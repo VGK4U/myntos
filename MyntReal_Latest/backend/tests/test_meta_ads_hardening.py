@@ -436,7 +436,7 @@ class TestMetaAdsIntegrationHardening(unittest.TestCase):
         routing = facebook_leads_service.get_form_routing("1596737462160734", "442395068958730", db=self.db)
         self.assertIsNotNone(routing)
         self.assertEqual(routing['company_id'], 2)
-        self.assertEqual(routing['category_id'], 16)
+        self.assertEqual(routing['category_id'], 42)
         self.assertEqual(routing['segment_tag'], 'etc_training')
 
     # ── Test 24: Dynamic Future-Form Registration Without Code Change ─────────

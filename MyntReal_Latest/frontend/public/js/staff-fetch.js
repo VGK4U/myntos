@@ -77,8 +77,14 @@
         if (rawUser) {
             try {
                 const u = JSON.parse(rawUser);
-                if (u.staff_type === 'TENANT_ADMIN' || u.staff_type === 'SAAS_CLIENT' || (u.base_company_id && u.base_company_id !== 4 && u.base_company_id !== 88 && u.base_company_id !== 1)) {
-                    isSaaSTenant = true;
+                const internalTypes = ['MYNT_REAL', 'MN_STAFF', 'VGK4U', 'INTERNAL', 'STAFF', 'ADMIN', 'HR', 'MANAGER', 'EXECUTIVE', 'FIELD_EXECUTIVE', 'SUPER_ADMIN', 'FREELANCER'];
+                const internalCompanyIds = [1, 2, 3, 4, 88];
+                const isInternalType = u.staff_type && internalTypes.includes(String(u.staff_type).toUpperCase());
+                const isInternalCompany = u.base_company_id && internalCompanyIds.includes(Number(u.base_company_id));
+                if (!isInternalType && !isInternalCompany) {
+                    if (u.staff_type === 'TENANT_ADMIN' || u.staff_type === 'SAAS_CLIENT' || u.staff_type === 'SAAS_TENANT' || u.company_segment === 'SEGMENT_B_SAAS' || u.base_company_type === 'SAAS_CLIENT') {
+                        isSaaSTenant = true;
+                    }
                 }
             } catch (_) {}
         }

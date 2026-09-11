@@ -166,7 +166,7 @@ export class VGKMyRegistrations {
                     Send OTP
                   </button>
                 </div>
-                <div style="font-size:11px;color:#f87171;margin-top:4px"><i class="fas fa-shield-alt" style="margin-right:3px"></i>WhatsApp OTP verification required.</div>
+                <div style="font-size:11px;color:#6b7280;margin-top:4px"><i class="fas fa-shield-alt" style="margin-right:3px;color:#7c3aed"></i>WhatsApp OTP verification is optional. You can verify now or verify later.</div>
 
                 <!-- OTP input block (hidden until Send OTP clicked) -->
                 <div id="regOtpBlock" style="display:none;margin-top:10px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:9px;padding:10px 12px">
@@ -179,12 +179,16 @@ export class VGKMyRegistrations {
                       Verify
                     </button>
                   </div>
-                  <div style="margin-top:5px;font-size:11px;color:#6b7280">
-                    Didn't receive? <span id="regResendLink" style="color:#7c3aed;cursor:pointer;text-decoration:underline">Resend OTP</span>
+                  <div style="margin-top:7px;display:flex;justify-content:space-between;font-size:11px;color:#6b7280">
+                    <div>Didn't receive? <span id="regResendLink" style="color:#7c3aed;cursor:pointer;text-decoration:underline">Resend OTP</span></div>
+                    <div><span id="regSkipOtpLink" style="color:#6b7280;cursor:pointer;text-decoration:underline">Skip for now</span></div>
                   </div>
                 </div>
                 <div id="regOtpVerifiedBadge" style="display:none;margin-top:8px;background:#f0fdf4;border:1.5px solid #16a34a;border-radius:8px;padding:7px 10px;color:#166534;font-size:12px;font-weight:700">
                   <i class="fas fa-check-circle" style="margin-right:4px"></i>Phone verified ✓
+                </div>
+                <div id="regOtpPendingBadge" style="display:none;margin-top:8px;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:8px;padding:7px 10px;color:#92400e;font-size:12px;font-weight:600">
+                  <i class="fas fa-clock" style="margin-right:4px"></i>WhatsApp verification pending (optional — you can verify later)
                 </div>
               </div>
 
@@ -252,11 +256,21 @@ export class VGKMyRegistrations {
     this.container.querySelector('#regSendOtpBtn')?.addEventListener('click', () => this.sendOTP());
     this.container.querySelector('#regVerifyBtn')?.addEventListener('click', () => this.verifyOTP());
     this.container.querySelector('#regResendLink')?.addEventListener('click', () => this.sendOTP());
+    this.container.querySelector('#regSkipOtpLink')?.addEventListener('click', () => this.skipOTP());
 
     this.container.querySelector('#regForm')?.addEventListener('submit', (e) => {
       e.preventDefault();
       this.submitRegistration();
     });
+  }
+
+  private skipOTP(): void {
+    const el = (id: string) => this.container.querySelector(`#${id}`) as HTMLElement | null;
+    const errEl = this.container.querySelector('#regError') as HTMLElement | null;
+    if (errEl) errEl.style.display = 'none';
+    if (el('regOtpBlock')) el('regOtpBlock')!.style.display = 'none';
+    if (el('regOtpVerifiedBadge')) el('regOtpVerifiedBadge')!.style.display = 'none';
+    if (el('regOtpPendingBadge')) el('regOtpPendingBadge')!.style.display = 'block';
   }
 
   private lookupReferrer(): void {
@@ -290,6 +304,7 @@ export class VGKMyRegistrations {
     const btn = this.container.querySelector('#regSendOtpBtn') as HTMLButtonElement | null;
     if (el('regOtpBlock'))       el('regOtpBlock')!.style.display = 'none';
     if (el('regOtpVerifiedBadge')) el('regOtpVerifiedBadge')!.style.display = 'none';
+    if (el('regOtpPendingBadge'))  el('regOtpPendingBadge')!.style.display = 'none';
     if (inp) inp.value = '';
     if (btn) btn.textContent = 'Send OTP';
   }
@@ -308,24 +323,38 @@ export class VGKMyRegistrations {
     try {
       const res = await apiService.post<any>('/vgk/auth/signup/send-otp', { phone });
       if (res.success) {
-        this.regOtpSent = true;
-        const otpBlock = this.container.querySelector('#regOtpBlock') as HTMLElement;
-        const badge    = this.container.querySelector('#regOtpVerifiedBadge') as HTMLElement;
-        const otpInp   = this.container.querySelector('#regOtpInput') as HTMLInputElement;
-        if (otpBlock) otpBlock.style.display = 'block';
-        if (badge)    badge.style.display = 'none';
-        if (otpInp)   { otpInp.value = ''; otpInp.focus(); }
-        this.regPhoneVerifiedToken = '';
-        btn.textContent = 'Resend OTP';
+        if (res.otp_sent === false) {
+          // WhatsApp delivery failed upstream (e.g. Meta locked) - user can still proceed
+          errEl.textContent = res.message || 'WhatsApp OTP could not be sent right now. You can proceed with registration and verify later.';
+          errEl.style.display = 'block';
+          errEl.style.background = '#fffbeb';
+          errEl.style.borderColor = '#fde68a';
+          errEl.style.color = '#92400e';
+          this.skipOTP();
+        } else {
+          this.regOtpSent = true;
+          const otpBlock = this.container.querySelector('#regOtpBlock') as HTMLElement;
+          const badge    = this.container.querySelector('#regOtpVerifiedBadge') as HTMLElement;
+          const pendingBadge = this.container.querySelector('#regOtpPendingBadge') as HTMLElement;
+          const otpInp   = this.container.querySelector('#regOtpInput') as HTMLInputElement;
+          if (otpBlock) otpBlock.style.display = 'block';
+          if (badge)    badge.style.display = 'none';
+          if (pendingBadge) pendingBadge.style.display = 'none';
+          if (otpInp)   { otpInp.value = ''; otpInp.focus(); }
+          this.regPhoneVerifiedToken = '';
+          btn.textContent = 'Resend OTP';
+        }
       } else {
-        errEl.textContent = res.message || 'Failed to send OTP. Please try again.';
+        errEl.textContent = res.message || 'Failed to send OTP. You can still register and verify later.';
         errEl.style.display = 'block';
         btn.textContent = 'Send OTP';
+        this.skipOTP();
       }
     } catch (e: any) {
-      errEl.textContent = e?.detail || e?.message || 'Failed to send OTP. Please try again.';
+      errEl.textContent = e?.detail || e?.message || 'Failed to send OTP. You can still register and verify later.';
       errEl.style.display = 'block';
       btn.textContent = 'Send OTP';
+      this.skipOTP();
     } finally { btn.disabled = false; }
   }
 
@@ -348,8 +377,10 @@ export class VGKMyRegistrations {
         this.regPhoneVerifiedToken = res.phone_verified_token;
         const otpBlock = this.container.querySelector('#regOtpBlock') as HTMLElement;
         const badge    = this.container.querySelector('#regOtpVerifiedBadge') as HTMLElement;
+        const pendingBadge = this.container.querySelector('#regOtpPendingBadge') as HTMLElement;
         if (otpBlock) otpBlock.style.display = 'none';
         if (badge)    badge.style.display = 'block';
+        if (pendingBadge) pendingBadge.style.display = 'none';
       } else {
         errEl.textContent = res.message || 'Invalid OTP. Please try again.';
         errEl.style.display = 'block';
@@ -377,10 +408,6 @@ export class VGKMyRegistrations {
 
     if (!firstName || !lastName) { errEl.textContent = 'Please enter both first name and last name.'; errEl.style.display = 'block'; return; }
     if (!phone || phone.length < 10) { errEl.textContent = 'Please enter a valid 10-digit phone number.'; errEl.style.display = 'block'; return; }
-    if (!this.regPhoneVerifiedToken) {
-      errEl.textContent = 'Phone verification required — enter the phone number, tap "Send OTP", enter the code from WhatsApp, then tap "Verify".';
-      errEl.style.display = 'block'; return;
-    }
     if (!password || password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
 
     const submitBtn = this.container.querySelector('#regSubmitBtn') as HTMLButtonElement;
@@ -397,7 +424,7 @@ export class VGKMyRegistrations {
         first_name: firstName || null,
         last_name:  lastName  || null,
         gender:     gender    || null,
-        phone_verified_token: this.regPhoneVerifiedToken,
+        phone_verified_token: this.regPhoneVerifiedToken || null,
       };
       if (email)    payload.email = email;
       if (referrer) payload.referrer_code = referrer;

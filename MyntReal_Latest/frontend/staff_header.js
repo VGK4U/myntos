@@ -665,7 +665,10 @@ window.StaffHeader = window.StaffHeader || {
         const isMnEmployee = staffType === 'MN_EMPLOYEE' || userData.is_mn_employee;
         const isFreelancer = staffType === 'FREELANCER' || userData.is_freelancer;
         
-        const isTenantAdmin = staffType === 'TENANT_ADMIN' || staffType === 'SAAS_CLIENT' || role.includes('Tenant') || (userData.base_company_id && userData.base_company_id !== 4 && userData.base_company_id !== 88);
+        const internalTypes = ['MYNT_REAL', 'MN_STAFF', 'VGK4U', 'INTERNAL', 'STAFF', 'ADMIN', 'HR', 'MANAGER', 'EXECUTIVE', 'FIELD_EXECUTIVE', 'SUPER_ADMIN', 'FREELANCER'];
+        const isInternalType = staffType && internalTypes.includes(String(staffType).toUpperCase());
+        const isInternalCompany = userData.base_company_id && [1, 2, 3, 4, 88].includes(Number(userData.base_company_id));
+        const isTenantAdmin = !isInternalType && !isInternalCompany && (staffType === 'TENANT_ADMIN' || staffType === 'SAAS_CLIENT' || role.includes('Tenant') || userData.company_segment === 'SEGMENT_B_SAAS');
         
         const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
         
@@ -863,6 +866,10 @@ window.StaffHeader = window.StaffHeader || {
             }
         }
         
+        // Remove any stray mobile toggle created before header injection
+        const strayToggle = document.getElementById('sidebarMobileToggle');
+        if (strayToggle) strayToggle.remove();
+
         this.init();
     },
     

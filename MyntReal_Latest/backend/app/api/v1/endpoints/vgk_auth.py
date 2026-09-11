@@ -132,6 +132,10 @@ def vgk_login(request: VGKLoginRequest, response: Response, db: Session = Depend
     if not partner:
         return VGKLoginResponse(success=False, message="Invalid credentials")
 
+    # [DC-VGK-BLOCKED-001] Prevent login for blocked partners
+    if getattr(partner, 'is_blocked', False) or getattr(partner, 'member_status', '') == 'BLOCKED':
+        return VGKLoginResponse(success=False, message="Your account is blocked. Please contact administration.")
+
     if not partner.password_hash:
         return VGKLoginResponse(success=False, message="Password not set. Contact admin.")
 
@@ -1569,6 +1573,23 @@ def vgk_signup_verify_otp(req: PhoneOTPVerifyRequest, db: Session = Depends(get_
     return {"success": True, "phone_verified_token": token, "message": "Phone verified successfully."}
 
 
+@router.post("/auth/verify-phone/send-otp")
+def vgk_verify_phone_send_otp(req: PhoneOTPSendRequest, db: Session = Depends(get_db)):
+    """[DC-PHONE-OTP-001] Send WhatsApp OTP for later phone verification of registered member."""
+    phone = req.phone.strip()
+    if len(phone) < 10 or not phone.isdigit():
+        raise HTTPException(status_code=400, detail="Please enter a valid 10-digit mobile number.")
+    from app.utils.phone_otp import generate_and_send_otp
+    return generate_and_send_otp(phone=phone, purpose='vgk_verify_later', db=db)
+
+
+@router.post("/auth/verify-phone/confirm")
+def vgk_verify_phone_confirm(req: PhoneOTPVerifyRequest, db: Session = Depends(get_db)):
+    """[DC-PHONE-OTP-001] Verify WhatsApp OTP for registered partner and mark phone_verified=True."""
+    from app.utils.phone_otp import verify_and_mark_partner_phone
+    return verify_and_mark_partner_phone(phone=req.phone.strip(), otp_code=req.otp_code.strip(), purpose='vgk_verify_later', db=db)
+
+
 @router.post("/auth/signup")
 def vgk_signup(request: VGKSignupRequest, db: Session = Depends(get_db)):
     """Public self-registration for new VGK members. Account created as inactive — activation via CRM flow."""
@@ -1576,14 +1597,12 @@ def vgk_signup(request: VGKSignupRequest, db: Session = Depends(get_db)):
 
     phone = request.phone.strip()
 
-    # [DC-PHONE-OTP-001] Phone verification token is REQUIRED for self-signup
-    if not request.phone_verified_token:
-        raise HTTPException(
-            status_code=400,
-            detail="Phone verification required. Please verify your WhatsApp number with OTP before registering."
-        )
-    from app.utils.phone_otp import validate_and_consume_token
-    validate_and_consume_token(phone=phone, token=request.phone_verified_token, purpose='vgk_signup', db=db)
+    # [DC-PHONE-OTP-001] Phone verification token is OPTIONAL for self-signup
+    phone_verified = False
+    if request.phone_verified_token:
+        from app.utils.phone_otp import validate_and_consume_token
+        validate_and_consume_token(phone=phone, token=request.phone_verified_token, purpose='vgk_signup', db=db)
+        phone_verified = True
 
     existing = db.query(OfficialPartner).filter(
         OfficialPartner.phone == phone,
@@ -1640,6 +1659,7 @@ def vgk_signup(request: VGKSignupRequest, db: Session = Depends(get_db)):
         email=(request.email or '').strip() or None,
         category='VGK_TEAM',
         is_active=False,
+        phone_verified=phone_verified,
         parent_partner_id=parent_id,
         vgk_role='VGK_ASSOCIATE',
         vgk_points_balance=Decimal('0'),
@@ -1904,6 +1924,7 @@ def vgk_signup(request: VGKSignupRequest, db: Session = Depends(get_db)):
         "success": True,
         "message": msg,
         "partner_code": partner_code,
+        "phone_verified": phone_verified,
         "referrer_code": referrer.partner_code if referrer else None,
         "referrer_name": referrer.partner_name if referrer else None,
         "referral_bonus_applied": referral_bonus_applied,

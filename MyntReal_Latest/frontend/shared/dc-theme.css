@@ -1,52 +1,69 @@
 /* DC Protocol Theme CSS - Standard styling for DC-compliant pages */
 :root {
-    --dc-primary: #6f42c1;
-    --dc-secondary: #e83e8c;
-    --dc-success: #28a745;
-    --dc-warning: #ffc107;
-    --dc-danger: #dc3545;
-    --dc-info: #17a2b8;
-    --dc-dark: #343a40;
-    --dc-light: #f8f9fa;
+    --dc-primary: #2563eb;
+    --dc-secondary: #0284c7;
+    --dc-success: #059669;
+    --dc-warning: #d97706;
+    --dc-danger: #dc2626;
+    --dc-info: #6366f1;
+    --dc-dark: #0f172a;
+    --dc-light: #f8fafc;
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f5f6fa;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #f8fafc;
+    color: #1e293b;
 }
 
 .dc-card {
-    border: none;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05);
     border-radius: 12px;
+    background: #ffffff;
 }
 
 .dc-header {
-    background: linear-gradient(135deg, var(--dc-primary) 0%, var(--dc-secondary) 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     color: white;
     padding: 1.5rem;
     border-radius: 12px;
 }
 
 .dc-badge-vgk4u {
-    background: linear-gradient(135deg, #6f42c1, #e83e8c);
+    background: linear-gradient(135deg, #2563eb, #0284c7);
     color: white;
+    font-weight: 700;
+    border-radius: 9999px;
+    padding: 4px 10px;
 }
 
 .dc-badge-manager {
-    background: #28a745;
-    color: white;
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+    font-weight: 700;
+    border-radius: 9999px;
+    padding: 4px 10px;
 }
 
 .dc-badge-employee {
-    background: #17a2b8;
-    color: white;
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+    font-weight: 700;
+    border-radius: 9999px;
+    padding: 4px 10px;
 }
 
 .dc-table th {
-    background-color: var(--dc-light);
-    font-weight: 600;
-    border-bottom: 2px solid #dee2e6;
+    background-color: #f1f5f9;
+    color: #334155;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e2e8f0;
 }
 
 .dc-loading {
@@ -59,21 +76,22 @@ body {
 .dc-empty-state {
     text-align: center;
     padding: 3rem;
-    color: #6c757d;
+    color: #64748b;
 }
 
 .dc-error-alert {
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-    color: #721c24;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
     padding: 1rem;
     border-radius: 8px;
 }
 
 .dc-success-alert {
-    background-color: #d4edda;
-    border: 1px solid #c3e6cb;
-    color: #155724;
+    background-color: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
     padding: 1rem;
     border-radius: 8px;
 }
+

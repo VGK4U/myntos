@@ -115,12 +115,17 @@ def get_current_staff_user(request: Request, db: Session = Depends(get_db)) -> S
             )
         
         employee = None
+        emp_query = db.query(StaffEmployee).options(
+            joinedload(StaffEmployee.role),
+            joinedload(StaffEmployee.department),
+            joinedload(StaffEmployee.base_company)
+        )
         if employee_id and str(employee_id).isdigit():
-            employee = db.query(StaffEmployee).filter_by(id=int(employee_id)).first()
+            employee = emp_query.filter_by(id=int(employee_id)).first()
         if not employee and emp_code:
-            employee = db.query(StaffEmployee).filter_by(emp_code=str(emp_code)).first()
+            employee = emp_query.filter_by(emp_code=str(emp_code)).first()
         if not employee and employee_id:
-            employee = db.query(StaffEmployee).filter_by(emp_code=str(employee_id)).first()
+            employee = emp_query.filter_by(emp_code=str(employee_id)).first()
             
         if not employee:
             raise HTTPException(
@@ -201,6 +206,15 @@ def get_current_staff_user(request: Request, db: Session = Depends(get_db)) -> S
                     }
                 )
         
+        # DC Protocol (ARCHITECTURAL FIX - Sep 2026):
+        # Deterministically end read transaction before returning to downstream route.
+        # This guarantees AccessShareLock on staff_employees is NOT held while downstream route handlers
+        # perform serialization, network transfers, or CPU calculations.
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
         return employee
         
     except HTTPException:
@@ -492,6 +506,14 @@ def staff_login(
             detail=f"Account locked. Try again in {remaining} minutes."
         )
     
+    # DC Protocol (ARCHITECTURAL FIX - Sep 2026):
+    # Release lookup read transaction before CPU-intensive bcrypt password verification.
+    # DB connection remains idle without holding AccessShareLock on staff_employees during bcrypt.
+    try:
+        db.rollback()
+    except Exception:
+        pass
+
     t_pw_start = time.time()
     raw_pw = login_data.password or ""
     clean_pw = raw_pw.strip()
@@ -606,6 +628,14 @@ def staff_login(
     total_ms = (time.time() - t0) * 1000
     print(f"[LOGIN TRACE] Total: {total_ms:.1f}ms (lookup: {t_lookup_ms:.1f}ms, pw: {t_pw_ms:.1f}ms, token: {t_token_ms:.1f}ms, sync: {t_sync_ms:.1f}ms, nda: {t_nda_ms:.1f}ms)", flush=True)
     
+    # DC Protocol (ARCHITECTURAL FIX - Sep 2026):
+    # Deterministically end session transaction before returning response.
+    # Ensures zero locks are held while FastAPI serializes JSON or sends response over network.
+    try:
+        db.rollback()
+    except Exception:
+        pass
+
     return StaffLoginResponse(
         success=True,
         message=message,

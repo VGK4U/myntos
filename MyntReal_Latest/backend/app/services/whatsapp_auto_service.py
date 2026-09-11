@@ -10,6 +10,7 @@ import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,29 @@ def _is_paused(db: Session) -> bool:
         return ctrl.is_paused if ctrl else False
     except Exception:
         return False
+
+
+def format_staff_whatsapp_message(message: str, staff_name: str) -> str:
+    """
+    Authoritative staff WhatsApp signature composer.
+    Appends:
+    
+    Regards,
+    <Staff Full Name>
+    
+    Guards against double signatures.
+    """
+    if not message:
+        return ""
+    clean_msg = message.strip()
+    if not staff_name or not str(staff_name).strip():
+        return clean_msg
+
+    # Guard: check if Regards, is already present in the message
+    if "regards," in clean_msg.lower():
+        return clean_msg
+
+    return f"{clean_msg}\n\nRegards,\n{str(staff_name).strip()}"
 
 
 def _render_body(body_text: str, context: Dict[str, Any]) -> str:
@@ -136,41 +160,84 @@ def _send_meta(phone: str, message: str, template=None, db=None,
     Send via Meta Cloud API.
     If template has meta_template_name + is_meta_approved → use template type with
     full components (image header, body params, URL buttons).
-    Otherwise use free-form text (works within 24h session window).
-    DC-FIX-INVPHONE-001: Validates phone before sending.
-    DC-TMPL-COMPONENTS-001: Populates components for variable substitution & media.
+    FAIL-CLOSED: If template is missing or unapproved, REJECTS freeform text fallback
+    to prevent Meta 131047 re-engagement errors on cold outbound customer outreach.
     """
-    # DC-FIX-INVPHONE-001: Reject invalid/placeholder numbers
+    # Reject invalid/placeholder numbers
     if not _is_valid_phone(phone):
         logger.warning("[WA-AUTO] Skipping invalid/placeholder phone: %s", phone)
-        return {"success": False, "reason": "invalid_phone_number"}
+        return {"success": False, "reason": "invalid_phone_number", "error_code": "INV_PHONE"}
+
+    # 1. Template-based send validation
+    if template:
+        if not getattr(template, 'meta_template_name', None) or not getattr(template, 'is_meta_approved', False):
+            tmpl_id = getattr(template, 'id', 'None')
+            tmpl_name = getattr(template, 'name', 'Selected template')
+            status = getattr(template, 'meta_approval_status', 'UNAPPROVED')
+            logger.warning(
+                f"[WA-AUTO] Unapproved template (ID: {tmpl_id}, Name: {tmpl_name}, Status: {status}). "
+                f"Cannot dispatch unapproved template via Meta Cloud API."
+            )
+            return {
+                "success": False,
+                "reason": f"Template '{tmpl_name}' is not approved by Meta (status: {status or 'UNAPPROVED'}). Please select an approved Meta template or send via Scanned WhatsApp.",
+                "error_code": "TMPL_NOT_APPROVED"
+            }
+    else:
+        # 2. Freeform text send validation (Meta 24-Hour Customer Service Window)
+        is_window_open = False
+        if db:
+            try:
+                from app.models.whatsapp import WAInbox
+                from datetime import datetime, timedelta
+                cutoff_24h = datetime.utcnow() - timedelta(hours=24)
+                clean_10 = phone[-10:] if len(phone) >= 10 else phone
+                inbound_msg = db.query(WAInbox).filter(
+                    WAInbox.from_phone.like(f"%{clean_10}%"),
+                    WAInbox.message_type != "outbound",
+                    WAInbox.received_at >= cutoff_24h
+                ).order_by(WAInbox.received_at.desc()).first()
+                if inbound_msg:
+                    is_window_open = True
+            except Exception as _we:
+                logger.warning(f"[WA-AUTO] Error checking 24h service window: {_we}")
+
+        if not is_window_open:
+            logger.warning(
+                f"[WA-AUTO] Cold outbound text to {phone} rejected: "
+                f"Recipient has not messaged within Meta 24-hour service window."
+            )
+            return {
+                "success": False,
+                "reason": "Meta 24-hour customer service window has expired for this recipient. Initiating contact requires an approved Meta template.",
+                "error_code": "WINDOW_EXPIRED"
+            }
 
     # [DC-WA-CREDS] Get live credentials from DB if available
     token, phone_id = _get_meta_creds(db)
     if not token or not phone_id:
         logger.warning("[WA-AUTO] No Meta credentials — skipping send to %s", phone)
-        return {"success": False, "reason": "no_credentials"}
+        return {"success": False, "reason": "no_credentials", "error_code": "NO_CREDS"}
 
     meta_base = f"https://graph.facebook.com/v21.0/{phone_id}/messages"
-    # Safely normalise to E.164 without country code prefix (91XXXXXXXXXX)
     import re as _re
-    _digits = _re.sub(r'\D', '', phone)           # strip all non-digits
+    _digits = _re.sub(r'\D', '', phone)
     if _digits.startswith('91') and len(_digits) == 12:
-        recipient = _digits                        # already 91+10 digits
+        recipient = _digits
     else:
-        recipient = '91' + _digits[-10:]           # take last 10 digits
+        recipient = '91' + _digits[-10:]
 
     headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
-    if template and template.meta_template_name and template.is_meta_approved:
+    if template:
         tpl_payload: Dict[str, Any] = {
             "name": template.meta_template_name,
             "language": {"code": template.meta_template_language or "en"},
         }
-        # DC-TMPL-COMPONENTS-001: Add components for image header, body vars, buttons
         components = _build_template_components(template, context or {})
         if components:
             tpl_payload["components"] = components
+
         payload = {
             "messaging_product": "whatsapp",
             "to": recipient,
@@ -178,6 +245,7 @@ def _send_meta(phone: str, message: str, template=None, db=None,
             "template": tpl_payload,
         }
     else:
+        # Freeform text inside 24h window
         payload = {
             "messaging_product": "whatsapp",
             "to": recipient,
@@ -188,16 +256,21 @@ def _send_meta(phone: str, message: str, template=None, db=None,
     try:
         resp = requests.post(meta_base, json=payload, headers=headers, timeout=10)
         data = resp.json()
-        if resp.status_code == 200:
+        if resp.status_code in (200, 201):
             wamid = data.get("messages", [{}])[0].get("id", "")
+            if not wamid:
+                logger.error("[WA-AUTO] Meta returned HTTP 200 without WAMID: %s", data)
+                return {"success": False, "reason": "Missing WAMID in Meta response", "error_code": "NO_WAMID"}
             return {"success": True, "wamid": wamid}
         else:
-            error = data.get("error", {}).get("message", "Unknown error")
-            logger.error("[WA-AUTO] Meta API error for %s: %s", phone, error)
-            return {"success": False, "reason": error}
+            err_obj = data.get("error", {})
+            err_code = str(err_obj.get("code") or resp.status_code)[:10]
+            error = err_obj.get("message", "Unknown error")
+            logger.error("[WA-AUTO] Meta API error for %s (%s): %s", phone, err_code, error)
+            return {"success": False, "reason": error, "error_code": err_code}
     except Exception as e:
         logger.error("[WA-AUTO] Send exception for %s: %s", phone, str(e))
-        return {"success": False, "reason": str(e)}
+        return {"success": False, "reason": str(e), "error_code": "NET_ERR"}
 
 
 def _log_message(db: Session, phone: str, message: str, result: Dict, event_key: str,
@@ -205,15 +278,9 @@ def _log_message(db: Session, phone: str, message: str, result: Dict, event_key:
                  template_id: Optional[int] = None,
                  sent_by_name: Optional[str] = None, sender_type: Optional[str] = None,
                  message_type: Optional[str] = None):
-    """Log auto-send to message_log table.
-
-    message_type: override the stored message_type column. Defaults to
-    f"auto_{event_key}" to preserve existing convention for all callers that
-    do not pass this argument.
-    """
+    """Log auto-send to message_log table with genuine WAMID only."""
     try:
         from app.models.whatsapp import MessageLog
-        # Resolve sender display name if not provided
         if staff_id and not sent_by_name:
             try:
                 from app.models.staff import StaffEmployee
@@ -228,45 +295,60 @@ def _log_message(db: Session, phone: str, message: str, result: Dict, event_key:
             sender_type = "staff" if staff_id else "auto"
 
         resolved_message_type = message_type if message_type is not None else f"auto_{event_key}"
+        wamid = result.get("wamid")
+        is_succ = bool(result.get("success") and wamid)
+
+        now_utc = datetime.utcnow()
+        clean_phone = phone[-10:] if len(phone) >= 10 else phone
+        fallback_id = f"failed_{event_key}_{int(now_utc.timestamp())}_{clean_phone}"
+
+        err_code = str(result.get("error_code") or "")[:10] if not is_succ else None
+        err_msg = str(result.get("reason") or "")[:95] if not is_succ else None
+
         log = MessageLog(
-            message_sid=result.get("wamid") or f"auto.{event_key}.{phone}.{int(datetime.utcnow().timestamp())}",
+            message_sid=wamid or fallback_id,
             message_type=resolved_message_type,
             mobile_number=phone,
             message_body=message,
             to_number=phone,
             provider="META_WHATSAPP",
-            initial_status="sent" if result.get("success") else "failed",
-            current_status="sent" if result.get("success") else "failed",
-            sent_at=datetime.utcnow() if result.get("success") else None,
-            error_message=result.get("reason") if not result.get("success") else None,
+            initial_status="sent" if is_succ else "failed",
+            current_status="sent" if is_succ else "failed",
+            status_source="SYSTEM",
+            sent_at=now_utc if is_succ else None,
+            failed_at=now_utc if not is_succ else None,
+            error_code=err_code,
+            error_message=err_msg,
+            failure_reason=err_msg,
             sent_by_staff_id=staff_id,
             sent_by_name=sent_by_name,
             sender_type=sender_type,
         )
         db.add(log)
 
-        # Dual-write to wa_inbox so CRM WhatsApp Inbox displays outbound activity
-        try:
-            from app.models.whatsapp import WAInbox
-            clean_phone = phone[-10:] if len(phone) >= 10 else phone
-            inbox_item = WAInbox(
-                wamid=result.get("wamid") or f"auto.{event_key}.{clean_phone}.{int(datetime.utcnow().timestamp())}",
-                from_phone=clean_phone,
-                from_name=sent_by_name,
-                message_type='outbound',
-                body_text=message,
-                is_read=True,
-                received_at=datetime.utcnow(),
-                status='new',
-                replied=False,
-            )
-            db.add(inbox_item)
-        except Exception as _ie:
-            logger.warning("[WA-AUTO] Dual-write wa_inbox error: %s", str(_ie))
+        # Dual-write to wa_inbox if genuine WAMID exists
+        if is_succ and wamid:
+            try:
+                from app.models.whatsapp import WAInbox
+                inbox_item = WAInbox(
+                    wamid=wamid,
+                    from_phone=clean_phone,
+                    from_name=sent_by_name,
+                    message_type='outbound',
+                    body_text=message,
+                    is_read=True,
+                    received_at=now_utc,
+                    status='new',
+                    replied=False,
+                )
+                db.add(inbox_item)
+            except Exception as _ie:
+                logger.warning("[WA-AUTO] Dual-write wa_inbox error: %s", str(_ie))
 
         db.commit()
     except Exception as e:
         logger.error("[WA-AUTO] Log exception: %s", str(e))
+        db.rollback()
 
 
 def _log_to_crm_note(db: Session, lead_id: int, message: str, event_key: str,
@@ -411,6 +493,26 @@ def send_direct_whatsapp(
     """
     if _is_paused(db):
         return {"success": False, "reason": "WhatsApp is paused by VGK control"}
+
+    # [DC-VGK-BLOCKED-001] Avoid sending communications to blocked members
+    try:
+        clean_p = ''.join(c for c in str(phone or '') if c.isdigit())[-10:]
+        if len(clean_p) == 10:
+            is_blocked = db.execute(text("""
+                SELECT 1 FROM official_partners 
+                WHERE (is_blocked = TRUE OR member_status = 'BLOCKED')
+                  AND RIGHT(REGEXP_REPLACE(COALESCE(phone, whatsapp_number, ''), '[^0-9]', '', 'g'), 10) = :p
+                LIMIT 1
+            """), {"p": clean_p}).scalar()
+            if is_blocked:
+                logger.info(f"[WA-DIRECT-SEND] Suppressing message to blocked partner phone {clean_p}")
+                return {
+                    "success": False,
+                    "reason": "blocked_member",
+                    "message": "Recipient is a Blocked Channel Partner. Communications are strictly suppressed."
+                }
+    except Exception as _b_err:
+        logger.warning(f"[WA-DIRECT-SEND] Block check error: {_b_err}")
 
     template = None
     if template_id:

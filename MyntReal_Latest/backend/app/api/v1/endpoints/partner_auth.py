@@ -1591,35 +1591,11 @@ async def staff_update_partner_logo(
     return {"success": True, "logo_path": target.logo_path, "logo_url": file_url}
 
 
+_partner_support_requests_table_ensured = False
+
 def _ensure_partner_support_requests_table(db: Session):
-    """[DC-PARTNER-CONTACTS-001] Ensure partner_support_requests table with all columns."""
-    db.execute(text("""
-        CREATE TABLE IF NOT EXISTS partner_support_requests (
-            id SERIAL PRIMARY KEY,
-            partner_id INTEGER NOT NULL,
-            partner_code VARCHAR(20),
-            subject VARCHAR(200) NOT NULL,
-            category VARCHAR(50) DEFAULT 'other',
-            description TEXT NOT NULL,
-            status VARCHAR(20) DEFAULT 'OPEN',
-            created_at TIMESTAMP DEFAULT NOW(),
-            updated_at TIMESTAMP DEFAULT NOW()
-        )
-    """))
-    for col_sql in [
-        "ALTER TABLE partner_support_requests ADD COLUMN IF NOT EXISTS assign_to VARCHAR(20) DEFAULT 'self'",
-        "ALTER TABLE partner_support_requests ADD COLUMN IF NOT EXISTS service_dept_staff_id INTEGER",
-        "ALTER TABLE partner_support_requests ADD COLUMN IF NOT EXISTS company_support_requested BOOLEAN DEFAULT FALSE",
-        "ALTER TABLE partner_support_requests ADD COLUMN IF NOT EXISTS customer_name VARCHAR(200)",
-        "ALTER TABLE partner_support_requests ADD COLUMN IF NOT EXISTS customer_phone VARCHAR(20)",
-        "ALTER TABLE partner_support_requests ADD COLUMN IF NOT EXISTS product_name VARCHAR(200)",
-        "ALTER TABLE partner_support_requests ADD COLUMN IF NOT EXISTS product_serial VARCHAR(100)",
-    ]:
-        try:
-            db.execute(text(col_sql))
-        except Exception:
-            pass
-    db.commit()
+    """DC Protocol (ARCHITECTURAL FIX - Sep 2026): Schema managed by standalone migration runner."""
+    pass
 
 
 class PartnerSupportRequestIn(BaseModel):
@@ -2356,13 +2332,8 @@ async def create_walkin(
     from sqlalchemy import text as sq_text
     _ensure_walkin_vgk_cols(db)
 
-    # [DC-PHONE-OTP-001] Validate VGK phone token when enrolling as VGK
-    if data.register_as_vgk and data.customer_phone:
-        if not data.vgk_phone_verified_token:
-            raise HTTPException(
-                status_code=400,
-                detail="Phone verification required. Please send an OTP to the customer's WhatsApp and verify before enrolling them as a VGK Channel Partner."
-            )
+    # [DC-PHONE-OTP-001] Validate VGK phone token when enrolling as VGK (OPTIONAL)
+    if data.register_as_vgk and data.customer_phone and data.vgk_phone_verified_token:
         from app.utils.phone_otp import validate_and_consume_token
         validate_and_consume_token(
             phone=data.customer_phone.strip(),
@@ -4153,46 +4124,11 @@ def _get_or_create_vgk_member(db: Session, phone: str, name: str, company_id: in
     return member.id, True, f"VGK member created ({code}) — password is mobile number"
 
 
-def _ensure_stock_tables(db: Session):
-    """DC_PARTNER_STOCK_001: Idempotent table creation for partner stock system."""
-    from sqlalchemy import text as sq_text
-    db.execute(sq_text("""
-        CREATE TABLE IF NOT EXISTS partner_stock_items (
-            id SERIAL PRIMARY KEY,
-            partner_id INTEGER NOT NULL,
-            item_type VARCHAR(20) NOT NULL DEFAULT 'catalog',
-            stock_item_id INTEGER,
-            item_name VARCHAR(200) NOT NULL,
-            item_code VARCHAR(100),
-            unit_of_measure VARCHAR(20) DEFAULT 'PCS',
-            hsn_code VARCHAR(20),
-            opening_qty NUMERIC(10,2) DEFAULT 0,
-            opening_qty_set_at TIMESTAMP,
-            reorder_level NUMERIC(10,2) DEFAULT 0,
-            selling_price NUMERIC(10,2),
-            is_active BOOLEAN DEFAULT TRUE,
-            notes TEXT,
-            created_at TIMESTAMP DEFAULT NOW(),
-            updated_at TIMESTAMP DEFAULT NOW()
-        )
-    """))
-    db.execute(sq_text("""
-        CREATE TABLE IF NOT EXISTS partner_stock_adjustments (
-            id SERIAL PRIMARY KEY,
-            partner_id INTEGER NOT NULL,
-            partner_stock_item_id INTEGER NOT NULL,
-            adj_type VARCHAR(30) NOT NULL,
-            qty NUMERIC(10,2) NOT NULL,
-            reason VARCHAR(200),
-            notes TEXT,
-            ref_doc_type VARCHAR(50),
-            ref_doc_id INTEGER,
-            ref_doc_number VARCHAR(100),
-            created_by VARCHAR(100),
-            created_at TIMESTAMP DEFAULT NOW()
-        )
-    """))
-    db.commit()
+_partner_stock_tables_ensured = True
+
+def _ensure_stock_tables(db: Session = None):
+    """DC_PARTNER_STOCK_001: Schema managed via backend/scripts/run_schema_migrations.py. Zero runtime DDL."""
+    pass
 
 
 @router.get("/stock/items")

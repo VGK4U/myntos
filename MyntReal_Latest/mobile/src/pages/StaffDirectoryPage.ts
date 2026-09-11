@@ -43,7 +43,15 @@ export class StaffDirectoryPage {
       console.log('[StaffDirectoryPage] API response:', response);
 
       if (response.success && response.data) {
-        this.entries = response.data.employees || response.data || [];
+        const raw = response.data.employees || response.data || [];
+        this.entries = raw.filter((e: any) => {
+          if (e.is_deleted) return false;
+          const code = (e.emp_code || '').toUpperCase();
+          const name = (e.name || e.full_name || '').toLowerCase();
+          if (code.startsWith('EMP_') || code.startsWith('SA_') || name.includes('test')) return false;
+          if (['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'].includes(e.staff_type)) return false;
+          return true;
+        });
       }
     } catch (error) {
       console.error('[StaffDirectoryPage] Failed to load:', error);

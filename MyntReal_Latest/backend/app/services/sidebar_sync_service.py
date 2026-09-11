@@ -878,24 +878,8 @@ def ensure_pdf_canonical_routes_table_and_seed(db_session):
             return True
         _lock_acquired = True
 
-        # Step 1: Create table DDL (idempotent)
-        db_session.execute(text("""
-            CREATE TABLE IF NOT EXISTS pdf_canonical_routes (
-                id SERIAL PRIMARY KEY,
-                route_path TEXT NOT NULL UNIQUE,
-                section_id TEXT NOT NULL,
-                section_title TEXT,
-                section_order INTEGER DEFAULT 1,
-                subsection_title TEXT,
-                is_submenu BOOLEAN DEFAULT FALSE,
-                parent_section TEXT,
-                menu_name TEXT,
-                menu_icon TEXT,
-                created_at TIMESTAMPTZ DEFAULT NOW()
-            )
-        """))
-        db_session.commit()
-        logger.info("[DC-PDF-CANONICAL-DDL] Table ensured")
+        # Step 1: Table definition managed by run_schema_migrations.py (Zero runtime DDL)
+        logger.info("[DC-PDF-CANONICAL-DDL] Table definition managed externally, proceeding to seed")
 
         # Step 2: Build section title/order lookup from SIDEBAR_SECTIONS
         section_info = {}

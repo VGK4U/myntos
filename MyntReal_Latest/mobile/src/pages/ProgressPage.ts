@@ -247,7 +247,7 @@ export class ProgressPage {
       </div>
     `;
 
-    PageHeader.attachListeners({ title: 'Progress Dashboard', showBack: true });
+    PageHeader.attachListeners({ title: 'Progress Dashboard', showBack: true, showMenu: true });
     this.attachEventListeners();
   }
 

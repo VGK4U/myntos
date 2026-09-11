@@ -41,12 +41,6 @@ def _next_pro_forma_number(db: Session) -> str:
     today = date.today()
     period = f"{today.year:04d}{today.month:02d}"
     prefix = f"PI-{period}-"
-    db.execute(text("""
-        CREATE TABLE IF NOT EXISTS platform_invoice_counters (
-            period   VARCHAR(8) PRIMARY KEY,
-            last_seq INTEGER NOT NULL DEFAULT 0
-        )
-    """))
     existing_max = db.execute(text("""
         SELECT COALESCE(MAX(CAST(SUBSTRING(invoice_number FROM '\\d+$') AS INTEGER)), 0)
           FROM platform_invoices
@@ -70,12 +64,6 @@ def _next_tax_invoice_number(db: Session) -> str:
     today = date.today()
     period = f"{today.year:04d}{today.month:02d}"
     prefix = f"INV-{period}-"
-    db.execute(text("""
-        CREATE TABLE IF NOT EXISTS platform_invoice_counters (
-            period   VARCHAR(8) PRIMARY KEY,
-            last_seq INTEGER NOT NULL DEFAULT 0
-        )
-    """))
     existing_max = db.execute(text("""
         SELECT COALESCE(MAX(CAST(SUBSTRING(invoice_number FROM '\\d+$') AS INTEGER)), 0)
           FROM platform_invoices

@@ -41,8 +41,27 @@ class CallStateEnum(str, Enum):
             cls.CANCELLED,
         }
 
+    @classmethod
+    def from_str(cls, val: str):
+        if not val:
+            return cls.CREATED
+        norm = str(val).lower().replace("-", "_")
+        if norm == "canceled":
+            norm = "cancelled"
+        for member in cls:
+            if member.value == norm or member.value == str(val).lower():
+                return member
+        return cls.CREATED
+
+    @classmethod
+    def is_terminal_status(cls, val: str) -> bool:
+        if not val:
+            return False
+        norm = str(val).lower().replace("-", "_")
+        return norm in ("ended", "busy", "no_answer", "rejected", "failed", "cancelled", "canceled", "completed", "hangup")
+
     def is_terminal(self) -> bool:
-        return self in self.terminal_states()
+        return self in self.terminal_states() or self.value in ("ended", "busy", "no_answer", "no-answer", "rejected", "failed", "cancelled", "canceled", "completed", "hangup")
 
 
 class RecordingStatusEnum(str, Enum):

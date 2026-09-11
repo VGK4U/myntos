@@ -120,7 +120,12 @@ def get_today_sales_performance_stats(db: Session, start_date=None, end_date=Non
         m_row = db.execute(text("""
             SELECT COUNT(id) as cnt, COALESCE(SUM(duration_seconds), 0) as dur,
                    COUNT(CASE WHEN UPPER(call_type) IN ('MISSED', 'REJECTED', 'NO_ANSWER') THEN 1 END) as missed
-            FROM staff_call_logs WHERE staff_id = :sid AND call_date >= :sd AND call_date <= :ed
+            FROM staff_call_logs 
+            WHERE staff_id = :sid 
+              AND call_date >= :sd 
+              AND call_date <= :ed
+              AND (source IS NULL OR LOWER(source) NOT IN ('softphone', 'plivo', 'voip'))
+              AND (matched_lead_id IS NOT NULL OR LOWER(COALESCE(source, '')) IN ('dialer', 'autodialer') OR device_call_id LIKE 'vcs_%' OR device_call_id LIKE 'dialer_%')
         """), {"sid": s.id, "sd": start_date_str, "ed": end_date_str}).fetchone()
 
         m_cnt = m_row.cnt if m_row else 0

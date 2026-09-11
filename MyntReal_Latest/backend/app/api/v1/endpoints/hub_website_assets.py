@@ -62,17 +62,11 @@ def _kv_get(key: str) -> str:
         return ""
 
 def _kv_set(key: str, value: str) -> None:
-    """Upsert a value into hub_kv table. Creates table if missing."""
+    """Upsert a value into hub_kv table."""
     try:
         import psycopg2
         conn = psycopg2.connect(os.environ["DATABASE_URL"])
         cur  = conn.cursor()
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS hub_kv (
-                key   TEXT PRIMARY KEY,
-                value TEXT NOT NULL
-            )
-        """)
         cur.execute("""
             INSERT INTO hub_kv (key, value) VALUES (%s, %s)
             ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value

@@ -908,7 +908,7 @@
                     </div>
                 </div>
 
-                <div class="row g-2 align-items-center">
+                <div class="row g-2 align-items-center mb-2">
                     <div class="col-md-3">
                         <div class="input-group input-group-sm">
                             <span class="input-group-text bg-dark text-muted border-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
@@ -925,24 +925,44 @@
                             <option value="voicemail">Voicemail</option>
                         </select>
                     </div>
+                    <div class="col-md-2">
+                        <select id="filter-channel" class="form-select form-select-sm bg-dark text-light border-secondary" onchange="loadCalls(1)">
+                            <option value="">All Channels</option>
+                            <option value="softphone">🎧 Softphone (WebRTC)</option>
+                            <option value="autodialer">🤖 Auto Dialer</option>
+                            <option value="device">📱 Local Device (Carrier)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select id="filter-lead-scope" class="form-select form-select-sm bg-dark text-light border-secondary" onchange="loadCalls(1)">
+                            <option value="">All Calls & Leads</option>
+                            <option value="my_leads">👤 My Leads</option>
+                            <option value="staff_leads">👥 Staff / Team Leads</option>
+                            <option value="others">📋 Others (Non-CRM / Personal)</option>
+                        </select>
+                    </div>
                     <div class="col-md-2" id="team-filter-col" style="display: none;">
                         <select id="filter-team-member" class="form-select form-select-sm bg-dark text-light border-secondary" onchange="loadCalls(1)">
                             <option value="">All Team Members</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <input type="date" id="filter-start-date" class="form-control form-control-sm bg-dark text-light border-secondary" onchange="validateDateRange(); loadCalls(1)">
-                    </div>
-                    <div class="col-md-2">
-                        <input type="date" id="filter-end-date" class="form-control form-control-sm bg-dark text-light border-secondary" onchange="validateDateRange(); loadCalls(1)">
-                    </div>
-                    <div class="col-md-1 d-flex gap-1">
+                    <div class="col-md-1 d-flex gap-1 ms-auto">
                         <button class="btn btn-outline-secondary btn-sm flex-fill" onclick="resetFilters()" title="Reset Filters">
                             <i class="fa-solid fa-filter-circle-xmark"></i>
                         </button>
                         <button class="btn btn-primary btn-sm flex-fill" onclick="loadCalls(1)" title="Apply Filters">
                             <i class="fa-solid fa-filter"></i>
                         </button>
+                    </div>
+                </div>
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-3 d-flex align-items-center gap-2">
+                        <span class="text-muted small"><i class="fa-regular fa-calendar me-1"></i>From:</span>
+                        <input type="date" id="filter-start-date" class="form-control form-control-sm bg-dark text-light border-secondary" onchange="validateDateRange(); loadCalls(1)">
+                    </div>
+                    <div class="col-md-3 d-flex align-items-center gap-2">
+                        <span class="text-muted small"><i class="fa-regular fa-calendar me-1"></i>To:</span>
+                        <input type="date" id="filter-end-date" class="form-control form-control-sm bg-dark text-light border-secondary" onchange="validateDateRange(); loadCalls(1)">
                     </div>
                 </div>
             </div>
@@ -1000,6 +1020,12 @@
                                 </button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm px-3 fw-semibold" id="btnContactLeads" onclick="setContactSourceFilter('leads')">
                                     <i class="fa-solid fa-user-tag text-info me-1"></i> Assigned Leads
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-3 fw-semibold" id="btnContactVgk" onclick="setContactSourceFilter('vgk')">
+                                    <i class="fa-solid fa-handshake text-warning me-1"></i> VGK Members
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-3 fw-semibold" id="btnContactMnr" onclick="setContactSourceFilter('mnr')">
+                                    <i class="fa-solid fa-star me-1" style="color:#c084fc;"></i> MNR Members
                                 </button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm px-3 fw-semibold" id="btnContactSynced" onclick="setContactSourceFilter('synced_contacts')">
                                     <i class="fa-solid fa-mobile-screen-button text-success me-1"></i> Synced Mobile Contacts
@@ -1317,22 +1343,23 @@
             if (el && el.value.length > 0) el.value = el.value.slice(0, -1);
         }
 
-        function dialFromHub(phoneNumber = null, leadName = null) {
-            const phone = phoneNumber || (document.getElementById('hubDialerInput') ? document.getElementById('hubDialerInput').value.trim() : '');
-            if (!phone) {
-                alert('Please enter or select a phone number to call.');
+        function dialFromHub(phoneNumber = null, leadName = null, leadId = null) {
+            let phone = phoneNumber;
+            if (!phone || typeof phone !== 'string' || !phone.trim() || phone.includes('•') || phone.includes('*')) {
+                phone = document.getElementById('hubDialerInput') ? document.getElementById('hubDialerInput').value.trim() : '';
+            }
+            const digits = (phone || '').replace(/\D/g, '');
+            if (!digits || digits.length < 10) {
+                alert('Please enter or select a valid 10-digit phone number to place a call.');
                 return;
             }
-            const cleanPhone = phone.startsWith('+') ? phone : `+91${phone.replace(/\D/g, '').slice(-10)}`;
+            const cleanPhone = `+91${digits.slice(-10)}`;
             const name = leadName || 'Contact Lead';
 
             if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
-                window.PlivoSoftphone.dial(cleanPhone, null, name);
+                window.PlivoSoftphone.dial(cleanPhone, leadId, name);
             } else {
-                // Fallback UI initiation
-                isCallInProgress = true;
-                activeCallInfo = { phone: cleanPhone, name, sessionId: 'local_' + Date.now() };
-                startHubCallUI(cleanPhone, name, activeCallInfo.sessionId, false);
+                alert('Telephony service is initializing. Please wait a moment and try again.');
             }
         }
 
@@ -1512,8 +1539,10 @@
             try {
                 // Fetch last 20 recent calls for the logged-in staff user
                 const res = await staffFetch('/api/v1/telephony/incoming-calls?scope=my&page=1&page_size=20&sort_by=newest');
-                if (res && res.items && res.items.length > 0) {
-                    cachedRecentDialerCalls = res.items;
+                const callList = (res && Array.isArray(res.items)) ? res.items : ((res && Array.isArray(res.data)) ? res.data : (Array.isArray(res) ? res : []));
+                
+                if (callList && callList.length > 0) {
+                    cachedRecentDialerCalls = callList;
                     const countBadge = document.getElementById('dialerRecentCallsCount');
                     if (countBadge) countBadge.textContent = cachedRecentDialerCalls.length;
                     renderRecentCallsDialer(cachedRecentDialerCalls);
@@ -1531,9 +1560,14 @@
                 }
             } catch (err) {
                 console.warn('Could not load recent dialer calls:', err);
+                cachedRecentDialerCalls = [];
+                const countBadge = document.getElementById('dialerRecentCallsCount');
+                if (countBadge) countBadge.textContent = '0';
                 container.innerHTML = `
-                    <div class="text-center py-4 text-danger small">
-                        <i class="fa-solid fa-triangle-exclamation me-1"></i> Could not load recent call history.
+                    <div class="text-center py-5 text-muted">
+                        <i class="fa-solid fa-phone-slash fa-2x mb-2 text-secondary"></i>
+                        <div class="fw-bold text-light">No Recent Calls Yet</div>
+                        <div class="small">Use the dialpad on the left to place your first outbound call.</div>
                     </div>
                 `;
             }
@@ -1819,10 +1853,14 @@
         function resetFilters() {
             const s = document.getElementById('filter-search');
             const t = document.getElementById('filter-type');
+            const ch = document.getElementById('filter-channel');
+            const ls = document.getElementById('filter-lead-scope');
             const m = document.getElementById('filter-team-member');
             const so = document.getElementById('filter-sort');
             if (s) s.value = '';
             if (t) t.value = '';
+            if (ch) ch.value = '';
+            if (ls) ls.value = '';
             if (m) m.value = '';
             if (so) so.value = 'newest';
             setDatePreset(7);
@@ -1863,6 +1901,8 @@
             currentPage = page;
             const search = document.getElementById('filter-search').value.trim();
             const callType = document.getElementById('filter-type').value;
+            const channel = document.getElementById('filter-channel')?.value || '';
+            const leadScope = document.getElementById('filter-lead-scope')?.value || '';
             const teamMember = document.getElementById('filter-team-member').value;
             const startDate = document.getElementById('filter-start-date').value;
             const endDate = document.getElementById('filter-end-date').value;
@@ -1871,6 +1911,8 @@
             let query = `/api/v1/telephony/incoming-calls?scope=${currentScope}&page=${page}&page_size=25&sort_by=${sortBy}`;
             if (search) query += `&search=${encodeURIComponent(search)}`;
             if (callType) query += `&call_type=${encodeURIComponent(callType)}`;
+            if (channel) query += `&channel=${encodeURIComponent(channel)}`;
+            if (leadScope) query += `&lead_scope=${encodeURIComponent(leadScope)}`;
             if (teamMember) query += `&staff_id=${encodeURIComponent(teamMember)}`;
             if (startDate) query += `&start_date=${encodeURIComponent(startDate)}`;
             if (endDate) query += `&end_date=${encodeURIComponent(endDate)}`;
@@ -2094,7 +2136,20 @@
                             </div>
                         </td>
                         <td>
-                            <span class="badge bg-dark border border-secondary text-info">${escapeHtml(c.source)}</span>
+                            <div class="d-flex flex-column align-items-start gap-1">
+                                ${c.channel === 'softphone' ? 
+                                    `<span class="badge bg-info bg-opacity-25 text-info border border-info border-opacity-50 px-2 py-0.5" style="font-size:11px;"><i class="fa-solid fa-headset me-1"></i>Softphone</span>` :
+                                  c.channel === 'autodialer' ?
+                                    `<span class="badge bg-primary bg-opacity-25 text-primary-emphasis border border-primary border-opacity-50 px-2 py-0.5" style="font-size:11px; color:#a5b4fc !important;"><i class="fa-solid fa-robot me-1"></i>Auto Dialer</span>` :
+                                    `<span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-50 px-2 py-0.5" style="font-size:11px;"><i class="fa-solid fa-mobile-screen me-1"></i>Device (SIM)</span>`
+                                }
+                                ${c.lead_scope === 'my_leads' ?
+                                    `<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-1.5 py-0.5" style="font-size:10px;"><i class="fa-solid fa-user-check me-1"></i>My Lead</span>` :
+                                  c.lead_scope === 'staff_leads' ?
+                                    `<span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50 px-1.5 py-0.5" style="font-size:10px;"><i class="fa-solid fa-users me-1"></i>Team Lead</span>` :
+                                    `<span class="badge bg-dark border border-secondary text-muted px-1.5 py-0.5" style="font-size:10px;" title="Non-CRM / Personal call — excluded from staff performance metrics"><i class="fa-solid fa-user-xmark me-1"></i>Non-CRM</span>`
+                                }
+                            </div>
                         </td>
                         <td>
                             <span class="badge bg-dark border border-secondary text-warning font-monospace px-2 py-1" style="font-size:12px;letter-spacing:0.5px;">
@@ -2606,11 +2661,13 @@
 
         function setContactSourceFilter(source) {
             currentContactSource = source;
-            ['All', 'Leads', 'Synced'].forEach(key => {
+            ['All', 'Leads', 'Vgk', 'Mnr', 'Synced'].forEach(key => {
                 const btn = document.getElementById('btnContact' + key);
                 if (btn) {
                     const match = (key === 'All' && source === 'all') || 
                                   (key === 'Leads' && source === 'leads') || 
+                                  (key === 'Vgk' && source === 'vgk') || 
+                                  (key === 'Mnr' && source === 'mnr') || 
                                   (key === 'Synced' && source === 'synced_contacts');
                     btn.className = match ? 'btn btn-primary btn-sm px-3 fw-semibold active' : 'btn btn-outline-secondary btn-sm px-3 fw-semibold';
                 }
@@ -2655,7 +2712,7 @@
                     <div class="text-center py-5 text-muted">
                         <i class="fa-solid fa-address-book fa-2x mb-2 opacity-50"></i>
                         <div class="fw-bold text-light">No Contacts Found</div>
-                        <div class="small">No assigned CRM leads or synced mobile contacts matched your filter.</div>
+                        <div class="small">No contacts matched your search or filter.</div>
                     </div>
                 `;
                 document.getElementById('contacts-pagination-info').innerText = 'Showing 0 contacts';
@@ -2670,15 +2727,28 @@
                 const leadId = c.lead_id || '';
                 const initialLetter = (name.replace(/[^a-zA-Z]/g, '') || 'C').slice(0, 2).toUpperCase();
 
-                const isLead = c.source_type === 'assigned_lead';
-                const sourceBadge = isLead
-                    ? `<span class="badge bg-primary bg-opacity-25 text-info border border-primary border-opacity-50 px-2 py-0.5" style="font-size:10.5px;"><i class="fa-solid fa-user-tag me-1"></i>${escapeHtml(c.badge)}</span>`
-                    : `<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-2 py-0.5" style="font-size:10.5px;"><i class="fa-solid fa-mobile-screen-button me-1"></i>${escapeHtml(c.badge)}</span>`;
+                const isLead = c.source_type === 'assigned_lead' || c.source_type === 'lead';
+                const isVgk = c.source_type === 'vgk_member';
+                const isMnr = c.source_type === 'mnr_member';
+
+                let avatarBg = 'linear-gradient(135deg, #059669, #047857)';
+                let sourceBadge = `<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-2 py-0.5" style="font-size:10.5px;"><i class="fa-solid fa-mobile-screen-button me-1"></i>${escapeHtml(c.badge || 'Contact')}</span>`;
+
+                if (isLead) {
+                    avatarBg = 'linear-gradient(135deg, #0284c7, #0369a1)';
+                    sourceBadge = `<span class="badge bg-primary bg-opacity-25 text-info border border-primary border-opacity-50 px-2 py-0.5" style="font-size:10.5px;"><i class="fa-solid fa-user-tag me-1"></i>${escapeHtml(c.badge || 'Lead')}</span>`;
+                } else if (isVgk) {
+                    avatarBg = 'linear-gradient(135deg, #d97706, #b45309)';
+                    sourceBadge = `<span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50 px-2 py-0.5" style="font-size:10.5px;"><i class="fa-solid fa-handshake me-1"></i>${escapeHtml(c.badge || 'VGK Member')}</span>`;
+                } else if (isMnr) {
+                    avatarBg = 'linear-gradient(135deg, #9333ea, #7e22ce)';
+                    sourceBadge = `<span class="badge bg-opacity-25 border px-2 py-0.5" style="font-size:10.5px;color:#c084fc;background-color:rgba(168,85,247,0.2);border-color:rgba(168,85,247,0.5)!important;"><i class="fa-solid fa-star me-1"></i>${escapeHtml(c.badge || 'MNR Member')}</span>`;
+                }
 
                 return `
                     <div class="contact-item-dark">
                         <div class="d-flex align-items-center gap-3 flex-grow-1 min-w-0">
-                            <div class="call-avatar-dark flex-shrink-0" style="width: 44px; height: 44px; font-size: 16px; margin-bottom: 0; box-shadow: none; animation: none; background: ${isLead ? 'linear-gradient(135deg, #0284c7, #0369a1)' : 'linear-gradient(135deg, #059669, #047857)'};">
+                            <div class="call-avatar-dark flex-shrink-0" style="width: 44px; height: 44px; font-size: 16px; margin-bottom: 0; box-shadow: none; animation: none; background: ${avatarBg};">
                                 ${initialLetter}
                             </div>
                             <div class="min-w-0 flex-grow-1">

@@ -44,6 +44,14 @@
             android:foregroundServiceType="location"
             android:stopWithTask="false" />
         
+        <!-- Dedicated In-Call Service for VoIP softphone calling and screen lock persistence -->
+        <service
+            android:name=".plugins.InCallService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone"
+            android:stopWithTask="true" />
+        
         <!-- Boot Receiver to restart tracking after device reboot -->
         <receiver
             android:name=".plugins.BootReceiver"
@@ -67,9 +75,11 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
-    <!-- Background/Foreground Service for Live Tracking -->
+    <!-- Background/Foreground Service for Live Tracking & In-Call Audio -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Wake Lock for Continuous GPS Tracking -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />

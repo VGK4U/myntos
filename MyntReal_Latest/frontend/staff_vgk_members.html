@@ -11,38 +11,147 @@
   <script src="/public/js/nda-enforcement.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="/public/js/mnr-map-modal.js"></script>
+<script src="/public/js/modal-resizable.js"></script>
 <style>
+/* ── DC-TPT-DRILLDOWN-001: Leaderboard Lead Drilldown Modal (Matches Executive Dashboard) ── */
+#tptEdOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.58);
+  z-index: 9500;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 14px;
+  overflow-y: auto;
+}
+#tptEdModal {
+  background: #fff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 1200px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 70px rgba(0,0,0,.35);
+  min-height: 420px;
+  max-height: calc(100vh - 28px);
+  resize: both;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+#tptEdOverlay.tpt-ed-fs #tptEdModal {
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+  height: 100vh;
+  width: 100vw;
+  margin: 0;
+}
+.tpt-num-badge {
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 11.5px;
+  transition: all .15s ease-in-out;
+  text-decoration: none;
+}
+.tpt-num-badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  filter: brightness(0.93);
+}
+.tpt-lead-row:hover {
+  background: #f8fafc;
+}
 * { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { overflow-x: hidden; width: 100%; max-width: 100vw; }
 body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
-.content-area { padding: 24px; }
+.main-content { margin-left: 280px; min-height: 100vh; transition: margin-left 0.3s ease, width 0.3s ease, max-width 0.3s ease; width: calc(100% - 280px); max-width: calc(100vw - 280px); overflow-x: hidden; }
+body.sidebar-collapsed-mode .main-content { margin-left: 70px !important; width: calc(100% - 70px) !important; max-width: calc(100vw - 70px) !important; }
+@media (max-width: 768px) { .main-content { margin-left: 0 !important; width: 100% !important; max-width: 100vw !important; } }
+.content-area { padding: 24px; max-width: 100%; margin: 0 auto; width: 100%; box-sizing: border-box; overflow-x: hidden; }
+@media (max-width: 768px) { .content-area { padding: 12px 14px; } }
+
+#vgkChannelBanner {
+    background: linear-gradient(135deg,#1e0a3c,#3b0d6e);
+    border-radius: 14px;
+    padding: 16px 22px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    border: 1.5px solid rgba(196,181,253,.4);
+    box-shadow: 0 4px 18px rgba(124,58,237,.2);
+}
+@media (max-width: 768px) {
+    #vgkChannelBanner {
+        padding: 14px 16px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    #vgkChannelBanner a {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+    }
+}
+
 .page-banner { background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; color: white; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
 .page-banner h1 { font-size: 20px; font-weight: 700; margin-bottom: 3px; display: flex; align-items: center; gap: 10px; }
 .page-banner p { opacity: .85; margin: 0; font-size: 12.5px; }
 .btn-banner { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; }
 .btn-banner.white { background: white; color: #7c3aed; }
-.filter-bar { background: white; border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+
+/* Filter bars */
+.filter-bar { background: white; border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; width: 100%; }
 .filter-bar .fgroup { display: flex; flex-direction: column; gap: 3px; }
 .filter-bar label { font-size: 10.5px; font-weight: 700; color: #6b7280; text-transform: uppercase; }
 .filter-bar .form-control, .filter-bar .form-select { font-size: 12.5px; padding: 6px 10px; border-radius: 7px; border: 1px solid #e5e7eb; min-width: 130px; }
 .btn-filter { padding: 7px 14px; border-radius: 7px; font-size: 12.5px; font-weight: 600; border: none; cursor: pointer; }
 .btn-filter.apply { background: #7c3aed; color: white; }
 .btn-filter.reset { background: #f3f4f6; color: #6b7280; }
-.table-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); overflow: hidden; }
+
+@media (max-width: 768px) {
+    .filter-bar { padding: 12px; }
+    .filter-bar .fgroup { width: 100% !important; min-width: 0 !important; }
+    .filter-bar .form-control, .filter-bar .form-select, .filter-bar input { width: 100% !important; min-width: 0 !important; }
+    .filter-bar .period-btns { width: 100%; }
+    .btn-filter, #advSearchBtn { flex: 1; text-align: center; justify-content: center; }
+}
+
+.table-card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); overflow: hidden; width: 100%; }
 .table-card-header { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f0f0f0; flex-wrap: wrap; gap: 8px; }
 .table-card-header h3 { font-size: 14px; font-weight: 700; color: #111827; }
-.table-scroll-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; scrollbar-width: thin; scrollbar-color: #a78bfa #f1f5f9; }
-.table-scroll-wrap::-webkit-scrollbar { height: 7px; }
+.table-scroll-wrap { overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 280px); min-height: 420px; position: relative; border-radius: 12px; -webkit-overflow-scrolling: touch; width: 100%; scrollbar-width: thin; scrollbar-color: #a78bfa #f1f5f9; }
+.table-scroll-wrap::-webkit-scrollbar { width: 7px; height: 7px; }
 .table-scroll-wrap::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
 .table-scroll-wrap::-webkit-scrollbar-thumb { background: #a78bfa; border-radius: 4px; }
 .table-scroll-wrap::-webkit-scrollbar-thumb:hover { background: #7c3aed; }
-table { width: 100%; border-collapse: collapse; min-width: 980px; }
+table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1200px; }
+.table-scroll-wrap thead th { position: sticky; top: 0; z-index: 20; background: #f9fafb; border-bottom: 2px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 thead th { padding: 10px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #6b7280; background: #f9fafb; white-space: nowrap; }
 thead th.sortable { cursor: pointer; user-select: none; }
 thead th.sortable:hover { color: #7c3aed; background: #f5f3ff; }
 thead th.sort-asc::after { content: ' ↑'; color: #7c3aed; }
 thead th.sort-desc::after { content: ' ↓'; color: #7c3aed; }
-tbody td { padding: 11px 14px; font-size: 13px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; white-space: nowrap; }
-tbody tr:hover { background: #fafafa; cursor: pointer; }
+tbody td { padding: 10px 12px; font-size: 12.5px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; white-space: nowrap; }
+tbody tr:hover td { background: #faf5ff; }
+
+/* Sticky Identity Column: # (Col 1) */
+th.th-sticky-num { position: sticky; top: 0; left: 0; z-index: 25; background: #f9fafb; }
+td.td-sticky-num { position: sticky; left: 0; z-index: 18; background: #ffffff; }
+tbody tr:hover td.td-sticky-num { background: #faf5ff; }
 .period-btns { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
 .period-btn { padding: 4px 11px; border-radius: 20px; border: 1px solid #e5e7eb; background: white; font-size: 12px; font-weight: 600; color: #6b7280; cursor: pointer; transition: all .15s; }
 .period-btn:hover { border-color: #7c3aed; color: #7c3aed; }
@@ -83,7 +192,7 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
 .sp-stat.purple .s-val { color: #7c3aed; }
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 2000; align-items: center; justify-content: center; }
 .modal-overlay.open { display: flex; }
-.modal-box { background: white; border-radius: 14px; width: 460px; max-height: 90vh; overflow-y: auto; }
+.modal-box { background: white; border-radius: 14px; width: 460px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
 .modal-header { padding: 18px 20px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
 .modal-header h4 { font-size: 15px; font-weight: 700; margin: 0; }
 .modal-body { padding: 20px; }
@@ -110,51 +219,236 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
 .toast.show { opacity: 1; transform: translateY(0); }
 .toast.success { background: #059669; }
 .toast.error { background: #dc2626; }
+
 /* ── Executive Dashboard Tabs ── */
-.page-tabs { display:flex; gap:0; border-bottom:2px solid #e5e7eb; margin-bottom:20px; }
-.page-tab { padding:10px 22px; font-size:13px; font-weight:700; border:none; background:none; cursor:pointer; color:#6b7280; border-bottom:3px solid transparent; margin-bottom:-2px; transition:all .15s; display:flex; align-items:center; gap:7px; }
-.page-tab:hover { color:#7c3aed; }
-.page-tab.active { color:#7c3aed; border-bottom-color:#7c3aed; background:#f5f3ff; border-radius:8px 8px 0 0; }
-.tab-panel { display:none; }
-.tab-panel.active { display:block; }
+.page-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e5e7eb;
+    background: white;
+    border-radius: 12px;
+    padding: 5px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+    width: 100%;
+}
+.page-tabs::-webkit-scrollbar { display: none; }
+.page-tab {
+    flex: 0 0 auto;
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #6b7280;
+    border-radius: 8px;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    white-space: nowrap;
+    user-select: none;
+}
+.page-tab:hover { color: #7c3aed; background: #f5f3ff; }
+.page-tab.active { color: white !important; background: #7c3aed !important; }
+.tab-panel { display: none; width: 100%; }
+.tab-panel.active { display: block; }
+
 /* ── KPI Cards ── */
-.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin-bottom:22px; }
-.kpi-card { background:white; border-radius:12px; padding:16px 18px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
-.kpi-card .kpi-label { font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#9ca3af; margin-bottom:6px; }
-.kpi-card .kpi-val { font-size:26px; font-weight:800; line-height:1; }
-.kpi-card .kpi-sub { font-size:11px; color:#9ca3af; margin-top:4px; }
-.kpi-purple .kpi-val { color:#7c3aed; }
-.kpi-green  .kpi-val { color:#059669; }
-.kpi-blue   .kpi-val { color:#1d4ed8; }
-.kpi-amber  .kpi-val { color:#d97706; }
-.kpi-red    .kpi-val { color:#dc2626; }
-.kpi-teal   .kpi-val { color:#0d9488; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 22px; width: 100%; }
+@media (max-width: 600px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .kpi-card:last-child { grid-column: 1 / -1; }
+}
+.kpi-card { background: white; border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.kpi-card .kpi-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #9ca3af; margin-bottom: 6px; }
+.kpi-card .kpi-val { font-size: 26px; font-weight: 800; line-height: 1; }
+.kpi-card .kpi-sub { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+.kpi-purple .kpi-val { color: #7c3aed; }
+.kpi-green  .kpi-val { color: #059669; }
+.kpi-blue   .kpi-val { color: #1d4ed8; }
+.kpi-amber  .kpi-val { color: #d97706; }
+.kpi-red    .kpi-val { color: #dc2626; }
+.kpi-teal   .kpi-val { color: #0d9488; }
+
+#tptKpiGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 14px; width: 100%; }
+@media (max-width: 600px) {
+    #tptKpiGrid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+}
+
+#meKpiRow, #iedKpiRow, #lvKpiRow, #commKpiRow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 14px;
+    width: 100%;
+}
+@media (max-width: 600px) {
+    #meKpiRow, #iedKpiRow, #lvKpiRow, #commKpiRow {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+}
+
 /* ── Chart cards ── */
-.chart-row   { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
-.chart-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
-@media(max-width:1100px){ .chart-row-3 { grid-template-columns:1fr 1fr; } }
-@media(max-width:700px){ .chart-row,.chart-row-3 { grid-template-columns:1fr; } }
-.chart-card { background:white; border-radius:12px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
-.chart-card h4 { font-size:13px; font-weight:700; color:#374151; margin-bottom:14px; display:flex; align-items:center; gap:7px; }
-.chart-wrap { position:relative; height:220px; }
+.chart-row   { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; width: 100%; }
+.chart-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; width: 100%; }
+@media(max-width: 1100px){ .chart-row-3 { grid-template-columns: 1fr 1fr; } }
+@media(max-width: 700px){ .chart-row, .chart-row-3 { grid-template-columns: 1fr; } }
+.chart-card { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); width: 100%; overflow: hidden; }
+.chart-card h4 { font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
+.chart-wrap { position: relative; height: 220px; }
+
 /* ── Period filter strip ── */
-.period-strip { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
-.period-btn { padding:5px 14px; font-size:12px; font-weight:700; border:1.5px solid #e5e7eb; border-radius:20px; background:white; color:#6b7280; cursor:pointer; transition:all .15s; }
-.period-btn:hover { border-color:#7c3aed; color:#7c3aed; }
-.period-btn.active { border-color:#7c3aed; background:#ede9fe; color:#7c3aed; }
+.period-strip { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.period-btn { padding: 5px 14px; font-size: 12px; font-weight: 700; border: 1.5px solid #e5e7eb; border-radius: 20px; background: white; color: #6b7280; cursor: pointer; transition: all .15s; }
+.period-btn:hover { border-color: #7c3aed; color: #7c3aed; }
+.period-btn.active { border-color: #7c3aed; background: #ede9fe; color: #7c3aed; }
+
 /* ── Top Partners table ── */
-.tp-section { background:white; border-radius:12px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:16px; }
-.tp-section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:10px; }
-.tp-section-title { font-size:13px; font-weight:700; color:#374151; display:flex; align-items:center; gap:7px; margin:0; }
-.tp-table { width:100%; border-collapse:collapse; font-size:12.5px; }
-.tp-table th { padding:9px 12px; font-size:11px; font-weight:700; text-transform:uppercase; color:#6b7280; background:#f9fafb; white-space:nowrap; position:sticky; top:0; }
-.tp-table td { padding:9px 12px; border-bottom:1px solid #f3f4f6; vertical-align:middle; }
-.tp-table tbody tr:hover { background:#fafafa; cursor:pointer; }
-.delta-badge { display:inline-flex; align-items:center; gap:2px; font-size:11px; font-weight:700; padding:2px 6px; border-radius:10px; white-space:nowrap; }
-.delta-up   { background:#d1fae5; color:#065f46; }
-.delta-down { background:#fee2e2; color:#991b1b; }
-.delta-flat { background:#f3f4f6; color:#9ca3af; }
-.won-val-cell { font-size:12px; font-weight:700; color:#059669; white-space:nowrap; }
+.tp-section { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 16px; width: 100%; overflow: hidden; }
+.tp-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+.tp-section-title { font-size: 13px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 7px; margin: 0; }
+.tp-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.tp-table th { padding: 9px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #6b7280; background: #f9fafb; white-space: nowrap; position: sticky; top: 0; }
+.tp-table td { padding: 9px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+.tp-table tbody tr:hover { background: #fafafa; cursor: pointer; }
+.delta-badge { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 10px; white-space: nowrap; }
+.delta-up   { background: #d1fae5; color: #065f46; }
+.delta-down { background: #fee2e2; color: #991b1b; }
+.delta-flat { background: #f3f4f6; color: #9ca3af; }
+.won-val-cell { font-size: 12px; font-weight: 700; color: #059669; white-space: nowrap; }
+
+/* Top Partners Leaderboard Sticky Frozen First 3 Columns */
+.tpt-sticky-1 {
+    position: sticky !important;
+    left: 0 !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    z-index: 15 !important;
+    background: #fff;
+    box-sizing: border-box;
+}
+.tpt-sticky-2 {
+    position: sticky !important;
+    left: 44px !important;
+    width: 110px !important;
+    min-width: 110px !important;
+    max-width: 110px !important;
+    z-index: 15 !important;
+    background: #fff;
+    box-sizing: border-box;
+}
+.tpt-sticky-3 {
+    position: sticky !important;
+    left: 154px !important;
+    width: 190px !important;
+    min-width: 190px !important;
+    max-width: 190px !important;
+    z-index: 15 !important;
+    background: #fff;
+    border-right: 2px solid #d1d5db !important;
+    box-shadow: 3px 0 6px -2px rgba(0,0,0,.1) !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+th.tpt-sticky-1, th.tpt-sticky-2, th.tpt-sticky-3 {
+    background: #f9fafb !important;
+    z-index: 30 !important;
+}
+#tptTable tbody tr:hover .tpt-sticky-1,
+#tptTable tbody tr:hover .tpt-sticky-2,
+#tptTable tbody tr:hover .tpt-sticky-3 {
+    background: #faf5ff !important;
+}
+
+/* Members Table Sticky Frozen First 3 Columns (S.No, Code, Name) */
+.mb-sticky-1 {
+    position: sticky !important;
+    left: 0 !important;
+    width: 45px !important;
+    min-width: 45px !important;
+    max-width: 45px !important;
+    z-index: 15 !important;
+    background: #fff;
+    box-sizing: border-box;
+}
+.mb-sticky-2 {
+    position: sticky !important;
+    left: 45px !important;
+    width: 120px !important;
+    min-width: 120px !important;
+    max-width: 120px !important;
+    z-index: 15 !important;
+    background: #fff;
+    box-sizing: border-box;
+}
+.mb-sticky-3 {
+    position: sticky !important;
+    left: 165px !important;
+    width: 200px !important;
+    min-width: 200px !important;
+    max-width: 200px !important;
+    z-index: 15 !important;
+    background: #fff;
+    border-right: 2px solid #d1d5db !important;
+    box-shadow: 3px 0 6px -2px rgba(0,0,0,.1) !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    box-sizing: border-box;
+}
+th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
+    background: #f9fafb !important;
+    z-index: 30 !important;
+}
+#membersTable tr:hover .mb-sticky-1,
+#membersTable tr:hover .mb-sticky-2,
+#membersTable tr:hover .mb-sticky-3 {
+    background: #f8fafc !important;
+}
+
+/* Filter Strips & General Mobile Adjustments */
+@media (max-width: 768px) {
+    #execFilterBar, #tabEarnings > div:first-child, #tabEarnings > div:nth-child(2),
+    #tabTopPartnersTab > div > div:nth-child(2),
+    #tabIncomeDash > div:nth-child(2), #tabIncomeDash > div:nth-child(3),
+    #tabLeadView > div:nth-child(2), #tabLeadView > div:nth-child(3),
+    #tabCommServices > div:nth-child(2) {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    #execFilterBar input, #execFilterBar select, #execFilterBar button,
+    #tabEarnings input, #tabEarnings select, #tabEarnings button,
+    #tabTopPartnersTab input, #tabTopPartnersTab select, #tabTopPartnersTab button,
+    #tabIncomeDash input, #tabIncomeDash select, #tabIncomeDash button,
+    #tabLeadView input, #tabLeadView select, #tabLeadView button,
+    #tabCommServices input, #tabCommServices select, #tabCommServices button {
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box;
+    }
+    .period-strip, .period-btns {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .me-period-btn, .period-btn {
+        flex: 1 1 auto;
+        text-align: center;
+    }
+    .tp-section { padding: 12px; }
+}
 </style>
 <script src="/public/js/vgk-card-shared.js?v=20260508v"></script>
 </head>
@@ -209,12 +503,31 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
 <div class="filter-bar">
   <div class="fgroup"><label>Search</label><input class="form-control" id="searchInput" placeholder="Name, phone, code…" style="min-width:200px" oninput="debounceSearch()" onkeydown="if(event.key==='Enter'){clearTimeout(_searchDebTimer);loadMembers(1);}"></div>
   <div class="fgroup"><label>Status</label>
-    <select class="form-select" id="statusFilter">
-      <option value="">All</option><option value="true">Active</option><option value="false">Inactive</option>
+    <select class="form-select" id="statusFilter" onchange="loadMembers(1)">
+      <option value="">All Status</option>
+      <option value="active">Active</option>
+      <option value="inactive">Inactive</option>
+      <option value="blocked">Blocked</option>
+    </select>
+  </div>
+  <div class="fgroup"><label>Assigned Staff</label>
+    <select class="form-select" id="assignedStaffFilter" style="min-width:160px" onchange="loadMembers(1)">
+      <option value="">All Assigned Staff</option>
+    </select>
+  </div>
+  <div class="fgroup"><label>Contacted Days</label>
+    <select class="form-select" id="contactedDaysFilter" style="min-width:150px" onchange="loadMembers(1)">
+      <option value="">All Contact Ages</option>
+      <option value="<5">&lt; 5 Days</option>
+      <option value="5-10">5–10 Days</option>
+      <option value="11-20">11–20 Days</option>
+      <option value="21-30">21–30 Days</option>
+      <option value=">30">&gt; 30 Days</option>
+      <option value="never">Never Contacted</option>
     </select>
   </div>
   <div class="fgroup"><label>Rank</label>
-    <select class="form-select" id="designationFilter" style="min-width:180px">
+    <select class="form-select" id="designationFilter" style="min-width:180px" onchange="loadMembers(1)">
       <option value="">All Ranks</option>
       <option value="1">Rank 1 — Channel Partner (5.00%)</option>
       <option value="2">Rank 2 — Manager (6.50%)</option>
@@ -283,13 +596,16 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
   <table>
     <thead>
       <tr>
-        <th style="width:45px;text-align:center">#</th>
+        <th class="mb-sticky-1" style="width:45px;text-align:center">#</th>
+        <th class="mb-sticky-2 sortable" onclick="toggleSort('code')" id="th_code" style="width:120px">Code</th>
+        <th class="mb-sticky-3 sortable" onclick="toggleSort('name')" id="th_name" style="width:200px">Name</th>
         <th class="sortable" onclick="toggleSort('registered')" id="th_registered" title="Registration date (created_at)">Reg Date</th>
         <th class="sortable" onclick="toggleSort('registered_by')" id="th_registered_by" title="Staff who registered this member">Reg By</th>
-        <th class="sortable" onclick="toggleSort('code')" id="th_code">Code</th>
-        <th class="sortable" onclick="toggleSort('name')" id="th_name">Name</th>
+        <th style="min-width:140px;color:#1e40af;background:#eff6ff" title="Staff assigned to manage and contact this member">Assigned Staff</th>
         <th>Phone</th>
-        <th>Status</th>
+        <th style="text-align:center">Status</th>
+        <th style="text-align:center;min-width:115px;color:#7c3aed;background:#f5f3ff">History</th>
+        <th class="sortable" onclick="toggleSort('last_contact_at')" id="th_last_contact" style="text-align:center;min-width:125px" title="Days since last genuine communication (IST calendar days)">Contacted Days</th>
         <th style="color:#7c3aed;background:#f5f3ff">Current Rank</th>
         <th style="color:#059669;text-align:center;background:#f0fdf4">Earning Slab</th>
         <th style="color:#047857;text-align:right;background:#ecfdf5">This Month Payout</th>
@@ -313,7 +629,7 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
         <th style="text-align:center;width:50px">WA</th>
       </tr>
     </thead>
-    <tbody id="membersTable"><tr><td colspan="28" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
+    <tbody id="membersTable"><tr><td colspan="31" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
   </table>
   </div>
   <div class="pagination" id="paginationBar"></div>
@@ -588,58 +904,63 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
     <table style="width:100%;border-collapse:collapse;font-size:12.5px" id="tptTable">
       <thead>
         <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb">
-          <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:700;color:#6b7280;width:50px">#</th>
-          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;cursor:pointer" onclick="_tptSort('code')">CODE ↕</th>
-          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;cursor:pointer" onclick="_tptSort('name')">PARTNER ↕</th>
+          <th class="tpt-sticky-1" style="padding:10px 12px;text-align:center;font-size:11px;font-weight:700;color:#6b7280;width:48px">#</th>
+          <th class="tpt-sticky-2" style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;cursor:pointer" onclick="_tptSort('code')">CODE ↕</th>
+          <th class="tpt-sticky-3" style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:#6b7280;cursor:pointer" onclick="_tptSort('name')">PARTNER ↕</th>
 
           <!-- RANK & CURRENT MONTH PERFORMANCE Group -->
-          <th colspan="4" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#7c3aed;background:#f5f3ff;border-left:2px solid #ddd6fe;border-right:2px solid #ddd6fe">
+          <th colspan="5" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#7c3aed;background:#f5f3ff;border-left:2px solid #ddd6fe;border-right:2px solid #ddd6fe">
             <i class="fas fa-award me-1" style="color:#7c3aed"></i>RANK & CURRENT MONTH PERFORMANCE
           </th>
 
           <!-- SELF PERFORMANCE Group -->
-          <th colspan="6" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#1e40af;background:#eff6ff;border-right:2px solid #bfdbfe">
+          <th colspan="7" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#1e40af;background:#eff6ff;border-right:2px solid #bfdbfe">
             <i class="fas fa-user-check me-1" style="color:#2563eb"></i>SELF PERFORMANCE
           </th>
 
           <!-- DIRECT TEAM PERFORMANCE Group -->
-          <th colspan="7" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#5b21b6;background:#fdf4ff;border-right:2px solid #f0abfc">
+          <th colspan="8" style="padding:8px;text-align:center;font-size:11px;font-weight:800;color:#5b21b6;background:#fdf4ff;border-right:2px solid #f0abfc">
             <i class="fas fa-users-cog me-1" style="color:#a855f7"></i>TEAM PERFORMANCE (DIRECT REFERENCE)
           </th>
 
           <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:800;color:#15803d;background:#f0fdf4;cursor:pointer" onclick="_tptSort('win_rate')">OVERALL WIN RATE ↕</th>
         </tr>
         <tr style="background:#f9fafb;border-bottom:1px solid #e5e7eb;font-size:10px">
-          <th colspan="3"></th>
+          <th class="tpt-sticky-1" style="padding:0"></th>
+          <th class="tpt-sticky-2" style="padding:0"></th>
+          <th class="tpt-sticky-3" style="padding:0"></th>
 
           <!-- Rank & Performance subheaders -->
-          <th style="padding:6px;text-align:center;background:#f5f3ff;color:#7c3aed;border-left:2px solid #ddd6fe">CURRENT RANK</th>
-          <th style="padding:6px;text-align:center;background:#f5f3ff;color:#059669">EARNING SLAB</th>
+          <th style="padding:6px;text-align:center;background:#f5f3ff;color:#7c3aed;border-left:2px solid #ddd6fe;cursor:pointer" onclick="_tptSort('rank_num')" title="Sort by Star Rank">CURRENT RANK ↕</th>
+          <th style="padding:6px;text-align:center;background:#f5f3ff;color:#059669;cursor:pointer" onclick="_tptSort('rank_slab_pct')" title="Sort by Earning Slab %">EARNING SLAB ↕</th>
+          <th style="padding:6px;text-align:right;background:#f5f3ff;color:#7c3aed;cursor:pointer" onclick="_tptSort('overall_payout')" title="Cumulative confirmed earnings/payouts all-time">OVERALL PAYOUT ↕</th>
           <th style="padding:6px;text-align:right;background:#f5f3ff;color:#047857;cursor:pointer" onclick="_tptSort('current_month_earning')" title="Confirmed payouts generated in current month">THIS MONTH PAYOUT ↕</th>
-          <th style="padding:6px;text-align:center;background:#f5f3ff;color:#1d4ed8;border-right:2px solid #ddd6fe" title="Installed Files / Total Files">ELIGIBILITY FILES</th>
+          <th style="padding:6px;text-align:center;background:#f5f3ff;color:#1d4ed8;border-right:2px solid #ddd6fe;cursor:pointer" onclick="_tptSort('eligible_files_installed')" title="Installed Files / Total Files">ELIGIBILITY FILES ↕</th>
 
           <!-- Self Performance subheaders -->
           <th style="padding:6px;text-align:center;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('total_leads')" title="Total leads submitted directly by this partner">SELF FILES ↕</th>
           <th style="padding:6px;text-align:center;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('submits_count')">SUBMIT COUNT ↕</th>
+          <th style="padding:6px;text-align:center;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('with_bank_count')" title="Leads that touch the with bank status">WITH BANK ↕</th>
           <th style="padding:6px;text-align:right;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('submits_val')">SUBMIT VALUE ↕</th>
-          <th style="padding:6px;text-align:center;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('dvr_count')">1ST PMT COUNT ↕</th>
-          <th style="padding:6px;text-align:right;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('dvr_val')">1ST PMT VALUE ↕</th>
-          <th style="padding:6px;text-align:right;background:#eff6ff;color:#1e3a8a;border-right:2px solid #bfdbfe;cursor:pointer" onclick="_tptSort('overall_dvr_val')" title="Overall total payment received value directly by partner">OVERALL RECV ↕</th>
+          <th style="padding:6px;text-align:center;background:#eff6ff;color:#1e40af;cursor:pointer" onclick="_tptSort('first_pmt_count')" title="Active in-progress files with 1st payment received">1ST PMT COUNT ↕</th>
+          <th style="padding:6px;text-align:center;background:#eff6ff;color:#047857;cursor:pointer" onclick="_tptSort('completed_count')" title="Installed / completed files">COMPLETED ↕</th>
+          <th style="padding:6px;text-align:right;background:#eff6ff;color:#1e3a8a;border-right:2px solid #bfdbfe;cursor:pointer" onclick="_tptSort('received_val')" title="Overall total payment received value directly by partner">RECEIVED VALUE ↕</th>
 
           <!-- Direct Team subheaders -->
           <th style="padding:6px;text-align:center;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_added')" title="Total team members registered under this partner">TEAM MEMBERS ↕</th>
           <th style="padding:6px;text-align:center;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_leads')" title="Total files submitted across direct team members">TEAM FILES ↕</th>
           <th style="padding:6px;text-align:center;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_submits_count')">SUBMIT COUNT ↕</th>
+          <th style="padding:6px;text-align:center;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_with_bank_count')" title="Team leads that touch the with bank status">WITH BANK ↕</th>
           <th style="padding:6px;text-align:right;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_submits_val')">SUBMIT VALUE ↕</th>
-          <th style="padding:6px;text-align:center;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_dvr_count')">1ST PMT COUNT ↕</th>
-          <th style="padding:6px;text-align:right;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_dvr_val')">1ST PMT VALUE ↕</th>
-          <th style="padding:6px;text-align:right;background:#fdf4ff;color:#4c1d95;border-right:2px solid #f0abfc;cursor:pointer" onclick="_tptSort('team_total_received_val')" title="Overall total payment received value across direct team">OVERALL RECV ↕</th>
+          <th style="padding:6px;text-align:center;background:#fdf4ff;color:#5b21b6;cursor:pointer" onclick="_tptSort('team_first_pmt_count')">1ST PMT COUNT ↕</th>
+          <th style="padding:6px;text-align:center;background:#fdf4ff;color:#047857;cursor:pointer" onclick="_tptSort('team_completed_count')">COMPLETED ↕</th>
+          <th style="padding:6px;text-align:right;background:#fdf4ff;color:#4c1d95;border-right:2px solid #f0abfc;cursor:pointer" onclick="_tptSort('team_total_received_val')" title="Overall total payment received value across direct team">RECEIVED VALUE ↕</th>
 
           <th></th>
         </tr>
       </thead>
       <tbody id="tptBody">
-        <tr><td colspan="22" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading Leaderboard Data…</td></tr>
+        <tr><td colspan="24" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading Leaderboard Data…</td></tr>
       </tbody>
     </table>
   </div>
@@ -1314,6 +1635,122 @@ tbody tr:hover { background: #fafafa; cursor: pointer; }
 </div>
 </div>
 
+<!-- ═══════ VGK COMMUNICATION HISTORY MODAL ═══════ -->
+<div class="modal-overlay" id="vgkHistoryModal" style="display:none;align-items:center;justify-content:center;z-index:9700">
+<div class="modal-box" style="max-width:720px;width:95%;max-height:90vh;display:flex;flex-direction:column;padding:0;border-radius:16px;overflow:hidden">
+  <!-- Header -->
+  <div style="background:linear-gradient(135deg,#7c3aed,#4c1d95);padding:18px 22px;color:white;display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div style="font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px">
+        <i class="fas fa-history"></i> Communication History
+      </div>
+      <div id="vhMemberInfo" style="font-size:12px;opacity:0.9;margin-top:4px">
+        Loading member…
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button id="vhCallBtn" onclick="vhInitiateCall()" style="background:#10b981;color:white;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 6px rgba(16,185,129,0.3)">
+        <i class="fas fa-phone-alt"></i> Call Softphone
+      </button>
+      <button onclick="closeMemberHistory()" style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;color:white;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary Bar & Filter Tabs -->
+  <div style="background:#f9fafb;padding:12px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div style="display:flex;align-items:center;gap:14px;font-size:12px">
+      <div><span style="color:#6b7280;font-weight:600">Calls:</span> <strong id="vhTotalCalls" style="color:#111827">0</strong></div>
+      <div><span style="color:#6b7280;font-weight:600">Messages:</span> <strong id="vhTotalMsgs" style="color:#111827">0</strong></div>
+      <div><span style="color:#6b7280;font-weight:600">Last Contact:</span> <strong id="vhLastContact" style="color:#7c3aed">—</strong></div>
+    </div>
+    <div style="display:flex;gap:6px">
+      <button class="vh-filter-btn active" id="vhFilterAll" onclick="setVhFilter('all')" style="padding:4px 10px;border-radius:6px;border:1px solid #7c3aed;background:#7c3aed;color:white;font-size:11px;font-weight:700;cursor:pointer">All</button>
+      <button class="vh-filter-btn" id="vhFilterCalls" onclick="setVhFilter('calls')" style="padding:4px 10px;border-radius:6px;border:1px solid #d1d5db;background:white;color:#374151;font-size:11px;font-weight:600;cursor:pointer">Calls Only</button>
+      <button class="vh-filter-btn" id="vhFilterMsgs" onclick="setVhFilter('messages')" style="padding:4px 10px;border-radius:6px;border:1px solid #d1d5db;background:white;color:#374151;font-size:11px;font-weight:600;cursor:pointer">Messages Only</button>
+    </div>
+  </div>
+
+  <!-- Scrollable Timeline Body -->
+  <div id="vhTimeline" style="padding:18px 22px;flex:1;overflow-y:auto;max-height:calc(85vh - 140px);background:#fff">
+    <div style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading communication history…</div>
+  </div>
+</div>
+</div>
+
+<!-- ═══════ VGK ASSIGN STAFF MODAL ═══════ -->
+<div class="modal-overlay" id="vgkAssignModal" style="display:none;align-items:center;justify-content:center;z-index:9700">
+<div class="modal-box" style="max-width:480px;width:92%;padding:0;border-radius:14px;overflow:hidden">
+  <div class="modal-header" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);padding:16px 20px;display:flex;justify-content:space-between;align-items:center">
+    <h4 style="margin:0;font-size:15px;color:#1e40af;font-weight:700"><i class="fas fa-user-check me-2"></i>Assign Channel Partner</h4>
+    <button onclick="closeAssignModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#6b7280"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="modal-body" style="padding:20px">
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;color:#111" id="vamPartnerName">Loading…</div>
+      <div style="font-size:11.5px;color:#6b7280;margin-top:2px" id="vamPartnerCode">Code: —</div>
+      <div style="font-size:11.5px;color:#1e40af;margin-top:4px" id="vamCurrentAssigned">Current Assigned: <strong style="font-weight:700">Unassigned</strong></div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:11.5px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px">Select Assigned Staff <span style="color:#dc2626">*</span></label>
+      <select id="vamStaffSelect" class="form-select" style="width:100%;font-size:13px;padding:8px 10px;border-radius:8px;border:1.5px solid #bfdbfe">
+        <option value="">-- Unassigned (Remove Assignment) --</option>
+      </select>
+    </div>
+    <div>
+      <label style="font-size:11.5px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px">Assignment Reason / Note</label>
+      <textarea id="vamReasonInput" rows="2" placeholder="e.g. Assigned for Solar follow-up and activation..." style="width:100%;font-size:12.5px;padding:8px 10px;border-radius:8px;border:1.5px solid #e5e7eb;resize:vertical;box-sizing:border-box"></textarea>
+    </div>
+  </div>
+  <div class="modal-footer" style="padding:14px 20px;background:#f9fafb;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:8px">
+    <button class="btn-secondary-vgk" onclick="closeAssignModal()" style="padding:8px 16px;border:1px solid #d1d5db;background:#fff;border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:600">Cancel</button>
+    <button id="vamSaveBtn" onclick="saveAssignment()" style="padding:8px 18px;background:#1e40af;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:700">
+      <i class="fas fa-save me-1"></i>Save Assignment
+    </button>
+  </div>
+</div>
+</div>
+
+<!-- ═══════ VGK STATUS TOGGLE MODAL ═══════ -->
+<div class="modal-overlay" id="vgkStatusModal" style="display:none;align-items:center;justify-content:center;z-index:9700">
+<div class="modal-box" style="max-width:440px;width:92%;padding:0;border-radius:14px;overflow:hidden">
+  <div class="modal-header" style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);padding:16px 20px;display:flex;justify-content:space-between;align-items:center">
+    <h4 style="margin:0;font-size:15px;color:#6d28d9;font-weight:700"><i class="fas fa-toggle-on me-2"></i>Update Partner Status</h4>
+    <button onclick="closeStatusModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#6b7280"><i class="fas fa-times"></i></button>
+  </div>
+  <div class="modal-body" style="padding:20px">
+    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;color:#111" id="vsmPartnerName">Loading…</div>
+      <div style="font-size:11.5px;color:#6b7280;margin-top:2px" id="vsmPartnerCode">Code: —</div>
+      <div style="font-size:11.5px;margin-top:4px" id="vsmCurrentStatus">Status: —</div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:11.5px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px">Status</label>
+      <select id="vsmStatusSelect" class="form-select" style="width:100%;font-size:13px;padding:8px 10px;border-radius:8px;border:1.5px solid #c4b5fd" onchange="handleVsmStatusChange(this.value)">
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+        <option value="blocked">Blocked</option>
+      </select>
+      <div id="vsmBlockedWarning" style="display:none;margin-top:8px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:6px;padding:8px 10px;font-size:11.5px;line-height:1.4">
+        <i class="fas fa-exclamation-triangle me-1"></i>
+        <strong>Warning:</strong> Blocked members are strictly avoided from all communications (morning revenue statements, zero-lead motivational messages, WhatsApp broadcasts, softphone dialer) until their status is changed back to Active.
+      </div>
+    </div>
+    <div>
+      <label style="font-size:11.5px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:6px">Status Change Reason (Audit Log)</label>
+      <textarea id="vsmReasonInput" rows="2" placeholder="e.g. Account verified and activated / Inactive due to non-response..." style="width:100%;font-size:12.5px;padding:8px 10px;border-radius:8px;border:1.5px solid #e5e7eb;resize:vertical;box-sizing:border-box"></textarea>
+    </div>
+  </div>
+  <div class="modal-footer" style="padding:14px 20px;background:#f9fafb;border-top:1px solid #e5e7eb;display:flex;justify-content:flex-end;gap:8px">
+    <button class="btn-secondary-vgk" onclick="closeStatusModal()" style="padding:8px 16px;border:1px solid #d1d5db;background:#fff;border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:600">Cancel</button>
+    <button id="vsmSaveBtn" onclick="saveStatus()" style="padding:8px 18px;background:#7c3aed;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:700">
+      <i class="fas fa-check me-1"></i>Update Status
+    </button>
+  </div>
+</div>
+</div>
+
 <!-- ═══════ CHANGE REGISTERED STAFF MODAL (VGK Admin only) ═══════ -->
 <div class="modal-overlay" id="changeStaffModal" style="display:none;align-items:center;justify-content:center">
 <div class="modal-box" style="max-width:500px">
@@ -1471,31 +1908,45 @@ Best wishes from Team VGK4U! 🙏</div>
 <script src="/staff_sidebar.js"></script>
 <script src="/staff_header.js"></script>
 <script>
-// DC-EMBED-001: Embed mode + auto-tab support (used when loaded inside Executive Dashboard iframe)
+// DC-EMBED-001: Embed mode + auto-tab + auth token pass-through support
 (function(){
   const _p = new URLSearchParams(location.search);
-  if(_p.get('embed')==='1'){
+  const _token = _p.get('token');
+  if (_token) {
+    localStorage.setItem('staff_token', _token);
+    localStorage.setItem('access_token', _token);
+    localStorage.setItem('token', _token);
+    try { sessionStorage.setItem('staff_token', _token); } catch(e){}
+    try { sessionStorage.setItem('access_token', _token); } catch(e){}
+  }
+  const _isEmbed = _p.get('embed') === '1' || _p.get('embed') === 'true' || _p.get('app') === 'true';
+  const _hideTabs = _p.get('hide_tabs') === '1' || (_p.get('embed') === '1' && !_p.get('embed_tabs') && _p.get('embed') !== 'true');
+  if (_isEmbed) {
+    if (document.body) document.body.classList.add('embed-mode');
     document.head.insertAdjacentHTML('beforeend',`<style>
       nav#staffSidebar{display:none!important}
       #headerContainer{display:none!important}
-      .main-content{margin-left:0!important;padding:0!important}
+      .main-content{margin-left:0!important;padding:0!important;width:100%!important}
       .page-banner{display:none!important}
       #vgkChannelBanner{display:none!important}
-      .page-tabs{display:none!important}
       body{overflow-x:hidden;background:#fff}
       .content-area{padding:10px!important}
+      ${_hideTabs ? '.page-tabs{display:none!important}' : ''}
     </style>`);
     /* StaffHeader.inject() sets inline display:flex on #headerContainer AFTER CSS loads —
        force-hide via JS once DOM is ready (DC-EMBED-FORCE-HIDE-001) */
     document.addEventListener('DOMContentLoaded', function(){
+      if (document.body) document.body.classList.add('embed-mode');
       ['headerContainer'].forEach(function(id){
         var el=document.getElementById(id);
         if(el) el.style.setProperty('display','none','important');
       });
       var banner=document.getElementById('vgkChannelBanner');
       if(banner) banner.style.setProperty('display','none','important');
-      var tabNav=document.querySelector('.page-tabs');
-      if(tabNav) tabNav.style.setProperty('display','none','important');
+      if (_hideTabs) {
+        var tabNav=document.querySelector('.page-tabs');
+        if(tabNav) tabNav.style.setProperty('display','none','important');
+      }
     });
   }
   window._EMBED_AUTOTAB = _p.get('autotab') || '';
@@ -1643,7 +2094,7 @@ function toggleSort(col) {
 }
 
 function updateSortHeaders() {
-  const cols = ['code','name','registered','last_login','login_count','downline_count','src_revenue','leads_total','leads_won','leads_lost'];
+  const cols = ['code','name','registered','registered_by','last_contact_at','last_login','login_count','downline_count','src_revenue','leads_total','leads_won','leads_lost'];
   cols.forEach(c => {
     const th = document.getElementById('th_' + c);
     if (!th) return;
@@ -1655,6 +2106,10 @@ function updateSortHeaders() {
 function resetFilters() {
   document.getElementById('searchInput').value = '';
   document.getElementById('statusFilter').value = '';
+  const asEl = document.getElementById('assignedStaffFilter');
+  if (asEl) asEl.value = '';
+  const cdEl = document.getElementById('contactedDaysFilter');
+  if (cdEl) cdEl.value = '';
   const desigEl = document.getElementById('designationFilter');
   if (desigEl) desigEl.value = '';
   const catEl = document.getElementById('categoryFilter');
@@ -1797,7 +2252,7 @@ async function loadTopPartnersTable(page = 1) {
   const body = document.getElementById('tptBody');
   if (!body) return;
   
-  body.innerHTML = `<tr><td colspan="22" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading Leaderboard Data…</td></tr>`;
+  body.innerHTML = `<tr><td colspan="24" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading Leaderboard Data…</td></tr>`;
 
   const search = document.getElementById('tptSearch')?.value?.trim() || '';
   const companyId = document.getElementById('tptCompany')?.value || '';
@@ -1831,12 +2286,21 @@ async function loadTopPartnersTable(page = 1) {
     _renderTptKpis(partners, data.total_count || 0, data.team_summary || {}, data.rank_summary || {});
 
     if (partners.length === 0) {
-      body.innerHTML = `<tr><td colspan="22" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No partner performance data found for the selected filters.</td></tr>`;
+      body.innerHTML = `<tr><td colspan="24" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No partner performance data found for the selected filters.</td></tr>`;
       document.getElementById('tptPagination').innerHTML = '';
       return;
     }
 
     const inr = n => '₹' + Number(n||0).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
+
+    function _tptCountBtn(count, partnerId, partnerName, partnerCode, metric, label, colorStyle) {
+      if (!count || count <= 0) {
+        return `<span style="color:#9ca3af;font-weight:600">0</span>`;
+      }
+      const safeName = (partnerName || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      const safeCode = (partnerCode || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      return `<button type="button" class="tpt-num-badge" onclick="event.stopPropagation();openTptLeadDrillDown(${partnerId},'${safeName}','${safeCode}','${metric}','${label}')" style="background:${colorStyle.bg};color:${colorStyle.color}" title="Click to view ${count} ${label}">${count}</button>`;
+    }
 
     body.innerHTML = partners.map((p, index) => {
       const seqRank = (page - 1) * 50 + index + 1;
@@ -1844,10 +2308,24 @@ async function loadTopPartnersTable(page = 1) {
         ? `<span style="background:${seqRank===1?'#fef3c7':(seqRank===2?'#f1f5f9':'#ffedd5')};color:${seqRank===1?'#d97706':(seqRank===2?'#475569':'#c2410c')};padding:2px 8px;border-radius:12px;font-weight:800">${seqRank===1?'🥇 1':(seqRank===2?'🥈 2':'🥉 3')}</span>`
         : `<span style="color:#6b7280;font-weight:700">#${seqRank}</span>`;
 
-      return `<tr style="border-bottom:1px solid #f3f4f6;transition:background .15s" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">
-        <td style="padding:10px 12px;text-align:center">${rankBadge}</td>
-        <td style="padding:10px 12px;font-weight:700;color:#7c3aed"><a href="javascript:void(0)" onclick="_openPartnerDrawer(${p.id})" style="color:#7c3aed;text-decoration:none">${p.code}</a></td>
-        <td style="padding:10px 12px;font-weight:700;color:#111827">${p.name}</td>
+      const safePName = (p.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      const safePCode = (p.code || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+      const elInst = p.eligible_files_installed || 0;
+      const elTot = p.eligible_files_total || 0;
+      const elInstHtml = elInst > 0 
+        ? `<button type="button" class="tpt-num-badge" onclick="event.stopPropagation();openTptLeadDrillDown(${p.id},'${safePName}','${safePCode}','eligible_files_installed','Installed Eligibility Files')" style="background:#dcfce7;color:#047857;padding:1px 6px;font-size:10.5px" title="Click to view ${elInst} Installed Files">${elInst}</button>`
+        : `<span style="color:#9ca3af">0</span>`;
+      const elTotHtml = elTot > 0
+        ? `<button type="button" class="tpt-num-badge" onclick="event.stopPropagation();openTptLeadDrillDown(${p.id},'${safePName}','${safePCode}','eligible_files_total','Total Eligibility Files')" style="background:#dbeafe;color:#1e40af;padding:1px 6px;font-size:10.5px" title="Click to view all ${elTot} Eligible Files">${elTot}</button>`
+        : `<span style="color:#9ca3af">0</span>`;
+
+      return `<tr style="border-bottom:1px solid #f3f4f6;transition:background .15s">
+        <td class="tpt-sticky-1" style="padding:10px 12px;text-align:center">${rankBadge}</td>
+        <td class="tpt-sticky-2" style="padding:10px 12px;font-weight:700;color:#7c3aed">
+          <a href="javascript:void(0)" onclick="openTptLeadDrillDown(${p.id},'${safePName}','${safePCode}','total_leads','All Self Files')" style="color:#7c3aed;text-decoration:none" title="Click to view all files for ${safePName}">${p.code}</a>
+        </td>
+        <td class="tpt-sticky-3" style="padding:10px 12px;font-weight:700;color:#111827">${p.name}</td>
 
         <!-- RANK & CURRENT MONTH PERFORMANCE Cells -->
         <td style="padding:10px 8px;text-align:center;background:#f5f3ff;border-left:2px solid #ddd6fe">
@@ -1857,27 +2335,54 @@ async function loadTopPartnersTable(page = 1) {
           <span style="font-weight:800;color:#059669;background:#dcfce7;padding:2px 7px;border-radius:6px;font-size:10.5px">${(p.rank_slab_pct||5.0).toFixed(2)}%</span>
         </td>
         <td style="padding:10px 8px;text-align:right;background:#f5f3ff">
+          <strong style="color:${(p.overall_payout||0)>0?'#7c3aed':'#9ca3af'};font-size:11.5px">${(p.overall_payout||0)>0 ? inr(p.overall_payout) : '—'}</strong>
+        </td>
+        <td style="padding:10px 8px;text-align:right;background:#f5f3ff">
           <strong style="color:${(p.current_month_earning||0)>0?'#047857':'#9ca3af'};font-size:11.5px">${(p.current_month_earning||0)>0 ? inr(p.current_month_earning) : '—'}</strong>
         </td>
         <td style="padding:10px 8px;text-align:center;background:#f5f3ff;border-right:2px solid #ddd6fe">
-          <span style="font-weight:800;color:#1e40af;background:#dbeafe;padding:2px 7px;border-radius:6px;font-size:10.5px;white-space:nowrap" title="Installed: ${p.eligible_files_installed || 0} / Total: ${p.eligible_files_total || 0}"><i class="fas fa-check-circle me-1" style="color:#10b981"></i>${p.eligible_files_installed || 0} / ${p.eligible_files_total || 0}</span>
+          <span style="font-weight:800;background:#eff6ff;padding:2px 7px;border-radius:6px;font-size:10.5px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px"><i class="fas fa-check-circle" style="color:#10b981"></i>${elInstHtml} / ${elTotHtml}</span>
         </td>
 
         <!-- SELF PERFORMANCE Cells -->
-        <td style="padding:10px 8px;text-align:center;font-weight:800;color:#1d4ed8;background:#eff6ff">${p.total_leads || 0}</td>
-        <td style="padding:10px 8px;text-align:center;font-weight:700;color:#c2410c;background:#eff6ff">${p.submits_count || 0}</td>
+        <td style="padding:8px;text-align:center;background:#eff6ff">
+          ${_tptCountBtn(p.total_leads, p.id, p.name, p.code, 'total_leads', 'Self Files', {bg:'#dbeafe', color:'#1d4ed8'})}
+        </td>
+        <td style="padding:8px;text-align:center;background:#eff6ff">
+          ${_tptCountBtn(p.submits_count, p.id, p.name, p.code, 'submits_count', 'Self Submits', {bg:'#ffedd5', color:'#c2410c'})}
+        </td>
+        <td style="padding:8px;text-align:center;background:#eff6ff">
+          ${_tptCountBtn(p.with_bank_count, p.id, p.name, p.code, 'with_bank_count', 'Self With Bank Leads', {bg:'#ede9fe', color:'#6d28d9'})}
+        </td>
         <td style="padding:10px 8px;text-align:right;font-weight:700;color:#9a3412;background:#eff6ff">${(p.submits_val || 0) > 0 ? inr(p.submits_val) : '—'}</td>
-        <td style="padding:10px 8px;text-align:center;font-weight:700;color:#0369a1;background:#eff6ff">${p.dvr_count || 0}</td>
-        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#075985;background:#eff6ff">${(p.dvr_val || 0) > 0 ? inr(p.dvr_val) : '—'}</td>
-        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#059669;background:#eff6ff;border-right:2px solid #bfdbfe">${(p.overall_dvr_val || 0) > 0 ? inr(p.overall_dvr_val) : '—'}</td>
+        <td style="padding:8px;text-align:center;background:#eff6ff">
+          ${_tptCountBtn(p.first_pmt_count, p.id, p.name, p.code, 'first_pmt_count', 'Self 1st Payment Leads', {bg:'#e0f2fe', color:'#0369a1'})}
+        </td>
+        <td style="padding:8px;text-align:center;background:#eff6ff">
+          ${_tptCountBtn(p.completed_count, p.id, p.name, p.code, 'completed_count', 'Self Completed Leads', {bg:'#dcfce7', color:'#047857'})}
+        </td>
+        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#059669;background:#eff6ff;border-right:2px solid #bfdbfe">${(p.received_val || 0) > 0 ? inr(p.received_val) : '—'}</td>
 
         <!-- DIRECT TEAM PERFORMANCE Cells -->
-        <td style="padding:10px 8px;text-align:center;font-weight:800;color:#6d28d9;background:#fdf4ff">${(p.team_added || 0) > 0 ? `<span style="background:#ede9fe;padding:2px 8px;border-radius:10px">${p.team_added}</span>` : '0'}</td>
-        <td style="padding:10px 8px;text-align:center;font-weight:800;color:#4338ca;background:#fdf4ff">${p.team_leads || 0}</td>
-        <td style="padding:10px 8px;text-align:center;font-weight:700;color:#6d28d9;background:#fdf4ff">${p.team_submits_count || 0}</td>
+        <td style="padding:8px;text-align:center;background:#fdf4ff">
+          ${_tptCountBtn(p.team_added, p.id, p.name, p.code, 'team_members', 'Direct Team Members', {bg:'#ede9fe', color:'#6d28d9'})}
+        </td>
+        <td style="padding:8px;text-align:center;background:#fdf4ff">
+          ${_tptCountBtn(p.team_leads, p.id, p.name, p.code, 'team_leads', 'Team Files', {bg:'#e0e7ff', color:'#4338ca'})}
+        </td>
+        <td style="padding:8px;text-align:center;background:#fdf4ff">
+          ${_tptCountBtn(p.team_submits_count, p.id, p.name, p.code, 'team_submits_count', 'Team Submits', {bg:'#fae8ff', color:'#a21caf'})}
+        </td>
+        <td style="padding:8px;text-align:center;background:#fdf4ff">
+          ${_tptCountBtn(p.team_with_bank_count, p.id, p.name, p.code, 'team_with_bank_count', 'Team With Bank Leads', {bg:'#f3e8ff', color:'#7c3aed'})}
+        </td>
         <td style="padding:10px 8px;text-align:right;font-weight:700;color:#5b21b6;background:#fdf4ff">${(p.team_submits_val || 0) > 0 ? inr(p.team_submits_val) : '—'}</td>
-        <td style="padding:10px 8px;text-align:center;font-weight:700;color:#0369a1;background:#fdf4ff">${p.team_dvr_count || 0}</td>
-        <td style="padding:10px 8px;text-align:right;font-weight:700;color:#0284c7;background:#fdf4ff">${(p.team_dvr_val || 0) > 0 ? inr(p.team_dvr_val) : '—'}</td>
+        <td style="padding:8px;text-align:center;background:#fdf4ff">
+          ${_tptCountBtn(p.team_first_pmt_count, p.id, p.name, p.code, 'team_first_pmt_count', 'Team 1st Payment Leads', {bg:'#e0f2fe', color:'#0369a1'})}
+        </td>
+        <td style="padding:8px;text-align:center;background:#fdf4ff">
+          ${_tptCountBtn(p.team_completed_count, p.id, p.name, p.code, 'team_completed_count', 'Team Completed Leads', {bg:'#dcfce7', color:'#047857'})}
+        </td>
         <td style="padding:10px 8px;text-align:right;font-weight:700;color:#059669;background:#fdf4ff;border-right:2px solid #f0abfc">${(p.team_total_received_val || 0) > 0 ? inr(p.team_total_received_val) : '—'}</td>
 
         <!-- Win Rate -->
@@ -1891,7 +2396,7 @@ async function loadTopPartnersTable(page = 1) {
 
   } catch (err) {
     console.error('[TPT_LOAD_ERR]', err);
-    body.innerHTML = `<tr><td colspan="22" style="text-align:center;padding:40px;color:#ef4444"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load leaderboard data: ${err.message}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="24" style="text-align:center;padding:40px;color:#ef4444"><i class="fas fa-exclamation-triangle me-2"></i>Failed to load leaderboard data: ${err.message}</td></tr>`;
   }
 }
 
@@ -2046,9 +2551,9 @@ function _tptExportCsv() {
       const partners = (json.data || {}).partners || [];
       if (partners.length === 0) { alert('No data available to export.'); return; }
 
-      let csv = 'Rank,Code,Partner,Team Added,Total Leads,Submits Count,Submits Value,Submits %,1st Payment Count,1st Payment Value,1st Payment %,Won Count,Won Value,Won %,Completed Count,Completed Value,Completed %,Lost Count,Lost Value,Lost %,Overall Win Rate %\n';
+      let csv = 'Rank,Code,Partner,Team Added,Total Leads,Submits Count,With Bank Count,Submits Value,Submits %,1st Payment Count,1st Payment Value,1st Payment %,Won Count,Won Value,Won %,Completed Count,Completed Value,Completed %,Lost Count,Lost Value,Lost %,Overall Win Rate %\n';
       partners.forEach(p => {
-        csv += `"${p.rank}","${p.code}","${p.name.replace(/"/g, '""')}","${p.team_added}","${p.total_leads}","${p.submits_count}","${p.submits_val}","${p.submits_pct}","${p.dvr_count}","${p.dvr_val}","${p.dvr_pct}","${p.won_count}","${p.won_val}","${p.won_pct}","${p.completed_count}","${p.completed_val}","${p.completed_pct}","${p.lost_count}","${p.lost_val}","${p.lost_pct}","${p.win_rate}"\n`;
+        csv += `"${p.rank}","${p.code}","${p.name.replace(/"/g, '""')}","${p.team_added}","${p.total_leads}","${p.submits_count}","${p.with_bank_count || 0}","${p.submits_val}","${p.submits_pct}","${p.dvr_count}","${p.dvr_val}","${p.dvr_pct}","${p.won_count}","${p.won_val}","${p.won_pct}","${p.completed_count}","${p.completed_val}","${p.completed_pct}","${p.lost_count}","${p.lost_val}","${p.lost_pct}","${p.win_rate}"\n`;
       });
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -2449,13 +2954,17 @@ async function loadIncomeDash(pg=1){
   try{
     const r = await staffFetch(url);
     const d = await r.json();
-    if(!d.success){ showToast('Failed to load income dashboard','error'); return; }
+    if(!d.success){
+      showToast(d.error || d.detail || 'Failed to load income dashboard','error');
+      document.getElementById('iedBody').innerHTML = `<tr><td colspan="18" style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>Failed to load: ${(d.error || d.detail || 'Unknown error')}<br><button onclick="loadIncomeDash(${pg})" style="margin-top:10px;padding:6px 14px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer"><i class="fas fa-redo me-1"></i>Retry</button></td></tr>`;
+      return;
+    }
     _iedLoaded = true;
     _iedRenderKpis(d.data, d.total);
     _iedRenderTable(d.data);
     _iedRenderPagination(d.total, pg, 50);
   } catch(e){
-    document.getElementById('iedBody').innerHTML = '<tr><td colspan="18" style="text-align:center;padding:30px;color:#dc2626">Error: '+e.message+'</td></tr>';
+    document.getElementById('iedBody').innerHTML = `<tr><td colspan="18" style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>Error: ${e.message}<br><button onclick="loadIncomeDash(${pg})" style="margin-top:10px;padding:6px 14px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer"><i class="fas fa-redo me-1"></i>Retry</button></td></tr>`;
   }
 }
 
@@ -4078,12 +4587,22 @@ async function loadMembers(page = 1) {
 
   const search = (document.getElementById('searchInput')?.value || '').trim();
   const status = document.getElementById('statusFilter')?.value ?? '';
+  const assignedStaffFilter = (document.getElementById('assignedStaffFilter')?.value || '').trim();
+  const contactedDaysFilter = (document.getElementById('contactedDaysFilter')?.value || '').trim();
   const desigFilter = (document.getElementById('designationFilter')?.value || '').trim();
   const categoryFilter = (document.getElementById('categoryFilter')?.value || '').trim();
   const eligFilter = (document.getElementById('eligibilityFilter')?.value || '').trim();
   let url = API + '/vgk/members?page=' + page + '&page_size=25';
   if (search) url += '&search=' + encodeURIComponent(search);
-  if (status !== '') url += '&is_active=' + status;
+  if (status !== '') {
+    if (status === 'blocked' || status === 'active' || status === 'inactive') {
+      url += '&status=' + encodeURIComponent(status);
+    } else {
+      url += '&is_active=' + encodeURIComponent(status);
+    }
+  }
+  if (assignedStaffFilter) url += '&assigned_staff_id=' + encodeURIComponent(assignedStaffFilter);
+  if (contactedDaysFilter) url += '&contacted_days=' + encodeURIComponent(contactedDaysFilter);
   if (desigFilter) url += '&rank_level=' + encodeURIComponent(desigFilter) + '&designation_tier=' + encodeURIComponent(desigFilter);
   if (categoryFilter) url += '&category_id=' + encodeURIComponent(categoryFilter);
   if (eligFilter) url += '&eligibility_filter=' + encodeURIComponent(eligFilter);
@@ -4099,16 +4618,21 @@ async function loadMembers(page = 1) {
   const referrerFilter = (document.getElementById('referrerFilter')?.value || '').trim();
   if (referrerFilter) url += '&referred_by=' + encodeURIComponent(referrerFilter);
 
-  tbody.innerHTML = '<tr><td colspan="28" style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="31" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
   try {
     const r = await staffFetch(url);
     const d = await r.json();
-    if (!d.success) { showToast('Failed to load', 'error'); return; }
+    if (!d.success) {
+      showToast(d.detail || d.error || 'Failed to load Channel Partners', 'error');
+      tbody.innerHTML = `<tr><td colspan="31" style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>Failed to load: ${(d.detail || d.error || 'Unknown error')}<br><button class="btn-filter apply" style="margin-top:12px" onclick="loadMembers(${page})"><i class="fas fa-redo me-1"></i>Retry</button></td></tr>`;
+      return;
+    }
     const tb = document.getElementById('totalBadge');
     if (tb) tb.textContent = d.total || 0;
     const membersList = d.data || d.members || [];
-    if (!membersList.length) { tbody.innerHTML = '<tr><td colspan="28" style="text-align:center;padding:30px;color:#9ca3af">No Channel Partners found</td></tr>'; }
-    else {
+    if (!membersList.length) {
+      tbody.innerHTML = '<tr><td colspan="31" style="text-align:center;padding:30px;color:#9ca3af">No Channel Partners found</td></tr>';
+    } else {
       membersList.forEach(m => { (window._vgkMemberCache = window._vgkMemberCache || {})[m.id] = m; });
       tbody.innerHTML = membersList.map((m, index) => {
         const rowNum = (page - 1) * 25 + index + 1;
@@ -4116,14 +4640,93 @@ async function loadMembers(page = 1) {
         const earnings = Number(m.confirmed_income_total || 0);
         const cmEarnings = Number(m.current_month_earning || 0);
         const loginCount = Number(m.login_count || 0);
+
+        // Assigned Staff Cell (Col 4)
+        let assignedStaffHtml = '';
+        if (m.assigned_staff_name) {
+          assignedStaffHtml = `<div style="display:flex;align-items:center;gap:5px;white-space:nowrap" onclick="event.stopPropagation()">
+            <span style="font-weight:600;color:#1e40af;font-size:11.5px">${m.assigned_staff_name}</span>`;
+          if (m.can_edit_assignment) {
+            assignedStaffHtml += `<button onclick="openAssignModal(${m.id})" title="Reassign staff" style="border:none;background:#eff6ff;color:#2563eb;border-radius:4px;padding:2px 5px;font-size:10px;cursor:pointer"><i class="fas fa-user-edit"></i></button>`;
+          }
+          assignedStaffHtml += `</div>`;
+        } else {
+          assignedStaffHtml = `<div style="display:flex;align-items:center;gap:5px;white-space:nowrap" onclick="event.stopPropagation()">
+            <span style="color:#9ca3af;font-style:italic;font-size:11px">Unassigned</span>`;
+          if (m.can_edit_assignment) {
+            assignedStaffHtml += `<button onclick="openAssignModal(${m.id})" title="Assign staff" style="border:1px dashed #93c5fd;background:#eff6ff;color:#2563eb;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:600;cursor:pointer">+ Assign</button>`;
+          }
+          assignedStaffHtml += `</div>`;
+        }
+
+        // Status Cell (Col 8)
+        const isBlocked = Boolean(m.is_blocked || m.member_status === 'BLOCKED');
+        let statusBadgeClass = 'badge-inactive';
+        let statusText = 'Inactive';
+        let statusStyle = '';
+        let statusParam = 'inactive';
+        if (isBlocked) {
+          statusText = 'Blocked';
+          statusParam = 'blocked';
+          statusStyle = 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-weight:700';
+        } else if (m.is_active) {
+          statusBadgeClass = 'badge-active';
+          statusText = 'Active';
+          statusParam = 'active';
+        }
+
+        let statusBadgeHtml = '';
+        if (m.can_edit_status) {
+          statusBadgeHtml = `<button onclick="event.stopPropagation(); openStatusModal(${m.id}, '${statusParam}')" title="Click to change status" style="background:none;border:none;cursor:pointer;padding:0">
+            <span class="badge ${statusBadgeClass}" style="display:inline-flex;align-items:center;gap:4px;${statusStyle}">
+              ${statusText} <i class="fas fa-pencil-alt" style="font-size:9px;opacity:0.7"></i>
+            </span>
+          </button>`;
+        } else {
+          statusBadgeHtml = `<span class="badge ${statusBadgeClass}" style="${statusStyle}">${statusText}</span>`;
+        }
+
+        // History Cell (Col 9)
+        const historyHtml = `<div style="display:flex;align-items:center;gap:4px;justify-content:center;white-space:nowrap" onclick="event.stopPropagation()">
+          <button onclick="openMemberHistory(${m.id})" title="Communication History (Calls & Messages)" style="padding:3px 8px;font-size:11px;font-weight:600;border-radius:6px;border:1px solid #c4b5fd;background:#f5f3ff;color:#6d28d9;cursor:pointer;display:inline-flex;align-items:center;gap:4px">
+            <i class="fas fa-history"></i> History
+          </button>
+          ${isBlocked ? `
+            <button onclick="alert('This Channel Partner is Blocked from all communications. Change status to Active to enable calls.');" title="Member is Blocked from communications" style="padding:3px 7px;font-size:11px;font-weight:600;border-radius:6px;border:none;background:#9ca3af;color:white;cursor:not-allowed;display:inline-flex;align-items:center;gap:3px;opacity:0.65">
+              <i class="fas fa-phone-slash"></i>
+            </button>
+          ` : `
+            <button onclick="dialMember(${m.id})" title="Call via Softphone" style="padding:3px 7px;font-size:11px;font-weight:600;border-radius:6px;border:none;background:#10b981;color:white;cursor:pointer;display:inline-flex;align-items:center;gap:3px">
+              <i class="fas fa-phone-alt"></i>
+            </button>
+          `}
+        </div>`;
+
+        // Contacted Days Since Cell (Col 10)
+        let contactedHtml = '';
+        if (m.contacted_days_since === null || m.contacted_days_since === undefined) {
+          contactedHtml = `<span style="background:#f3f4f6;color:#6b7280;padding:3px 7px;border-radius:12px;font-size:10.5px;font-weight:600;white-space:nowrap">Never</span>`;
+        } else {
+          const days = m.contacted_days_since;
+          let cBg = '#dcfce7', cFg = '#065f46', cLabel = days === 0 ? 'Today' : `${days}d ago`;
+          if (days >= 5 && days <= 10) { cBg = '#dbeafe'; cFg = '#1e40af'; }
+          else if (days >= 11 && days <= 20) { cBg = '#fef3c7'; cFg = '#92400e'; }
+          else if (days >= 21 && days <= 30) { cBg = '#ffedd5'; cFg = '#9a3412'; }
+          else if (days > 30) { cBg = '#fee2e2'; cFg = '#991b1b'; }
+          contactedHtml = `<span style="background:${cBg};color:${cFg};padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap" title="Last contact: ${fmtDateTime(m.last_contact_at)}">${cLabel}</span>`;
+        }
+
         return `<tr onclick="openSidePanel(${m.id})">
-          <td style="text-align:center;font-size:11.5px;font-weight:700;color:#6b7280">${rowNum}</td>
+          <td class="mb-sticky-1" style="text-align:center;font-size:11.5px;font-weight:700;color:#6b7280">${rowNum}</td>
+          <td class="mb-sticky-2"><strong style="color:#7c3aed">${m.partner_code}</strong></td>
+          <td class="mb-sticky-3"><div style="display:flex;align-items:center;gap:6px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.partner_name}</span><button onclick="event.stopPropagation(); generateMemberPoster('${m.id}')" style="width:22px;height:22px;border-radius:5px;border:1px solid #d1fae5;background:#ecfdf5;cursor:pointer;font-size:10px;color:#059669;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0" title="Generate Achievement Poster"><i class="fas fa-image"></i></button></div></td>
           <td style="font-size:11px;color:#374151;white-space:nowrap;font-weight:600">${fmtDate(m.created_at)}</td>
           <td style="font-size:11px;color:#6b7280;white-space:nowrap" title="${m.registered_by_emp_code||''}">${m.registered_by_name ? '<span style="font-size:11px">' + m.registered_by_name + '</span>' : (m.registered_by_emp_code ? '<span style="font-family:monospace;font-size:10.5px;color:#7c3aed">' + m.registered_by_emp_code + '</span>' : '<span style="color:#d1d5db">—</span>')}</td>
-          <td><strong style="color:#7c3aed">${m.partner_code}</strong></td>
-          <td><div style="display:flex;align-items:center;gap:6px"><span>${m.partner_name}</span><button onclick="event.stopPropagation(); generateMemberPoster('${m.id}')" style="width:22px;height:22px;border-radius:5px;border:1px solid #d1fae5;background:#ecfdf5;cursor:pointer;font-size:10px;color:#059669;display:inline-flex;align-items:center;justify-content:center" title="Generate Achievement Poster"><i class="fas fa-image"></i></button></div></td>
+          <td>${assignedStaffHtml}</td>
           <td>${m.phone || '—'}</td>
-          <td><span class="badge ${m.is_active ? 'badge-active' : 'badge-inactive'}">${m.is_active ? 'Active' : 'Inactive'}</span></td>
+          <td style="text-align:center">${statusBadgeHtml}</td>
+          <td style="text-align:center">${historyHtml}</td>
+          <td style="text-align:center">${contactedHtml}</td>
           <td style="white-space:nowrap;background:#f5f3ff"><span style="font-weight:800;color:#7c3aed;background:#ede9fe;padding:3px 8px;border-radius:6px;font-size:11px"><i class="fas fa-star me-1" style="color:#d97706"></i>${m.rank_display || '1★ Channel Partner'}</span></td>
           <td style="white-space:nowrap;text-align:center;background:#f0fdf4"><span style="font-weight:800;color:#059669;background:#dcfce7;padding:3px 8px;border-radius:6px;font-size:11px">${(m.rank_slab_pct||5.0).toFixed(2)}%</span></td>
           <td style="text-align:right;white-space:nowrap;background:#ecfdf5"><strong style="color:${cmEarnings>0?'#047857':'#9ca3af'};font-size:12px">${cmEarnings>0 ? fmtInr(cmEarnings) : '₹0'}</strong></td>
@@ -4156,7 +4759,7 @@ async function loadMembers(page = 1) {
   } catch(e) {
     console.error('[ERROR loadMembers]', e);
     showToast('Error loading Channel Partners', 'error');
-    tbody.innerHTML = '<tr><td colspan="24" style="text-align:center;padding:20px;color:#dc2626">Error loading data: ' + e.message + '</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="31" style="text-align:center;padding:25px;color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>Error loading data: ${e.message}<br><button class="btn-filter apply" style="margin-top:12px" onclick="loadMembers(${page})"><i class="fas fa-redo me-1"></i>Retry</button></td></tr>`;
   }
 }
 
@@ -4629,6 +5232,493 @@ async function toggleActive(id, active) {
     if (d.success) { showToast('Channel Partner ' + (active ? 'reactivated' : 'deactivated')); loadMembers(currentPage); openSidePanel(id); }
     else showToast(d.detail || 'Failed', 'error');
   } catch(e) { showToast('Error', 'error'); }
+}
+
+// ═══════ VGK CHANNEL PARTNERS: ASSIGNMENT, STATUS, HISTORY & SOFTPHONE CONTROLLER ═══════
+let _currentAssignMemberId = null;
+let _currentStatusMemberId = null;
+let _currentHistoryMemberId = null;
+let _currentHistoryData = null;
+let _vhCurrentFilter = 'all';
+
+function formatStaffOptionLabel(s) {
+  if (!s) return 'Unknown Staff';
+  if (s.label && s.label.trim() && s.label !== 'undefined') return s.label;
+  const name = s.full_name || s.name || '';
+  const code = s.emp_code || '';
+  if (name && code) return `${name} (${code})`;
+  if (name) return name;
+  if (code) return code;
+  return `Staff #${s.id}`;
+}
+
+async function loadStaffOptions() {
+  try {
+    const r = await staffFetch('/api/v1/vgk/staff-options');
+    const d = await r.json();
+    if (d.success && Array.isArray(d.staff)) {
+      window._staffOptionsCache = d.staff;
+      
+      // Populate filter dropdown
+      const asFilter = document.getElementById('assignedStaffFilter');
+      if (asFilter) {
+        const curVal = asFilter.value;
+        asFilter.innerHTML = '<option value="">All Assigned Staff</option>' +
+          d.staff.map(s => `<option value="${s.id}">${formatStaffOptionLabel(s)}</option>`).join('');
+        if (curVal) asFilter.value = curVal;
+      }
+
+      // Populate modal dropdown
+      const vamSelect = document.getElementById('vamStaffSelect');
+      if (vamSelect) {
+        vamSelect.innerHTML = '<option value="">-- Unassigned (Remove Assignment) --</option>' +
+          d.staff.map(s => `<option value="${s.id}">${formatStaffOptionLabel(s)}</option>`).join('');
+      }
+    }
+  } catch (err) {
+    console.error('[loadStaffOptions error]', err);
+  }
+}
+
+function openAssignModal(memberId) {
+  _currentAssignMemberId = memberId;
+  const m = (window._vgkMemberCache && window._vgkMemberCache[memberId]) || {};
+  
+  const nameEl = document.getElementById('vamPartnerName');
+  if (nameEl) nameEl.textContent = m.partner_name || 'Channel Partner #' + memberId;
+  
+  const codeEl = document.getElementById('vamPartnerCode');
+  if (codeEl) codeEl.textContent = 'Code: ' + (m.partner_code || '—');
+  
+  const curEl = document.getElementById('vamCurrentAssigned');
+  if (curEl) {
+    curEl.innerHTML = 'Current Assigned: ' + (m.assigned_staff_name 
+      ? `<strong style="font-weight:700;color:#1e40af">${m.assigned_staff_name}</strong>` 
+      : '<strong style="font-weight:700;color:#9ca3af">Unassigned</strong>');
+  }
+
+  const vamSelect = document.getElementById('vamStaffSelect');
+  if (vamSelect) {
+    vamSelect.value = m.assigned_staff_id ? String(m.assigned_staff_id) : '';
+  }
+
+  const reasonEl = document.getElementById('vamReasonInput');
+  if (reasonEl) reasonEl.value = '';
+
+  const saveBtn = document.getElementById('vamSaveBtn');
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save Assignment';
+  }
+
+  const modal = document.getElementById('vgkAssignModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeAssignModal() {
+  const modal = document.getElementById('vgkAssignModal');
+  if (modal) modal.style.display = 'none';
+  _currentAssignMemberId = null;
+}
+
+async function saveAssignment() {
+  if (!_currentAssignMemberId) return;
+  const vamSelect = document.getElementById('vamStaffSelect');
+  const reasonInput = document.getElementById('vamReasonInput');
+  const staffVal = (vamSelect?.value || '').trim();
+  const staffId = staffVal ? parseInt(staffVal, 10) : null;
+  const reason = (reasonInput?.value || '').trim();
+
+  const saveBtn = document.getElementById('vamSaveBtn');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving…';
+  }
+
+  try {
+    const r = await staffFetch(`/api/v1/vgk/members/${_currentAssignMemberId}/assign`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        assigned_staff_id: staffId,
+        assignment_reason: reason
+      })
+    });
+    const d = await r.json();
+    if (d.success) {
+      showToast(d.message || 'Assignment updated successfully', 'success');
+      closeAssignModal();
+      loadMembers(currentPage);
+    } else {
+      showToast(d.detail || 'Assignment failed', 'error');
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save Assignment';
+      }
+    }
+  } catch (err) {
+    console.error('[saveAssignment error]', err);
+    showToast('Error saving assignment: ' + err.message, 'error');
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save Assignment';
+    }
+  }
+}
+
+function handleVsmStatusChange(val) {
+  const w = document.getElementById('vsmBlockedWarning');
+  if (w) {
+    w.style.display = (val === 'blocked') ? 'block' : 'none';
+  }
+}
+
+function openStatusModal(memberId, currentStatus) {
+  _currentStatusMemberId = memberId;
+  const m = (window._vgkMemberCache && window._vgkMemberCache[memberId]) || {};
+
+  const nameEl = document.getElementById('vsmPartnerName');
+  if (nameEl) nameEl.textContent = m.partner_name || 'Channel Partner #' + memberId;
+
+  const codeEl = document.getElementById('vsmPartnerCode');
+  if (codeEl) codeEl.textContent = 'Code: ' + (m.partner_code || '—');
+
+  const curEl = document.getElementById('vsmCurrentStatus');
+  const isBlocked = Boolean(m.is_blocked || m.member_status === 'BLOCKED' || currentStatus === 'blocked');
+  const isActive = Boolean(m.is_active && !isBlocked && currentStatus !== 'inactive');
+
+  let stBadge = '<span class="badge badge-inactive">Inactive</span>';
+  let initialSelectVal = 'inactive';
+  if (isBlocked) {
+    stBadge = '<span class="badge" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-weight:700">Blocked</span>';
+    initialSelectVal = 'blocked';
+  } else if (isActive) {
+    stBadge = '<span class="badge badge-active">Active</span>';
+    initialSelectVal = 'active';
+  }
+
+  if (curEl) {
+    curEl.innerHTML = 'Current Status: ' + stBadge;
+  }
+
+  const stSelect = document.getElementById('vsmStatusSelect');
+  if (stSelect) {
+    stSelect.value = initialSelectVal;
+    handleVsmStatusChange(initialSelectVal);
+  }
+
+  const reasonEl = document.getElementById('vsmReasonInput');
+  if (reasonEl) reasonEl.value = '';
+
+  const saveBtn = document.getElementById('vsmSaveBtn');
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<i class="fas fa-check me-1"></i>Update Status';
+  }
+
+  const modal = document.getElementById('vgkStatusModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeStatusModal() {
+  const modal = document.getElementById('vgkStatusModal');
+  if (modal) modal.style.display = 'none';
+  _currentStatusMemberId = null;
+}
+
+async function saveStatus() {
+  if (!_currentStatusMemberId) return;
+  const stSelect = document.getElementById('vsmStatusSelect');
+  const reasonInput = document.getElementById('vsmReasonInput');
+  const selectedStatus = (stSelect?.value || 'inactive').toLowerCase();
+  const reason = (reasonInput?.value || '').trim();
+
+  const saveBtn = document.getElementById('vsmSaveBtn');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Updating…';
+  }
+
+  try {
+    const r = await staffFetch(`/api/v1/vgk/members/${_currentStatusMemberId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: selectedStatus.toUpperCase(),
+        is_active: selectedStatus === 'active',
+        is_blocked: selectedStatus === 'blocked',
+        status_note: reason
+      })
+    });
+    const d = await r.json();
+    if (d.success) {
+      showToast(d.message || 'Status updated successfully', 'success');
+      closeStatusModal();
+      loadMembers(currentPage);
+    } else {
+      showToast(d.detail || 'Status update failed', 'error');
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-check me-1"></i>Update Status';
+      }
+    }
+  } catch (err) {
+    console.error('[saveStatus error]', err);
+    showToast('Error updating status: ' + err.message, 'error');
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = '<i class="fas fa-check me-1"></i>Update Status';
+    }
+  }
+}
+
+async function dialMember(memberId) {
+  const m = (window._vgkMemberCache && window._vgkMemberCache[memberId]) || {};
+  if (m.is_blocked || m.member_status === 'BLOCKED') {
+    alert('This Channel Partner is Blocked from all communications. Change status to Active to enable calls.');
+    return;
+  }
+
+  try {
+    const r = await staffFetch(`/api/v1/vgk/members/${memberId}/call-intent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const d = await r.json();
+    if (!d.success) {
+      showToast(d.detail || 'Could not initiate call intent', 'error');
+      return;
+    }
+
+    showToast(`Initiating call to ${d.partner_name}...`, 'info');
+
+    if (d.was_assigned) {
+      showToast(`Member assigned to you automatically!`, 'success');
+      loadMembers(currentPage);
+    }
+
+    const cleanPhone = d.clean_phone;
+    const safeName = d.partner_name || 'Channel Partner';
+    if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+      window.PlivoSoftphone.dialOutboundCall(cleanPhone, null, safeName, 'plivo');
+    } else if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+      window.PlivoSoftphone.dial(cleanPhone, null, safeName, 'plivo');
+    } else {
+      window.location.href = 'tel:' + cleanPhone;
+    }
+  } catch (err) {
+    console.error('[dialMember error]', err);
+    showToast('Call error: ' + err.message, 'error');
+  }
+}
+
+async function openMemberHistory(memberId) {
+  _currentHistoryMemberId = memberId;
+  const modal = document.getElementById('vgkHistoryModal');
+  if (modal) modal.style.display = 'flex';
+
+  const m = (window._vgkMemberCache && window._vgkMemberCache[memberId]) || {};
+  const isBlocked = Boolean(m.is_blocked || m.member_status === 'BLOCKED');
+
+  const infoEl = document.getElementById('vhMemberInfo');
+  if (infoEl) {
+    infoEl.innerHTML = `${m.partner_name || 'Channel Partner'} (${m.partner_code || 'VGK'}) • ${m.phone || '—'}` + 
+      (isBlocked ? ' <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:700;margin-left:6px"><i class="fas fa-ban me-1"></i>BLOCKED</span>' : '');
+  }
+
+  // Update Call button in history modal
+  const callBtn = document.getElementById('vhCallBtn');
+  if (callBtn) {
+    if (isBlocked) {
+      callBtn.disabled = true;
+      callBtn.style.background = '#9ca3af';
+      callBtn.style.cursor = 'not-allowed';
+      callBtn.style.opacity = '0.7';
+      callBtn.title = 'Member is Blocked from all communications';
+      callBtn.innerHTML = '<i class="fas fa-phone-slash"></i> Blocked';
+    } else {
+      callBtn.disabled = false;
+      callBtn.style.background = '#10b981';
+      callBtn.style.cursor = 'pointer';
+      callBtn.style.opacity = '1';
+      callBtn.title = 'Call via Softphone';
+      callBtn.innerHTML = '<i class="fas fa-phone-alt"></i> Call Softphone';
+    }
+  }
+
+  const timelineEl = document.getElementById('vhTimeline');
+  if (timelineEl) {
+    timelineEl.innerHTML = '<div style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading communication records…</div>';
+  }
+
+  setVhFilter('all');
+
+  try {
+    const r = await staffFetch(`/api/v1/vgk/members/${memberId}/communication-history`);
+    const d = await r.json();
+    if (!d.success) {
+      showToast(d.detail || 'Failed to load communication history', 'error');
+      if (timelineEl) timelineEl.innerHTML = `<div style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>${d.detail || 'Error loading history'}</div>`;
+      return;
+    }
+
+    _currentHistoryData = d;
+
+    // Check if backend reports member is blocked
+    const memIsBlocked = Boolean(d.member?.is_blocked || d.member?.member_status === 'BLOCKED');
+    if (memIsBlocked && callBtn) {
+      callBtn.disabled = true;
+      callBtn.style.background = '#9ca3af';
+      callBtn.style.cursor = 'not-allowed';
+      callBtn.style.opacity = '0.7';
+      callBtn.title = 'Member is Blocked from all communications';
+      callBtn.innerHTML = '<i class="fas fa-phone-slash"></i> Blocked';
+    }
+
+    // Update header badges
+    const tcEl = document.getElementById('vhTotalCalls');
+    if (tcEl) tcEl.textContent = d.total_calls || 0;
+    const tmEl = document.getElementById('vhTotalMsgs');
+    if (tmEl) tmEl.textContent = d.total_messages || 0;
+    const lcEl = document.getElementById('vhLastContact');
+    if (lcEl) lcEl.textContent = d.member?.last_contact_at ? fmtDateTime(d.member.last_contact_at) : 'Never';
+
+    renderVhTimeline();
+  } catch (err) {
+    console.error('[openMemberHistory error]', err);
+    if (timelineEl) timelineEl.innerHTML = `<div style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>Error: ${err.message}</div>`;
+  }
+}
+
+function closeMemberHistory() {
+  const modal = document.getElementById('vgkHistoryModal');
+  if (modal) modal.style.display = 'none';
+  // Pause any playing audio
+  document.querySelectorAll('#vhTimeline audio').forEach(a => {
+    try { a.pause(); } catch(e){}
+  });
+  _currentHistoryMemberId = null;
+  _currentHistoryData = null;
+}
+
+function vhInitiateCall() {
+  if (_currentHistoryMemberId) {
+    dialMember(_currentHistoryMemberId);
+  }
+}
+
+function setVhFilter(filter) {
+  _vhCurrentFilter = filter;
+  ['All', 'Calls', 'Msgs'].forEach(k => {
+    const btn = document.getElementById('vhFilter' + k);
+    if (!btn) return;
+    const isActive = (k === 'All' && filter === 'all') ||
+                     (k === 'Calls' && filter === 'calls') ||
+                     (k === 'Msgs' && filter === 'messages');
+    if (isActive) {
+      btn.style.background = '#7c3aed';
+      btn.style.color = '#fff';
+      btn.style.borderColor = '#7c3aed';
+      btn.style.fontWeight = '700';
+    } else {
+      btn.style.background = '#fff';
+      btn.style.color = '#374151';
+      btn.style.borderColor = '#d1d5db';
+      btn.style.fontWeight = '600';
+    }
+  });
+  renderVhTimeline();
+}
+
+function renderVhTimeline() {
+  const timelineEl = document.getElementById('vhTimeline');
+  if (!timelineEl || !_currentHistoryData) return;
+
+  let items = _currentHistoryData.items || [];
+  if (_vhCurrentFilter === 'calls') {
+    items = items.filter(it => it.type === 'call');
+  } else if (_vhCurrentFilter === 'messages') {
+    items = items.filter(it => it.type === 'message');
+  }
+
+  if (items.length === 0) {
+    timelineEl.innerHTML = `
+      <div style="text-align:center;padding:40px 20px;color:#9ca3af">
+        <i class="fas fa-comment-slash" style="font-size:32px;margin-bottom:10px;display:block;opacity:0.6"></i>
+        <div style="font-weight:700;font-size:14px;color:#4b5563">No communication records found</div>
+        <div style="font-size:12px;margin-top:4px">No ${_vhCurrentFilter === 'all' ? 'calls or messages' : _vhCurrentFilter} recorded for this member.</div>
+      </div>
+    `;
+    return;
+  }
+
+  timelineEl.innerHTML = items.map(it => {
+    const isCall = it.type === 'call';
+    const isOutbound = (it.direction || '').toLowerCase().includes('out');
+    const timeStr = fmtDateTime(it.timestamp);
+
+    if (isCall) {
+      const durSec = it.duration || 0;
+      const durLabel = durSec >= 60 ? `${Math.floor(durSec/60)}m ${durSec%60}s` : `${durSec}s`;
+      const isAnswered = ['answered','completed','connected'].includes((it.status||'').toLowerCase());
+      const stColor = isAnswered ? '#059669' : '#dc2626';
+      const stBg = isAnswered ? '#d1fae5' : '#fee2e2';
+
+      return `
+        <div style="display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #f3f4f6;align-items:flex-start">
+          <div style="width:36px;height:36px;border-radius:50%;background:${isOutbound ? '#eff6ff' : '#f0fdf4'};display:flex;align-items:center;justify-content:center;color:${isOutbound ? '#2563eb' : '#059669'};font-size:14px;flex-shrink:0">
+            <i class="fas ${isOutbound ? 'fa-phone-alt' : 'fa-phone-volume'}"></i>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+              <div style="font-weight:700;font-size:13px;color:#111827">
+                ${isOutbound ? 'Outbound Call' : 'Inbound Call'}
+                <span style="font-size:10.5px;padding:2px 7px;border-radius:12px;background:${stBg};color:${stColor};font-weight:700;margin-left:6px">${it.status || 'Done'}</span>
+              </div>
+              <div style="font-size:11.5px;color:#9ca3af;font-weight:600">${timeStr}</div>
+            </div>
+            <div style="font-size:12px;color:#4b5563;margin-top:4px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <span><i class="fas fa-stopwatch me-1" style="color:#9ca3af"></i>Duration: <strong>${durLabel}</strong></span>
+              ${it.staff_emp_code ? `<span><i class="fas fa-user-tie me-1" style="color:#9ca3af"></i>Staff: <strong>${it.staff_name || it.staff_emp_code}</strong></span>` : ''}
+              ${it.source ? `<span style="font-size:10.5px;color:#9ca3af;font-family:monospace">${it.source}</span>` : ''}
+            </div>
+            ${it.recording_url ? `
+              <div style="margin-top:8px;background:#f9fafb;padding:6px 10px;border-radius:8px;border:1px solid #e5e7eb">
+                <div style="font-size:11px;font-weight:700;color:#6b7280;margin-bottom:4px"><i class="fas fa-play-circle me-1" style="color:#7c3aed"></i>Call Recording:</div>
+                <audio controls preload="none" src="${it.recording_url}" style="width:100%;height:32px"></audio>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    } else {
+      // Message Item
+      const isWa = (it.channel || '').toLowerCase().includes('wa') || (it.channel || '').toLowerCase().includes('whatsapp');
+      const stColor = ['delivered','read'].includes((it.status||'').toLowerCase()) ? '#059669' : '#6b7280';
+
+      return `
+        <div style="display:flex;gap:14px;padding:14px 0;border-bottom:1px solid #f3f4f6;align-items:flex-start">
+          <div style="width:36px;height:36px;border-radius:50%;background:#ecfdf5;display:flex;align-items:center;justify-content:center;color:#059669;font-size:16px;flex-shrink:0">
+            <i class="fab ${isWa ? 'fa-whatsapp' : 'fa-comment-dots'}"></i>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
+              <div style="font-weight:700;font-size:13px;color:#111827">
+                ${isWa ? 'WhatsApp' : 'SMS'} ${isOutbound ? 'Outbound' : 'Inbound'}
+                <span style="font-size:10.5px;padding:2px 7px;border-radius:12px;background:#f3f4f6;color:${stColor};font-weight:700;margin-left:6px">${it.status || 'Sent'}</span>
+              </div>
+              <div style="font-size:11.5px;color:#9ca3af;font-weight:600">${timeStr}</div>
+            </div>
+            ${it.content ? `
+              <div style="margin-top:6px;background:#f9fafb;padding:8px 12px;border-radius:8px;font-size:12px;color:#374151;line-height:1.5;border:1px solid #e5e7eb;white-space:pre-wrap;word-break:break-word">
+                ${it.content}
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    }
+  }).join('');
 }
 
 // ── Change Registered Staff Modal [DC-VGK-STAFF-REG-001] ─────────────────────
@@ -5228,6 +6318,7 @@ function _initApp() {
 
   try { StaffHeader.inject('VGK Channel Partners', 'fas fa-users'); } catch(e){}
   try { _initStaffMe(); } catch(e){}
+  try { loadStaffOptions(); } catch(e){}
   if (typeof StaffSidebar !== 'undefined' && StaffSidebar.init) {
     StaffSidebar.init().catch(err => console.warn('[StaffSidebar.init warning]', err));
   }
@@ -6065,6 +7156,196 @@ function closePosterModal() {
 }
 window.closePosterModal = closePosterModal;
 
+// ── Channel Partner Poster Image & WhatsApp Template Engine ──────────────────
+window._customUploadedCreativeImage = null;
+window._customUploadedPosterImage = null; // compatibility alias
+window._originalPosterProfilePhoto = null;
+window._posterCustomTextEdited = false;
+
+function handleCustomCreativeUpload(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const dataUrl = evt.target.result;
+    window._customUploadedCreativeImage = dataUrl;
+    window._customUploadedPosterImage = dataUrl; // alias
+
+    // 1. Update Preview Card Beside Existing Poster Canvas
+    const img = document.getElementById('customCreativeImg');
+    const card = document.getElementById('customCreativeImgCard');
+    const placeholder = document.getElementById('customCreativeEmptyPlaceholder');
+    const topBadge = document.getElementById('customCreativeTopBadge');
+
+    if (img) img.src = dataUrl;
+    if (card) card.style.display = 'block';
+    if (placeholder) placeholder.style.display = 'none';
+    if (topBadge) {
+      topBadge.textContent = 'Active for WhatsApp ✅';
+      topBadge.style.background = '#d1fae5';
+      topBadge.style.color = '#065f46';
+      topBadge.style.borderColor = '#10b981';
+    }
+
+    // 2. Update Left Controls Card
+    const leftBadge = document.getElementById('customCreativeStatusBadge');
+    if (leftBadge) {
+      leftBadge.textContent = 'Creative Attached ✅';
+      leftBadge.style.background = '#dcfce7';
+      leftBadge.style.color = '#15803d';
+    }
+    const leftNotice = document.getElementById('customCreativeNotice');
+    if (leftNotice) {
+      leftNotice.textContent = '✅ Custom creative attached! WhatsApp shares will use this uploaded image beside the message.';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+window.handleCustomCreativeUpload = handleCustomCreativeUpload;
+window.handlePosterImageUpload = handleCustomCreativeUpload; // compatibility alias
+
+function clearCustomCreativeImage() {
+  window._customUploadedCreativeImage = null;
+  window._customUploadedPosterImage = null; // alias
+
+  const fileInput = document.getElementById('postCustomCreativeFile');
+  if (fileInput) fileInput.value = '';
+  const oldFileInput = document.getElementById('postCustomImageFile');
+  if (oldFileInput) oldFileInput.value = '';
+
+  const card = document.getElementById('customCreativeImgCard');
+  const placeholder = document.getElementById('customCreativeEmptyPlaceholder');
+  const topBadge = document.getElementById('customCreativeTopBadge');
+  const img = document.getElementById('customCreativeImg');
+
+  if (img) img.src = '';
+  if (card) card.style.display = 'none';
+  if (placeholder) placeholder.style.display = 'flex';
+  if (topBadge) {
+    topBadge.textContent = 'Optional Attachment';
+    topBadge.style.background = '#1e293b';
+    topBadge.style.color = '#9ca3af';
+    topBadge.style.borderColor = '#334155';
+  }
+
+  const leftBadge = document.getElementById('customCreativeStatusBadge');
+  if (leftBadge) {
+    leftBadge.textContent = 'No Creative Attached';
+    leftBadge.style.background = '#f3f4f6';
+    leftBadge.style.color = '#6b7280';
+  }
+  const leftNotice = document.getElementById('customCreativeNotice');
+  if (leftNotice) {
+    leftNotice.textContent = '✨ No custom creative attached. WhatsApp will send the default message.';
+  }
+}
+window.clearCustomCreativeImage = clearCustomCreativeImage;
+window.clearPosterImage = clearCustomCreativeImage; // compatibility alias
+window.resetPosterImageToProfile = clearCustomCreativeImage; // compatibility alias
+
+function buildPosterShareText(templateKey) {
+  const rawName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevName')?.textContent || '').trim();
+  const rawRank = (document.getElementById('postRank')?.value || document.getElementById('prevRank')?.textContent || '').trim();
+  const partnerName = rawName || 'Channel Partner';
+  const partnerRank = rawRank ? (rawRank.startsWith('★') ? rawRank : `★ ${rawRank} ★`) : '';
+  const partnerOverall = (document.getElementById('postHighlight')?.value || document.getElementById('prevHighlight')?.textContent || '').trim();
+  const partnerToday = (document.getElementById('prevTotalToday')?.textContent || document.getElementById('postTodayPayout')?.value || '').trim();
+  const partnerPotential = (document.getElementById('postPotential')?.value || document.getElementById('prevPotential')?.textContent || '').trim();
+  const breakupText = (document.getElementById('postTodayPayout')?.value || '').trim();
+  const filesVal = (document.getElementById('postFiles')?.value || document.getElementById('prevFiles')?.textContent || '').trim();
+  const teamVal = (document.getElementById('postOverall')?.value || document.getElementById('prevOverall')?.textContent || '').trim();
+
+  let seniorName = (document.getElementById('postSeniorName')?.value || document.getElementById('prevSeniorName')?.textContent || '').replace(/^Senior\s*:\s*/i, '').trim();
+  const seniorToday = (document.getElementById('postSeniorToday')?.value || document.getElementById('prevSeniorToday')?.textContent || '').trim();
+  const seniorOverall = (document.getElementById('postSeniorEarning')?.value || document.getElementById('prevSeniorEarning')?.textContent || '').trim();
+  const prevSeniorPot = document.getElementById('prevSeniorPotential');
+  const seniorPotential = prevSeniorPot ? prevSeniorPot.textContent.trim() : (document.getElementById('postSeniorPotential')?.value || '₹0/-');
+
+  const showSeniorInput = document.getElementById('postShowSenior');
+  const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
+
+  const tpl = templateKey || document.getElementById('postShareTemplate')?.value || 'full';
+
+  if (tpl === 'payout') {
+    let t = `💰 *TODAY'S PAYOUT RELEASED!* 💰\n\n`;
+    t += `🎉 Congratulations to *${partnerName}*${partnerRank ? ' (' + partnerRank + ')' : ''}!\n\n`;
+    if (partnerToday) t += `💵 *Today's Earning:* ${partnerToday}\n`;
+    if (breakupText && breakupText !== 'No Payouts for Selected Date') t += `📋 *Breakup:* ${breakupText}\n`;
+    if (filesVal) t += `📂 *Files Status:* ${filesVal}\n`;
+    if (partnerOverall) t += `📈 *Overall Earned:* ${partnerOverall}\n`;
+    t += `\n🌟 Keep shining and reaching new heights with VGK4U!\n`;
+    t += `🌐 https://vgk4u.com`;
+    return t;
+  }
+
+  if (tpl === 'milestone') {
+    let t = `⭐ *NEW MILESTONE ACHIEVED!* ⭐\n\n`;
+    t += `🏆 Proud to celebrate *${partnerName}* — ${partnerRank || 'Channel Partner'}!\n\n`;
+    if (partnerOverall) t += `📈 *Total Career Earnings:* ${partnerOverall}\n`;
+    if (teamVal) t += `👥 *Total Team Size:* ${teamVal}\n`;
+    if (partnerPotential) t += `🔮 *Expected Potential:* ${partnerPotential}\n`;
+    if (partnerToday) t += `💰 *Latest Payout:* ${partnerToday}\n`;
+    t += `\n🚀 VGK4U is empowering partners across India!\n`;
+    t += `🌐 https://vgk4u.com\n`;
+    t += `📲 Join the revolution today!`;
+    return t;
+  }
+
+  if (tpl === 'short') {
+    return `🎉 Big congratulations to *${partnerName}* for earning *${partnerToday}* today with VGK4U! 🚀 Overall: ${partnerOverall}. Proud of your achievement! 👏 https://vgk4u.com`;
+  }
+
+  // Default: Full Celebration Announcement
+  let text = `🎉 *CONGRATULATIONS TO ${partnerName}!* 🎉\n\n`;
+  if (partnerRank) {
+    text += `${partnerRank}\n\n`;
+  }
+  text += `👤 *Member Name:* ${partnerName}\n`;
+  if (partnerToday) {
+    text += `💰 *Today's Payout:* ${partnerToday}\n`;
+  }
+  if (partnerOverall) {
+    text += `📈 *Overall Earning:* ${partnerOverall}\n`;
+  }
+  if (partnerPotential) {
+    text += `🔮 *Potential Valuation:* ${partnerPotential}\n`;
+  }
+  text += `\n`;
+
+  if (isSeniorVisible && seniorName && seniorName !== '—' && seniorName !== 'NONE' && !seniorName.endsWith('—')) {
+    text += `🙌 *Senior Referrer:* ${seniorName}\n`;
+    text += `💰 *Senior Today:* ${seniorToday} | *Overall:* ${seniorOverall}\n`;
+    if (seniorPotential && seniorPotential !== '₹0/-') {
+      text += `🔮 *Senior Potential:* ${seniorPotential}\n`;
+    }
+    text += `\n`;
+  }
+
+  text += `🌐 *Official Website:* https://vgk4u.com\n\n`;
+  text += `🚀 *Join VGK4U today & grow your earnings!*`;
+  return text;
+}
+window.buildPosterShareText = buildPosterShareText;
+
+function changePosterShareTemplate() {
+  const tpl = document.getElementById('postShareTemplate')?.value || 'full';
+  window._posterCustomTextEdited = false;
+  const txt = buildPosterShareText(tpl);
+  const el = document.getElementById('postShareCustomText');
+  if (el) el.value = txt;
+}
+window.changePosterShareTemplate = changePosterShareTemplate;
+
+function resetPosterCustomText() {
+  const tpl = document.getElementById('postShareTemplate')?.value || 'full';
+  window._posterCustomTextEdited = false;
+  const txt = buildPosterShareText(tpl);
+  const el = document.getElementById('postShareCustomText');
+  if (el) el.value = txt;
+}
+window.resetPosterCustomText = resetPosterCustomText;
+
 async function generateMemberPoster(partnerId) {
   const modal = document.getElementById('posterModal');
   if(!modal) return;
@@ -6113,7 +7394,21 @@ async function generateMemberPoster(partnerId) {
     
     const photoPath = m.passport_photo || m.logo_path || m.profile_image || m.photo_url || m.avatar_url || m.id_card_photo || m.photo;
     const resolvedUrl = resolvePosterMediaUrl(photoPath);
+    window._originalPosterProfilePhoto = resolvedUrl || null;
+    clearCustomCreativeImage();
+    window._posterCustomTextEdited = false;
+
+    // Update member profile avatar thumbnail in left pane controls
+    const thumbImg = document.getElementById('postImageThumb');
+    const thumbAvatar = document.getElementById('postImageThumbAvatar');
+    const nameBadge = document.getElementById('postMemberNameBadge');
+    if (nameBadge) nameBadge.textContent = m.partner_name || 'Member';
+    if (thumbAvatar) thumbAvatar.textContent = initials;
+
     if (resolvedUrl) {
+      if (thumbImg) { thumbImg.src = resolvedUrl; thumbImg.style.display = 'block'; }
+      if (thumbAvatar) thumbAvatar.style.display = 'none';
+
       const img = document.getElementById('prevImg');
       let triedWithoutCors = false;
       if (resolvedUrl.startsWith('http') && !resolvedUrl.includes(window.location.host)) {
@@ -6141,6 +7436,8 @@ async function generateMemberPoster(partnerId) {
     } else {
       console.log("[Poster Debug] No main photo path found. Displaying initials.");
       avatar.style.display = 'flex';
+      if (thumbImg) thumbImg.style.display = 'none';
+      if (thumbAvatar) thumbAvatar.style.display = 'flex';
     }
     
     // Fetch full member income details (unfiltered) to populate poster stats, location and customer
@@ -6428,6 +7725,11 @@ async function generateMemberPoster(partnerId) {
     if (document.getElementById('postThemePreset')) document.getElementById('postThemePreset').value = 'celebration_graphic';
     changeThemePreset();
     recalculateTodayPayout();
+
+    if (document.getElementById('postShareTemplate')) {
+      document.getElementById('postShareTemplate').value = 'full';
+    }
+    resetPosterCustomText();
   } catch(err) {
     alert('Failed to generate poster: ' + err.message);
     closePosterModal();
@@ -6832,6 +8134,13 @@ function updatePoster() {
   
   const imgInstVal = getVal('postImageInstructions');
   setTxt('prevImageInstructions', imgInstVal ? '* Instructions: ' + imgInstVal.toUpperCase() : '');
+
+  if (!window._posterCustomTextEdited) {
+    const tpl = document.getElementById('postShareTemplate')?.value || 'full';
+    const txt = buildPosterShareText(tpl);
+    const customTextEl = document.getElementById('postShareCustomText');
+    if (customTextEl) customTextEl.value = txt;
+  }
 }
 
 function changeThemePreset() {
@@ -7135,33 +8444,8 @@ function getPosterShareDetails() {
   const showSeniorInput = document.getElementById('postShowSenior');
   const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
 
-  let text = `🎉 *CONGRATULATIONS TO ${partnerName}!* 🎉\n\n`;
-  if (partnerRank) {
-    text += `${partnerRank}\n\n`;
-  }
-  text += `👤 *Member Name:* ${partnerName}\n`;
-  if (partnerToday) {
-    text += `💰 *Today's Payout:* ${partnerToday}\n`;
-  }
-  if (partnerOverall) {
-    text += `📈 *Overall Earning:* ${partnerOverall}\n`;
-  }
-  if (partnerPotential) {
-    text += `🔮 *Potential Valuation:* ${partnerPotential}\n`;
-  }
-  text += `\n`;
-
-  if (isSeniorVisible && seniorName && seniorName !== '—' && seniorName !== 'NONE' && !seniorName.endsWith('—')) {
-    text += `🙌 *Senior Referrer:* ${seniorName}\n`;
-    text += `💰 *Senior Today:* ${seniorToday} | *Overall:* ${seniorOverall}\n`;
-    if (seniorPotential && seniorPotential !== '₹0/-') {
-      text += `🔮 *Senior Potential:* ${seniorPotential}\n`;
-    }
-    text += `\n`;
-  }
-
-  text += `🌐 *Official Website:* https://vgk4u.com\n\n`;
-  text += `🚀 *Join VGK4U today & grow your earnings!*`;
+  const customTextEl = document.getElementById('postShareCustomText');
+  let text = (customTextEl && customTextEl.value.trim()) ? customTextEl.value.trim() : buildPosterShareText();
 
   return { partnerName, partnerRank, partnerOverall, partnerToday, partnerPotential, seniorName, seniorToday, seniorOverall, seniorPotential, isSeniorVisible, text };
 }
@@ -7171,6 +8455,16 @@ function shareOnWhatsApp() {
   const shareDetails = getPosterShareDetails();
   const partnerName = shareDetails.partnerName;
   const text = shareDetails.text;
+
+  // Check if custom uploaded creative image is present:
+  const customImg = window._customUploadedCreativeImage || window._customUploadedPosterImage;
+
+  if (!customImg) {
+    // Text only: directly open WhatsApp with default template message!
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+    return;
+  }
 
   // Open the window immediately to bypass browser popup blockers
   const shareWindow = window.open('', '_blank');
@@ -7185,57 +8479,36 @@ function shareOnWhatsApp() {
     if (spText) spText.textContent = 'Preparing WhatsApp share & download...';
   }
 
-  capturePosterCanvas(container).then(canvas => {
+  const proceedWithImageBlob = async (blob, dUrl) => {
     if (spinner) spinner.style.display = 'none';
-    if (!canvas) {
-      if (shareWindow) shareWindow.close();
-      return;
-    }
-    
-    // Automatically trigger image download using safeToDataURL
-    try {
-      const dUrl = safeToDataURL(canvas);
-      if (dUrl) {
+    if (dUrl) {
+      try {
         const link = document.createElement('a');
         link.download = `${partnerName.replace(/\s+/g, '_')}_Achievement_Poster.png`;
         link.href = dUrl;
         link.click();
-      }
-    } catch (downloadErr) {
-      console.error('Auto download failed:', downloadErr);
+      } catch(e){}
     }
-    
-    safeToBlob(canvas, async (blob) => {
-      if (!blob) {
-        alert('Failed to generate sharing image.');
-        if (shareWindow) shareWindow.close();
-        return;
-      }
-
-      // Try to write image to clipboard so the user can easily paste it
+    if (blob && navigator.clipboard && window.ClipboardItem) {
       try {
-        if (navigator.clipboard && window.ClipboardItem) {
-          await navigator.clipboard.write([
-            new ClipboardItem({ 'image/png': blob })
-          ]);
-          alert('Poster image downloaded and copied to clipboard! You can paste (Cmd+V / Ctrl+V) the image directly inside the WhatsApp chat.');
-        }
-      } catch (err) {
-        console.warn('Clipboard write failed:', err);
-      }
+        await navigator.clipboard.write([
+          new ClipboardItem({ [blob.type || 'image/png']: blob })
+        ]);
+        alert('Poster image downloaded and copied to clipboard! You can paste (Cmd+V / Ctrl+V) the image directly inside the WhatsApp chat.');
+      } catch(e){}
+    }
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    if (shareWindow) {
+      shareWindow.location.href = url;
+    } else {
+      window.open(url, '_blank');
+    }
+  };
 
-      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-      if (shareWindow) {
-        shareWindow.location.href = url;
-      } else {
-        window.open(url, '_blank');
-      }
-    }, 'image/png');
-  }).catch(err => {
-    if (spinner) spinner.style.display = 'none';
-    if (shareWindow) shareWindow.close();
-    alert('Failed to generate sharing image: ' + err.message);
-  });
+  fetch(customImg)
+    .then(r => r.blob())
+    .then(blob => proceedWithImageBlob(blob, customImg))
+    .catch(() => proceedWithImageBlob(null, customImg));
 }
 
 function showLiveDispatchStatusModal(targets, partnerName) {
@@ -7368,18 +8641,20 @@ async function shareDefaultChannel() {
   let dataUrl = null;
   let blob = null;
 
-  try {
-    const canvas = await capturePosterCanvas(container);
-    if (canvas) {
-      try {
-        dataUrl = canvas.toDataURL('image/png');
-        blob = await (await fetch(dataUrl)).blob();
-      } catch (cErr) {
-        console.warn("Poster toDataURL failed:", cErr);
-      }
+  // Determine image to send:
+  // If staff uploaded a custom creative image, USE THAT UPLOADED IMAGE!
+  // If NO creative uploaded, send default message (dataUrl = null)!
+  const customImage = window._customUploadedCreativeImage || window._customUploadedPosterImage;
+  if (customImage) {
+    dataUrl = customImage;
+    try {
+      blob = await (await fetch(dataUrl)).blob();
+    } catch (bErr) {
+      console.warn("Custom creative image blob conversion error:", bErr);
     }
-  } catch (capErr) {
-    console.warn("capturePosterCanvas error:", capErr);
+  } else {
+    dataUrl = null;
+    blob = null;
   }
 
   const fetchWithTimeout = async (url, opts = {}, ms = 2500) => {
@@ -7435,7 +8710,7 @@ async function shareDefaultChannel() {
         });
         const json = await res.json();
         if (json.success) {
-          updateDispatchStatus('member', 'sent', 'Delivered via Scanned WhatsApp');
+          updateDispatchStatus('member', 'sent', dataUrl ? 'Delivered with Image 🖼️' : 'Delivered (Text Only) ✅');
         } else {
           updateDispatchStatus('member', 'error', json.error || 'Bot Error');
         }
@@ -7456,7 +8731,7 @@ async function shareDefaultChannel() {
         });
         const json = await res.json();
         if (json.success) {
-          updateDispatchStatus('senior', 'sent', 'Delivered via Scanned WhatsApp');
+          updateDispatchStatus('senior', 'sent', dataUrl ? 'Delivered with Image 🖼️' : 'Delivered (Text Only) ✅');
         } else {
           updateDispatchStatus('senior', 'error', json.error || 'Bot Error');
         }
@@ -7476,7 +8751,7 @@ async function shareDefaultChannel() {
       });
       const json = await res.json();
       if (json.success) {
-        updateDispatchStatus('channel_official', 'sent', 'Delivered to Channel');
+        updateDispatchStatus('channel_official', 'sent', dataUrl ? 'Delivered with Image' : 'Delivered to Channel (Text Only)');
       } else {
         updateDispatchStatus('channel_official', 'error', json.error || 'Channel Send Failed');
       }
@@ -7493,7 +8768,7 @@ async function shareDefaultChannel() {
       });
       const json = await res.json();
       if (json.success) {
-        updateDispatchStatus('group_main', 'sent', 'Delivered to Group');
+        updateDispatchStatus('group_main', 'sent', dataUrl ? 'Delivered with Image' : 'Delivered to Group (Text Only)');
       } else {
         updateDispatchStatus('group_main', 'error', json.error || 'Group Send Failed');
       }
@@ -7510,7 +8785,7 @@ async function shareDefaultChannel() {
       });
       const json = await res.json();
       if (json.success) {
-        updateDispatchStatus('group_exec', 'sent', 'Delivered to Group');
+        updateDispatchStatus('group_exec', 'sent', dataUrl ? 'Delivered with Image' : 'Delivered to Group (Text Only)');
       } else {
         updateDispatchStatus('group_exec', 'error', json.error || 'Group Send Failed');
       }
@@ -7527,7 +8802,7 @@ async function shareDefaultChannel() {
       });
       const json = await res.json();
       if (json.success) {
-        updateDispatchStatus('group_ev_stars', 'sent', 'Delivered to Group');
+        updateDispatchStatus('group_ev_stars', 'sent', dataUrl ? 'Delivered with Image' : 'Delivered to Group (Text Only)');
       } else {
         updateDispatchStatus('group_ev_stars', 'error', json.error || 'Group Send Failed');
       }
@@ -7544,7 +8819,7 @@ async function shareDefaultChannel() {
       });
       const json = await res.json();
       if (json.success) {
-        updateDispatchStatus('group_mnr_gen', 'sent', 'Delivered to Group');
+        updateDispatchStatus('group_mnr_gen', 'sent', dataUrl ? 'Delivered with Image' : 'Delivered to Group (Text Only)');
       } else {
         updateDispatchStatus('group_mnr_gen', 'error', json.error || 'Group Send Failed');
       }
@@ -7561,7 +8836,7 @@ async function shareDefaultChannel() {
       });
       const json = await res.json();
       if (json.success) {
-        updateDispatchStatus('group_vgk_vjd', 'sent', 'Delivered to Group');
+        updateDispatchStatus('group_vgk_vjd', 'sent', dataUrl ? 'Delivered with Image' : 'Delivered to Group (Text Only)');
       } else {
         updateDispatchStatus('group_vgk_vjd', 'error', json.error || 'Group Send Failed');
       }
@@ -7573,6 +8848,62 @@ async function shareDefaultChannel() {
     console.error('Share Default error:', err);
   }
 }
+
+async function testShareToNumber() {
+  const container = document.getElementById('posterCanvasWrapper');
+  if (!container) return;
+
+  const savedPhone = localStorage.getItem('last_test_wa_phone') || '';
+  const phoneInput = prompt('📲 ENTER TEST WHATSAPP NUMBER:\n----------------------------------------\nEnter the WhatsApp mobile number to test broadcast & message before sending to all groups/members:', savedPhone || '91');
+
+  if (!phoneInput) return;
+  let cleanPhone = phoneInput.replace(/\D/g, '');
+  if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+  if (cleanPhone.length < 10) {
+    alert('Please enter a valid 10-digit or 12-digit mobile number.');
+    return;
+  }
+
+  localStorage.setItem('last_test_wa_phone', cleanPhone);
+
+  const shareDetails = getPosterShareDetails();
+  const shareText = shareDetails.text;
+
+  const spinner = document.getElementById('posterSpinner');
+  if (spinner) spinner.style.display = 'flex';
+
+  // If a custom creative image was uploaded, USE THAT UPLOADED IMAGE!
+  // If NO creative uploaded, send default message (dataUrl = null)!
+  const dataUrl = window._customUploadedCreativeImage || window._customUploadedPosterImage || null;
+
+  if (spinner) spinner.style.display = 'none';
+
+  try {
+    const res = await fetch('http://localhost:5002/api/send-message', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: cleanPhone, imageUrl: dataUrl, message: shareText })
+    });
+    const json = await res.json();
+    if (json.success) {
+      alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nAttachment: ${dataUrl ? 'Uploaded Image 🖼️' : 'Text Only (Default Message)'}\n\nPlease check your WhatsApp on +91 ${cleanPhone.slice(-10)} to verify!`);
+    } else {
+      const errNotice = json.error || 'WhatsApp bot not connected';
+      const useFallback = confirm(`⚠️ Automated Background Bot Notice:\n${errNotice}\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
+      if (useFallback) {
+        const directUrl = `https://api.whatsapp.com/send?phone=91${cleanPhone.slice(-10)}&text=${encodeURIComponent(shareText)}`;
+        window.open(directUrl, '_blank');
+      }
+    }
+  } catch (err) {
+    const useFallback = confirm(`⚠️ Background Bot Unavailable on port 5002.\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
+    if (useFallback) {
+      const directUrl = `https://api.whatsapp.com/send?phone=91${cleanPhone.slice(-10)}&text=${encodeURIComponent(shareText)}`;
+      window.open(directUrl, '_blank');
+    }
+  }
+}
+window.testShareToNumber = testShareToNumber;
 
 async function postPosterAnnouncement() {
   if (typeof window.postPosterAnnouncement === 'function' && window.postPosterAnnouncement !== postPosterAnnouncement) {
@@ -7872,7 +9203,8 @@ async function loadCommServicesTab(pg = 1) {
     const r = await staffFetch(url);
     const d = await r.json();
     if (!d.success) {
-      showToast('Failed to load community services dashboard', 'error');
+      showToast(d.error || d.detail || 'Failed to load community services dashboard', 'error');
+      document.getElementById('commBody').innerHTML = `<tr><td colspan="16" style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>Failed to load: ${(d.error || d.detail || 'Unknown error')}<br><button onclick="loadCommServicesTab(${pg})" style="margin-top:10px;padding:6px 14px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer"><i class="fas fa-redo me-1"></i>Retry</button></td></tr>`;
       return;
     }
     _commLoaded = true;
@@ -7880,7 +9212,7 @@ async function loadCommServicesTab(pg = 1) {
     _commRenderTable(d.data);
     _commRenderPagination(d.total, pg, 50);
   } catch (e) {
-    document.getElementById('commBody').innerHTML = '<tr><td colspan="16" style="text-align:center;padding:30px;color:#dc2626">Error: ' + e.message + '</td></tr>';
+    document.getElementById('commBody').innerHTML = `<tr><td colspan="16" style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>Error: ${e.message}<br><button onclick="loadCommServicesTab(${pg})" style="margin-top:10px;padding:6px 14px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer"><i class="fas fa-redo me-1"></i>Retry</button></td></tr>`;
   }
 }
 
@@ -8357,7 +9689,7 @@ function _renderCommDetailTable(partnerId) {
 
 <!-- Poster Modal (Generate & Download) -->
 <div id="posterModal" onclick="if(event.target===this)closePosterModal()" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.75);align-items:center;justify-content:center;padding:16px;overflow-y:auto;box-sizing:border-box">
-  <div style="background:white;border-radius:16px;width:100%;max-width:1200px;box-shadow:0 20px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;max-height:90vh;overflow:hidden">
+  <div style="background:white;border-radius:16px;width:96vw;max-width:1440px;box-shadow:0 20px 60px rgba(0,0,0,.35);display:flex;flex-direction:column;height:92vh;max-height:92vh;overflow:hidden">
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#10b981,#059669);padding:16px 24px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
       <div style="color:white">
@@ -8374,6 +9706,19 @@ function _renderCommDetailTable(partnerId) {
         <h5 style="font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:16px;border-bottom:2px solid #e5e7eb;padding-bottom:6px"><i class="fas fa-edit me-1" style="color:#059669"></i>Poster Details</h5>
         
         <div style="display:flex;flex-direction:column;gap:12px">
+          <!-- MEMBER PROFILE AVATAR DISPLAY (Existing photo used in poster canvas) -->
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;box-sizing:border-box;display:flex;align-items:center;gap:12px">
+            <div style="width:46px;height:46px;border-radius:50%;border:2.5px solid #10b981;overflow:hidden;background:#0f172a;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.15)">
+              <img id="postImageThumb" src="" style="width:100%;height:100%;object-fit:cover;display:none" alt="Avatar">
+              <div id="postImageThumbAvatar" style="font-size:14px;font-weight:800;color:#fff">MB</div>
+            </div>
+            <div style="min-width:0;flex:1">
+              <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.3px">Member Profile Photo</div>
+              <div id="postMemberNameBadge" style="font-size:12px;font-weight:800;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Teku Jyothi Kumar</div>
+              <div style="font-size:9.5px;color:#059669;font-weight:600;margin-top:1px"><i class="fas fa-check-circle me-1"></i>Shown inside auto-generated poster</div>
+            </div>
+          </div>
+
           <div>
             <label style="font-size:11px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px">POSTER TITLE</label>
             <input type="text" id="postTitle" oninput="updatePoster()" style="width:100%;padding:8px 10px;font-size:12px;border:1.5px solid #d1d5db;border-radius:6px;outline:none" placeholder="e.g. SOLAR 1ST PAYMENT RELEASED">
@@ -8507,17 +9852,87 @@ function _renderCommDetailTable(partnerId) {
               </div>
             </div>
           </div>
+
+          <!-- WHATSAPP MESSAGE TEMPLATES & PREVIEW -->
+          <div style="border-top:1.5px solid #e5e7eb;margin-top:8px;padding-top:12px;background:#f0fdf4;margin:4px -20px -20px -20px;padding:16px 20px;border-bottom:1px solid #d1d5db">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <label style="font-size:11.5px;font-weight:800;color:#065f46;text-transform:uppercase;letter-spacing:0.3px;margin:0">
+                <i class="fab fa-whatsapp me-1 text-success"></i>WhatsApp Message Template
+              </label>
+              <button type="button" onclick="resetPosterCustomText()" style="background:none;border:none;color:#059669;font-size:11px;font-weight:700;cursor:pointer;padding:0">
+                <i class="fas fa-redo-alt me-1"></i>Reset Text
+              </button>
+            </div>
+            
+            <div style="margin-bottom:8px">
+              <select id="postShareTemplate" onchange="changePosterShareTemplate()" style="width:100%;padding:7px 9px;font-size:11.5px;font-weight:700;border:1.5px solid #a7f3d0;border-radius:7px;background:#ffffff;color:#065f46;outline:none">
+                <option value="full" selected>🎉 Full Celebration Announcement</option>
+                <option value="payout">💰 Today's Payout Highlight</option>
+                <option value="milestone">⭐ Milestone &amp; Stars</option>
+                <option value="short">📢 Short Announcement</option>
+              </select>
+            </div>
+            
+            <div>
+              <label style="font-size:10px;font-weight:700;color:#4b5563;display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+                <span>EDITABLE MESSAGE PREVIEW</span>
+                <span style="font-size:9.5px;font-weight:400;color:#6b7280">(Staff can edit directly)</span>
+              </label>
+              <textarea id="postShareCustomText" rows="6" oninput="window._posterCustomTextEdited = true" style="width:100%;font-size:11.5px;font-family:'Segoe UI',system-ui,sans-serif;line-height:1.45;border:1.5px solid #a7f3d0;border-radius:7px;padding:8px 10px;box-sizing:border-box;resize:vertical;background:#ffffff;color:#111827;white-space:pre-wrap" placeholder="WhatsApp message will preview and update here…"></textarea>
+            </div>
+
+            <!-- ATTACH CUSTOM CREATIVE / POSTER (FOR WHATSAPP SENDING) -->
+            <div style="background:#ffffff;border:1.5px dashed #059669;border-radius:9px;padding:12px;margin-top:10px;box-sizing:border-box">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                <label style="font-size:11px;font-weight:800;color:#065f46;text-transform:uppercase;letter-spacing:0.3px;margin:0">
+                  <i class="fas fa-file-image me-1"></i>Attach Custom Creative
+                </label>
+                <span id="customCreativeStatusBadge" style="font-size:9.5px;font-weight:700;padding:2px 7px;border-radius:10px;background:#f3f4f6;color:#6b7280">
+                  No Creative Attached
+                </span>
+              </div>
+              
+              <p style="font-size:10px;color:#047857;margin:0 0 8px 0;line-height:1.35">
+                Upload a designer poster or banner. It appears <strong>beside the auto-poster</strong> and is sent on WhatsApp with the template.
+              </p>
+
+              <input type="file" id="postCustomCreativeFile" accept="image/*" onchange="handleCustomCreativeUpload(event)" style="display:none">
+              <input type="file" id="postCustomImageFile" accept="image/*" onchange="handleCustomCreativeUpload(event)" style="display:none">
+              <div style="display:flex;gap:6px">
+                <button type="button" onclick="document.getElementById('postCustomCreativeFile').click()" style="flex:2;background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:6px;padding:7px 10px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:5px">
+                  <i class="fas fa-cloud-upload-alt"></i> Upload Creative
+                </button>
+                <button type="button" onclick="clearCustomCreativeImage()" id="btnClearCustomCreative" style="flex:1;background:#fff;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;padding:7px 8px;font-size:10.5px;font-weight:700;cursor:pointer" title="Remove creative to send default message without image">
+                  <i class="fas fa-trash-alt me-1"></i>Remove
+                </button>
+              </div>
+              <div id="customCreativeNotice" style="font-size:9.5px;color:#4b5563;margin-top:6px;line-height:1.3">
+                ℹ️ If no creative is uploaded, WhatsApp will send the default text message.
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       
-      <!-- Right Pane: Live Poster Preview -->
-      <div style="flex:1;background:#131B2E;display:flex;align-items:center;justify-content:center;padding:24px;overflow:auto;position:relative">
+      <!-- Right Pane: Live Poster Preview (Side-by-Side: Auto-Generated Poster | Uploaded Creative) -->
+      <div id="rightPosterPane" style="flex:1;background:#131B2E;display:flex;align-items:flex-start;justify-content:center;gap:24px;padding:24px;overflow-x:auto;overflow-y:auto;position:relative">
         <div id="posterSpinner" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.6);z-index:10;align-items:center;justify-content:center;color:white;font-size:14px">
           <div style="text-align:center"><i class="fas fa-circle-notch fa-spin fa-2x mb-2"></i><div>Analyzing and populating values…</div></div>
         </div>
-        
-        <!-- Renderable Canvas Wrapper - Dynamic Content-Fitting Celebration Poster (480px width, tight auto-fit height with zero empty space) -->
-        <div id="posterCanvasWrapper" style="width:480px;height:fit-content;background:radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 50%, #020617 100%);border:5px double #fbbf24;border-radius:20px;box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 50px rgba(251,191,36,0.4);position:relative;box-sizing:border-box;color:#ffffff;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0;padding:14px 16px 20px 16px;display:flex;flex-direction:column;align-items:center;overflow:hidden">
+
+        <!-- Left Preview: Auto-Generated Poster Column -->
+        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;width:480px;margin-bottom:8px;padding:0 4px">
+            <span style="font-size:12px;font-weight:800;color:#fbbf24;letter-spacing:0.5px;text-transform:uppercase">
+              <i class="fas fa-magic me-1"></i>Auto-Generated Poster
+            </span>
+            <span style="font-size:10.5px;font-weight:700;color:#94a3b8;background:#1e293b;padding:2px 8px;border-radius:10px;border:1px solid #334155">
+              Canvas Template
+            </span>
+          </div>
+
+          <!-- Renderable Canvas Wrapper - Dynamic Content-Fitting Celebration Poster (480px width, tight auto-fit height with zero empty space) -->
+          <div id="posterCanvasWrapper" style="width:480px;height:fit-content;background:radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 50%, #020617 100%);border:5px double #fbbf24;border-radius:20px;box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 50px rgba(251,191,36,0.4);position:relative;box-sizing:border-box;color:#ffffff;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;user-select:none;flex-shrink:0;padding:14px 16px 20px 16px;display:flex;flex-direction:column;align-items:center;overflow:hidden">
           
           <div id="prevBonusDesc" style="display:none"></div>
           <div id="prevTitle" style="display:none">CONGRATULATIONS</div>
@@ -8681,6 +10096,60 @@ function _renderCommDetailTable(partnerId) {
               * POTENTIAL EARNING IS BASED ON FINAL COMPLETION OF PROJECTS AND SUBJECT TO COMPANY TERMS.
             </div>
 
+          </div>
+        </div>
+        <!-- End Left Auto Poster Column -->
+        </div>
+
+        <!-- Right Preview: Uploaded Custom Creative Column (BESIDE the existing image) -->
+        <div id="customCreativePreviewCol" style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;width:480px;margin-bottom:8px;padding:0 4px">
+            <span style="font-size:12px;font-weight:800;color:#34d399;letter-spacing:0.5px;text-transform:uppercase">
+              <i class="fas fa-file-image me-1"></i>Uploaded Custom Creative
+            </span>
+            <span id="customCreativeTopBadge" style="font-size:10.5px;font-weight:800;color:#9ca3af;background:#1e293b;padding:2px 8px;border-radius:10px;border:1px solid #334155">
+              Optional Attachment
+            </span>
+          </div>
+
+          <!-- Displayed when image IS uploaded -->
+          <div id="customCreativeImgCard" style="display:none;width:480px;background:#0f172a;border:3px solid #10b981;border-radius:20px;overflow:hidden;box-shadow:0 25px 70px rgba(0,0,0,0.95), 0 0 30px rgba(16,185,129,0.25);position:relative">
+            <div style="background:#1e293b;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #334155">
+              <span style="font-size:12px;font-weight:700;color:#34d399;display:flex;align-items:center;gap:6px">
+                <i class="fas fa-check-circle"></i>Attached for WhatsApp
+              </span>
+              <div style="display:flex;gap:8px">
+                <button type="button" onclick="document.getElementById('postCustomCreativeFile').click()" style="background:#059669;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">
+                  <i class="fas fa-sync-alt me-1"></i>Replace
+                </button>
+                <button type="button" onclick="clearCustomCreativeImage()" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">
+                  <i class="fas fa-trash-alt me-1"></i>Remove
+                </button>
+              </div>
+            </div>
+            <div style="padding:12px;display:flex;justify-content:center;align-items:center;background:#020617;max-height:680px;overflow:auto">
+              <img id="customCreativeImg" src="" alt="Custom Creative" style="max-width:100%;max-height:650px;object-fit:contain;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.6)">
+            </div>
+            <div style="background:linear-gradient(135deg,#064e3b,#065f46);color:#a7f3d0;padding:9px 14px;font-size:11px;font-weight:700;text-align:center;letter-spacing:0.3px">
+              <i class="fab fa-whatsapp me-1"></i>This uploaded creative will be dispatched on WhatsApp!
+            </div>
+          </div>
+
+          <!-- Displayed when NO image is uploaded yet -->
+          <div id="customCreativeEmptyPlaceholder" onclick="document.getElementById('postCustomCreativeFile').click()" style="width:480px;min-height:600px;border:3px dashed #334155;border-radius:20px;background:rgba(15,23,42,0.5);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;box-sizing:border-box;cursor:pointer;transition:all .2s ease;text-align:center">
+            <div style="width:76px;height:76px;border-radius:50%;background:#1e293b;color:#38bdf8;display:flex;align-items:center;justify-content:center;font-size:32px;margin-bottom:16px;box-shadow:0 8px 20px rgba(0,0,0,0.4)">
+              <i class="fas fa-cloud-upload-alt"></i>
+            </div>
+            <h4 style="color:#f8fafc;font-size:16px;font-weight:800;margin:0 0 8px 0">Upload Custom Creative / Poster</h4>
+            <p style="color:#94a3b8;font-size:12px;line-height:1.5;max-width:320px;margin:0 0 18px 0">
+              Have a ready-made flyer or graphic designed in Photoshop or Canva? Click here to upload it.
+            </p>
+            <button type="button" style="background:linear-gradient(135deg,#059669,#047857);color:white;border:none;border-radius:8px;padding:9px 20px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(5,150,105,0.4)">
+              <i class="fas fa-plus"></i> Select Image File
+            </button>
+            <div style="color:#64748b;font-size:10.5px;margin-top:16px;max-width:300px;line-height:1.4">
+              ℹ️ If no creative is uploaded, WhatsApp will send the <strong>default message</strong> without an image attachment.
+            </div>
           </div>
         </div>
       </div>
@@ -9124,7 +10593,535 @@ function toggleExecModalExpand() {
     if (btn) btn.innerHTML = '<i class="fas fa-expand"></i> <span id="expandBtnLabel">Expand</span>';
   }
 }
+
+// ── DC-TPT-DRILLDOWN-001: Top Partners Leaderboard Metric Drilldown Modal (Executive Dashboard Style) ──
+let _tptModalCurrentLead = null;
+let _tptModalLeadsData = [];
+let _tptModalSortBy = 'submit_date';
+let _tptModalSortDir = 'desc';
+let _tptModalIsTeamMembers = false;
+
+function esc(s) {
+  if (s === null || s === undefined) return '';
+  const d = document.createElement('div');
+  d.textContent = String(s);
+  return d.innerHTML;
+}
+
+const _TPT_SOL_LABEL = {
+  pending_with_bank: 'At Bank', installation_pending: 'Inst. Pending', documents_pending: 'Docs Pending',
+  application_submitted: 'App Submitted', loan_rejected: 'Loan Rejected', documents_issue: 'Docs Issue',
+  load_extension: 'Load Extension', electricity_bill_change: 'Elec Bill Chg',
+  net_meter_pending: 'Net Meter', balance_pending: 'Bal Pending', balance_received: 'Bal Received',
+  subsidy_pending: 'Subsidy Pending', completed: 'Completed', not_interested: 'Not Interested',
+  cancelled: 'Cancelled', different_vendor: 'Diff Vendor',
+};
+const _TPT_STATUS_COL = {
+  won: '#059669', order_placed: '#0891b2', dispatched: '#0284c7', delivered: '#1d4ed8',
+  installed: '#7c3aed', completed: '#065f46', lost: '#dc2626', on_hold: '#9ca3af',
+  new: '#60a5fa', contacted: '#a78bfa', interested: '#34d399', qualified: '#fbbf24', proposal: '#f97316',
+};
+
+function _tptFmtDt(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? iso.slice(0,10) : d.toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
+  } catch { return iso.slice(0, 10); }
+}
+
+function _tptFmtDtTime(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? iso : d.toLocaleString('en-IN', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit', hour12:true});
+  } catch { return iso; }
+}
+
+function _tptComputeDays(l) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const raw = l.solar_pipeline_status_updated_at || l.updated_at || l.submit_date || l.created_at;
+  if (!raw) return null;
+  const d = new Date(raw.slice(0, 10)); d.setHours(0,0,0,0);
+  return isNaN(d.getTime()) ? null : Math.max(0, Math.floor((today - d) / 86400000));
+}
+
+function _tptBuildMapsCell(l) {
+  if (!l) return `<td style="font-size:10px;color:#d1d5db;white-space:nowrap;padding:5px 6px;text-align:center">—</td>`;
+  if (window.registerLeadForMap) window.registerLeadForMap(l);
+  const hasLatLon = l.latitude && l.longitude && !isNaN(parseFloat(l.latitude)) && !isNaN(parseFloat(l.longitude));
+  const hasLink = l.google_maps_link && l.google_maps_link.trim() && l.google_maps_link !== '—';
+  const hasAddr = Boolean(l.area || l.city || l.state || l.pincode || l.address);
+  if (!hasLatLon && !hasLink && !hasAddr) {
+    return `<td style="font-size:10px;color:#d1d5db;white-space:nowrap;padding:5px 6px;text-align:center">—</td>`;
+  }
+  const isExactGps = hasLatLon;
+  const badgeTitle = isExactGps ? `Exact Customer GPS (${l.latitude}, ${l.longitude})` : `Open Location Options`;
+  return `
+    <td style="font-size:10px;white-space:nowrap;padding:5px 6px" onclick="event.stopPropagation()">
+      <div style="display:inline-flex;align-items:center;gap:4px">
+        <button type="button" onclick="event.stopPropagation();if(window.openLeadMapModal)openLeadMapModal('${l.id}')" style="padding:2px 7px;font-size:10px;background:${isExactGps ? '#059669' : '#ea4335'};color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:3px;box-shadow:0 1px 2px rgba(0,0,0,0.1)" title="${badgeTitle}">
+          <i class="fas fa-map-marker-alt"></i> Maps${isExactGps ? ' (GPS)' : ''}
+        </button>
+      </div>
+    </td>`;
+}
+
+function _tptModalUpdateSortUI() {
+  document.querySelectorAll('#tptEdModalTable th[data-sk]').forEach(th => {
+    const ic = th.querySelector('.tpt-ed-si');
+    if (!ic) return;
+    if (th.dataset.sk === _tptModalSortBy) {
+      ic.textContent = _tptModalSortDir === 'asc' ? ' ▲' : ' ▼';
+      ic.style.color = '#1e3a5f';
+    } else {
+      ic.textContent = ' ⇅';
+      ic.style.color = '#9ca3af';
+    }
+  });
+}
+
+function _tptModalSortLeads(col) {
+  if (_tptModalSortBy === col) _tptModalSortDir = _tptModalSortDir === 'asc' ? 'desc' : 'asc';
+  else { _tptModalSortBy = col; _tptModalSortDir = 'asc'; }
+  _tptModalLeadsData.sort((a, b) => {
+    if (col === '_days') {
+      const va = _tptComputeDays(a) ?? (_tptModalSortDir === 'asc' ? Infinity : -Infinity);
+      const vb = _tptComputeDays(b) ?? (_tptModalSortDir === 'asc' ? Infinity : -Infinity);
+      return _tptModalSortDir === 'asc' ? va - vb : vb - va;
+    }
+    if (col === 'deal_value_total' || col === 'total_leads' || col === 'completed_leads') {
+      const va = a[col] || 0; const vb = b[col] || 0;
+      return _tptModalSortDir === 'asc' ? va - vb : vb - va;
+    }
+    const va = (a[col] || '').toString();
+    const vb = (b[col] || '').toString();
+    const c = va.localeCompare(vb);
+    return _tptModalSortDir === 'asc' ? c : -c;
+  });
+  if (_tptModalIsTeamMembers) {
+    _tptRenderTeamMembers(_tptModalLeadsData);
+  } else {
+    _tptRenderLeads(_tptModalLeadsData);
+  }
+}
+
+function _tptFilterModalTable() {
+  const q = (document.getElementById('tptEdQuickFilter')?.value || '').trim().toLowerCase();
+  const rows = document.querySelectorAll('#tptEdLeadListBody tr.tpt-lead-row');
+  rows.forEach(r => {
+    if (!q) { r.style.display = ''; return; }
+    const text = r.textContent.toLowerCase();
+    r.style.display = text.includes(q) ? '' : 'none';
+  });
+}
+
+function _tptToggleFullscreen() {
+  const ov = document.getElementById('tptEdOverlay');
+  const ic = document.getElementById('tptEdFsIcon');
+  if (!ov) return;
+  ov.classList.toggle('tpt-ed-fs');
+  if (ic) ic.className = ov.classList.contains('tpt-ed-fs') ? 'fas fa-compress' : 'fas fa-expand';
+}
+
+function closeTptLeadDrillDown() {
+  const ov = document.getElementById('tptEdOverlay');
+  if (ov) ov.style.display = 'none';
+  _tptModalCurrentLead = null;
+}
+
+function _openPartnerDrawer(id) {
+  const p = window._vgkMemberCache && window._vgkMemberCache[id];
+  if (p) {
+    openTptLeadDrillDown(id, p.partner_name, p.partner_code, 'total_leads', 'All Self Files');
+  } else {
+    openTptLeadDrillDown(id, 'Partner', `ID #${id}`, 'total_leads', 'All Self Files');
+  }
+}
+
+function _tptTriggerCall(phone, name) {
+  if (!phone) { showToast('Phone number not available', 'warning'); return; }
+  const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+  if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+    window.PlivoSoftphone.dialOutboundCall(cleanPhone, null, name, 'plivo');
+  } else if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+    window.PlivoSoftphone.dial(cleanPhone, null, name, 'plivo');
+  } else {
+    window.location.href = 'tel:' + cleanPhone;
+  }
+}
+
+function _tptSelectLead(leadId, companyId, name, phoneRaw, tr) {
+  document.querySelectorAll('#tptEdLeadListBody .tpt-lead-row').forEach(r => r.style.background = '');
+  if (tr) tr.style.background = '#eff6ff';
+  _tptModalCurrentLead = { id: leadId, company_id: companyId, name, phone_raw: phoneRaw };
+  const panel = document.getElementById('tptEdDetailPanel');
+  const pTitle = document.getElementById('tptEdDetailTitle');
+  const callSec = document.getElementById('tptEdCallHistSection');
+  const callBtn = document.getElementById('tptEdCallHistBtn');
+  if (!panel) return;
+  if (pTitle) pTitle.textContent = `Notes & Activity — ${name}`;
+  if (callSec) { callSec.style.display = 'none'; callSec.innerHTML = ''; }
+  if (callBtn) callBtn.textContent = '📞 Call History';
+  panel.style.display = 'flex';
+  _tptLoadNotes(leadId, companyId);
+}
+
+async function _tptLoadNotes(leadId, companyId) {
+  const list = document.getElementById('tptEdNotesList');
+  if (!list) return;
+  list.innerHTML = '<div style="text-align:center;padding:14px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i> Loading comments…</div>';
+  try {
+    const r = await staffFetch(`/api/v1/crm/leads/${leadId}/notes?company_id=${companyId || ''}`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    const notes = d.data || [];
+    if (!notes.length) {
+      list.innerHTML = '<div style="color:#9ca3af;font-size:12px;text-align:center;padding:12px">No comments yet on this lead</div>';
+      return;
+    }
+    list.innerHTML = notes.map(n => {
+      const dt = _tptFmtDtTime(n.created_at);
+      return `<div style="border-bottom:1px solid #f3f4f6;padding:8px 14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+          <span style="font-size:10px;color:#9ca3af">${esc(dt)} · ${esc(n.created_by_id || 'Staff')}</span>
+        </div>
+        <div style="font-size:12.5px;color:#1f2937;line-height:1.4">${esc(n.note)}</div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    list.innerHTML = `<div style="color:#dc2626;font-size:12px;padding:10px">Error loading notes: ${esc(e.message)}</div>`;
+  }
+}
+
+async function _tptSubmitNote() {
+  const ta = document.getElementById('tptEdNewNote');
+  const val = (ta?.value || '').trim();
+  if (!val || !_tptModalCurrentLead) return;
+  const btn = document.getElementById('tptEdNoteBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+  try {
+    const r = await staffFetch(`/api/v1/crm/leads/${_tptModalCurrentLead.id}/notes?company_id=${_tptModalCurrentLead.company_id || ''}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note: val, is_private: false })
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    ta.value = '';
+    _tptLoadNotes(_tptModalCurrentLead.id, _tptModalCurrentLead.company_id);
+  } catch (e) {
+    alert('Failed to add comment: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Add'; }
+  }
+}
+
+async function _tptToggleCallHist() {
+  const sec = document.getElementById('tptEdCallHistSection');
+  const btn = document.getElementById('tptEdCallHistBtn');
+  if (!sec || !_tptModalCurrentLead) return;
+  if (sec.style.display !== 'none') {
+    sec.style.display = 'none';
+    if (btn) btn.textContent = '📞 Call History';
+    return;
+  }
+  sec.style.display = 'block';
+  if (btn) btn.textContent = '▲ Hide Calls';
+  sec.innerHTML = '<div style="text-align:center;padding:12px;color:#9ca3af"><i class="fas fa-spinner fa-spin"></i> Loading calls…</div>';
+  try {
+    const r = await staffFetch(`/api/v1/call-tracking/lead/${_tptModalCurrentLead.id}/calls`);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json();
+    const calls = d.data || [];
+    if (!calls.length) {
+      sec.innerHTML = '<div style="color:#9ca3af;font-size:12px;text-align:center;padding:12px">No call records found for this lead</div>';
+      return;
+    }
+    const cc = { 'OUTGOING': '#0ea5e9', 'INCOMING': '#059669', 'MISSED': '#dc2626', 'REJECTED': '#7c3aed', 'DIALER': '#d97706' };
+    sec.innerHTML = '<div style="padding:6px 14px;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb">Call History (' + calls.length + ')</div>' +
+      calls.slice(0, 10).map(c => {
+        const ct = (c.call_type || 'OUTGOING').toUpperCase();
+        const sc = cc[ct] || '#6b7280';
+        const dt = _tptFmtDtTime(c.created_at || c.call_date);
+        const dur = c.duration_seconds > 0 ? (Math.floor(c.duration_seconds / 60) + 'm ' + (c.duration_seconds % 60) + 's') : '—';
+        const agent = c.staff_name || c.contact_name || '—';
+        const outcome = c.call_outcome ? ' · ' + esc(c.call_outcome) : '';
+        return '<div style="padding:7px 14px;border-bottom:1px solid #f3f4f6;display:flex;align-items:flex-start;gap:9px">' +
+          '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:' + sc + '22;color:' + sc + ';font-weight:700;white-space:nowrap;margin-top:2px">' + ct + '</span>' +
+          '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:12px;color:#1f2937;font-weight:600">' + esc(agent) + outcome + '</div>' +
+            '<div style="font-size:11px;color:#6b7280;margin-top:1px">' + esc(dt) + ' &nbsp;·&nbsp; ' + dur + '</div>' +
+          '</div></div>';
+      }).join('');
+  } catch (e) {
+    sec.innerHTML = '<div style="color:#dc2626;font-size:12px;padding:10px">Error loading calls: ' + esc(e.message) + '</div>';
+  }
+}
+
+function _tptRenderLeads(leads) {
+  const table = document.getElementById('tptEdModalTable');
+  if (!table) return;
+
+  const theadHtml = `
+    <tr style="background:#f8fafc">
+      <th style="padding:7px 6px;font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;text-align:center;border-bottom:1px solid #e5e7eb;white-space:nowrap">#</th>
+      <th data-sk="category_name" onclick="_tptModalSortLeads('category_name')" style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#0369a1;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;cursor:pointer">Segment<span class="tpt-ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="created_at" onclick="_tptModalSortLeads('created_at')" style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;cursor:pointer">Lead Date<span class="tpt-ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="submit_date" onclick="_tptModalSortLeads('submit_date')" style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;cursor:pointer">Submit Date<span class="tpt-ed-si" style="color:#1e3a5f"> ▼</span></th>
+      <th data-sk="name" onclick="_tptModalSortLeads('name')" style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#111827;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;cursor:pointer">Customer Name<span class="tpt-ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Phone</th>
+      <th data-sk="solar_pipeline_status" onclick="_tptModalSortLeads('solar_pipeline_status')" style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#0891b2;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;cursor:pointer">Solar Stage<span class="tpt-ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="status" onclick="_tptModalSortLeads('status')" style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;cursor:pointer">Status<span class="tpt-ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="brand_name" onclick="_tptModalSortLeads('brand_name')" style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#7c3aed;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;cursor:pointer">Brand<span class="tpt-ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Area / Address</th>
+      <th style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#475569;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">City / District</th>
+      <th style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#ea4335;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Maps</th>
+      <th data-sk="_days" onclick="_tptModalSortLeads('_days')" style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#4b5563;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center;cursor:pointer" title="Days in current stage">Stage Days<span class="tpt-ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#0284c7;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Ground Source (CP)</th>
+      <th style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#7c3aed;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Telecaller</th>
+      <th data-sk="loan_bank" onclick="_tptModalSortLeads('loan_bank')" style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#059669;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;cursor:pointer">Bank<span class="tpt-ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#047857;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Branch</th>
+      <th data-sk="deal_value_total" onclick="_tptModalSortLeads('deal_value_total')" style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#1d4ed8;text-transform:uppercase;border-bottom:1px solid #e5e7eb;text-align:right;white-space:nowrap;cursor:pointer">Deal Value<span class="tpt-ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th style="padding:7px 8px;font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Latest Note</th>
+    </tr>
+  `;
+
+  let tbodyHtml = '';
+  if (!leads.length) {
+    tbodyHtml = '<tr><td colspan="19" style="text-align:center;padding:35px;color:#9ca3af"><i class="fas fa-inbox me-2"></i>No leads found for this metric and period</td></tr>';
+  } else {
+    tbodyHtml = leads.map((l, i) => {
+      const days = _tptComputeDays(l);
+      const daysCell = days === null ? `<td style="text-align:center;padding:5px 6px;font-size:10px;color:#d1d5db">—</td>` : (() => {
+        const col = days <= 7 ? '#059669' : days <= 30 ? '#d97706' : days <= 60 ? '#ea580c' : '#dc2626';
+        const bg = days <= 7 ? '#f0fdf4' : days <= 30 ? '#fffbeb' : days <= 60 ? '#fff7ed' : '#fef2f2';
+        return `<td style="text-align:center;padding:5px 6px;white-space:nowrap" title="${days} days in current stage"><span style="display:inline-block;min-width:32px;padding:2px 7px;border-radius:10px;background:${bg};color:${col};font-size:11px;font-weight:700">${days}d</span></td>`;
+      })();
+
+      const stageBadge = (() => {
+        if (l.solar_pipeline_status) {
+          const lbl = _TPT_SOL_LABEL[l.solar_pipeline_status] || l.solar_pipeline_status;
+          const isComp = l.solar_pipeline_status === 'completed';
+          const col = isComp ? '#065f46' : '#0891b2';
+          const bg = isComp ? '#ecfdf5' : '#e0f2fe';
+          const border = isComp ? '#a7f3d0' : '#bae6fd';
+          return `<span style="display:inline-block;padding:2px 8px;border-radius:12px;background:${bg};color:${col};border:1px solid ${border};font-size:10px;font-weight:700;white-space:nowrap">${esc(lbl)}</span>`;
+        }
+        return '<span style="color:#d1d5db">—</span>';
+      })();
+
+      const stCol = _TPT_STATUS_COL[l.status] || '#6b7280';
+      const stBadge = l.status ? `<span style="font-size:9.5px;font-weight:700;padding:2px 6px;border-radius:8px;background:${stCol}22;color:${stCol};white-space:nowrap">${esc(l.status)}</span>` : '<span style="color:#d1d5db">—</span>';
+
+      const dv = l.deal_value_total > 0 ? '₹' + Number(l.deal_value_total).toLocaleString('en-IN') : '—';
+      const areaVal = l.area || l.address || '—';
+      const cityDistVal = [l.city, l.state].filter(p => p && p !== '—').join(', ') || '—';
+      const mapsCell = _tptBuildMapsCell(l);
+      const latNote = l.latest_note ? `<span title="${esc(l.latest_note.note||'')}" style="font-size:10px;color:#6b7280;max-width:160px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle">${esc((l.latest_note.note||'').substring(0,60) + (l.latest_note.note && l.latest_note.note.length > 60 ? '…' : ''))}</span>` : '<span style="color:#d1d5db;font-size:10px">—</span>';
+      const segVal = l.category_name || 'Solar';
+
+      const rawPhone = l.phone_raw || l.phone || '';
+      const safeLeadName = (l.name || 'Lead').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+      return `
+        <tr class="tpt-lead-row" style="cursor:pointer;border-bottom:1px solid #f3f4f6" onclick="_tptSelectLead(${l.id}, ${l.company_id}, '${safeLeadName}', '${rawPhone}', this)">
+          <td style="text-align:center;font-size:10px;color:#9ca3af;padding:6px">${i + 1}</td>
+          <td style="font-size:10px;font-weight:600;color:#0284c7;white-space:nowrap;padding:6px"><span style="display:inline-block;padding:2px 7px;border-radius:10px;background:#e0f2fe;color:#0369a1;font-size:9.5px;font-weight:700">${esc(segVal)}</span></td>
+          <td style="font-size:10.5px;white-space:nowrap;padding:6px">${_tptFmtDt(l.created_at)}</td>
+          <td style="font-size:10.5px;white-space:nowrap;padding:6px">${_tptFmtDt(l.submit_date)}</td>
+          <td style="font-weight:700;font-size:11.5px;color:#111827;white-space:nowrap;padding:6px">${esc(l.name || '—')}</td>
+          <td style="font-size:10.5px;padding:6px;white-space:nowrap" onclick="event.stopPropagation()">
+            <button type="button" onclick="_tptTriggerCall('${esc(rawPhone)}', '${safeLeadName}')" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;border-radius:6px;padding:2px 8px;font-size:10.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px">
+              <i class="fas fa-phone-alt" style="font-size:9px"></i> ${esc(l.phone || '—')}
+            </button>
+          </td>
+          <td style="font-size:10px;padding:6px;white-space:nowrap">${stageBadge}</td>
+          <td style="padding:6px;white-space:nowrap">${stBadge}</td>
+          <td style="font-size:10px;color:#7c3aed;font-weight:600;white-space:nowrap;padding:6px">${esc(l.brand_name || '—')}</td>
+          <td style="font-size:10px;color:#334155;white-space:nowrap;padding:6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(areaVal)}">${esc(areaVal)}</td>
+          <td style="font-size:10px;color:#334155;white-space:nowrap;padding:6px;max-width:130px;overflow:hidden;text-overflow:ellipsis" title="${esc(cityDistVal)}">${esc(cityDistVal)}</td>
+          ${mapsCell}
+          ${daysCell}
+          <td style="font-size:10px;color:#0284c7;font-weight:600;white-space:nowrap;padding:6px;max-width:140px;overflow:hidden;text-overflow:ellipsis" title="${esc(l.ground_source)}">${esc(l.ground_source || '—')}</td>
+          <td style="font-size:10px;color:#7c3aed;white-space:nowrap;padding:6px">${esc(l.telecaller_name || '—')}</td>
+          <td style="font-size:10px;color:#059669;font-weight:600;white-space:nowrap;padding:6px">${esc(l.loan_bank || '—')}</td>
+          <td style="font-size:10px;color:#047857;white-space:nowrap;padding:6px">${esc(l.bank_branch || '—')}</td>
+          <td style="font-size:10.5px;font-weight:700;color:#1d4ed8;white-space:nowrap;text-align:right;padding:6px">${dv}</td>
+          <td style="max-width:160px;padding:6px">${latNote}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  table.style.minWidth = '1400px';
+  table.innerHTML = `<thead>${theadHtml}</thead><tbody id="tptEdLeadListBody">${tbodyHtml}</tbody>`;
+  _tptModalUpdateSortUI();
+}
+
+function _tptRenderTeamMembers(members) {
+  const table = document.getElementById('tptEdModalTable');
+  if (!table) return;
+  table.style.minWidth = '100%';
+
+  const theadHtml = `
+    <tr style="background:#f8fafc">
+      <th style="padding:8px 6px;font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;text-align:center;border-bottom:1px solid #e5e7eb;white-space:nowrap;width:45px">#</th>
+      <th data-sk="partner_code" onclick="_tptModalSortLeads('partner_code')" style="padding:8px 10px;font-size:9.5px;font-weight:700;color:#7c3aed;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;cursor:pointer">CP Code<span class="tpt-ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="partner_name" onclick="_tptModalSortLeads('partner_name')" style="padding:8px 10px;font-size:9.5px;font-weight:700;color:#111827;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;cursor:pointer">Partner Name<span class="tpt-ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th style="padding:8px 10px;font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap">Phone</th>
+      <th data-sk="member_status" onclick="_tptModalSortLeads('member_status')" style="padding:8px 10px;font-size:9.5px;font-weight:700;color:#059669;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center;cursor:pointer">Status<span class="tpt-ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="created_at" onclick="_tptModalSortLeads('created_at')" style="padding:8px 10px;font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;cursor:pointer">Joined Date<span class="tpt-ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="total_leads" onclick="_tptModalSortLeads('total_leads')" style="padding:8px 10px;font-size:9.5px;font-weight:700;color:#1d4ed8;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center;cursor:pointer">Self Leads<span class="tpt-ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th data-sk="completed_leads" onclick="_tptModalSortLeads('completed_leads')" style="padding:8px 10px;font-size:9.5px;font-weight:700;color:#047857;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center;cursor:pointer">Completed<span class="tpt-ed-si" style="color:#9ca3af"> ⇅</span></th>
+      <th style="padding:8px 10px;font-size:9.5px;font-weight:700;color:#6b7280;text-transform:uppercase;border-bottom:1px solid #e5e7eb;white-space:nowrap;text-align:center">Action</th>
+    </tr>
+  `;
+
+  let tbodyHtml = '';
+  if (!members.length) {
+    tbodyHtml = '<tr><td colspan="9" style="text-align:center;padding:35px;color:#9ca3af"><i class="fas fa-users me-2"></i>No direct team members found under this partner</td></tr>';
+  } else {
+    tbodyHtml = members.map((m, i) => {
+      const rawPhone = m.phone || '';
+      const safeName = (m.partner_name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      const safeCode = (m.partner_code || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      return `
+        <tr class="tpt-lead-row" style="border-bottom:1px solid #f3f4f6">
+          <td style="text-align:center;font-size:11px;color:#9ca3af;padding:8px">${i + 1}</td>
+          <td style="font-weight:700;color:#7c3aed;padding:8px;white-space:nowrap">${esc(m.partner_code)}</td>
+          <td style="font-weight:700;color:#111827;padding:8px;white-space:nowrap">${esc(m.partner_name)}</td>
+          <td style="padding:8px;white-space:nowrap">
+            <button type="button" onclick="_tptTriggerCall('${esc(rawPhone)}', '${safeName}')" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px">
+              <i class="fas fa-phone-alt" style="font-size:9px"></i> ${esc(m.phone || '—')}
+            </button>
+          </td>
+          <td style="text-align:center;padding:8px;white-space:nowrap"><span style="background:#dcfce7;color:#047857;padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:700">${esc(m.member_status)}</span></td>
+          <td style="font-size:11px;color:#4b5563;padding:8px;white-space:nowrap">${_tptFmtDt(m.created_at)}</td>
+          <td style="text-align:center;font-weight:800;color:#1d4ed8;padding:8px;white-space:nowrap">${m.total_leads || 0}</td>
+          <td style="text-align:center;font-weight:800;color:#047857;padding:8px;white-space:nowrap">${m.completed_leads || 0}</td>
+          <td style="text-align:center;padding:8px;white-space:nowrap">
+            <button type="button" onclick="openTptLeadDrillDown(${m.id}, '${safeName}', '${safeCode}', 'total_leads', 'All Self Files')" style="padding:3px 10px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">
+              <i class="fas fa-folder-open me-1"></i>View Leads
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  table.innerHTML = `<thead>${theadHtml}</thead><tbody id="tptEdLeadListBody">${tbodyHtml}</tbody>`;
+  _tptModalUpdateSortUI();
+}
+
+async function openTptLeadDrillDown(partnerId, partnerName, partnerCode, metric, label) {
+  const ov = document.getElementById('tptEdOverlay');
+  const title = document.getElementById('tptEdModalTitle');
+  const body = document.getElementById('tptEdLeadListBody');
+  const cnt = document.getElementById('tptEdLeadCount');
+  const panel = document.getElementById('tptEdDetailPanel');
+  const quickFilter = document.getElementById('tptEdQuickFilter');
+  if (!ov) return;
+
+  if (quickFilter) quickFilter.value = '';
+  title.innerHTML = `<span>${esc(partnerName)} <small style="color:#93c5fd">(${esc(partnerCode)})</small> — <span style="color:#fde047">${esc(label)}</span></span>`;
+  body.innerHTML = '<tr><td colspan="19" style="text-align:center;padding:35px;color:#6b7280"><i class="fas fa-spinner fa-spin me-2"></i>Loading details…</td></tr>';
+  cnt.textContent = '';
+  if (panel) panel.style.display = 'none';
+  _tptModalCurrentLead = null;
+  _tptModalLeadsData = [];
+  _tptModalSortBy = metric === 'team_members' ? 'partner_name' : 'submit_date';
+  _tptModalSortDir = metric === 'team_members' ? 'asc' : 'desc';
+  _tptModalIsTeamMembers = (metric === 'team_members');
+  ov.style.display = 'flex';
+
+  let url = `/api/v1/vgk/dashboard/top-partners-leads?partner_id=${partnerId}&metric=${encodeURIComponent(metric)}&period=${encodeURIComponent(_tptPeriod)}`;
+  const companyId = document.getElementById('tptCompany')?.value || '';
+  const categoryId = document.getElementById('tptCategory')?.value || '';
+  const dateFrom = document.getElementById('tptDateFrom')?.value || '';
+  const dateTo = document.getElementById('tptDateTo')?.value || '';
+  if (companyId) url += `&company_id=${companyId}`;
+  if (categoryId) url += `&category_id=${encodeURIComponent(categoryId)}`;
+  if (_tptPeriod === 'custom' && dateFrom && dateTo) {
+    url += `&date_from=${dateFrom}&date_to=${dateTo}`;
+  }
+
+  try {
+    const res = await staffFetch(url);
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.detail || `HTTP ${res.status}`);
+    }
+    const d = await res.json();
+    _tptModalLeadsData = d.data || [];
+    _tptModalIsTeamMembers = Boolean(d.is_team_members);
+    const total = d.total || 0;
+
+    cnt.innerHTML = `<span style="background:rgba(255,255,255,0.18);padding:2px 9px;border-radius:12px;font-weight:700">${total} ${_tptModalIsTeamMembers ? 'Member' + (total!==1?'s':'') : 'Lead' + (total!==1?'s':'')}</span>`;
+
+    if (_tptModalIsTeamMembers) {
+      _tptRenderTeamMembers(_tptModalLeadsData);
+    } else {
+      _tptRenderLeads(_tptModalLeadsData);
+    }
+  } catch (err) {
+    body.innerHTML = `<tr><td colspan="19" style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>${esc(err.message)}</td></tr>`;
+  }
+}
+
+// Initialize resizable & draggable
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('tptEdModal');
+  const header = document.getElementById('tptEdModalHeader');
+  if (modal && header && typeof window.makeModalResizableAndDraggable === 'function') {
+    window.makeModalResizableAndDraggable(modal, header);
+  }
+});
 </script>
+
+<!-- ── DC-TPT-DRILLDOWN-001: Leaderboard Metric Drill-Down Modal (Executive Dashboard Style) ── -->
+<div id="tptEdOverlay" onclick="if(event.target===this)closeTptLeadDrillDown()">
+  <div id="tptEdModal">
+    <!-- Header (Draggable) -->
+    <div id="tptEdModalHeader" style="background:linear-gradient(135deg,#1e3a5f,#0f2440);border-radius:14px 14px 0 0;padding:12px 18px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;cursor:move;color:#fff">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:800;font-size:14px;display:flex;align-items:center;gap:8px">
+            <i class="fas fa-list" style="color:#38bdf8"></i>
+            <span id="tptEdModalTitle">Partner Leads</span>
+          </div>
+          <div id="tptEdLeadCount" style="font-size:11px;color:rgba(255,255,255,.8);margin-top:2px"></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <input type="text" id="tptEdQuickFilter" placeholder="Quick filter leads…" oninput="_tptFilterModalTable()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:6px;padding:4px 10px;color:#fff;font-size:11.5px;outline:none;width:170px" title="Filter by name, phone, stage, bank…">
+        <button type="button" onclick="_tptToggleFullscreen()" title="Toggle Fullscreen" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:12px;padding:5px 10px;border-radius:6px;cursor:pointer;line-height:1"><i id="tptEdFsIcon" class="fas fa-expand"></i></button>
+        <button type="button" onclick="closeTptLeadDrillDown()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1;opacity:.8;padding:0 4px">✕</button>
+      </div>
+    </div>
+    <!-- Table Container -->
+    <div id="tptEdLeadTableWrap" style="overflow-x:auto;overflow-y:auto;flex:1;min-height:220px;max-height:380px;border-bottom:2px solid #e5e7eb;background:#fff">
+      <table id="tptEdModalTable" style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:1400px">
+        <thead></thead>
+        <tbody id="tptEdLeadListBody">
+          <tr><td colspan="19" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading details…</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- Lead Detail Panel (Notes & Call History) -->
+    <div id="tptEdDetailPanel" style="display:none;flex-direction:column;flex-shrink:0;border-top:2px solid #e5e7eb;background:#fff">
+      <div style="background:#f8fafc;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e5e7eb;flex-shrink:0">
+        <span style="font-size:12.5px;font-weight:700;color:#1e3a5f"><i class="fas fa-comment-dots me-2" style="color:#0284c7"></i><span id="tptEdDetailTitle">Notes</span></span>
+        <button id="tptEdCallHistBtn" type="button" onclick="_tptToggleCallHist()" style="background:rgba(30,58,95,.08);border:1px solid #c7d2fe;color:#1e3a5f;font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer">📞 Call History</button>
+      </div>
+      <div id="tptEdCallHistSection" style="display:none;background:#f8fafc;max-height:180px;overflow-y:auto;border-bottom:1px solid #e5e7eb"></div>
+      <div id="tptEdNotesList" style="flex:1;overflow-y:auto;min-height:80px;max-height:180px"></div>
+      <div style="padding:10px 14px;border-top:1px solid #e5e7eb;display:flex;gap:7px;align-items:center;flex-shrink:0;background:#fafafa">
+        <textarea id="tptEdNewNote" rows="2" placeholder="Add a comment on this lead…" style="flex:1;font-size:12px;border:1.5px solid #d1d5db;border-radius:7px;padding:7px 10px;resize:none;font-family:inherit;outline:none"></textarea>
+        <button id="tptEdNoteBtn" type="button" onclick="_tptSubmitNote()" style="padding:8px 16px;background:#1e3a5f;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap"><i class="fas fa-paper-plane me-1"></i>Add</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="/public/js/poster-modal-core.js?v=20260831_1435"></script>
 </body>

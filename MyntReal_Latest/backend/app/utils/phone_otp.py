@@ -51,20 +51,93 @@ def generate_and_send_otp(phone: str, purpose: str, db: Session, user_name: Opti
     db.commit()
 
     # Send via WhatsApp
+    wa_sent = True
+    wa_reason = None
+    wa_err_code = None
     try:
-        from app.api.v1.endpoints.whatsapp import WhatsAppService
-        wa = WhatsAppService(db)
-        wa_result = wa.send_otp(mobile_number=phone, otp_code=otp_code, user_name=user_name or "User")
+        from app.services.whatsapp_canonical_service import WhatsAppCanonicalService
+        wa_result = WhatsAppCanonicalService.send_meta_template_message(
+            db=db,
+            phone=phone,
+            template_name="otp",
+            language_code="en",
+            components=[
+                {"type": "body", "parameters": [{"type": "text", "text": otp_code}]},
+                {"type": "button", "sub_type": "url", "index": "0", "parameters": [{"type": "text", "text": otp_code}]}
+            ],
+            message_type="whatsapp_otp",
+            user_name=user_name or "User",
+            sent_by_name="Registration Engine"
+        )
         if not wa_result.get("success"):
-            logger.warning(f"[DC-PHONE-OTP-001] WhatsApp OTP send issue for {phone}: {wa_result.get('message')}")
+            wa_sent = False
+            wa_reason = wa_result.get("reason")
+            wa_err_code = wa_result.get("error_code")
+            logger.warning(f"[DC-PHONE-OTP-001] WhatsApp OTP send issue for {phone}: {wa_reason} ({wa_err_code})")
     except Exception as e:
+        wa_sent = False
+        wa_reason = str(e)
         logger.error(f"[DC-PHONE-OTP-001] WhatsApp OTP send failed for {phone}: {e}")
 
-    logger.info(f"[DC-PHONE-OTP-001] OTP sent for phone={phone} purpose={purpose}")
-    return {
-        "success": True,
-        "message": f"OTP sent to WhatsApp on {phone[-4:].rjust(len(phone), '*')}. Valid for {OTP_EXPIRE_MINUTES} minutes."
-    }
+    logger.info(f"[DC-PHONE-OTP-001] OTP generated for phone={phone} purpose={purpose} wa_sent={wa_sent}")
+    if wa_sent:
+        return {
+            "success": True,
+            "otp_sent": True,
+            "message": f"OTP sent to WhatsApp on {phone[-4:].rjust(len(phone), '*')}. Valid for {OTP_EXPIRE_MINUTES} minutes."
+        }
+    else:
+        return {
+            "success": True,
+            "otp_sent": False,
+            "reason": wa_reason or "WhatsApp service unavailable",
+            "error_code": wa_err_code,
+            "message": "WhatsApp verification is currently unavailable. You may continue registration and verify your WhatsApp number later."
+        }
+
+
+def verify_and_mark_user_phone(phone: str, otp_code: str, purpose: str, db: Session, user_id: Optional[str] = None) -> dict:
+    """
+    [DC-PHONE-OTP-001] Verify OTP for existing User and set mobile_verified = True in DB.
+    """
+    from app.models.user import User
+    # Verify OTP first
+    token = verify_otp_and_issue_token(phone=phone, otp_code=otp_code, purpose=purpose, db=db)
+    validate_and_consume_token(phone=phone, token=token, purpose=purpose, db=db)
+
+    # Update User in DB
+    query = db.query(User).filter(User.phone_number == phone)
+    if user_id:
+        query = query.filter(User.id == user_id)
+    user = query.first()
+    if user:
+        user.mobile_verified = True
+        db.commit()
+        logger.info(f"[DC-PHONE-OTP-001] User {user.id} phone {phone} marked mobile_verified=True")
+        return {"success": True, "message": "WhatsApp number verified successfully.", "user_id": user.id, "mobile_verified": True}
+    return {"success": True, "message": "OTP verified successfully.", "mobile_verified": True}
+
+
+def verify_and_mark_partner_phone(phone: str, otp_code: str, purpose: str, db: Session, partner_id: Optional[int] = None) -> dict:
+    """
+    [DC-PHONE-OTP-001] Verify OTP for existing OfficialPartner and set phone_verified = True in DB.
+    """
+    from app.models.staff_accounts import OfficialPartner
+    # Verify OTP first
+    token = verify_otp_and_issue_token(phone=phone, otp_code=otp_code, purpose=purpose, db=db)
+    validate_and_consume_token(phone=phone, token=token, purpose=purpose, db=db)
+
+    # Update OfficialPartner in DB
+    query = db.query(OfficialPartner).filter(OfficialPartner.phone == phone)
+    if partner_id:
+        query = query.filter(OfficialPartner.id == partner_id)
+    partner = query.first()
+    if partner:
+        partner.phone_verified = True
+        db.commit()
+        logger.info(f"[DC-PHONE-OTP-001] Partner {partner.partner_code} phone {phone} marked phone_verified=True")
+        return {"success": True, "message": "WhatsApp number verified successfully.", "partner_code": partner.partner_code, "phone_verified": True}
+    return {"success": True, "message": "OTP verified successfully.", "phone_verified": True}
 
 
 def verify_otp_and_issue_token(phone: str, otp_code: str, purpose: str, db: Session) -> str:

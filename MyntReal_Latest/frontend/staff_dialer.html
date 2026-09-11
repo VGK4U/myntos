@@ -7,6 +7,7 @@
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <script src="/public/js/plivo-softphone.js?v=20260906_fix"></script>
   <style>
     .main-content { margin-left: 0; transition: margin-left 0.3s; padding-top: 88px; }
     .sidebar-expanded .main-content { margin-left: 260px; }
@@ -355,7 +356,10 @@
         <div class="dc-badge yellow"><div class="badge-num" id="badge-due">0</div><div class="badge-lbl">Due Today</div></div>
         <div class="dc-badge orange"><div class="badge-num" id="badge-new">0</div><div class="badge-lbl">New</div></div>
         <div class="dc-badge blue"><div class="badge-num" id="badge-second">0</div><div class="badge-lbl">2nd Call</div></div>
-        <button id="dc-web-cat-toggle" onclick="dcToggleCatPanel()" style="margin-left:auto;border:1px solid #e5e7eb;border-radius:16px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;background:#f3f4f6;color:#6b7280;">🎯 Category</button>
+        <button id="dc-web-refresh-queue" onclick="refreshQueueManual()" style="margin-left:auto;border:1px solid #e5e7eb;border-radius:16px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;background:#f3f4f6;color:#374151;display:inline-flex;align-items:center;gap:4px;" title="Refresh queue with latest leads">
+          <i class="fas fa-sync-alt" id="dc-refresh-icon"></i> Refresh
+        </button>
+        <button id="dc-web-cat-toggle" onclick="dcToggleCatPanel()" style="border:1px solid #e5e7eb;border-radius:16px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;background:#f3f4f6;color:#6b7280;">🎯 Category</button>
       </div>
 
       <!-- DC_CAT_PRIORITY: Category priority panel -->
@@ -439,11 +443,31 @@
 
       <!-- Lead Header Banner (shown when dial active) -->
       <div id="dc-lead-banner" class="dc-lead-banner" style="display:none">
-        <div class="dc-banner-name" id="banner-name">—</div>
-        <div class="dc-banner-meta-row">
-          <span class="dc-banner-chip" id="banner-category"><i class="fas fa-tag me-1"></i><span id="banner-category-txt">—</span></span>
-          <span class="dc-banner-chip" id="banner-area"><i class="fas fa-map-marker-alt me-1"></i><span id="banner-area-txt">—</span></span>
-          <span class="dc-banner-chip" id="banner-priority-chip"><span id="banner-priority-txt">—</span></span>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+          <div>
+            <div class="dc-banner-name" id="banner-name">—</div>
+            <div class="dc-banner-meta-row">
+              <span class="dc-banner-chip" id="banner-category"><i class="fas fa-tag me-1"></i><span id="banner-category-txt">—</span></span>
+              <span class="dc-banner-chip" id="banner-area"><i class="fas fa-map-marker-alt me-1"></i><span id="banner-area-txt">—</span></span>
+              <span class="dc-banner-chip" id="banner-priority-chip"><span id="banner-priority-txt">—</span></span>
+            </div>
+          </div>
+          <!-- Action Buttons / Live Call State Area -->
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-sm btn-primary" id="dc-banner-redial-btn" onclick="doDialerRedial()" style="border-radius:20px; font-weight:700; background:#0284c7; border-color:#0284c7; box-shadow:0 2px 8px rgba(2,132,199,0.3); display:inline-flex; align-items:center; gap:6px;" title="Redial lead immediately">
+              <i class="fas fa-redo-alt"></i> Redial
+            </button>
+            <button type="button" class="btn btn-sm btn-success" id="dc-wa-btn" onclick="openDialerLeadWhatsApp()" style="border-radius:20px; font-weight:700; background:#25D366; border-color:#25D366; box-shadow:0 2px 8px rgba(37,211,102,0.3);">
+              <i class="fab fa-whatsapp me-1"></i> Send WhatsApp
+            </button>
+            <div id="dc-call-state-pill" style="display:inline-flex; align-items:center; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.2); border-radius:20px; padding:4px 10px;">
+              <span id="dc-call-state-badge" class="badge bg-secondary">Idle</span>
+              <span id="dc-call-timer-text" style="display:none; font-weight:700; font-size:12px; margin-left:6px; color:#38bdf8;">00:00</span>
+              <button id="dc-hangup-btn" type="button" class="btn btn-sm btn-danger ms-2" style="display:none; border-radius:15px; padding:2px 10px; font-size:11px; font-weight:700;" onclick="doDialerHangup()">
+                <i class="fas fa-phone-slash me-1"></i> End Call
+              </button>
+            </div>
+          </div>
         </div>
         <div class="dc-banner-status-row">
           <span class="dc-banner-status-badge" id="banner-status-badge">—</span>
@@ -478,12 +502,22 @@
             <div class="dc-field-row cols-2">
               <div class="dc-field">
                 <label>Phone (Primary)</label>
-                <input type="tel" id="e-phone" placeholder="10-digit mobile">
+                <div style="display:flex;gap:6px;align-items:center;">
+                  <input type="tel" id="e-phone" placeholder="10-digit mobile" style="flex:1;">
+                  <button type="button" class="btn btn-sm btn-outline-primary" onclick="doDialerRedial('primary')" title="Redial Primary Phone" style="border-radius:8px;padding:5px 10px;font-weight:700;font-size:12px;height:38px;display:inline-flex;align-items:center;gap:4px;">
+                    <i class="fas fa-phone-alt"></i> Redial
+                  </button>
+                </div>
                 <div class="wa-check"><input type="checkbox" id="e-phone-wa"><label for="e-phone-wa"><i class="fab fa-whatsapp"></i> WhatsApp</label></div>
               </div>
               <div class="dc-field">
                 <label>Alternate Phone</label>
-                <input type="tel" id="e-alt-phone" placeholder="Alternate number">
+                <div style="display:flex;gap:6px;align-items:center;">
+                  <input type="tel" id="e-alt-phone" placeholder="Alternate number" style="flex:1;">
+                  <button type="button" class="btn btn-sm btn-outline-primary" onclick="doDialerRedial('alt')" title="Redial Alternate Phone" style="border-radius:8px;padding:5px 10px;font-weight:700;font-size:12px;height:38px;display:inline-flex;align-items:center;gap:4px;">
+                    <i class="fas fa-phone-alt"></i> Redial
+                  </button>
+                </div>
                 <div class="wa-check"><input type="checkbox" id="e-alt-phone-wa"><label for="e-alt-phone-wa"><i class="fab fa-whatsapp"></i> WhatsApp</label></div>
               </div>
             </div>
@@ -683,9 +717,15 @@
           </div>
 
           <!-- SAVE ROW -->
-          <div class="dc-save-row">
+          <div class="dc-save-row" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
             <button class="dc-skip-btn" id="dc-skip-btn">Skip →</button>
-            <button class="dc-save-btn" id="dc-save-btn">Save &amp; Next →</button>
+            <button class="dc-redial-btn" id="dc-bottom-redial-btn" type="button" onclick="doDialerRedial()" style="background:#0284c7;color:#ffffff;border:none;border-radius:10px;padding:12px 18px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:7px;cursor:pointer;box-shadow:0 2px 6px rgba(2,132,199,0.3);transition:all 0.15s ease;" title="Redial this lead immediately">
+              <i class="fas fa-redo-alt" style="font-size:14px;"></i> Redial
+            </button>
+            <button class="dc-whatsapp-btn" id="dc-whatsapp-btn" type="button" style="background:#25D366;color:#ffffff;border:none;border-radius:10px;padding:12px 18px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:7px;cursor:pointer;box-shadow:0 2px 6px rgba(37,211,102,0.3);transition:transform 0.15s ease;" title="Open WhatsApp chat with lead">
+              <i class="fab fa-whatsapp" style="font-size:16px;"></i> WhatsApp
+            </button>
+            <button class="dc-save-btn" id="dc-save-btn" style="flex:1;">Save &amp; Next →</button>
           </div>
 
         </div><!-- /.dc-lead-edit-card -->
@@ -826,7 +866,8 @@
 <script src="/shared/staff_inactivity_manager.js"></script>
 <script src="/staff_header.js"></script>
 <script src="/public/js/staff-fetch.js"></script>
-  <script src="/public/js/nda-enforcement.js"></script>
+<script src="/public/js/wa-lead-modal.js?v=20260907"></script>
+<script src="/public/js/nda-enforcement.js"></script>
 <script>
 (async function() {
   // ── Sidebar/Header ──────────────────────────────────────────────────────────
@@ -868,8 +909,8 @@
 
   function _dcGetStaffToken() {
     const c = document.cookie.split(';').map(s => s.trim())
-      .find(s => s.startsWith('staff_token='));
-    return c ? c.slice('staff_token='.length) : '';
+      .find(s => s.startsWith('staff_token=') || s.startsWith('session_token='));
+    return c ? c.slice(c.indexOf('=') + 1) : (localStorage.getItem('staff_token') || localStorage.getItem('token') || '');
   }
 
   async function _dcHandleCallState(msg) {
@@ -998,7 +1039,7 @@
   async function apiCall(method, path, body) {
     const token = document.cookie.split(';').map(c => c.trim())
       .find(c => c.startsWith('staff_token=') || c.startsWith('session_token='));
-    const tk = token ? token.slice(token.indexOf('=') + 1) : '';
+    const tk = token ? token.slice(token.indexOf('=') + 1) : (localStorage.getItem('staff_token') || localStorage.getItem('token') || '');
     const opts = { method, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tk}` } };
     if (body) opts.body = JSON.stringify(body);
     try {
@@ -1008,6 +1049,7 @@
       return { success: false, error: e.message };
     }
   }
+  window.apiCall = apiCall;
 
   function toast(msg, dur = 3000) {
     const el = document.getElementById('dc-toast');
@@ -1068,12 +1110,16 @@
 
   async function loadQueue() {
     const data = await apiCall('GET', '/crm/dialer/queue');
-    if (data.success && data.data) {
-      queue = data.data.queue || [];
-      document.getElementById('badge-overdue').textContent = data.data.overdue || 0;
-      document.getElementById('badge-due').textContent = data.data.due_today || 0;
-      document.getElementById('badge-new').textContent = data.data.new || 0;
-      document.getElementById('badge-second').textContent = data.data.second_contact || 0;
+    const payload = (data && data.data) ? data.data : data;
+    if (data && data.success && payload) {
+      queue = (payload.queue || []).map(l => {
+        const lid = l.id || l.lead_id;
+        return { ...l, id: lid, lead_id: lid };
+      });
+      document.getElementById('badge-overdue').textContent = payload.overdue || 0;
+      document.getElementById('badge-due').textContent = payload.due_today || 0;
+      document.getElementById('badge-new').textContent = payload.new_leads ?? payload.new ?? 0;
+      document.getElementById('badge-second').textContent = payload.second_contact || 0;
     }
   }
 
@@ -1238,17 +1284,27 @@
   let reservationHeartbeatTimer = null;
 
   async function acquireReservation(leadId) {
+    if (!leadId || isNaN(parseInt(leadId)) || parseInt(leadId) <= 0) {
+      console.error('[AutoDialer] Invalid canonical lead ID before reservation:', leadId);
+      toast('⚠️ Lead in queue has missing/invalid ID. Halting auto-advance for safety.', 4000);
+      return null;
+    }
     if (reservationHeartbeatTimer) { clearInterval(reservationHeartbeatTimer); reservationHeartbeatTimer = null; }
     activeReservationLeadId = leadId;
     const res = await apiCall('POST', `/crm/dialer/lead/${leadId}/reserve`, { session_id: sessionId, ttl_seconds: 60 });
-    if (!res.success) {
-      if (res.cooldown_blocked) {
+    if (!res || !res.success) {
+      if (res && res.cooldown_blocked) {
         toast(`⏳ Redial Cooldown: ${res.message || 'Recently attempted — 1-hour cooldown active'}`, 4500);
         return false;
       }
-      if (res.compliance_blocked) {
+      if (res && res.compliance_blocked) {
         toast(`⚠️ Compliance: ${res.error}`, 4000);
         return false;
+      }
+      if (res && (res.detail || res.error === 'Lead not found')) {
+        console.error('[AutoDialer] Reservation application error:', res);
+        toast(`⚠️ Reservation failed: ${typeof res.detail === 'string' ? res.detail : (res.error || 'Server error')}`, 4000);
+        return null;
       }
       toast(`⚠️ Lead #${leadId} is currently in another agent's active preview. Skipping to next lead...`, 2500);
       return false;
@@ -1302,7 +1358,7 @@
     if (res.success) {
       toast('✅ ' + (res.message || 'Lead claimed successfully! It is now in your personal My Leads.'), 4000);
       dismissClaimPrompt();
-      if (currentLead && currentLead.id === lid) {
+      if (currentLead && (currentLead.id === lid || currentLead.lead_id === lid)) {
         currentLead.handler_type = 'staff';
         currentLead.telecaller_id = 'me';
         populateBanner(currentLead, currentLead);
@@ -1319,10 +1375,16 @@
     const posEl = document.getElementById('dc-queue-pos');
     if (!lead) { if (sessionStatus === 'active') showQueueComplete(); return; }
 
+    const canonicalId = lead.id || lead.lead_id;
+
     // JIT Reservation check when session is active
     if (sessionStatus === 'active' && lead) {
-      const resOk = await acquireReservation(lead.id);
-      if (!resOk) {
+      const resState = await acquireReservation(canonicalId);
+      if (resState === null) {
+        console.error('[AutoDialer] Halting queue advance due to reservation application error on lead:', canonicalId, lead);
+        return;
+      }
+      if (resState === false) {
         // Skip locked lead and advance smoothly
         currentIndex++;
         if (currentIndex < queue.length) {
@@ -1345,7 +1407,7 @@
     cardEl.className = `dc-lead-card border-${lead.queue_priority || 'upcoming'}`;
     cardEl.innerHTML = `
       <div class="dc-lead-header">
-        <div class="dc-lead-name">${escHtml(lead.name)}</div>
+        <h4 class="dc-lead-name">${escHtml(lead.name || '—')}</h4>
         <span class="dc-priority-tag">${priorLabel}</span>
       </div>
       <div class="dc-lead-meta">${location || '—'}</div>
@@ -1357,8 +1419,33 @@
         <div class="dc-detail-item"><span>Follow-up</span><b>${lead.next_followup_date ? new Date(lead.next_followup_date).toLocaleDateString('en-IN') : '—'}</b></div>
       </div>
       <div class="dc-dial-btns">
-        ${lead.phone ? `<button class="dc-dial-btn" onclick="doDial('${escHtml(lead.phone)}', ${lead.id})"><i class="fas fa-phone-alt"></i>${escHtml(lead.phone)}</button>` : ''}
-        ${lead.alternate_phone ? `<button class="dc-dial-btn alt" onclick="doDial('${escHtml(lead.alternate_phone)}', ${lead.id})"><i class="fas fa-phone-alt"></i>${escHtml(lead.alternate_phone)} (Alt)</button>` : ''}
+        ${lead.phone ? `
+          <button class="dc-dial-btn" onclick="doDial('${escHtml(lead.phone)}', ${canonicalId}, 'plivo')" title="Dial via Softphone (WebRTC Cloud Call with Recording)">
+            <i class="fas fa-headset me-2"></i>Dial: ${escHtml(lead.phone)} (Softphone)
+          </button>
+          <div class="d-flex align-items-center justify-content-between mt-1 px-1">
+            <button type="button" class="btn btn-link btn-sm text-decoration-none text-muted p-0" style="font-size:11px;" onclick="doDial('${escHtml(lead.phone)}', ${canonicalId}, 'mobile')" title="Open native phone dialer / SIM bypass">
+              <i class="fas fa-mobile-alt me-1"></i> Direct Mobile (Bypass)
+            </button>
+            <button type="button" class="btn btn-link btn-sm text-decoration-none text-secondary p-0" style="font-size:11px;" onclick="doDial('${escHtml(lead.phone)}', ${canonicalId}, 'modal')" title="Choose calling method">
+              <i class="fas fa-sliders-h me-1"></i> Other Methods
+            </button>
+          </div>
+        ` : ''}
+        ${lead.alternate_phone ? `
+          <button class="dc-dial-btn alt mt-2" onclick="doDial('${escHtml(lead.alternate_phone)}', ${canonicalId}, 'plivo')" title="Dial Alt via Softphone">
+            <i class="fas fa-headset me-2"></i>Alt: ${escHtml(lead.alternate_phone)} (Softphone)
+          </button>
+          <div class="d-flex align-items-center justify-content-between mt-1 px-1">
+            <button type="button" class="btn btn-link btn-sm text-decoration-none text-muted p-0" style="font-size:11px;" onclick="doDial('${escHtml(lead.alternate_phone)}', ${canonicalId}, 'mobile')">
+              <i class="fas fa-mobile-alt me-1"></i> Alt Direct Mobile
+            </button>
+            <button type="button" class="btn btn-link btn-sm text-decoration-none text-secondary p-0" style="font-size:11px;" onclick="doDial('${escHtml(lead.alternate_phone)}', ${canonicalId}, 'modal')">
+              <i class="fas fa-sliders-h me-1"></i> Other Methods
+            </button>
+          </div>
+        ` : ''}
+        ${(lead.phone || lead.alternate_phone) ? `<button type="button" class="btn btn-sm btn-outline-success w-100 mt-2" style="border-radius:20px;font-weight:700;" onclick="openDialerLeadWhatsApp()"><i class="fab fa-whatsapp me-1"></i> Send WhatsApp</button>` : ''}
         ${!lead.phone && !lead.alternate_phone ? `<div style="color:#9ca3af;text-align:center;font-size:13px;padding:10px">No phone number on file</div>` : ''}
       </div>
     `;
@@ -1427,22 +1514,188 @@
     `;
   }
 
-  // ── Dial ─────────────────────────────────────────────────────────────────────
-  async function doDial(phone, leadId) {
-    if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
-      window.PlivoSoftphone.dialOutboundCall(phone, leadId, currentLead?.name);
+  // ── Dial & Telephony Integration ─────────────────────────────────────────────
+  let bannerCallTimerInterval = null;
+  let bannerCallTimerSeconds = 0;
+
+  function updateBannerCallState(state, text, badgeClass) {
+    const badge = document.getElementById('dc-call-state-badge');
+    const timer = document.getElementById('dc-call-timer-text');
+    const hangupBtn = document.getElementById('dc-hangup-btn');
+    if (badge) {
+      badge.textContent = text || state;
+      badge.className = `badge ${badgeClass || 'bg-secondary'}`;
+    }
+    if (state === 'connected') {
+      if (hangupBtn) hangupBtn.style.display = 'inline-block';
+      if (timer) timer.style.display = 'inline-block';
+    } else if (state === 'ended' || state === 'idle') {
+      if (hangupBtn) hangupBtn.style.display = 'none';
+      if (bannerCallTimerInterval) {
+        clearInterval(bannerCallTimerInterval);
+        bannerCallTimerInterval = null;
+      }
+    }
+  }
+
+  document.addEventListener('plivo:call-dialing', function(e) {
+    bannerCallTimerSeconds = 0;
+    const timer = document.getElementById('dc-call-timer-text');
+    if (timer) { timer.textContent = '00:00'; timer.style.display = 'none'; }
+    updateBannerCallState('dialing', 'Calling...', 'bg-warning text-dark');
+  });
+
+  document.addEventListener('plivo:call-ringing', function(e) {
+    updateBannerCallState('ringing', 'Ringing...', 'bg-info text-dark');
+  });
+
+  document.addEventListener('plivo:call-connected', function(e) {
+    updateBannerCallState('connected', 'Connected', 'bg-success');
+    bannerCallTimerSeconds = 0;
+    if (bannerCallTimerInterval) clearInterval(bannerCallTimerInterval);
+    bannerCallTimerInterval = setInterval(() => {
+      bannerCallTimerSeconds++;
+      const m = String(Math.floor(bannerCallTimerSeconds / 60)).padStart(2, '0');
+      const s = String(bannerCallTimerSeconds % 60).padStart(2, '0');
+      const timer = document.getElementById('dc-call-timer-text');
+      if (timer) timer.textContent = `${m}:${s}`;
+    }, 1000);
+  });
+
+  let lastDialedPhone = '';
+
+  document.addEventListener('plivo:call-terminated', function(e) {
+    const durSec = bannerCallTimerSeconds;
+    updateBannerCallState('ended', 'Call Ended', 'bg-danger');
+    const durInput = document.getElementById('e-duration');
+    if (durInput && (!durInput.value || parseInt(durInput.value) === 0) && durSec > 0) {
+      durInput.value = durSec;
+    }
+    if (lastDialedPhone && typeof window.rchSaveLocal === 'function') {
+      const termName = document.getElementById('e-name')?.value || currentLead?.name || 'Customer';
+      window.rchSaveLocal(lastDialedPhone, termName, { duration_seconds: durSec, source: 'dialer' });
+    }
+    if (typeof window.rchInvalidateCache === 'function') {
+      window.rchInvalidateCache();
+    }
+    setTimeout(() => {
+      updateBannerCallState('idle', 'Idle', 'bg-secondary');
+    }, 3500);
+  });
+
+  window.doDialerHangup = function() {
+    if (window.PlivoSoftphone && typeof window.PlivoSoftphone.hangup === 'function') {
+      window.PlivoSoftphone.hangup();
+    }
+  };
+
+  window.doDialerRedial = function(which = 'auto') {
+    const pInput = document.getElementById('e-phone');
+    const aInput = document.getElementById('e-alt-phone');
+    const lead = currentLead || {};
+    const pVal = (pInput?.value || lead.phone || '').trim();
+    const aVal = (aInput?.value || lead.alternate_phone || '').trim();
+
+    let targetPhone = '';
+    if (which === 'primary') targetPhone = pVal;
+    else if (which === 'alt') targetPhone = aVal;
+    else targetPhone = lastDialedPhone || pVal || aVal;
+
+    if (!targetPhone) {
+      toast('⚠️ No phone number available to redial.');
+      return;
+    }
+
+    const leadName = document.getElementById('e-name')?.value || lead.name || 'Customer';
+    lastDialedPhone = targetPhone;
+    if (typeof window.rchSaveLocal === 'function') {
+      window.rchSaveLocal(targetPhone, leadName, { source: 'dialer' });
+    }
+    if (typeof window.rchInvalidateCache === 'function') {
+      window.rchInvalidateCache();
+    }
+
+    toast(`📞 Redialing ${targetPhone}...`);
+    doRedialLead(targetPhone, currentLeadId || lead.id || lead.lead_id);
+  };
+
+  async function doRedialLead(phone, leadId) {
+    callTimerStart = Date.now();
+    bannerCallTimerSeconds = 0;
+    const timer = document.getElementById('dc-call-timer-text');
+    if (timer) { timer.textContent = '00:00'; timer.style.display = 'none'; }
+    updateBannerCallState('dialing', 'Calling...', 'bg-warning text-dark');
+
+    // Notify backend active call state immediately
+    if (leadId) {
+      try {
+        await apiCall('POST', '/crm/dialer/call/active', { lead_id: leadId });
+      } catch (_) {}
+    }
+
+    if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+      const savedPref = sessionStorage.getItem('myntos_preferred_call_method');
+      const method = savedPref || 'plivo';
+      window.PlivoSoftphone.dial(phone, leadId, currentLead?.name, method);
     } else {
       window.open('tel:' + phone, '_self');
     }
+  }
+
+  window.openDialerLeadWhatsApp = function() {
+    if (!currentLead) return;
+    const phone = (currentLead.phone || currentLead.alternate_phone || '').replace(/\D/g, '').slice(-10);
+    const leadId = currentLead.id || currentLead.lead_id;
+    const name = currentLead.name || '';
+    const companyId = currentLead.company_id || 4;
+    if (typeof window.openLeadWAModal === 'function') {
+      window.openLeadWAModal(leadId, phone, name, companyId);
+    } else {
+      if (phone) window.open(`https://wa.me/91${phone}`, '_blank');
+    }
+  };
+
+  async function doDial(phone, leadId, forceMethod = null) {
     currentLeadId = leadId;
+    lastDialedPhone = phone;
     callTimerStart = Date.now();
     await loadAndShowLeadEdit(leadId);
+
+    const leadName = currentLead?.name || document.getElementById('e-name')?.value || 'Customer';
+    if (typeof window.rchSaveLocal === 'function') {
+      window.rchSaveLocal(phone, leadName, { source: 'dialer' });
+    }
+    if (typeof window.rchInvalidateCache === 'function') {
+      window.rchInvalidateCache();
+    }
+
+    // Notify backend active call state immediately so dial attempt is registered
+    try {
+      await apiCall('POST', '/crm/dialer/call/active', { lead_id: leadId });
+    } catch (_) {}
+
+    if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+      if (forceMethod === 'mobile') {
+        if (typeof window.PlivoSoftphone.executeMobileDial === 'function') {
+          window.PlivoSoftphone.executeMobileDial(phone);
+        } else {
+          window.open('tel:' + phone, '_self');
+        }
+      } else if (forceMethod === 'modal') {
+        window.PlivoSoftphone.showCallMethodModal(phone, leadId, currentLead?.name);
+      } else {
+        // Default: Force dial directly via Softphone (Plivo WebRTC Cloud Call with live recording)
+        window.PlivoSoftphone.dial(phone, leadId, currentLead?.name, 'plivo');
+      }
+    } else {
+      window.open('tel:' + phone, '_self');
+    }
   }
 
   async function loadAndShowLeadEdit(leadId) {
     // Prefer queue data; fall back to any pre-set currentLead (e.g. from mobile sync) then bare id
-    const inQueue = queue.find(l => l.id === leadId);
-    const lead = inQueue || (currentLead?.id === leadId ? currentLead : { id: leadId });
+    const inQueue = queue.find(l => (l.id || l.lead_id) === leadId);
+    const lead = inQueue || (currentLead && (currentLead.id === leadId || currentLead.lead_id === leadId) ? currentLead : { id: leadId, lead_id: leadId });
     currentLead = lead;
 
     // Show banner immediately with queue data
@@ -1467,6 +1720,10 @@
       }
     }
   }
+  window.loadAndShowLeadEdit = loadAndShowLeadEdit;
+  window.populateBanner = populateBanner;
+  window.populateEditForm = populateEditForm;
+  window.updateBannerCallState = updateBannerCallState;
 
   function populateBanner(lead, fullData) {
     const name = lead.name || '—';
@@ -1655,9 +1912,16 @@
         const statusLabel = STATUS_LABELS[r.status] || r.status;
         const hasAlt = r.alternate_phone && r.alternate_phone !== r.phone;
         const isContact = r.source === 'contact';
-        const sourceBadge = isContact
-          ? `<span style="background:#f0f9ff;color:#0369a1;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;">📱 Contact</span>`
-          : `<span style="background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;">🎯 Lead</span>`;
+        const isVgk = r.source === 'vgk_member';
+        const isMnr = r.source === 'mnr_member';
+        let sourceBadge = `<span style="background:#eff6ff;color:#1d4ed8;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;">🎯 Lead</span>`;
+        if (isVgk) {
+          sourceBadge = `<span style="background:#fef3c7;color:#b45309;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;">🤝 VGK Member</span>`;
+        } else if (isMnr) {
+          sourceBadge = `<span style="background:#f3e8ff;color:#7e22ce;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;">🌟 MNR Member</span>`;
+        } else if (isContact) {
+          sourceBadge = `<span style="background:#f0f9ff;color:#0369a1;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;">📱 Contact</span>`;
+        }
         const dialedBadge = r.dialed_today
           ? `<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;">✅ Called Today</span>`
           : '';
@@ -1665,7 +1929,7 @@
         if (hasAlt) metaParts.push(`Alt: ${escHtml(r.alternate_phone)}`);
         if (loc) metaParts.push(escHtml(loc));
         if (r.status) metaParts.push(`<span style="color:#374151">${escHtml(statusLabel)}</span>`);
-        const dialFn = (isContact && !r.lead_id) ? 'dcDirectDial' : 'dcOverrideDial';
+        const dialFn = (!r.lead_id) ? 'dcDirectDial' : 'dcOverrideDial';
         return `
           <div class="dc-search-result-item" style="${r.dialed_today ? 'opacity:0.75;' : ''}">
             <div class="dc-search-result-info">
@@ -1695,6 +1959,12 @@
   function dcDirectDial(phone, leadId, name) {
     // Pure contact dial — no CRM lead, just open the phone dialer
     dcSearchClear();
+    if (typeof window.rchSaveLocal === 'function') {
+      window.rchSaveLocal(phone, name || phone, { source: 'direct' });
+    }
+    if (typeof window.rchInvalidateCache === 'function') {
+      window.rchInvalidateCache();
+    }
     window.open('tel:' + phone, '_self');
   }
 
@@ -1813,6 +2083,20 @@
       lead_update_minutes: leadUpdateMinutes,
     });
 
+    // Update local recent calls history immediately with final outcome & duration
+    const savedPhone = lastDialedPhone || (currentLead && (currentLead.phone || currentLead.alternate_phone)) || document.getElementById('e-phone')?.value;
+    const savedName = document.getElementById('e-name')?.value || currentLead?.name || 'Customer';
+    if (savedPhone && typeof window.rchSaveLocal === 'function') {
+      window.rchSaveLocal(savedPhone, savedName, {
+        duration_seconds: durationSec,
+        call_outcome: selectedOutcome || 'answered',
+        source: 'dialer'
+      });
+    }
+    if (typeof window.rchInvalidateCache === 'function') {
+      window.rchInvalidateCache();
+    }
+
     if (selectedOutcome === 'answered') statsAnswered++;
     statsDialed++;
     document.getElementById('stat-dialed').textContent = statsDialed;
@@ -1868,6 +2152,15 @@
     await apiCall('POST', '/crm/dialer/attempt', {
       session_id: sessionId, lead_id: currentLeadId, call_outcome: 'skip', current_index: currentIndex,
     });
+
+    if (lastDialedPhone && typeof window.rchSaveLocal === 'function') {
+      const skipName = currentLead?.name || document.getElementById('e-name')?.value || 'Customer';
+      window.rchSaveLocal(lastDialedPhone, skipName, { call_outcome: 'skip', source: 'dialer' });
+    }
+    if (typeof window.rchInvalidateCache === 'function') {
+      window.rchInvalidateCache();
+    }
+
     // Release JIT reservation on skip
     await releaseCurrentReservation();
     statsSkipped++;
@@ -1908,14 +2201,31 @@
     // Session buttons
     document.getElementById('dc-start-btn').addEventListener('click', async () => {
       await loadQueue();
-      const qIds = queue.map(l => l.id);
-      const res = await apiCall('POST', '/crm/dialer/session/start', { queue_lead_ids: qIds });
+      const validQIds = queue
+        .map(l => l.id || l.lead_id)
+        .filter(id => id && !isNaN(parseInt(id)) && parseInt(id) > 0)
+        .map(id => parseInt(id));
+
+      if (validQIds.length === 0 && queue.length > 0) {
+        console.error('[AutoDialer] Queue items contain invalid IDs. Reloading queue...', queue);
+        await loadQueue();
+      }
+      const finalQIds = queue
+        .map(l => l.id || l.lead_id)
+        .filter(id => id && !isNaN(parseInt(id)) && parseInt(id) > 0)
+        .map(id => parseInt(id));
+
+      const res = await apiCall('POST', '/crm/dialer/session/start', { queue_lead_ids: finalQIds });
       if (res.success) { sessionId = res.session?.id || null; sessionStatus = 'active'; updateUI(); startSyncPoll(); toast('Session started!'); }
       else toast('Failed to start session.');
     });
     document.getElementById('dc-pause-btn').addEventListener('click', async () => {
       _dcPauseCountdown();
-      await apiCall('POST', '/crm/dialer/session/pause', { session_id: sessionId, current_index: currentIndex, queue_lead_ids: queue.map(l => l.id) });
+      const validQIds = queue
+        .map(l => l.id || l.lead_id)
+        .filter(id => id && !isNaN(parseInt(id)) && parseInt(id) > 0)
+        .map(id => parseInt(id));
+      await apiCall('POST', '/crm/dialer/session/pause', { session_id: sessionId, current_index: currentIndex, queue_lead_ids: validQIds });
       sessionStatus = 'paused'; stopSyncPoll(); updateUI(); toast('Session paused.');
     });
     document.getElementById('dc-resume-btn').addEventListener('click', async () => {
@@ -1991,6 +2301,8 @@
     // Save & Skip
     document.getElementById('dc-save-btn').addEventListener('click', saveAndNext);
     document.getElementById('dc-skip-btn').addEventListener('click', skipLead);
+    const waBtn = document.getElementById('dc-whatsapp-btn');
+    if (waBtn) waBtn.addEventListener('click', openWhatsAppForCurrentLead);
 
     // Close telecaller dropdown when clicking outside
     document.addEventListener('click', e => {
@@ -1998,6 +2310,41 @@
         document.getElementById('e-tele-results').style.display = 'none';
       }
     });
+  }
+
+  // ── DC_WHATSAPP_ACTION: 1-Click WhatsApp Quick Action ────────────────────────
+  function openWhatsAppForCurrentLead() {
+    const phoneVal = (document.getElementById('e-phone').value || '').trim();
+    const leadName = (document.getElementById('e-name').value || 'Customer').trim();
+    const cleanPhone = phoneVal.replace(/[^0-9]/g, '');
+    if (!cleanPhone) {
+      toast('⚠️ No valid phone number available for WhatsApp.');
+      return;
+    }
+    const formattedPhone = cleanPhone.length === 10 ? ('91' + cleanPhone) : cleanPhone;
+    const note = (document.getElementById('e-note').value || '').trim();
+    let msg = `Hello ${leadName}, this is regarding our discussion with Mynt. `;
+    if (note) {
+      msg += `Note: ${note}. Please let us know if you need any assistance!`;
+    } else {
+      msg += `Please feel free to connect with us for any questions or details.`;
+    }
+    const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, '_blank');
+  }
+
+  // ── DC_MANUAL_REFRESH: Dynamic Queue Refresh ────────────────────────────────
+  async function refreshQueueManual() {
+    const icon = document.getElementById('dc-refresh-icon');
+    if (icon) icon.classList.add('fa-spin');
+    await loadQueue();
+    if (sessionId && (sessionStatus === 'active' || sessionStatus === 'paused')) {
+      renderQueueList();
+    } else {
+      updateUI();
+    }
+    if (icon) setTimeout(() => icon.classList.remove('fa-spin'), 600);
+    toast('Queue refreshed with latest leads.');
   }
 
   // ── Sync Polling replaced by WebSocket (DC_DIALER_WS_001) ───────────────────
@@ -2012,6 +2359,7 @@
     if (!s) return '';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+  window.escHtml = escHtml;
 
   // ═══════════════ MANAGER OVERVIEW ═══════════════════════════════════════════
   window.setMgrRange = function(range, el) {
@@ -2239,6 +2587,11 @@
     DIALER:    { icon: '🎯', color: '#d97706', label: 'CRM Dialer' },
   };
 
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
   let rchFilter = 'ALL';
   let rchPage   = 1;
   let rchHasMore = true;
@@ -2267,17 +2620,35 @@
     try { return JSON.parse(localStorage.getItem('dc_dial_history') || '[]'); } catch(_){ return []; }
   }
 
-  function rchSaveLocal(phone, name) {
+  window.rchSaveLocal = function(phone, name, extras = {}) {
     try {
       const hist = JSON.parse(localStorage.getItem('dc_dial_history') || '[]');
-      const entry = { phone, name, call_type: 'OUTGOING', call_outcome: '', dialed_at: new Date().toISOString(), source: 'direct' };
-      const filtered = hist.filter(h => h.phone !== phone);
+      const cleanPhone = (phone || '').trim();
+      if (!cleanPhone) return;
+      const existing = hist.find(h => h.phone === cleanPhone) || {};
+      const entry = {
+        phone: cleanPhone,
+        name: name || existing.name || cleanPhone,
+        call_type: extras.call_type || existing.call_type || 'OUTGOING',
+        call_outcome: extras.call_outcome !== undefined ? extras.call_outcome : (existing.call_outcome || ''),
+        duration_seconds: extras.duration_seconds !== undefined ? extras.duration_seconds : (existing.duration_seconds || 0),
+        dialed_at: extras.dialed_at || existing.dialed_at || new Date().toISOString(),
+        source: extras.source || existing.source || 'dialer'
+      };
+      const filtered = hist.filter(h => h.phone !== cleanPhone);
       filtered.unshift(entry);
-      localStorage.setItem('dc_dial_history', JSON.stringify(filtered.slice(0, 30)));
+      localStorage.setItem('dc_dial_history', JSON.stringify(filtered.slice(0, 50)));
     } catch(_){}
-  }
+  };
+
+  window.rchInvalidateCache = function() {
+    rchPage = 1;
+    rchEntries = [];
+    rchHasMore = true;
+  };
 
   window.rchLoad = async function(reset) {
+    console.log('[RCH] rchLoad called, reset=', reset, 'rchLoading=', rchLoading);
     if (rchLoading) return;
     if (reset) { rchPage = 1; rchEntries = []; rchHasMore = true; }
     if (!rchHasMore) return;
@@ -2287,15 +2658,18 @@
     try {
       const typeQ = rchFilter !== 'ALL' ? `&call_type=${rchFilter}` : '';
       const res = await apiCall('GET', `/crm/dialer/call-history?page=${rchPage}&per_page=25${typeQ}`);
+      console.log('[RCH] call-history response:', JSON.stringify(res).slice(0, 300));
       const batch = (res.entries || res.data?.entries || []);
+      console.log('[RCH] batch length:', batch.length);
 
       // On page 1 also prepend local direct-dial history (filter to matching type)
-      if (reset && (rchFilter === 'ALL' || rchFilter === 'OUTGOING')) {
+      if (reset && (rchFilter === 'ALL' || rchFilter === 'OUTGOING' || rchFilter === 'DIALER')) {
         const local = rchGetLocal().map(l => ({
-          phone: l.phone, name: l.name || l.phone, call_type: 'OUTGOING',
-          dialed_at: l.dialed_at, duration_seconds: 0, source: 'direct',
+          phone: l.phone, name: l.name || l.phone, call_type: l.call_type || 'OUTGOING',
+          dialed_at: l.dialed_at, duration_seconds: l.duration_seconds || 0, source: l.source || 'direct',
           call_outcome: l.call_outcome || '',
         }));
+        console.log('[RCH] local entries count:', local.length);
         const localPhones = new Set(batch.map(b => b.phone));
         const newLocals = local.filter(l => !localPhones.has(l.phone));
         rchEntries = [...newLocals, ...batch];
@@ -2305,63 +2679,96 @@
 
       rchHasMore = batch.length === 25;
       if (rchHasMore) rchPage++;
-    } catch(_) {}
+    } catch(err) {
+      console.error('[RCH] rchLoad error:', err);
+    }
 
     rchLoading = false;
     rchRender();
+    console.log('[RCH] rchRender completed, total rchEntries:', rchEntries.length);
   };
 
   function rchRender() {
-    const listEl = document.getElementById('rch-list');
-    const lmWrap = document.getElementById('rch-load-more-wrap');
-    if (!listEl) return;
+    try {
+      const listEl = document.getElementById('rch-list');
+      const lmWrap = document.getElementById('rch-load-more-wrap');
+      if (!listEl) return;
 
-    if (rchLoading && rchEntries.length === 0) {
-      listEl.innerHTML = '<div style="padding:40px;text-align:center;color:#9ca3af">Loading…</div>';
-      return;
-    }
-    if (!rchLoading && rchEntries.length === 0) {
-      listEl.innerHTML = `<div style="padding:40px;text-align:center;color:#9ca3af">No calls found${rchFilter !== 'ALL' ? ` for ${RCH_TYPE[rchFilter]?.label || rchFilter}` : ''}</div>`;
-      lmWrap.style.display = 'none';
-      return;
-    }
+      if (rchLoading && rchEntries.length === 0) {
+        listEl.innerHTML = '<div style="padding:40px;text-align:center;color:#9ca3af">Loading…</div>';
+        return;
+      }
+      if (!rchLoading && rchEntries.length === 0) {
+        listEl.innerHTML = `<div style="padding:40px;text-align:center;color:#9ca3af">No calls found${rchFilter !== 'ALL' ? ` for ${RCH_TYPE[rchFilter]?.label || rchFilter}` : ''}</div>`;
+        if (lmWrap) lmWrap.style.display = 'none';
+        return;
+      }
 
-    listEl.innerHTML = rchEntries.map(e => {
-      const cfg = RCH_TYPE[e.call_type] || RCH_TYPE['OUTGOING'];
-      const name = (e.contact_name || e.name || e.phone || '').replace(/</g,'&lt;');
-      const phone = e.phone || '';
-      const dur = rchFmtDur(e.duration_seconds || 0);
-      const localBadge = e.source === 'direct' ? '<span class="rch-local-badge">Device</span>' : '';
-      const crmBadge  = e.source === 'dialer'  ? '<span class="rch-crm-badge">CRM</span>' : '';
-      const dialBtn   = phone
-        ? `<button class="rch-dial-btn" onclick="rchDial('${phone.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}')" title="Call ${phone}">📞 Call</button>`
-        : '';
-      return `
-        <div class="rch-row">
-          <div class="rch-icon" style="color:${cfg.color}">${cfg.icon}</div>
-          <div class="rch-info">
-            <div class="rch-name">${name || phone}</div>
-            <div class="rch-meta">
-              <span class="rch-type-label" style="color:${cfg.color}">${cfg.label}</span>
-              ${crmBadge}${localBadge}
-              ${dur ? `<span>· ${dur}</span>` : ''}
-              <span>· ${rchFmtTime(e.dialed_at)}</span>
+      listEl.innerHTML = rchEntries.map(e => {
+        const cfg = RCH_TYPE[e.call_type] || RCH_TYPE['OUTGOING'];
+        let rawName = (e.contact_name || e.name || '').trim();
+        if (rawName.toLowerCase() === 'unknown') rawName = '';
+        const name = (rawName || e.phone || '').replace(/</g,'&lt;');
+        const phone = e.phone || '';
+        const dur = rchFmtDur(e.duration_seconds || 0);
+        const isCrm = (e.source === 'dialer' || e.source === 'softphone');
+        const isVgk = (e.source === 'vgk' || e.source === 'vgk_member');
+        const isMnr = (e.source === 'mnr' || e.source === 'mnr_member');
+        let sourceBadge = '';
+        if (isVgk) {
+          sourceBadge = '<span style="background:#fef3c7;color:#b45309;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;">VGK</span>';
+        } else if (isMnr) {
+          sourceBadge = '<span style="background:#f3e8ff;color:#7e22ce;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;">MNR</span>';
+        } else if (isCrm) {
+          sourceBadge = '<span class="rch-crm-badge">CRM</span>';
+        } else if (e.source === 'direct') {
+          sourceBadge = '<span class="rch-local-badge">Device</span>';
+        }
+        const outcomeBadge = e.call_outcome ? `<span style="background:#e0e7ff;color:#3730a3;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;text-transform:capitalize;">${escHtml(String(e.call_outcome).replace(/_/g, ' '))}</span>` : '';
+        const dialBtn   = phone
+          ? `<button class="rch-dial-btn" onclick="rchDial('${phone.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}')" title="Call ${phone}">📞 Call</button>`
+          : '';
+        return `
+          <div class="rch-row">
+            <div class="rch-icon" style="color:${cfg.color}">${cfg.icon}</div>
+            <div class="rch-info">
+              <div class="rch-name">${name || phone}</div>
+              <div class="rch-meta">
+                <span class="rch-type-label" style="color:${cfg.color}">${cfg.label}</span>
+                ${sourceBadge}${outcomeBadge}
+                ${dur ? `<span>· ${dur}</span>` : ''}
+                <span>· ${rchFmtTime(e.dialed_at)}</span>
+              </div>
+              ${phone && phone !== name ? `<div class="rch-phone">${phone}</div>` : ''}
             </div>
-            ${phone && phone !== name ? `<div class="rch-phone">${phone}</div>` : ''}
-          </div>
-          <div>${dialBtn}</div>
-        </div>`;
-    }).join('');
+            <div>${dialBtn}</div>
+          </div>`;
+      }).join('');
 
-    if (lmWrap) lmWrap.style.display = rchHasMore ? '' : 'none';
+      if (lmWrap) lmWrap.style.display = rchHasMore ? '' : 'none';
+    } catch(err) {
+      console.error('[RCH] Exception inside rchRender:', err);
+    }
   }
 
   window.rchDial = function(phone, name) {
-    rchSaveLocal(phone, name);
-    if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
-      window.PlivoSoftphone.dialOutboundCall(phone, null, name);
+    if (!phone) return;
+    const digits = String(phone).replace(/\D/g, '');
+    let cleanPhone = phone;
+    if (digits.length === 10) cleanPhone = `+91${digits}`;
+    else if (digits.length === 11 && digits.startsWith('0')) cleanPhone = `+91${digits.slice(1)}`;
+    else if (digits.length === 12 && digits.startsWith('91')) cleanPhone = `+${digits}`;
+    else if (digits.length > 10) cleanPhone = `+91${digits.slice(-10)}`;
+
+    window.rchSaveLocal(cleanPhone, name, { source: 'dialer' });
+    if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+      const savedPref = sessionStorage.getItem('myntos_preferred_call_method');
+      const method = savedPref || 'plivo';
+      window.PlivoSoftphone.dial(cleanPhone, null, name, method);
+    } else if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+      window.PlivoSoftphone.dialOutboundCall(cleanPhone, null, name);
     } else {
-      window.location.href = `tel:${phone}`;
+      window.location.href = `tel:${cleanPhone}`;
     }
   };
 

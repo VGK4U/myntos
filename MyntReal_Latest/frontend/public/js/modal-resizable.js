@@ -191,6 +191,15 @@
     }
 
     // Observe body for dynamically inserted or shown modals
-    const observer = new MutationObserver(autoInitModals);
-    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+    function initObserver() {
+        if (!document.body) return;
+        const observer = new MutationObserver(autoInitModals);
+        observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class'] });
+    }
+
+    if (document.body) {
+        initObserver();
+    } else {
+        document.addEventListener('DOMContentLoaded', initObserver);
+    }
 })();

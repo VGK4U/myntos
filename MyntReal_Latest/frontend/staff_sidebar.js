@@ -383,6 +383,9 @@ window.StaffSidebar = window.StaffSidebar || {
                         this.allowedMenuPaths.add('/staff/incoming-calls');
                         this.allowedMenuPaths.add('/staff/call-flow-studio');
                         this.allowedMenuPaths.add('/staff/call-flow');
+                        this.allowedMenuPaths.add('/staff/dialer');
+                        this.allowedMenuPaths.add('/staff/auto-dialer');
+                        this.allowedMenuPaths.add('/staff/my-leads');
                         this.allowedMenuCodes = new Set(data.menus.map(m => m.menu_code).filter(c => c));
                         this.allowedMenuCodes.add('CRM_WA_INBOX');
                         this.allowedMenuCodes.add('CRM_WA_BOT_HUB');
@@ -391,6 +394,10 @@ window.StaffSidebar = window.StaffSidebar || {
                         this.allowedMenuCodes.add('CRM_SOFTPHONE_DIALER');
                         this.allowedMenuCodes.add('INCOMING_CALLS');
                         this.allowedMenuCodes.add('CALL_FLOW_STUDIO');
+                        this.allowedMenuCodes.add('AUTO_DIALER');
+                        this.allowedMenuCodes.add('staff_auto_dialer');
+                        this.allowedMenuCodes.add('MY_LEADS');
+                        this.allowedMenuCodes.add('staff_my_leads');
                         this.rawMenus = data.menus || [];
                         this.menuRoutesForVGK = data.menus.filter(m => m.route_path && m.label).map(m => ({ label: m.label, route: m.route_path }));
                         console.log('[DC-SIDEBAR] Unified menus loaded:', this.allowedMenuPaths.size, '(unified_mode:', data.unified_mode, ')');
@@ -428,6 +435,9 @@ window.StaffSidebar = window.StaffSidebar || {
                         this.allowedMenuPaths.add('/staff/incoming-calls');
                         this.allowedMenuPaths.add('/staff/call-flow-studio');
                         this.allowedMenuPaths.add('/staff/call-flow');
+                        this.allowedMenuPaths.add('/staff/dialer');
+                        this.allowedMenuPaths.add('/staff/auto-dialer');
+                        this.allowedMenuPaths.add('/staff/my-leads');
                         this.allowedMenuCodes = new Set(data.menus.map(m => m.menu_code).filter(c => c));
                         this.allowedMenuCodes.add('CRM_WA_INBOX');
                         this.allowedMenuCodes.add('CRM_WA_BOT_HUB');
@@ -436,6 +446,10 @@ window.StaffSidebar = window.StaffSidebar || {
                         this.allowedMenuCodes.add('CRM_SOFTPHONE_DIALER');
                         this.allowedMenuCodes.add('INCOMING_CALLS');
                         this.allowedMenuCodes.add('CALL_FLOW_STUDIO');
+                        this.allowedMenuCodes.add('AUTO_DIALER');
+                        this.allowedMenuCodes.add('staff_auto_dialer');
+                        this.allowedMenuCodes.add('MY_LEADS');
+                        this.allowedMenuCodes.add('staff_my_leads');
                         this.rawMenus = data.menus || [];
                         this.menuRoutesForVGK = data.menus.filter(m => m.route_path && m.label).map(m => ({ label: m.label, route: m.route_path }));
                     }
@@ -657,8 +671,14 @@ window.StaffSidebar = window.StaffSidebar || {
         if (rawUser) {
             try {
                 const u = JSON.parse(rawUser);
-                if (u.staff_type === 'TENANT_ADMIN' || u.staff_type === 'SAAS_CLIENT' || (u.base_company_id && u.base_company_id !== 4 && u.base_company_id !== 88 && u.base_company_id !== 1)) {
-                    isSaaSTenant = true;
+                const internalTypes = ['MYNT_REAL', 'MN_STAFF', 'VGK4U', 'INTERNAL', 'STAFF', 'ADMIN', 'HR', 'MANAGER', 'EXECUTIVE', 'FIELD_EXECUTIVE', 'SUPER_ADMIN', 'FREELANCER'];
+                const internalCompanyIds = [1, 2, 3, 4, 88];
+                const isInternalType = u.staff_type && internalTypes.includes(String(u.staff_type).toUpperCase());
+                const isInternalCompany = u.base_company_id && internalCompanyIds.includes(Number(u.base_company_id));
+                if (!isInternalType && !isInternalCompany) {
+                    if (u.staff_type === 'TENANT_ADMIN' || u.staff_type === 'SAAS_CLIENT' || u.staff_type === 'SAAS_TENANT' || u.company_segment === 'SEGMENT_B_SAAS' || u.base_company_type === 'SAAS_CLIENT') {
+                        isSaaSTenant = true;
+                    }
                 }
             } catch (_) {}
         }
@@ -777,9 +797,11 @@ window.StaffSidebar = window.StaffSidebar || {
         const staffType = (this.userData?.staff_type || '').toUpperCase();
         const isSaaSAdmin = ['MR10018', 'MR10001', 'MR10025', 'MR10016'].includes(empCode) || 
                             ['SAAS_SEGMENT_ADMIN', 'SUPER_ADMIN', 'VGK4U_SUPREME'].includes(staffType) ||
-                            ['super_admin', 'saas_segment_admin', 'tenant_admin', 'key_leadership', 'vgk4u'].includes(roleCode) ||
-                            (this.userData?.base_company_id === 88);
-        const isSaaSTenant = !isSaaSAdmin && (this.userData?.staff_type === 'TENANT_ADMIN' || this.userData?.staff_type === 'SAAS_CLIENT' || (this.userData?.base_company_id && this.userData?.base_company_id !== 4 && this.userData?.base_company_id !== 88 && this.userData?.base_company_id !== 1));
+                            ['super_admin', 'saas_segment_admin', 'tenant_admin', 'key_leadership', 'vgk4u'].includes(roleCode);
+        const internalTypes = ['MYNT_REAL', 'MN_STAFF', 'VGK4U', 'INTERNAL', 'STAFF', 'ADMIN', 'HR', 'MANAGER', 'EXECUTIVE', 'FIELD_EXECUTIVE', 'SUPER_ADMIN', 'FREELANCER'];
+        const isInternalType = staffType && internalTypes.includes(staffType);
+        const isInternalCompany = this.userData?.base_company_id && [1, 2, 3, 4, 88].includes(Number(this.userData.base_company_id));
+        const isSaaSTenant = !isSaaSAdmin && !isInternalType && !isInternalCompany && (staffType === 'TENANT_ADMIN' || staffType === 'SAAS_CLIENT' || staffType === 'SAAS_TENANT' || this.userData?.company_segment === 'SEGMENT_B_SAAS');
         
         for (const section of menuMaster) {
             const sCode = (section.section_code || '').toUpperCase();
@@ -839,6 +861,14 @@ window.StaffSidebar = window.StaffSidebar || {
                         const deptName = this.userData?.department_name || '';
                         const isAllowed = (empId === 'MR10001') || (deptName.toLowerCase() === 'accounts');
                         if (!isAllowed) {
+                            shouldInclude = false;
+                        }
+                    }
+
+                    // DC Protocol: Remove access to Staff Leads page (/staff/leads) for Anusha, Anushka, Hema, Nandana, Poojitha
+                    if (item.route === '/staff/leads' || item.menu_code === 'LEADS_MASTER' || item.menu_code === 'staff_leads' || item.menu_code === 'STAFF_LEADS') {
+                        const empId = (this.userData?.emp_code || this.userData?.employee_code || '').toUpperCase();
+                        if (['MN10009', 'MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'].includes(empId) || (hasRouteAccess && !allowedPaths.has('/staff/leads'))) {
                             shouldInclude = false;
                         }
                     }
@@ -1023,6 +1053,12 @@ window.StaffSidebar = window.StaffSidebar || {
 
     // Create mobile hamburger button
     createMobileToggle: function() {
+        // If top header or header container exists, the top header already provides the hamburger / navigation
+        if (document.querySelector('.top-header') || document.getElementById('headerContainer') || document.querySelector('.header-hamburger')) {
+            const existing = document.getElementById('sidebarMobileToggle');
+            if (existing) existing.remove();
+            return;
+        }
         // Only create if it doesn't exist
         if (document.getElementById('sidebarMobileToggle')) return;
         
@@ -1697,8 +1733,14 @@ window.StaffSidebar = window.StaffSidebar || {
         if (rawUser) {
             try {
                 const u = JSON.parse(rawUser);
-                if (u.staff_type === 'TENANT_ADMIN' || u.staff_type === 'SAAS_CLIENT' || (u.base_company_id && u.base_company_id !== 4 && u.base_company_id !== 88 && u.base_company_id !== 1)) {
-                    isSaaSTenant = true;
+                const internalTypes = ['MYNT_REAL', 'MN_STAFF', 'VGK4U', 'INTERNAL', 'STAFF', 'ADMIN', 'HR', 'MANAGER', 'EXECUTIVE', 'FIELD_EXECUTIVE', 'SUPER_ADMIN', 'FREELANCER'];
+                const internalCompanyIds = [1, 2, 3, 4, 88];
+                const isInternalType = u.staff_type && internalTypes.includes(String(u.staff_type).toUpperCase());
+                const isInternalCompany = u.base_company_id && internalCompanyIds.includes(Number(u.base_company_id));
+                if (!isInternalType && !isInternalCompany) {
+                    if (u.staff_type === 'TENANT_ADMIN' || u.staff_type === 'SAAS_CLIENT' || u.staff_type === 'SAAS_TENANT' || u.company_segment === 'SEGMENT_B_SAAS' || u.base_company_type === 'SAAS_CLIENT') {
+                        isSaaSTenant = true;
+                    }
                 }
             } catch (_) {}
         }
@@ -1794,6 +1836,13 @@ const StaffSidebarStyles = `
     cursor: pointer;
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     transition: all 0.2s ease;
+}
+
+body:has(.top-header) .sidebar-mobile-toggle,
+body:has(#headerContainer) .sidebar-mobile-toggle,
+.top-header ~ .sidebar-mobile-toggle,
+#headerContainer ~ .sidebar-mobile-toggle {
+    display: none !important;
 }
 
 .sidebar-mobile-toggle:hover {

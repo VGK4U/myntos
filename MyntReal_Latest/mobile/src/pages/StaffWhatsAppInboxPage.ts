@@ -361,19 +361,22 @@ export class StaffWhatsAppInboxPage {
   }
 
   private maskPhone(phone: string): string {
-    const clean = (phone || '').replace(/[^0-9]/g, '').slice(-10);
+    const s = String(phone || '').trim();
+    if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid') || s.startsWith('120363') || s.length > 14) return s;
+    const clean = s.replace(/[^0-9]/g, '').slice(-10);
     if (!clean || clean.length < 10) return '••••••••••';
     return `+91 ${clean.slice(0, 4)}••••${clean.slice(-2)}`;
   }
 
   private renderMessengerCard(c: any): string {
     const phone = c.from_phone || c.phone || '';
+    const isGroup = c.recipient_type === 'group' || c.contact_type === 'GROUP' || (phone && (phone.includes('@g.us') || phone.startsWith('120363') || phone.length > 14));
     const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
     let rawName = c.resolved_name || c.from_name || c.name || '';
     const hasRealName = rawName && rawName !== '0' && rawName !== 'None' && rawName !== 'null' && !/^\d+$/.test(rawName) && !rawName.startsWith('Customer (+91') && !rawName.startsWith('Contact (+91');
     
-    const displayName = hasRealName ? rawName : `Customer (${this.maskPhone(cleanPhone)})`;
-    const initial = (displayName.charAt(0) || 'C').toUpperCase();
+    const displayName = isGroup ? (c.name || rawName || phone) : (hasRealName ? rawName : `Customer (${this.maskPhone(cleanPhone)})`);
+    const initial = isGroup ? '👥' : (displayName.charAt(0) || 'C').toUpperCase();
     const msg = c.last_message || c.snippet || 'No messages';
     const time = c.last_time || '';
 
@@ -404,11 +407,12 @@ export class StaffWhatsAppInboxPage {
   }
 
   private renderLiveChatPane(): string {
+    const isGroup = (this.activeChatPhone && (this.activeChatPhone.includes('@g.us') || this.activeChatPhone.startsWith('120363') || this.activeChatPhone.length > 14));
     const cleanPhone = (this.activeChatPhone || '').replace(/[^0-9]/g, '').slice(-10);
     const rawName = this.activeChatName || '';
     const hasRealName = rawName && rawName !== '0' && rawName !== 'None' && rawName !== 'null' && !/^\d+$/.test(rawName) && !rawName.startsWith('Customer (+91') && !rawName.startsWith('Contact (+91');
-    const headerTitle = hasRealName ? rawName : `Customer (${this.maskPhone(cleanPhone)})`;
-    const headerSub = hasRealName ? 'WhatsApp Contact' : this.maskPhone(cleanPhone);
+    const headerTitle = isGroup ? (rawName || this.activeChatPhone) : (hasRealName ? rawName : `Customer (${this.maskPhone(cleanPhone)})`);
+    const headerSub = isGroup ? 'WhatsApp Group' : (hasRealName ? 'WhatsApp Contact' : this.maskPhone(cleanPhone));
 
     return `
       <div style="display: flex; flex-direction: column; height: calc(100vh - 280px); min-height: 480px; background: #0b1120;">
@@ -1001,10 +1005,11 @@ export class StaffWhatsAppInboxPage {
       this.chatOriginTab = this.activeTab;
     }
 
+    const isGroup = (phone && (phone.includes('@g.us') || phone.startsWith('120363') || phone.length > 14));
     const cleanPhone = (phone || '').replace(/[^0-9]/g, '').slice(-10);
     let safeName = name;
     if (!safeName || safeName === '0' || safeName === 'None' || safeName === 'null' || /^\d+$/.test(safeName)) {
-      safeName = `Customer (+91 ${cleanPhone})`;
+      safeName = isGroup ? (phone || 'WhatsApp Group') : `Customer (+91 ${cleanPhone})`;
     }
     this.activeChatPhone = phone;
     this.activeChatName = safeName;
@@ -1014,7 +1019,8 @@ export class StaffWhatsAppInboxPage {
     this.render();
 
     try {
-      const res = await apiService.get<any>(`/whatsapp/chat-history?phone=${encodeURIComponent(phone)}`);
+      const recParam = isGroup ? '&recipient_type=group' : '&recipient_type=individual';
+      const res = await apiService.get<any>(`/whatsapp/chat-history?phone=${encodeURIComponent(phone)}${recParam}`);
       if (res.success && res.data && res.data.messages && res.data.messages.length > 0) {
         this.chatHistory = res.data.messages;
       } else {
@@ -1370,10 +1376,8 @@ export class StaffWhatsAppInboxPage {
 
       const user = authService.getAuthState().user || {};
       const staffName = user.full_name || user.name || 'Staff';
-      const empCode = user.emp_code ? ` (${user.emp_code})` : '';
-      const designation = user.designation || user.role_name || user.role?.role_name || 'Workflows';
-      const signature = `\n\n—\nRegards,\n${staffName}${empCode}\n${designation} | MyntReal Workflows`;
-      const finalMsg = text ? (text.includes('Regards,') ? text : `${text}${signature}`) : '';
+      const signature = `\n\nRegards,\n${staffName}`;
+      const finalMsg = text ? (!text.toLowerCase().includes('regards,') ? `${text}${signature}` : text) : '';
 
       this.chatHistory.push({
         id: Date.now(),
@@ -1443,19 +1447,19 @@ export class StaffWhatsAppInboxPage {
             Open WhatsApp on your phone > <strong>Linked Devices</strong> > <strong>Link a Device</strong> and point your camera here:
           </p>
 
-          <div style="background: #fff; padding: 12px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 16px;">
+          <div id="mobileQrBox" style="background: #fff; padding: 12px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 16px;">
             ${this.gatewayQr ? `
-              <img src="${this.gatewayQr}" alt="QR Code" style="width: 200px; height: 200px; display: block;" />
+              <img id="mobileQrImg" src="${this.gatewayQr.startsWith('http') || this.gatewayQr.startsWith('data:') ? this.gatewayQr : `data:image/png;base64,${this.gatewayQr}`}" alt="QR Code" style="width: 200px; height: 200px; display: block; border-radius: 8px;" />
             ` : `
-              <div style="width: 200px; height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; font-size: 12px; gap: 8px;">
+              <div id="mobileQrSpinner" style="width: 200px; height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; font-size: 12px; gap: 8px;">
                 <i class="fas fa-spinner fa-spin" style="font-size: 28px; color: #25d366;"></i>
                 <span>Loading QR Code...</span>
               </div>
             `}
           </div>
 
-          <div style="font-size: 11px; color: #64748b;">
-            Auto-refreshes every 5 seconds.
+          <div id="mobileQrStatusNote" style="font-size: 11px; color: #64748b;">
+            Live WhatsApp Web Pairing Session
           </div>
 
         </div>
@@ -1465,22 +1469,36 @@ export class StaffWhatsAppInboxPage {
     document.getElementById('waQrModalCloseBtn')?.addEventListener('click', () => {
       modalWrap.innerHTML = '';
       if (this.qrPollingTimer) clearInterval(this.qrPollingTimer);
+      this.qrPollingTimer = null;
     });
 
+    let lastRenderedQr = this.gatewayQr || '';
     if (this.qrPollingTimer) clearInterval(this.qrPollingTimer);
     this.qrPollingTimer = setInterval(async () => {
       await this.checkGatewayStatus();
       if (this.gatewayConnected) {
         clearInterval(this.qrPollingTimer);
+        this.qrPollingTimer = null;
         modalWrap.innerHTML = '';
         this.render();
-      } else if (this.gatewayQr) {
-        const container = modalWrap.querySelector('div[style*="background: #fff"]');
-        if (container) {
-          container.innerHTML = `<img src="${this.gatewayQr}" alt="QR Code" style="width: 200px; height: 200px; display: block; border-radius: 8px;" />`;
+      } else if (this.gatewayQr && this.gatewayQr !== lastRenderedQr) {
+        lastRenderedQr = this.gatewayQr;
+        const normalizedSrc = this.gatewayQr.startsWith('http') || this.gatewayQr.startsWith('data:')
+          ? this.gatewayQr
+          : `data:image/png;base64,${this.gatewayQr}`;
+        const img = document.getElementById('mobileQrImg') as HTMLImageElement;
+        const spinner = document.getElementById('mobileQrSpinner');
+        if (img) {
+          img.src = normalizedSrc;
+        } else {
+          const qrBox = document.getElementById('mobileQrBox');
+          if (qrBox) {
+            if (spinner) spinner.remove();
+            qrBox.innerHTML = `<img id="mobileQrImg" src="${normalizedSrc}" alt="QR Code" style="width: 200px; height: 200px; display: block; border-radius: 8px;" />`;
+          }
         }
       }
-    }, 3000);
+    }, 2500);
   }
 
   private openNewMessageModal(phoneNum?: string, initialText?: string): void {
@@ -1489,9 +1507,7 @@ export class StaffWhatsAppInboxPage {
 
     const user = authService.getAuthState().user || {};
     const staffName = user.full_name || user.name || 'Staff';
-    const empCode = user.emp_code ? ` (${user.emp_code})` : '';
-    const designation = user.designation || user.role_name || user.role?.role_name || 'Workflows';
-    const defaultSig = `—\nRegards,\n${staffName}${empCode}\n${designation} | MyntReal Workflows`;
+    const defaultSig = `Regards,\n${staffName}`;
 
     let activeModalEmojiCat = 'smileys';
     let showModalEmoji = false;
@@ -2164,7 +2180,7 @@ export class StaffWhatsAppInboxPage {
 
       const attachSig = sigCheck?.checked ?? true;
       const signature = `\n\n${defaultSig}`;
-      const finalMsg = text ? ((attachSig && !text.includes('Regards,')) ? `${text}${signature}` : text) : '';
+      const finalMsg = text ? ((attachSig && !text.toLowerCase().includes('regards,')) ? `${text}${signature}` : text) : '';
 
       if (sendBtn) sendBtn.disabled = true;
       if (sendBtnText) sendBtnText.textContent = currentMode === 'company' ? 'Sending via Meta API...' : 'Sending via WhatsApp Bot...';

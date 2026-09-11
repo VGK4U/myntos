@@ -722,11 +722,27 @@ async def get_reporting_managers(
     """
     is_top_level = current_user.role and current_user.role.role_code in ['key_leadership', 'vgk4u', 'ea']
 
+    valid_filter = and_(
+        StaffEmployee.is_deleted == False,
+        StaffEmployee.status == 'active',
+        ~StaffEmployee.emp_code.like('EMP_%'),
+        ~StaffEmployee.emp_code.like('SA_%'),
+        ~StaffEmployee.full_name.ilike('%test%'),
+        or_(
+            StaffEmployee.staff_type.is_(None),
+            ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'])
+        )
+    )
+
     manager_ids_subq = db.query(StaffEmployee.reporting_manager_id).filter(
-        StaffEmployee.reporting_manager_id.isnot(None)
+        StaffEmployee.reporting_manager_id.isnot(None),
+        valid_filter
     ).distinct().subquery()
 
-    query = db.query(StaffEmployee).filter(StaffEmployee.id.in_(manager_ids_subq))
+    query = db.query(StaffEmployee).filter(
+        StaffEmployee.id.in_(manager_ids_subq),
+        valid_filter
+    )
 
     if not is_top_level:
         managed_depts = db.query(StaffDepartment).filter(
@@ -1160,41 +1176,15 @@ async def get_team_attendance_summary(
     if not to_date:
         to_date = get_indian_date()
 
-    is_top_level = current_user.role and current_user.role.role_code in ['key_leadership', 'vgk4u', 'ea']
-    
-    hidden_ids = _get_hidden_employee_ids(db, StaffEmployee)
-    exclude_ids = hidden_ids | {current_user.id}
-
-    if is_top_level:
-        team_query = db.query(StaffEmployee).filter(StaffEmployee.status == 'active')
-        if department_id:
-            team_query = team_query.filter(StaffEmployee.department_id == department_id)
-        team = [e for e in team_query.all() if e.id not in exclude_ids]
-    else:
-        managed_depts = db.query(StaffDepartment).filter(
-            StaffDepartment.head_id == current_user.id
-        ).all()
-        dept_ids = [d.id for d in managed_depts]
-        
-        dept_employees = db.query(StaffEmployee).filter(
-            StaffEmployee.department_id.in_(dept_ids),
-            StaffEmployee.status == 'active'
-        ).all()
-        
-        direct_reports = db.query(StaffEmployee).filter(
-            StaffEmployee.reporting_manager_id == current_user.id,
-            StaffEmployee.status == 'active'
-        ).all()
-        
-        seen_ids = set()
-        team = []
-        for emp in dept_employees + direct_reports:
-            if emp.id not in seen_ids and emp.id not in exclude_ids:
-                seen_ids.add(emp.id)
-                team.append(emp)
-        
-        if department_id:
-            team = [e for e in team if e.department_id == department_id]
+    team_ids = get_team_member_ids(
+        current_user, db, StaffEmployee,
+        department_id=department_id,
+        start_date=from_date,
+        end_date=to_date
+    )
+    team = db.query(StaffEmployee).filter(
+        StaffEmployee.id.in_(team_ids)
+    ).order_by(StaffEmployee.full_name).all()
 
     team_summary = []
     total_stats = {

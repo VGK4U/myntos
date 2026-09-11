@@ -18,6 +18,11 @@ export interface CallIntent {
 
 class CallController {
   public openCallDialer(intent: CallIntent): void {
+    // MANDATE 1: TRUE USER-GESTURE AUDIO UNLOCK BEFORE ANY ASYNC OPERATION
+    if (intent?.autoStart !== false) {
+      telephonyService.prepareAudioOnUserGesture();
+    }
+
     if (!intent || !intent.phoneNumber) {
       console.warn('[CallController] Invalid call intent: phoneNumber is required', intent);
       return;

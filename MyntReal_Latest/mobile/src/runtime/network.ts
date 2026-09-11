@@ -44,38 +44,57 @@ class NetworkRuntime {
   async init(): Promise<void> {
     if (this.initialized) return;
 
-    const status = await Network.getStatus();
-    this.networkStatus = {
-      isOnline: status.connected,
-      connectionType: status.connectionType,
-      lastCheck: Date.now()
-    };
+    const Capacitor = (window as any).Capacitor;
+    const isNative = Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform();
 
-    this.networkListenerHandle = await Network.addListener('networkStatusChange', (status) => {
-      const wasOffline = !this.networkStatus.isOnline;
+    if (isNative) {
+      try {
+        const status = await Network.getStatus();
+        this.networkStatus = {
+          isOnline: status.connected,
+          connectionType: status.connectionType,
+          lastCheck: Date.now()
+        };
+        this.networkListenerHandle = await Network.addListener('networkStatusChange', (status) => {
+          this.networkStatus = {
+            isOnline: status.connected,
+            connectionType: status.connectionType,
+            lastCheck: Date.now()
+          };
+          this.notifyStatusListeners(status.connected);
+        });
+      } catch (e) {
+        console.warn('[DC_NETWORK] Network plugin init failed:', e);
+      }
+    } else if (typeof window !== 'undefined') {
       this.networkStatus = {
-        isOnline: status.connected,
-        connectionType: status.connectionType,
+        isOnline: navigator.onLine,
+        connectionType: 'wifi',
         lastCheck: Date.now()
       };
-
-      console.log(`[DC_NETWORK] Status changed: ${status.connected ? 'online' : 'offline'} (${status.connectionType})`);
-      
-      this.statusListeners.forEach(listener => {
-        try {
-          listener(status.connected);
-        } catch (e) {
-          console.error('[DC_NETWORK] Listener error:', e);
-        }
-      });
-
-      if (wasOffline && status.connected) {
+      window.addEventListener('online', () => {
+        this.networkStatus.isOnline = true;
+        this.notifyStatusListeners(true);
         window.dispatchEvent(new CustomEvent('network-restored'));
-      }
-    });
+      });
+      window.addEventListener('offline', () => {
+        this.networkStatus.isOnline = false;
+        this.notifyStatusListeners(false);
+      });
+    }
 
     this.initialized = true;
     console.log(`[DC_NETWORK] Initialized. Online: ${this.networkStatus.isOnline}`);
+  }
+
+  private notifyStatusListeners(isOnline: boolean): void {
+    this.statusListeners.forEach(listener => {
+      try {
+        listener(isOnline);
+      } catch (e) {
+        console.error('[DC_NETWORK] Listener error:', e);
+      }
+    });
   }
 
   isOnline(): boolean {

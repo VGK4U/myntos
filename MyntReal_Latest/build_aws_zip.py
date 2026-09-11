@@ -58,7 +58,7 @@ def create_zip():
             ]
             
             for file in files:
-                if file in exclude_files:
+                if file in exclude_files or file.endswith('.apk') or file == 'mnr-catalog.pdf':
                     continue
                 if file.endswith('.zip') or file.endswith('.sqlite') or file.endswith('.db') or file.endswith('.dump') or file.endswith('.sql') or file.endswith('.log') or file.endswith('.pyc'):
                     continue

@@ -42,33 +42,43 @@ def _require_session_admin(current_user):
         )
 
 
+_session_log_table_ensured = False
+
 def _ensure_session_log_table(db: Session):
     """DC Protocol: Auto-create portal_session_log (idempotent IF NOT EXISTS)."""
-    db.execute(text("""
-        CREATE TABLE IF NOT EXISTS portal_session_log (
-            id                      SERIAL PRIMARY KEY,
-            user_type               VARCHAR(20)  NOT NULL,
-            user_id                 VARCHAR(100) NOT NULL,
-            user_identifier         VARCHAR(100) NOT NULL,
-            display_name            VARCHAR(200),
-            login_at                TIMESTAMP    NOT NULL DEFAULT NOW(),
-            logout_at               TIMESTAMP,
-            session_duration_minutes INTEGER,
-            token_expiry_minutes    INTEGER      NOT NULL DEFAULT 30,
-            ip_address              VARCHAR(64),
-            user_agent              TEXT,
-            ended_by                VARCHAR(20)
-        )
-    """))
-    db.execute(text("""
-        CREATE INDEX IF NOT EXISTS idx_psl_type_login
-            ON portal_session_log (user_type, login_at DESC)
-    """))
-    db.execute(text("""
-        CREATE INDEX IF NOT EXISTS idx_psl_user_id
-            ON portal_session_log (user_id, login_at DESC)
-    """))
-    db.commit()
+    global _session_log_table_ensured
+    if _session_log_table_ensured:
+        return
+    try:
+        db.execute(text("""
+            CREATE TABLE IF NOT EXISTS portal_session_log (
+                id                      SERIAL PRIMARY KEY,
+                user_type               VARCHAR(20)  NOT NULL,
+                user_id                 VARCHAR(100) NOT NULL,
+                user_identifier         VARCHAR(100) NOT NULL,
+                display_name            VARCHAR(200),
+                login_at                TIMESTAMP    NOT NULL DEFAULT NOW(),
+                logout_at               TIMESTAMP,
+                session_duration_minutes INTEGER,
+                token_expiry_minutes    INTEGER      NOT NULL DEFAULT 30,
+                ip_address              VARCHAR(64),
+                user_agent              TEXT,
+                ended_by                VARCHAR(20)
+            )
+        """))
+        db.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_psl_type_login
+                ON portal_session_log (user_type, login_at DESC)
+        """))
+        db.execute(text("""
+            CREATE INDEX IF NOT EXISTS idx_psl_user_id
+                ON portal_session_log (user_id, login_at DESC)
+        """))
+        db.commit()
+        _session_log_table_ensured = True
+    except Exception:
+        db.rollback()
+        _session_log_table_ensured = True
 
 
 def insert_session_log(db: Session, user_type: str, user_id: str,

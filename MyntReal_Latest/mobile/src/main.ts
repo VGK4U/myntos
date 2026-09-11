@@ -48,6 +48,7 @@ import { CallHistoryPage } from './pages/CallHistoryPage';
 import { OperatorCallsPage } from './pages/OperatorCallsPage';
 import { StaffExpenseEntriesPage } from './pages/StaffExpenseEntriesPage';
 import { StaffMyEarningsPage } from './pages/StaffMyEarningsPage';
+import { StaffVGKMembersPage } from './pages/StaffVGKMembersPage';
 import { callSyncService } from './services/call-sync.service';
 import { gpsService } from './services/gps.service';
 // New Staff Dashboard Section Pages
@@ -198,6 +199,8 @@ import { PartnerSpareOrders } from './pages/partner/PartnerSpareOrders';
 // Components
 import { BottomTabs } from './components/BottomTabs';
 import { getSideDrawer } from './components/SideDrawer';
+import { mnrSideDrawer } from './components/MNRSideDrawer';
+import { partnerSideDrawer } from './components/PartnerSideDrawer';
 import { sessionExpirationBanner } from './components/SessionExpirationBanner';
 import { initVGKMobileAssistant } from './components/VGKMobileAssistant';
 import './theme/variables.css';
@@ -319,44 +322,50 @@ class MNRApp {
   private async init(): Promise<void> {
     console.log('[DC_APP] Initializing MyntReal Mobile App');
 
-    // ─── PHASE 1: SYNCHRONOUS SETUP (zero bridge calls, instant) ───────────────
-    this.injectDevServerWarning();
-    this.initLandscapeDetector();
-    this.applyThemePreference();
+    try {
+      // ─── PHASE 1: SYNCHRONOUS SETUP (zero bridge calls, instant) ───────────────
+      this.injectDevServerWarning();
+      this.initLandscapeDetector();
+      this.applyThemePreference();
 
-    // ─── PHASE 2: REGISTER WINDOW / ROUTER EVENTS (no bridge calls) ───────────
-    this.registerEventListeners();
+      // ─── PHASE 2: REGISTER WINDOW / ROUTER EVENTS (no bridge calls) ───────────
+      this.registerEventListeners();
 
-    // ─── PHASE 3: READ AUTH STATE FROM LOCALSTORAGE (synchronous, instant) ─────
-    // DC_FAST_PATH_001: Never await Capacitor bridge calls before showing UI.
-    // localStorage is always available and never hangs. All writes use dual-write
-    // (localStorage + Preferences) so auth state is always in localStorage.
-    let isLoggedIn = false;
-    const rawAuthState = localStorage.getItem('mnr_auth_state');
-    if (rawAuthState) {
-      try {
-        const restored = JSON.parse(rawAuthState);
-        const tokenExpired = restored.isLoggedIn
-          && restored.tokenExpiresAt > 0
-          && Date.now() >= restored.tokenExpiresAt;
-        isLoggedIn = restored.isLoggedIn === true && !tokenExpired;
-        // Sync in-memory state on authService without any bridge calls
-        if (isLoggedIn) {
-          await authService.init();
-          await portalService.init();
+      // ─── PHASE 3: READ AUTH STATE FROM LOCALSTORAGE (synchronous, instant) ─────
+      // DC_FAST_PATH_001: Never await Capacitor bridge calls before showing UI.
+      // localStorage is always available and never hangs. All writes use dual-write
+      // (localStorage + Preferences) so auth state is always in localStorage.
+      let isLoggedIn = false;
+      const rawAuthState = localStorage.getItem('mnr_auth_state');
+      if (rawAuthState) {
+        try {
+          const restored = JSON.parse(rawAuthState);
+          const tokenExpired = restored.isLoggedIn
+            && restored.tokenExpiresAt > 0
+            && Date.now() >= restored.tokenExpiresAt;
+          isLoggedIn = restored.isLoggedIn === true && !tokenExpired;
+          // Sync in-memory state on authService without any bridge calls
+          if (isLoggedIn) {
+            await authService.init().catch(e => console.warn('[DC_APP] authService.init error:', e));
+            await portalService.init().catch(e => console.warn('[DC_APP] portalService.init error:', e));
+          }
+        } catch {
+          isLoggedIn = false;
         }
-      } catch {
-        isLoggedIn = false;
       }
-    }
 
-    this.isLoggedIn = isLoggedIn;
+      this.isLoggedIn = isLoggedIn;
 
-    // ─── PHASE 4: SHOW UI IMMEDIATELY ──────────────────────────────────────────
-    if (this.isLoggedIn) {
-      this.showApp();
-    } else {
-      gpsService.cleanup().catch(() => {});
+      // ─── PHASE 4: SHOW UI IMMEDIATELY ──────────────────────────────────────────
+      if (this.isLoggedIn) {
+        this.showApp();
+      } else {
+        gpsService.cleanup().catch(() => {});
+        this.showLogin();
+      }
+    } catch (fatalErr) {
+      console.error('[DC_APP] Fatal init error, falling back to showLogin:', fatalErr);
+      this.isLoggedIn = false;
       this.showLogin();
     }
 
@@ -442,35 +451,64 @@ class MNRApp {
       this.showAgreementModal(agreementType || 'NDA', agreementLabel || 'Non-Disclosure Agreement');
     });
 
-    App.addListener('backButton', () => {
-      const currentRoute = routerService.getCurrentRoute();
-      const portalDashboards: PageRoute[] = ['progress', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'];
-      if (portalDashboards.includes(currentRoute)) {
-        App.minimizeApp();
-      } else {
-        if (!routerService.goBack()) {
-          const authState = authService.getAuthState();
-          const portal = authState.user?.portal || 'staff';
-          const homeRoute: PageRoute = portal === 'mnr' ? 'mnr-dashboard'
-            : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'progress';
-          routerService.navigate(homeRoute);
-        }
-      }
-    });
+    try {
+      const isNative = typeof (window as any)?.Capacitor?.isNativePlatform === 'function'
+        && (window as any).Capacitor.isNativePlatform();
+      if (isNative) {
+        App.addListener('backButton', () => {
+          const currentRoute = routerService.getCurrentRoute();
+          const portalDashboards: PageRoute[] = ['progress', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'];
+          if (portalDashboards.includes(currentRoute)) {
+            App.minimizeApp();
+          } else {
+            if (!routerService.goBack()) {
+              const authState = authService.getAuthState();
+              const portal = authState.user?.portal || 'staff';
+              const homeRoute: PageRoute = portal === 'mnr' ? 'mnr-dashboard'
+                : portal === 'partner' ? 'partner-dashboard' : portal === 'vgk' ? 'vgk-member-hub' : 'progress';
+              routerService.navigate(homeRoute);
+            }
+          }
+        });
 
-    App.addListener('appStateChange', async ({ isActive }) => {
-      if (!isActive) {
-        await authService.markAppClosed();
-        console.log('[DC_APP] App moved to background');
-      } else {
-        const offlineData = await authService.getOfflineTime();
-        if (offlineData.wasOffline && offlineData.offlineMinutes > 0) {
-          window.dispatchEvent(new CustomEvent('app-resumed-from-background', {
-            detail: { offlineMinutes: offlineData.offlineMinutes }
-          }));
+        App.addListener('appStateChange', async ({ isActive }) => {
+          if (!isActive) {
+            await authService.markAppClosed();
+            console.log('[DC_APP] App moved to background');
+          } else {
+            const offlineData = await authService.getOfflineTime();
+            if (offlineData.wasOffline && offlineData.offlineMinutes > 0) {
+              window.dispatchEvent(new CustomEvent('app-resumed-from-background', {
+                detail: { offlineMinutes: offlineData.offlineMinutes }
+              }));
+            }
+          }
+        });
+      }
+    } catch (appListenerErr) {
+      console.warn('[DC_APP] Native App listeners registration skipped:', appListenerErr);
+    }
+
+    // DC_HAMBURGER_001: High-priority global capture delegation for side drawer toggles across all portals
+    // Fires in capture phase before any page/component listeners, guaranteeing zero drop during page init
+    document.addEventListener('click', (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      const hamburgerBtn = target.closest('#hamburgerBtn, .hamburger-btn, #mnrHamburgerBtn, .mnr-hamburger-btn, #partnerHamburgerBtn, .partner-hamburger, #menuBtn') as HTMLElement | null;
+      if (hamburgerBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (hamburgerBtn.id === 'mnrHamburgerBtn' || hamburgerBtn.classList.contains('mnr-hamburger-btn')) {
+          mnrSideDrawer.toggle();
+        } else if (hamburgerBtn.id === 'partnerHamburgerBtn' || hamburgerBtn.classList.contains('partner-hamburger') || hamburgerBtn.id === 'menuBtn') {
+          partnerSideDrawer.toggle();
+        } else {
+          getSideDrawer().toggle();
         }
       }
-    });
+    }, true);
 
     document.addEventListener('click', (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
@@ -556,6 +594,7 @@ class MNRApp {
       '/staff/whatsapp': 'staff-whatsapp',
       '/staff/whatsapp-center': 'staff-whatsapp',
       '/staff/whatsapp-inbox': 'staff-whatsapp-inbox',
+      '/staff/vgk/members': 'staff-vgk-members',
       '/staff/dashboard': 'dashboard',
       '/staff/progress': 'progress'
     };
@@ -814,6 +853,7 @@ class MNRApp {
         page = new StaffKYCPage(this.pageContainer);
         break;
       case 'staff-leads':
+      case 'staff-my-leads':
         page = new StaffLeadsPage(this.pageContainer);
         break;
       case 'team-attendance':
@@ -977,6 +1017,9 @@ class MNRApp {
         break;
       case 'staff-vgk4u-journeys':
         page = new StaffVGK4UJourneysPage(this.pageContainer);
+        break;
+      case 'staff-vgk-members':
+        page = new StaffVGKMembersPage(this.pageContainer);
         break;
       
       // New Location Tracking Section Pages
@@ -1313,6 +1356,24 @@ class MNRApp {
             <button onclick="window.routerService?.navigate(window.routerService?.currentRoute?.startsWith('partner-') ? 'partner-dashboard' : 'dashboard')" style="background:#6366f1;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:14px;cursor:pointer;">Go to Home</button>
           </div>`;
         return;
+    }
+
+    // DC_PAGE_HEADER_PRE_INIT: Attach header listeners immediately upon construction, before waiting for async page.init()
+    if (document.getElementById('backBtn') || document.getElementById('logoutBtn') || document.getElementById('hamburgerBtn')) {
+      const portal = portalService.getPortal();
+      const authState = authService.getAuthState();
+      const user = authState.user || {};
+      const name = user.name || user.partner_name || '';
+      const code = user.partner_code || '';
+      const subtitle = portal === 'vgk' && (name || code) ? (code ? `${name} (${code})` : name) : '';
+      
+      PageHeader.attachListeners({
+        title: '',
+        showBack: !!document.getElementById('backBtn'),
+        showLogout: !!document.getElementById('logoutBtn') || (portal === 'vgk'),
+        showMenu: !!document.getElementById('hamburgerBtn'),
+        subtitle
+      });
     }
 
     try {

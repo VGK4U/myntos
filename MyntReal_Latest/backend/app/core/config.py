@@ -124,8 +124,18 @@ class Settings(BaseSettings):
         if db_url:
             # Fix legacy Neon SSL mode typo if present (sslmode=require. → sslmode=require)
             db_url = db_url.replace("sslmode=require.", "sslmode=require")
-            # Strip sslmode=disable param when connecting to Neon (cloud requires SSL)
-            # Harmless no-op when already on Helium (which legitimately uses sslmode=disable)
+            # DC Protocol (ARCHITECTURAL FIX - Sep 2026): Production DB Isolation Guard
+            # Detect AWS Elastic Beanstalk / Linux server environment vs local macOS dev
+            is_eb = os.path.exists("/var/app") or os.path.exists("/opt/elasticbeanstalk")
+            is_prod = (
+                is_eb
+                or os.getenv("ENVIRONMENT", "").lower() == "production"
+                or os.getenv("NODE_ENV", "").lower() == "production"
+            )
+            if "rds.amazonaws.com" in db_url and not is_prod:
+                if os.getenv("ALLOW_PROD_DB_ACCESS") != "1":
+                    print("[DC-DB-GUARD] 🛡️ Blocked silent local connection to production RDS! Defaulting to local PostgreSQL (port 5433). Set ALLOW_PROD_DB_ACCESS=1 to override.", flush=True)
+                    return "postgresql://postgres:postgres@localhost:5433/myntreal_dev"
             return db_url
             
         # Fallback to SQLite for development
@@ -135,7 +145,12 @@ class Settings(BaseSettings):
     def validate_secret_key(cls, v: str) -> str:
         """Ensure secret key is provided via environment"""
         secret = os.getenv("SECRET_KEY", v)
-        is_prod = os.getenv("ENVIRONMENT", "").lower() == "production"
+        is_eb = os.path.exists("/var/app") or os.path.exists("/opt/elasticbeanstalk")
+        is_prod = (
+            is_eb
+            or os.getenv("ENVIRONMENT", "").lower() == "production"
+            or os.getenv("NODE_ENV", "").lower() == "production"
+        )
         if secret == "your-secret-key-here" or not secret:
             if is_prod:
                 raise ValueError("CRITICAL: SECRET_KEY is missing or insecure in PRODUCTION. App will not start.")

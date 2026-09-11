@@ -110,6 +110,7 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
         LEFT JOIN vgk_cash_income_entries e ON (e.partner_id = p.id AND e.status != 'CANCELLED')
         LEFT JOIN crm_leads l ON (l.associated_partner_id = p.id OR l.primary_owner_id = p.id OR l.source_ref_id = CAST(p.id AS VARCHAR))
         WHERE p.is_active = TRUE
+          AND (p.is_blocked IS FALSE OR p.is_blocked IS NULL)
     """)
     stats_row = db.execute(stats_query).fetchone()
 
@@ -119,6 +120,7 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
         FROM official_partners p
         JOIN crm_leads c ON (c.associated_partner_id = p.id OR c.primary_owner_id = p.id OR c.source_ref_id = CAST(p.id AS VARCHAR))
         WHERE p.is_active = TRUE
+          AND (p.is_blocked IS FALSE OR p.is_blocked IS NULL)
     """)).scalar() or 0
     
     active_partners_count = db_active_partners + 150
@@ -132,6 +134,7 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
         FROM official_partners p
         LEFT JOIN crm_leads c ON (c.associated_partner_id = p.id OR c.primary_owner_id = p.id OR c.source_ref_id = CAST(p.id AS VARCHAR))
         WHERE p.is_active = TRUE
+          AND (p.is_blocked IS FALSE OR p.is_blocked IS NULL)
         GROUP BY p.id, p.partner_name, p.partner_code, p.phone, p.whatsapp_number
         HAVING COUNT(c.id) = 0
         ORDER BY p.id ASC

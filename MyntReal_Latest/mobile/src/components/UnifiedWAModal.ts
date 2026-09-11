@@ -52,12 +52,8 @@ class UnifiedWAModal {
   private getSenderSignature(): string {
     const authState = authService.getAuthState();
     const user = authState.user || {};
-    const fullName = user.full_name || user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'MyntReal Executive';
-    const empCode = user.emp_code || user.employee_id || user.mnr_id || user.partner_code || '';
-    const designation = user.designation || user.role_name || user.role || 'Sales & Operations';
-
-    const codeStr = empCode ? ` (${empCode})` : '';
-    return `\n\n—\nRegards,\n${fullName}${codeStr}\n${designation} | MyntReal Workflows`;
+    const fullName = user.full_name || user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Staff';
+    return `\n\nRegards,\n${fullName}`;
   }
 
   open(options: WAModalOptions): void {
@@ -108,14 +104,14 @@ class UnifiedWAModal {
           <button class="uwa-mode-btn ${this.activeMode === 'scanned' ? 'active' : ''}" id="uwaModeScannedBtn">
             <i class="fas fa-qrcode"></i>
             <div>
-              <strong>Scan WhatsApp</strong>
-              <small>Common Number · Port 5002 · Tracked</small>
+              <strong>📱 Scanned WhatsApp</strong>
+              <small>Employee Account · Port 5002</small>
             </div>
           </button>
           <button class="uwa-mode-btn ${this.activeMode === 'meta_api' ? 'active' : ''}" id="uwaModeMetaBtn">
             <i class="fas fa-building"></i>
             <div>
-              <strong>WhatsApp API</strong>
+              <strong>🏢 Official WhatsApp</strong>
               <small>Meta Cloud API · Verified</small>
             </div>
           </button>
@@ -148,7 +144,7 @@ class UnifiedWAModal {
           <button class="btn btn-outline uwa-cancel-btn" id="uwaCancelBtn">Cancel</button>
           <button class="btn btn-primary uwa-send-btn" id="uwaSendBtn">
             <i class="fas fa-paper-plane me-1"></i>
-            <span id="uwaSendBtnLabel">Send via Scan WhatsApp</span>
+            <span id="uwaSendBtnLabel">Send via 📱 Scanned WhatsApp</span>
           </button>
         </div>
       </div>
@@ -203,12 +199,12 @@ class UnifiedWAModal {
     if (this.activeMode === 'scanned') {
       scannedBtn?.classList.add('active');
       metaBtn?.classList.remove('active');
-      if (sendBtnLabel) sendBtnLabel.textContent = 'Send via Scan WhatsApp';
+      if (sendBtnLabel) sendBtnLabel.textContent = 'Send via 📱 Scanned WhatsApp';
       if (sendBtn) sendBtn.style.background = '#16a34a';
     } else {
       scannedBtn?.classList.remove('active');
       metaBtn?.classList.add('active');
-      if (sendBtnLabel) sendBtnLabel.textContent = 'Send via WhatsApp API';
+      if (sendBtnLabel) sendBtnLabel.textContent = 'Send via 🏢 Official WhatsApp';
       if (sendBtn) sendBtn.style.background = '#2563eb';
     }
   }
@@ -226,9 +222,9 @@ class UnifiedWAModal {
       return;
     }
 
-    // Ensure sender signature is attached
+    // Ensure sender signature is attached without duplicates
     const sig = this.getSenderSignature();
-    if (msg.indexOf('Regards,') === -1 && msg.indexOf('MyntReal') === -1) {
+    if (!msg.toLowerCase().includes('regards,')) {
       msg = msg + sig;
     }
 
@@ -257,32 +253,25 @@ class UnifiedWAModal {
 
         if (response.success) {
           if (sendBtnLabel) sendBtnLabel.innerHTML = '<i class="fas fa-check me-1"></i> Sent Successfully ✓';
-          this.showFeedback('✅ Dispatched via WhatsApp Meta Cloud API (Signed & Tracked)', 'success');
+          this.showFeedback('✅ Dispatched via WhatsApp Meta Cloud API (Official Business)', 'success');
           setTimeout(() => this.close(), 2500);
         } else {
-          const errorMsg = response.error || response.data?.reason || 'Meta API not available. Switching to Scan WhatsApp...';
-          this.showFeedback(`⚠️ ${errorMsg}`, 'error');
-          // Auto-switch to Scanned WhatsApp
-          setTimeout(() => {
-            this.activeMode = 'scanned';
-            this.updateModeUI();
-            this.handleSend();
-          }, 1500);
+          const errorMsg = response.error || response.data?.reason || 'Meta API not available.';
+          this.showFeedback(`❌ Meta API Error: ${errorMsg}`, 'error');
+          if (sendBtn) sendBtn.disabled = false;
+          if (sendBtnLabel) sendBtnLabel.textContent = 'Retry Send';
         }
       } catch (err: any) {
-        console.warn('[UnifiedWAModal] Meta API failed, fallback to scan:', err);
-        this.showFeedback(`⚠️ Meta API failed: ${err.message || 'Error'}. Falling back to Scan WhatsApp...`, 'error');
-        setTimeout(() => {
-          this.activeMode = 'scanned';
-          this.updateModeUI();
-          this.handleSend();
-        }, 1500);
+        console.warn('[UnifiedWAModal] Meta API failed:', err);
+        this.showFeedback(`❌ Meta API Network error: ${err.message || 'Server unreachable'}`, 'error');
+        if (sendBtn) sendBtn.disabled = false;
+        if (sendBtnLabel) sendBtnLabel.textContent = 'Retry Send';
       }
       return;
     }
 
-    // Mode 2: Scan WhatsApp (Common Number)
-    if (sendBtnLabel) sendBtnLabel.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending via Common Bot...';
+    // Mode 2: Scan WhatsApp (Personal / Common Number)
+    if (sendBtnLabel) sendBtnLabel.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending via Personal WA...';
     this.showFeedback('Connecting to WhatsApp Bot Gateway...', 'info');
 
     try {
@@ -296,17 +285,17 @@ class UnifiedWAModal {
 
       if (response.success) {
         if (sendBtnLabel) sendBtnLabel.innerHTML = '<i class="fas fa-check me-1"></i> Sent Successfully ✓';
-        this.showFeedback(`✅ Dispatched via Scan WhatsApp (Common Number)! Sender: ${this.escapeHtml(authService.getAuthState().user?.full_name || 'Staff')}`, 'success');
+        this.showFeedback(`✅ Dispatched via Personal Scanned WhatsApp! Sender: ${this.escapeHtml(authService.getAuthState().user?.full_name || 'Staff')}`, 'success');
         setTimeout(() => this.close(), 2500);
       } else {
-        const errorMsg = response.error || 'Failed to dispatch via WhatsApp Gateway. Please verify the common QR bot is scanned.';
-        this.showFeedback(`❌ ${errorMsg}`, 'error');
+        const errorMsg = response.error || 'Personal WhatsApp Web is disconnected or unlinked.';
+        this.showFeedback(`❌ Personal WA: ${errorMsg}. You can switch to "WhatsApp API" mode above to send via Official Meta Business.`, 'error');
         if (sendBtn) sendBtn.disabled = false;
         if (sendBtnLabel) sendBtnLabel.textContent = 'Retry Send';
       }
     } catch (err: any) {
       console.error('[UnifiedWAModal] Send error:', err);
-      this.showFeedback(`❌ Network error: ${err.message || 'Server unreachable'}`, 'error');
+      this.showFeedback(`❌ Personal WhatsApp Gateway offline. You can switch to "WhatsApp API" above to send via Meta Cloud.`, 'error');
       if (sendBtn) sendBtn.disabled = false;
       if (sendBtnLabel) sendBtnLabel.textContent = 'Retry Send';
     }

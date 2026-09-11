@@ -7,135 +7,156 @@
   <title>Mynt Real LLP Staff Portal — WhatsApp Center</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="/shared/dc-theme.css" rel="stylesheet">
+  <link href="/public/css/mobile-responsive.css" rel="stylesheet">
   <script src="/public/js/staff-token-manager.js"></script>
   <script src="/public/js/staff-fetch.js"></script>
   <script src="/public/js/nda-enforcement.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;background:#f3f4f6;color:#111827;min-height:100vh}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;color:#0f172a;min-height:100vh}
+
+    /* Suppress duplicate floating mobile hamburger when top header is present */
+    body:has(.top-header) .sidebar-mobile-toggle,
+    body:has(#headerContainer) .sidebar-mobile-toggle,
+    .top-header ~ .sidebar-mobile-toggle,
+    #headerContainer ~ .sidebar-mobile-toggle {
+      display: none !important;
+    }
 
     /* ── Staff Portal Main Content Shell ─────────────────────────────── */
-    .main-content{margin-left:260px;min-height:100vh;display:flex;flex-direction:column;transition:margin-left .3s ease}
+    .main-content{margin-left:0;min-height:100vh;display:flex;flex-direction:column;transition:margin-left .3s ease;overflow-x:hidden}
     @media(max-width:768px){.main-content{margin-left:0 !important}}
-    .content-area{flex:1;padding:20px 24px;max-width:1600px;width:100%}
+    .content-area{flex:1;padding:12px 16px;max-width:1400px;width:100%;box-sizing:border-box;margin:0 auto}
 
     /* ── WhatsApp Center Page Banner ─────────────────────────────────── */
-    .wa-center-banner{background:linear-gradient(135deg,#064e3b,#065f46,#047857);color:#fff;border-radius:12px;padding:16px 20px;margin-bottom:16px;box-shadow:0 2px 8px rgba(4,120,87,.2)}
-    .wa-center-banner .hdr-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
-    .wa-center-banner h1{font-size:18px;font-weight:700;display:flex;align-items:center;gap:10px;margin:0}
-    .wa-center-banner p{font-size:12px;opacity:.9;margin:3px 0 0 0}
-    .hdr-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-    .status-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:999px;padding:4px 12px;font-size:11.5px;font-weight:700}
-    .unread-pill{display:inline-flex;align-items:center;gap:5px;background:#ef4444;color:#fff;border-radius:999px;padding:4px 10px;font-size:11.5px;font-weight:700}
+    .wa-center-banner{background:linear-gradient(135deg,#064e3b,#065f46,#047857);color:#fff;border-radius:12px;padding:12px 18px;margin-bottom:12px;box-shadow:0 3px 10px rgba(4,120,87,.18);border:1px solid rgba(255,255,255,0.1)}
+    .wa-center-banner .hdr-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+    .wa-center-banner h1{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;margin:0}
+    .wa-center-banner p{font-size:11.5px;opacity:.9;margin:2px 0 0 0}
+    .hdr-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    .status-badge{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700}
+    .unread-pill{display:inline-flex;align-items:center;gap:4px;background:#ef4444;color:#fff;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:700}
 
     /* ── Global Search Input ─────────────────────────────────────────── */
-    .hdr-search-box{position:relative;width:240px}
-    .hdr-search-box input{width:100%;padding:6px 12px 6px 32px;border-radius:20px;border:none;background:rgba(255,255,255,.95);font-size:12px;outline:none}
-    .hdr-search-box i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#6b7280;font-size:11px}
+    .hdr-search-box{position:relative;width:220px}
+    .hdr-search-box input{width:100%;padding:5px 10px 5px 30px;border-radius:20px;border:none;background:rgba(255,255,255,.95);font-size:11.5px;outline:none}
+    .hdr-search-box i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#6b7280;font-size:11px}
 
     /* ── Tab Bar ──────────────────────────────────────────────────────── */
-    .wa-tab-bar{display:flex;align-items:center;gap:4px;background:#fff;border-radius:10px;padding:6px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:16px;overflow-x:auto}
-    .wa-tab-btn{padding:9px 16px;font-size:12.5px;font-weight:700;color:#4b5563;border:none;background:none;cursor:pointer;border-radius:8px;white-space:nowrap;display:flex;align-items:center;gap:8px;transition:.15s}
-    .wa-tab-btn:hover{background:#f3f4f6;color:#111827}
+    .wa-tab-bar{display:flex;align-items:center;gap:6px;background:#fff;border-radius:12px;padding:6px;box-shadow:0 1px 3px rgba(15,23,42,.04);border:1px solid #e2e8f0;margin-bottom:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .wa-tab-bar::-webkit-scrollbar{display:none}
+    .wa-tab-btn{padding:8px 14px;font-size:12px;font-weight:600;color:#475569;border:none;background:none;cursor:pointer;border-radius:8px;white-space:nowrap;display:flex;align-items:center;gap:6px;transition:all .2s cubic-bezier(0.4, 0, 0.2, 1)}
+    .wa-tab-btn:hover{background:#f1f5f9;color:#0f172a}
     .wa-tab-btn.active{background:#059669;color:#fff;box-shadow:0 2px 6px rgba(5,150,105,.25)}
-    .wa-tab-btn .badge-num{background:rgba(255,255,255,.25);color:#fff;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:800}
+    .wa-tab-btn .badge-num{background:rgba(255,255,255,.25);color:#fff;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:700}
 
     /* ── Tab Panes ────────────────────────────────────────────────────── */
     .tab-pane{display:none}
-    .tab-pane.active{display:block}
+    .tab-pane.active{display:flex;flex-direction:column;flex:1;min-height:0}
 
     /* ── TAB 1: CRM INBOX STYLING ────────────────────────────────────── */
-    .stats-bar{display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap}
-    .stat-card{background:#fff;border-radius:8px;padding:10px 14px;flex:1;min-width:100px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05);cursor:pointer;transition:.15s;border:2px solid transparent}
+    .stats-bar{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+    .stat-card{background:#fff;border-radius:10px;padding:10px 14px;flex:1;min-width:100px;text-align:center;box-shadow:0 1px 3px rgba(15,23,42,.04);cursor:pointer;transition:.15s;border:1.5px solid #e2e8f0}
     .stat-card:hover{border-color:#a7f3d0}
     .stat-card.active{border-color:#059669;background:#ecfdf5}
     .stat-card .stat-val{font-size:18px;font-weight:800;color:#059669}
-    .stat-card .stat-lbl{font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-top:2px}
+    .stat-card .stat-lbl{font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;margin-top:2px}
 
-    .filter-wrap{background:#fff;padding:10px 14px;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:14px;display:flex;align-items:center;flex-wrap:wrap;gap:10px}
-    .filter-wrap input, .filter-wrap select{padding:5px 9px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;outline:none}
-    .filter-wrap input:focus, .filter-wrap select:focus{border-color:#059669}
+    .filter-wrap{background:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 1px 3px rgba(15,23,42,.04);border:1px solid #e2e8f0;margin-bottom:12px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+    .filter-wrap input, .filter-wrap select{padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;outline:none}
+    .filter-wrap input:focus, .filter-wrap select:focus{border-color:#059669;box-shadow:0 0 0 3px rgba(5,150,105,0.12)}
 
-    .btn-custom{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:none;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+    .btn-custom{padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:.15s;display:inline-flex;align-items:center;gap:5px}
     .btn-green{background:#059669;color:#fff}
     .btn-green:hover{background:#047857}
-    .btn-gray{background:#6b7280;color:#fff}
-    .btn-gray:hover{background:#4b5563}
-    .btn-outline-custom{background:#fff;color:#374151;border:1px solid #d1d5db}
-    .btn-outline-custom:hover{background:#f9fafb}
+    .btn-gray{background:#64748b;color:#fff}
+    .btn-gray:hover{background:#475569}
+    .btn-outline-custom{background:#fff;color:#334155;border:1px solid #cbd5e1}
+    .btn-outline-custom:hover{background:#f8fafc;color:#0f172a}
 
-    .inbox-wrap{background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden}
-    .inbox-header{display:grid;grid-template-columns:14px 28px 140px 185px 1fr 85px 150px 80px 75px 80px 145px 110px;gap:8px;padding:10px 14px;background:#f9fafb;border-bottom:2px solid #e5e7eb;font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase}
-    .inbox-row{display:grid;grid-template-columns:14px 28px 140px 185px 1fr 85px 150px 80px 75px 80px 145px 110px;gap:8px;padding:10px 14px;border-bottom:1px solid #f3f4f6;align-items:center;cursor:pointer;transition:.12s}
+    .inbox-wrap{background:#fff;border-radius:10px;box-shadow:0 1px 4px rgba(15,23,42,.06);border:1px solid #e2e8f0;overflow:hidden}
+    .inbox-header{display:grid;grid-template-columns:14px 28px 140px 185px 1fr 85px 150px 80px 75px 80px 145px 110px;gap:8px;padding:10px 14px;background:#f8fafc;border-bottom:2px solid #e2e8f0;font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase}
+    .inbox-row{display:grid;grid-template-columns:14px 28px 140px 185px 1fr 85px 150px 80px 75px 80px 145px 110px;gap:8px;padding:10px 14px;border-bottom:1px solid #f1f5f9;align-items:center;cursor:pointer;transition:.12s}
     .inbox-row:hover{background:#f0fdf4}
     .inbox-row.unread{background:#f0fdf4;font-weight:600}
     .unread-dot{width:8px;height:8px;background:#25d366;border-radius:50%}
 
-    .ei-chip{display:inline-flex;align-items:center;gap:3px;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700}
+    .ei-chip{display:inline-flex;align-items:center;gap:3px;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700}
     .ei-crm{background:#ede9fe;color:#6d28d9}
     .ei-service{background:#dbeafe;color:#1d4ed8}
     .ei-contacts{background:#d1fae5;color:#065f46}
 
     /* ── TAB 2: MESSENGER SPLIT VIEW ─────────────────────────────────── */
-    .messenger-container{display:flex;height:calc(100vh - 255px);min-height:460px;background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
-    .msg-sidebar{width:310px;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;background:#f9fafb;flex-shrink:0}
-    .msg-sidebar-header{padding:10px 12px;border-bottom:1px solid #e5e7eb;background:#fff}
-    .msg-scope-select{width:100%;padding:5px 8px;border:1px solid #d1d5db;border-radius:6px;font-size:11.5px;font-weight:600;margin-bottom:6px;outline:none}
-    .msg-search-input{width:100%;padding:6px 10px 6px 28px;border:1px solid #d1d5db;border-radius:6px;font-size:11.5px;outline:none}
+    .messenger-container{display:flex;height:calc(100vh - 300px);min-height:450px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(15,23,42,.06);border:1px solid #e2e8f0;overflow:hidden;width:100%}
+    .msg-sidebar{width:320px;border-right:1px solid #e2e8f0;display:flex;flex-direction:column;background:#f8fafc;flex-shrink:0;height:100%;overflow:hidden}
+    .msg-sidebar-header{padding:10px 12px;border-bottom:1px solid #e2e8f0;background:#fff}
+    .msg-scope-select{width:100%;padding:6px 10px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px;font-weight:600;margin-bottom:6px;outline:none}
+    .msg-search-input{width:100%;padding:7px 10px 7px 28px;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;outline:none}
 
-    .conv-list{flex:1;overflow-y:auto}
-    .conv-card{padding:10px 12px;border-bottom:1px solid #f3f4f6;cursor:pointer;transition:.12s;display:flex;align-items:center;gap:10px;background:#fff}
+    .conv-list{flex:1;overflow-y:auto;min-height:0}
+    .conv-card{padding:10px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:.12s;display:flex;align-items:center;gap:10px;background:#fff}
     .conv-card:hover,.conv-card.active{background:#e6f4ea}
-    .conv-avatar{width:36px;height:36px;border-radius:50%;background:#059669;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+    .conv-avatar{width:38px;height:38px;border-radius:50%;background:#059669;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
     .conv-info{flex:1;min-width:0}
-    .conv-name{font-size:12.5px;font-weight:700;color:#111827;display:flex;align-items:center;justify-content:space-between}
-    .conv-snippet{font-size:11px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
+    .conv-name{font-size:13px;font-weight:700;color:#0f172a;display:flex;align-items:center;justify-content:space-between}
+    .conv-snippet{font-size:11.5px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
 
-    .msg-chat-pane{flex:1;display:flex;flex-direction:column;background:#efeae2}
-    .chat-header{padding:10px 14px;background:#fff;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between}
-    .chat-title h3{font-size:13.5px;font-weight:700;margin:0}
-    .chat-title p{font-size:11px;color:#6b7280;margin:0}
+    .msg-chat-pane{flex:1;display:flex;flex-direction:column;background:#efeae2;min-width:0;height:100%;overflow:hidden}
+    .chat-header{padding:10px 14px;background:#fff;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .chat-header-main{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+    .chat-title h3{font-size:14px;font-weight:700;color:#0f172a;margin:0}
+    .chat-title p{font-size:11px;color:#64748b;margin:0}
 
-    .chat-history-box{flex:1;padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+    .chat-history-box{flex:1;padding:12px 14px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:0}
     .chat-bubble{max-width:75%;padding:8px 12px;border-radius:10px;font-size:12.5px;line-height:1.45;word-break:break-word;position:relative;box-shadow:0 1px 2px rgba(0,0,0,.08)}
-    .bubble-in{background:#fff;align-self:flex-start;border-top-left-radius:2px;color:#111827}
-    .bubble-out{background:#d9fdd3;align-self:flex-end;border-top-right-radius:2px;color:#111827}
-    .bubble-meta{font-size:9.5px;color:#6b7280;margin-top:3px;display:flex;align-items:center;justify-content:flex-end;gap:4px}
+    .bubble-in{background:#fff;align-self:flex-start;border-top-left-radius:2px;color:#0f172a}
+    .bubble-out{background:#d9fdd3;align-self:flex-end;border-top-right-radius:2px;color:#0f172a}
+    .bubble-meta{font-size:9.5px;color:#64748b;margin-top:3px;display:flex;align-items:center;justify-content:flex-end;gap:4px}
     .type-badge{display:inline-block;padding:1px 5px;border-radius:4px;font-size:9.5px;font-weight:700;margin-right:4px}
     .badge-customer{background:#dbeafe;color:#1d4ed8}
     .badge-group{background:#fef3c7;color:#92400e}
     .badge-channel{background:#fae8ff;color:#86198f}
     .badge-staff{background:#d1fae5;color:#065f46}
 
-    .chat-composer-bar{padding:10px 14px;background:#f0f2f5;border-top:1px solid #e5e7eb;display:flex;flex-direction:column;gap:6px}
-    .composer-row{display:flex;align-items:center;gap:6px}
-    .composer-input{flex:1;padding:8px 12px;border:1px solid #d1d5db;border-radius:18px;font-size:12.5px;outline:none;background:#fff}
-    .composer-input:focus{border-color:#059669}
+    .chat-composer-bar{padding:10px 14px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+    .composer-tools-row,.composer-input-row{display:flex;align-items:center;gap:6px}
+    .composer-input{padding:8px 14px;border:1.5px solid #cbd5e1;border-radius:20px;font-size:13px;outline:none;background:#fff;color:#0f172a;transition:all .15s}
+    .composer-input:focus{border-color:#059669;box-shadow:0 0 0 3px rgba(5,150,105,0.12)}
+    .channel-select-compact{border-radius:14px;background:#f1f5f9;font-weight:600;font-size:12px;padding:6px 10px}
+
+    @media (min-width: 769px) {
+      .chat-composer-bar{flex-direction:row;align-items:center}
+      .composer-tools-row{flex-shrink:0}
+      .composer-input-row{flex:1;min-width:0}
+      .channel-select-compact{width:170px}
+      .msg-text-input{flex:1;min-width:0}
+    }
 
     /* Attachment Preview */
-    .attach-preview-card{background:#fff;border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;display:none;align-items:center;gap:8px;font-size:11.5px}
+    .attach-preview-card{background:#fff;border:1px solid #cbd5e1;border-radius:6px;padding:6px 10px;display:none;align-items:center;gap:8px;font-size:12px}
     .attach-preview-card.show{display:flex}
 
     /* ── TAB 3: TEMPLATE HUB ─────────────────────────────────────────── */
     .tpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-    .tpl-card{background:#fff;border-radius:8px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.05);border:1px solid #e5e7eb}
-    .tpl-card h4{font-size:13.5px;font-weight:700;color:#111827;margin-bottom:4px}
-    .tpl-card p{font-size:11.5px;color:#4b5563;line-height:1.4;margin-bottom:8px;max-height:70px;overflow-y:auto;white-space:pre-wrap}
+    .tpl-card{background:#fff;border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(15,23,42,.04);border:1px solid #e2e8f0}
+    .tpl-card h4{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:4px}
+    .tpl-card p{font-size:12px;color:#475569;line-height:1.45;margin-bottom:8px;max-height:70px;overflow-y:auto;white-space:pre-wrap}
 
     /* ── Modals & Toast ──────────────────────────────────────────────── */
-    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:20px}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);z-index:9999;align-items:center;justify-content:center;padding:16px}
     .modal-overlay.open{display:flex}
-    .modal-box{background:#fff;border-radius:12px;max-width:580px;width:100%;box-shadow:0 10px 25px rgba(0,0,0,.18);overflow:hidden}
-    .modal-head{padding:12px 16px;background:#f9fafb;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between}
-    .modal-body{padding:16px;max-height:75vh;overflow-y:auto}
+    .modal-box{background:#fff;border-radius:14px;max-width:580px;width:100%;box-shadow:0 10px 25px rgba(15,23,42,.2);overflow:hidden;border:1px solid #e2e8f0}
+    .modal-head{padding:14px 18px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between}
+    .modal-body{padding:18px;max-height:75vh;overflow-y:auto}
 
-    .toast{position:fixed;bottom:20px;right:20px;background:#111827;color:#fff;padding:10px 16px;border-radius:8px;font-size:12.5px;font-weight:600;z-index:99999;opacity:0;transition:.2s;pointer-events:none}
+    .toast{position:fixed;bottom:20px;right:20px;background:#0f172a;color:#fff;padding:10px 16px;border-radius:8px;font-size:12.5px;font-weight:600;z-index:99999;opacity:0;transition:.2s;pointer-events:none}
     .toast.show{opacity:1}
     .toast.green{background:#059669}
     .toast.red{background:#dc2626}
 
-    .channel-pill-btn{border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;transition:.15s;border:1px solid #d1d5db;background:#fff;color:#374151}
-    .channel-pill-btn.active{background:#059669;color:#fff;border-color:#059669;box-shadow:0 2px 4px rgba(5,150,105,.2)}
+    .channel-pill-btn{border-radius:20px;padding:5px 12px;font-size:11.5px;font-weight:600;transition:.15s;border:1px solid #cbd5e1;background:#fff;color:#334155}
+    .channel-pill-btn.active{background:#059669;color:#fff;border-color:#059669;box-shadow:0 2px 4px rgba(5,150,105,.25)}
 
     @keyframes pulse-green {
       0%, 100% { transform: scale(1); box-shadow: 0 2px 6px rgba(5,150,105,.3); }
@@ -175,15 +196,28 @@
       border: 1px solid #bbf7d0;
     }
 
-    /* Mobile Responsive Split View */
+    /* Mobile Responsive Split View & Layout */
     @media(max-width:768px){
-      .messenger-container{height:calc(100vh - 210px);min-height:380px;position:relative}
+      .wa-center-banner{padding:10px 12px;border-radius:10px}
+      .wa-center-banner .hdr-top{flex-direction:column;align-items:flex-start;gap:8px}
+      .hdr-actions{width:100%;gap:6px}
+      .hdr-search-box{width:100%}
+      .messenger-container{height:calc(100vh - 190px);min-height:380px;position:relative;border-radius:10px}
       .msg-sidebar{width:100% !important;border-right:none}
       .msg-chat-pane{display:none;width:100%}
       .messenger-container.chat-active .msg-sidebar{display:none}
       .messenger-container.chat-active .msg-chat-pane{display:flex}
       .mobile-back-btn{display:inline-flex !important}
-      .wa-tab-bar{padding:4px;gap:2px}
+      .chat-header{padding:8px 10px;display:flex;flex-direction:column;align-items:stretch;gap:6px}
+      .chat-header-main{width:100%}
+      #chatHeaderActions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;width:100%;padding-top:4px;border-top:1px dashed #e2e8f0}
+      .composer-tools-row{display:flex;align-items:center;gap:6px;width:100%}
+      .channel-select-compact{flex:1;min-width:120px;font-size:11px !important;padding:5px 8px !important}
+      .composer-tpl-btn{padding:5px 10px !important;font-size:11.5px !important;white-space:nowrap}
+      .composer-input-row{display:flex;align-items:center;gap:6px;width:100%}
+      .msg-text-input{flex:1;min-width:0;padding:8px 12px !important;font-size:13px !important}
+      .msg-send-btn{flex-shrink:0;padding:8px 14px !important;font-size:12.5px !important;border-radius:18px !important}
+      .wa-tab-bar{padding:4px;gap:4px}
       .wa-tab-btn{padding:7px 10px;font-size:11px}
     }
   </style>
@@ -220,7 +254,8 @@
             <p>Unified WhatsApp Workspace — Operational CRM Inbox, Messenger, Templates, Automations &amp; Audit Logs</p>
           </div>
           <div class="hdr-actions">
-            <span class="status-badge" id="hdrGatewayStatus"><i class="fas fa-circle" style="color:#25d366;font-size:8px"></i> Bot Connected &amp; Active</span>
+            <span class="status-badge" id="hdrOfficialStatus" style="background:rgba(37,99,235,0.12);color:#2563eb;border:1px solid rgba(37,99,235,0.25);font-size:11.5px;padding:4px 10px;border-radius:20px;font-weight:600" title="Official WhatsApp Status"><i class="fas fa-building text-primary"></i> 🏢 Official WhatsApp: <b id="hdrOfficialState">Ready</b></span>
+            <span class="status-badge" id="hdrScannedStatus" style="background:rgba(37,211,102,0.12);color:#059669;border:1px solid rgba(37,211,102,0.25);font-size:11.5px;padding:4px 10px;border-radius:20px;font-weight:600" title="Scanned WhatsApp Status"><i class="fas fa-qrcode text-success"></i> 📱 Scanned WhatsApp: <b id="hdrScannedState">Checking...</b></span>
             <span class="unread-pill" id="hdrUnreadCount"><i class="fas fa-envelope"></i> <span id="unreadNum">0</span> Unread</span>
             <div class="hdr-search-box">
               <i class="fas fa-search"></i>
@@ -232,17 +267,17 @@
         </div>
       </div>
 
-      <!-- Disconnected / Scan QR Warning Banner -->
-      <div id="gatewayWarningBanner" style="display:none;background:linear-gradient(135deg,#78350f,#92400e);border:1px solid #f59e0b;border-radius:10px;padding:10px 16px;margin-bottom:14px;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.15);color:#fff">
+      <!-- Capability-Aware Two-Channel Status Banner -->
+      <div id="gatewayWarningBanner" style="display:none;background:linear-gradient(135deg,#064e3b,#047857);border:1px solid #10b981;border-radius:10px;padding:10px 16px;margin-bottom:14px;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.15);color:#fff">
         <div style="display:flex;align-items:center;gap:10px">
-          <i class="fas fa-exclamation-triangle" style="color:#fbbf24;font-size:20px"></i>
+          <i class="fas fa-info-circle" style="color:#a7f3d0;font-size:20px"></i>
           <div>
-            <div style="font-size:13px;font-weight:700;color:#fef3c7">WhatsApp Bot Disconnected / Logged Out</div>
-            <div style="font-size:11.5px;color:#fde68a">Scan QR code to link your WhatsApp account for automated messages &amp; replies</div>
+            <div id="gatewayBannerTitle" style="font-size:13px;font-weight:700;color:#f0fdf4">📱 Scanned WhatsApp: QR Required · 🏢 Official WhatsApp: Ready</div>
+            <div id="gatewayBannerSub" style="font-size:11.5px;color:#d1fae5">Official business templates &amp; OTPs are operational. Link your personal/employee WhatsApp via QR code to enable direct Scanned WhatsApp messaging and group broadcasts.</div>
           </div>
         </div>
-        <button class="btn-custom btn-green" onclick="openScanQrModal()" style="padding:6px 14px;font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.2)">
-          <i class="fas fa-qrcode"></i> Scan QR Code
+        <button class="btn-custom btn-green" onclick="openScanQrModal()" style="padding:6px 14px;font-size:12px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.2);background:#fff;color:#065f46">
+          <i class="fas fa-qrcode"></i> Link Scanned WA
         </button>
       </div>
 
@@ -250,7 +285,7 @@
       <div class="wa-tab-bar">
         <button class="wa-tab-btn active" id="btn-tab-messenger" onclick="switchCenterTab('messenger')"><i class="fas fa-comments"></i> 1. My Messages</button>
         <button class="wa-tab-btn" id="btn-tab-team" onclick="switchCenterTab('team')"><i class="fas fa-users"></i> 2. Team Messages</button>
-        <button class="wa-tab-btn" id="btn-tab-company" onclick="switchCenterTab('company')"><i class="fas fa-building"></i> 3. Company Messages <span class="badge-num" id="tb-company-num" style="display:none;background:#ef4444">0</span></button>
+        <button class="wa-tab-btn" id="btn-tab-company" onclick="switchCenterTab('company')"><i class="fas fa-envelope-open-text"></i> 3. New Messages <span class="badge-num" id="tb-company-num" style="display:none;background:#ef4444">0</span></button>
         <button class="wa-tab-btn" id="btn-tab-broadcasts" onclick="switchCenterTab('broadcasts')"><i class="fas fa-bullhorn"></i> 4. Broadcasts &amp; Dispatches</button>
         <button class="wa-tab-btn admin-only-tab" id="btn-tab-inbox" onclick="switchCenterTab('inbox')"><i class="fas fa-robot"></i> 5. WhatsApp API Bot <span class="badge-num" id="tb-inbox-num">0</span></button>
         <button class="wa-tab-btn admin-only-tab" id="btn-tab-templates" onclick="switchCenterTab('templates')"><i class="fas fa-file-alt"></i> 6. Templates</button>
@@ -331,7 +366,7 @@
               <select class="msg-scope-select" id="msgScopeSelect" onchange="onMsgScopeChange(this.value)" style="display:none">
                 <option value="assigned_tagged">📍 My Assigned + Tagged Leads</option>
                 <option value="downline">👥 My Downline Team</option>
-                <option value="company">🏢 Unassigned Company Messages</option>
+                <option value="company">📥 3. New Messages (Unassigned Inbound)</option>
                 <option value="broadcasts">📢 Broadcasts &amp; Bot Dispatches</option>
                 <option value="all">🌐 All System Conversations (Admin)</option>
               </select>
@@ -363,14 +398,16 @@
           <!-- Chat Pane -->
           <div class="msg-chat-pane">
             <div class="chat-header">
-              <button type="button" class="btn-custom btn-outline-custom mobile-back-btn" id="mobileChatBackBtn" onclick="closeMobileChat()" style="display:none;padding:6px 10px;margin-right:8px;border-radius:6px;" title="Back to conversations">
-                <i class="fas fa-arrow-left"></i>
-              </button>
-              <div class="chat-title" style="flex:1;min-width:0;">
-                <h3 id="chatHeaderName" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Select a conversation</h3>
-                <p id="chatHeaderSub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Select a contact or group from the left sidebar to view messages</p>
+              <div class="chat-header-main">
+                <button type="button" class="btn-custom btn-outline-custom mobile-back-btn" id="mobileChatBackBtn" onclick="closeMobileChat()" style="display:none;padding:6px 10px;margin-right:8px;border-radius:6px;" title="Back to conversations">
+                  <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="chat-title" style="flex:1;min-width:0;">
+                  <h3 id="chatHeaderName" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Select a conversation</h3>
+                  <p id="chatHeaderSub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Select a contact or group from the left sidebar to view messages</p>
+                </div>
               </div>
-              <div id="chatHeaderActions" style="display:flex;align-items:center;gap:8px"></div>
+              <div id="chatHeaderActions"></div>
             </div>
 
             <div class="chat-history-box" id="chatHistoryBox">
@@ -385,11 +422,11 @@
             </div>
 
             <!-- Quick Action Pills -->
-            <div style="display:flex;gap:6px;overflow-x:auto;padding:6px 10px;background:#f3f4f6;border-top:1px solid #e5e7eb;">
-              <button type="button" class="btn-custom btn-outline-custom" style="padding:3px 8px;font-size:11px;border-radius:12px;white-space:nowrap;" onclick="insertQuickPill('Hello! Thank you for contacting MyntReal. How can we assist you today?')">👋 Greeting</button>
-              <button type="button" class="btn-custom btn-outline-custom" style="padding:3px 8px;font-size:11px;border-radius:12px;white-space:nowrap;" onclick="insertQuickPill('We are pleased to share our project brochure and pricing details. When is a good time to connect?')">📁 Brochure</button>
-              <button type="button" class="btn-custom btn-outline-custom" style="padding:3px 8px;font-size:11px;border-radius:12px;white-space:nowrap;" onclick="insertQuickPill('Our executive will call you shortly to assist you with the complete details.')">📞 Callback</button>
-              <button type="button" class="btn-custom btn-outline-custom" style="padding:3px 8px;font-size:11px;border-radius:12px;white-space:nowrap;" onclick="insertQuickPill('📍 Project Location: https://maps.google.com/?q=17.729,83.308')">📍 Location</button>
+            <div style="display:flex;gap:6px;overflow-x:auto;padding:6px 10px;background:#f3f4f6;border-top:1px solid #e5e7eb;-webkit-overflow-scrolling:touch;scrollbar-width:none;">
+              <button type="button" class="btn-custom btn-outline-custom" style="padding:4px 10px;font-size:11.5px;border-radius:12px;white-space:nowrap;" onclick="insertQuickPill('Hello! Thank you for contacting MyntReal. How can we assist you today?')">👋 Greeting</button>
+              <button type="button" class="btn-custom btn-outline-custom" style="padding:4px 10px;font-size:11.5px;border-radius:12px;white-space:nowrap;" onclick="insertQuickPill('We are pleased to share our project brochure and pricing details. When is a good time to connect?')">📁 Brochure</button>
+              <button type="button" class="btn-custom btn-outline-custom" style="padding:4px 10px;font-size:11.5px;border-radius:12px;white-space:nowrap;" onclick="insertQuickPill('Our executive will call you shortly to assist you with the complete details.')">📞 Callback</button>
+              <button type="button" class="btn-custom btn-outline-custom" style="padding:4px 10px;font-size:11.5px;border-radius:12px;white-space:nowrap;" onclick="insertQuickPill('📍 Project Location: https://maps.google.com/?q=17.729,83.308')">📍 Location</button>
             </div>
 
             <!-- WhatsApp Native-Style Emoji Palette Tray -->
@@ -405,30 +442,37 @@
             </div>
 
             <!-- WhatsApp Style Composer Bar -->
-            <div class="chat-composer-bar" style="padding:8px 12px;background:#f0f2f5;border-top:1px solid #e5e7eb;">
-              <div class="composer-row" style="display:flex;align-items:center;gap:6px;">
-                
+            <div class="chat-composer-bar">
+              <div class="composer-tools-row">
                 <!-- Emoji Toggle -->
-                <button type="button" class="btn-custom btn-outline-custom" id="btnEmojiToggle" onclick="toggleEmojiTray()" style="padding:6px 10px;font-size:16px;border-radius:50%;" title="Insert Emoji">
+                <button type="button" class="btn-custom btn-outline-custom" id="btnEmojiToggle" onclick="toggleEmojiTray()" style="padding:6px 10px;font-size:15px;border-radius:50%;" title="Insert Emoji">
                   <i class="far fa-smile"></i>
                 </button>
 
                 <!-- Attachment Picker -->
-                <label class="btn-custom btn-outline-custom" style="cursor:pointer;padding:6px 10px;font-size:14px;border-radius:50%;" title="Attach Image or PDF">
+                <label class="btn-custom btn-outline-custom" style="cursor:pointer;padding:6px 10px;font-size:14px;border-radius:50%;margin:0;" title="Attach Image or PDF">
                   <i class="fas fa-paperclip"></i>
                   <input type="file" id="msgFileInput" accept="image/*,application/pdf" style="display:none" onchange="onFileSelected(this)">
                 </label>
 
-                <!-- Template Selector -->
-                <select id="msgTemplateSel" class="composer-input" style="flex:0 0 170px;padding:6px 8px;font-size:12px;" onchange="onMsgTemplateSelect(this.value)">
-                  <option value="">— Template —</option>
+                <!-- Channel / Sender Identity Selector -->
+                <select id="msgChannelSel" class="composer-input channel-select-compact" title="Select WhatsApp Sender Identity" onchange="onMsgChannelChange(this.value)">
+                  <option value="scanned">📱 Scanned WhatsApp</option>
+                  <option value="official">🏢 Official WhatsApp</option>
                 </select>
 
+                <!-- Template Selector Button (Opens Unified CRM Template Modal) -->
+                <button type="button" class="btn-custom btn-outline-custom composer-tpl-btn" id="composerTemplateBtn" onclick="openComposerTemplateModal()" title="Choose from CRM Templates">
+                  <i class="fas fa-file-alt text-primary"></i> Template
+                </button>
+              </div>
+
+              <div class="composer-input-row">
                 <!-- Message Input -->
-                <input type="text" class="composer-input" id="msgTextInput" placeholder="Type a WhatsApp message..." style="flex:1;padding:8px 14px;border-radius:20px;font-size:13px;" onkeypress="if(event.key==='Enter')sendChatMessage()">
+                <input type="text" class="composer-input msg-text-input" id="msgTextInput" placeholder="Type a WhatsApp message..." onkeypress="if(event.key==='Enter')sendChatMessage()">
                 
                 <!-- Send Button -->
-                <button class="btn-custom btn-green" onclick="sendChatMessage()" style="border-radius:20px;padding:7px 16px;font-size:13px;">
+                <button class="btn-custom btn-green msg-send-btn" id="msgSendBtn" onclick="sendChatMessage()">
                   <i class="fas fa-paper-plane"></i> Send
                 </button>
               </div>
@@ -550,6 +594,42 @@
   </div>
 </div>
 
+<!-- ═══ NEW CHAT / MESSAGE UNIVERSAL MODAL ════════════════════════════════ -->
+<div class="modal-overlay" id="newChatModal">
+  <div class="modal-box" style="max-width:520px;text-align:left">
+    <div class="modal-head">
+      <h4 style="font-size:15px;font-weight:700;color:#065f46;margin:0"><i class="fas fa-plus-circle" style="color:#25d366"></i> New WhatsApp Message</h4>
+      <button class="btn-custom btn-outline-custom" onclick="closeModal('newChatModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" style="padding:20px">
+      <div style="font-size:12px;color:#6b7280;margin-bottom:12px">
+        Search a CRM Lead, Contact, Staff member, or enter a direct 10-digit mobile number:
+      </div>
+
+      <div style="position:relative;margin-bottom:14px">
+        <div style="display:flex;gap:8px">
+          <input type="text" id="newChatSearchInput" placeholder="Type name, phone number, or lead ID..." 
+                 oninput="onNewChatSearch(this.value)" 
+                 style="flex:1;padding:9px 12px;border:1.5px solid #d1d5db;border-radius:8px;font-size:13px;outline:none;box-sizing:border-box">
+          <button class="btn-custom btn-green" onclick="submitDirectNewChat()" style="padding:9px 16px;font-size:12px;font-weight:700">
+            <i class="fas fa-paper-plane"></i> Proceed
+          </button>
+        </div>
+        <div id="newChatSearchResults" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);max-height:240px;overflow-y:auto;z-index:9999;margin-top:4px"></div>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;font-size:12px;color:#475569">
+        <div style="font-weight:700;margin-bottom:6px;color:#1e293b"><i class="fas fa-info-circle text-primary me-1"></i> Multi-Channel Dispatch Guidelines:</div>
+        <ul style="margin:0;padding-left:18px;line-height:1.5">
+          <li><b>CRM Leads:</b> Dispatches via Official Meta Business API templates with lead tracking and notes.</li>
+          <li><b>Direct Phones:</b> Freeform messages or approved templates with instant delivery.</li>
+          <li><b>Sender Identity:</b> Select between <i>Official Brand Identity</i> or <i>Personal Scanned SIM</i> before sending.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ SCAN QR CODE MODAL ═══════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="scanQrModal">
   <div class="modal-box" style="max-width:420px;text-align:center">
@@ -599,7 +679,7 @@ let broadcastFilter      = 'all';
 function maskPhone(p) {
   if (!p || p === '—' || p === '-' || p === 'null') return '—';
   const s = String(p).trim();
-  if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+  if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid') || s.startsWith('120363') || s.length > 14) return s;
   const digits = s.replace(/\D/g, '');
   if (digits.length < 6) return s;
   const clean10 = digits.slice(-10);
@@ -607,6 +687,9 @@ function maskPhone(p) {
 }
 
 function formatContactName(name, phone) {
+  if (phone && (phone.includes('@g.us') || phone.includes('@broadcast') || phone.startsWith('120363') || phone.length > 14)) {
+    return name || phone;
+  }
   if (name && name !== '0' && name !== 'None' && name !== 'null' && !/^\d+$/.test(name) && !name.startsWith('+91')) {
     return name;
   }
@@ -647,6 +730,16 @@ async function apiFetch(url, opts = {}) {
     throw new Error(errText || res.statusText);
   }
   return res.json();
+}
+
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function showToast(msg, type='green') {
@@ -757,26 +850,181 @@ function insertQuickPill(text) {
   input.focus();
 }
 
+let latestUnifiedStatus = null;
+
 async function checkGatewayConnectionStatus() {
   try {
-    const res = await apiFetch(`${API}/whatsapp/bot-status`);
-    const isConnected = res.connected === true;
+    const res = await apiFetch(`${API}/whatsapp/unified-status`);
+    latestUnifiedStatus = res;
+
+    const official = res?.official_whatsapp || res?.meta_cloud_api || {};
+    const scanned = res?.scanned_whatsapp || res?.baileys_gateway || {};
+
+    const offBadge = document.getElementById('hdrOfficialStatus');
+    const offState = document.getElementById('hdrOfficialState');
+    const scBadge = document.getElementById('hdrScannedStatus');
+    const scState = document.getElementById('hdrScannedState');
     const banner = document.getElementById('gatewayWarningBanner');
-    const badge = document.getElementById('hdrGatewayStatus');
-    if (banner) banner.style.display = isConnected ? 'none' : 'flex';
-    if (badge) {
-      badge.innerHTML = isConnected 
-        ? '<i class="fas fa-circle" style="color:#25d366;font-size:8px"></i> Bot Connected & Active' 
-        : '<i class="fas fa-circle" style="color:#ef4444;font-size:8px"></i> Bot Disconnected';
+
+    // 1. Update 🏢 Official WhatsApp Status Badge
+    if (offState) {
+      if (official.is_ready || official.status === 'ready' || official.healthy) {
+        offState.innerHTML = '<span style="color:#2563eb">Ready</span>';
+        if (offBadge) offBadge.style.background = 'rgba(37,99,235,0.12)';
+      } else if (official.status === 'paused' || official.is_paused) {
+        offState.innerHTML = '<span style="color:#d97706">Paused</span>';
+        if (offBadge) offBadge.style.background = 'rgba(217,119,6,0.12)';
+      } else {
+        offState.innerHTML = '<span style="color:#dc2626">Unavailable</span>';
+        if (offBadge) offBadge.style.background = 'rgba(220,38,38,0.12)';
+      }
     }
-    if (isConnected) {
+
+    // 2. Update 📱 Scanned WhatsApp Status Badge
+    const isConn = scanned.is_connected === true || scanned.status === 'connected';
+    const isReconn = scanned.is_reconnecting === true || scanned.status === 'reconnecting';
+
+    if (scState) {
+      if (isConn) {
+        scState.innerHTML = '<span style="color:#059669">Connected</span>';
+        if (scBadge) scBadge.style.background = 'rgba(37,211,102,0.12)';
+      } else if (isReconn) {
+        scState.innerHTML = '<span style="color:#d97706">Reconnecting...</span>';
+        if (scBadge) scBadge.style.background = 'rgba(217,119,6,0.12)';
+      } else if (scanned.status === 'logged_out') {
+        scState.innerHTML = '<span style="color:#dc2626">Logged Out</span>';
+        if (scBadge) scBadge.style.background = 'rgba(220,38,38,0.12)';
+      } else {
+        scState.innerHTML = '<span style="color:#64748b">QR Required</span>';
+        if (scBadge) scBadge.style.background = 'rgba(100,116,139,0.12)';
+      }
+    }
+
+    // 3. Update Capability Info / QR Link Banner
+    if (banner) {
+      if (isConn || isReconn) {
+        banner.style.display = 'none';
+      } else {
+        banner.style.display = 'flex';
+      }
+    }
+
+    if (isConn) {
       closeModal('scanQrModal');
     }
     return res;
   } catch(e) {
-    return { connected: false };
+    console.warn('[WA-STATUS] Check note:', e);
+    return { success: false };
   }
 }
+
+function onMsgChannelChange(val) {
+  const sendBtn = document.getElementById('msgSendBtn');
+  if (!sendBtn) return;
+  if (val === 'official') {
+    sendBtn.innerHTML = '<i class="fas fa-building text-primary me-1"></i> Send Official';
+  } else {
+    sendBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Send Scanned';
+  }
+}
+
+// ═══ UNIVERSAL NEW MESSAGE MODAL HANDLERS ══════════════════════════════════
+let newChatSearchTimer = null;
+
+function openNewChatModal() {
+  const inp = document.getElementById('newChatSearchInput');
+  const resBox = document.getElementById('newChatSearchResults');
+  if (inp) inp.value = '';
+  if (resBox) {
+    resBox.innerHTML = '';
+    resBox.style.display = 'none';
+  }
+  openModal('newChatModal');
+  if (inp) setTimeout(() => inp.focus(), 150);
+}
+
+function onNewChatSearch(query) {
+  if (newChatSearchTimer) clearTimeout(newChatSearchTimer);
+  const q = (query || '').trim();
+  const resBox = document.getElementById('newChatSearchResults');
+  if (!resBox) return;
+
+  if (q.length < 2) {
+    resBox.innerHTML = '';
+    resBox.style.display = 'none';
+    return;
+  }
+
+  newChatSearchTimer = setTimeout(async () => {
+    try {
+      resBox.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:#6b7280"><i class="fas fa-spinner fa-spin me-1"></i> Searching recipients...</div>';
+      resBox.style.display = 'block';
+
+      const res = await apiFetch(`${API}/whatsapp/recipient-search?q=${encodeURIComponent(q)}`);
+      const results = (res && res.results) || [];
+
+      if (results.length === 0) {
+        const cleanDigits = q.replace(/\D/g, '');
+        const isPhone = cleanDigits.length >= 10;
+        resBox.innerHTML = `
+          <div style="padding:12px;font-size:12px;color:#64748b;text-align:center">
+            No matching leads or contacts found.
+            ${isPhone ? `
+              <div style="margin-top:8px">
+                <button type="button" class="btn-custom btn-green" style="padding:5px 12px;font-size:11.5px"
+                        onclick="selectNewChatRecipient('new', '${cleanDigits.slice(-10)}', 'Direct Recipient')">
+                  <i class="fab fa-whatsapp me-1"></i> Send to +91 ${cleanDigits.slice(-10)}
+                </button>
+              </div>
+            ` : '<div style="margin-top:4px;color:#94a3b8">Enter a 10-digit mobile number to send directly.</div>'}
+          </div>
+        `;
+        return;
+      }
+
+      resBox.innerHTML = results.map(r => `
+        <div class="new-chat-item" onclick="selectNewChatRecipient('${r.id}', '${r.phone}', '${escapeHtml(r.name)}')"
+             style="padding:10px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background .15s"
+             onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
+          <div>
+            <div style="font-weight:700;font-size:13px;color:#0f172a">${escapeHtml(r.name)}</div>
+            <div style="font-size:11px;color:#64748b">${escapeHtml(r.subtitle || r.display_phone)}</div>
+          </div>
+          <div style="text-align:right">
+            <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;background:#e0f2fe;color:#0369a1">${escapeHtml(r.badge || 'Contact')}</span>
+            <div style="font-size:11px;color:#475569;margin-top:2px">${escapeHtml(r.display_phone)}</div>
+          </div>
+        </div>
+      `).join('');
+
+    } catch(err) {
+      resBox.innerHTML = `<div style="padding:10px;font-size:12px;color:#dc2626">Search error: ${err.message || 'Server error'}</div>`;
+    }
+  }, 250);
+}
+
+function selectNewChatRecipient(leadId, phone, name) {
+  closeModal('newChatModal');
+  const cleanPhone = (phone || '').replace(/\D/g, '').slice(-10);
+  const displayName = name || `+91 ${cleanPhone}`;
+  switchCenterTab('messenger');
+  selectChat(cleanPhone, 'direct', displayName, false);
+  const inp = document.getElementById('msgTextInput');
+  if (inp) setTimeout(() => inp.focus(), 150);
+}
+
+function submitDirectNewChat() {
+  const inp = document.getElementById('newChatSearchInput');
+  const val = (inp?.value || '').trim();
+  const digits = val.replace(/\D/g, '').slice(-10);
+  if (!digits || digits.length < 10) {
+    showToast('Please enter a valid 10-digit mobile number or select a lead.', 'warning');
+    return;
+  }
+  selectNewChatRecipient('new', digits, `Direct Recipient (+91 ${digits})`);
+}
+
 
 function openModal(id) {
   const el = document.getElementById(id);
@@ -793,9 +1041,11 @@ function closeModal(id) {
 }
 
 let qrPollerInterval = null;
+let lastRenderedWebQr = '';
 
 async function openScanQrModal() {
   openModal('scanQrModal');
+  lastRenderedWebQr = '';
   await refreshGatewayQr();
 
   if (qrPollerInterval) clearInterval(qrPollerInterval);
@@ -808,6 +1058,17 @@ async function openScanQrModal() {
         closeModal('scanQrModal');
         showToast('WhatsApp account linked & connected successfully!', 'success');
         checkGatewayConnectionStatus();
+      } else if (res && res.qr && res.qr !== lastRenderedWebQr) {
+        lastRenderedWebQr = res.qr;
+        const img = document.getElementById('qrImageElement');
+        const spinner = document.getElementById('qrLoadingSpinner');
+        if (img) {
+          img.src = res.qr.startsWith('http://') || res.qr.startsWith('https://') || res.qr.startsWith('data:')
+            ? res.qr
+            : `data:image/png;base64,${res.qr}`;
+          img.style.display = 'block';
+          if (spinner) spinner.style.display = 'none';
+        }
       }
     } catch (_) {}
   }, 2500);
@@ -816,11 +1077,14 @@ async function openScanQrModal() {
 async function refreshGatewayQr() {
   const spinner = document.getElementById('qrLoadingSpinner');
   const img = document.getElementById('qrImageElement');
-  if (spinner) {
-    spinner.style.display = 'flex';
-    spinner.innerHTML = '<i class="fas fa-qrcode fa-spin fa-2x" style="color:#059669;margin-bottom:8px"></i><span style="font-size:12px;font-weight:600">Fetching live QR code...</span>';
+  // Keep previous image visible if available to prevent jarring blank flash
+  if (!img?.src) {
+    if (spinner) {
+      spinner.style.display = 'flex';
+      spinner.innerHTML = '<i class="fas fa-qrcode fa-spin fa-2x" style="color:#059669;margin-bottom:8px"></i><span style="font-size:12px;font-weight:600">Fetching live QR code...</span>';
+    }
+    if (img) img.style.display = 'none';
   }
-  if (img) img.style.display = 'none';
 
   try {
     const res = await apiFetch(`${API}/whatsapp/gateway-status-qr`);
@@ -834,6 +1098,7 @@ async function refreshGatewayQr() {
     }
 
     if (res.qr) {
+      lastRenderedWebQr = res.qr;
       if (res.qr.startsWith('http://') || res.qr.startsWith('https://') || res.qr.startsWith('data:')) {
         img.src = res.qr;
       } else {
@@ -1026,7 +1291,7 @@ function renderConversationsList(convs) {
   if (!convs || !convs.length) {
     let emptyMsg = 'No personal conversations found.';
     if (activeScope === 'company') {
-      emptyMsg = 'No unassigned company messages found.';
+      emptyMsg = 'No new unreplied messages found.';
     } else if (activeScope === 'downline') {
       emptyMsg = 'No team conversations found.';
     } else if (activeScope === 'broadcasts') {
@@ -1038,7 +1303,7 @@ function renderConversationsList(convs) {
 
   let html = '';
   convs.forEach((c, idx) => {
-    const isGroup = c.recipient_type === 'group' || c.contact_type === 'GROUP' || c.broadcast_type === 'group';
+    const isGroup = c.recipient_type === 'group' || c.contact_type === 'GROUP' || c.broadcast_type === 'group' || (c.phone && (c.phone.includes('@g.us') || c.phone.startsWith('120363') || c.phone.length > 14));
     const isChannel = c.recipient_type === 'channel' || c.contact_type === 'CHANNEL';
     const isUnassigned = c.is_unassigned === true || activeScope === 'company';
     const st = (c.status || '').toLowerCase();
@@ -1052,7 +1317,9 @@ function renderConversationsList(convs) {
       statusBadge = `<span class="type-badge badge-inprogress" title="In Progress"><i class="fas fa-clock"></i> In Progress</span>`;
     }
 
-    const chanBadge = c.channel ? `<span class="type-badge" style="background:#e0f2fe;color:#0369a1;font-size:9.5px;padding:2px 6px;">${c.channel === 'META_API' ? '⚡ Meta API' : '📲 Scanned'}</span>` : '';
+    const chanBadge = (c.channel === 'META_API' || c.channel === 'official')
+      ? `<span class="type-badge" style="background:#e0f2fe;color:#0369a1;font-size:9.5px;padding:2px 6px;">🏢 Official WA</span>`
+      : `<span class="type-badge" style="background:#dcfce7;color:#15803d;font-size:9.5px;padding:2px 6px;">📱 Scanned WA</span>`;
     const badgeClass = isGroup ? 'badge-group' : (isChannel ? 'badge-channel' : 'badge-customer');
     let badgeLabel = isGroup ? 'Group' : (isChannel ? 'Channel' : (c.badge || 'Contact'));
     if (activeScope === 'broadcasts') {
@@ -1084,7 +1351,10 @@ function selectChatByIndex(idx) {
   const c = currentRenderedConvs[idx];
   if (!c) return;
   const isUnassigned = c.is_unassigned === true || activeScope === 'company';
-  selectChat(c.phone, c.recipient_type || 'individual', c.name || c.phone, isUnassigned, c.channel || '', c.status || 'active');
+  const isGroup = c.recipient_type === 'group' || c.contact_type === 'GROUP' || (c.phone && (c.phone.includes('@g.us') || c.phone.startsWith('120363') || c.phone.length > 14));
+  const isChannel = c.recipient_type === 'channel' || c.contact_type === 'CHANNEL';
+  const recType = isGroup ? 'group' : (isChannel ? 'channel' : (c.recipient_type || 'individual'));
+  selectChat(c.phone, recType, c.name || c.phone, isUnassigned, c.channel || '', c.status || 'active');
 }
 
 function onMsgScopeChange(scope) {
@@ -1120,9 +1390,20 @@ async function selectChat(phone, recType, name, isUnassigned = false, channel = 
   const isGroupOrChan = (recType === 'group' || recType === 'channel');
   const headerName = isGroupOrChan ? (name || phone) : formatContactName(name, phone);
   const headerPhoneDisplay = isGroupOrChan ? phone : maskPhone(phone);
+  const chanTag = (channel === 'META_API' || channel === 'official') ? ' • 🏢 Official WhatsApp' : (channel === 'SCANNED' || channel === 'scanned' ? ' • 📱 Scanned WhatsApp' : '');
 
   document.getElementById('chatHeaderName').textContent = headerName;
-  document.getElementById('chatHeaderSub').textContent = `${recType.toUpperCase()} • ${headerPhoneDisplay}${channel ? ' • ' + (channel === 'META_API' ? 'Meta API' : 'Scanned Bot') : ''}${isArchived ? ' • 📁 ARCHIVED' : ''}`;
+  document.getElementById('chatHeaderSub').textContent = `${recType.toUpperCase()} • ${headerPhoneDisplay}${chanTag}${isArchived ? ' • 📁 ARCHIVED' : ''}`;
+
+  // Sync composer channel selection to conversation channel if available
+  const chanSel = document.getElementById('msgChannelSel');
+  if (chanSel) {
+    if (channel === 'META_API' || channel === 'official') {
+      chanSel.value = 'official';
+    } else if (channel === 'SCANNED' || channel === 'scanned') {
+      chanSel.value = 'scanned';
+    }
+  }
 
   const actionsContainer = document.getElementById('chatHeaderActions');
   let actionsHtml = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">`;
@@ -1223,7 +1504,8 @@ async function claimActiveChat() {
 
 async function loadChatHistory(phone, recType) {
   try {
-    const data = await apiFetch(`${API}/whatsapp/chat-history?phone=${encodeURIComponent(phone)}&recipient_type=${recType}`);
+    const rType = recType || 'individual';
+    const data = await apiFetch(`${API}/whatsapp/chat-history?phone=${encodeURIComponent(phone)}&recipient_type=${encodeURIComponent(rType)}`);
     renderChatMessages(data.messages || []);
   } catch(err) {
     document.getElementById('chatHistoryBox').innerHTML = `<div style="margin:auto;color:#dc2626">Error loading history: ${err.message}</div>`;
@@ -1242,15 +1524,18 @@ function renderChatMessages(msgs) {
     const bubbleClass = isOut ? 'bubble-out' : 'bubble-in';
     const msgText = m.body || m.body_text || m.message_body || m.message || m.text || '';
     const timeStr = m.sent_at || m.received_at_ist || m.time_str || m.received_at || '';
-    const ticks = m.status_ticks || (isOut ? '✓✓' : '');
-    const tickColor = m.status_color || '#3b82f6';
-    const statusLabel = m.status_label || (isOut ? 'Delivered' : '');
+    const ticks = m.status_ticks || (isOut ? (m.status === 'delivered' ? '✓✓' : (m.status === 'read' ? '✓✓' : '✓')) : '');
+    const tickColor = m.status_color || (m.status === 'read' ? '#3b82f6' : '#6b7280');
+    const statusLabel = m.status_label || (isOut ? (m.status ? m.status.charAt(0).toUpperCase() + m.status.slice(1) : 'Sent') : '');
+
+    const chanTag = isOut ? (m.channel === 'official' ? '<span style="font-size:9.5px;color:#2563eb;font-weight:600"><i class="fas fa-building"></i> Official</span>' : '<span style="font-size:9.5px;color:#059669;font-weight:600"><i class="fas fa-qrcode"></i> Scanned</span>') : '';
 
     html += `
       <div class="chat-bubble ${bubbleClass}">
         <div style="font-size:12.5px;color:#111827;white-space:pre-wrap">${msgText}</div>
         ${m.media_url ? `<div style="margin-top:4px"><a href="${m.media_url}" target="_blank" style="color:#059669;font-weight:700"><i class="fas fa-paperclip"></i> View Media Attachment</a></div>` : ''}
         <div class="bubble-meta" style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:4px">
+          ${chanTag}
           <span style="font-size:10px;color:#6b7280;font-weight:500">${timeStr}</span>
           ${isOut ? `<span style="font-size:11px;font-weight:bold;color:${tickColor}" title="${statusLabel}">${ticks}</span>` : ''}
         </div>
@@ -1293,65 +1578,135 @@ function clearAttachment() {
   document.getElementById('attachPreviewCard').classList.remove('show');
 }
 
+function getStaffSignature() {
+  try {
+    const raw = localStorage.getItem('staff_user') || localStorage.getItem('user');
+    if (raw) {
+      const u = JSON.parse(raw);
+      const name = u.full_name || u.name || (u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : '') || 'Staff';
+      return `\n\nRegards,\n${name}`;
+    }
+  } catch(e) {}
+  return '\n\nRegards,\nStaff';
+}
+
 async function sendChatMessage() {
   const textInput = document.getElementById('msgTextInput');
-  const msgText = textInput.value.trim();
+  const rawMsgText = (textInput?.value || '').trim();
+  const selectedChannel = document.getElementById('msgChannelSel')?.value || 'scanned';
 
   if (!activeChatPhone) return showToast('Please select a chat first', 'red');
-  if (!msgText && !activeMediaUrl) return showToast('Please type a message or attach media', 'red');
+  if (!rawMsgText && !activeMediaUrl) return showToast('Please type a message or attach media', 'red');
 
-  const payload = {
-    recipient: activeChatPhone,
-    recipient_type: activeChatType,
-    message: msgText,
-    media_url: activeMediaUrl,
-    client_msg_id: `wa_center_${Date.now()}`
-  };
+  let msgText = rawMsgText;
+  if (msgText && !msgText.toLowerCase().includes('regards,')) {
+    msgText = msgText + getStaffSignature();
+  }
 
-  const wasCompanyTab = (activeScope === 'company');
+  const cleanPhone = activeChatPhone.replace(/\D/g, '').slice(-10);
 
+  // 1. Channel 2: 📱 Scanned WhatsApp Dispatch
+  if (selectedChannel === 'scanned') {
+    const scanned = latestUnifiedStatus?.scanned_whatsapp || latestUnifiedStatus?.baileys_gateway;
+    const isConn = scanned?.is_connected === true || scanned?.status === 'connected';
+    const isReconn = scanned?.is_reconnecting === true || scanned?.status === 'reconnecting';
+
+    if (!isConn) {
+      if (isReconn) {
+        showToast('📱 Scanned WhatsApp is reconnecting. Please wait 3 seconds and retry.', 'warning');
+      } else {
+        showToast('📱 Scanned WhatsApp is not linked. Scan the QR code or switch to 🏢 Official WhatsApp.', 'warning');
+        openScanQrModal();
+      }
+      return;
+    }
+
+    const payload = {
+      recipient: activeChatPhone,
+      recipient_type: activeChatType,
+      message: msgText,
+      media_url: activeMediaUrl,
+      client_msg_id: `wa_center_${Date.now()}`
+    };
+
+    const wasCompanyTab = (activeScope === 'company');
+
+    try {
+      const res = await apiFetch(`${API}/whatsapp/send-message`, {
+        method: 'POST',
+        body: payload
+      });
+
+      if (res.success || res.status === 'sent') {
+        textInput.value = '';
+        clearAttachment();
+        
+        if (wasCompanyTab) {
+          showToast('Reply sent! Chat assigned to you & moved to My Messages.', 'green');
+          const curName = document.getElementById('chatHeaderName').textContent;
+          switchCenterTab('messenger');
+          selectChat(activeChatPhone, activeChatType, curName, false);
+        } else {
+          showToast('✅ Sent via 📱 Scanned WhatsApp', 'green');
+          loadChatHistory(activeChatPhone, activeChatType);
+        }
+      } else {
+        showToast(res.message || res.error || 'Send failed via Scanned WhatsApp', 'red');
+      }
+    } catch(err) {
+      showToast(err.message || 'Error sending via Scanned WhatsApp', 'red');
+    }
+    return;
+  }
+
+  // 2. Channel 1: 🏢 Official WhatsApp Dispatch
   try {
-    const res = await apiFetch(`${API}/whatsapp/send-message`, {
+    const officialPayload = {
+      phone: cleanPhone || activeChatPhone,
+      company_id: 4,
+      custom_message: msgText
+    };
+
+    const res = await apiFetch(`${API}/whatsapp-config/test-send`, {
       method: 'POST',
-      body: payload
+      body: officialPayload
     });
 
-    if (res.success || res.status === 'sent') {
+    if (res.success) {
       textInput.value = '';
       clearAttachment();
-      
-      if (wasCompanyTab) {
-        showToast('Reply sent! Chat assigned to you & moved to My Messages.', 'green');
-        const curName = document.getElementById('chatHeaderName').textContent;
-        switchCenterTab('messenger');
-        selectChat(activeChatPhone, activeChatType, curName, false);
-      } else {
-        showToast('Message sent');
-        loadChatHistory(activeChatPhone, activeChatType);
-      }
+      showToast('✅ Sent via 🏢 Official WhatsApp', 'green');
+      loadChatHistory(activeChatPhone, activeChatType);
     } else {
-      showToast(res.message || 'Send failed', 'red');
+      const reason = res.reason || res.detail || res.error || 'Official WhatsApp send failed';
+      showToast(`❌ Official WA: ${reason}`, 'red');
     }
   } catch(err) {
-    showToast(err.message || 'Error sending message', 'red');
+    showToast(`❌ Network error: ${err.message || 'Official WhatsApp unreachable'}`, 'red');
   }
 }
+
+let cachedTemplates = [];
 
 // ── TAB 3: TEMPLATES ────────────────────────────────────────────────────────
 async function loadTemplatesHub() {
   try {
     const data = await apiFetch(`${API}/whatsapp-config/templates`);
     const templates = data.templates || [];
+    cachedTemplates = templates;
     renderTemplateCards(templates);
     populateTemplateDropdown(templates);
   } catch(err) {
-    document.getElementById('tplGrid').innerHTML = `<div style="padding:20px;color:#dc2626">Error loading templates: ${err.message}</div>`;
+    const grid = document.getElementById('tplGrid');
+    if (grid) grid.innerHTML = `<div style="padding:20px;color:#dc2626">Error loading templates: ${err.message}</div>`;
   }
 }
 
 function renderTemplateCards(tpls) {
+  const grid = document.getElementById('tplGrid');
+  if (!grid) return;
   if (!tpls.length) {
-    document.getElementById('tplGrid').innerHTML = '<div style="padding:20px;text-align:center;color:#9ca3af">No templates found.</div>';
+    grid.innerHTML = '<div style="padding:20px;text-align:center;color:#9ca3af">No templates found.</div>';
     return;
   }
 
@@ -1360,29 +1715,65 @@ function renderTemplateCards(tpls) {
     html += `
       <div class="tpl-card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <span class="ei-chip ei-crm">${t.segment || 'General'}</span>
-          <span class="ei-chip ei-contacts" style="background:#ecfdf5;color:#065f46">${t.status || 'APPROVED'}</span>
+          <span class="ei-chip ei-crm">${escapeHtml(t.segment || 'General')}</span>
+          <span class="ei-chip ei-contacts" style="background:#ecfdf5;color:#065f46">${escapeHtml(t.status || 'APPROVED')}</span>
         </div>
-        <h4>${t.name}</h4>
-        <p>${t.body_text || ''}</p>
-        <div style="font-size:11px;color:#6b7280">Slug: <code>${t.slug || t.id}</code></div>
+        <h4>${escapeHtml(t.name || t.template_name || 'Template')}</h4>
+        <p>${escapeHtml(t.body_text || t.content || '')}</p>
+        <div style="font-size:11px;color:#6b7280">Slug: <code>${escapeHtml(t.slug || t.id)}</code></div>
       </div>
     `;
   });
-  document.getElementById('tplGrid').innerHTML = html;
+  grid.innerHTML = html;
 }
 
-function populateTemplateDropdown(tpls) {
-  const sel = document.getElementById('msgTemplateSel');
-  sel.innerHTML = '<option value="">— Select Template —</option>';
-  tpls.forEach(t => {
-    sel.innerHTML += `<option value="${t.id}">${t.name} (${t.segment})</option>`;
-  });
+function openComposerTemplateModal() {
+  const phone = activeChatPhone || '';
+  const cleanPhone = (phone || '').replace(/\D/g, '').slice(-10);
+  let recipientName = document.getElementById('chatHeaderName')?.textContent || '';
+  if (recipientName.startsWith('+91') || recipientName.includes('Select a conversation')) {
+    recipientName = 'Customer';
+  }
+  recipientName = recipientName.replace(/\s*\(.*?\)\s*/g, '').trim();
+
+  if (typeof window.openLeadWAModal === 'function') {
+    window.openLeadWAModal('direct', cleanPhone, recipientName, 4);
+  } else {
+    showToast('CRM Template Modal is initializing...', 'warning');
+  }
 }
 
 function onMsgTemplateSelect(tplId) {
   if (!tplId) return;
-  sendChatMessage();
+  const tpl = cachedTemplates.find(t => String(t.id) === String(tplId));
+  if (!tpl) return;
+
+  const rawBody = tpl.body_text || tpl.content || tpl.body || '';
+  if (!rawBody) return;
+
+  // Resolve variable {{1}} with active recipient name if available
+  let recipientName = document.getElementById('chatHeaderName')?.textContent || '';
+  if (recipientName.startsWith('+91') || recipientName.includes('Select a conversation')) {
+    recipientName = 'Customer';
+  }
+  recipientName = recipientName.replace(/\s*\(.*?\)\s*/g, '').trim();
+
+  let interpolated = rawBody;
+  interpolated = interpolated.replace(/\{\{1\}\}/g, recipientName || 'Customer');
+  interpolated = interpolated.replace(/\{\{2\}\}/g, 'MyntReal');
+  interpolated = interpolated.replace(/\{\{3\}\}/g, 'our executive');
+
+  const textInput = document.getElementById('msgTextInput');
+  if (textInput) {
+    textInput.value = interpolated;
+    textInput.focus();
+  }
+
+  // Reset dropdown back to default placeholder so staff can pick again if needed
+  const sel = document.getElementById('msgTemplateSel');
+  if (sel) sel.value = '';
+
+  showToast('📋 Template loaded. Review/edit message before pressing Send.', 'green');
 }
 
 async function syncTemplatesFromMeta() {
@@ -1661,6 +2052,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       switchCenterTab('messenger');
     }
 
+    // Load available templates on startup for composer dropdown
+    loadTemplatesHub();
+
     // Check WhatsApp Gateway connection status asynchronously
     checkGatewayConnectionStatus();
 
@@ -1684,5 +2078,6 @@ window.addEventListener('DOMContentLoaded', async () => {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/shared/staff_inactivity_manager.js"></script>
 <script src="/staff_header.js?v=20260821a"></script>
+<script src="/public/js/wa-lead-modal.js?v=20260907"></script>
 </body>
 </html>

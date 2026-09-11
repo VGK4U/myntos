@@ -2985,6 +2985,7 @@ class OfficialPartner(BaseModel):
     service_center_sla_hours = Column(Integer, nullable=True, default=24)  # Custom SLA for this center
     
     is_active = Column(Boolean, default=True, nullable=False)
+    phone_verified = Column(Boolean, default=False, nullable=False)
     
     # DC_PARTNER_LOGO_001: Business logo path (partner_logos/{partner_id}_{uuid}.ext)
     logo_path = Column(String(500), nullable=True)
@@ -3091,6 +3092,17 @@ class OfficialPartner(BaseModel):
 
     # [DC-VGK-STAFF-REG-001] Jun 2026: Emp code of the staff who registered this VGK member (nullable; new regs only)
     registered_by_emp_code = Column(String(50), nullable=True)
+
+    # [DC-VGK-ASSIGN-001] Sep 2026: Assigned staff relationship, contact tracking & status notes
+    assigned_staff_id = Column(Integer, ForeignKey('staff_employees.id', ondelete='SET NULL'), nullable=True, index=True)
+    assigned_at = Column(DateTime, nullable=True)
+    assigned_by_id = Column(Integer, ForeignKey('staff_employees.id', ondelete='SET NULL'), nullable=True)
+    last_contact_at = Column(DateTime, nullable=True, index=True)
+    status_note = Column(Text, nullable=True)
+
+    # [DC-VGK-BLOCKED-001] Sep 2026: Blocked status flag & canonical member_status ('ACTIVE', 'INACTIVE', 'BLOCKED')
+    is_blocked = Column(Boolean, default=False, nullable=False, index=True)
+    member_status = Column(String(30), default='INACTIVE', nullable=True, index=True)
 
     company_segments = relationship('PartnerCompanySegment', back_populates='partner', cascade='all, delete-orphan')
     pricing_profiles = relationship('PartnerPricingProfile', back_populates='partner', cascade='all, delete-orphan')
@@ -3203,6 +3215,15 @@ class OfficialPartner(BaseModel):
             'application_document_path': self.application_document_path,
             # [DC-VGK-STAFF-REG-001] Jun 2026: Registering staff emp code
             'registered_by_emp_code': self.registered_by_emp_code,
+            # [DC-VGK-ASSIGN-001] Sep 2026: Assigned staff & contact tracking
+            'assigned_staff_id': self.assigned_staff_id,
+            'assigned_at': self.assigned_at.isoformat() if self.assigned_at else None,
+            'assigned_by_id': self.assigned_by_id,
+            'last_contact_at': self.last_contact_at.isoformat() if self.last_contact_at else None,
+            'status_note': self.status_note,
+            # [DC-VGK-BLOCKED-001] Sep 2026: Blocked status flag & canonical member_status
+            'is_blocked': self.is_blocked if self.is_blocked is not None else False,
+            'member_status': self.member_status or ('BLOCKED' if self.is_blocked else ('ACTIVE' if self.is_active else 'INACTIVE')),
             # Derived from company_segments for company-based filtering
             'applicable_companies': [cs.company_id for cs in self.company_segments if cs.is_active] if self.company_segments else [],
         }

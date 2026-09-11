@@ -45,42 +45,11 @@ def _require_catalog_admin(current_user):
         )
 
 
+_catalog_tables_ensured = False
+
 def _ensure_catalog_tables(db: Session):
-    """DC Protocol: Auto-create catalog tables if not exist (idempotent)."""
-    db.execute(text("""
-        CREATE TABLE IF NOT EXISTS catalog_shares (
-            id          SERIAL PRIMARY KEY,
-            mnr_id      VARCHAR(20),
-            member_name VARCHAR(200),
-            platform    VARCHAR(30)  NOT NULL DEFAULT 'unknown',
-            language    VARCHAR(10)  DEFAULT 'english',
-            recipient_name    VARCHAR(200),
-            recipient_prefix  VARCHAR(10),
-            share_ref_code    VARCHAR(60) UNIQUE,
-            ip_address  VARCHAR(45),
-            user_agent  TEXT,
-            shared_at   TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        )
-    """))
-    db.execute(text("""
-        CREATE TABLE IF NOT EXISTS catalog_hits (
-            id              SERIAL PRIMARY KEY,
-            share_ref_code  VARCHAR(60),
-            ip_address      VARCHAR(45),
-            user_agent      TEXT,
-            referrer        VARCHAR(500),
-            viewed_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-        )
-    """))
-    db.execute(text("""
-        CREATE INDEX IF NOT EXISTS idx_catalog_shares_mnr
-            ON catalog_shares (mnr_id)
-    """))
-    db.execute(text("""
-        CREATE INDEX IF NOT EXISTS idx_catalog_hits_ref
-            ON catalog_hits (share_ref_code)
-    """))
-    db.commit()
+    """DC Protocol (ARCHITECTURAL FIX - Sep 2026): Schema managed by standalone migration runner."""
+    pass
 
 
 def _client_ip(request: Request) -> str:

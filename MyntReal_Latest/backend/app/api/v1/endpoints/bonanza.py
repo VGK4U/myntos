@@ -122,6 +122,9 @@ class BonanzaUpdate(BaseModel):
     ec_l5_trigger: Optional[str] = None
     brand_filter_ids: Optional[List[int]] = None
     brand_configs: Optional[List[BonanzaBrandConfig]] = None
+    # DC-BONANZA-ENTITLEMENT-001: Qualification event and Completion criteria
+    qualification_event: Optional[str] = None
+    completion_criteria: Optional[str] = None
 
 
 class BonanzaCreate(BaseModel):
@@ -190,6 +193,9 @@ class BonanzaCreate(BaseModel):
     ec_l5_trigger: Optional[str] = None
     brand_filter_ids: Optional[List[int]] = None
     brand_configs: Optional[List[BonanzaBrandConfig]] = None
+    # DC-BONANZA-ENTITLEMENT-001: Qualification event and Completion criteria
+    qualification_event: Optional[str] = 'first_payment'
+    completion_criteria: Optional[str] = 'balance_received_plus'
 
 
 class BonanzaApprove(BaseModel):
@@ -407,6 +413,10 @@ async def create_bonanza(
         ec_l3_trigger=data.ec_l3_trigger if data.reward_type != 'slab_wise' else None,
         ec_l4_trigger=data.ec_l4_trigger if data.reward_type != 'slab_wise' else None,
         ec_l5_trigger=data.ec_l5_trigger if data.reward_type != 'slab_wise' else None,
+
+        # DC-BONANZA-ENTITLEMENT-001: Qualification event and Completion criteria
+        qualification_event=data.qualification_event or 'first_payment',
+        completion_criteria=data.completion_criteria or 'balance_received_plus',
     )
     
     db.add(bonanza)
@@ -914,6 +924,20 @@ def _get_vgk_member_bonanzas(partner, db: Session) -> dict:
         bp = progress_map.get(bonanza.id)
         slots_remaining = max(0, bonanza.max_winners - (bonanza.current_winners or 0))
 
+        # DC-BONANZA-ENTITLEMENT-001: Check for active slabs and attach member catalogue
+        slabs_count = db.query(BonanzaSlab).filter(
+            BonanzaSlab.bonanza_id == bonanza.id,
+            BonanzaSlab.is_active == True
+        ).count()
+        has_slabs = slabs_count > 0
+        catalogue_data = None
+        if has_slabs:
+            try:
+                from app.services import vgk_bonanza_engine
+                catalogue_data = vgk_bonanza_engine.get_member_reward_catalogue(db, bonanza.id, partner.id)
+            except Exception as _ce:
+                logger.warning(f"[DC-BONANZA] Error generating catalogue for bonanza {bonanza.id}, partner {partner.id}: {_ce}")
+
         result.append({
             "id": bonanza.id,
             "name": bonanza.name,
@@ -954,7 +978,9 @@ def _get_vgk_member_bonanzas(partner, db: Session) -> dict:
             "current_winners": bonanza.current_winners or 0,
             "slots_remaining": slots_remaining,
             "slots_full": slots_remaining == 0,
-            "image_url": bonanza.image_url
+            "image_url": bonanza.image_url,
+            "has_slabs": has_slabs,
+            "catalogue": catalogue_data
         })
 
     result.sort(key=lambda x: (
@@ -2736,6 +2762,11 @@ async def edit_bonanza(
         bonanza.ec_l4_trigger = data.ec_l4_trigger or None
     if data.ec_l5_trigger is not None:
         bonanza.ec_l5_trigger = data.ec_l5_trigger or None
+    # DC-BONANZA-ENTITLEMENT-001: qualification_event and completion_criteria
+    if data.qualification_event is not None:
+        bonanza.qualification_event = data.qualification_event or 'first_payment'
+    if data.completion_criteria is not None:
+        bonanza.completion_criteria = data.completion_criteria or 'balance_received_plus'
     if data.category_filter_ids is not None and bonanza.reward_type in ('extra_commission', 'award', 'gift', 'cash', 'bonus'):
         db.execute(
             text("DELETE FROM bonanza_category_filters WHERE bonanza_id = :bid"),
@@ -4845,6 +4876,12 @@ class BonanzaSlabCreate(BaseModel):
     budget_amount: Optional[float] = None
     is_active: bool = True
     image_url: Optional[str] = None
+    # DC-BONANZA-ENTITLEMENT-001
+    reward_mode: Optional[str] = 'one_time'
+    max_repeat: Optional[int] = None
+    reward_quantity: Optional[int] = 1
+    entitlement_cost: Optional[int] = 1
+    selection_enabled: Optional[bool] = True
 
 class BonanzaSlabUpdate(BaseModel):
     slab_label: Optional[str] = None
@@ -4859,6 +4896,12 @@ class BonanzaSlabUpdate(BaseModel):
     budget_amount: Optional[float] = None
     is_active: Optional[bool] = None
     image_url: Optional[str] = None
+    # DC-BONANZA-ENTITLEMENT-001
+    reward_mode: Optional[str] = None
+    max_repeat: Optional[int] = None
+    reward_quantity: Optional[int] = None
+    entitlement_cost: Optional[int] = None
+    selection_enabled: Optional[bool] = None
 
 
 @router.get("/{bonanza_id}/slabs")
@@ -4909,6 +4952,11 @@ async def create_bonanza_slab(
         budget_amount=payload.budget_amount,
         is_active=payload.is_active,
         image_url=payload.image_url,
+        reward_mode=payload.reward_mode or 'one_time',
+        max_repeat=payload.max_repeat,
+        reward_quantity=payload.reward_quantity or 1,
+        entitlement_cost=payload.entitlement_cost or 1,
+        selection_enabled=payload.selection_enabled if payload.selection_enabled is not None else True,
         created_at=get_indian_time(),
         updated_at=get_indian_time(),
     )
@@ -4943,6 +4991,11 @@ async def update_bonanza_slab(
     if payload.budget_amount is not None: slab.budget_amount = payload.budget_amount
     if payload.is_active is not None: slab.is_active = payload.is_active
     if payload.image_url is not None: slab.image_url = payload.image_url
+    if payload.reward_mode is not None: slab.reward_mode = payload.reward_mode
+    if payload.max_repeat is not None: slab.max_repeat = payload.max_repeat
+    if payload.reward_quantity is not None: slab.reward_quantity = payload.reward_quantity
+    if payload.entitlement_cost is not None: slab.entitlement_cost = payload.entitlement_cost
+    if payload.selection_enabled is not None: slab.selection_enabled = payload.selection_enabled
     slab.updated_at = get_indian_time()
     db.commit()
     db.refresh(slab)
@@ -5509,24 +5562,31 @@ def vgk_member_tracking(
 
         # ── Tiers: base + slabs ───────────────────────────────────────────────
         slab_rows = db.execute(text("""
-            SELECT id, target_from, award_name FROM bonanza_slabs
+            SELECT id, target_from, award_name, reward_mode, max_repeat, entitlement_cost FROM bonanza_slabs
             WHERE bonanza_id = :bid AND is_active = true
             ORDER BY target_from
         """), {'bid': bz.id}).fetchall()
 
         base_target = bz.target_requirement or 1
         tiers = [{"slab_id": None, "target": base_target,
-                  "award": bz.award_name or bz.reward_text or '', "tier_num": 1}]
+                  "award": bz.award_name or bz.reward_text or '', "tier_num": 1,
+                  "reward_mode": "one_time", "max_repeat": None, "entitlement_cost": 1}]
         for i, sl in enumerate(slab_rows, start=2):
             tiers.append({"slab_id": sl[0], "target": sl[1],
-                          "award": sl[2] or '', "tier_num": i})
+                          "award": sl[2] or '', "tier_num": i,
+                          "reward_mode": sl[3] or 'one_time',
+                          "max_repeat": sl[4],
+                          "entitlement_cost": sl[5] or 1})
 
         has_slabs = len(tiers) > 1
 
         for t in tiers:
             target = t["target"]
+            mode = t.get("reward_mode", "one_time")
+            max_rep = t.get("max_repeat")
             if has_slabs:
-                tier_label = f"Tier {t['tier_num']} · {t['award']} ({target} deals)"
+                mode_str = f" · {mode.replace('_',' ').title()}" if mode != 'one_time' else ""
+                tier_label = f"Tier {t['tier_num']} · {t['award']} ({target} deals{mode_str})"
             else:
                 tier_label = None
 
@@ -5538,10 +5598,17 @@ def vgk_member_tracking(
                     is_elig = stats["total_earnings"] > 0
                     achieved = stats["total_earnings"]
                     gap = 0
+                    units_earned = 1 if is_elig else 0
                 else:
                     achieved = achieved_map.get(pid, 0)
                     gap      = max(0, target - achieved)
-                    is_elig  = achieved >= target
+                    if mode == 'repeatable' and target > 0:
+                        units_earned = achieved // target
+                        if max_rep and max_rep > 0:
+                            units_earned = min(units_earned, max_rep)
+                    else:
+                        units_earned = 1 if achieved >= target else 0
+                    is_elig  = units_earned > 0
 
                 if is_elig:
                     elig_count += 1
@@ -5558,6 +5625,7 @@ def vgk_member_tracking(
                     "partner_code": partner_map[pid]["code"],
                     "eligible":     eligible_map.get(pid, 0),
                     "achieved":     achieved,
+                    "units_earned": units_earned,
                     "gap":          gap,
                     "is_eligible":  is_elig,
                     "claim_status": claim_status,
@@ -5578,6 +5646,9 @@ def vgk_member_tracking(
                 "tier_label":    tier_label,
                 "has_slabs":     has_slabs,
                 "target":        target,
+                "reward_mode":   mode,
+                "max_repeat":    max_rep,
+                "entitlement_cost": t.get("entitlement_cost", 1),
                 "basis":         basis,
                 "award_name":    t["award"],
                 "start_date":    bz.start_date.isoformat() if bz.start_date else None,
@@ -5934,3 +6005,124 @@ def vgk_member_tracking_details(
         "partner": partner_info,
         "leads": leads_list,
     }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DC-BONANZA-ENTITLEMENT-001: Generic Reward Catalogue, Selection & Admin Recalculation
+# ─────────────────────────────────────────────────────────────────────────────
+
+class RewardSelectRequest(BaseModel):
+    bonanza_id: int
+    slab_id: int
+    quantity: int = 1
+    partner_id: Optional[int] = None
+
+
+@router.get("/{bonanza_id}/catalogue")
+def get_bonanza_catalogue(
+    bonanza_id: int,
+    partner_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_vgk_partner_any)
+):
+    """
+    Stage 3: Available Reward Catalogue with Entitlement & Claim Tracking.
+    Returns: Total entitlement earned -> entitlement already consumed -> entitlement remaining -> selectable rewards.
+    """
+    from app.services import vgk_bonanza_engine
+    from app.models.staff import StaffEmployee
+    
+    target_partner_id = current_user.id
+    if isinstance(current_user, StaffEmployee):
+        if not partner_id:
+            raise HTTPException(status_code=400, detail="partner_id required when staff views catalogue")
+        target_partner_id = partner_id
+
+    res = vgk_bonanza_engine.get_member_reward_catalogue(db, bonanza_id, target_partner_id)
+    if "error" in res:
+        raise HTTPException(status_code=404, detail=res["error"])
+    return {"success": True, "catalogue": res}
+
+
+@router.post("/vgk/select-reward")
+def select_bonanza_reward(
+    payload: RewardSelectRequest,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_vgk_partner_any)
+):
+    """
+    Stage 4: Reward Selection & Claim Transaction.
+    Uses canonical slab_id as single source of truth and validates remaining entitlement.
+    """
+    from app.services import vgk_bonanza_engine
+    from app.models.staff import StaffEmployee
+    
+    target_partner_id = current_user.id
+    if isinstance(current_user, StaffEmployee):
+        if not payload.partner_id:
+            raise HTTPException(status_code=400, detail="partner_id required when staff selects reward")
+        target_partner_id = payload.partner_id
+
+    res = vgk_bonanza_engine.select_and_claim_reward(
+        db=db,
+        bonanza_id=payload.bonanza_id,
+        partner_id=target_partner_id,
+        slab_id=payload.slab_id,
+        quantity=payload.quantity,
+        admin_user=current_user if isinstance(current_user, StaffEmployee) else None
+    )
+    if not res.get("success"):
+        raise HTTPException(status_code=400, detail=res.get("error", "Failed to select reward"))
+    return res
+
+
+@router.post("/admin/recalculate/{bonanza_id}")
+def admin_recalculate_bonanza(
+    bonanza_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_hybrid)
+):
+    """
+    Staff/Admin endpoint to trigger retroactive reconciliation and backfill.
+    """
+    from app.models.staff import StaffEmployee
+    if not isinstance(current_user, StaffEmployee):
+        raise HTTPException(status_code=403, detail="Staff access required")
+    from app.services import vgk_bonanza_engine
+    
+    b = db.query(Bonanza).filter(Bonanza.id == bonanza_id, Bonanza.is_deleted == False).first()
+    if not b:
+        raise HTTPException(status_code=404, detail="Bonanza not found")
+    
+    if b.reward_type in ('extra_commission', 'brand_wise_commission'):
+        reconciliation = vgk_bonanza_engine.backfill_extra_commission(db, bonanza_id)
+        return {"success": True, "type": "extra_commission", "reconciliation": reconciliation, "members_evaluated": reconciliation.get("leads_evaluated", 0)}
+    else:
+        # Evaluate active partners who submitted leads
+        partners_with_leads = db.execute(text("""
+            SELECT DISTINCT associated_partner_id
+            FROM crm_leads
+            WHERE associated_partner_id IS NOT NULL
+        """)).fetchall()
+        
+        evaluated = []
+        for (pid,) in partners_with_leads:
+            ent = vgk_bonanza_engine.calculate_member_entitlement(db, bonanza_id, pid)
+            if ent.get("units_earned", 0) > 0 or ent.get("completed_deals", 0) > 0:
+                evaluated.append({
+                    "partner_id": pid,
+                    "completed_deals": ent["completed_deals"],
+                    "units_earned": ent["units_earned"],
+                    "slabs_entitled": [
+                        {"slab_id": s["slab_id"], "label": s["slab_label"], "units": s["units"]}
+                        for s in ent.get("entitled_slabs", [])
+                    ]
+                })
+        return {
+            "success": True,
+            "type": "milestone",
+            "bonanza_id": bonanza_id,
+            "members_evaluated": len(evaluated),
+            "results": evaluated
+        }
+

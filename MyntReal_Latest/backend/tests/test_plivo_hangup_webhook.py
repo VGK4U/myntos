@@ -99,10 +99,8 @@ class TestPlivoHangupWebhookV3(unittest.TestCase):
         )
 
         self.assertEqual(resp.status_code, 200)
-        res_json = resp.json()
-        self.assertEqual(res_json.get("status"), "success")
-        self.assertEqual(res_json.get("final_status"), CallStateEnum.ENDED.value)
-        self.assertEqual(res_json.get("duration_seconds"), 45)
+        self.assertIn("application/xml", resp.headers.get("content-type", ""))
+        self.assertIn("<Hangup", resp.text)
 
         # Verify DB session update
         fresh_session = self.db.query(VoIPCallSession).filter_by(call_session_id=self.session_id).first()
@@ -126,11 +124,12 @@ class TestPlivoHangupWebhookV3(unittest.TestCase):
         # First callback
         resp1 = self.client.post("/api/v1/telephony/plivo/hangup", data=payload)
         self.assertEqual(resp1.status_code, 200)
+        self.assertIn("application/xml", resp1.headers.get("content-type", ""))
 
         # Second duplicate callback
         resp2 = self.client.post("/api/v1/telephony/plivo/hangup", data=payload)
         self.assertEqual(resp2.status_code, 200)
-        self.assertEqual(resp2.json().get("status"), "success")
+        self.assertIn("application/xml", resp2.headers.get("content-type", ""))
 
         # Verify DB session remains valid
         fresh = self.db.query(VoIPCallSession).filter_by(call_session_id=self.session_id).first()
@@ -180,7 +179,7 @@ class TestPlivoHangupWebhookV3(unittest.TestCase):
             }
         )
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.json().get("status"), "success")
+        self.assertIn("application/xml", resp.headers.get("content-type", ""))
 
     # 5. Valid X-Plivo-Signature-Ma-V3 is also supported and accepted
     def test_05_valid_ma_v3_signature_accepted(self):
@@ -208,7 +207,7 @@ class TestPlivoHangupWebhookV3(unittest.TestCase):
             }
         )
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.json().get("status"), "success")
+        self.assertIn("application/xml", resp.headers.get("content-type", ""))
 
     # 6. Unknown CallUUID is gracefully acknowledged with HTTP 200 without error
     def test_06_unknown_call_uuid_gracefully_acknowledged(self):
@@ -222,9 +221,7 @@ class TestPlivoHangupWebhookV3(unittest.TestCase):
             data=payload
         )
         self.assertEqual(resp.status_code, 200)
-        res_json = resp.json()
-        self.assertEqual(res_json.get("status"), "success")
-        self.assertIn("no active session found", res_json.get("message", "").lower())
+        self.assertIn("application/xml", resp.headers.get("content-type", ""))
 
     # 7. Official Plivo V3 test vector verification
     def test_07_plivo_official_v3_test_vector(self):

@@ -600,6 +600,26 @@ async def get_current_user_hybrid(
         except Exception:
             pass
     
+    # Fall back to token query parameter (for media streaming audio tags and file downloads)
+    token_param = request.query_params.get("token")
+    if token_param:
+        try:
+            payload = SecurityManager.verify_token(token_param.strip())
+            if payload and payload.get("sub"):
+                if payload.get("user_type") == "staff" or payload.get("emp_code"):
+                    staff = resolve_staff_employee(payload)
+                    if staff:
+                        return staff
+                else:
+                    try:
+                        user = SecurityManager.get_user_by_id(db, payload["sub"])
+                        if user:
+                            return user
+                    except Exception:
+                        pass
+        except Exception as e:
+            logger.debug(f"Query parameter token verification failed: {e}")
+
     # No valid authentication found
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

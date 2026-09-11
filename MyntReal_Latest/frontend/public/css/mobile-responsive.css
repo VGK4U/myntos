@@ -1,281 +1,448 @@
-/* DC_MOBILE_RESPONSIVE: Universal mobile-responsive styles for all pages */
-/* Injected automatically by server.js into every HTML page */
+/**
+ * MYNTOS ENTERPRISE CORPORATE DESIGN SYSTEM & UNIVERSAL RESPONSIVE ENGINE
+ * Applied globally to all 150+ pages across VGK, MNR, SaaS, CRM, Staff, Admin, Partner, and Service portals.
+ * Tailored for 3 delivery representations: Web Desktop, /mobile Web, and Native Mobile App (Android/iOS).
+ * ZERO DATABASE IMPACT — Strictly CSS/UI Layout & Viewport Optimization.
+ */
 
-/* ============ MOBILE & TABLET (≤991px) ============ */
+:root {
+    /* Corporate Color Tokens */
+    --mynt-navy-dark: #0f172a;
+    --mynt-navy: #1e293b;
+    --mynt-slate: #334155;
+    --mynt-muted: #64748b;
+    --mynt-border: #e2e8f0;
+    --mynt-canvas: #f8fafc;
+    --mynt-surface: #ffffff;
+    
+    /* Primary & Semantic Brand Accents */
+    --mynt-primary: #2563eb;
+    --mynt-primary-hover: #1d4ed8;
+    --mynt-primary-light: #eff6ff;
+    --mynt-success: #059669;
+    --mynt-success-light: #ecfdf5;
+    --mynt-warning: #d97706;
+    --mynt-warning-light: #fffbeb;
+    --mynt-danger: #dc2626;
+    --mynt-danger-light: #fef2f2;
+    --mynt-info: #0284c7;
+    --mynt-info-light: #f0f9ff;
+    --mynt-purple: #7c3aed;
+    --mynt-purple-light: #f5f3ff;
+
+    /* Corporate Elevation & Radii */
+    --mynt-radius-sm: 6px;
+    --mynt-radius-md: 10px;
+    --mynt-radius-lg: 14px;
+    --mynt-shadow-sm: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+    --mynt-shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.07), 0 2px 4px -2px rgba(15, 23, 42, 0.05);
+    --mynt-shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+}
+
+/* ==========================================================================
+   1. GLOBAL SYSTEM RESETS & FULL-WIDTH VIEWPORT CLAMPING
+   ========================================================================== */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--mynt-canvas) !important;
+    color: var(--mynt-navy);
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Container & Wrapper Fluid Containment */
+.main-content,
+.content-area,
+.container-fluid,
+.wrapper,
+.app-container,
+.page-container {
+    width: 100% !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+}
+
+/* Safe Area Insets for Native iOS/Android Notch & Home Indicator */
+@supports (padding-top: env(safe-area-inset-top)) {
+    body {
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+}
+
+/* ==========================================================================
+   2. CORPORATE CARDS, GRIDS & ZERO DEAD-SPACE CONTAINERS
+   ========================================================================== */
+.card, .dc-card, .section-card, .dashboard-card {
+    background: var(--mynt-surface) !important;
+    border: 1px solid var(--mynt-border) !important;
+    border-radius: var(--mynt-radius-md) !important;
+    box-shadow: var(--mynt-shadow-sm) !important;
+    margin-bottom: 16px !important;
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card:hover, .dc-card:hover {
+    box-shadow: var(--mynt-shadow-md) !important;
+}
+
+.card-header {
+    background: transparent !important;
+    border-bottom: 1px solid var(--mynt-border) !important;
+    padding: 14px 18px !important;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.card-header h5, .card-header h6, .card-title {
+    font-weight: 700 !important;
+    color: var(--mynt-navy-dark) !important;
+    margin: 0 !important;
+    font-size: 15px !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-body {
+    padding: 18px !important;
+}
+
+/* Self-Balancing KPI Status & Metric Grids */
+.stats-grid,
+.summary-row,
+.kpi-grid,
+#kpiCardsContainer,
+.kpi-cards-grid,
+.stat-cards-container {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+    width: 100% !important;
+}
+
+.stat-card, .kpi-card, .summary-card {
+    background: var(--mynt-surface) !important;
+    border: 1px solid var(--mynt-border) !important;
+    border-radius: var(--mynt-radius-md) !important;
+    padding: 12px 14px !important;
+    box-shadow: var(--mynt-shadow-sm) !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    min-height: 72px;
+}
+
+.stat-card .value, .stat-value, .kpi-value {
+    font-size: 20px !important;
+    font-weight: 800 !important;
+    color: var(--mynt-navy-dark) !important;
+    line-height: 1.2 !important;
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-card .label, .stat-label, .kpi-label {
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: var(--mynt-muted) !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px !important;
+}
+
+/* ==========================================================================
+   3. UNIVERSAL DATA TABLES & MATRIX SCROLL CONTAINMENT
+   ========================================================================== */
+.table-responsive,
+.table-container,
+.table-wrap,
+.data-table-wrap,
+.directory-table,
+.user-table,
+.breakdown-table,
+.card-wrap,
+#leadsTableContainer,
+#teamLeadsTableContainer {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch !important;
+    display: block !important;
+    border-radius: var(--mynt-radius-md);
+    margin-bottom: 12px !important;
+}
+
+/* Ensure data tables don't wrap text aggressively, allowing clean horizontal swipe */
+.table, .table-responsive > .table, .dataTable {
+    width: 100% !important;
+    min-width: max-content !important;
+    margin-bottom: 0 !important;
+    border-collapse: collapse !important;
+}
+
+.table thead th {
+    background: #f1f5f9 !important;
+    color: var(--mynt-slate) !important;
+    font-weight: 700 !important;
+    font-size: 11px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 10px 12px !important;
+    border-bottom: 2px solid var(--mynt-border) !important;
+    white-space: nowrap !important;
+    vertical-align: middle !important;
+}
+
+.table tbody td {
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+    color: var(--mynt-navy) !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    white-space: nowrap !important;
+    vertical-align: middle !important;
+}
+
+.table tbody tr:hover td {
+    background-color: #f8fafc !important;
+}
+
+/* ==========================================================================
+   4. CORPORATE STATUS PILLS, BADGES & ACTION BUTTONS
+   ========================================================================== */
+.badge, .status-badge, .pill-badge {
+    padding: 4px 10px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    border-radius: 9999px !important;
+    display: inline-flex !important;
+    align-items: center;
+    gap: 4px;
+    letter-spacing: 0.3px;
+}
+
+.badge-success, .status-won, .status-active, .status-completed {
+    background-color: var(--mynt-success-light) !important;
+    color: var(--mynt-success) !important;
+    border: 1px solid #a7f3d0 !important;
+}
+
+.badge-warning, .status-pending, .status-progress, .status-followup {
+    background-color: var(--mynt-warning-light) !important;
+    color: var(--mynt-warning) !important;
+    border: 1px solid #fde68a !important;
+}
+
+.badge-danger, .status-lost, .status-rejected, .status-failed {
+    background-color: var(--mynt-danger-light) !important;
+    color: var(--mynt-danger) !important;
+    border: 1px solid #fecaca !important;
+}
+
+.badge-info, .status-fresh, .status-new, .status-open {
+    background-color: var(--mynt-info-light) !important;
+    color: var(--mynt-info) !important;
+    border: 1px solid #bae6fd !important;
+}
+
+.badge-purple, .status-verified, .badge-vgk {
+    background-color: var(--mynt-purple-light) !important;
+    color: var(--mynt-purple) !important;
+    border: 1px solid #ddd6fe !important;
+}
+
+/* Corporate Buttons */
+.btn {
+    font-weight: 600 !important;
+    border-radius: var(--mynt-radius-sm) !important;
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s ease-in-out;
+}
+
+.btn-primary {
+    background-color: var(--mynt-primary) !important;
+    border-color: var(--mynt-primary) !important;
+    color: #ffffff !important;
+}
+
+.btn-primary:hover, .btn-primary:focus {
+    background-color: var(--mynt-primary-hover) !important;
+    border-color: var(--mynt-primary-hover) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+}
+
+.btn-outline-primary {
+    border-color: var(--mynt-primary) !important;
+    color: var(--mynt-primary) !important;
+    background: transparent !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--mynt-primary) !important;
+    color: #ffffff !important;
+}
+
+/* ==========================================================================
+   5. FILTER TOOLBARS & SEARCH BARS AUTO-WRAP
+   ========================================================================== */
+.filters-bar, .filter-row, .filters-container, .search-container, .toolbar-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+    align-items: center !important;
+    margin-bottom: 14px !important;
+    width: 100% !important;
+}
+
+.filter-group, .filter-item {
+    flex: 1 1 auto;
+    min-width: 140px;
+}
+
+.form-control, .form-select {
+    border: 1px solid var(--mynt-border) !important;
+    border-radius: var(--mynt-radius-sm) !important;
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+    color: var(--mynt-navy) !important;
+    background-color: #ffffff !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    max-width: 100% !important;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--mynt-primary) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+    outline: none !important;
+}
+
+/* ==========================================================================
+   6. MOBILE & TABLET RESPONSIVE TUNING (≤991px)
+   ========================================================================== */
 @media (max-width: 991px) {
-    html, body {
-        max-width: 100vw !important;
-        overflow-x: hidden !important;
+    .content-area, .main-content {
+        padding: 12px 14px !important;
     }
-    .main-content {
-        margin-left: 0 !important;
+
+    /* Page Banner / Header */
+    .page-banner, .page-header {
+        padding: 16px !important;
+        margin-bottom: 14px !important;
+        border-radius: var(--mynt-radius-md) !important;
+    }
+
+    .page-banner h1, .page-header h1 {
+        font-size: 18px !important;
+    }
+
+    /* KPI Grids on Mobile: Clean 2-Column Symmetrical Grid */
+    .summary-row {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+
+    .stats-grid, #kpiCardsContainer, .kpi-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    /* Suppress duplicate floating mobile hamburger when top header is active */
+    body:has(.top-header) .sidebar-mobile-toggle,
+    body:has(#headerContainer) .sidebar-mobile-toggle,
+    .top-header ~ .sidebar-mobile-toggle,
+    #headerContainer ~ .sidebar-mobile-toggle {
+        display: none !important;
+    }
+
+    .stat-card, .kpi-card {
+        padding: 8px 10px !important;
+        min-height: 60px;
+    }
+
+    .stat-card .value, .kpi-value {
+        font-size: 16px !important;
+    }
+
+    .stat-card .label, .kpi-label {
+        font-size: 9px !important;
+    }
+
+    /* Filter Inputs: Full-Width on Mobile */
+    .filter-group, .filter-item, .filters-bar select, .filters-bar input {
+        flex: 1 1 100% !important;
         width: 100% !important;
-        max-width: 100vw !important;
-        box-sizing: border-box !important;
-    }
-    /* Content area: reduce padding */
-    .content-area {
-        padding: 12px !important;
-        max-width: 100vw !important;
-        box-sizing: border-box !important;
     }
 
-    /* Stat cards & summary row: responsive grid */
-    .stats-grid, .summary-row { 
-        grid-template-columns: repeat(2, 1fr) !important; 
-        gap: 8px !important; 
-        margin-bottom: 12px !important; 
+    /* Modals on Mobile: Touch Bottom Sheet Format */
+    .modal-dialog {
+        margin: 8px !important;
+        max-width: calc(100vw - 16px) !important;
     }
-    .stat-card { 
-        padding: 8px 10px !important; 
-        border-radius: 8px !important; 
-        margin-bottom: 0 !important;
-    }
-    .stat-header { margin-bottom: 2px !important; }
-    .stat-value { font-size: 18px !important; }
-    .stat-label { font-size: 10px !important; margin-top: 1px !important; }
-    .stat-icon { 
-        width: 28px !important; height: 28px !important; 
-        border-radius: 6px !important; font-size: 13px !important; 
-    }
-    .stat-number { font-size: 18px !important; }
-    .stat-title { font-size: 10px !important; }
 
-    /* Cards: compact */
-    .card { margin-bottom: 10px !important; }
-    .card-header { padding: 8px 10px !important; }
-    .card-header h5, .card-header h6, .card-header .h5, .card-header .h6 { 
-        font-size: 13px !important; margin-bottom: 0 !important; 
+    .modal-content {
+        border-radius: var(--mynt-radius-lg) !important;
     }
-    .card-body { padding: 8px !important; }
-    .card-title { font-size: 13px !important; }
-    .card-text { font-size: 12px !important; }
 
-    /* Tables: horizontal scroll for wide tables */
-    .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 0.5rem; width: 100%; }
-    /* Do NOT force width:100% — that collapses multi-column tables instead of scrolling them */
-    .table-responsive > .table { width: auto; min-width: max-content; }
-    .table th, .table td {
-        padding: 5px 6px !important;
-        font-size: 11px !important;
-        text-align: center;
+    /* Navigation & Tabs Scrolling */
+    .nav-tabs, .nav-pills, .tab-headers {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding-bottom: 4px !important;
+    }
+
+    .nav-tabs .nav-link, .nav-pills .nav-link, .tab-header {
         white-space: nowrap !important;
-        vertical-align: middle !important;
+        padding: 6px 12px !important;
+        font-size: 12px !important;
     }
-    .table th:first-child, .table td:first-child { text-align: left; }
-    .table thead th { font-size: 10px !important; }
-
-    /* VGK dashboard: tighten section-card and tab-content on small screens */
-    .section-card { padding: 12px 10px !important; }
-    .tab-content   { padding: 8px 6px 32px !important; }
-
-    /* Override overflow:hidden on common table-container wrapper classes
-       so tables can still scroll horizontally on mobile */
-    .breakdown-table, .card-wrap, .data-table, .directory-table,
-    .user-table, .table-wrap, .table-container {
-        overflow-x: auto !important;
-        overflow-y: visible !important;
-    }
-
-    /* Nav tabs / pill tabs / custom tabs */
-    .nav-tabs, .nav-pills { flex-wrap: nowrap !important; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .nav-tabs .nav-link, .nav-pills .nav-link {
-        padding: 6px 8px !important; font-size: 11px !important; white-space: nowrap;
-    }
-    .nav-tabs .nav-link i, .nav-pills .nav-link i { display: none; }
-    .tab-content { padding: 8px !important; }
-
-    /* Custom tab headers (non-bootstrap) */
-    .tab-headers { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap !important; }
-    .tab-header { padding: 8px 6px !important; font-size: 11px !important; white-space: nowrap; min-width: 0; }
-    .tab-header i { display: none; }
-
-    /* Section headings */
-    .content-area h4, .content-area h5, .content-area h6 { 
-        font-size: 12px !important; margin-bottom: 6px !important; 
-    }
-    .content-area h4 i, .content-area h5 i, .content-area h6 i { font-size: 11px !important; }
-    .section-title { font-size: 13px !important; }
-
-    /* Filters compact */
-    .filters-card { padding: 8px 10px !important; }
-    .filters-row, .filter-row { gap: 6px !important; flex-wrap: wrap !important; }
-    .filters-row select, .filters-row input, .filter-row select, .filter-row input { 
-        padding: 5px 8px !important; font-size: 12px !important; 
-    }
-    .filter-group { flex: 1 1 45% !important; min-width: 0 !important; }
-    .filter-label { font-size: 11px !important; }
-    .filters-title { font-size: 12px !important; }
-    .filters-bar { padding: 6px 8px !important; flex-wrap: wrap !important; gap: 6px !important; }
-    .filters-bar select, .filters-bar input { 
-        min-width: unset !important; flex: 1 1 45% !important; font-size: 12px !important; 
-    }
-
-    /* Badges smaller */
-    .badge { padding: 2px 6px !important; font-size: 10px !important; }
-
-    /* Buttons compact */
-    .btn-sm { padding: 4px 8px !important; font-size: 11px !important; }
-    .btn-group-sm > .btn { padding: 3px 6px !important; font-size: 10px !important; }
-
-    /* Forms compact */
-    .form-control, .form-select { font-size: 12px !important; padding: 6px 8px !important; }
-    .form-label, label { font-size: 12px !important; }
-    .form-check-label { font-size: 11px !important; }
-    .input-group-text { font-size: 11px !important; padding: 4px 8px !important; }
-
-    /* Modals responsive */
-    .modal-dialog { margin: 8px !important; max-width: calc(100vw - 16px) !important; }
-    .modal-header { padding: 8px 12px !important; }
-    .modal-header .modal-title { font-size: 14px !important; }
-    .modal-body { padding: 10px !important; }
-    .modal-footer { padding: 8px 10px !important; }
-
-    /* Charts compact */
-    .charts-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
-    .chart-container { height: 200px !important; }
-
-    /* Empty state compact */
-    .empty-state { padding: 20px 10px !important; }
-    .empty-state i { font-size: 32px !important; margin-bottom: 8px !important; }
-    .empty-state h5 { font-size: 14px !important; }
-    .empty-state p { font-size: 12px !important; }
-
-    /* Expandable/sub tables */
-    .expandable-table thead th { padding: 6px 4px !important; font-size: 10px !important; }
-    .expandable-table tbody td { padding: 6px 4px !important; font-size: 11px !important; }
-    .expanded-content { padding: 8px 10px !important; }
-    .sub-table thead th { padding: 4px 6px !important; font-size: 10px !important; }
-    .sub-table tbody td { padding: 6px !important; font-size: 11px !important; }
-
-    /* Manager/info badges */
-    .manager-badge, .info-badge { font-size: 10px !important; padding: 3px 8px !important; }
-
-    /* Pagination compact */
-    .pagination { gap: 2px !important; }
-    .page-link { padding: 4px 8px !important; font-size: 11px !important; }
-
-    /* Alerts compact */
-    .alert { padding: 8px 10px !important; font-size: 12px !important; margin-bottom: 8px !important; }
-
-    /* Search bars */
-    .search-box, .search-container, .search-input { 
-        font-size: 12px !important; 
-    }
-
-    /* Action buttons in tables */
-    .action-btn, .btn-action { padding: 3px 6px !important; font-size: 10px !important; }
-
-    /* Summary rows */
-    .summary-card { padding: 8px !important; }
-    .summary-value { font-size: 16px !important; }
-    .summary-label { font-size: 10px !important; }
-
-    /* Spacing overrides */
-    .mb-4 { margin-bottom: 10px !important; }
-    .mb-3 { margin-bottom: 8px !important; }
-    .mt-4 { margin-top: 10px !important; }
-    .mt-3 { margin-top: 8px !important; }
-    .p-4 { padding: 10px !important; }
-    .p-3 { padding: 8px !important; }
-    .gap-3 { gap: 8px !important; }
-    .gap-4 { gap: 10px !important; }
-
-    /* Grid layouts */
-    .row > [class*="col-md-"], .row > [class*="col-lg-"] {
-        padding-left: 4px !important; padding-right: 4px !important;
-    }
-
-    /* Data display items */
-    .data-label, .detail-label { font-size: 10px !important; }
-    .data-value, .detail-value { font-size: 12px !important; }
-
-    /* Timeline items */
-    .timeline-item { padding: 6px 8px !important; font-size: 12px !important; }
-
-    /* Abbreviated table headers */
-    .th-full { display: none !important; }
-    .th-short { display: inline !important; }
-
-    /* Dropdown menus */
-    .dropdown-item { font-size: 12px !important; padding: 4px 10px !important; }
-    .dropdown-menu { min-width: unset !important; }
-
-    /* Toast/notification */
-    .toast { font-size: 12px !important; }
-
-    /* List groups */
-    .list-group-item { padding: 6px 10px !important; font-size: 12px !important; }
-
-    /* Accordion */
-    .accordion-button { padding: 8px 10px !important; font-size: 12px !important; }
-    .accordion-body { padding: 8px 10px !important; font-size: 12px !important; }
-
-    /* Progress bars */
-    .progress { height: 6px !important; }
-
-    /* Breadcrumb */
-    .breadcrumb { font-size: 11px !important; margin-bottom: 8px !important; }
-    .breadcrumb-item { font-size: 11px !important; }
-
-    /* Page headers */
-    .page-title, .page-header h4, .page-header h3 { font-size: 14px !important; }
-    .page-subtitle { font-size: 11px !important; }
 }
 
-/* ============ TABLETS (577px - 768px) ============ */
-@media (min-width: 577px) and (max-width: 768px) {
-    .content-area { padding: 12px !important; }
-
-    .stats-grid { 
-        grid-template-columns: repeat(3, 1fr) !important; 
-        gap: 8px !important; margin-bottom: 14px !important; 
-    }
-    .stat-card { padding: 12px !important; }
-    .stat-value { font-size: 22px !important; }
-    .stat-label { font-size: 11px !important; }
-    .stat-icon { width: 32px !important; height: 32px !important; font-size: 14px !important; }
-    .stat-number { font-size: 22px !important; }
-    .stat-title { font-size: 11px !important; }
-
-    .card-header { padding: 10px 12px !important; }
-    .card-body { padding: 10px !important; }
-    .card-header h5, .card-header h6 { font-size: 14px !important; }
-
-    .table th, .table td {
-        padding: 6px 5px !important; font-size: 12px !important;
-        text-align: center; white-space: nowrap !important;
-    }
-    .table th:first-child, .table td:first-child { text-align: left; }
-    .table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
-    .table-responsive > .table { width: auto; min-width: max-content; }
-    .section-card { padding: 14px 12px !important; }
-
-    .breakdown-table, .card-wrap, .data-table, .directory-table,
-    .user-table, .table-wrap, .table-container {
-        overflow-x: auto !important;
-        overflow-y: visible !important;
+/* ============ PHONES (≤576px) ============ */
+@media (max-width: 576px) {
+    .content-area {
+        padding: 8px 10px !important;
     }
 
-    .nav-tabs .nav-link, .nav-pills .nav-link { padding: 8px 10px !important; font-size: 12px !important; }
-    .tab-header { padding: 10px 8px !important; font-size: 12px !important; }
-    .tab-content { padding: 12px !important; }
+    .card-header {
+        padding: 10px 12px !important;
+    }
 
-    .charts-grid { grid-template-columns: 1fr !important; }
-    .chart-container { height: 240px !important; }
+    .card-body {
+        padding: 12px !important;
+    }
 
-    .filter-group { flex: 1 1 30% !important; min-width: 0 !important; }
-
-    .badge { font-size: 11px !important; }
-    .btn-sm { font-size: 12px !important; }
-    .form-control, .form-select { font-size: 13px !important; }
-
-    .modal-body { padding: 12px !important; }
-
-    .empty-state { padding: 30px 15px !important; }
-    .empty-state h5 { font-size: 15px !important; }
+    .table thead th, .table tbody td {
+        padding: 8px 10px !important;
+        font-size: 12px !important;
+    }
 }
 
-/* ============ DEFAULT: full headers ============ */
-.th-full { display: inline; }
-.th-short { display: none; }

@@ -490,7 +490,7 @@ export class MNRAddMember {
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.17h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.7A16 16 0 0 0 13.3 14.09l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.02 15.5z"/></svg>
                   Send OTP to WhatsApp
                 </button>
-                <div style="font-size:11px;color:#ef4444;margin-top:5px;text-align:center"><i>WhatsApp OTP verification is required before registering</i></div>
+                <div style="font-size:11px;color:#6b7280;margin-top:5px;text-align:center"><i>WhatsApp OTP verification is optional. You can verify now or verify later.</i></div>
               </div>
               <div id="mnrMobileOtpSection" style="display:none;background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:14px;margin-bottom:16px;">
                 <div style="font-size:12.5px;color:#166534;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
@@ -501,11 +501,18 @@ export class MNRAddMember {
                   <input type="text" id="mnrMobileOtpInput" maxlength="6" placeholder="● ● ● ● ● ●" style="flex:1;padding:12px;border:2px solid #22c55e;border-radius:10px;font-size:20px;font-weight:700;letter-spacing:6px;text-align:center;background:#fff;color:#166534;" />
                   <button type="button" id="mnrMobileVerifyBtn" onclick="mnrMobileVerifyOTP()" style="padding:12px 16px;background:#22c55e;border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;">Verify</button>
                 </div>
-                <div style="margin-top:8px;font-size:11.5px;color:#6b7280;text-align:center">Didn't receive? <a href="#" onclick="mnrMobileSendOTP();return false;" style="color:#7c3aed;font-weight:600;">Resend OTP</a></div>
+                <div style="margin-top:8px;display:flex;justify-content:space-between;font-size:11.5px;color:#6b7280">
+                  <div>Didn't receive? <a href="#" onclick="mnrMobileSendOTP();return false;" style="color:#7c3aed;font-weight:600;">Resend OTP</a></div>
+                  <div><a href="#" onclick="mnrMobileSkipOTP();return false;" style="color:#6b7280;text-decoration:underline;">Skip for now</a></div>
+                </div>
               </div>
-              <div id="mnrMobileVerifiedBadge" style="display:none;background:#f0fdf4;border:2px solid #22c55e;border-radius:10px;padding:10px 14px;margin-bottom:16px;color:#166534;font-size:13px;font-weight:600;display:none;align-items:center;gap:8px;">
+              <div id="mnrMobileVerifiedBadge" style="display:none;background:#f0fdf4;border:2px solid #22c55e;border-radius:10px;padding:10px 14px;margin-bottom:16px;color:#166534;font-size:13px;font-weight:600;align-items:center;gap:8px;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 WhatsApp number verified
+              </div>
+              <div id="mnrMobileOtpPendingBadge" style="display:none;background:#fef3c7;border:2px solid #f59e0b;border-radius:10px;padding:10px 14px;margin-bottom:16px;color:#92400e;font-size:13px;font-weight:600;align-items:center;gap:8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                WhatsApp verification pending (optional — verify later)
               </div>
               <input type="hidden" id="mnrMobilePhoneToken" value="" />
 
@@ -686,6 +693,13 @@ export class MNRAddMember {
     });
 
     // [DC-PHONE-OTP-001] Expose OTP helpers as global functions for inline onclick handlers
+    (window as any).mnrMobileSkipOTP = () => {
+      document.getElementById('mnrMobileOtpSection')!.style.display = 'none';
+      document.getElementById('mnrMobileVerifiedBadge')!.style.display = 'none';
+      document.getElementById('mnrMobileOtpPendingBadge')!.style.display = 'flex';
+      (document.getElementById('mnrMobilePhoneToken') as HTMLInputElement).value = '';
+    };
+
     (window as any).mnrMobileSendOTP = async () => {
       const mobile = (document.getElementById('mobile') as HTMLInputElement)?.value.replace(/[^0-9]/g, '');
       if (!mobile || mobile.length < 10) {
@@ -696,6 +710,7 @@ export class MNRAddMember {
       if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
       document.getElementById('mnrMobileOtpSection')!.style.display = 'none';
       document.getElementById('mnrMobileVerifiedBadge')!.style.display = 'none';
+      document.getElementById('mnrMobileOtpPendingBadge')!.style.display = 'none';
       document.getElementById('mnrMobilePhoneToken' as any)!.setAttribute('value', '');
       try {
         const r = await fetch('/api/v1/users/send-otp', {
@@ -705,13 +720,22 @@ export class MNRAddMember {
         });
         const d = await r.json();
         if (r.ok && d.success) {
-          document.getElementById('mnrMobileOtpSection')!.style.display = 'block';
-          (document.getElementById('mnrMobileOtpInput') as HTMLInputElement).value = '';
-          document.getElementById('mnrMobileOtpInput')!.focus();
+          if (d.otp_sent === false) {
+            alert(d.message || 'WhatsApp OTP could not be sent right now. You can continue registration and verify later.');
+            (window as any).mnrMobileSkipOTP();
+          } else {
+            document.getElementById('mnrMobileOtpSection')!.style.display = 'block';
+            (document.getElementById('mnrMobileOtpInput') as HTMLInputElement).value = '';
+            document.getElementById('mnrMobileOtpInput')!.focus();
+          }
         } else {
-          alert(d.detail || d.message || 'Failed to send OTP. Please try again.');
+          alert(d.detail || d.message || 'Failed to send OTP. You can proceed with registration and verify later.');
+          (window as any).mnrMobileSkipOTP();
         }
-      } catch { alert('Network error. Please try again.'); }
+      } catch {
+        alert('Network error. You can proceed with registration and verify later.');
+        (window as any).mnrMobileSkipOTP();
+      }
       finally {
         if (btn) {
           btn.disabled = false;
@@ -739,6 +763,7 @@ export class MNRAddMember {
         if (r.ok && d.success) {
           (document.getElementById('mnrMobilePhoneToken') as HTMLInputElement).value = d.phone_verified_token;
           document.getElementById('mnrMobileOtpSection')!.style.display = 'none';
+          document.getElementById('mnrMobileOtpPendingBadge')!.style.display = 'none';
           const badge = document.getElementById('mnrMobileVerifiedBadge')!;
           badge.style.display = 'flex';
         } else {
@@ -806,12 +831,8 @@ export class MNRAddMember {
       return;
     }
 
-    // [DC-PHONE-OTP-001] Phone verification is required
+    // [DC-PHONE-OTP-001] Phone verification token is optional (verify now or verify later)
     const phoneVerifiedToken = (document.getElementById('mnrMobilePhoneToken') as HTMLInputElement)?.value.trim();
-    if (!phoneVerifiedToken) {
-      alert('Phone verification required. Please tap "Send OTP to WhatsApp", enter the code, and tap Verify before adding the member.');
-      return;
-    }
 
     if (password.length < 6) {
       alert('Password must be at least 6 characters');

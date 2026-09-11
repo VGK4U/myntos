@@ -244,65 +244,38 @@ def handle_missed_call_whatsapp_ack(
     if display_name.lower().startswith('missed call'):
         display_name = "Valued Customer"
 
-    # ── 3. Meta WhatsApp API Dispatch ─────────────────────────────────────────
-    creds = get_wa_credentials(db)
-    access_token = creds.get("access_token") or ""
-    phone_id = creds.get("phone_number_id") or ""
+    # ── 3. Meta WhatsApp API Dispatch (Canonical Real WAMID) ────────────────
+    from app.services.whatsapp_canonical_service import WhatsAppCanonicalService
 
-    sent_success = False
-    error_msg = None
+    components = [
+        {
+            "type": "body",
+            "parameters": [
+                {"type": "text", "text": display_name}
+            ]
+        }
+    ]
 
-    if access_token and phone_id:
-        try:
-            url = f"https://graph.facebook.com/v21.0/{phone_id}/messages"
-            payload = {
-                "messaging_product": "whatsapp",
-                "to": phone_formatted,
-                "type": "template",
-                "template": {
-                    "name": "missed_call_ack_v1",
-                    "language": {"code": "en"},
-                    "components": [
-                        {
-                            "type": "body",
-                            "parameters": [
-                                {"type": "text", "text": display_name}
-                            ]
-                        }
-                    ]
-                }
-            }
-            resp = requests.post(url, json=payload, headers={"Authorization": f"Bearer {access_token}"}, timeout=8)
-            if resp.status_code in (200, 201):
-                sent_success = True
-            else:
-                error_msg = f"HTTP {resp.status_code}: {resp.text}"
-                # If Meta template is PENDING approval, treat as queued/success for simulation
-                if "does not exist" in resp.text or "132001" in resp.text:
-                    sent_success = True
-                    error_msg = "Queued (Meta Template approval pending)"
-        except Exception as exc:
-            error_msg = str(exc)
-    else:
-        # Local simulation mode
-        sent_success = True
-        error_msg = "Simulated (Meta WABA credentials pending configuration)"
-
-    # ── 4. Log History ────────────────────────────────────────────────────────
-    history_item = MessageLog(
-        message_sid=f"wamid.mc.{uuid.uuid4().hex[:12]}",
-        mobile_number=phone_formatted,
-        user_name=display_name,
+    res = WhatsAppCanonicalService.send_meta_template_message(
+        db=db,
+        phone=phone_formatted,
+        template_name="missed_call_ack_v1",
+        language_code="en",
+        components=components,
         message_type="missed_call_ack",
-        initial_status="sent" if sent_success else "failed",
-        current_status="sent" if sent_success else "failed",
-        sent_at=get_indian_time()
+        user_name=display_name,
+        sender_type="auto",
+        company_id=4,
+        idempotency_key=f"missed_call_ack:{phone_formatted}:{int(ist_now.timestamp() // 21600)}",
+        raw_body_fallback=MISSED_CALL_TEMPLATE["body_text"].replace("{{name}}", display_name)
     )
-    db.add(history_item)
-    db.commit()
+
+    sent_success = res.get("success", False)
+    error_msg = res.get("reason") if not sent_success else None
 
     return {
         "success": sent_success,
+        "wamid": res.get("wamid"),
         "lead_id": lead.id,
         "phone": phone_formatted,
         "recipient_name": display_name,

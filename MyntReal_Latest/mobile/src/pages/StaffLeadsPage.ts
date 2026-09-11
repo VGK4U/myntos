@@ -10,6 +10,7 @@ import { authService } from '../services/auth.service';
 import { PageHeader } from '../components/PageHeader';
 import { vgkBannerService } from '../services/vgk-banner.service';
 import { unifiedWAModal } from '../components/UnifiedWAModal';
+import { callController } from '../services/call-controller';
 
 interface Lead {
   id: number;
@@ -191,15 +192,23 @@ export class StaffLeadsPage {
   private leadDeals: LeadDeal[] = [];
   private leadTransactions: LeadTransaction[] = [];
   private revenueCategories: RevenueCategory[] = [];
+  private currentPage: number = 1;
+  private perPage: number = 20;
+  private totalPages: number = 1;
+  private totalLeads: number = 0;
+  private handlerStats: any = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
   }
 
   async init(params?: { leadId?: string; action?: string }): Promise<void> {
-    this.render();
     await this.loadCompanies();
-    await this.loadLeads();
+    this.render();
+    await Promise.all([
+      this.loadHandlerStats(),
+      this.loadLeads(1)
+    ]);
     
     // DC Protocol: Handle navigation parameters for direct edit
     if (params?.action === 'edit' && params?.leadId) {
@@ -211,20 +220,77 @@ export class StaffLeadsPage {
 
   private async loadCompanies(): Promise<void> {
     try {
-      const authState = authService.getAuthState();
-      const user = authState?.user;
-      // Get companies from user's data_companies or make API call
-      if (user?.data_companies) {
-        this.companies = user.data_companies;
+      const response = await apiService.get<any>('/crm/my-companies');
+      const rawList = response.companies || response.data?.companies || (Array.isArray(response.data) ? response.data : []);
+      if (Array.isArray(rawList) && rawList.length > 0) {
+        this.companies = rawList
+          .filter((c: any) => c && c.is_active !== false)
+          .map((c: any) => ({
+            id: c.id,
+            name: c.company_name ? `${c.company_name} (${c.company_code || c.id})` : (c.name || `Company ${c.id}`)
+          }));
       } else {
-        const response = await apiService.get<any>('/crm/my-companies');
-        if (response.success && response.data) {
-          this.companies = response.data;
+        const authState = authService.getAuthState();
+        const user = authState?.user;
+        if (Array.isArray(user?.data_companies)) {
+          this.companies = user.data_companies.map((c: any) => 
+            typeof c === 'object' && c !== null ? { id: c.id, name: c.name || c.company_name || `Company ${c.id}` } : { id: Number(c), name: `Company ${c}` }
+          );
         }
       }
+
+      if (this.companies.length === 1) {
+        this.selectedCompanyId = this.companies[0].id;
+      }
+      this.populateCompanyDropdown();
     } catch (error) {
       console.error('[StaffLeads] Failed to load companies:', error);
     }
+  }
+
+  private populateCompanyDropdown(): void {
+    const select = document.getElementById('companyFilter') as HTMLSelectElement | null;
+    if (!select) return;
+    select.innerHTML = '<option value="">All Companies</option>' + 
+      this.companies.map(c => 
+        `<option value="${c.id}" ${this.selectedCompanyId === c.id ? 'selected' : ''}>${c.name}</option>`
+      ).join('');
+  }
+
+  private async loadHandlerStats(): Promise<void> {
+    try {
+      const companyParam = this.selectedCompanyId !== null ? this.selectedCompanyId.toString() : 'all';
+      const response = await apiService.get<any>(`/crm/staff-handler-dashboard?company_id=${companyParam}`);
+      if (response.success && response.data) {
+        this.handlerStats = response.data;
+        this.updateTabBadges();
+      }
+    } catch (error) {
+      console.error('[StaffLeads] Failed to load handler stats:', error);
+    }
+  }
+
+  private updateTabBadges(): void {
+    if (!this.handlerStats) return;
+    const hb = this.handlerStats.handler_breakdown || {};
+    const badgeMap: Record<string, number> = {
+      my_leads: this.handlerStats.all_my_leads_count ?? this.handlerStats.total_leads ?? 0,
+      as_primary: hb.as_primary ?? 0,
+      as_telecaller: hb.as_telecaller ?? 0,
+      as_field: hb.as_field_staff ?? 0,
+      as_handler: hb.as_mnr_handler ?? 0,
+      fresh: this.handlerStats.unassigned_count ?? 0,
+      self: this.handlerStats.self_leads_count ?? 0
+    };
+
+    ROLE_TABS.forEach(tab => {
+      const badgeEl = document.getElementById(`tab-badge-${tab.id}`);
+      if (badgeEl) {
+        const count = badgeMap[tab.id] ?? 0;
+        badgeEl.textContent = count.toString();
+        badgeEl.style.display = count > 0 ? 'inline-block' : 'none';
+      }
+    });
   }
 
   private async lookupPincode(pincodeInput: HTMLInputElement): Promise<void> {
@@ -263,47 +329,89 @@ export class StaffLeadsPage {
     }
   }
 
-  private async loadLeads(): Promise<void> {
+  private async loadLeads(page: number = 1): Promise<void> {
+    this.currentPage = page;
     this.loading = true;
     this.updateContent();
 
     try {
       const params = new URLSearchParams();
-      
-      // DC Protocol (Feb 2026): Company filter - null means all companies
+      params.append('page', page.toString());
+      params.append('per_page', this.perPage.toString());
+
       if (this.selectedCompanyId !== null) {
         params.append('company_id', this.selectedCompanyId.toString());
+      } else {
+        params.append('company_id', 'all');
       }
-      // If no company selected, don't include company_id for "All Companies" behavior
-      
+
       params.append('role_filter', this.activeRoleTab);
+
       if (this.dateFrom) params.append('date_from', this.dateFrom);
       if (this.dateTo) params.append('date_to', this.dateTo);
       if (this.categoryFilter) params.append('category', this.categoryFilter);
       if (this.sourceFilter) params.append('source', this.sourceFilter);
-      // DC Protocol (Feb 2026): Add quick filter support
       if (this.quickFilter && this.quickFilter !== 'all') params.append('quick_filter', this.quickFilter);
-      // DC Protocol (Feb 2026): Add days since filter
-      if (this.daysSinceFilter) params.append('days_since', this.daysSinceFilter);
+      if (this.daysSinceFilter) params.append('days_since_interaction', this.daysSinceFilter);
       if (this.submitDateFrom) params.append('submit_date_from', this.submitDateFrom);
       if (this.submitDateTo) params.append('submit_date_to', this.submitDateTo);
       if (this.completeDateFrom) params.append('complete_date_from', this.completeDateFrom);
       if (this.completeDateTo) params.append('complete_date_to', this.completeDateTo);
       if (this.dvrFrom) params.append('first_dvr_from', this.dvrFrom);
       if (this.dvrTo) params.append('first_dvr_to', this.dvrTo);
-      if (this.telecallerCode) params.append('telecaller_emp_code', this.telecallerCode);
-      if (this.fieldStaffCode) params.append('field_staff_emp_code', this.fieldStaffCode);
+      if (this.telecallerCode) params.append('filter_telecaller_id', this.telecallerCode);
+      if (this.fieldStaffCode) params.append('filter_field_staff_id', this.fieldStaffCode);
 
-      const response = await apiService.get<any>(`/crm/my-leads?${params.toString()}`);
-      if (response.success && response.data) {
-        this.leads = response.data.leads || response.data || [];
+      const response = await apiService.get<any>(`/crm/leads?${params.toString()}`);
+      if (response.success) {
+        this.leads = Array.isArray(response.data) ? response.data : (response.data?.leads || []);
+        if (response.pagination) {
+          this.totalLeads = response.pagination.total ?? this.leads.length;
+          this.totalPages = response.pagination.pages ?? Math.max(1, Math.ceil(this.totalLeads / this.perPage));
+        } else {
+          this.totalLeads = this.leads.length;
+          this.totalPages = 1;
+        }
+      } else {
+        this.leads = [];
+        this.totalLeads = 0;
+        this.totalPages = 1;
       }
     } catch (error) {
       console.error('[StaffLeads] Failed to load:', error);
+      this.leads = [];
+      this.totalLeads = 0;
+      this.totalPages = 1;
     }
 
     this.loading = false;
     this.updateContent();
+  }
+
+  private async claimLead(leadId: number, companyId?: number | null): Promise<void> {
+    const cid = companyId || this.selectedCompanyId;
+    if (!cid) {
+      alert('Please select a specific company to claim this lead.');
+      return;
+    }
+    if (!confirm(`Do you want to claim Lead #${leadId} to your personal active pipeline?`)) {
+      return;
+    }
+    try {
+      const response = await apiService.post<any>(`/crm/leads/${leadId}/claim?company_id=${cid}`, {});
+      if (response.success) {
+        alert(response.message || response.data?.message || 'Lead successfully claimed!');
+        await Promise.all([
+          this.loadLeads(this.currentPage),
+          this.loadHandlerStats()
+        ]);
+      } else {
+        alert(response.error || response.message || 'Lead could not be claimed.');
+      }
+    } catch (err: any) {
+      console.error('[StaffLeads] Error claiming lead:', err);
+      alert('Error claiming lead: ' + (err?.message || 'Network error'));
+    }
   }
 
   private getFilteredLeads(): Lead[] {
@@ -339,6 +447,7 @@ export class StaffLeadsPage {
               <button class="role-tab ${this.activeRoleTab === tab.id ? 'active' : ''}" data-role="${tab.id}">
                 <span class="tab-icon">${tab.icon}</span>
                 <span class="tab-label">${tab.label}</span>
+                <span class="tab-badge" id="tab-badge-${tab.id}" style="display: none; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; margin-left: 4px;">0</span>
               </button>
             `).join('')}
           </div>
@@ -1239,42 +1348,45 @@ export class StaffLeadsPage {
           this.activeRoleTab = role;
           document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
           tab.classList.add('active');
-          this.loadLeads();
+          this.loadLeads(1);
         }
       });
     });
 
     document.getElementById('dateFrom')?.addEventListener('change', (e) => {
       this.dateFrom = (e.target as HTMLInputElement).value;
-      this.loadLeads();
+      this.loadLeads(1);
     });
 
     document.getElementById('dateTo')?.addEventListener('change', (e) => {
       this.dateTo = (e.target as HTMLInputElement).value;
-      this.loadLeads();
+      this.loadLeads(1);
     });
 
     document.getElementById('categoryFilter')?.addEventListener('change', (e) => {
       this.categoryFilter = (e.target as HTMLSelectElement).value;
-      this.loadLeads();
+      this.loadLeads(1);
     });
 
     document.getElementById('sourceFilter')?.addEventListener('change', (e) => {
       this.sourceFilter = (e.target as HTMLSelectElement).value;
-      this.loadLeads();
+      this.loadLeads(1);
     });
 
     // DC Protocol (Feb 2026): Quick filter listener
     document.getElementById('quickFilterSelect')?.addEventListener('change', (e) => {
       this.quickFilter = (e.target as HTMLSelectElement).value;
-      this.loadLeads();
+      this.loadLeads(1);
     });
 
     // DC Protocol (Feb 2026): Company filter listener
-    document.getElementById('companyFilter')?.addEventListener('change', (e) => {
+    document.getElementById('companyFilter')?.addEventListener('change', async (e) => {
       const value = (e.target as HTMLSelectElement).value;
       this.selectedCompanyId = value ? parseInt(value) : null;
-      this.loadLeads();
+      await Promise.all([
+        this.loadHandlerStats(),
+        this.loadLeads(1)
+      ]);
     });
 
     // DC Protocol (Feb 2026): Days since filter listener
@@ -1429,17 +1541,20 @@ export class StaffLeadsPage {
 
     const filtered = this.getFilteredLeads();
     const statuses = ['all', 'new', 'contacted', 'qualified', 'converted', 'lost'];
-    const counts: Record<string, number> = { all: this.leads.length };
+    const counts: Record<string, number> = { all: this.totalLeads };
     statuses.slice(1).forEach(s => {
       counts[s] = this.leads.filter(l => l.status.toLowerCase() === s).length;
     });
+
+    const activeTabObj = ROLE_TABS.find(t => t.id === this.activeRoleTab);
+    const activeTabLabel = activeTabObj?.label || 'Leads';
 
     content.innerHTML = `
       <div class="leads-stats card">
         <div class="stats-row">
           <div class="stat-item">
-            <span class="stat-value">${this.leads.length}</span>
-            <span class="stat-label">Total</span>
+            <span class="stat-value">${this.totalLeads}</span>
+            <span class="stat-label">${activeTabLabel}</span>
           </div>
           <div class="stat-item">
             <span class="stat-value success">${counts.converted}</span>
@@ -1455,7 +1570,7 @@ export class StaffLeadsPage {
       <div class="filter-tabs status-filters">
         ${statuses.map(s => `
           <button class="tab ${this.activeStatusFilter === s ? 'active' : ''}" data-filter="${s}">
-            ${s.charAt(0).toUpperCase() + s.slice(1)} (${counts[s] || 0})
+            ${s.charAt(0).toUpperCase() + s.slice(1)} (${s === 'all' ? this.totalLeads : (counts[s] || 0)})
           </button>
         `).join('')}
       </div>
@@ -1483,6 +1598,18 @@ export class StaffLeadsPage {
             </tbody>
           </table>
         </div>
+
+        <!-- Pagination Bar -->
+        <div class="pagination-bar" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(13,27,42,0.6);border-radius:12px;margin-top:12px;border:1px solid rgba(255,255,255,0.08);">
+          <div style="font-size:13px;color:#a8c0d8;">
+            Showing <strong>${this.leads.length > 0 ? (this.currentPage - 1) * this.perPage + 1 : 0}</strong> - <strong>${Math.min(this.currentPage * this.perPage, this.totalLeads)}</strong> of <strong>${this.totalLeads}</strong> leads
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn-page prev-page" ${this.currentPage <= 1 ? 'disabled' : ''} style="padding:6px 14px;border-radius:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#e6f1ff;cursor:${this.currentPage <= 1 ? 'not-allowed' : 'pointer'};opacity:${this.currentPage <= 1 ? '0.4' : '1'};">« Prev</button>
+            <span style="font-size:13px;color:#94a3b8;font-weight:600;">Page ${this.currentPage} / ${Math.max(1, this.totalPages)}</span>
+            <button class="btn-page next-page" ${this.currentPage >= this.totalPages ? 'disabled' : ''} style="padding:6px 14px;border-radius:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#e6f1ff;cursor:${this.currentPage >= this.totalPages ? 'not-allowed' : 'pointer'};opacity:${this.currentPage >= this.totalPages ? '0.4' : '1'};">Next »</button>
+          </div>
+        </div>
       ` : `
         <div class="empty-state card">
           <div class="empty-icon">👥</div>
@@ -1498,6 +1625,35 @@ export class StaffLeadsPage {
       });
     });
 
+    // Pagination buttons
+    content.querySelector('.prev-page')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (this.currentPage > 1) {
+        this.loadLeads(this.currentPage - 1);
+      }
+    });
+
+    content.querySelector('.next-page')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (this.currentPage < this.totalPages) {
+        this.loadLeads(this.currentPage + 1);
+      }
+    });
+
+    // Claim lead buttons
+    content.querySelectorAll('.claim-lead-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const leadId = parseInt((btn as HTMLElement).dataset.leadId || '0');
+        const compIdAttr = (btn as HTMLElement).dataset.companyId;
+        const companyId = compIdAttr ? parseInt(compIdAttr) : this.selectedCompanyId;
+        if (leadId) {
+          await this.claimLead(leadId, companyId);
+        }
+      });
+    });
+
     // Sortable table headers
     document.querySelectorAll('.leads-table th.sortable').forEach(th => {
       th.addEventListener('click', () => {
@@ -1508,7 +1664,7 @@ export class StaffLeadsPage {
 
     document.querySelectorAll('.leads-table tbody tr').forEach(row => {
       row.addEventListener('click', (e) => {
-        if ((e.target as HTMLElement).closest('.action-btn')) return;
+        if ((e.target as HTMLElement).closest('.action-btn, a, button')) return;
         const leadId = row.getAttribute('data-id');
         if (leadId) this.showLeadDetails(parseInt(leadId));
       });
@@ -1551,6 +1707,27 @@ export class StaffLeadsPage {
         }
       });
     });
+
+    // Unified softphone call handler (Issue #4)
+    content.querySelectorAll('.call-softphone-trigger').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const target = (el as HTMLElement);
+        const phone = target.dataset.phone || '';
+        const name = target.dataset.name || 'Contact Lead';
+        const leadId = target.dataset.leadId || null;
+        if (phone) {
+          callController.openCallDialer({
+            phoneNumber: phone,
+            name: name,
+            entityId: leadId,
+            entityType: 'lead',
+            autoStart: true
+          });
+        }
+      });
+    });
   }
 
   private maskPhone(phone: string): string {
@@ -1574,8 +1751,11 @@ export class StaffLeadsPage {
     const nextFollowup = lead.next_followup ? new Date(lead.next_followup).toLocaleDateString('en', { day: 'numeric', month: 'short' }) : '-';
     const dealValue = lead.deal_value_total ? `₹${lead.deal_value_total.toLocaleString()}` : '-';
     const phone = lead.phone || '';
+    const cleanPhone = phone.replace(/[^\d+]/g, '');
     const whatsappNumber = phone.replace(/\D/g, '');
     const maskedPhone = this.maskPhone(phone);
+    const isFresh = this.activeRoleTab === 'fresh' || (lead as any).claim_eligible;
+    const leadCompId = lead.company_id || this.selectedCompanyId || '';
 
     return `
       <tr data-id="${lead.id}">
@@ -1583,8 +1763,9 @@ export class StaffLeadsPage {
           <div class="lead-name-cell">
             <span class="lead-name">${lead.name}</span>
             <div class="lead-contact-links" style="display:flex;align-items:center;gap:4px;margin-top:2px;">
-              <a href="tel:${phone}" class="mobile-link" data-name="${this.escapeAttr(lead.name)}" data-lead-id="${lead.id}" onclick="event.stopPropagation();" title="Call with Softphone" style="display:inline-flex;align-items:center;gap:3px;color:#38bdf8;text-decoration:none;font-weight:600;"><span style="font-size:12px;">📞</span> ${maskedPhone}</a>
-              ${phone ? `<a href="tel:${phone}" class="dial-btn-badge" data-name="${this.escapeAttr(lead.name)}" data-lead-id="${lead.id}" onclick="event.stopPropagation();" title="Call via Softphone" style="display:inline-flex;align-items:center;justify-content:center;padding:1px 5px;background:rgba(56,189,248,0.2);border:1px solid rgba(56,189,248,0.4);border-radius:4px;color:#38bdf8;text-decoration:none;font-size:11px;font-weight:600;margin-left:2px;">📞 Call</a>` : ''}
+              <a href="javascript:void(0)" class="mobile-link call-softphone-trigger" data-name="${this.escapeAttr(lead.name)}" data-lead-id="${lead.id}" data-phone="${cleanPhone}" onclick="event.stopPropagation();" title="Call with Softphone" style="display:inline-flex;align-items:center;gap:3px;color:#38bdf8;text-decoration:none;font-weight:600;"><span style="font-size:12px;">📞</span> ${maskedPhone}</a>
+              ${phone ? `<a href="javascript:void(0)" class="dial-btn-badge call-softphone-trigger" data-name="${this.escapeAttr(lead.name)}" data-lead-id="${lead.id}" data-phone="${cleanPhone}" onclick="event.stopPropagation();" title="Call via Softphone" style="display:inline-flex;align-items:center;justify-content:center;padding:1px 5px;background:rgba(56,189,248,0.2);border:1px solid rgba(56,189,248,0.4);border-radius:4px;color:#38bdf8;text-decoration:none;font-size:11px;font-weight:600;margin-left:2px;">📞 Call</a>` : ''}
+              ${isFresh ? `<button type="button" class="claim-lead-btn" data-lead-id="${lead.id}" data-company-id="${leadCompId}" title="Claim Lead" style="background:rgba(16,185,129,0.25);border:1px solid rgba(16,185,129,0.5);border-radius:4px;color:#10b981;padding:1px 6px;font-size:11px;font-weight:700;cursor:pointer;margin-left:2px;">⚡ Claim</button>` : ''}
               ${phone ? `<button class="whatsapp-link open-lead-wa-btn" data-phone="${whatsappNumber}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" onclick="event.stopPropagation()" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:13px;" title="Send WhatsApp">💬</button>` : ''}
             </div>
           </div>
@@ -1599,7 +1780,8 @@ export class StaffLeadsPage {
         <td class="deal-value">${dealValue}</td>
         <td>
           <div class="action-btns">
-            <a href="tel:${phone}" class="action-btn call" data-name="${this.escapeAttr(lead.name)}" data-lead-id="${lead.id}" onclick="event.stopPropagation();" title="Call via Softphone">📞</a>
+            ${isFresh ? `<button type="button" class="action-btn claim-lead-btn" data-lead-id="${lead.id}" data-company-id="${leadCompId}" title="Claim Lead" style="background:linear-gradient(135deg, #10b981 0%, #047857 100%);color:white;border:none;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:3px;">⚡ Claim</button>` : ''}
+            <a href="javascript:void(0)" class="action-btn call call-softphone-trigger" data-name="${this.escapeAttr(lead.name)}" data-lead-id="${lead.id}" data-phone="${cleanPhone}" onclick="event.stopPropagation();" title="Call via Softphone">📞</a>
             <button class="action-btn whatsapp open-lead-wa-btn" data-phone="${whatsappNumber}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" onclick="event.stopPropagation()" style="border:none;cursor:pointer;" title="Send WhatsApp">💬</button>
             <button class="action-btn followup" data-id="${lead.id}" title="Follow-up">📅</button>
             <button class="action-btn edit" data-id="${lead.id}" title="Edit">✏️</button>
@@ -1620,7 +1802,7 @@ export class StaffLeadsPage {
           <div class="lead-info">
             <h4>${lead.name}</h4>
             <p class="lead-contact">
-              <a href="tel:${lead.phone || ''}" data-name="${this.escapeAttr(lead.name)}" data-lead-id="${lead.id}" style="color: #38bdf8; text-decoration: none; font-weight: 600;">
+              <a href="javascript:void(0)" class="call-softphone-trigger" data-phone="${lead.phone || ''}" data-name="${this.escapeAttr(lead.name)}" data-lead-id="${lead.id}" style="color: #38bdf8; text-decoration: none; font-weight: 600;">
                 📞 ${this.maskPhone(lead.phone || '')}
               </a>
             </p>
@@ -1693,7 +1875,7 @@ export class StaffLeadsPage {
       <div id="sl-mob-vgk-banner" style="margin:0 0 10px"></div>
 
       <div class="lead-contact-section">
-        <a href="tel:${lead.phone || ''}" data-name="${this.escapeAttr(lead.name)}" data-lead-id="${lead.id}" class="contact-btn" style="text-decoration: none;">
+        <a href="javascript:void(0)" data-phone="${lead.phone || ''}" data-name="${this.escapeAttr(lead.name)}" data-lead-id="${lead.id}" class="contact-btn call-softphone-trigger" style="text-decoration: none;">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72"/>
           </svg>
@@ -2017,6 +2199,27 @@ export class StaffLeadsPage {
       });
     });
 
+    // Softphone call trigger in detail modal (Issue #4)
+    body.querySelectorAll('.call-softphone-trigger').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const target = el as HTMLElement;
+        const phone = target.dataset.phone || lead.phone || '';
+        const name = target.dataset.name || lead.name || 'Contact Lead';
+        const leadId = target.dataset.leadId || lead.id;
+        if (phone) {
+          callController.openCallDialer({
+            phoneNumber: phone,
+            name: name,
+            entityId: leadId,
+            entityType: 'lead',
+            autoStart: true
+          });
+        }
+      });
+    });
+
     this.showModal('detailModal');
   }
 
@@ -2028,6 +2231,14 @@ export class StaffLeadsPage {
   }
 
   private playCallRecording(recordingId: number, btnEl: HTMLElement): void {
+    // Ensure in-communication mode is reset to media loudspeaker (Issue #5)
+    try {
+      const cap = (window as any).Capacitor;
+      if (cap?.Plugins?.AudioRouting?.resetAudioMode) {
+        cap.Plugins.AudioRouting.resetAudioMode().catch(() => {});
+      }
+    } catch (_) {}
+
     const existingPlayer = document.getElementById('mobileAudioPlayer');
     if (existingPlayer) existingPlayer.remove();
 

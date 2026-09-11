@@ -6,7 +6,7 @@ CRUD operations with RBAC
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, UploadFile, File, Form, Body
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from datetime import datetime, date
 from typing import Optional, List
 import pytz
@@ -240,6 +240,23 @@ def check_permission(current_user: StaffEmployee, required_level: int, action: s
         )
 
 
+def get_valid_staff_filter():
+    """
+    Filter to exclude soft-deleted records, test runner dummy accounts, and external SaaS clients/admins
+    from company staff operations, employee directories, and reporting manager dropdowns.
+    """
+    return and_(
+        StaffEmployee.is_deleted == False,
+        ~StaffEmployee.emp_code.like('EMP_%'),
+        ~StaffEmployee.emp_code.like('SA_%'),
+        ~StaffEmployee.full_name.ilike('%test%'),
+        or_(
+            StaffEmployee.staff_type.is_(None),
+            ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'])
+        )
+    )
+
+
 @router.get("/employees/subordinates", summary="Get subordinates for KRA assignment")
 async def get_subordinates(
     current_user: StaffEmployee = Depends(get_current_staff_user),
@@ -251,7 +268,10 @@ async def get_subordinates(
     """
     role_code = current_user.role.role_code.lower() if current_user.role and current_user.role.role_code else None
     
-    query = db.query(StaffEmployee).filter(StaffEmployee.status == 'active')
+    query = db.query(StaffEmployee).filter(
+        StaffEmployee.status == 'active',
+        get_valid_staff_filter()
+    )
     
     if role_code in VIEW_ALL_ROLES:
         pass
@@ -293,14 +313,19 @@ async def get_team_members(
     role_code = current_user.role.role_code.lower() if current_user.role and current_user.role.role_code else None
     hierarchy_level = current_user.role.hierarchy_level if current_user.role else 0
     
+    base_filter = [
+        StaffEmployee.status == 'active',
+        get_valid_staff_filter()
+    ]
+    
     if hierarchy_level >= 150 or role_code in VIEW_ALL_ROLES:
         employees = db.query(StaffEmployee).filter(
-            StaffEmployee.status == 'active'
+            *base_filter
         ).order_by(StaffEmployee.full_name).all()
     elif hierarchy_level <= 5 or role_code in VIEW_REPORTS_ROLES:
         employees = db.query(StaffEmployee).filter(
             StaffEmployee.reporting_manager_id == current_user.id,
-            StaffEmployee.status == 'active'
+            *base_filter
         ).order_by(StaffEmployee.full_name).all()
     else:
         return {"success": True, "employees": []}
@@ -330,7 +355,7 @@ async def list_employees(
     staff_type: Optional[str] = None,
     search: Optional[str] = None,
     page: int = Query(1, ge=1),
-    limit: int = Query(50, ge=1, le=100),
+    limit: int = Query(200, ge=1, le=500),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
@@ -342,7 +367,7 @@ async def list_employees(
     - Leadership Role / Team Leader / Manager: Direct reports only (based on reporting_manager_id)
     - Senior/Junior Executive: No access to Employees menu (should not reach here)
     """
-    query = db.query(StaffEmployee)
+    query = db.query(StaffEmployee).filter(get_valid_staff_filter())
     
     role_code = current_user.role.role_code.lower() if current_user.role and current_user.role.role_code else None
     
@@ -458,8 +483,8 @@ async def get_employees_directory(
     #         detail="Only VGK4U Supreme, Key Leadership, Admin, or HR can access employee directory"
     #     )
     
-    query = db.query(StaffEmployee).filter(StaffEmployee.status == 'active')
-    stats_base = db.query(StaffEmployee).filter(StaffEmployee.status == 'active')
+    query = db.query(StaffEmployee).filter(StaffEmployee.status == 'active', get_valid_staff_filter())
+    stats_base = db.query(StaffEmployee).filter(StaffEmployee.status == 'active', get_valid_staff_filter())
     if role_code not in VIEW_ALL_ROLES and current_user.emp_code != "MR10001":
         query = query.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
         stats_base = stats_base.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
@@ -528,7 +553,7 @@ async def get_employees_directory(
         "success": True,
         "employees": employee_list,
         "stats": {
-            "total": db.query(StaffEmployee).filter(StaffEmployee.status == 'active').count(),
+            "total": stats_base.count(),
             "approved": total_approved,
             "pending": total_pending,
             "rejected": total_rejected
@@ -557,7 +582,8 @@ async def list_managers(
     """
     manager_ids = db.query(StaffEmployee.reporting_manager_id).filter(
         StaffEmployee.status == 'active',
-        StaffEmployee.reporting_manager_id.isnot(None)
+        StaffEmployee.reporting_manager_id.isnot(None),
+        get_valid_staff_filter()
     ).distinct().all()
     
     manager_id_list = [m[0] for m in manager_ids if m[0]]
@@ -567,7 +593,8 @@ async def list_managers(
     
     managers = db.query(StaffEmployee).filter(
         StaffEmployee.id.in_(manager_id_list),
-        StaffEmployee.status == 'active'
+        StaffEmployee.status == 'active',
+        get_valid_staff_filter()
     ).order_by(StaffEmployee.full_name).all()
     
     return {
@@ -2591,7 +2618,7 @@ async def upload_kyc_document(
             uploaded_by_type='staff',
             storage_dir=f'staff_kyc/{current_user.emp_code}',
             db=db,
-            mnr_id=None,  # Staff system doesn't use MNR IDs
+            emp_code=current_user.emp_code,
             defer_scheduler=True  # DC: Transaction safety - schedule job AFTER commit
         )
         

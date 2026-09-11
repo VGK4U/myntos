@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal & Audience Scope Configuration — Mynt Real</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
+    <style>
+        :root {
+            --primary: #7c3aed;
+            --primary-glow: rgba(124, 58, 237, 0.35);
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --card-bg-subtle: #182234;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.09);
+            --border-highlight: rgba(124, 58, 237, 0.4);
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #38bdf8;
+            --mobile-color: #10b981;
+            --app-color: #8b5cf6;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .main-content {
+            margin-left: 260px !important;
+            transition: margin-left 0.3s;
+            background-color: var(--bg-dark) !important;
+            min-height: 100vh;
+        }
+
+        body.sidebar-collapsed-mode .main-content {
+            margin-left: 70px !important;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0 !important;
+            }
+        }
+
+        .content-area {
+            padding: 24px;
+            max-width: 1850px;
+            margin: 0 auto;
+        }
+
+        /* Banner */
+        .page-banner {
+            background: linear-gradient(135deg, #1e1b4b 0%, #2e1065 50%, #3b0764 100%);
+            border-radius: 16px;
+            padding: 24px 28px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .page-banner h1 {
+            font-size: 24px;
+            font-weight: 800;
+            margin: 0 0 6px 0;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #c084fc, #f472b6, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .page-banner p {
+            color: var(--text-muted);
+            margin: 0;
+            font-size: 14px;
+        }
+
+        /* Stats Strip */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+        }
+
+        .stat-card .stat-label {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .stat-card .stat-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-main);
+        }
+
+        .stat-card.stat-total .stat-value { color: #f8fafc; }
+        .stat-card.stat-mobile .stat-value { color: var(--mobile-color); }
+        .stat-card.stat-app .stat-value { color: var(--app-color); }
+        .stat-card.stat-both .stat-value { color: var(--info); }
+        .stat-card.stat-verified .stat-value { color: #34d399; }
+
+        /* Controls / Filter Bar */
+        .control-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 22px;
+            margin-bottom: 22px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .filter-row-header {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--primary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .filter-item label {
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .form-select-dark, .form-input-dark {
+            background: #0f172a;
+            border: 1px solid var(--border-color);
+            color: #f8fafc;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 13px;
+            width: 100%;
+            transition: all 0.2s;
+        }
+
+        .form-select-dark:focus, .form-input-dark:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .action-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .bulk-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .btn-scope {
+            background: rgba(255, 255, 255, 0.07);
+            color: #f8fafc;
+            border: 1px solid var(--border-color);
+            padding: 7px 14px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-scope:hover {
+            background: rgba(255, 255, 255, 0.14);
+            transform: translateY(-1px);
+        }
+
+        .btn-scope.btn-save {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border: none;
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-scope.btn-save:hover {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        }
+
+        /* Matrix Table */
+        .table-wrapper {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+        }
+
+        .table-responsive {
+            max-height: calc(100vh - 460px);
+            min-height: 480px;
+            overflow: auto;
+        }
+
+        .scope-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+        }
+
+        .scope-table th {
+            background: #111827;
+            color: #94a3b8;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding: 12px 10px;
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            white-space: nowrap;
+        }
+
+        .scope-table td {
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            vertical-align: middle;
+        }
+
+        .scope-table tr:hover td {
+            background: rgba(255, 255, 255, 0.025);
+        }
+
+        /* Portal Badges */
+        .portal-pill {
+            display: inline-block;
+            padding: 2px 7px;
+            border-radius: 5px;
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+        }
+
+        .portal-staff { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+        .portal-mnr { background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .portal-partner { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .portal-vgk { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+        .portal-rvz { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .portal-public { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
+
+        /* Checkbox Styling */
+        .scope-check {
+            width: 17px;
+            height: 17px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .scope-check.check-mobile { accent-color: var(--mobile-color); }
+        .scope-check.check-app { accent-color: var(--app-color); }
+
+        /* Code Tags */
+        .route-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            background: rgba(0, 0, 0, 0.35);
+            padding: 2px 5px;
+            border-radius: 4px;
+            color: #e2e8f0;
+            border: 1px solid rgba(255,255,255,0.06);
+            display: inline-block;
+            max-width: 160px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Hierarchy Text */
+        .hierarchy-text {
+            color: #cbd5e1;
+            font-size: 11.5px;
+            max-width: 130px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: inline-block;
+        }
+
+        .hierarchy-text.not-mapped {
+            color: #64748b;
+            font-style: italic;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            font-size: 10.5px;
+            padding: 2px 7px;
+            border-radius: 5px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            display: inline-block;
+        }
+
+        .status-verified { background: rgba(16, 185, 129, 0.25); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.5); }
+        .status-implemented { background: rgba(14, 165, 233, 0.2); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.4); }
+        .status-in-development { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+        .status-planned { background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
+        .status-not-started { background: rgba(100, 116, 139, 0.15); color: #64748b; border: 1px solid rgba(100, 116, 139, 0.3); }
+        .status-desktop-only { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .status-web-seo { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+        /* Priority Badges */
+        .priority-badge {
+            font-size: 10.5px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+        .priority-critical { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .priority-high { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .priority-medium { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+        .priority-low { background: rgba(148, 163, 184, 0.15); color: #94a3b8; }
+        .priority-unassigned { color: #64748b; }
+
+        /* Details Drawer */
+        .scope-drawer {
+            position: fixed;
+            top: 0;
+            right: -650px;
+            width: 620px;
+            max-width: 90vw;
+            height: 100vh;
+            background: #111827;
+            border-left: 1px solid var(--border-color);
+            box-shadow: -10px 0 30px rgba(0,0,0,0.6);
+            z-index: 1050;
+            transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .scope-drawer.open {
+            right: 0;
+        }
+
+        .drawer-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0f172a;
+        }
+
+        .drawer-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .drawer-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .drawer-section h6 {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .meta-field {
+            margin-bottom: 10px;
+        }
+
+        .meta-field label {
+            font-size: 11px;
+            color: var(--text-muted);
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .meta-field span {
+            font-size: 13px;
+            color: #f1f5f9;
+            font-weight: 500;
+        }
+
+        .breadcrumb-hierarchy {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            background: rgba(0,0,0,0.3);
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 14px;
+        }
+
+        .breadcrumb-hierarchy span {
+            font-weight: 600;
+        }
+
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(2px);
+            z-index: 1040;
+            display: none;
+        }
+
+        .drawer-overlay.visible {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div id="headerContainer"></div>
+        <div class="content-area">
+            <!-- Banner -->
+            <div class="page-banner">
+                <div>
+                    <h1><i class="fas fa-layer-group me-2"></i>Portal & Audience Scope Configuration</h1>
+                    <p>Authoritative Multi-Portal Control Matrix: Configure which MyntOS pages and features are delivered to <strong>Mobile Web (/mobile)</strong> and the <strong>Native Android/iOS App</strong>.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn-scope" onclick="exportScopeConfig()" title="Export JSON"><i class="fas fa-download"></i> Export Scope</button>
+                    <button class="btn-scope btn-save" onclick="saveScopeConfig()"><i class="fas fa-save"></i> Save Scope Matrix</button>
+                </div>
+            </div>
+
+            <!-- Stats Strip -->
+            <div class="stats-grid">
+                <div class="stat-card stat-total">
+                    <div class="stat-label">Total Discovered Pages</div>
+                    <div class="stat-value" id="statTotal">511</div>
+                </div>
+                <div class="stat-card stat-mobile">
+                    <div class="stat-label">Targeted for /mobile</div>
+                    <div class="stat-value" id="statMobile">0</div>
+                </div>
+                <div class="stat-card stat-app">
+                    <div class="stat-label">Targeted for Native App</div>
+                    <div class="stat-value" id="statApp">0</div>
+                </div>
+                <div class="stat-card stat-both">
+                    <div class="stat-label">Targeted on Both</div>
+                    <div class="stat-value" id="statBoth">0</div>
+                </div>
+                <div class="stat-card stat-verified">
+                    <div class="stat-label">Truthful Implemented / Verified</div>
+                    <div class="stat-value" id="statVerified">0</div>
+                </div>
+            </div>
+
+            <!-- Filter Panel: 3 Structured Rows -->
+            <div class="control-panel">
+                <!-- Row 1: Hierarchy Filters -->
+                <div class="filter-row-header"><i class="fas fa-sitemap"></i> Row 1 — Hierarchy Filters (Portal → Audience → Module → Menu → Submenu)</div>
+                <div class="filter-row">
+                    <div class="filter-item">
+                        <label><i class="fas fa-door-open"></i> Portal</label>
+                        <select id="filterPortal" class="form-select-dark" onchange="applyFilters()">
+                            <option value="ALL">All Portals</option>
+                            <option value="Staff Portal">Staff Portal (201)</option>
+                            <option value="MNR Member Portal">MNR Member Portal (32)</option>
+                            <option value="Partner Portal">Partner Portal (31)</option>
+                            <option value="VGK4U / Zynova / Real Estate">VGK4U / Zynova (68)</option>
+                            <option value="RVZ Supreme / Admin">RVZ Supreme Admin (76)</option>
+                            <option value="Public / Marketing / Static">Public & SEO (103)</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label><i class="fas fa-users-cog"></i> Audience</label>
+                        <select id="filterAudience" class="form-select-dark" onchange="applyFilters()">
+                            <option value="ALL">All Audiences</option>
+                            <option value="staff">Staff Employee</option>
+                            <option value="user">MNR Member</option>
+                            <option value="partner">B2B Partner</option>
+                            <option value="shared">Shared</option>
+                            <option value="admin">Admin / RVZ</option>
+                            <option value="public">Public / Guest</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label><i class="fas fa-cubes"></i> Module</label>
+                        <select id="filterModule" class="form-select-dark" onchange="applyFilters()">
+                            <option value="ALL">All Modules</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label><i class="fas fa-bars"></i> Menu</label>
+                        <select id="filterMenu" class="form-select-dark" onchange="applyFilters()">
+                            <option value="ALL">All Menus</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label><i class="fas fa-stream"></i> Submenu</label>
+                        <select id="filterSubmenu" class="form-select-dark" onchange="applyFilters()">
+                            <option value="ALL">All Submenus</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Row 2: Delivery & Implementation Filters -->
+                <div class="filter-row-header"><i class="fas fa-tasks"></i> Row 2 — Delivery & Implementation Filters</div>
+                <div class="filter-row">
+                    <div class="filter-item">
+                        <label><i class="fas fa-mobile-alt"></i> Delivery Scope</label>
+                        <select id="filterDelivery" class="form-select-dark" onchange="applyFilters()">
+                            <option value="ALL">All Delivery Scopes</option>
+                            <option value="MOBILE_ONLY">/mobile Only</option>
+                            <option value="APP_ONLY">Native App Only</option>
+                            <option value="BOTH">Both (/mobile & App)</option>
+                            <option value="NEITHER">Neither (Desktop / Web Only)</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label><i class="fas fa-clipboard-check"></i> Implementation Status</label>
+                        <select id="filterStatus" class="form-select-dark" onchange="applyFilters()">
+                            <option value="ALL">All Statuses</option>
+                            <option value="VERIFIED">Verified (Closed Slices)</option>
+                            <option value="IMPLEMENTED">Implemented (Mobile Code Exists)</option>
+                            <option value="IN_DEVELOPMENT">In Development</option>
+                            <option value="PLANNED">Planned (Targeted for Mobile)</option>
+                            <option value="NOT_STARTED">Not Started</option>
+                            <option value="DESKTOP_ONLY">Desktop Admin Only</option>
+                            <option value="WEB_SEO">Web SEO / Public</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label><i class="fas fa-shield-alt"></i> Permission / RBAC</label>
+                        <select id="filterPermission" class="form-select-dark" onchange="applyFilters()">
+                            <option value="ALL">All Permissions</option>
+                            <option value="STAFF">Staff Authenticated</option>
+                            <option value="MANAGER">Manager / Admin Level</option>
+                            <option value="PARTNER">Partner Authenticated</option>
+                            <option value="PUBLIC">Public / Open</option>
+                        </select>
+                    </div>
+                    <div class="filter-item">
+                        <label><i class="fas fa-flag"></i> Priority</label>
+                        <select id="filterPriority" class="form-select-dark" onchange="applyFilters()">
+                            <option value="ALL">All Priorities</option>
+                            <option value="CRITICAL">Critical</option>
+                            <option value="HIGH">High</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="LOW">Low</option>
+                            <option value="UNASSIGNED">Not Assigned</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Row 3: Global Search & Reset -->
+                <div class="filter-row-header"><i class="fas fa-search"></i> Row 3 — Search & Utilities</div>
+                <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+                    <div class="position-relative flex-grow-1">
+                        <i class="fas fa-search position-absolute" style="left: 12px; top: 12px; color: var(--text-muted);"></i>
+                        <input type="text" id="globalSearch" class="form-input-dark" style="padding-left: 36px;" placeholder="Search page name, route, API, module, menu, submenu, permission..." oninput="debouncedSearch()">
+                    </div>
+                    <button class="btn-scope" onclick="resetFilters()"><i class="fas fa-undo"></i> Reset Filters</button>
+                </div>
+
+                <!-- Bulk Selection Toolbar -->
+                <div class="action-toolbar">
+                    <div class="bulk-actions">
+                        <span class="text-muted small me-2"><strong id="visibleCount">511</strong> pages visible:</span>
+                        <button class="btn-scope" onclick="bulkSetScope('mobile', true)"><i class="fas fa-check-circle text-success"></i> Enable /mobile (Filtered)</button>
+                        <button class="btn-scope" onclick="bulkSetScope('mobile', false)"><i class="fas fa-times-circle text-danger"></i> Disable /mobile (Filtered)</button>
+                        <button class="btn-scope" onclick="bulkSetScope('app', true)"><i class="fas fa-check-circle text-info"></i> Enable App (Filtered)</button>
+                        <button class="btn-scope" onclick="bulkSetScope('app', false)"><i class="fas fa-times-circle text-danger"></i> Disable App (Filtered)</button>
+                        <button class="btn-scope" onclick="bulkSetScope('both', true)"><i class="fas fa-check-double text-purple"></i> Enable Both (Filtered)</button>
+                    </div>
+                    <div>
+                        <span id="saveIndicator" class="small text-success d-none"><i class="fas fa-check"></i> Changes saved locally</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Table -->
+            <div class="table-wrapper">
+                <div class="table-responsive">
+                    <table class="scope-table" id="scopeTable">
+                        <thead>
+                            <tr>
+                                <th style="width: 35px; text-align: center;">#</th>
+                                <th onclick="sortTable('portal')" style="cursor: pointer;">Portal <i class="fas fa-sort small"></i></th>
+                                <th onclick="sortTable('audience')" style="cursor: pointer;">Audience <i class="fas fa-sort small"></i></th>
+                                <th onclick="sortTable('module')" style="cursor: pointer;">Module <i class="fas fa-sort small"></i></th>
+                                <th onclick="sortTable('menu')" style="cursor: pointer;">Menu <i class="fas fa-sort small"></i></th>
+                                <th onclick="sortTable('submenu')" style="cursor: pointer;">Submenu <i class="fas fa-sort small"></i></th>
+                                <th onclick="sortTable('title')" style="cursor: pointer;">Page / Feature <i class="fas fa-sort small"></i></th>
+                                <th>Web Route</th>
+                                <th style="width: 70px; text-align: center;">/mobile</th>
+                                <th style="width: 70px; text-align: center;">App</th>
+                                <th onclick="sortTable('status')" style="cursor: pointer; text-align: center;">Status <i class="fas fa-sort small"></i></th>
+                                <th onclick="sortTable('priority')" style="cursor: pointer; text-align: center;">Priority <i class="fas fa-sort small"></i></th>
+                                <th style="width: 70px; text-align: center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="scopeTableBody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Details Drawer -->
+    <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+    <div class="scope-drawer" id="scopeDrawer">
+        <div class="drawer-header">
+            <h5 class="m-0 text-white" id="drawerTitle">Page Hierarchy & Scope Details</h5>
+            <button class="btn-scope" onclick="closeDrawer()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="drawer-body" id="drawerBody">
+            <!-- Dynamic Content -->
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/menu-master.js"></script>
+    <script src="/staff_sidebar.js"></script>
+    <script src="/staff_header.js"></script>
+    <script src="/shared/staff_inactivity_manager.js"></script>
+    <script>
+        let masterCatalog = [];
+        let filteredCatalog = [];
+        let scopeConfig = {};
+        let currentSort = { column: 'id', ascending: true };
+        let searchTimeout = null;
+
+        // Evidence registry for truth in implementation status
+        const VERIFIED_ROUTES = new Set([
+            '/staff_day_planner',
+            '/staff_softphone_hub',
+            '/staff_whatsapp_center',
+            '/staff_crm_whatsapp_inbox',
+            '/staff/tasks/day-planner',
+            '/staff/calling-page',
+            '/staff/softphone',
+            '/staff/dialer',
+            '/staff/whatsapp',
+            '/staff/whatsapp-center',
+            '/staff/crm/whatsapp-inbox'
+        ]);
+
+        const VERIFIED_FILES = new Set([
+            'staff_day_planner.html',
+            'staff_softphone_hub.html',
+            'staff_whatsapp_center.html',
+            'staff_crm_whatsapp_inbox.html',
+            'staff_tasks_day_planner.html',
+            'staff_calling_page.html',
+            'staff_whatsapp.html'
+        ]);
+
+        const IMPLEMENTED_FILES = new Set([
+            'staff_my_attendance.html', 'staff_dashboard.html', 'staff_profile.html', 'staff_announcements.html',
+            'staff_my_leaves.html', 'staff_leave_approvals.html', 'staff_attendance_sheet.html', 'staff_attendance_reports.html',
+            'staff_attendance_exceptions.html', 'staff_attendance_computation.html', 'staff_timesheet.html', 'staff_timesheet_approval.html',
+            'staff_my_journeys.html', 'staff_team_journeys.html', 'staff_all_location_tracker.html', 'staff_team_live_tracker.html',
+            'staff_accounts_my_reimbursements.html', 'staff_accounts_reimbursement_approvals.html', 'staff_accounts_expense_entries.html',
+            'staff_procurement_requests.html', 'staff_vendors.html', 'staff_my_kras.html', 'staff_kra_templates.html', 'staff_kra_tracking_sheet.html',
+            'staff_tasks_assigned_by_me_v2.html', 'staff_tasks_assigned_to_me.html', 'staff_tasks_team_activities.html', 'staff_tasks_tracker.html',
+            'staff_task_review.html', 'staff_crm_dashboard.html', 'staff_leads.html', 'staff_my_leads.html', 'staff_team_leads.html',
+            'staff_lead_sources.html', 'staff_bank_wise_leads.html', 'staff_service_tickets_queue.html', 'staff_service_tickets_dashboard.html',
+            'staff_service_tickets_procurement_queue.html', 'staff_service_tickets_raise.html', 'staff_service_center_revenue.html',
+            'staff_service_performance.html', 'staff_service_reports.html', 'staff_employees.html', 'staff_employee_directory.html',
+            'staff_training_videos.html', 'staff_my_kyc.html', 'staff_kyc_approvals.html', 'staff_manager_review.html', 'staff_my_lead_incentives.html',
+            'staff_operator_calls.html', 'staff_call_history.html', 'staff_call_tracking.html', 'staff_zynova.html', 'staff_zynova_real_estate.html',
+            'staff_zynova_insurance.html'
+        ]);
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof window.StaffSidebar !== 'undefined') await window.StaffSidebar.init();
+            if (typeof window.StaffHeader !== 'undefined') {
+                window.StaffHeader.inject('Portal & Audience Scope', 'fas fa-layer-group');
+                window.StaffHeader.init();
+            }
+            if (typeof window.StaffBackButton !== 'undefined') window.StaffBackButton.init();
+            if (typeof window.StaffInactivityManager !== 'undefined') window.StaffInactivityManager.init();
+            updateHeaderUserInfo();
+
+            loadSavedConfig();
+            await loadMasterCatalog();
+            populateDropdowns();
+            applyFilters();
+            updateStats();
+        });
+
+        function updateHeaderUserInfo() {
+            try {
+                const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
+                const name = userData.full_name || userData.name || 'Staff Member';
+                const role = userData.role_name || userData.staff_type || 'Employee';
+                const empId = userData.emp_code || userData.employee_code || '';
+                
+                const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+                const elInitials = document.getElementById('headerUserInitials');
+                if (elInitials) elInitials.textContent = initials;
+                const elName = document.getElementById('headerUserName');
+                if (elName) elName.textContent = name;
+                const elRole = document.getElementById('headerUserRole');
+                if (elRole) elRole.textContent = role;
+            } catch (_) {}
+        }
+
+        function loadSavedConfig() {
+            try {
+                const saved = localStorage.getItem('myntos_scope_config_v2');
+                if (saved) {
+                    scopeConfig = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.warn('Could not load scope configuration from localStorage:', e);
+            }
+        }
+
+        function saveScopeConfig() {
+            try {
+                localStorage.setItem('myntos_scope_config_v2', JSON.stringify(scopeConfig));
+                const indicator = document.getElementById('saveIndicator');
+                if (indicator) {
+                    indicator.classList.remove('d-none');
+                    setTimeout(() => indicator.classList.add('d-none'), 3000);
+                }
+            } catch (e) {
+                alert('Failed to save scope matrix locally: ' + e.message);
+            }
+        }
+
+        function exportScopeConfig() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+                version: "2.0.0",
+                exported_at: new Date().toISOString(),
+                total_records: masterCatalog.length,
+                records: masterCatalog.map(item => ({
+                    ...item,
+                    scope: scopeConfig[item.route]
+                }))
+            }, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", "myntos_scope_matrix_v2.json");
+            dlAnchorElem.click();
+        }
+
+        async function loadMasterCatalog() {
+            try {
+                const res = await fetch('/public/data/mynt_categorized_records.json');
+                if (res.ok) {
+                    masterCatalog = await res.json();
+                }
+            } catch (e) {
+                console.error('Error fetching catalog:', e);
+            }
+
+            // Build authoritative maps from MENU_MASTER
+            const staffMenuMap = {};
+            if (window.MENU_MASTER && Array.isArray(window.MENU_MASTER)) {
+                window.MENU_MASTER.forEach(sec => {
+                    const secLabel = sec.section_label;
+                    if (sec.items) {
+                        sec.items.forEach(it => {
+                            staffMenuMap[it.route] = { menu: secLabel, submenu: 'Not Mapped', label: it.label };
+                        });
+                    }
+                    if (sec.subSections) {
+                        sec.subSections.forEach(sub => {
+                            const subLabel = sub.sub_section_label;
+                            if (sub.items) {
+                                sub.items.forEach(it => {
+                                    staffMenuMap[it.route] = { menu: secLabel, submenu: subLabel, label: it.label };
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+
+            masterCatalog.forEach((item, idx) => {
+                const route = item.route || `/${item.path.replace('.html', '')}`;
+                item.id = idx + 1;
+                item.route = route;
+
+                // Audience
+                if (!item.audience) {
+                    if (item.portal.includes('Staff')) item.audience = 'staff';
+                    else if (item.portal.includes('MNR')) item.audience = 'user';
+                    else if (item.portal.includes('Partner')) item.audience = 'partner';
+                    else if (item.portal.includes('VGK')) item.audience = 'shared';
+                    else if (item.portal.includes('RVZ')) item.audience = 'admin';
+                    else item.audience = 'public';
+                }
+
+                // Authoritative Menu / Submenu resolution
+                let mInfo = staffMenuMap[route] || staffMenuMap['/staff/' + item.path.replace('.html', '').replace('staff_', '').replace(/_/g, '-')];
+                if (mInfo) {
+                    item.menu = mInfo.menu;
+                    item.submenu = mInfo.submenu;
+                } else if (item.portal.includes('Partner')) {
+                    item.menu = 'Partner Portal';
+                    item.submenu = item.title.replace('Partner', '').trim() || 'Not Mapped';
+                } else if (item.portal.includes('MNR')) {
+                    item.menu = item.module || 'MNR Member Portal';
+                    item.submenu = 'Not Mapped';
+                } else if (item.portal.includes('VGK')) {
+                    item.menu = 'VGK4U Member Hub';
+                    item.submenu = item.module || 'Not Mapped';
+                } else {
+                    item.menu = 'Not Mapped';
+                    item.submenu = 'Not Mapped';
+                }
+
+                // Evidence-based status determination
+                let evidenceStatus = 'PLANNED';
+                const isVerified = VERIFIED_ROUTES.has(route) || VERIFIED_FILES.has(item.path);
+                const isImplemented = IMPLEMENTED_FILES.has(item.path) || 
+                    (item.portal.includes('MNR') && (item.path.includes('dashboard') || item.path.includes('income') || item.path.includes('coupon'))) ||
+                    (item.portal.includes('Partner') && (item.path.includes('dashboard') || item.path.includes('orders') || item.path.includes('service')));
+                const isDesktopOnly = item.portal.includes('RVZ') || item.path.includes('data_recovery') || item.path.includes('system_health') || item.path.includes('admin_');
+                const isWebSeo = item.path.includes('seo') || item.path.includes('public') || item.path.includes('privacy') || item.path.includes('terms') || item.portal.includes('Public');
+
+                if (isVerified) {
+                    evidenceStatus = 'VERIFIED';
+                } else if (isImplemented) {
+                    evidenceStatus = 'IMPLEMENTED';
+                } else if (isDesktopOnly) {
+                    evidenceStatus = 'DESKTOP_ONLY';
+                } else if (isWebSeo) {
+                    evidenceStatus = 'WEB_SEO';
+                } else if (item.portal.includes('Staff') || item.portal.includes('MNR') || item.portal.includes('Partner') || item.portal.includes('VGK')) {
+                    evidenceStatus = 'PLANNED';
+                } else {
+                    evidenceStatus = 'NOT_STARTED';
+                }
+
+                // Delivery Scope Defaults (strictly separated from implementation status)
+                if (!scopeConfig[route]) {
+                    const isCandidate = (evidenceStatus === 'VERIFIED' || evidenceStatus === 'IMPLEMENTED' || evidenceStatus === 'PLANNED') && !isDesktopOnly && !isWebSeo;
+                    scopeConfig[route] = {
+                        mobile: isCandidate,
+                        app: isCandidate,
+                        priority: isVerified ? 'CRITICAL' : (isImplemented ? 'HIGH' : (isCandidate ? 'MEDIUM' : 'LOW')),
+                        status: evidenceStatus,
+                        notes: ''
+                    };
+                } else {
+                    // Update the status to truthful evidence if still using legacy defaults
+                    if (scopeConfig[route].status === 'IMPLEMENTED' && !isVerified && !isImplemented) {
+                        scopeConfig[route].status = evidenceStatus;
+                    }
+                }
+            });
+        }
+
+        function populateDropdowns() {
+            // Module
+            const selectModule = document.getElementById('filterModule');
+            const modules = new Set(masterCatalog.map(i => i.module).filter(Boolean));
+            Array.from(modules).sort().forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                selectModule.appendChild(opt);
+            });
+
+            // Menu
+            const selectMenu = document.getElementById('filterMenu');
+            const menus = new Set(masterCatalog.map(i => i.menu).filter(Boolean));
+            Array.from(menus).sort().forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                selectMenu.appendChild(opt);
+            });
+
+            // Submenu
+            const selectSubmenu = document.getElementById('filterSubmenu');
+            const submenus = new Set(masterCatalog.map(i => i.submenu).filter(Boolean));
+            Array.from(submenus).sort().forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.textContent = s;
+                selectSubmenu.appendChild(opt);
+            });
+        }
+
+        function debouncedSearch() {
+            if (searchTimeout) clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => applyFilters(), 250);
+        }
+
+        function resetFilters() {
+            document.getElementById('filterPortal').value = 'ALL';
+            document.getElementById('filterAudience').value = 'ALL';
+            document.getElementById('filterModule').value = 'ALL';
+            document.getElementById('filterMenu').value = 'ALL';
+            document.getElementById('filterSubmenu').value = 'ALL';
+            document.getElementById('filterDelivery').value = 'ALL';
+            document.getElementById('filterStatus').value = 'ALL';
+            document.getElementById('filterPermission').value = 'ALL';
+            document.getElementById('filterPriority').value = 'ALL';
+            document.getElementById('globalSearch').value = '';
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const portal = document.getElementById('filterPortal').value;
+            const audience = document.getElementById('filterAudience').value;
+            const module = document.getElementById('filterModule').value;
+            const menu = document.getElementById('filterMenu').value;
+            const submenu = document.getElementById('filterSubmenu').value;
+            const delivery = document.getElementById('filterDelivery').value;
+            const status = document.getElementById('filterStatus').value;
+            const permission = document.getElementById('filterPermission').value;
+            const priority = document.getElementById('filterPriority').value;
+            const search = document.getElementById('globalSearch').value.toLowerCase().trim();
+
+            filteredCatalog = masterCatalog.filter(item => {
+                const cfg = scopeConfig[item.route] || {};
+
+                if (portal !== 'ALL' && item.portal !== portal) return false;
+                if (audience !== 'ALL' && item.audience !== audience) return false;
+                if (module !== 'ALL' && item.module !== module) return false;
+                if (menu !== 'ALL' && item.menu !== menu) return false;
+                if (submenu !== 'ALL' && item.submenu !== submenu) return false;
+                if (status !== 'ALL' && cfg.status !== status) return false;
+                if (priority !== 'ALL' && cfg.priority !== priority) return false;
+
+                if (permission !== 'ALL') {
+                    if (permission === 'STAFF' && item.audience !== 'staff') return false;
+                    if (permission === 'PARTNER' && item.audience !== 'partner') return false;
+                    if (permission === 'PUBLIC' && item.audience !== 'public') return false;
+                    if (permission === 'MANAGER' && !item.path.includes('approval') && !item.path.includes('admin') && !item.path.includes('manager')) return false;
+                }
+
+                if (delivery === 'MOBILE_ONLY' && (!cfg.mobile || cfg.app)) return false;
+                if (delivery === 'APP_ONLY' && (!cfg.app || cfg.mobile)) return false;
+                if (delivery === 'BOTH' && (!cfg.mobile || !cfg.app)) return false;
+                if (delivery === 'NEITHER' && (cfg.mobile || cfg.app)) return false;
+
+                if (search) {
+                    const haystack = `${item.title} ${item.path} ${item.route} ${item.module} ${item.menu} ${item.submenu} ${item.portal} ${item.audience} ${cfg.status}`.toLowerCase();
+                    if (!haystack.includes(search)) return false;
+                }
+
+                return true;
+            });
+
+            document.getElementById('visibleCount').textContent = filteredCatalog.length;
+            renderTable();
+            updateStats();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('scopeTableBody');
+            tbody.innerHTML = '';
+
+            if (filteredCatalog.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="13" class="text-center py-5 text-muted"><i class="fas fa-search me-2"></i>No pages match the selected scope filters.</td></tr>`;
+                return;
+            }
+
+            filteredCatalog.forEach((item, index) => {
+                const cfg = scopeConfig[item.route] || { mobile: false, app: false, priority: 'UNASSIGNED', status: 'NOT_STARTED' };
+                const portalClass = getPortalBadgeClass(item.portal);
+                const statusBadge = getStatusBadge(cfg.status);
+                const priorityBadge = getPriorityBadge(cfg.priority);
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align: center; color: #64748b;">${item.id}</td>
+                    <td><span class="portal-pill ${portalClass}">${escapeHTML(item.portal.split('/')[0].trim())}</span></td>
+                    <td><span class="badge bg-dark border border-secondary text-capitalize">${escapeHTML(item.audience)}</span></td>
+                    <td><span class="hierarchy-text" title="${escapeHTML(item.module)}">${escapeHTML(item.module)}</span></td>
+                    <td><span class="hierarchy-text ${item.menu === 'Not Mapped' ? 'not-mapped' : ''}" title="${escapeHTML(item.menu)}">${escapeHTML(item.menu)}</span></td>
+                    <td><span class="hierarchy-text ${item.submenu === 'Not Mapped' ? 'not-mapped' : ''}" title="${escapeHTML(item.submenu)}">${escapeHTML(item.submenu)}</span></td>
+                    <td><strong class="text-white">${escapeHTML(item.title)}</strong></td>
+                    <td><span class="route-code" title="${escapeHTML(item.route)}">${escapeHTML(item.route)}</span></td>
+                    <td style="text-align: center;">
+                        <input type="checkbox" class="scope-check check-mobile" ${cfg.mobile ? 'checked' : ''} onchange="toggleScope('${item.route}', 'mobile', this.checked)">
+                    </td>
+                    <td style="text-align: center;">
+                        <input type="checkbox" class="scope-check check-app" ${cfg.app ? 'checked' : ''} onchange="toggleScope('${item.route}', 'app', this.checked)">
+                    </td>
+                    <td style="text-align: center;">${statusBadge}</td>
+                    <td style="text-align: center;">${priorityBadge}</td>
+                    <td style="text-align: center;">
+                        <button class="btn btn-sm btn-outline-light py-0 px-2" style="font-size: 11.5px;" onclick="openDrawer('${item.route}')"><i class="fas fa-eye"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function toggleScope(route, type, checked) {
+            if (!scopeConfig[route]) {
+                scopeConfig[route] = { mobile: false, app: false, priority: 'UNASSIGNED', status: 'NOT_STARTED' };
+            }
+            scopeConfig[route][type] = checked;
+            // CRITICAL: Delivery checkbox toggle NEVER modifies implementation status
+            updateStats();
+            saveScopeConfig();
+        }
+
+        function bulkSetScope(scopeType, value) {
+            filteredCatalog.forEach(item => {
+                if (!scopeConfig[item.route]) {
+                    scopeConfig[item.route] = { mobile: false, app: false, priority: 'UNASSIGNED', status: 'NOT_STARTED' };
+                }
+                if (scopeType === 'mobile') {
+                    scopeConfig[item.route].mobile = value;
+                } else if (scopeType === 'app') {
+                    scopeConfig[item.route].app = value;
+                } else if (scopeType === 'both') {
+                    scopeConfig[item.route].mobile = value;
+                    scopeConfig[item.route].app = value;
+                }
+            });
+            renderTable();
+            updateStats();
+            saveScopeConfig();
+        }
+
+        function updateStats() {
+            let countMobile = 0;
+            let countApp = 0;
+            let countBoth = 0;
+            let countVerified = 0;
+
+            masterCatalog.forEach(item => {
+                const cfg = scopeConfig[item.route] || {};
+                if (cfg.mobile) countMobile++;
+                if (cfg.app) countApp++;
+                if (cfg.mobile && cfg.app) countBoth++;
+                if (cfg.status === 'VERIFIED' || cfg.status === 'IMPLEMENTED') countVerified++;
+            });
+
+            document.getElementById('statTotal').textContent = masterCatalog.length;
+            document.getElementById('statMobile').textContent = countMobile;
+            document.getElementById('statApp').textContent = countApp;
+            document.getElementById('statBoth').textContent = countBoth;
+            document.getElementById('statVerified').textContent = countVerified;
+        }
+
+        function sortTable(col) {
+            if (currentSort.column === col) {
+                currentSort.ascending = !currentSort.ascending;
+            } else {
+                currentSort.column = col;
+                currentSort.ascending = true;
+            }
+
+            filteredCatalog.sort((a, b) => {
+                let vA, vB;
+                const cfgA = scopeConfig[a.route] || {};
+                const cfgB = scopeConfig[b.route] || {};
+
+                if (col === 'id') { vA = a.id; vB = b.id; }
+                else if (col === 'portal') { vA = a.portal; vB = b.portal; }
+                else if (col === 'audience') { vA = a.audience; vB = b.audience; }
+                else if (col === 'module') { vA = a.module; vB = b.module; }
+                else if (col === 'menu') { vA = a.menu; vB = b.menu; }
+                else if (col === 'submenu') { vA = a.submenu; vB = b.submenu; }
+                else if (col === 'title') { vA = a.title; vB = b.title; }
+                else if (col === 'status') { vA = cfgA.status || ''; vB = cfgB.status || ''; }
+                else if (col === 'priority') { vA = cfgA.priority || ''; vB = cfgB.priority || ''; }
+
+                if (vA < vB) return currentSort.ascending ? -1 : 1;
+                if (vA > vB) return currentSort.ascending ? 1 : -1;
+                return 0;
+            });
+
+            renderTable();
+        }
+
+        function openDrawer(route) {
+            const item = masterCatalog.find(i => i.route === route);
+            if (!item) return;
+
+            const cfg = scopeConfig[route] || { mobile: false, app: false, priority: 'UNASSIGNED', status: 'NOT_STARTED' };
+            const drawer = document.getElementById('scopeDrawer');
+            const overlay = document.getElementById('drawerOverlay');
+
+            document.getElementById('drawerTitle').innerHTML = `<i class="fas fa-layer-group me-2 text-purple"></i>${escapeHTML(item.title)}`;
+
+            const isVerified = cfg.status === 'VERIFIED';
+            const isImplemented = cfg.status === 'IMPLEMENTED';
+
+            let mobileSource = 'Not Mapped / Not Verified';
+            let mobileRoute = 'Not Mapped';
+            let verificationEvidence = 'No direct mobile test slice verification recorded';
+
+            if (route.includes('day_planner') || route.includes('day-planner')) {
+                mobileSource = 'mobile/src/features/planner/DayPlannerView.ts & mobile/src/pages/DayPlannerPage.ts';
+                mobileRoute = 'day-planner';
+                verificationEvidence = 'Phase 1 First Day Planner Approved & Verified';
+            } else if (route.includes('softphone') || route.includes('calling') || route.includes('dialer')) {
+                mobileSource = 'mobile/src/pages/SoftphonePage.ts';
+                mobileRoute = 'softphone';
+                verificationEvidence = 'Phase 2 Plivo Softphone Bridge Approved & Verified';
+            } else if (route.includes('whatsapp') && route.includes('inbox')) {
+                mobileSource = 'mobile/src/features/whatsapp/WhatsAppInboxView.ts';
+                mobileRoute = 'staff-whatsapp-inbox';
+                verificationEvidence = 'Slice 3C WhatsApp Inbox & Assignment Approved & Verified';
+            } else if (route.includes('whatsapp')) {
+                mobileSource = 'mobile/src/pages/StaffWhatsAppInboxPage.ts';
+                mobileRoute = 'staff-whatsapp';
+                verificationEvidence = 'Slice 3A + 3B WhatsApp Messenger Core & Attachments Verified';
+            } else if (route.includes('journeys')) {
+                mobileSource = 'mobile/src/pages/JourneysPage.ts';
+                mobileRoute = 'journeys';
+                verificationEvidence = 'Field Journeys Mobile Component Implemented';
+            } else if (route.includes('crm') || route.includes('leads')) {
+                mobileSource = 'mobile/src/pages/StaffCRMPage.ts';
+                mobileRoute = 'staff-crm';
+                verificationEvidence = 'CRM Mobile Component Implemented';
+            }
+
+            document.getElementById('drawerBody').innerHTML = `
+                <div class="breadcrumb-hierarchy">
+                    <span class="text-info">${escapeHTML(item.portal)}</span>
+                    <i class="fas fa-chevron-right text-muted" style="font-size: 10px;"></i>
+                    <span class="text-warning">${escapeHTML(item.audience)}</span>
+                    <i class="fas fa-chevron-right text-muted" style="font-size: 10px;"></i>
+                    <span class="text-primary">${escapeHTML(item.module)}</span>
+                    <i class="fas fa-chevron-right text-muted" style="font-size: 10px;"></i>
+                    <span class="text-light">${escapeHTML(item.menu)}</span>
+                    <i class="fas fa-chevron-right text-muted" style="font-size: 10px;"></i>
+                    <span class="text-secondary">${escapeHTML(item.submenu)}</span>
+                </div>
+
+                <div class="drawer-section">
+                    <h6><i class="fas fa-route"></i> Web Hierarchy & Routing</h6>
+                    <div class="meta-field">
+                        <label>Web Route Path</label>
+                        <span class="route-code">${escapeHTML(item.route)}</span>
+                    </div>
+                    <div class="meta-field">
+                        <label>Source HTML Template</label>
+                        <span class="route-code">${escapeHTML(item.path)}</span>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 meta-field">
+                            <label>Menu Section</label>
+                            <span>${escapeHTML(item.menu)}</span>
+                        </div>
+                        <div class="col-6 meta-field">
+                            <label>Submenu / Group</label>
+                            <span>${escapeHTML(item.submenu)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="drawer-section">
+                    <h6><i class="fas fa-mobile-alt"></i> Delivery Scope Configuration</h6>
+                    <div class="d-flex gap-4 my-2">
+                        <div class="form-check">
+                            <input class="form-check-input scope-check check-mobile" type="checkbox" id="drawerMobileCheck" ${cfg.mobile ? 'checked' : ''} onchange="toggleScope('${item.route}', 'mobile', this.checked)">
+                            <label class="form-check-label text-white ms-2" for="drawerMobileCheck">Deliver to /mobile (PWA)</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input scope-check check-app" type="checkbox" id="drawerAppCheck" ${cfg.app ? 'checked' : ''} onchange="toggleScope('${item.route}', 'app', this.checked)">
+                            <label class="form-check-label text-white ms-2" for="drawerAppCheck">Deliver to Native App</label>
+                        </div>
+                    </div>
+                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Delivery checkboxes set deployment targeting and are completely decoupled from implementation status.</small>
+                </div>
+
+                <div class="drawer-section">
+                    <h6><i class="fas fa-code-branch"></i> Truthful Implementation & Evidence</h6>
+                    <div class="meta-field">
+                        <label>Current Status</label>
+                        <div>${getStatusBadge(cfg.status)}</div>
+                    </div>
+                    <div class="meta-field">
+                        <label>Mobile Source File</label>
+                        <span class="route-code">${escapeHTML(mobileSource)}</span>
+                    </div>
+                    <div class="meta-field">
+                        <label>Mobile Route</label>
+                        <span class="route-code">${escapeHTML(mobileRoute)}</span>
+                    </div>
+                    <div class="meta-field">
+                        <label>Verification Evidence</label>
+                        <span class="text-info">${escapeHTML(verificationEvidence)}</span>
+                    </div>
+                </div>
+
+                <div class="drawer-section">
+                    <h6><i class="fas fa-mobile-android"></i> Capacitor Native Sync</h6>
+                    <div class="row">
+                        <div class="col-6 meta-field">
+                            <label>Android Parity</label>
+                            <span class="text-success"><i class="fab fa-android me-1"></i> ${cfg.app ? 'Synced via Capacitor' : 'Excluded'}</span>
+                        </div>
+                        <div class="col-6 meta-field">
+                            <label>iOS Parity</label>
+                            <span class="text-success"><i class="fab fa-apple me-1"></i> ${cfg.app ? 'Synced via Capacitor' : 'Excluded'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            drawer.classList.add('open');
+            overlay.classList.add('visible');
+        }
+
+        function closeDrawer() {
+            const drawer = document.getElementById('scopeDrawer');
+            const overlay = document.getElementById('drawerOverlay');
+            if (drawer) drawer.classList.remove('open');
+            if (overlay) overlay.classList.remove('visible');
+        }
+
+        function getPortalBadgeClass(portal) {
+            if (portal.includes('Staff')) return 'portal-staff';
+            if (portal.includes('MNR')) return 'portal-mnr';
+            if (portal.includes('Partner')) return 'portal-partner';
+            if (portal.includes('VGK')) return 'portal-vgk';
+            if (portal.includes('RVZ')) return 'portal-rvz';
+            return 'portal-public';
+        }
+
+        function getStatusBadge(status) {
+            switch(status) {
+                case 'VERIFIED': return '<span class="status-badge status-verified"><i class="fas fa-check-double me-1"></i>VERIFIED</span>';
+                case 'IMPLEMENTED': return '<span class="status-badge status-implemented"><i class="fas fa-code me-1"></i>IMPLEMENTED</span>';
+                case 'IN_DEVELOPMENT': return '<span class="status-badge status-in-development"><i class="fas fa-hammer me-1"></i>IN DEV</span>';
+                case 'PLANNED': return '<span class="status-badge status-planned"><i class="fas fa-clock me-1"></i>PLANNED</span>';
+                case 'DESKTOP_ONLY': return '<span class="status-badge status-desktop-only"><i class="fas fa-desktop me-1"></i>DESKTOP</span>';
+                case 'WEB_SEO': return '<span class="status-badge status-web-seo"><i class="fas fa-globe me-1"></i>PUBLIC/SEO</span>';
+                case 'NOT_STARTED':
+                default: return '<span class="status-badge status-not-started"><i class="fas fa-circle me-1"></i>NOT STARTED</span>';
+            }
+        }
+
+        function getPriorityBadge(priority) {
+            switch(priority) {
+                case 'CRITICAL': return '<span class="priority-badge priority-critical">CRITICAL</span>';
+                case 'HIGH': return '<span class="priority-badge priority-high">HIGH</span>';
+                case 'MEDIUM': return '<span class="priority-badge priority-medium">MEDIUM</span>';
+                case 'LOW': return '<span class="priority-badge priority-low">LOW</span>';
+                default: return '<span class="priority-badge priority-unassigned">—</span>';
+            }
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag] || tag));
+        }
+    </script>
+</body>
+</html>

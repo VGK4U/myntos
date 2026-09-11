@@ -62,11 +62,30 @@ class PermissionsRuntime {
   async init(): Promise<void> {
     if (this.initialized) return;
 
-    this.appStateListenerHandle = await App.addListener('appStateChange', (state: AppState) => {
-      this.handleAppStateChange(state.isActive);
-    });
+    const Capacitor = (window as any).Capacitor;
+    const isNative = Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform();
 
-    await this.checkAllPermissions();
+    if (isNative) {
+      try {
+        this.appStateListenerHandle = await App.addListener('appStateChange', (state: AppState) => {
+          this.handleAppStateChange(state.isActive);
+        });
+      } catch (e) {
+        console.warn('[DC_PERMISSIONS] App.addListener failed:', e);
+      }
+      await this.checkAllPermissions();
+    } else {
+      this.permissions = {
+        camera: 'prompt',
+        location: 'prompt',
+        photos: 'prompt',
+        callLog: 'unknown',
+        storage: 'unknown',
+        phoneState: 'unknown',
+        contacts: 'unknown',
+        lastChecked: Date.now()
+      };
+    }
 
     this.initialized = true;
     console.log('[DC_PERMISSIONS] Initialized');

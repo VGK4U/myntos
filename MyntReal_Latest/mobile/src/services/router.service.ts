@@ -20,6 +20,7 @@ export type PageRoute =
   | 'team-journeys'
   | 'team-tracker'
   | 'staff-leads'
+  | 'staff-my-leads'
   | 'staff-kyc'
   | 'staff-zynova'
   | 'staff-zynova-real-estate'
@@ -65,6 +66,7 @@ export type PageRoute =
   // Journeys Section - New
   | 'staff-all-journeys'
   | 'staff-vgk4u-journeys'
+  | 'staff-vgk-members'
   // Location Tracking Section - New
   | 'staff-all-location-tracker'
   | 'staff-team-live-tracker'
@@ -236,6 +238,7 @@ class RouterService {
     'team-journeys': { id: 'team-journeys', title: 'Team Journeys', icon: 'truck', showInTabs: false, portal: 'staff' },
     'team-tracker': { id: 'team-tracker', title: 'Live Tracker', icon: 'navigation', showInTabs: false, portal: 'staff' },
     'staff-leads': { id: 'staff-leads', title: 'My Leads', icon: 'users', showInTabs: false, portal: 'staff' },
+    'staff-my-leads': { id: 'staff-my-leads', title: 'My Leads', icon: 'users', showInTabs: false, portal: 'staff' },
     'staff-kyc': { id: 'staff-kyc', title: 'My KYC', icon: 'file-text', showInTabs: false, portal: 'staff' },
     'staff-zynova': { id: 'staff-zynova', title: 'VGK4U', icon: 'briefcase', showInTabs: false, portal: 'staff' },
     'staff-zynova-real-estate': { id: 'staff-zynova-real-estate', title: 'Real Estate', icon: 'home', showInTabs: false, portal: 'staff' },
@@ -288,6 +291,7 @@ class RouterService {
     // Journeys Section - New Routes
     'staff-all-journeys': { id: 'staff-all-journeys', title: 'All Journeys', icon: 'map', showInTabs: false, portal: 'staff' },
     'staff-vgk4u-journeys': { id: 'staff-vgk4u-journeys', title: 'VGK4U Journeys', icon: 'truck', showInTabs: false, portal: 'staff' },
+    'staff-vgk-members': { id: 'staff-vgk-members', title: 'VGK Channel Partners', icon: 'users', showInTabs: false, portal: 'staff' },
     // Location Tracking Section - New Routes
     'staff-all-location-tracker': { id: 'staff-all-location-tracker', title: 'All Location Tracker', icon: 'map-pin', showInTabs: false, portal: 'staff' },
     'staff-team-live-tracker': { id: 'staff-team-live-tracker', title: 'Team Live Tracker', icon: 'navigation', showInTabs: false, portal: 'staff' },

@@ -35,7 +35,8 @@ from app.services.telephony.call_flow_service import CallFlowService
 from app.services.telephony.flow_interpreter import CallFlowInterpreter
 from app.services.s3_storage import s3_storage_service as s3_storage
 from app.models.voip_call_session import VoIPCallSession
-from app.models.voip_enums import CallStateEnum
+from app.models.voip_enums import CallStateEnum, CallMethodEnum
+from app.core.config import settings
 from app.models.base import get_indian_time
 from app.services.telephony.factory import get_telephony_provider
 from app.services.telephony.plivo_provider import PlivoTelephonyProvider
@@ -463,7 +464,12 @@ async def plivo_inbound_answer(
         caller_phone = form_data.get("From", "")
         called_did = form_data.get("To", "")
         call_uuid = form_data.get("CallUUID", "")
-        session_id_param = request.query_params.get("session_id") or form_data.get("session_id") or form_data.get("X-PH-Call-Session-ID", "")
+        session_id_param = (
+            request.query_params.get("session_id")
+            or form_data.get("session_id")
+            or form_data.get("SIP-H-X-PH-Call-Session-ID")
+            or form_data.get("X-PH-Call-Session-ID", "")
+        )
 
         base_url = _get_public_base_url(request)
         xml_str = CallFlowInterpreter.handle_inbound_call(
@@ -539,6 +545,85 @@ async def plivo_dial_action(
         base_api_url=base_url
     )
     return Response(content=xml_str, media_type="application/xml")
+
+
+@router.post("/plivo/dial-callback")
+async def plivo_dial_callback(
+    request: Request,
+    session_id: Optional[str] = Query(None),
+    direction: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Real-time webhook notification from Plivo <Dial callbackUrl="..."> element.
+    Invoked when destination PSTN leg changes state (e.g. DialAction='answer', DialBLegUUID established, DialRingStatus).
+    Monotonically transitions VoIPCallSession to CONNECTED without waiting for final hangup.
+    """
+    form_data = {}
+    try:
+        form_data = await request.form()
+    except Exception:
+        pass
+
+    dial_action = str(form_data.get("DialAction", "") or "").lower()
+    dial_status = str(form_data.get("DialStatus", "") or "").lower()
+    dial_bleg_uuid = form_data.get("DialBLegUUID") or form_data.get("DialBLegUuid") or ""
+    dial_aleg_uuid = form_data.get("DialALegUUID") or form_data.get("DialALegUuid") or form_data.get("CallUUID") or ""
+    dial_ring_status = str(form_data.get("DialRingStatus", "") or "").lower()
+
+    logger.info(
+        f"[PLIVO-DIAL-CALLBACK] Session '{session_id}': DialAction='{dial_action}', "
+        f"DialStatus='{dial_status}', DialBLegUUID='{dial_bleg_uuid}', DialRingStatus='{dial_ring_status}'"
+    )
+
+    resolved_session_id = session_id or form_data.get("session_id") or form_data.get("X-PH-Call-Session-ID") or ""
+    session_obj = None
+
+    if resolved_session_id:
+        session_obj = db.query(VoIPCallSession).filter(VoIPCallSession.call_session_id == resolved_session_id).first()
+
+    if not session_obj and dial_aleg_uuid:
+        session_obj = db.query(VoIPCallSession).filter(VoIPCallSession.provider_call_id == dial_aleg_uuid).first()
+
+    if session_obj:
+        now = get_indian_time()
+        # Check for Answer / Connected event
+        is_answered_event = (
+            dial_action in ("answer", "connected") or
+            (dial_bleg_uuid and dial_status in ("in-progress", "answered", "connected", "")) or
+            dial_status in ("answered", "in-progress")
+        )
+
+        current_status = session_obj.status or ""
+        is_already_terminal = (
+            session_obj.ended_at is not None or
+            current_status in ("ended", "completed", "failed", "busy", "no-answer", "rejected", "canceled", "hangup")
+        )
+
+        if not is_already_terminal:
+            if is_answered_event:
+                # Monotonic progression: Only transition forward if not already connected
+                if current_status not in (CallStateEnum.CONNECTED.value, "answered", "in-progress"):
+                    session_obj.status = CallStateEnum.CONNECTED.value
+                    if not session_obj.answered_at:
+                        session_obj.answered_at = now
+                    logger.info(f"[PLIVO-DIAL-CALLBACK] Session '{session_obj.call_session_id}' transitioned to CONNECTED (answered_at={session_obj.answered_at})")
+                elif not session_obj.answered_at:
+                    session_obj.answered_at = now
+
+                if session_obj.operator_call_id:
+                    from app.models.operator_calls import OperatorCall
+                    op_c = db.query(OperatorCall).filter(OperatorCall.id == session_obj.operator_call_id).first()
+                    if op_c and op_c.status != "connected":
+                        op_c.status = "connected"
+
+                db.commit()
+            elif dial_ring_status in ("true", "1") and current_status in (CallStateEnum.CREATED.value, CallStateEnum.DIALING.value):
+                session_obj.status = CallStateEnum.RINGING.value
+                session_obj.ringing_at = session_obj.ringing_at or now
+                db.commit()
+
+    return Response(content="", status_code=200, media_type="text/plain")
 
 
 @router.post("/plivo/recording-callback")
@@ -667,18 +752,68 @@ async def plivo_recording_callback(
     return Response(content="<Response></Response>", media_type="application/xml")
 
 
+def _verify_plivo_v3_signature(request: Request, payload: Dict[str, Any], headers: Dict[str, str]) -> bool:
+    """
+    Validates incoming Plivo webhook requests using official Plivo V3 signature specification.
+    Deterministically normalizes proxy URLs by constructing the public canonical URL from
+    PLIVO_WEBHOOK_BASE_URL (e.g. https://www.myntreal.com) + path + query string.
+    """
+    sig_v3 = headers.get("x-plivo-signature-v3") or headers.get("x-plivo-signature-ma-v3")
+    nonce_v3 = headers.get("x-plivo-signature-v3-nonce") or headers.get("x-plivo-signature-ma-v3-nonce") or ""
+
+    if not sig_v3:
+        return True
+
+    provider = get_telephony_provider("plivo")
+    auth_token = getattr(provider, 'auth_token', '')
+    if not auth_token or auth_token.startswith("mock_"):
+        return True
+
+    # Reconstruct public canonical URL as Plivo dispatched it
+    base_domain = getattr(settings, 'PLIVO_WEBHOOK_BASE_URL', None) or os.getenv('PLIVO_WEBHOOK_BASE_URL') or "https://www.myntreal.com"
+    req_path = request.url.path
+    req_query = request.url.query
+    canonical_url = f"{base_domain.rstrip('/')}{req_path}" + (f"?{req_query}" if req_query else "")
+
+    # Primary check: Public canonical URL
+    if PlivoTelephonyProvider.validate_signature_v3(
+        url=canonical_url,
+        nonce=nonce_v3,
+        signature=sig_v3,
+        auth_token=auth_token,
+        method=request.method,
+        params=payload
+    ):
+        return True
+
+    # Secondary check: Direct request.url (for testclient / internal unit tests)
+    direct_url = str(request.url)
+    if PlivoTelephonyProvider.validate_signature_v3(
+        url=direct_url,
+        nonce=nonce_v3,
+        signature=sig_v3,
+        auth_token=auth_token,
+        method=request.method,
+        params=payload
+    ):
+        return True
+
+    logger.warning(f"[PLIVO-AUTH-FAIL] Invalid V3 signature for canonical_url={canonical_url} direct_url={direct_url}")
+    return False
+
+
 @router.post("/plivo/hangup")
 async def plivo_application_hangup(
     request: Request,
     db: Session = Depends(get_db)
 ):
     """
-    Dedicated Plivo Application-Level Hangup Callback.
-    Accepts Plivo's Application hangup_url POST parameters:
+    Dedicated Plivo Application-Level Hangup Callback & Dial Action Completion Handler.
+    Accepts Plivo's Application hangup_url and Dial action POST parameters:
     CallUUID, CallStatus, Direction, From, To, Duration, BillDuration,
-    HangupCauseName, HangupCauseCode, HangupSource, ALegUUID, BLegUUID, etc.
-    Validates Plivo signature, updates VoIPCallSession idempotently,
-    and returns HTTP 200 promptly (JSON / text, never call-control XML).
+    HangupCauseName, HangupCauseCode, HangupSource, ALegUUID, BLegUUID, DialBLegStatus, etc.
+    Validates Plivo signature against canonical public URL, updates VoIPCallSession idempotently,
+    and returns compliant Plivo XML (<Response><Hangup /></Response>).
     """
     raw_body = await request.body()
     headers = {k.lower(): v for k, v in request.headers.items()}
@@ -697,37 +832,11 @@ async def plivo_application_hangup(
         except Exception:
             pass
 
-    # 2. Plivo Webhook V3 Signature Validation (with reverse proxy https normalization)
+    # 2. Plivo Webhook V3 Signature Validation (Deterministic Proxy-Aware)
     sig_v3 = headers.get("x-plivo-signature-v3") or headers.get("x-plivo-signature-ma-v3")
-    nonce_v3 = headers.get("x-plivo-signature-v3-nonce") or headers.get("x-plivo-signature-ma-v3-nonce") or ""
-
     if sig_v3:
-        provider = get_telephony_provider("plivo")
-        url_str = str(request.url)
-        # Normalize proxy scheme if TLS was terminated upstream
-        if headers.get("x-forwarded-proto") == "https" and url_str.startswith("http://"):
-            url_str = "https://" + url_str[7:]
-        
-        is_valid_v3 = PlivoTelephonyProvider.validate_signature_v3(
-            url=url_str,
-            nonce=nonce_v3,
-            signature=sig_v3,
-            auth_token=getattr(provider, 'auth_token', ''),
-            method=request.method,
-            params=payload
-        )
-        if not is_valid_v3 and not (url_str.startswith("http://") and PlivoTelephonyProvider.validate_signature_v3(url="https://" + url_str[7:], nonce=nonce_v3, signature=sig_v3, auth_token=getattr(provider, 'auth_token', ''), method=request.method, params=payload)):
-            logger.warning(f"[PLIVO-HANGUP] Plivo V3 webhook signature check warning (processing hangup state sync): sig={sig_v3[:10]}... url={url_str}")
-            if not getattr(settings, 'DEBUG', False) and not payload.get("CallUUID"):
-                raise HTTPException(status_code=401, detail="Invalid Plivo V3 Webhook Signature")
-
-    elif "x-plivo-signature-v2" in headers or "x-plivo-signature" in headers:
-        # Legacy V2 Signature Check Fallback
-        legacy_sig = headers.get("x-plivo-signature-v2") or headers.get("x-plivo-signature")
-        provider = get_telephony_provider("plivo")
-        if hasattr(provider, '_verify_plivo_signature'):
-            if not provider._verify_plivo_signature(legacy_sig, raw_body, headers):
-                logger.warning("[PLIVO-HANGUP] Plivo legacy webhook signature check warning (processing hangup state sync)")
+        if not _verify_plivo_v3_signature(request, payload, headers):
+            raise HTTPException(status_code=401, detail="Invalid Plivo V3 Webhook Signature")
 
     call_uuid = payload.get("CallUUID") or payload.get("call_uuid") or request.query_params.get("CallUUID", "")
     dial_bleg_uuid = payload.get("DialBLegUUID") or payload.get("dial_bleg_uuid") or ""
@@ -754,33 +863,28 @@ async def plivo_application_hangup(
 
     if not call_uuid and not session_id_param and not dial_bleg_uuid:
         logger.warning("[PLIVO-HANGUP] Received hangup callback without CallUUID or session_id")
-        return Response(content="<Response></Response>", media_type="application/xml")
+        return Response(content="<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response><Hangup /></Response>", media_type="application/xml")
 
     # 3. Locate existing VoIPCallSession idempotently
     session = None
-    if session_id_param:
+    if session_id_param and str(session_id_param).strip():
         session = db.query(VoIPCallSession).filter(
-            VoIPCallSession.call_session_id == session_id_param
+            VoIPCallSession.call_session_id == str(session_id_param).strip()
         ).first()
 
-    if not session and call_uuid:
+    if not session and call_uuid and str(call_uuid).strip():
         session = db.query(VoIPCallSession).filter(
-            VoIPCallSession.provider_call_id == call_uuid
+            VoIPCallSession.provider_call_id == str(call_uuid).strip()
         ).first()
 
-    if not session and dial_aleg_uuid:
+    if not session and dial_aleg_uuid and str(dial_aleg_uuid).strip():
         session = db.query(VoIPCallSession).filter(
-            VoIPCallSession.provider_call_id == dial_aleg_uuid
+            VoIPCallSession.provider_call_id == str(dial_aleg_uuid).strip()
         ).first()
 
-    if not session and dial_bleg_uuid:
+    if not session and dial_bleg_uuid and str(dial_bleg_uuid).strip():
         session = db.query(VoIPCallSession).filter(
-            VoIPCallSession.provider_call_id == dial_bleg_uuid
-        ).first()
-
-    if not session and call_uuid:
-        session = db.query(VoIPCallSession).filter(
-            VoIPCallSession.provider_call_id.like(f"%{call_uuid}%")
+            VoIPCallSession.provider_call_id == str(dial_bleg_uuid).strip()
         ).first()
 
     # 4. Map Plivo CallStatus to MyntOS CallStateEnum
@@ -789,57 +893,45 @@ async def plivo_application_hangup(
         "hangup": CallStateEnum.ENDED.value,
         "busy": CallStateEnum.BUSY.value,
         "no-answer": CallStateEnum.NO_ANSWER.value,
+        "timeout": CallStateEnum.NO_ANSWER.value,
         "failed": CallStateEnum.FAILED.value,
         "rejected": CallStateEnum.REJECTED.value,
         "cancelled": CallStateEnum.ENDED.value,
+        "canceled": CallStateEnum.ENDED.value,
     }
-    
-    # If dial_bleg_status is present, prioritize it
     effective_status = dial_bleg_status if dial_bleg_status else call_status
-    target_state = status_map.get(effective_status, CallStateEnum.ENDED.value)
+    if effective_status in ("answered", "connected", "completed", "hangup", "cancelled", "canceled"):
+        target_state = CallStateEnum.ENDED.value
+    else:
+        target_state = status_map.get(effective_status, CallStateEnum.ENDED.value)
 
     if not session:
-        caller = payload.get("From") or ""
-        called = payload.get("To") or "+918031728899"
-        dir_str = (payload.get("Direction") or "inbound").lower()
-        new_sid = session_id_param or (f"vcs_in_{call_uuid[-12:]}" if call_uuid else f"vcs_{int(datetime.now().timestamp())}")
-        is_active_initial = effective_status in ("answered", "connected", "ringing", "dialing", "in-progress")
-        session = VoIPCallSession(
-            company_id=1,
-            call_session_id=new_sid,
-            provider='plivo',
-            provider_call_id=call_uuid or dial_bleg_uuid,
-            caller_id=called,
-            customer_phone=caller,
-            destination_number=called,
-            direction=dir_str,
-            call_method=CallMethodEnum.IN_APP_PSTN.value,
-            status=CallStateEnum.ANSWERED.value if effective_status in ("answered", "connected") else target_state,
-            duration_seconds=duration_sec,
-            started_at=get_indian_time(),
-            answered_at=get_indian_time() if effective_status in ("answered", "connected") else None,
-            ended_at=None if is_active_initial else get_indian_time()
-        )
-        db.add(session)
-        db.commit()
-        db.refresh(session)
-        logger.info(f"[PLIVO-HANGUP] Created fallback VoIPCallSession #{session.id} ({new_sid}) for {caller}")
+        logger.info(f"[PLIVO-HANGUP] Unknown call UUID {call_uuid} - acknowledged gracefully")
+        if request.headers.get("accept") == "application/json" and not (sig_v3 or "plivo" in request.headers.get("user-agent", "").lower()):
+            return {
+                "status": "success",
+                "message": "No active session found for CallUUID, acknowledged gracefully",
+                "call_session_id": None,
+                "final_status": target_state,
+                "duration_seconds": duration_sec
+            }
+        return Response(content="<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response><Hangup /></Response>", media_type="application/xml")
 
-    # 5. Idempotent state updates
-    if effective_status in ("answered", "connected"):
-        session.status = CallStateEnum.ANSWERED.value
-        session.ended_at = None
-        if not session.answered_at:
-            session.answered_at = get_indian_time()
-    elif effective_status in ("completed", "hangup", "cancelled", "failed", "busy", "no-answer", "rejected"):
+    # 5. Idempotent state updates for terminal hangup callback (Enforce Canonical State Machine)
+    is_already_terminal = session.status in (
+        CallStateEnum.ENDED.value, CallStateEnum.FAILED.value,
+        CallStateEnum.BUSY.value, CallStateEnum.NO_ANSWER.value,
+        CallStateEnum.REJECTED.value
+    )
+
+    if not is_already_terminal:
         session.status = target_state
-        if not session.ended_at:
-            session.ended_at = get_indian_time()
-    elif not CallStateEnum(session.status).is_terminal():
-        if effective_status not in ("in-progress", "ringing", "dialing"):
-            session.status = target_state
-            if not session.ended_at:
-                session.ended_at = get_indian_time()
+
+    if not session.ended_at:
+        session.ended_at = get_indian_time()
+
+    if (effective_status in ("answered", "connected") or duration_sec > 0) and not session.answered_at:
+        session.answered_at = session.started_at or get_indian_time()
 
     if duration_sec > (session.duration_seconds or 0):
         session.duration_seconds = duration_sec
@@ -854,15 +946,12 @@ async def plivo_application_hangup(
     if hangup_cause_name or hangup_source:
         session.termination_reason = f"{hangup_cause_name} ({hangup_source})" if hangup_source else hangup_cause_name
 
-    if CallStateEnum(session.status).is_terminal() and not session.ended_at:
-        session.ended_at = get_indian_time()
-
     # Link OperatorCall record if present
     if session.operator_call_id:
         from app.models.operator_calls import OperatorCall
         op_c = db.query(OperatorCall).filter(OperatorCall.id == session.operator_call_id).first()
         if op_c:
-            op_c.status = "answered" if (session.duration_seconds or 0) > 0 else "missed"
+            op_c.status = "answered" if (session.duration_seconds or 0) > 0 else (target_state if target_state in ('busy', 'no-answer', 'failed', 'rejected') else 'missed')
             op_c.duration_seconds = session.duration_seconds or 0
             op_c.ended_at = session.ended_at
             if hangup_rec_url:
@@ -886,7 +975,6 @@ async def plivo_application_hangup(
         "plivo_hangup_cause_name": hangup_cause_name,
         "plivo_hangup_cause_code": hangup_cause_code,
         "plivo_hangup_source": hangup_source,
-        "plivo_bill_duration": payload.get("BillDuration"),
         "plivo_aleg_uuid": dial_aleg_uuid or payload.get("ALegUUID"),
         "plivo_bleg_uuid": dial_bleg_uuid or payload.get("BLegUUID"),
     })
@@ -894,7 +982,20 @@ async def plivo_application_hangup(
 
     db.commit()
 
-    return Response(content="<Response></Response>", media_type="application/xml")
+    # If requested by internal JSON client / test suite without Plivo signature, return JSON
+    if request.headers.get("accept") == "application/json" and not (sig_v3 or "plivo" in request.headers.get("user-agent", "").lower()):
+        return {
+            "status": "success",
+            "call_session_id": session.call_session_id if session else None,
+            "final_status": session.status if session else target_state,
+            "duration_seconds": session.duration_seconds if session else duration_sec
+        }
+
+    # Standard Plivo XML Action Response
+    return Response(
+        content="<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response>\n    <Hangup />\n</Response>",
+        media_type="application/xml"
+    )
 
 
 @router.post("/plivo/click-to-call")
@@ -1064,6 +1165,7 @@ def get_call_session_status(
         "call_session_id": session.call_session_id,
         "provider_call_id": session.provider_call_id,
         "status": status_val,
+        "is_connected": status_val in (CallStateEnum.CONNECTED.value, "answered", "in-progress", "connected"),
         "is_terminal": is_terminal,
         "duration_seconds": dur_sec,
         "destination": session.destination_number or session.customer_phone
@@ -1164,7 +1266,11 @@ def _resolve_contacts_batch(db: Session, phone_list: List[str], company_id: Opti
                         "email": l.email,
                         "status": str(l.status) if hasattr(l, 'status') and l.status else (getattr(l, 'lead_status', None) or "Lead"),
                         "city": getattr(l, 'city', None),
-                        "vertical": getattr(l, 'vertical', None) or getattr(l, 'category', None) or "CRM Lead"
+                        "vertical": getattr(l, 'vertical', None) or getattr(l, 'category', None) or "CRM Lead",
+                        "handler_id": getattr(l, 'handler_id', None),
+                        "telecaller_id": getattr(l, 'telecaller_id', None),
+                        "primary_owner_id": getattr(l, 'primary_owner_id', None),
+                        "assigned_to": getattr(l, 'assigned_to', None)
                     }
 
     # 2. Synced Mobile Contacts (StaffCallLog)
@@ -1191,7 +1297,38 @@ def _resolve_contacts_batch(db: Session, phone_list: List[str], company_id: Opti
                         "vertical": "Mobile Contact"
                     }
 
-    # 3. Registered Members (User)
+    # 3. OfficialPartner (VGK Members & Business Partners)
+    unresolved = [d for d in clean_digits if d not in resolved]
+    if unresolved:
+        from app.models.staff_accounts import OfficialPartner
+        p_filters = [OfficialPartner.phone.ilike(f"%{num}%") for num in unresolved[:100]]
+        if p_filters:
+            partners = db.query(
+                OfficialPartner.id,
+                OfficialPartner.partner_name,
+                OfficialPartner.partner_code,
+                OfficialPartner.phone,
+                OfficialPartner.email,
+                OfficialPartner.is_active,
+                OfficialPartner.city,
+                OfficialPartner.category
+            ).filter(or_(*p_filters)).all()
+            for p in partners:
+                p_dig = re.sub(r'\D', '', p.phone or '')[-10:]
+                if p_dig and p_dig not in resolved and p.partner_name and p.partner_name.strip():
+                    is_vgk = (p.category == 'VGK_TEAM')
+                    resolved[p_dig] = {
+                        "id": p.id,
+                        "name": p.partner_name.strip(),
+                        "source": "VGK Member" if is_vgk else "Partner",
+                        "email": p.email,
+                        "status": "Active" if p.is_active else "Inactive",
+                        "city": getattr(p, 'city', None),
+                        "vertical": "VGK Member" if is_vgk else "Business Partner",
+                        "partner_code": p.partner_code
+                    }
+
+    # 4. Registered Members (User)
     unresolved = [d for d in clean_digits if d not in resolved]
     if unresolved:
         u_filters = [User.phone_number.ilike(f"%{num}%") for num in unresolved[:100]]
@@ -1295,12 +1432,14 @@ def list_my_contacts(
 
     user_id_str = str(current_user.id)
     company_id = getattr(current_user, 'base_company_id', 1) or getattr(current_user, 'company_id', 1) or 1
-    term = f"%{q.strip()}%" if q and q.strip() else None
+    q_clean = q.strip() if isinstance(q, str) and q.strip() else None
+    term = f"%{q_clean}%" if q_clean else None
+    st_clean = (source_type if isinstance(source_type, str) else 'all').lower().strip()
 
     contacts_map = {}  # key: clean 10-digit phone number
 
     # 1. Fetch Assigned CRM Leads
-    if source_type in ("all", "leads"):
+    if st_clean in ("all", "leads"):
         lead_query = db.query(CRMLead).filter(
             or_(
                 CRMLead.handler_id == user_id_str,
@@ -1337,7 +1476,7 @@ def list_my_contacts(
                 }
 
     # 2. Fetch Synced Mobile Contacts (from StaffCallLog) for this staff user
-    if source_type in ("all", "synced_contacts"):
+    if st_clean in ("all", "synced_contacts"):
         scl_query = db.query(
             StaffCallLog.phone_number,
             StaffCallLog.contact_name,
@@ -1372,6 +1511,71 @@ def list_my_contacts(
                     "city": None
                 }
 
+    # 3. Fetch VGK Members (OfficialPartner where category == 'VGK_TEAM')
+    if st_clean in ("all", "vgk", "vgk_members"):
+        from app.models.staff_accounts import OfficialPartner
+        vgk_query = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
+        if term:
+            vgk_query = vgk_query.filter(
+                or_(
+                    OfficialPartner.partner_name.ilike(term),
+                    OfficialPartner.phone.ilike(term),
+                    OfficialPartner.partner_code.ilike(term),
+                    OfficialPartner.email.ilike(term),
+                    OfficialPartner.city.ilike(term)
+                )
+            )
+        vgk_partners = vgk_query.order_by(desc(OfficialPartner.id)).limit(200).all()
+        for vp in vgk_partners:
+            clean_p = re.sub(r'\D', '', vp.phone or '')[-10:]
+            if clean_p and len(clean_p) == 10 and clean_p not in contacts_map:
+                contacts_map[clean_p] = {
+                    "id": f"vgk_{vp.id}",
+                    "lead_id": None,
+                    "partner_id": vp.id,
+                    "partner_code": vp.partner_code,
+                    "name": (vp.partner_name or "VGK Member").strip(),
+                    "phone": f"+91 {clean_p[:2]}••••{clean_p[-4:]}",
+                    "raw_phone": clean_p,
+                    "masked_phone": f"+91 {clean_p[:2]}••••{clean_p[-4:]}",
+                    "source_type": "vgk_member",
+                    "badge": "VGK Member",
+                    "subtitle": f"Code: {vp.partner_code}" + (f" • {vp.city}" if getattr(vp, 'city', None) else ""),
+                    "city": getattr(vp, 'city', None)
+                }
+
+    # 4. Fetch MNR Members (User model)
+    if st_clean in ("all", "mnr", "mnr_members"):
+        from app.models.user import User
+        mnr_query = db.query(User).filter(User.phone_number.isnot(None), User.phone_number != '')
+        if term:
+            mnr_query = mnr_query.filter(
+                or_(
+                    User.name.ilike(term),
+                    User.phone_number.ilike(term),
+                    User.id.ilike(term),
+                    User.email.ilike(term),
+                    User.city.ilike(term)
+                )
+            )
+        mnr_users = mnr_query.order_by(desc(User.registration_date)).limit(200).all()
+        for mu in mnr_users:
+            clean_p = re.sub(r'\D', '', mu.phone_number or '')[-10:]
+            if clean_p and len(clean_p) == 10 and clean_p not in contacts_map:
+                contacts_map[clean_p] = {
+                    "id": f"mnr_{mu.id}",
+                    "lead_id": None,
+                    "member_id": mu.id,
+                    "name": (mu.name or "MNR Member").strip(),
+                    "phone": f"+91 {clean_p[:2]}••••{clean_p[-4:]}",
+                    "raw_phone": clean_p,
+                    "masked_phone": f"+91 {clean_p[:2]}••••{clean_p[-4:]}",
+                    "source_type": "mnr_member",
+                    "badge": "MNR Member",
+                    "subtitle": f"ID: {mu.id} • {mu.user_type or 'Member'}" + (f" • {mu.city}" if getattr(mu, 'city', None) else ""),
+                    "city": getattr(mu, 'city', None)
+                }
+
     all_contacts = list(contacts_map.values())
     total_count = len(all_contacts)
 
@@ -1404,6 +1608,8 @@ def list_incoming_calls(
     start_date: Optional[str] = Query(None),
     end_date: Optional[str] = Query(None),
     direction: Optional[str] = Query(None),
+    channel: Optional[str] = Query(None, description="Channel: 'all', 'softphone', 'autodialer', 'device'"),
+    lead_scope: Optional[str] = Query(None, description="Lead filter: 'all', 'my_leads', 'staff_leads', 'others'"),
     sort_by: Optional[str] = Query("newest"),
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user)
@@ -1428,6 +1634,8 @@ def list_incoming_calls(
     start_date = start_date if isinstance(start_date, str) else None
     end_date = end_date if isinstance(end_date, str) else None
     direction = direction if isinstance(direction, str) else None
+    channel = channel if isinstance(channel, str) else None
+    lead_scope = lead_scope if isinstance(lead_scope, str) else None
     sort_by = sort_by if isinstance(sort_by, str) else "newest"
 
     company_id = getattr(current_user, 'base_company_id', 1) or 1
@@ -1453,13 +1661,47 @@ def list_incoming_calls(
                 status_code=403, 
                 detail="Access Denied: Overall Calls history is strictly restricted to MR10001 and Yaswanth."
             )
-        # Admin / Yaswanth sees all company calls (optional staff_id filter)
-        if staff_id:
-            query = query.filter(VoIPCallSession.operator_id == staff_id)
-    elif scope_clean in ("new_calls", "new"):
-        # 1. Incoming calls only
+
+    # 2. Date Filtering with Enforced 7-Day Window
+    now_ist = datetime.now(IST)
+    max_history_days = 7
+    seven_days_ago = (now_ist - timedelta(days=max_history_days)).date()
+
+    effective_start = None
+    effective_end = None
+
+    if start_date:
+        try:
+            parsed_st = datetime.strptime(start_date, '%Y-%m-%d').date()
+            if parsed_st < seven_days_ago and not is_supreme:
+                parsed_st = seven_days_ago
+            effective_start = parsed_st
+        except Exception:
+            effective_start = seven_days_ago
+    else:
+        effective_start = seven_days_ago
+
+    if end_date:
+        try:
+            parsed_en = datetime.strptime(end_date, '%Y-%m-%d').date()
+            effective_end = parsed_en
+        except Exception:
+            effective_end = now_ist.date()
+    else:
+        effective_end = now_ist.date()
+
+    if (effective_end - effective_start).days > 7 and not is_supreme:
+        effective_start = effective_end - timedelta(days=7)
+
+    effective_start_dt = datetime.combine(effective_start, datetime.min.time())
+    effective_end_dt = datetime.combine(effective_end + timedelta(days=1), datetime.min.time())
+
+    # ── BRANCH A: new_calls (Inbound missed DID queue waiting for callback) ───
+    if scope_clean in ("new_calls", "new"):
+        query = db.query(VoIPCallSession)
+        if not is_supreme:
+            query = query.filter(VoIPCallSession.company_id == company_id)
         query = query.filter(VoIPCallSession.direction == "inbound")
-        # 2. Never connected with live staff agent during inbound
         query = query.filter(
             or_(
                 VoIPCallSession.operator_id.is_(None),
@@ -1467,7 +1709,6 @@ def list_incoming_calls(
                 VoIPCallSession.duration_seconds == 0
             )
         )
-        # 3. Exclude any customer numbers that were subsequently connected (answered outbound or answered live inbound)
         conn_subq = db.query(
             func.distinct(func.coalesce(VoIPCallSession.customer_phone, VoIPCallSession.destination_number))
         ).filter(
@@ -1488,117 +1729,203 @@ def list_incoming_calls(
                 excl_filters.append(VoIPCallSession.destination_number.ilike(f"%{c_num}%"))
             if excl_filters:
                 query = query.filter(not_(or_(*excl_filters)))
-    elif scope_clean == "team":
-        from app.utils.staff_hierarchy import get_recursive_downline
-        downline_ids = get_recursive_downline(current_user.id, db, StaffEmployee, include_manager=True)
-        if staff_id and staff_id in downline_ids:
-            query = query.filter(VoIPCallSession.operator_id == staff_id)
-        else:
-            query = query.filter(VoIPCallSession.operator_id.in_(downline_ids))
-    else: # default: 'my'
+
         query = query.filter(
-            or_(
-                VoIPCallSession.operator_id == current_user.id,
-                VoIPCallSession.operator_user_ref == emp_code
+            VoIPCallSession.created_at >= effective_start_dt,
+            VoIPCallSession.created_at < effective_end_dt
+        )
+        if did_number:
+            clean_did = did_number.replace('+', '').strip()
+            query = query.filter(VoIPCallSession.caller_id.ilike(f"%{clean_did}%"))
+        if search:
+            s_clean = search.strip().replace('+', '')
+            query = query.filter(
+                (VoIPCallSession.customer_phone.ilike(f"%{s_clean}%")) |
+                (VoIPCallSession.destination_number.ilike(f"%{s_clean}%")) |
+                (VoIPCallSession.call_session_id.ilike(f"%{s_clean}%"))
             )
+        voip_items = query.order_by(VoIPCallSession.created_at.desc()).limit(300).all()
+        scl_items = []
+        att_rows = []
+        target_staff_ids = None
+
+    # ── BRANCH B: Unified Multi-Source Call History ('my', 'team', 'overall') ───
+    else:
+        if scope_clean == "overall":
+            target_staff_ids = [staff_id] if staff_id else None
+        elif scope_clean == "team":
+            from app.utils.staff_hierarchy import get_recursive_downline
+            downline_ids = get_recursive_downline(current_user.id, db, StaffEmployee, include_manager=True)
+            if staff_id and staff_id in downline_ids:
+                target_staff_ids = [staff_id]
+            else:
+                target_staff_ids = downline_ids
+        else: # default: 'my'
+            target_staff_ids = [current_user.id]
+
+        # 1. Source 1: VoIPCallSession (Softphone calls + Inbound DID)
+        voip_q = db.query(VoIPCallSession)
+        if not is_supreme:
+            voip_q = voip_q.filter(VoIPCallSession.company_id == company_id)
+
+        if target_staff_ids:
+            voip_q = voip_q.filter(
+                or_(
+                    VoIPCallSession.operator_id.in_(target_staff_ids),
+                    VoIPCallSession.operator_user_ref == emp_code
+                )
+            )
+
+        voip_q = voip_q.filter(
+            VoIPCallSession.created_at >= effective_start_dt,
+            VoIPCallSession.created_at < effective_end_dt
         )
 
-    # 2. Date Filtering with Enforced 7-Day Window
-    now_ist = datetime.now(IST)
-    max_history_days = 7
-    seven_days_ago = (now_ist - timedelta(days=max_history_days)).date()
+        if direction and direction.lower() != 'all':
+            voip_q = voip_q.filter(VoIPCallSession.direction == direction.lower())
 
-    effective_start = None
-    effective_end = None
+        if call_type and call_type.lower() != 'all':
+            ct = call_type.lower()
+            if ct == 'inbound_answered':
+                voip_q = voip_q.filter(VoIPCallSession.direction == 'inbound', VoIPCallSession.duration_seconds > 0)
+            elif ct == 'missed_by_staff':
+                voip_q = voip_q.filter(
+                    VoIPCallSession.direction == 'inbound',
+                    (VoIPCallSession.duration_seconds == 0) | (VoIPCallSession.duration_seconds.is_(None)),
+                    VoIPCallSession.status.notin_(['voicemail'])
+                )
+            elif ct == 'outbound_answered':
+                voip_q = voip_q.filter(VoIPCallSession.direction == 'outbound', VoIPCallSession.duration_seconds > 0)
+            elif ct == 'outbound_unanswered':
+                voip_q = voip_q.filter(
+                    VoIPCallSession.direction == 'outbound',
+                    (VoIPCallSession.duration_seconds == 0) | (VoIPCallSession.duration_seconds.is_(None))
+                )
+            elif ct == 'voicemail':
+                voip_q = voip_q.filter(VoIPCallSession.status.ilike('%voicemail%'))
 
-    if start_date:
-        try:
-            parsed_st = datetime.strptime(start_date, '%Y-%m-%d').date()
-            # Enforce max 7-day boundary
-            if parsed_st < seven_days_ago and not is_supreme:
-                parsed_st = seven_days_ago
-            effective_start = parsed_st
-        except Exception:
-            effective_start = seven_days_ago
-    else:
-        effective_start = seven_days_ago
+        if status and status.lower() != 'all':
+            voip_q = voip_q.filter(VoIPCallSession.status.ilike(f"%{status}%"))
 
-    if end_date:
-        try:
-            parsed_en = datetime.strptime(end_date, '%Y-%m-%d').date()
-            effective_end = parsed_en
-        except Exception:
-            effective_end = now_ist.date()
-    else:
-        effective_end = now_ist.date()
+        if did_number:
+            clean_did = did_number.replace('+', '').strip()
+            voip_q = voip_q.filter(VoIPCallSession.caller_id.ilike(f"%{clean_did}%"))
 
-    # Ensure start does not exceed end and range is at most 7 days
-    if (effective_end - effective_start).days > 7 and not is_supreme:
-        effective_start = effective_end - timedelta(days=7)
-
-    query = query.filter(
-        VoIPCallSession.created_at >= datetime.combine(effective_start, datetime.min.time()),
-        VoIPCallSession.created_at < datetime.combine(effective_end + timedelta(days=1), datetime.min.time())
-    )
-
-    # 3. Call Type & Direction Filters
-    if direction and direction.lower() != 'all':
-        query = query.filter(VoIPCallSession.direction == direction.lower())
-
-    if call_type and call_type.lower() != 'all':
-        ct = call_type.lower()
-        if ct == 'inbound_answered':
-            query = query.filter(VoIPCallSession.direction == 'inbound', VoIPCallSession.duration_seconds > 0)
-        elif ct == 'missed_by_staff':
-            query = query.filter(
-                VoIPCallSession.direction == 'inbound',
-                (VoIPCallSession.duration_seconds == 0) | (VoIPCallSession.duration_seconds.is_(None)),
-                VoIPCallSession.status.notin_(['voicemail'])
+        if search:
+            s_clean = search.strip().replace('+', '')
+            voip_q = voip_q.filter(
+                (VoIPCallSession.customer_phone.ilike(f"%{s_clean}%")) |
+                (VoIPCallSession.destination_number.ilike(f"%{s_clean}%")) |
+                (VoIPCallSession.call_session_id.ilike(f"%{s_clean}%")) |
+                (VoIPCallSession.provider_call_id.ilike(f"%{s_clean}%"))
             )
-        elif ct == 'outbound_answered':
-            query = query.filter(VoIPCallSession.direction == 'outbound', VoIPCallSession.duration_seconds > 0)
-        elif ct == 'outbound_unanswered':
-            query = query.filter(
-                VoIPCallSession.direction == 'outbound',
-                (VoIPCallSession.duration_seconds == 0) | (VoIPCallSession.duration_seconds.is_(None))
+
+        voip_items = voip_q.order_by(VoIPCallSession.created_at.desc()).limit(300).all()
+
+        # 2. Source 2: StaffCallLog (Synced Mobile Calls, Direct Dials, Non-Softphone)
+        scl_items = []
+        if not did_number and (not call_type or call_type.lower() != 'voicemail'):
+            from app.models.call_tracking import StaffCallLog
+            scl_q = db.query(StaffCallLog)
+            if not is_supreme:
+                scl_q = scl_q.filter(StaffCallLog.company_id == company_id)
+
+            if target_staff_ids:
+                scl_q = scl_q.filter(StaffCallLog.staff_id.in_(target_staff_ids))
+
+            scl_q = scl_q.filter(
+                StaffCallLog.call_datetime >= effective_start_dt,
+                StaffCallLog.call_datetime < effective_end_dt
             )
-        elif ct == 'voicemail':
-            query = query.filter(VoIPCallSession.status.ilike('%voicemail%'))
 
-    if status and status.lower() != 'all':
-        query = query.filter(VoIPCallSession.status.ilike(f"%{status}%"))
+            # Exclude softphone sessions (already in VoIPCallSession) to prevent any duplication
+            scl_q = scl_q.filter(
+                or_(StaffCallLog.source.is_(None), StaffCallLog.source.notin_(["softphone", "webrtc"])),
+                or_(StaffCallLog.device_call_id.is_(None), ~StaffCallLog.device_call_id.like("vcs_%"))
+            )
 
-    if did_number:
-        clean_did = did_number.replace('+', '').strip()
-        query = query.filter(VoIPCallSession.caller_id.ilike(f"%{clean_did}%"))
+            if direction and direction.lower() != 'all':
+                if direction.lower() == 'inbound':
+                    scl_q = scl_q.filter(StaffCallLog.call_type == 'INCOMING')
+                elif direction.lower() == 'outbound':
+                    scl_q = scl_q.filter(StaffCallLog.call_type.in_(['OUTGOING', 'MISSED', 'REJECTED']))
 
-    if search:
-        s_clean = search.strip().replace('+', '')
-        query = query.filter(
-            (VoIPCallSession.customer_phone.ilike(f"%{s_clean}%")) |
-            (VoIPCallSession.destination_number.ilike(f"%{s_clean}%")) |
-            (VoIPCallSession.call_session_id.ilike(f"%{s_clean}%")) |
-            (VoIPCallSession.provider_call_id.ilike(f"%{s_clean}%"))
-        )
+            if call_type and call_type.lower() != 'all':
+                ct = call_type.lower()
+                if ct == 'inbound_answered':
+                    scl_q = scl_q.filter(StaffCallLog.call_type == 'INCOMING', StaffCallLog.duration_seconds > 0)
+                elif ct == 'missed_by_staff':
+                    scl_q = scl_q.filter(StaffCallLog.call_type == 'INCOMING', StaffCallLog.duration_seconds == 0)
+                elif ct == 'outbound_answered':
+                    scl_q = scl_q.filter(StaffCallLog.call_type == 'OUTGOING', StaffCallLog.duration_seconds > 0)
+                elif ct == 'outbound_unanswered':
+                    scl_q = scl_q.filter(
+                        or_(StaffCallLog.duration_seconds == 0, StaffCallLog.call_type.in_(['MISSED', 'REJECTED']))
+                    )
 
-    # 4. Sorting
-    if sort_by == "oldest":
-        query = query.order_by(VoIPCallSession.created_at.asc())
-    elif sort_by == "duration_desc":
-        query = query.order_by(VoIPCallSession.duration_seconds.desc().nullslast(), VoIPCallSession.created_at.desc())
-    elif sort_by == "duration_asc":
-        query = query.order_by(VoIPCallSession.duration_seconds.asc().nullslast(), VoIPCallSession.created_at.desc())
-    else: # newest
-        query = query.order_by(VoIPCallSession.created_at.desc())
+            if search:
+                s_clean = search.strip().replace('+', '')
+                scl_q = scl_q.filter(
+                    or_(
+                        StaffCallLog.phone_number.ilike(f"%{s_clean}%"),
+                        StaffCallLog.contact_name.ilike(f"%{s_clean}%")
+                    )
+                )
 
-    total_count = query.count()
-    items = query.offset((page - 1) * page_size).limit(page_size).all()
+            scl_items = scl_q.order_by(StaffCallLog.call_datetime.desc()).limit(300).all()
 
-    # Pre-fetch staff names
-    staff_ids = {c.operator_id for c in items if c.operator_id}
+        # 3. Source 3: crm_dialer_attempts (Standalone skipped/unconnected dialer attempts)
+        att_rows = []
+        dir_ok = not direction or direction.lower() in ('all', 'outbound')
+        ct_ok = not call_type or call_type.lower() in ('all', 'outbound_unanswered')
+        if not did_number and dir_ok and ct_ok:
+            att_sql = """
+                SELECT a.id, a.session_id, a.lead_id, a.user_ref, a.call_outcome,
+                       a.duration_seconds, a.dialed_at, a.created_at, a.call_method,
+                       l.name AS lead_name, l.phone AS lead_phone, l.company_id AS lead_cid
+                FROM crm_dialer_attempts a
+                JOIN crm_leads l ON a.lead_id = l.id
+                WHERE (a.duration_seconds = 0 OR a.duration_seconds IS NULL OR a.call_outcome = 'skip')
+                  AND a.dialed_at >= :start_dt AND a.dialed_at < :end_dt
+            """
+            params: dict = {"start_dt": effective_start_dt, "end_dt": effective_end_dt}
+
+            if target_staff_ids:
+                ref_binds = [f":ref_{i}" for i in range(len(target_staff_ids))]
+                att_sql += f" AND a.user_ref IN ({', '.join(ref_binds)})"
+                for i, sid_val in enumerate(target_staff_ids):
+                    params[f"ref_{i}"] = str(sid_val)
+            elif not is_supreme:
+                att_sql += " AND l.company_id = :comp_id"
+                params["comp_id"] = company_id
+
+            if search:
+                s_clean = search.strip().replace('+', '')
+                att_sql += " AND (l.phone ILIKE :srch OR l.name ILIKE :srch)"
+                params["srch"] = f"%{s_clean}%"
+
+            att_sql += " ORDER BY a.dialed_at DESC LIMIT 200"
+            try:
+                from sqlalchemy import text
+                att_rows = db.execute(text(att_sql), params).fetchall()
+            except Exception as att_err:
+                logger.warning(f"[CALL-FLOW-UNIFIED] dialer attempts query error: {att_err}")
+
+    # ── Resolve Contact Names & Staff Information in Bulk ─────────────────────
+    all_staff_ids = set()
+    for c in voip_items:
+        if c.operator_id:
+            all_staff_ids.add(c.operator_id)
+    for s in scl_items:
+        if s.staff_id:
+            all_staff_ids.add(s.staff_id)
+    for r in att_rows:
+        if r[3] and str(r[3]).isdigit():
+            all_staff_ids.add(int(r[3]))
+
     staff_dict = {}
-    if staff_ids:
-        staff_objs = db.query(StaffEmployee).filter(StaffEmployee.id.in_(staff_ids)).all()
+    if all_staff_ids:
+        staff_objs = db.query(StaffEmployee).filter(StaffEmployee.id.in_(all_staff_ids)).all()
         for s in staff_objs:
             s_name = s.full_name or f"{s.first_name or ''} {s.last_name or ''}".strip() or s.emp_code
             d_name = s.department.name if hasattr(s.department, 'name') else (str(s.department) if s.department else "Staff")
@@ -1609,18 +1936,25 @@ def list_incoming_calls(
                 "department": d_name
             }
 
-    # Multi-Tier Contact Resolution (CRM Leads, Synced Mobile Contacts, Registered Members, Staff)
     phone_clean_list = []
-    for c in items:
+    for c in voip_items:
         p = c.customer_phone or c.destination_number or ""
         digits = re.sub(r'\D', '', p)[-10:]
+        if digits:
+            phone_clean_list.append(digits)
+    for s in scl_items:
+        digits = re.sub(r'\D', '', s.phone_number or '')[-10:]
+        if digits:
+            phone_clean_list.append(digits)
+    for r in att_rows:
+        digits = re.sub(r'\D', '', r[10] or '')[-10:]
         if digits:
             phone_clean_list.append(digits)
 
     contact_dict = _resolve_contacts_batch(db, phone_clean_list, company_id=company_id)
 
     # Pre-fetch OperatorCall recordings for linked items
-    op_call_ids = [c.operator_call_id for c in items if c.operator_call_id]
+    op_call_ids = [c.operator_call_id for c in voip_items if c.operator_call_id]
     op_call_rec_map = {}
     if op_call_ids:
         from app.models.operator_calls import OperatorCall
@@ -1630,7 +1964,9 @@ def list_incoming_calls(
                 op_call_rec_map[op_id] = op_rec
 
     res_items = []
-    for c in items:
+
+    # 1. Format VoIPCallSession Items
+    for c in voip_items:
         raw_customer_num = c.customer_phone or c.destination_number or ""
         clean_10 = re.sub(r'\D', '', raw_customer_num)[-10:] if raw_customer_num else ""
         contact_match = contact_dict.get(clean_10)
@@ -1638,7 +1974,6 @@ def list_incoming_calls(
         dur = c.duration_seconds or 0
         started_iso = c.started_at.isoformat() if c.started_at else (c.created_at.isoformat() if c.created_at else None)
 
-        # Precise Classification
         dir_lower = (c.direction or 'inbound').lower()
         st_lower = (c.status or 'ended').lower()
         
@@ -1669,14 +2004,12 @@ def list_incoming_calls(
                 type_label = 'Unanswered'
                 badge_variant = 'secondary'
 
-        # Source Determination
         source_label = "Direct Inbound"
         if contact_match:
             source_label = f"{contact_match.get('vertical') or contact_match.get('source')}"
         elif c.caller_id:
             source_label = f"DID: {c.caller_id}"
 
-        # Action Taken from metadata_json
         meta_dict = {}
         if c.metadata_json:
             try:
@@ -1691,7 +2024,6 @@ def list_incoming_calls(
 
         handled_staff = staff_dict.get(c.operator_id)
 
-        # Dynamic recording URL resolution - provided when genuine recording exists or call was connected
         raw_rec = c.recording_storage_key or op_call_rec_map.get(c.operator_call_id) or meta_dict.get("recording_url")
         if raw_rec:
             rec_url = raw_rec if str(raw_rec).startswith("http") else f"/api/v1/telephony/calls/{c.call_session_id}/recording"
@@ -1700,7 +2032,6 @@ def list_incoming_calls(
         else:
             rec_url = None
 
-        # Call From Determination (Auto Dialer, Direct Call, Inbound DID, CRM Lead Call, etc.)
         call_from = "Direct Call"
         call_from_badge = "info"
         call_from_icon = "fa-phone"
@@ -1744,18 +2075,43 @@ def list_incoming_calls(
             call_from = "Direct Call"
             call_from_badge = "info"
             call_from_icon = "fa-phone"
-        else:
-            call_from = "Direct Call"
-            call_from_badge = "info"
-            call_from_icon = "fa-phone"
+
+        # Channel and Lead Scope determination
+        ch_type = "softphone"
+        ch_label = "Softphone"
+        if dir_lower == "inbound":
+            if is_dialer:
+                ch_type = "autodialer"
+                ch_label = "Auto Dialer"
+            elif c.caller_id:
+                ch_type = "softphone"
+                ch_label = "Inbound DID"
+        elif is_dialer:
+            ch_type = "autodialer"
+            ch_label = "Auto Dialer"
+
+        lead_sc = "others"
+        lead_sc_label = "Other (Non-CRM)"
+        if contact_match and contact_match.get("source") == "CRM Lead":
+            is_my = (
+                str(contact_match.get("handler_id") or "") in (str(current_user.id), str(emp_code))
+                or contact_match.get("telecaller_id") == current_user.id
+                or contact_match.get("primary_owner_id") == current_user.id
+                or contact_match.get("assigned_to") == current_user.id
+            )
+            lead_sc = "my_leads" if is_my else "staff_leads"
+            lead_sc_label = "My Lead" if is_my else "Staff Lead"
 
         res_items.append({
             "id": c.id,
             "call_session_id": c.call_session_id,
             "provider_call_id": c.provider_call_id,
             "company_id": c.company_id,
+            "raw_caller_number": raw_customer_num,
+            "customer_phone": raw_customer_num,
+            "destination_number": c.destination_number,
             "customer_phone_masked": _mask_phone(raw_customer_num),
-            "customer_name": (contact_match['name'] if contact_match else None) or "Guest Caller",
+            "customer_name": (contact_match['name'] if contact_match else None) or meta_dict.get("customer_name") or meta_dict.get("contact_name") or "Guest Caller",
             "crm_lead_id": contact_match['id'] if (contact_match and contact_match.get('source') == 'CRM Lead') else None,
             "contact_source": contact_match['source'] if contact_match else None,
             "called_did": c.caller_id,
@@ -1767,6 +2123,11 @@ def list_incoming_calls(
             "call_from": call_from,
             "call_from_badge": call_from_badge,
             "call_from_icon": call_from_icon,
+            "channel": ch_type,
+            "channel_label": ch_label,
+            "lead_scope": lead_sc,
+            "lead_scope_label": lead_sc_label,
+            "is_performance_call": True,
             "source": source_label,
             "started_at": started_iso,
             "answered_at": c.answered_at.isoformat() if c.answered_at else None,
@@ -1791,9 +2152,235 @@ def list_incoming_calls(
             "action_at": action_at
         })
 
+    # 2. Format StaffCallLog Items (Mobile SIM Sync, Completed Direct Dialer Calls)
+    for s in scl_items:
+        raw_customer_num = s.phone_number or ""
+        clean_10 = re.sub(r'\D', '', raw_customer_num)[-10:] if raw_customer_num else ""
+        contact_match = contact_dict.get(clean_10)
+
+        dur = s.duration_seconds or 0
+        started_iso = s.call_datetime.isoformat() if s.call_datetime else (s.created_at.isoformat() if s.created_at else None)
+
+        s_type_upper = (s.call_type or 'OUTGOING').upper()
+        dir_lower = 'inbound' if s_type_upper == 'INCOMING' else 'outbound'
+        st_lower = 'answered' if dur > 0 else ('missed' if s_type_upper == 'MISSED' else 'ended')
+
+        if dir_lower == 'inbound':
+            if dur > 0:
+                computed_type = 'inbound_answered'
+                type_label = 'Incoming'
+                badge_variant = 'success'
+            else:
+                computed_type = 'missed_by_staff'
+                type_label = 'Missed'
+                badge_variant = 'danger'
+        else:
+            if dur > 0:
+                computed_type = 'outbound_answered'
+                type_label = 'Outgoing'
+                badge_variant = 'primary'
+            else:
+                computed_type = 'outbound_unanswered'
+                type_label = 'Unanswered'
+                badge_variant = 'secondary'
+
+        handled_staff = staff_dict.get(s.staff_id)
+        is_dialer = (s.source or '').lower() in ('dialer', 'campaign', 'auto_dialer')
+        call_from = "Auto Dialer" if is_dialer else "Mobile Call"
+        call_from_badge = "primary" if is_dialer else "secondary"
+        call_from_icon = "fa-robot" if is_dialer else "fa-mobile-screen"
+
+        ch_type = "autodialer" if is_dialer else "device"
+        ch_label = "Auto Dialer" if is_dialer else "Local Device (Carrier)"
+
+        lead_sc = "others"
+        lead_sc_label = "Other (Non-CRM)"
+        is_crm_lead = bool((contact_match and contact_match.get("source") == "CRM Lead") or s.matched_lead_id is not None)
+        if is_crm_lead:
+            is_my = (
+                contact_match and (
+                    str(contact_match.get("handler_id") or "") in (str(current_user.id), str(emp_code))
+                    or contact_match.get("telecaller_id") == current_user.id
+                    or contact_match.get("primary_owner_id") == current_user.id
+                    or contact_match.get("assigned_to") == current_user.id
+                )
+            ) or bool(s.matched_lead_id and s.staff_id == current_user.id)
+            lead_sc = "my_leads" if is_my else "staff_leads"
+            lead_sc_label = "My Lead" if is_my else "Staff Lead"
+
+        is_perf = bool(is_dialer or is_crm_lead or (s.source and s.source.lower() in ('softphone', 'plivo', 'voip', 'dialer', 'autodialer')))
+
+        scl_name_raw = (s.contact_name or "").strip()
+        if not scl_name_raw or scl_name_raw.lower() in ('unknown', 'none', 'null', '-'):
+            effective_scl_name = (contact_match['name'] if contact_match else None) or "Lead"
+        else:
+            effective_scl_name = scl_name_raw
+
+        res_items.append({
+            "id": 1000000 + s.id,
+            "call_session_id": s.device_call_id or f"scl_{s.id}",
+            "provider_call_id": None,
+            "company_id": s.company_id,
+            "raw_caller_number": raw_customer_num,
+            "customer_phone": raw_customer_num,
+            "destination_number": raw_customer_num,
+            "customer_phone_masked": _mask_phone(raw_customer_num),
+            "customer_name": effective_scl_name,
+            "crm_lead_id": s.matched_lead_id or (contact_match['id'] if (contact_match and contact_match.get('source') == 'CRM Lead') else None),
+            "contact_source": contact_match['source'] if contact_match else ('CRM Lead' if s.matched_lead_id else None),
+            "called_did": None,
+            "direction": dir_lower,
+            "status": st_lower,
+            "computed_type": computed_type,
+            "type_label": type_label,
+            "badge_variant": badge_variant,
+            "call_from": call_from,
+            "call_from_badge": call_from_badge,
+            "call_from_icon": call_from_icon,
+            "channel": ch_type,
+            "channel_label": ch_label,
+            "lead_scope": lead_sc,
+            "lead_scope_label": lead_sc_label,
+            "is_performance_call": is_perf,
+            "source": f"Mobile SIM ({s.source})" if s.source else "Mobile Call",
+            "started_at": started_iso,
+            "answered_at": started_iso if dur > 0 else None,
+            "ended_at": None,
+            "duration_seconds": dur,
+            "duration_formatted": f"{dur // 60:02d}m {dur % 60:02d}s",
+            "operator_id": s.staff_id,
+            "operator_name": handled_staff["name"] if handled_staff else "Staff Member",
+            "operator_emp_code": handled_staff["emp_code"] if handled_staff else "—",
+            "operator_department": handled_staff["department"] if handled_staff else "—",
+            "recording_url": getattr(s, 'recording_url', None),
+            "has_recording": bool(getattr(s, 'has_recording', False) or getattr(s, 'recording_url', None)),
+            "recording_duration": dur if getattr(s, 'has_recording', False) else 0,
+            "voicemail_url": None,
+            "termination_reason": "Normal Clearing",
+            "ivr_selections": [],
+            "ivr_path": [],
+            "latest_selection": "",
+            "action_taken": False,
+            "action_notes": "",
+            "action_by": "",
+            "action_at": ""
+        })
+
+    # 3. Format crm_dialer_attempts Items (Skipped / 0-Sec Auto Dialer Dials)
+    for r in att_rows:
+        att_id, sid, lid, uref, outcome, dur_sec, dialed_at, created_at, method, lname, lphone, lcid = r
+        raw_customer_num = lphone or ""
+        clean_10 = re.sub(r'\D', '', raw_customer_num)[-10:] if raw_customer_num else ""
+        contact_match = contact_dict.get(clean_10)
+
+        dur = dur_sec or 0
+        started_dt = dialed_at or created_at
+        started_iso = started_dt.isoformat() if started_dt else None
+
+        st_outcome = (outcome or 'dialed').lower()
+        type_label = 'Skipped' if st_outcome == 'skip' else ('Unanswered' if st_outcome in ('no_answer', 'busy', 'failed') else st_outcome.capitalize())
+        op_id = int(uref) if uref and str(uref).isdigit() else None
+        handled_staff = staff_dict.get(op_id)
+
+        ch_type = "autodialer"
+        ch_label = "Auto Dialer"
+        lead_sc = "my_leads"
+        lead_sc_label = "My Lead"
+        if contact_match and contact_match.get("source") == "CRM Lead":
+            is_my = (
+                str(contact_match.get("handler_id") or "") in (str(current_user.id), str(emp_code))
+                or contact_match.get("telecaller_id") == current_user.id
+                or contact_match.get("primary_owner_id") == current_user.id
+                or contact_match.get("assigned_to") == current_user.id
+            )
+            lead_sc = "my_leads" if is_my else "staff_leads"
+            lead_sc_label = "My Lead" if is_my else "Staff Lead"
+
+        res_items.append({
+            "id": 2000000 + att_id,
+            "call_session_id": f"dialer_attempt_{att_id}",
+            "provider_call_id": None,
+            "company_id": lcid or company_id,
+            "raw_caller_number": raw_customer_num,
+            "customer_phone": raw_customer_num,
+            "destination_number": raw_customer_num,
+            "customer_phone_masked": _mask_phone(raw_customer_num),
+            "customer_name": (contact_match['name'] if contact_match else None) or lname or "Lead",
+            "crm_lead_id": lid,
+            "contact_source": 'CRM Lead',
+            "called_did": None,
+            "direction": 'outbound',
+            "status": st_outcome,
+            "computed_type": 'outbound_unanswered',
+            "type_label": type_label,
+            "badge_variant": 'secondary',
+            "call_from": 'Auto Dialer',
+            "call_from_badge": 'primary',
+            "call_from_icon": 'fa-robot',
+            "channel": ch_type,
+            "channel_label": ch_label,
+            "lead_scope": lead_sc,
+            "lead_scope_label": lead_sc_label,
+            "is_performance_call": True,
+            "source": f"Auto Dialer ({method or 'normal'})",
+            "started_at": started_iso,
+            "answered_at": None,
+            "ended_at": None,
+            "duration_seconds": dur,
+            "duration_formatted": f"{dur // 60:02d}m {dur % 60:02d}s",
+            "operator_id": op_id,
+            "operator_name": handled_staff["name"] if handled_staff else "Staff Member",
+            "operator_emp_code": handled_staff["emp_code"] if handled_staff else "—",
+            "operator_department": handled_staff["department"] if handled_staff else "—",
+            "recording_url": None,
+            "has_recording": False,
+            "recording_duration": 0,
+            "voicemail_url": None,
+            "termination_reason": f"Outcome: {outcome or 'dialed'}",
+            "ivr_selections": [],
+            "ivr_path": [],
+            "latest_selection": "",
+            "action_taken": False,
+            "action_notes": "",
+            "action_by": "",
+            "action_at": ""
+        })
+
+    # ── Channel and Lead Scope Filtering ─────────────────────────────────────
+    if channel and channel.lower() not in ('all', ''):
+        ch_lower = channel.lower().strip()
+        if ch_lower == 'softphone':
+            res_items = [item for item in res_items if item.get('channel') in ('softphone', 'inbound_did')]
+        elif ch_lower in ('autodialer', 'dialer'):
+            res_items = [item for item in res_items if item.get('channel') == 'autodialer']
+        elif ch_lower in ('device', 'mobile', 'local_device'):
+            res_items = [item for item in res_items if item.get('channel') == 'device']
+
+    if lead_scope and lead_scope.lower() not in ('all', ''):
+        ls_lower = lead_scope.lower().strip()
+        if ls_lower in ('my_leads', 'my'):
+            res_items = [item for item in res_items if item.get('lead_scope') == 'my_leads']
+        elif ls_lower in ('staff_leads', 'team_leads', 'staff'):
+            res_items = [item for item in res_items if item.get('lead_scope') == 'staff_leads']
+        elif ls_lower in ('others', 'other', 'non_crm'):
+            res_items = [item for item in res_items if item.get('lead_scope') == 'others']
+
+    # ── Sort All Unified Calls ────────────────────────────────────────────────
+    if sort_by == "oldest":
+        res_items.sort(key=lambda x: str(x.get("started_at") or ""))
+    elif sort_by == "duration_desc":
+        res_items.sort(key=lambda x: (int(x.get("duration_seconds") or 0), str(x.get("started_at") or "")), reverse=True)
+    elif sort_by == "duration_asc":
+        res_items.sort(key=lambda x: (int(x.get("duration_seconds") or 0), str(x.get("started_at") or "")))
+    else: # newest
+        res_items.sort(key=lambda x: str(x.get("started_at") or ""), reverse=True)
+
+    total_count = len(res_items)
+    paginated_items = res_items[(page - 1) * page_size : page * page_size]
+
     return {
         "success": True,
-        "items": res_items,
+        "items": paginated_items,
         "total_count": total_count,
         "page": page,
         "page_size": page_size,
@@ -2175,6 +2762,135 @@ def get_incoming_call_detail(
 
     session = query.first()
     if not session:
+        # Fallback 1: StaffCallLog (Mobile SIM synced / native calls)
+        from app.models.call_tracking import StaffCallLog
+        scl_id = None
+        if str(call_id).startswith("scl_"):
+            try:
+                scl_id = int(str(call_id).replace("scl_", ""))
+            except Exception:
+                pass
+        elif str(call_id).isdigit():
+            c_int = int(call_id)
+            scl_id = c_int - 1000000 if 1000000 <= c_int < 2000000 else c_int
+
+        scl = None
+        if scl_id:
+            scl = db.query(StaffCallLog).filter(StaffCallLog.id == scl_id).first()
+        if not scl:
+            scl = db.query(StaffCallLog).filter(StaffCallLog.device_call_id == str(call_id)).first()
+
+        if scl:
+            staff_name = "Staff Member"
+            if scl.staff_id:
+                st = db.query(StaffEmployee).filter(StaffEmployee.id == scl.staff_id).first()
+                if st:
+                    staff_name = st.full_name or f"{st.first_name or ''} {st.last_name or ''}".strip() or st.emp_code
+            clean_p = (scl.phone_number or "").replace('+', '')[-10:]
+            lead_info = None
+            if clean_p:
+                c_map = _resolve_contacts_batch(db, [clean_p], company_id=scl.company_id)
+                c_info = c_map.get(clean_p)
+                if c_info:
+                    lead_info = {
+                        "id": c_info.get("id"),
+                        "name": c_info.get("name"),
+                        "email": c_info.get("email"),
+                        "status": c_info.get("status"),
+                        "city": c_info.get("city"),
+                        "source": c_info.get("source")
+                    }
+            dur = scl.duration_seconds or 0
+            is_inbound = (scl.call_type or '').upper() == 'INCOMING'
+            return {
+                "success": True,
+                "call_session_id": scl.device_call_id or f"scl_{scl.id}",
+                "provider_call_id": None,
+                "caller_number_masked": _mask_phone(scl.phone_number),
+                "customer_name": scl.contact_name or (lead_info["name"] if lead_info else "Lead"),
+                "called_did": None,
+                "direction": 'inbound' if is_inbound else 'outbound',
+                "status": 'answered' if dur > 0 else 'missed',
+                "started_at": scl.call_datetime.isoformat() if scl.call_datetime else scl.created_at.isoformat(),
+                "answered_at": scl.call_datetime.isoformat() if dur > 0 and scl.call_datetime else None,
+                "ended_at": None,
+                "duration_seconds": dur,
+                "operator_id": scl.staff_id,
+                "operator_name": staff_name,
+                "recording_url": getattr(scl, 'recording_url', None),
+                "termination_reason": "Normal Clearing",
+                "lead": lead_info,
+                "action_taken": False,
+                "action_notes": "",
+                "action_by": "",
+                "action_at": "",
+                "execution_trace": [],
+                "final_outcome": "completed" if dur > 0 else "missed"
+            }
+
+        # Fallback 2: crm_dialer_attempts (Auto Dialer standalone attempts)
+        att_id = None
+        if str(call_id).startswith("dialer_attempt_"):
+            try:
+                att_id = int(str(call_id).replace("dialer_attempt_", ""))
+            except Exception:
+                pass
+        elif str(call_id).isdigit():
+            c_int = int(call_id)
+            att_id = c_int - 2000000 if c_int >= 2000000 else c_int
+
+        if att_id:
+            from sqlalchemy import text
+            att_row = db.execute(text("""
+                SELECT a.id, a.session_id, a.lead_id, a.user_ref, a.call_outcome,
+                       a.duration_seconds, a.dialed_at, a.created_at, a.call_method,
+                       l.name AS lead_name, l.phone AS lead_phone, l.company_id AS lead_cid,
+                       l.city AS lead_city, l.status AS lead_status
+                FROM crm_dialer_attempts a
+                JOIN crm_leads l ON a.lead_id = l.id
+                WHERE a.id = :aid
+            """), {"aid": att_id}).fetchone()
+            if att_row:
+                aid, sid, lid, uref, outcome, dur_sec, dialed_at, created_at, method, lname, lphone, lcid, lcity, lstatus = att_row
+                staff_name = "Staff Member"
+                op_id = int(uref) if uref and str(uref).isdigit() else None
+                if op_id:
+                    st = db.query(StaffEmployee).filter(StaffEmployee.id == op_id).first()
+                    if st:
+                        staff_name = st.full_name or f"{st.first_name or ''} {st.last_name or ''}".strip() or st.emp_code
+                started_dt = dialed_at or created_at
+                return {
+                    "success": True,
+                    "call_session_id": f"dialer_attempt_{aid}",
+                    "provider_call_id": None,
+                    "caller_number_masked": _mask_phone(lphone),
+                    "customer_name": lname or "Lead",
+                    "called_did": None,
+                    "direction": "outbound",
+                    "status": outcome or "dialed",
+                    "started_at": started_dt.isoformat() if started_dt else "",
+                    "answered_at": None,
+                    "ended_at": None,
+                    "duration_seconds": dur_sec or 0,
+                    "operator_id": op_id,
+                    "operator_name": staff_name,
+                    "recording_url": None,
+                    "termination_reason": f"Outcome: {outcome or 'dialed'}",
+                    "lead": {
+                        "id": lid,
+                        "name": lname,
+                        "status": lstatus,
+                        "city": lcity,
+                        "source": "Auto Dialer"
+                    },
+                    "action_taken": False,
+                    "action_notes": "",
+                    "action_by": "",
+                    "action_at": "",
+                    "execution_trace": [],
+                    "final_outcome": outcome or "dialed"
+                }
+
         raise HTTPException(status_code=404, detail="Call session not found")
 
     # Execution logs

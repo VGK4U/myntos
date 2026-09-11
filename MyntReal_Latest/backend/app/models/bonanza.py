@@ -118,6 +118,12 @@ class BonanzaProgress(BaseModel):
     
     # Batch processing
     bulk_batch_id = Column(String, nullable=True)
+
+    # DC-BONANZA-ENTITLEMENT-001: Canonical Reward ID & Entitlement tracking
+    slab_id = Column(Integer, ForeignKey('bonanza_slabs.id', ondelete='SET NULL'), nullable=True)
+    quantity_earned = Column(Integer, default=1, nullable=True)
+    quantity_claimed = Column(Integer, default=0, nullable=True)
+    selected_reward_name = Column(String(200), nullable=True)  # Snapshot/display only; slab_id is canonical
     rejection_reason = Column(Text, nullable=True)
 
     # DC-AWARD-TRIGGER-001 (Jul 2026): auto-trigger tracking on BonanzaProgress
@@ -423,6 +429,10 @@ class Bonanza(BaseModel):
     ec_l4_trigger = Column(String(30), nullable=True)
     ec_l5_trigger = Column(String(30), nullable=True)
 
+    # DC-BONANZA-ENTITLEMENT-001: Configuration-driven qualification and completion rules
+    qualification_event = Column(String(50), default='first_payment', nullable=True)
+    completion_criteria = Column(String(50), default='balance_received_plus', nullable=True)
+
     # Timestamps
     created_at = Column(DateTime, default=get_indian_time, nullable=False)
     updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
@@ -573,6 +583,13 @@ class BonanzaSlab(BaseModel):
     # DC-SLAB-IMG-001: Optional slab-level promo image
     image_url = Column(Text, nullable=True)
 
+    # DC-BONANZA-ENTITLEMENT-001: Configurable reward behaviour & entitlement cost
+    reward_mode = Column(String(30), default='one_time', nullable=True)   # 'one_time', 'repeatable', 'highest_only'
+    max_repeat = Column(Integer, nullable=True)                          # NULL = unlimited
+    reward_quantity = Column(Integer, default=1, nullable=True)          # units per reward
+    entitlement_cost = Column(Integer, default=1, nullable=True)         # entitlement units required to claim
+    selection_enabled = Column(Boolean, default=True, nullable=True)
+
     # Timestamps
     created_at = Column(DateTime, default=get_indian_time, nullable=False)
     updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
@@ -594,6 +611,11 @@ class BonanzaSlab(BaseModel):
             'budget_amount': float(self.budget_amount) if self.budget_amount is not None else None,
             'is_active': self.is_active,
             'image_url': self.image_url,
+            'reward_mode': self.reward_mode or 'one_time',
+            'max_repeat': self.max_repeat,
+            'reward_quantity': self.reward_quantity or 1,
+            'entitlement_cost': self.entitlement_cost or 1,
+            'selection_enabled': self.selection_enabled if self.selection_enabled is not None else True,
         }
 
     def __repr__(self):

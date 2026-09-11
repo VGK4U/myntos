@@ -9,7 +9,7 @@ do_not_call is a lead STATUS value — filterable and manager-changeable.
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_, text, case
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 import pytz
 import json
@@ -23,6 +23,7 @@ from app.core.database import get_db
 from app.core.security import get_current_user_hybrid
 from app.models.crm import CRMLead, CRMLeadFollowUp, CRMLeadNote, CRMLeadAssignment
 from app.models.staff import StaffEmployee
+from app.models.staff_accounts import OfficialPartner
 from app.models.user import User
 from app.models.call_tracking import StaffCallLog
 from app.models.signup_category import SignupCategory
@@ -31,6 +32,7 @@ from app.models.operator_calls import OperatorCall
 from app.utils.staff_hierarchy import get_recursive_downline, get_team_member_ids
 from app.services.timesheet_auto_service import auto_upsert_timesheet_entry
 from app.core.timezone import get_indian_time, IST, parse_to_ist
+from app.services.telephony.canonical_phone import CanonicalPhoneValidator
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -133,7 +135,7 @@ async def _push_dialer_ws(user_ref: str, payload: dict) -> None:
 
 # DC_DIALER: Statuses that permanently disqualify a lead from the dialer queue
 # NOTE: 'lost' and 'not_interested' re-enter after 20 days (_LOST_REENTRY_DAYS)
-DIALER_EXCLUDE_STATUSES = {'won', 'completed', 'do_not_call'}
+DIALER_EXCLUDE_STATUSES = {'won', 'completed', 'do_not_call', 'unresponsive'}
 DIALER_LOST_STATUSES = {'lost', 'not_interested', 'not interested', 'not interest'}
 _LOST_REENTRY_DAYS = 20
 
@@ -142,6 +144,7 @@ def _dialer_active_filter(now: datetime):
     """DC_LOST_REENTRY: Returns a SQLAlchemy condition for dialer-eligible leads.
     - Won / completed / do_not_call: permanently excluded.
     - Lost / Not Interested: excluded for 20 days from lost_at / last_contact / updated_at, then re-enters the queue.
+    - DC_CANONICAL_PHONE: Exclude invalid, corrupted, empty, or non-numeric phone numbers via CanonicalPhoneValidator.
     """
     cutoff = now - timedelta(days=_LOST_REENTRY_DAYS)
     return and_(
@@ -150,6 +153,7 @@ def _dialer_active_filter(now: datetime):
             ~func.lower(func.coalesce(CRMLead.status, '')).in_(DIALER_LOST_STATUSES),
             func.coalesce(CRMLead.lost_at, CRMLead.last_contact_date, CRMLead.updated_at, CRMLead.created_at) < cutoff,
         ),
+        CanonicalPhoneValidator.get_sql_filter(CRMLead.phone),
     )
 
 # DC_DIALER: Roles with full org visibility in dialer analytics
@@ -445,10 +449,10 @@ def _check_calling_compliance(lead: CRMLead, current_user, communication_type: s
     if (lead.status or '').strip().lower() == 'do_not_call':
         return False, "Lead is marked as Do Not Call (DNC). Dialing prohibited."
 
-    # 2. Phone validation
-    phone_clean = re.sub(r'[^\d]', '', str(lead.phone or ''))
-    if len(phone_clean) < 10:
-        return False, f"Invalid phone number on lead: {lead.phone}"
+    # 2. Canonical Phone validation
+    is_valid_phone, norm_phone, phone_reason = CanonicalPhoneValidator.validate(lead.phone)
+    if not is_valid_phone:
+        return False, f"Invalid phone number on lead: {phone_reason}"
 
     # 3. Time of day check for commercial / promotional outreach
     now = get_ist_now()
@@ -807,14 +811,10 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
             staff_eligibility = get_staff_handler_eligibility(db, [emp_id])
             co_cats = [(co, cat) for co, cat in staff_eligibility if co in co_ids]
             if co_cats:
-                u_filter.append(or_(*[and_(CRMLead.company_id == co, CRMLead.category_id == cat) for co, cat in co_cats]))
-            else:
-                has_active_handlers = db.query(CRMLeadHandler.id).filter(
-                    CRMLeadHandler.company_id.in_(co_ids),
-                    CRMLeadHandler.is_active == True
-                ).first()
-                if has_active_handlers:
-                    u_filter.append(CRMLead.id == -1)
+                u_filter.append(or_(
+                    CRMLead.category_id.is_(None),
+                    *[and_(CRMLead.company_id == co, CRMLead.category_id == cat) for co, cat in co_cats]
+                ))
 
         if u_exclude:
             u_filter.append(CRMLead.id.notin_(u_exclude))
@@ -823,9 +823,10 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
             CRMLead.created_at.desc()
         ).limit(300).all()
 
-        # DC_NEW_LEADS_FIX: merge and sort so new leads interleave by urgency tier,
+        # DC_NEW_LEADS_FIX: merge, canonical phone validate, and sort so new leads interleave by urgency tier,
         # with segment preference (dialer_category_priority) as secondary sort key
-        leads = sorted(a_q + u_q, key=_sort_fn)
+        valid_leads = [l for l in (a_q + u_q) if CanonicalPhoneValidator.is_valid(l.phone)]
+        leads = sorted(valid_leads, key=_sort_fn)
         return leads, a_ids
 
     # ── Specific company requested: bypass tiering, flat queue for that company ──
@@ -984,9 +985,10 @@ def _lead_to_queue_item(lead: CRMLead, slot_type: str, cat_map: Optional[dict] =
     if lead.last_contact_date:
         last_contact_days = (now - lead.last_contact_date).days
 
-    priority_label = 'overdue' if _is_overdue(lead) else (
+    status_l = (lead.status or '').strip().lower()
+    priority_label = 'new' if status_l in ('new', 'fresh') and not lead.last_contact_date else (
         'due_today' if _is_due_today(lead) else (
-            'new' if lead.status == 'new' else (
+            'overdue' if _is_overdue(lead) else (
                 'second_contact' if _needs_second_contact(lead) else 'upcoming'
             )
         )
@@ -998,9 +1000,10 @@ def _lead_to_queue_item(lead: CRMLead, slot_type: str, cat_map: Optional[dict] =
         category_name = cat_map.get(lead.category_id)
 
     return {
+        'id': lead.id,
         'lead_id': lead.id,
         'name': lead.name,
-        'phone': lead.phone or '',
+        'phone': CanonicalPhoneValidator.normalize(lead.phone) or lead.phone or '',
         'alternate_phone': lead.alternate_phone or '',
         'phone_primary_whatsapp': lead.phone_primary_whatsapp,
         'phone_secondary_whatsapp': lead.phone_secondary_whatsapp,
@@ -1476,7 +1479,11 @@ async def start_dialer_session(
     company_id = body.get('company_id') or (
         current_user.base_company_id if hasattr(current_user, 'base_company_id') else None
     )
-    queue_lead_ids = body.get('queue_lead_ids', [])
+    raw_lead_ids = body.get('queue_lead_ids', [])
+    queue_lead_ids = [
+        int(q) for q in raw_lead_ids
+        if (isinstance(q, int) and q > 0) or (isinstance(q, str) and q.isdigit() and int(q) > 0)
+    ] if isinstance(raw_lead_ids, list) else []
 
     # Check for existing paused session
     existing = db.execute(text("""
@@ -1534,8 +1541,12 @@ async def pause_dialer_session(
     updates = {"status": "paused", "now": get_ist_now(), "idx": current_index, "id": session_id}
     sql = "UPDATE crm_dialer_sessions SET status='paused', paused_at=:now, last_active_at=:now, current_index=:idx"
     if queue_lead_ids is not None:
+        valid_q_ids = [
+            int(q) for q in queue_lead_ids
+            if (isinstance(q, int) and q > 0) or (isinstance(q, str) and q.isdigit() and int(q) > 0)
+        ] if isinstance(queue_lead_ids, list) else []
         sql += ", queue_data=:queue"
-        updates["queue"] = json.dumps(queue_lead_ids)
+        updates["queue"] = json.dumps(valid_q_ids)
     sql += " WHERE id=:id"
 
     db.execute(text(sql), updates)
@@ -1639,6 +1650,14 @@ async def get_current_session(
 
     # DC_RESUME_FIX: Include saved queue order so client can anchor to the right lead
     queue_lead_ids = json.loads(session_dict.get('queue_data') or '[]')
+
+    # DC_GHOST_SESSION_HEAL: If an active/paused session has 0 leads in queue_data, auto-close it
+    # so the agent immediately receives their fresh live queue instead of getting stuck in 'Queue Complete'
+    if len(queue_lead_ids) == 0:
+        db.execute(text("UPDATE crm_dialer_sessions SET status='closed', closed_at=NOW() WHERE id=:id"), {"id": session_dict['id']})
+        db.commit()
+        return {"success": True, "session": None, "last_attempt": None}
+
     return {
         "success": True,
         "session": session_dict,
@@ -1800,25 +1819,132 @@ async def log_dialer_attempt(
             )
             db.add(note_obj)
 
-        # Canonical StaffCallLog logging if duration > 0
-        if is_staff and duration_seconds and duration_seconds > 0:
+        # Canonical StaffCallLog logging on dialer attempt (records answered, no_answer, busy, callback, etc.)
+        if is_staff:
             try:
-                call_log = StaffCallLog(
-                    company_id=lead.company_id or (getattr(current_user, 'base_company_id', None) or 1),
-                    staff_id=current_user.id,
-                    phone_number=lead.phone or 'unknown',
-                    contact_name=lead.name or None,
-                    call_type='outbound',
-                    call_datetime=now,
-                    call_date=now.strftime('%Y-%m-%d'),
-                    duration_seconds=int(duration_seconds),
-                    source=call_method or 'dialer',
-                    matched_lead_id=lead.id,
-                    matched_at=now,
-                )
-                db.add(call_log)
+                # DC_DIALER_SCL_DEDUP: Check if an existing StaffCallLog was already created
+                # for this staff and lead/phone within the last 30 minutes (e.g. from Softphone / VoIP session)
+                recent_cutoff = now - timedelta(minutes=30)
+                existing_scl = db.query(StaffCallLog).filter(
+                    StaffCallLog.staff_id == current_user.id,
+                    or_(
+                        StaffCallLog.matched_lead_id == lead.id,
+                        StaffCallLog.phone_number == (lead.phone or '')
+                    ),
+                    StaffCallLog.call_datetime >= recent_cutoff
+                ).order_by(StaffCallLog.id.desc()).first()
+
+                dur_val = int(duration_seconds or 0)
+                call_type_val = 'MISSED' if (call_outcome or '').lower() in ('no_answer', 'missed') else 'OUTGOING'
+
+                if existing_scl:
+                    if dur_val > 0:
+                        existing_scl.duration_seconds = max(existing_scl.duration_seconds or 0, dur_val)
+                    if not existing_scl.contact_name and lead.name:
+                        existing_scl.contact_name = lead.name
+                    if not existing_scl.matched_lead_id and lead.id:
+                        existing_scl.matched_lead_id = lead.id
+                        existing_scl.matched_at = now
+                    if existing_scl.call_type in ('MISSED', 'UNKNOWN') and call_type_val == 'OUTGOING':
+                        existing_scl.call_type = 'OUTGOING'
+                else:
+                    call_log = StaffCallLog(
+                        company_id=lead.company_id or (getattr(current_user, 'base_company_id', None) or 1),
+                        staff_id=current_user.id,
+                        phone_number=lead.phone or 'unknown',
+                        contact_name=lead.name or None,
+                        call_type=call_type_val,
+                        call_datetime=now,
+                        call_date=now.strftime('%Y-%m-%d'),
+                        duration_seconds=dur_val,
+                        source=call_method or 'dialer',
+                        matched_lead_id=lead.id,
+                        matched_at=now,
+                    )
+                    db.add(call_log)
             except Exception as cl_err:
                 logger.warning(f"[DC_DIALER] StaffCallLog insertion error: {cl_err}")
+
+        # DC_AUTO_ASSIGN: Automatically bind unassigned lead or inactive employee lead to telecaller upon positive contact or scheduled follow-up
+        from app.api.v1.endpoints.crm import is_lead_owned_by_inactive_staff
+        is_unassigned = (lead.telecaller_id is None and lead.primary_owner_id is None and lead.handler_id is None)
+        is_inactive_owner, inactive_emp = is_lead_owned_by_inactive_staff(lead, db)
+
+        positive_outcomes = {'interested', 'callback_scheduled', 'callback', 'meeting_fixed', 'meeting_scheduled', 'site_visit_scheduled', 'proposal_sent', 'converted'}
+        positive_statuses = {'interested', 'in_progress', 'qualified', 'converted', 'proposal_sent', 'site_visit'}
+        is_positive_contact = (
+            (call_outcome or '').lower() in positive_outcomes
+            or (new_status or '').lower() in positive_statuses
+            or bool(next_followup_date and not do_not_call)
+            or (duration_seconds and duration_seconds >= 30 and (call_outcome or '').lower() not in ('no_answer', 'busy', 'switched_off', 'failed', 'wrong_number', 'not_interested', 'skip', 'not_my_category'))
+        )
+        if (is_unassigned or is_inactive_owner) and is_staff and is_positive_contact:
+            prev_handler_type = lead.handler_type
+            prev_handler_id = lead.handler_id
+
+            lead.telecaller_id = current_user.id
+            lead.assigned_to = current_user.id
+            lead.handler_type = 'staff'
+            lead.handler_id = str(getattr(current_user, 'emp_code', None) or current_user.id)
+            lead.primary_owner_type = 'staff'
+            lead.primary_owner_id = current_user.id
+
+            assign_reason = (
+                f"[Auto-Assign] Lead reassigned from inactive employee {getattr(inactive_emp, 'full_name', getattr(inactive_emp, 'emp_code', 'Past Staff'))} to {getattr(current_user, 'name', 'Staff')} ({getattr(current_user, 'emp_code', current_user.id)}) upon positive contact ({call_outcome or new_status or 'call >= 30s'})."
+                if is_inactive_owner
+                else f"[Auto-Assign] Lead assigned to {getattr(current_user, 'name', 'Staff')} ({getattr(current_user, 'emp_code', current_user.id)}) upon positive contact ({call_outcome or new_status or 'followup'})."
+            )
+            auto_assign_note = CRMLeadNote(
+                company_id=lead.company_id,
+                lead_id=lead.id,
+                note=assign_reason,
+                is_private=False,
+                created_by_type=handler_type,
+                created_by_id=handler_id,
+            )
+            db.add(auto_assign_note)
+
+            try:
+                assignment = CRMLeadAssignment(
+                    company_id=lead.company_id,
+                    lead_id=lead.id,
+                    from_handler_type=prev_handler_type or ('staff' if is_inactive_owner else 'unassigned'),
+                    from_handler_id=str(prev_handler_id or (inactive_emp.emp_code if inactive_emp else '') or ''),
+                    to_handler_type='staff',
+                    to_handler_id=str(getattr(current_user, 'emp_code', None) or current_user.id),
+                    reason=assign_reason,
+                    assigned_by_type='staff',
+                    assigned_by_id=str(getattr(current_user, 'emp_code', None) or current_user.id)
+                )
+                db.add(assignment)
+            except Exception as asgn_err:
+                logger.warning(f"[DC_DIALER] Failed to log CRMLeadAssignment: {asgn_err}")
+
+        # DC_CADENCE_LIMITER: Auto-retire chronic non-connected leads (>= 5 failed attempts) to 'unresponsive'
+        failed_outcomes = {'no_answer', 'busy', 'switched_off', 'failed', 'not_connected', 'not_reachable', 'ringing_timeout', 'unanswered', 'timeout', 'zero_duration', 'call_failed'}
+        if (call_outcome or '').lower() in failed_outcomes and not do_not_call and not next_followup_date:
+            try:
+                fail_res = db.execute(text("""
+                    SELECT COUNT(*), COUNT(DISTINCT DATE(COALESCE(dialed_at, created_at)))
+                    FROM crm_dialer_attempts
+                    WHERE lead_id = :lid
+                      AND LOWER(COALESCE(call_outcome, '')) IN ('no_answer', 'busy', 'switched_off', 'failed', 'not_connected', 'not_reachable', 'ringing_timeout', 'unanswered', 'timeout', 'zero_duration', 'call_failed')
+                """), {"lid": lead.id}).fetchone()
+                total_fails = (fail_res[0] or 0)
+                distinct_days = (fail_res[1] or 0)
+                if total_fails >= 5 and (lead.status in ('new', 'fresh', 'contacted', 'New', 'Fresh', None) or not lead.status):
+                    lead.status = 'unresponsive'
+                    cadence_note = CRMLeadNote(
+                        company_id=lead.company_id,
+                        lead_id=lead.id,
+                        note=f"[Cadence Engine] Lead reached {total_fails} non-connected attempts across {max(distinct_days, 1)} day(s). Auto-transitioned to 'unresponsive' to optimize dialer queues.",
+                        is_private=False,
+                        created_by_type=handler_type,
+                        created_by_id=handler_id,
+                    )
+                    db.add(cadence_note)
+            except Exception as cad_err:
+                logger.warning(f"[DC_DIALER] Cadence evaluation error: {cad_err}")
 
     # Release JIT reservation for this lead upon attempt completion
     _release_lead_reservation(lead_id, user_ref, db)
@@ -2328,6 +2454,7 @@ async def dialer_search(
     q_clean = q.strip()
     term = f"%{q_clean}%"
     ist_today = get_ist_now().replace(hour=0, minute=0, second=0, microsecond=0)
+    target_company_id = int(company_id) if isinstance(company_id, (int, str)) and str(company_id).isdigit() else None
 
     # ── Leads ─────────────────────────────────────────────────────────────────
     if hasattr(current_user, 'emp_code'):
@@ -2335,7 +2462,7 @@ async def dialer_search(
         if not staff:
             raise HTTPException(status_code=404, detail="Staff record not found")
         # DC_QUEUE_COMPANY_FIX: Search across all companies the staff member has access to
-        search_company_ids = _get_staff_company_ids(staff, company_id)
+        search_company_ids = _get_staff_company_ids(staff, target_company_id)
         user_ref = str(staff.id)
         staff_id = staff.id
         _search_now = get_ist_now()
@@ -2382,6 +2509,7 @@ async def dialer_search(
     results = [
         {
             "source": "lead",
+            "id": l.id,
             "lead_id": l.id,
             "name": l.name or "—",
             "phone": l.phone or "",
@@ -2396,15 +2524,93 @@ async def dialer_search(
         for l in leads
     ]
 
-    # ── Contacts from call log ─────────────────────────────────────────────────
-    # Collect phone numbers already covered by leads to avoid duplicates
+    # ── Contacts, VGK Members, and MNR Members ────────────────────────────────
+    # Collect clean 10-digit phone numbers already covered by leads to avoid duplicates
     lead_phones: set = set()
+    seen_phones: set = set()
     for l in leads:
         if l.phone:
-            lead_phones.add(l.phone.strip().replace(" ", ""))
+            c10 = re.sub(r'\D', '', l.phone)[-10:]
+            if c10:
+                lead_phones.add(c10)
+                seen_phones.add(c10)
         if l.alternate_phone:
-            lead_phones.add(l.alternate_phone.strip().replace(" ", ""))
+            c10_alt = re.sub(r'\D', '', l.alternate_phone)[-10:]
+            if c10_alt:
+                lead_phones.add(c10_alt)
+                seen_phones.add(c10_alt)
 
+    # 1. VGK Members (OfficialPartner where category == 'VGK_TEAM')
+    vgk_partners = db.query(OfficialPartner).filter(
+        OfficialPartner.category == 'VGK_TEAM',
+        or_(
+            OfficialPartner.partner_name.ilike(term),
+            OfficialPartner.phone.ilike(term),
+            OfficialPartner.partner_code.ilike(term),
+            OfficialPartner.email.ilike(term),
+            OfficialPartner.city.ilike(term),
+        )
+    ).order_by(OfficialPartner.partner_name).limit(10).all()
+
+    for vp in vgk_partners:
+        raw_ph = vp.phone or ""
+        c10 = re.sub(r'\D', '', raw_ph)[-10:]
+        if c10 and c10 in seen_phones:
+            continue
+        if c10:
+            seen_phones.add(c10)
+        results.append({
+            "source": "vgk_member",
+            "id": f"vgk_{vp.id}",
+            "lead_id": None,
+            "partner_id": vp.id,
+            "partner_code": vp.partner_code,
+            "name": (vp.partner_name or "VGK Member").strip(),
+            "phone": raw_ph,
+            "alternate_phone": "",
+            "status": "Active" if vp.is_active else "Inactive",
+            "city": vp.city or "",
+            "area": "",
+            "badge": "VGK Member",
+            "dialed_today": False,
+        })
+
+    # 2. MNR Members (User model)
+    mnr_users = db.query(User).filter(
+        User.phone_number.isnot(None),
+        User.phone_number != '',
+        or_(
+            User.name.ilike(term),
+            User.phone_number.ilike(term),
+            User.email.ilike(term),
+            User.id.ilike(term),
+            User.city.ilike(term),
+        )
+    ).order_by(User.name).limit(10).all()
+
+    for mu in mnr_users:
+        raw_ph = mu.phone_number or ""
+        c10 = re.sub(r'\D', '', raw_ph)[-10:]
+        if c10 and c10 in seen_phones:
+            continue
+        if c10:
+            seen_phones.add(c10)
+        results.append({
+            "source": "mnr_member",
+            "id": f"mnr_{mu.id}",
+            "lead_id": None,
+            "user_id": mu.id,
+            "name": (mu.name or "MNR Member").strip(),
+            "phone": raw_ph,
+            "alternate_phone": "",
+            "status": mu.account_status or "Active",
+            "city": getattr(mu, 'city', '') or "",
+            "area": "",
+            "badge": "MNR Member",
+            "dialed_today": False,
+        })
+
+    # 3. Contacts from native call log
     if staff_id:
         contact_rows = db.execute(text("""
             SELECT DISTINCT ON (phone_number)
@@ -2420,14 +2626,17 @@ async def dialer_search(
         """), {"sid": staff_id, "term": term}).fetchall()
 
         for row in contact_rows:
-            ph = (row[0] or "").strip().replace(" ", "")
-            if ph in lead_phones:
-                continue  # already shown as a lead
+            raw_ph = row[0] or ""
+            c10 = re.sub(r'\D', '', raw_ph)[-10:]
+            if c10 and c10 in seen_phones:
+                continue  # already shown as lead or member
+            if c10:
+                seen_phones.add(c10)
             results.append({
                 "source": "contact",
                 "lead_id": row[2],  # matched_lead_id — may be None
-                "name": row[1] or ph,
-                "phone": row[0] or "",
+                "name": row[1] or raw_ph,
+                "phone": raw_ph,
                 "alternate_phone": "",
                 "status": "",
                 "city": "",
@@ -2436,6 +2645,118 @@ async def dialer_search(
             })
 
     return {"success": True, "results": results}
+
+
+def _resolve_phones_batch(db: Session, phones: List[str]) -> Dict[str, Dict[str, Any]]:
+    """
+    Multi-source batch phone resolver for call history and recent calls.
+    Resolves clean 10-digit phone numbers to:
+    1. CRMLead (highest priority)
+    2. OfficialPartner (VGK Members & Channel Partners)
+    3. User (MNR Registered Members)
+    4. StaffEmployee (Internal Staff)
+    """
+    if not phones:
+        return {}
+
+    digits_map: Dict[str, str] = {}
+    for p in phones:
+        if not p:
+            continue
+        c10 = re.sub(r'\D', '', str(p))[-10:]
+        if len(c10) == 10:
+            digits_map[c10] = str(p)
+
+    clean_digits = list(digits_map.keys())
+    if not clean_digits:
+        return {}
+
+    resolved: Dict[str, Dict[str, Any]] = {}
+
+    # 1. CRM Leads
+    lead_filters = []
+    for d in clean_digits[:100]:
+        lead_filters.append(CRMLead.phone.ilike(f"%{d}%"))
+        lead_filters.append(CRMLead.alternate_phone.ilike(f"%{d}%"))
+    if lead_filters:
+        leads = db.query(CRMLead.id, CRMLead.name, CRMLead.phone, CRMLead.alternate_phone).filter(or_(*lead_filters)).all()
+        for l in leads:
+            p1 = re.sub(r'\D', '', l.phone or '')[-10:]
+            p2 = re.sub(r'\D', '', l.alternate_phone or '')[-10:]
+            for p_dig in (p1, p2):
+                if p_dig and p_dig not in resolved and l.name and l.name.strip():
+                    resolved[p_dig] = {
+                        "name": l.name.strip(),
+                        "source": "lead",
+                        "id": l.id,
+                        "badge": "CRM Lead"
+                    }
+
+    # 2. OfficialPartner (VGK Members & Partners)
+    unresolved = [d for d in clean_digits if d not in resolved]
+    if unresolved:
+        part_filters = [OfficialPartner.phone.ilike(f"%{d}%") for d in unresolved[:100]]
+        if part_filters:
+            partners = db.query(
+                OfficialPartner.id,
+                OfficialPartner.partner_name,
+                OfficialPartner.partner_code,
+                OfficialPartner.phone,
+                OfficialPartner.category
+            ).filter(or_(*part_filters)).all()
+            for p in partners:
+                p_dig = re.sub(r'\D', '', p.phone or '')[-10:]
+                if p_dig and p_dig not in resolved and p.partner_name and p.partner_name.strip():
+                    is_vgk = (p.category == 'VGK_TEAM')
+                    resolved[p_dig] = {
+                        "name": p.partner_name.strip(),
+                        "source": "vgk_member" if is_vgk else "partner",
+                        "id": p.id,
+                        "code": p.partner_code,
+                        "badge": "VGK Member" if is_vgk else "Partner"
+                    }
+
+    # 3. User (MNR Members)
+    unresolved = [d for d in clean_digits if d not in resolved]
+    if unresolved:
+        user_filters = [User.phone_number.ilike(f"%{d}%") for d in unresolved[:100]]
+        if user_filters:
+            users = db.query(User.id, User.name, User.phone_number).filter(or_(*user_filters)).all()
+            for u in users:
+                p_dig = re.sub(r'\D', '', u.phone_number or '')[-10:]
+                if p_dig and p_dig not in resolved and u.name and u.name.strip():
+                    resolved[p_dig] = {
+                        "name": u.name.strip(),
+                        "source": "mnr_member",
+                        "id": u.id,
+                        "badge": "MNR Member"
+                    }
+
+    # 4. StaffEmployee
+    unresolved = [d for d in clean_digits if d not in resolved]
+    if unresolved:
+        staff_filters = [StaffEmployee.phone.ilike(f"%{d}%") for d in unresolved[:100]]
+        if staff_filters:
+            staffs = db.query(
+                StaffEmployee.id,
+                StaffEmployee.full_name,
+                StaffEmployee.first_name,
+                StaffEmployee.last_name,
+                StaffEmployee.phone,
+                StaffEmployee.emp_code
+            ).filter(or_(*staff_filters)).all()
+            for s in staffs:
+                p_dig = re.sub(r'\D', '', s.phone or '')[-10:]
+                s_name = (s.full_name or f"{s.first_name or ''} {s.last_name or ''}").strip() or s.emp_code
+                if p_dig and p_dig not in resolved and s_name:
+                    resolved[p_dig] = {
+                        "name": s_name,
+                        "source": "staff",
+                        "id": s.id,
+                        "badge": "Staff"
+                    }
+
+    return resolved
 
 
 @router.get("/dialer/recent-calls")
@@ -2449,6 +2770,7 @@ async def get_recent_calls(
     - crm_dialer_attempts (CRM leads dialed via Auto Dialer)
     - staff_call_logs (INCOMING, MISSED, OUTGOING, REJECTED — native call log)
     Merged, deduped by phone, sorted by most recent. Staff only.
+    Automatically resolves missing/Unknown names against Leads, VGK Members, and MNR Members.
     """
     staff_id = None
     user_ref = None
@@ -2469,10 +2791,10 @@ async def get_recent_calls(
         dial_rows = db.execute(text("""
             SELECT DISTINCT ON (l.phone)
                 a.lead_id, l.name, l.phone, l.alternate_phone, l.status,
-                a.call_outcome, a.dialed_at, 0 AS duration_seconds
+                a.call_outcome, a.dialed_at, COALESCE(a.duration_seconds, 0) AS duration_seconds
             FROM crm_dialer_attempts a
             JOIN crm_leads l ON a.lead_id = l.id
-            WHERE a.user_ref = :ref AND a.call_outcome != 'skip'
+            WHERE a.user_ref = :ref
             ORDER BY l.phone, a.dialed_at DESC
             LIMIT 30
         """), {"ref": user_ref}).fetchall()
@@ -2482,10 +2804,10 @@ async def get_recent_calls(
             if ph and ph not in seen_phones:
                 seen_phones.add(ph)
                 results.append({
-                    "lead_id": r[0], "name": r[1] or "Unknown",
+                    "id": r[0], "lead_id": r[0], "name": r[1] or "Unknown",
                     "phone": r[2] or "", "status": r[4] or "",
-                    "call_type": "OUTGOING", "call_outcome": r[5] or "",
-                    "duration_seconds": 0,
+                    "call_type": "OUTGOING", "call_outcome": r[5] or "dialed",
+                    "duration_seconds": r[7] or 0,
                     "dialed_at": r[6].isoformat() if r[6] else None,
                     "source": "dialer",
                 })
@@ -2507,13 +2829,31 @@ async def get_recent_calls(
             if ph and ph not in seen_phones:
                 seen_phones.add(ph)
                 results.append({
-                    "lead_id": r[0], "name": r[1] or "",
+                    "id": r[0], "lead_id": r[0], "name": r[1] or "",
                     "phone": r[2] or "", "status": "",
                     "call_type": r[3] or "OUTGOING", "call_outcome": "",
                     "duration_seconds": r[5] or 0,
                     "dialed_at": r[4].isoformat() if r[4] else None,
                     "source": "native",
                 })
+
+    # ── Backfill missing/Unknown contact names using multi-source batch resolver ─
+    missing_phones = [
+        r["phone"] for r in results 
+        if not r.get("name") or str(r.get("name")).strip().lower() in ('', 'unknown', 'none', 'null', '-')
+    ]
+    if missing_phones:
+        res_map = _resolve_phones_batch(db, missing_phones)
+        for r in results:
+            if not r.get("name") or str(r.get("name")).strip().lower() in ('', 'unknown', 'none', 'null', '-'):
+                c10 = re.sub(r'\D', '', r.get("phone") or '')[-10:]
+                match = res_map.get(c10)
+                if match:
+                    r["name"] = match["name"]
+                    if not r.get("lead_id") and match.get("source") == "lead":
+                        r["lead_id"] = match.get("id")
+                    if match.get("source") in ("vgk_member", "mnr_member"):
+                        r["contact_type"] = match.get("source")
 
     results.sort(key=lambda x: x["dialed_at"] or "", reverse=True)
     return {"success": True, "results": results[:limit]}
@@ -2608,48 +2948,112 @@ async def get_call_history(
     offset = (page_num - 1) * per_page_num
     entries: list = []
 
-    # 3. Build SQL filters for call_type & date range
-    filters = ["scl.staff_id = ANY(:sids)"]
-    params = {"sids": target_staff_ids if target_staff_ids else [0], "lim": per_page_num, "off": offset}
+    # 3. Build SQL filters for call_type & date range across staff_call_logs + crm_dialer_attempts
+    target_user_refs = [str(sid) for sid in target_staff_ids] if target_staff_ids else ['0']
+    params = {
+        "sids": target_staff_ids if target_staff_ids else [0],
+        "urefs": target_user_refs,
+        "lim": per_page_num,
+        "off": offset
+    }
 
-    if isinstance(call_type, str) and call_type.strip().upper() in ("INCOMING", "MISSED", "OUTGOING", "REJECTED"):
-        filters.append("scl.call_type = :ctype")
-        params["ctype"] = call_type.strip().upper()
+    scl_filters = ["scl.staff_id = ANY(:sids)"]
+    att_filters = ["a.portal = 'staff'", "a.user_ref = ANY(:urefs)"]
+
+    ctype_clean = (call_type if isinstance(call_type, str) else '').strip().upper()
+    if ctype_clean == 'DIALER':
+        scl_filters.append("(scl.source IN ('dialer', 'softphone') OR scl.call_type = 'DIALER')")
+        # All crm_dialer_attempts are dialer calls
+    elif ctype_clean == 'OUTGOING':
+        scl_filters.append("scl.call_type = 'OUTGOING'")
+        # All crm_dialer_attempts are outgoing
+    elif ctype_clean == 'MISSED':
+        scl_filters.append("scl.call_type = 'MISSED'")
+        att_filters.append("LOWER(COALESCE(a.call_outcome, '')) IN ('no_answer', 'missed')")
+    elif ctype_clean in ('INCOMING', 'REJECTED'):
+        scl_filters.append("scl.call_type = :ctype")
+        att_filters.append("1=0")  # CRM dialer attempts are strictly outbound
+        params["ctype"] = ctype_clean
 
     if isinstance(start_date, str) and start_date.strip():
-        filters.append("scl.call_datetime >= :sdate")
+        scl_filters.append("scl.call_datetime >= :sdate")
+        att_filters.append("COALESCE(a.dialed_at, a.created_at) >= :sdate")
         params["sdate"] = f"{start_date.strip()} 00:00:00"
 
     if isinstance(end_date, str) and end_date.strip():
-        filters.append("scl.call_datetime <= :edate")
+        scl_filters.append("scl.call_datetime <= :edate")
+        att_filters.append("COALESCE(a.dialed_at, a.created_at) <= :edate")
         params["edate"] = f"{end_date.strip()} 23:59:59"
 
-    where_clause = " AND ".join(filters)
+    where_scl = " AND ".join(scl_filters)
+    where_att = " AND ".join(att_filters)
 
     try:
         rows = db.execute(text(f"""
-            SELECT scl.matched_lead_id, 
-                   COALESCE(NULLIF(TRIM(scl.contact_name), ''), NULLIF(TRIM(l.name), ''), '') AS name,
-                   scl.phone_number, scl.call_type,
-                   scl.call_datetime, scl.duration_seconds, NULL AS call_outcome,
-                   COALESCE(NULLIF(TRIM(scl.contact_name), ''), NULLIF(TRIM(l.name), ''), '') AS contact_name,
-                   COALESCE(scl.has_recording, false) AS has_recording,
-                   scl.recording_id,
-                   scl.staff_id,
-                   e.first_name, e.last_name, e.emp_code
-            FROM staff_call_logs scl
-            LEFT JOIN crm_leads l ON scl.matched_lead_id = l.id
-            LEFT JOIN staff_employees e ON scl.staff_id = e.id
-            WHERE {where_clause}
-            ORDER BY scl.call_datetime DESC
+            WITH combined_calls AS (
+                SELECT 
+                    scl.matched_lead_id, 
+                    COALESCE(NULLIF(TRIM(scl.contact_name), ''), NULLIF(TRIM(l.name), ''), '') AS name,
+                    scl.phone_number,
+                    COALESCE(scl.call_type, 'OUTGOING') AS call_type,
+                    scl.call_datetime,
+                    COALESCE(scl.duration_seconds, 0) AS duration_seconds,
+                    COALESCE((
+                        SELECT a2.call_outcome FROM crm_dialer_attempts a2 
+                        WHERE a2.lead_id = scl.matched_lead_id 
+                          AND a2.portal = 'staff' 
+                          AND a2.user_ref = CAST(scl.staff_id AS VARCHAR)
+                        ORDER BY a2.id DESC LIMIT 1
+                    ), '') AS call_outcome,
+                    COALESCE(NULLIF(TRIM(scl.contact_name), ''), NULLIF(TRIM(l.name), ''), '') AS contact_name,
+                    COALESCE(scl.source, 'native') AS source,
+                    COALESCE(scl.has_recording, false) AS has_recording,
+                    scl.recording_id,
+                    scl.staff_id,
+                    e.first_name, e.last_name, e.emp_code
+                FROM staff_call_logs scl
+                LEFT JOIN crm_leads l ON scl.matched_lead_id = l.id
+                LEFT JOIN staff_employees e ON scl.staff_id = e.id
+                WHERE {where_scl}
+
+                UNION ALL
+
+                SELECT 
+                    a.lead_id AS matched_lead_id,
+                    COALESCE(NULLIF(TRIM(l.name), ''), '') AS name,
+                    COALESCE(l.phone, '') AS phone_number,
+                    'OUTGOING' AS call_type,
+                    COALESCE(a.dialed_at, a.created_at) AS call_datetime,
+                    COALESCE(a.duration_seconds, 0) AS duration_seconds,
+                    COALESCE(a.call_outcome, '') AS call_outcome,
+                    COALESCE(NULLIF(TRIM(l.name), ''), '') AS contact_name,
+                    'dialer' AS source,
+                    false AS has_recording,
+                    NULL AS recording_id,
+                    CAST(NULLIF(regexp_replace(a.user_ref, '[^0-9]', '', 'g'), '') AS INTEGER) AS staff_id,
+                    e.first_name, e.last_name, e.emp_code
+                FROM crm_dialer_attempts a
+                LEFT JOIN crm_leads l ON a.lead_id = l.id
+                LEFT JOIN staff_employees e ON CAST(NULLIF(regexp_replace(a.user_ref, '[^0-9]', '', 'g'), '') AS INTEGER) = e.id
+                WHERE {where_att}
+                  AND NOT EXISTS (
+                      SELECT 1 FROM staff_call_logs s2 
+                      WHERE s2.staff_id = ANY(:sids)
+                        AND (s2.matched_lead_id = a.lead_id OR s2.phone_number = l.phone)
+                        AND s2.call_datetime BETWEEN (COALESCE(a.dialed_at, a.created_at) - INTERVAL '5 minutes') 
+                                                 AND (COALESCE(a.dialed_at, a.created_at) + INTERVAL '5 minutes')
+                  )
+            )
+            SELECT * FROM combined_calls
+            ORDER BY call_datetime DESC
             LIMIT :lim OFFSET :off
         """), params).fetchall()
 
         for r in rows:
             cname = (r[7] or "").strip().rstrip(', ')
-            staff_full = f"{r[11] or ''} {r[12] or ''}".strip()
-            rec_id = r[9]
-            has_rec = bool(r[8] or rec_id)
+            staff_full = f"{r[12] or ''} {r[13] or ''}".strip()
+            rec_id = r[10]
+            has_rec = bool(r[9] or rec_id)
 
             entries.append({
                 "lead_id": r[0],
@@ -2658,17 +3062,36 @@ async def get_call_history(
                 "call_type": (r[3] or "OUTGOING").upper(),
                 "dialed_at": r[4].isoformat() if r[4] else None,
                 "duration_seconds": r[5] or 0,
-                "call_outcome": "",
+                "call_outcome": r[6] or "",
                 "contact_name": cname,
-                "source": "native",
+                "source": r[8] or "native",
                 "has_recording": has_rec,
                 "recording_id": rec_id,
                 "recording_stream_url": f"/api/v1/call-tracking/recordings/{rec_id}/stream" if rec_id else None,
-                "staff_id": r[10],
-                "staff_name": staff_full if staff_full else (r[13] or "Staff"),
-                "staff_emp_code": r[13] or "",
-                "is_downline": bool(current_staff_id and r[10] != current_staff_id)
+                "staff_id": r[11],
+                "staff_name": staff_full if staff_full else (r[14] or "Staff"),
+                "staff_emp_code": r[14] or "",
+                "is_downline": bool(current_staff_id and r[11] != current_staff_id)
             })
+
+        # Backfill missing/Unknown contact names using multi-source batch resolver
+        missing_phones = [
+            e["phone"] for e in entries
+            if not e.get("name") or str(e.get("name")).strip().lower() in ('', 'unknown', 'none', 'null', '-')
+        ]
+        if missing_phones:
+            res_map = _resolve_phones_batch(db, missing_phones)
+            for e in entries:
+                if not e.get("name") or str(e.get("name")).strip().lower() in ('', 'unknown', 'none', 'null', '-'):
+                    c10 = re.sub(r'\D', '', e.get("phone") or '')[-10:]
+                    match = res_map.get(c10)
+                    if match:
+                        e["name"] = match["name"]
+                        e["contact_name"] = match["name"]
+                        if not e.get("lead_id") and match.get("source") == "lead":
+                            e["lead_id"] = match.get("id")
+                        if match.get("source") in ("vgk_member", "mnr_member"):
+                            e["contact_type"] = match.get("source")
     except Exception as e:
         logger.error(f"[CALL-HISTORY] Query error: {e}")
 

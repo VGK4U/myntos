@@ -85,20 +85,41 @@ class CategoryUpdate(BaseModel):
 
 @router.get("/list")
 async def get_categories(
-    company_id: int = Query(..., description="Company ID for DC Protocol filtering"),
+    company_id: Optional[str] = Query(None, description="Company ID for DC Protocol filtering (or 'all')"),
     include_inactive: bool = False,
     db: Session = Depends(get_db)
 ):
     """
     Get all signup categories (public endpoint for signup form)
-    DC Protocol: Requires company_id parameter - public access for signup forms
+    DC Protocol: Supports company_id parameter or 'all' for cross-company deduplicated list
     """
-    query = db.query(SignupCategory).filter(SignupCategory.company_id == company_id)
+    is_all_companies = not company_id or str(company_id).strip().lower() in ('all', '', 'none')
+    parsed_company_id = None
+    if company_id and not is_all_companies:
+        try:
+            parsed_company_id = int(company_id)
+        except (ValueError, TypeError):
+            pass
+
+    query = db.query(SignupCategory)
+    if parsed_company_id is not None:
+        query = query.filter(SignupCategory.company_id == parsed_company_id)
     
     if not include_inactive:
         query = query.filter(SignupCategory.is_active == True)
     
     categories = query.order_by(SignupCategory.display_order, SignupCategory.name).all()
+    
+    # If all companies requested, deduplicate by name to provide a clean list
+    if is_all_companies:
+        seen_names = set()
+        deduped = []
+        for c in categories:
+            key = (c.name or '').strip().lower()
+            if key and key not in seen_names:
+                seen_names.add(key)
+                deduped.append(c)
+        categories = deduped
     
     return {
         "success": True,

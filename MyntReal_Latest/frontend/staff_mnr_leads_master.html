@@ -36,13 +36,14 @@ body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f3f4f6;min-height:100v
 .tab-btn:not(.active) .tab-count{background:#f3f4f6;color:#6b7280}
 
 /* Stats */
-.stats-row{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
-.stat-card{background:white;border-radius:8px;padding:8px 11px;flex:1;min-width:80px;box-shadow:0 1px 3px rgba(0,0,0,.08);display:flex;align-items:center;gap:7px;cursor:pointer;transition:box-shadow .15s}
-.stat-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.12)}
-.stat-card.active-filter{box-shadow:0 0 0 2px #1e3a5f}
-.stat-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
-.stat-label{font-size:9px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em}
-.stat-value{font-size:16px;font-weight:800;color:#1f2937;line-height:1.1}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));gap:6px;margin-bottom:8px}
+.stats-row.pipeline-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(110px, 1fr));gap:5px;margin-bottom:8px}
+.stat-card{background:white;border-radius:7px;padding:6px 8px;box-shadow:0 1px 2px rgba(0,0,0,.06);display:flex;align-items:center;gap:6px;cursor:pointer;transition:all .15s;border:1px solid #f1f5f9;min-width:0;overflow:hidden}
+.stat-card:hover{box-shadow:0 2px 6px rgba(0,0,0,.1);border-color:#cbd5e1}
+.stat-card.active-filter{box-shadow:0 0 0 2px #1e3a5f;border-color:#1e3a5f}
+.stat-icon{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+.stat-label{font-size:8.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1}
+.stat-value{font-size:13.5px;font-weight:800;color:#1e293b;line-height:1.1;margin-top:1px}
 
 /* Filter panel */
 .filter-panel{background:white;border-radius:10px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);overflow:hidden}
@@ -101,8 +102,7 @@ table.ml-table tr.lead-row:hover td{background:#f9fafb}
 .pipeline-badge{display:inline-block;padding:2px 6px;border-radius:9px;font-size:9.5px;font-weight:700}
 .ps-documents_pending{background:#fef3c7;color:#92400e}.ps-application_submitted{background:#dbeafe;color:#1e40af}.ps-pending_with_bank{background:#bfdbfe;color:#1d4ed8}
 .ps-loan_rejected{background:#fee2e2;color:#991b1b}.ps-documents_issue{background:#fed7aa;color:#c2410c}.ps-load_extension{background:#ede9fe;color:#5b21b6}
-.ps-electricity_bill_change{background:#fef9c3;color:#713f12}.ps-installation_pending{background:#e0e7ff;color:#3730a3}.ps-net_meter_pending{background:#f5f3ff;color:#5b21b6}.ps-balance_pending{background:#fff7ed;color:#c2410c}.ps-balance_received{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;font-weight:800}
-.ps-subsidy_pending{background:#ccfbf1;color:#0f766e}.ps-completed{background:#bbf7d0;color:#065f46;border:1px solid #6ee7b7}.ps-not_interested{background:#f3f4f6;color:#374151}.ps-cancelled{background:#fce7f3;color:#9d174d}.ps-different_vendor{background:#f3e8ff;color:#7e22ce}
+.ps-subsidy_pending{background:#ccfbf1;color:#0f766e}.ps-completed{background:#bbf7d0;color:#065f46;border:1px solid #6ee7b7}.ps-not_interested{background:#f3f4f6;color:#374151}.ps-cancelled{background:#fce7f3;color:#9d174d}.ps-different_vendor{background:#f3e8ff;color:#7e22ce}.ps-installed{background:#dcfce7;color:#15803d;border:1px solid #86efac;font-weight:800}.ps-first_payment_received{background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;font-weight:800}
 .b2b-stage-badge{display:inline-block;padding:2px 6px;border-radius:9px;font-size:9.5px;font-weight:700}
 .bs-application_pending{background:#fef3c7;color:#92400e}.bs-agreement_pending{background:#dbeafe;color:#1e40af}.bs-gst_pending{background:#ede9fe;color:#5b21b6}
 .bs-training_pending{background:#fed7aa;color:#c2410c}.bs-branding_pending{background:#e0e7ff;color:#3730a3}.bs-payment_pending{background:#fee2e2;color:#991b1b}
@@ -426,10 +426,13 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
     <div id="datePresetBar" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
       <span style="font-size:10.5px;color:#6b7280;font-weight:500;white-space:nowrap">Quick Date:</span>
       <button class="date-preset-btn active" data-preset="overall" onclick="applyDatePreset('overall')">Overall</button>
-      <button class="date-preset-btn" data-preset="ftd" onclick="applyDatePreset('ftd')">FTD</button>
+      <button class="date-preset-btn" data-preset="today" onclick="applyDatePreset('today')">Today</button>
       <button class="date-preset-btn" data-preset="yesterday" onclick="applyDatePreset('yesterday')">Yesterday</button>
-      <button class="date-preset-btn" data-preset="mtd" onclick="applyDatePreset('mtd')">MTD</button>
-      <button class="date-preset-btn" data-preset="fy" onclick="applyDatePreset('fy')">FY (1 Apr)</button>
+      <button class="date-preset-btn" data-preset="this_week" onclick="applyDatePreset('this_week')">This Week</button>
+      <button class="date-preset-btn" data-preset="last_week" onclick="applyDatePreset('last_week')">Last Week</button>
+      <button class="date-preset-btn" data-preset="this_month" onclick="applyDatePreset('this_month')">This Month</button>
+      <button class="date-preset-btn" data-preset="last_month" onclick="applyDatePreset('last_month')">Last Month</button>
+      <button class="date-preset-btn" data-preset="this_fy" onclick="applyDatePreset('this_fy')">This FY</button>
     </div>
 
     <!-- Stats (hidden for ETC) -->
@@ -445,39 +448,41 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
     </div>
 
     <!-- Solar Pipeline Stats (shown only when Solar tab is active) -->
-    <div class="stats-row solar-only" id="pipelineStatsRow" style="display:none;margin-top:6px">
-      <div class="stat-card" id="pscard_documents_pending" onclick="filterByPipeline('documents_pending')" title="Filter: Documents Pending"><div class="stat-icon" style="background:#fef3c7;color:#d97706"><i class="fas fa-file-alt"></i></div><div><div class="stat-label" style="font-size:10px">Docs Pending</div><div class="stat-value" id="ps_documents_pending">—</div></div></div>
-      <div class="stat-card" id="pscard_application_submitted" onclick="filterByPipeline('application_submitted')" title="Filter: Application Submitted"><div class="stat-icon" style="background:#dbeafe;color:#1d4ed8"><i class="fas fa-paper-plane"></i></div><div><div class="stat-label" style="font-size:10px">App Submitted</div><div class="stat-value" id="ps_application_submitted">—</div></div></div>
-      <div class="stat-card" id="pscard_pending_with_bank" onclick="filterByWithBank()" title="Filter: With Bank / Waiting for Bank Loan"><div class="stat-icon" style="background:#eff6ff;color:#1d4ed8"><i class="fas fa-university"></i></div><div><div class="stat-label" style="font-size:10px">With Bank</div><div class="stat-value" id="ps_pending_with_bank">—</div></div></div>
-      <div class="stat-card" id="pscard_loan_rejected" onclick="filterByLoanRejected()" title="Filter: Loan Rejected (pipeline + bank)"><div class="stat-icon" style="background:#fee2e2;color:#b91c1c"><i class="fas fa-ban"></i></div><div><div class="stat-label" style="font-size:10px">Loan Rejected</div><div class="stat-value" id="ps_loan_rejected">—</div></div></div>
-      <div class="stat-card" id="pscard_documents_issue" onclick="filterByPipeline('documents_issue')" title="Filter: Documents Issue"><div class="stat-icon" style="background:#fed7aa;color:#c2410c"><i class="fas fa-exclamation-triangle"></i></div><div><div class="stat-label" style="font-size:10px">Docs Issue</div><div class="stat-value" id="ps_documents_issue">—</div></div></div>
-      <div class="stat-card" id="pscard_load_extension" onclick="filterByPipeline('load_extension')" title="Filter: Load Extension"><div class="stat-icon" style="background:#ede9fe;color:#5b21b6"><i class="fas fa-plug"></i></div><div><div class="stat-label" style="font-size:10px">Load Ext</div><div class="stat-value" id="ps_load_extension">—</div></div></div>
-      <div class="stat-card" id="pscard_electricity_bill_change" onclick="filterByPipeline('electricity_bill_change')" title="Filter: Electricity Bill Change"><div class="stat-icon" style="background:#fef9c3;color:#92400e"><i class="fas fa-bolt"></i></div><div><div class="stat-label" style="font-size:10px">Bill Change</div><div class="stat-value" id="ps_electricity_bill_change">—</div></div></div>
-      <div class="stat-card" id="pscard_installation_pending" onclick="filterByPipeline('installation_pending')" title="Filter: Installation Pending"><div class="stat-icon" style="background:#e0e7ff;color:#3730a3"><i class="fas fa-solar-panel"></i></div><div><div class="stat-label" style="font-size:10px">Installation</div><div class="stat-value" id="ps_installation_pending">—</div></div></div>
-      <div class="stat-card" id="pscard_net_meter_pending" onclick="filterByPipeline('net_meter_pending')" title="Filter: Net Meter Pending"><div class="stat-icon" style="background:#f5f3ff;color:#5b21b6"><i class="fas fa-tachometer-alt"></i></div><div><div class="stat-label" style="font-size:10px">Net Meter</div><div class="stat-value" id="ps_net_meter_pending">—</div></div></div>
-      <div class="stat-card" id="pscard_balance_pending" onclick="filterByPipeline('balance_pending')" title="Filter: Balance Pending"><div class="stat-icon" style="background:#fff7ed;color:#c2410c"><i class="fas fa-hourglass-half"></i></div><div><div class="stat-label" style="font-size:10px">Bal. Pending</div><div class="stat-value" id="ps_balance_pending">—</div></div></div>
-      <div class="stat-card" id="pscard_balance_received" onclick="filterByPipeline('balance_received')" title="Filter: Balance Received"><div class="stat-icon" style="background:#d1fae5;color:#065f46"><i class="fas fa-hand-holding-usd"></i></div><div><div class="stat-label" style="font-size:10px">Bal. Received</div><div class="stat-value" id="ps_balance_received">—</div></div></div>
-      <div class="stat-card" id="pscard_subsidy_pending" onclick="filterByPipeline('subsidy_pending')" title="Filter: Subsidy Pending"><div class="stat-icon" style="background:#ccfbf1;color:#0f766e"><i class="fas fa-hand-holding-usd"></i></div><div><div class="stat-label" style="font-size:10px">Subsidy</div><div class="stat-value" id="ps_subsidy_pending">—</div></div></div>
-      <div class="stat-card" id="pscard_total_won" onclick="filterByStat('won')" title="Total Won leads (Solar) — click to filter"><div class="stat-icon" style="background:#fef9c3;color:#b45309"><i class="fas fa-trophy"></i></div><div><div class="stat-label" style="font-size:10px">Total Won</div><div class="stat-value" id="ps_total_won">—</div></div></div>
-      <div class="stat-card" id="pscard_completed" onclick="filterByPipeline('completed')" title="Filter: Completed"><div class="stat-icon" style="background:#d1fae5;color:#065f46"><i class="fas fa-check-circle"></i></div><div><div class="stat-label" style="font-size:10px">Completed</div><div class="stat-value" id="ps_completed">—</div></div></div>
-      <div class="stat-card" id="pscard_not_interested" onclick="filterByPipeline('not_interested')" title="Filter: Not Interested"><div class="stat-icon" style="background:#f3f4f6;color:#6b7280"><i class="fas fa-ban"></i></div><div><div class="stat-label" style="font-size:10px">Not Interested</div><div class="stat-value" id="ps_not_interested">—</div></div></div>
-      <div class="stat-card" id="pscard_cancelled" onclick="filterByPipeline('cancelled')" title="Filter: Cancelled"><div class="stat-icon" style="background:#fce7f3;color:#9d174d"><i class="fas fa-times-circle"></i></div><div><div class="stat-label" style="font-size:10px">Cancelled</div><div class="stat-value" id="ps_cancelled">—</div></div></div>
-      <div class="stat-card" id="pscard_different_vendor" onclick="filterByPipeline('different_vendor')" title="Filter: Different Vendor"><div class="stat-icon" style="background:#f3e8ff;color:#7e22ce"><i class="fas fa-exchange-alt"></i></div><div><div class="stat-label" style="font-size:10px">Diff. Vendor</div><div class="stat-value" id="ps_different_vendor">—</div></div></div>
+    <div class="stats-row pipeline-grid solar-only" id="pipelineStatsRow" style="display:none;margin-top:6px">
+      <div class="stat-card" id="pscard_first_payment_received" onclick="filterByPipeline('first_payment_received')" title="Filter: 1st Payment Received"><div class="stat-icon" style="background:#e0f2fe;color:#0369a1"><i class="fas fa-rupee-sign"></i></div><div><div class="stat-label">1st Payment</div><div class="stat-value" id="ps_first_payment_received">—</div></div></div>
+      <div class="stat-card" id="pscard_documents_pending" onclick="filterByPipeline('documents_pending')" title="Filter: Documents Pending"><div class="stat-icon" style="background:#fef3c7;color:#d97706"><i class="fas fa-file-alt"></i></div><div><div class="stat-label">Docs Pending</div><div class="stat-value" id="ps_documents_pending">—</div></div></div>
+      <div class="stat-card" id="pscard_application_submitted" onclick="filterByPipeline('application_submitted')" title="Filter: Application Submitted"><div class="stat-icon" style="background:#dbeafe;color:#1d4ed8"><i class="fas fa-paper-plane"></i></div><div><div class="stat-label">App Submitted</div><div class="stat-value" id="ps_application_submitted">—</div></div></div>
+      <div class="stat-card" id="pscard_pending_with_bank" onclick="filterByWithBank()" title="Filter: With Bank / Waiting for Bank Loan"><div class="stat-icon" style="background:#eff6ff;color:#1d4ed8"><i class="fas fa-university"></i></div><div><div class="stat-label">With Bank</div><div class="stat-value" id="ps_pending_with_bank">—</div></div></div>
+      <div class="stat-card" id="pscard_loan_rejected" onclick="filterByLoanRejected()" title="Filter: Loan Rejected (pipeline + bank)"><div class="stat-icon" style="background:#fee2e2;color:#b91c1c"><i class="fas fa-ban"></i></div><div><div class="stat-label">Loan Rejected</div><div class="stat-value" id="ps_loan_rejected">—</div></div></div>
+      <div class="stat-card" id="pscard_documents_issue" onclick="filterByPipeline('documents_issue')" title="Filter: Documents Issue"><div class="stat-icon" style="background:#fed7aa;color:#c2410c"><i class="fas fa-exclamation-triangle"></i></div><div><div class="stat-label">Docs Issue</div><div class="stat-value" id="ps_documents_issue">—</div></div></div>
+      <div class="stat-card" id="pscard_load_extension" onclick="filterByPipeline('load_extension')" title="Filter: Load Extension"><div class="stat-icon" style="background:#ede9fe;color:#5b21b6"><i class="fas fa-plug"></i></div><div><div class="stat-label">Load Ext</div><div class="stat-value" id="ps_load_extension">—</div></div></div>
+      <div class="stat-card" id="pscard_electricity_bill_change" onclick="filterByPipeline('electricity_bill_change')" title="Filter: Electricity Bill Change"><div class="stat-icon" style="background:#fef9c3;color:#92400e"><i class="fas fa-bolt"></i></div><div><div class="stat-label">Bill Change</div><div class="stat-value" id="ps_electricity_bill_change">—</div></div></div>
+      <div class="stat-card" id="pscard_installation_pending" onclick="filterByPipeline('installation_pending')" title="Filter: Installation Pending"><div class="stat-icon" style="background:#e0e7ff;color:#3730a3"><i class="fas fa-solar-panel"></i></div><div><div class="stat-label">Install Pending</div><div class="stat-value" id="ps_installation_pending">—</div></div></div>
+      <div class="stat-card" id="pscard_installed" onclick="filterByPipeline('installed')" title="Filter: Installed (passed installation pending)"><div class="stat-icon" style="background:#dcfce7;color:#15803d"><i class="fas fa-check-double"></i></div><div><div class="stat-label">Installed</div><div class="stat-value" id="ps_installed">—</div></div></div>
+      <div class="stat-card" id="pscard_net_meter_pending" onclick="filterByPipeline('net_meter_pending')" title="Filter: Net Meter Pending"><div class="stat-icon" style="background:#f5f3ff;color:#5b21b6"><i class="fas fa-tachometer-alt"></i></div><div><div class="stat-label">Net Meter</div><div class="stat-value" id="ps_net_meter_pending">—</div></div></div>
+      <div class="stat-card" id="pscard_balance_pending" onclick="filterByPipeline('balance_pending')" title="Filter: Balance Pending"><div class="stat-icon" style="background:#fff7ed;color:#c2410c"><i class="fas fa-hourglass-half"></i></div><div><div class="stat-label">Bal. Pending</div><div class="stat-value" id="ps_balance_pending">—</div></div></div>
+      <div class="stat-card" id="pscard_balance_received" onclick="filterByPipeline('balance_received')" title="Filter: Balance Received"><div class="stat-icon" style="background:#d1fae5;color:#065f46"><i class="fas fa-hand-holding-usd"></i></div><div><div class="stat-label">Bal. Received</div><div class="stat-value" id="ps_balance_received">—</div></div></div>
+      <div class="stat-card" id="pscard_subsidy_pending" onclick="filterByPipeline('subsidy_pending')" title="Filter: Subsidy Pending"><div class="stat-icon" style="background:#ccfbf1;color:#0f766e"><i class="fas fa-award"></i></div><div><div class="stat-label">Subsidy</div><div class="stat-value" id="ps_subsidy_pending">—</div></div></div>
+      <div class="stat-card" id="pscard_total_won" onclick="filterByStat('won')" title="Total Won leads (Solar) — click to filter"><div class="stat-icon" style="background:#fef9c3;color:#b45309"><i class="fas fa-trophy"></i></div><div><div class="stat-label">Total Won</div><div class="stat-value" id="ps_total_won">—</div></div></div>
+      <div class="stat-card" id="pscard_completed" onclick="filterByPipeline('completed')" title="Filter: Completed"><div class="stat-icon" style="background:#d1fae5;color:#065f46"><i class="fas fa-check-circle"></i></div><div><div class="stat-label">Completed</div><div class="stat-value" id="ps_completed">—</div></div></div>
+      <div class="stat-card" id="pscard_not_interested" onclick="filterByPipeline('not_interested')" title="Filter: Not Interested"><div class="stat-icon" style="background:#f3f4f6;color:#6b7280"><i class="fas fa-ban"></i></div><div><div class="stat-label">Not Interested</div><div class="stat-value" id="ps_not_interested">—</div></div></div>
+      <div class="stat-card" id="pscard_cancelled" onclick="filterByPipeline('cancelled')" title="Filter: Cancelled"><div class="stat-icon" style="background:#fce7f3;color:#9d174d"><i class="fas fa-times-circle"></i></div><div><div class="stat-label">Cancelled</div><div class="stat-value" id="ps_cancelled">—</div></div></div>
+      <div class="stat-card" id="pscard_different_vendor" onclick="filterByPipeline('different_vendor')" title="Filter: Different Vendor"><div class="stat-icon" style="background:#f3e8ff;color:#7e22ce"><i class="fas fa-exchange-alt"></i></div><div><div class="stat-label">Diff. Vendor</div><div class="stat-value" id="ps_different_vendor">—</div></div></div>
       <span id="ps_waiting_for_bank_loan" style="display:none">—</span>
       <span id="ps_bank_loan_rejected" style="display:none">—</span>
     </div>
 
     <!-- EV B2B Stage Stats (shown only when EV B2B tab is active) -->
-    <div class="stats-row" id="b2bStatsRow" style="display:none;margin-top:6px">
-      <div class="stat-card" id="bscard_application_pending" onclick="filterByB2BStage('application_pending')" title="Filter: Application Pending"><div class="stat-icon" style="background:#fef3c7;color:#d97706"><i class="fas fa-file-signature"></i></div><div><div class="stat-label" style="font-size:10px">App Pending</div><div class="stat-value" id="bs_application_pending">—</div></div></div>
-      <div class="stat-card" id="bscard_agreement_pending" onclick="filterByB2BStage('agreement_pending')" title="Filter: Agreement Pending"><div class="stat-icon" style="background:#dbeafe;color:#1d4ed8"><i class="fas fa-file-contract"></i></div><div><div class="stat-label" style="font-size:10px">Agreement</div><div class="stat-value" id="bs_agreement_pending">—</div></div></div>
-      <div class="stat-card" id="bscard_gst_pending" onclick="filterByB2BStage('gst_pending')" title="Filter: GST Pending"><div class="stat-icon" style="background:#ede9fe;color:#5b21b6"><i class="fas fa-receipt"></i></div><div><div class="stat-label" style="font-size:10px">GST</div><div class="stat-value" id="bs_gst_pending">—</div></div></div>
-      <div class="stat-card" id="bscard_training_pending" onclick="filterByB2BStage('training_pending')" title="Filter: Training Pending"><div class="stat-icon" style="background:#fed7aa;color:#c2410c"><i class="fas fa-chalkboard-teacher"></i></div><div><div class="stat-label" style="font-size:10px">Training</div><div class="stat-value" id="bs_training_pending">—</div></div></div>
-      <div class="stat-card" id="bscard_branding_pending" onclick="filterByB2BStage('branding_pending')" title="Filter: Branding Pending"><div class="stat-icon" style="background:#e0e7ff;color:#3730a3"><i class="fas fa-paint-brush"></i></div><div><div class="stat-label" style="font-size:10px">Branding</div><div class="stat-value" id="bs_branding_pending">—</div></div></div>
-      <div class="stat-card" id="bscard_payment_pending" onclick="filterByB2BStage('payment_pending')" title="Filter: Payment Pending"><div class="stat-icon" style="background:#fee2e2;color:#991b1b"><i class="fas fa-rupee-sign"></i></div><div><div class="stat-label" style="font-size:10px">Payment</div><div class="stat-value" id="bs_payment_pending">—</div></div></div>
-      <div class="stat-card" id="bscard_dispatch_pending" onclick="filterByB2BStage('dispatch_pending')" title="Filter: Dispatch Pending"><div class="stat-icon" style="background:#ccfbf1;color:#0f766e"><i class="fas fa-shipping-fast"></i></div><div><div class="stat-label" style="font-size:10px">Dispatch</div><div class="stat-value" id="bs_dispatch_pending">—</div></div></div>
-      <div class="stat-card" id="bscard_confirmation_pending" onclick="filterByB2BStage('confirmation_pending')" title="Filter: Confirmation Pending"><div class="stat-icon" style="background:#fef9c3;color:#92400e"><i class="fas fa-check-square"></i></div><div><div class="stat-label" style="font-size:10px">Confirmation</div><div class="stat-value" id="bs_confirmation_pending">—</div></div></div>
-      <div class="stat-card" id="bscard_completed" onclick="filterByB2BStage('completed')" title="Filter: Completed"><div class="stat-icon" style="background:#d1fae5;color:#065f46"><i class="fas fa-trophy"></i></div><div><div class="stat-label" style="font-size:10px">Completed</div><div class="stat-value" id="bs_completed">—</div></div></div>
+    <div class="stats-row pipeline-grid" id="b2bStatsRow" style="display:none;margin-top:6px">
+      <div class="stat-card" id="bscard_application_pending" onclick="filterByB2BStage('application_pending')" title="Filter: Application Pending"><div class="stat-icon" style="background:#fef3c7;color:#d97706"><i class="fas fa-file-signature"></i></div><div><div class="stat-label">App Pending</div><div class="stat-value" id="bs_application_pending">—</div></div></div>
+      <div class="stat-card" id="bscard_agreement_pending" onclick="filterByB2BStage('agreement_pending')" title="Filter: Agreement Pending"><div class="stat-icon" style="background:#dbeafe;color:#1d4ed8"><i class="fas fa-file-contract"></i></div><div><div class="stat-label">Agreement</div><div class="stat-value" id="bs_agreement_pending">—</div></div></div>
+      <div class="stat-card" id="bscard_gst_pending" onclick="filterByB2BStage('gst_pending')" title="Filter: GST Pending"><div class="stat-icon" style="background:#ede9fe;color:#5b21b6"><i class="fas fa-receipt"></i></div><div><div class="stat-label">GST</div><div class="stat-value" id="bs_gst_pending">—</div></div></div>
+      <div class="stat-card" id="bscard_training_pending" onclick="filterByB2BStage('training_pending')" title="Filter: Training Pending"><div class="stat-icon" style="background:#fed7aa;color:#c2410c"><i class="fas fa-chalkboard-teacher"></i></div><div><div class="stat-label">Training</div><div class="stat-value" id="bs_training_pending">—</div></div></div>
+      <div class="stat-card" id="bscard_branding_pending" onclick="filterByB2BStage('branding_pending')" title="Filter: Branding Pending"><div class="stat-icon" style="background:#e0e7ff;color:#3730a3"><i class="fas fa-paint-brush"></i></div><div><div class="stat-label">Branding</div><div class="stat-value" id="bs_branding_pending">—</div></div></div>
+      <div class="stat-card" id="bscard_payment_pending" onclick="filterByB2BStage('payment_pending')" title="Filter: Payment Pending"><div class="stat-icon" style="background:#fee2e2;color:#991b1b"><i class="fas fa-rupee-sign"></i></div><div><div class="stat-label">Payment</div><div class="stat-value" id="bs_payment_pending">—</div></div></div>
+      <div class="stat-card" id="bscard_dispatch_pending" onclick="filterByB2BStage('dispatch_pending')" title="Filter: Dispatch Pending"><div class="stat-icon" style="background:#ccfbf1;color:#0f766e"><i class="fas fa-shipping-fast"></i></div><div><div class="stat-label">Dispatch</div><div class="stat-value" id="bs_dispatch_pending">—</div></div></div>
+      <div class="stat-card" id="bscard_confirmation_pending" onclick="filterByB2BStage('confirmation_pending')" title="Filter: Confirmation Pending"><div class="stat-icon" style="background:#fef9c3;color:#92400e"><i class="fas fa-check-square"></i></div><div><div class="stat-label">Confirmation</div><div class="stat-value" id="bs_confirmation_pending">—</div></div></div>
+      <div class="stat-card" id="bscard_completed" onclick="filterByB2BStage('completed')" title="Filter: Completed"><div class="stat-icon" style="background:#d1fae5;color:#065f46"><i class="fas fa-trophy"></i></div><div><div class="stat-label">Completed</div><div class="stat-value" id="bs_completed">—</div></div></div>
     </div>
 
     <!-- Filter panel (CRM tabs) -->
@@ -598,6 +603,7 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
           <label>Stage</label>
           <select class="form-select" id="filterSolarStage" style="min-width:160px" onchange="applyFilters()">
             <option value="">All Stages</option>
+            <option value="first_payment_received">1st Payment Received</option>
             <option value="documents_pending">Documents Pending</option>
             <option value="application_submitted">Application Submitted</option>
             <option value="pending_with_bank">Pending with Bank</option>
@@ -606,6 +612,7 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
             <option value="load_extension">Load Extension</option>
             <option value="electricity_bill_change">Electricity Bill Change</option>
             <option value="installation_pending">Installation Pending</option>
+            <option value="installed">Installed (Completed Installation)</option>
             <option value="net_meter_pending">Net Meter Pending</option>
             <option value="balance_pending">Balance Pending</option>
             <option value="balance_received">Balance Received</option>
@@ -1662,10 +1669,12 @@ const SUBSIDY_LABELS = {
   bank_loan_rejected:'Bank Loan Rejected'
 };
 const PIPELINE_LABELS = {
+  first_payment_received:'1st Payment Received',
   documents_pending:'Documents Pending', application_submitted:'Application Submitted',
   pending_with_bank:'With Bank', loan_rejected:'Loan Rejected',
   documents_issue:'Documents Issue', load_extension:'Load Extension',
   electricity_bill_change:'Electricity Bill Change', installation_pending:'Installation Pending',
+  installed:'Installed',
   net_meter_pending:'Net Meter Pending', balance_pending:'Balance Pending', balance_received:'Balance Received', subsidy_pending:'Subsidy Pending',
   completed:'Completed', not_interested:'Not Interested', cancelled:'Cancelled',
   different_vendor:'Different Vendor'
@@ -1698,6 +1707,9 @@ let activeTab = 'solar';
 let currentPage = 1;
 let perPage = 20;
 let totalCount = 0;
+let currentDatePreset = 'overall';
+let dateFrom = '';
+let dateTo = '';
 let sortBy = 'solar_pipeline_status_updated_at'; // solar tab is default active tab
 let sortDir = 'desc';
 let tabCounts = {};
@@ -2082,6 +2094,11 @@ function buildQS() {
   } else if (!rawStatus && wonMode) {
     p.set('status', 'won_plus');
   }
+  if (currentDatePreset && currentDatePreset !== 'overall') {
+    p.set('date_preset', currentDatePreset);
+  }
+  addIf('date_from', dateFrom);
+  addIf('date_to', dateTo);
   // rawStatus==='all_status' → no status param → backend returns everything
   addIf('priority', document.getElementById('filterPriority')?.value);
   addIf('subsidy_status', document.getElementById('filterSubsidy')?.value);
@@ -2701,7 +2718,7 @@ function computeStats(leads, total, pg) {
 }
 
 function resetStats() {
-  ['statTotal','statWon','statProgress','statLost','statValue','statCollected','statPending','statLoanRejected','ps_documents_pending','ps_application_submitted','ps_pending_with_bank','ps_loan_rejected','ps_documents_issue','ps_load_extension','ps_electricity_bill_change','ps_installation_pending','ps_net_meter_pending','ps_balance_pending','ps_balance_received','ps_subsidy_pending','ps_total_won','ps_completed','ps_not_interested','ps_cancelled','ps_waiting_for_bank_loan','ps_bank_loan_rejected'].forEach(id=>{
+  ['statTotal','statWon','statProgress','statLost','statValue','statCollected','statPending','statLoanRejected','ps_first_payment_received','ps_documents_pending','ps_application_submitted','ps_pending_with_bank','ps_loan_rejected','ps_documents_issue','ps_load_extension','ps_electricity_bill_change','ps_installation_pending','ps_installed','ps_net_meter_pending','ps_balance_pending','ps_balance_received','ps_subsidy_pending','ps_total_won','ps_completed','ps_not_interested','ps_cancelled','ps_different_vendor','ps_waiting_for_bank_loan','ps_bank_loan_rejected'].forEach(id=>{
     const e=document.getElementById(id); if(e) e.textContent='—';
   });
 }
@@ -2711,33 +2728,46 @@ function buildAnalyticsQS() {
   const p = new URLSearchParams();
   if (t && t.category) p.set('category', t.category);
   const addIf = (k,v)=>{ if(v) p.set(k,v); };
-  const rawStatus = statFilterVal || document.getElementById('filterStatus')?.value || '';
-  if (rawStatus && rawStatus !== 'all_status') {
-    p.set('status', rawStatus);
-  } else if (!rawStatus && wonMode) {
+  if (wonMode) {
     p.set('status', 'won_plus');
   }
+  if (currentDatePreset && currentDatePreset !== 'overall') {
+    p.set('date_preset', currentDatePreset);
+  }
+  addIf('date_from', dateFrom);
+  addIf('date_to', dateTo);
+  addIf('priority', document.getElementById('filterPriority')?.value);
+  addIf('subsidy_status', document.getElementById('filterSubsidy')?.value);
+  addIf('existing_association', document.getElementById('filterAssoc')?.value);
   addIf('source', document.getElementById('filterSource')?.value?.trim());
+  addIf('handler_emp_code', document.getElementById('filterHandlerCode')?.value?.trim());
   addIf('telecaller_emp_code', document.getElementById('filterTelecallerCode')?.value?.trim());
   addIf('field_staff_emp_code', document.getElementById('filterFieldStaffCode')?.value?.trim());
   addIf('field_support_ref_id', document.getElementById('filterFieldSupportCode')?.value?.trim());
   addIf('pincode', document.getElementById('filterPincode')?.value?.trim());
   addIf('search', document.getElementById('quickSearch')?.value?.trim());
-  addIf('created_from', document.getElementById('filterCreatedFrom')?.value);
-  addIf('created_to', document.getElementById('filterCreatedTo')?.value);
+  addIf('next_followup_from', document.getElementById('filterNfFrom')?.value);
+  addIf('next_followup_to', document.getElementById('filterNfTo')?.value);
   addIf('accepted_date_from', document.getElementById('filterAccFrom')?.value);
   addIf('accepted_date_to', document.getElementById('filterAccTo')?.value);
   addIf('installation_date_from', document.getElementById('filterInstFrom')?.value);
   addIf('installation_date_to', document.getElementById('filterInstTo')?.value);
   addIf('material_reach_date_from', document.getElementById('filterMatFrom')?.value);
   addIf('material_reach_date_to', document.getElementById('filterMatTo')?.value);
-  addIf('next_followup_from', document.getElementById('filterNfFrom')?.value);
-  addIf('next_followup_to', document.getElementById('filterNfTo')?.value);
-  // DC-MULTI-FILTER-001: always read stage dropdown directly so analytics reflects current selection
-  const _sfv = pipelineFilterVal || (activeTab==='solar' ? (document.getElementById('filterSolarStage')?.value||'') : '');
-  if (_sfv) p.set('solar_pipeline_status', _sfv);
+  addIf('created_from', document.getElementById('filterCreatedFrom')?.value);
+  addIf('created_to', document.getElementById('filterCreatedTo')?.value);
+  addIf('submit_date_from', document.getElementById('filterSubmitFrom')?.value);
+  addIf('submit_date_to', document.getElementById('filterSubmitTo')?.value);
+  addIf('complete_date_from', document.getElementById('filterCompleteFrom')?.value);
+  addIf('complete_date_to', document.getElementById('filterCompleteTo')?.value);
+  addIf('first_dvr_from', document.getElementById('filterDvrFrom')?.value);
+  addIf('first_dvr_to', document.getElementById('filterDvrTo')?.value);
   if (b2bStageFilterVal) p.set('ev_b2b_stage', b2bStageFilterVal);
-  if (combinedBankFilter) p.set('combined_bank_filter', combinedBankFilter);
+  addIf('vendor_id', document.getElementById('filterVendorId')?.value);
+  addIf('guru_name', document.getElementById('filterGuruName')?.value?.trim());
+  addIf('z_guru_name', document.getElementById('filterZGuruName')?.value?.trim());
+  addIf('core_name', document.getElementById('filterCoreName')?.value?.trim());
+  addIf('loan_bank', document.getElementById('filterLoanBank')?.value?.trim());
   return p.toString();
 }
 
@@ -2759,7 +2789,7 @@ async function loadStats() {
     // Pipeline breakdown (solar tab only)
     if (activeTab === 'solar') {
       const pl = data.pipeline_breakdown || {};
-      ['documents_pending','application_submitted','pending_with_bank','documents_issue','load_extension','electricity_bill_change','installation_pending','net_meter_pending','balance_pending','balance_received','subsidy_pending','completed','not_interested','cancelled','waiting_for_bank_loan','bank_loan_rejected'].forEach(k => {
+      ['first_payment_received','documents_pending','application_submitted','pending_with_bank','loan_rejected','documents_issue','load_extension','electricity_bill_change','installation_pending','installed','net_meter_pending','balance_pending','balance_received','subsidy_pending','completed','not_interested','cancelled','different_vendor','waiting_for_bank_loan','bank_loan_rejected'].forEach(k => {
         const e = el('ps_' + k); if (e) e.textContent = fmtNum(pl[k] || 0);
       });
       /* Merged card: loan_rejected pipeline + bank_loan_rejected status */
@@ -2869,24 +2899,67 @@ function updateFilterCount() {
 
 function applyDatePreset(preset) {
   const today = new Date();
-  const fmt = d => d.toISOString().slice(0,10);
+  const fmt = d => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
   let from = '', to = '';
-  if (preset === 'ftd') {
+
+  if (preset === 'today' || preset === 'ftd') {
     from = to = fmt(today);
   } else if (preset === 'yesterday') {
-    const y = new Date(today); y.setDate(today.getDate()-1); from = to = fmt(y);
-  } else if (preset === 'mtd') {
-    from = fmt(new Date(today.getFullYear(), today.getMonth(), 1)); to = fmt(today);
-  } else if (preset === 'fy') {
-    const fyYear = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear()-1;
-    from = fmt(new Date(fyYear, 3, 1)); to = fmt(today);
+    const y = new Date(today);
+    y.setDate(today.getDate() - 1);
+    from = to = fmt(y);
+  } else if (preset === 'this_week') {
+    const d = new Date(today);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.setDate(diff));
+    from = fmt(monday);
+    to = fmt(today);
+  } else if (preset === 'last_week') {
+    const d = new Date(today);
+    const day = d.getDay();
+    const diffToMonday = d.getDate() - day + (day === 0 ? -6 : 1);
+    const lastMon = new Date(d.setDate(diffToMonday - 7));
+    const lastSun = new Date(lastMon);
+    lastSun.setDate(lastMon.getDate() + 6);
+    from = fmt(lastMon);
+    to = fmt(lastSun);
+  } else if (preset === 'this_month' || preset === 'mtd') {
+    from = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+    to = fmt(today);
+  } else if (preset === 'last_month') {
+    const firstDayLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const lastDayLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+    from = fmt(firstDayLastMonth);
+    to = fmt(lastDayLastMonth);
+  } else if (preset === 'this_fy' || preset === 'fy') {
+    const fyYear = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+    from = fmt(new Date(fyYear, 3, 1));
+    to = fmt(today);
+  } else if (preset === 'overall') {
+    from = '';
+    to = '';
   }
+
+  currentDatePreset = preset;
+  dateFrom = from;
+  dateTo = to;
+
+  // Clear manual created_from/created_to in filter inputs
   const fc = document.getElementById('filterCreatedFrom');
   const tc = document.getElementById('filterCreatedTo');
-  if (fc) fc.value = from; if (tc) tc.value = to;
+  if (fc) fc.value = '';
+  if (tc) tc.value = '';
+
   document.querySelectorAll('.date-preset-btn').forEach(b => b.classList.remove('active'));
   const btn = document.querySelector(`.date-preset-btn[data-preset="${preset}"]`);
   if (btn) btn.classList.add('active');
+
   applyFilters();
 }
 function applyFilters() {
@@ -2907,6 +2980,7 @@ function resetFilters() {
    'filterVendorId','filterSolarStage'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
   const qs=document.getElementById('quickSearch'); if(qs) qs.value='';
   statFilterVal=''; pipelineFilterVal=''; b2bStageFilterVal=''; combinedBankFilter='';
+  currentDatePreset = 'overall'; dateFrom = ''; dateTo = '';
   document.querySelectorAll('.stat-card').forEach(c=>c.classList.remove('active-filter'));
   document.querySelectorAll('.date-preset-btn').forEach(b=>b.classList.remove('active'));
   const _ob=document.querySelector('.date-preset-btn[data-preset="overall"]');if(_ob)_ob.classList.add('active');
@@ -6302,19 +6376,55 @@ async function submitMissingFields(){
     else if(k.startsWith('params.'))payloadUpdates[k.replace('params.','')]=v;
     else leadUpdates[k]=v;
   }
-  const fetches=[];
-  if(Object.keys(leadUpdates).length)
-    fetches.push(staffFetch('/api/v1/crm/leads/'+_sdocLeadId+'/solar-fields',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(leadUpdates)}));
-  if(Object.keys(techUpdates).length)
-    fetches.push(staffFetch('/api/v1/crm/leads/'+_sdocLeadId+'/solar-tech',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(techUpdates)}));
-  if(Object.keys(vendorUpdates).length&&_sdocVendorId)
-    fetches.push(staffFetch('/api/v1/crm/solar-vendors/'+_sdocVendorId,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(vendorUpdates)}));
-  await Promise.all(fetches);
-  // Inject saved values back into retry payload so backend validation passes even
-  // if DB commit hasn't propagated yet. params.* fields go directly into root payload.
-  for(const[k,v] of Object.entries(techUpdates))_mfPayload[k]=v;
-  for(const[k,v] of Object.entries(leadUpdates))_mfPayload[k]=v;
-  _mfPayload._save_preflight=true;
+  try {
+    const fetches=[];
+    if(Object.keys(leadUpdates).length){
+      fetches.push(staffFetch('/api/v1/crm/leads/'+_sdocLeadId+'/solar-fields',{
+        method:'PATCH',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(leadUpdates)
+      }).then(async res=>{
+        if(!res.ok){
+          const err=await res.json().catch(()=>({}));
+          throw new Error(err.detail||'Failed to save lead details');
+        }
+        return res.json();
+      }));
+    }
+    if(Object.keys(techUpdates).length){
+      fetches.push(staffFetch('/api/v1/crm/leads/'+_sdocLeadId+'/solar-tech',{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(techUpdates)
+      }).then(async res=>{
+        if(!res.ok){
+          const err=await res.json().catch(()=>({}));
+          throw new Error(err.detail||'Failed to save technical specifications');
+        }
+        return res.json();
+      }));
+    }
+    if(Object.keys(vendorUpdates).length&&_sdocVendorId){
+      fetches.push(staffFetch('/api/v1/crm/solar-vendors/'+_sdocVendorId,{
+        method:'PATCH',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(vendorUpdates)
+      }).then(async res=>{
+        if(!res.ok){
+          const err=await res.json().catch(()=>({}));
+          throw new Error(err.detail||'Failed to save vendor details');
+        }
+        return res.json();
+      }));
+    }
+    if(fetches.length){
+      await Promise.all(fetches);
+    }
+  } catch(err){
+    showToast('❌ Error saving data: '+err.message,'error');
+    return;
+  }
+
   const retryPayload={..._mfPayload,...payloadUpdates};
   closeMissingFieldsModal();
   showToast('Data saved, retrying generation...','info');

@@ -8,6 +8,7 @@ Created: Sep 2026
 from typing import Dict, Any, List, Optional, Tuple
 from datetime import datetime
 import os
+import json
 import pytz
 import logging
 import re
@@ -60,16 +61,35 @@ class CallFlowInterpreter:
         """
         logger.info(f"[FLOW-INTERPRETER] Call received on DID/Destination '{called_did}' from '{caller_phone}' (UUID: {provider_call_id}, Session: {call_session_id})")
 
-        # 0. Robust Detection for Outbound Browser Softphone Calling (WebRTC SIP Leg -> Customer PSTN)
         caller_str = str(caller_phone or '').strip()
         called_str = str(called_did or '').strip()
 
+        # 0. Check if called number is an incoming company DID
+        clean_called = re.sub(r'\D', '', called_str)
+        is_inbound_did = False
+        try:
+            if clean_called:
+                did_exists = db.query(TelephonyDIDMapping).filter(
+                    TelephonyDIDMapping.did_number.ilike(f"%{clean_called[-10:]}%"),
+                    TelephonyDIDMapping.is_active == True
+                ).first()
+                if did_exists:
+                    is_inbound_did = True
+                else:
+                    flow_exists = db.query(TelephonyCallFlow).filter(
+                        (TelephonyCallFlow.did_number == called_did) | (TelephonyCallFlow.did_number.ilike(f"%{clean_called[-10:]}%")),
+                        TelephonyCallFlow.status == 'published'
+                    ).first()
+                    if flow_exists:
+                        is_inbound_did = True
+        except Exception as e:
+            logger.warning(f"[FLOW-INTERPRETER] DID lookup error: {e}")
+
+        # 0b. Robust Detection for Outbound Browser Softphone Calling (WebRTC SIP Leg -> Customer PSTN)
         is_sip_caller = (
             caller_str.startswith('sip:') or 
-            '@' in caller_str or 
-            'agent' in caller_str.lower() or 
-            not caller_str.replace('+', '').isdigit() or
-            len(re.sub(r'\D', '', caller_str)) < 10
+            '@' in caller_str or
+            caller_str.startswith('agent')
         )
 
         clean_dest_digits = "".join([c for c in called_str if c.isdigit()])
@@ -85,11 +105,12 @@ class CallFlowInterpreter:
             clean_caller_id = "918031728899"
         outbound_caller_id = f"+{clean_caller_id}" if not clean_caller_id.startswith('+') else clean_caller_id
 
-        domain = base_api_url if (base_api_url and "localhost" not in base_api_url and "127.0.0.1" not in base_api_url) else "https://www.myntreal.com"
+        domain = base_api_url if (base_api_url and "localhost" not in base_api_url and "127.0.0.1" not in base_api_url) else (getattr(settings, 'PLIVO_WEBHOOK_BASE_URL', None) or os.getenv('PLIVO_WEBHOOK_BASE_URL') or "https://www.myntreal.com")
         rec_cb = f"{domain}/api/v1/telephony/plivo/recording-callback"
         hangup_cb = f"{domain}/api/v1/telephony/plivo/hangup"
+        dial_cb = f"{domain}/api/v1/telephony/plivo/dial-callback"
 
-        if is_sip_caller:
+        if not is_inbound_did and is_sip_caller:
             logger.info(f"[FLOW-INTERPRETER] Bridging Outbound WebRTC call from {caller_str} to customer {clean_dest} with callerId {outbound_caller_id}")
             
             # Correlate with existing VoIPCallSession and update with real Plivo CallUUID
@@ -100,7 +121,7 @@ class CallFlowInterpreter:
                     session_obj = db.query(VoIPCallSession).filter(VoIPCallSession.call_session_id == call_session_id).first()
                 if not session_obj and clean_dest:
                     from datetime import timedelta
-                    cutoff = get_indian_time() - timedelta(minutes=3)
+                    cutoff = datetime.now(IST) - timedelta(minutes=3)
                     session_obj = db.query(VoIPCallSession).filter(
                         VoIPCallSession.destination_number.ilike(f"%{clean_dest[-10:]}%"),
                         VoIPCallSession.direction == 'outbound',
@@ -113,7 +134,7 @@ class CallFlowInterpreter:
                         session_obj.provider_call_id = provider_call_id
                     if session_obj.status in (CallStateEnum.CREATED.value, CallStateEnum.DIALING.value):
                         session_obj.status = CallStateEnum.RINGING.value
-                        session_obj.ringing_at = session_obj.ringing_at or get_indian_time()
+                        session_obj.ringing_at = session_obj.ringing_at or datetime.now(IST)
                     if session_obj.operator_call_id:
                         from app.models.operator_calls import OperatorCall
                         op_c = db.query(OperatorCall).filter(OperatorCall.id == session_obj.operator_call_id).first()
@@ -125,35 +146,22 @@ class CallFlowInterpreter:
                 logger.warning(f"[FLOW-INTERPRETER] Could not correlate VoIPCallSession: {dbe}")
 
             out_rec_cb = f"{rec_cb}?session_id={actual_session_id or ''}"
-            out_hangup_cb = f"{hangup_cb}?session_id={actual_session_id or ''}&direction=outbound"
+            out_hangup_cb = f"{hangup_cb}?session_id={actual_session_id or ''}&amp;direction=outbound"
+            out_dial_cb = f"{dial_cb}?session_id={actual_session_id or ''}&amp;direction=outbound"
 
             return cls._generate_xml_response([
-                f'<Dial callerId="{outbound_caller_id}" action="{out_hangup_cb}" method="POST" record="record-from-answer" recordingCallbackUrl="{out_rec_cb}" recordingCallbackMethod="POST">',
+                f'<Record recordSession="true" startOnDialAnswer="true" redirect="false" callbackUrl="{out_rec_cb}" callbackMethod="POST" fileFormat="mp3" />',
+                f'<Dial timeout="50" callerId="{outbound_caller_id}" action="{out_hangup_cb}" method="POST" callbackUrl="{out_dial_cb}" callbackMethod="POST">',
                 f'  <Number>{clean_dest}</Number>',
                 f'</Dial>'
             ])
 
-        # Check if called number is an incoming company DID or an outbound customer number
-        clean_called = re.sub(r'\D', '', called_str)
-        is_inbound_did = False
-        try:
-            if clean_called:
-                did_exists = db.query(TelephonyDIDMapping).filter(
-                    TelephonyDIDMapping.did_number.ilike(f"%{clean_called[-10:]}%"),
-                    TelephonyDIDMapping.is_active == True
-                ).first()
-                if did_exists:
-                    is_inbound_did = True
-        except Exception as e:
-            logger.warning(f"[FLOW-INTERPRETER] DID lookup error: {e}")
-
         if not is_inbound_did:
-            # Dynamically resolve registered staff Plivo endpoint from DB
+            # Dynamically resolve registered staff Plivo endpoint from DB if this was an outbound click-to-call OBD session
             operator_sip = None
             ep_rec = None
+            session_obj = None
             try:
-                # 1. Locate VoIPCallSession
-                session_obj = None
                 if call_session_id:
                     session_obj = db.query(VoIPCallSession).filter(VoIPCallSession.call_session_id == call_session_id).first()
                 if not session_obj and provider_call_id:
@@ -163,7 +171,20 @@ class CallFlowInterpreter:
                         VoIPCallSession.customer_phone == clean_dest,
                         VoIPCallSession.direction == 'outbound'
                     ).order_by(VoIPCallSession.id.desc()).first()
+            except Exception as e:
+                logger.warning(f"[FLOW-INTERPRETER] Dynamic endpoint lookup error: {e}")
 
+            # If no session object exists and not a company DID, quarantine the unmapped DID
+            if not session_obj:
+                comp_did = cls._resolve_company_from_did(db, called_did)
+                if not comp_did:
+                    logger.warning(f"[FLOW-INTERPRETER] Unmapped/Quarantined DID: {called_did}")
+                    return cls._generate_xml_response([
+                        f'<Speak voice="Polly.Aditi" language="en-IN">Thank you for calling. This number is not currently configured. Please contact support.</Speak>',
+                        f'<Hangup />'
+                    ])
+
+            try:
                 op_id = session_obj.operator_id if session_obj else None
                 comp_id = session_obj.company_id if session_obj else None
 
@@ -203,13 +224,17 @@ class CallFlowInterpreter:
                         clean_ag_phone = f"+91{clean_ag_phone[-10:]}"
                     agent_phone = clean_ag_phone
 
+            obd_rec_cb = f"{rec_cb}?session_id={session_obj.call_session_id if session_obj else ''}"
+            obd_hangup_cb = f"{hangup_cb}?session_id={session_obj.call_session_id if session_obj else ''}&amp;direction=outbound"
+
             if operator_sip:
                 logger.info(
                     f"[FLOW-INTERPRETER] Outbound call to customer {clean_dest} answered. Bridging to agent SIP {operator_sip} "
                     f"with callerId {outbound_caller_id}"
                 )
                 return cls._generate_xml_response([
-                    f'<Dial callerId="{outbound_caller_id}" action="{hangup_cb}" method="POST" record="record-from-answer" recordingCallbackUrl="{rec_cb}" recordingCallbackMethod="POST">',
+                    f'<Record recordSession="true" startOnDialAnswer="true" redirect="false" callbackUrl="{obd_rec_cb}" callbackMethod="POST" fileFormat="mp3" />',
+                    f'<Dial callerId="{outbound_caller_id}" action="{obd_hangup_cb}" method="POST">',
                     f'  <User>{operator_sip}</User>',
                     f'</Dial>'
                 ])
@@ -219,7 +244,8 @@ class CallFlowInterpreter:
                     f"with callerId {outbound_caller_id}"
                 )
                 return cls._generate_xml_response([
-                    f'<Dial callerId="{outbound_caller_id}" action="{hangup_cb}" method="POST" record="record-from-answer" recordingCallbackUrl="{rec_cb}" recordingCallbackMethod="POST">',
+                    f'<Record recordSession="true" startOnDialAnswer="true" redirect="false" callbackUrl="{obd_rec_cb}" callbackMethod="POST" fileFormat="mp3" />',
+                    f'<Dial callerId="{outbound_caller_id}" action="{obd_hangup_cb}" method="POST">',
                     f'  <Number>{agent_phone}</Number>',
                     f'</Dial>'
                 ])
@@ -252,7 +278,7 @@ class CallFlowInterpreter:
                 destination_number=called_did or '+918031728899',
                 direction='inbound',
                 call_method=CallMethodEnum.IN_APP_PSTN.value,
-                status=CallStateEnum.IN_PROGRESS.value,
+                status=CallStateEnum.RINGING.value,
                 started_at=now_ist,
                 answered_at=now_ist
             )
@@ -261,32 +287,12 @@ class CallFlowInterpreter:
             db.refresh(session_obj)
             logger.info(f"[FLOW-INTERPRETER] Registered inbound VoIPCallSession #{session_obj.id} ({session_id}) from {caller_phone}")
 
-        # 3. FIRST ROUTING GATE: Business Hours & Holiday Evaluation
-        # Outermost Gate: Must execute BEFORE any recent-caller lookup, DAG execution, or staff dialing.
-        is_open, bh_reason = cls._evaluate_business_hours(db, company_id, {}, now_ist)
-        if not is_open:
-            logger.info(
-                f"[FLOW-INTERPRETER] Inbound call outside business window ({bh_reason}) from {caller_phone} on DID {called_did}. "
-                f"Halting all staff routing -> Dispatching to After-Hours Voicemail."
-            )
-            return cls._generate_xml_response([
-                f'<Speak voice="Polly.Aditi" language="en-IN">Thank you for calling Mynt Real. Our office hours are 9:00 AM to 8:00 PM, Monday to Sunday. Please leave a message after the tone, and our team will get back to you shortly.</Speak>',
-                f'<Record maxLength="120" finishOnKey="#" action="https://www.myntreal.com/api/v1/telephony/plivo/voicemail" playBeep="true" />',
-                f'<Hangup />'
-            ])
-
-        # 3. IF OPEN: Check Recent-Caller Callback Routing (Sticky Agent)
-        sticky_agent_xml = cls._check_sticky_agent(db, caller_phone, called_did, company_id, now_ist)
-        if sticky_agent_xml:
-            logger.info(f"[FLOW-INTERPRETER] Sticky agent routed caller {caller_phone} during open hours ({bh_reason}).")
-            return sticky_agent_xml
-
-        # 4. Check Dynamic Published Call Flow from DB (if configured and valid)
+        # 3. PRIORITY 1: Check Dynamic Published Call Flow from DB (if configured and valid)
         clean_d = re.sub(r'\D', '', str(called_did))[-10:] if called_did else ""
         flow = db.query(TelephonyCallFlow).filter(
             (TelephonyCallFlow.did_number == called_did) | (TelephonyCallFlow.did_number.ilike(f"%{clean_d}%")),
             TelephonyCallFlow.status == 'published'
-        ).first()
+        ).order_by(TelephonyCallFlow.id.desc()).first()
 
         if flow and flow.current_published_version_id:
             flow_version = db.query(TelephonyCallFlowVersion).filter(
@@ -322,74 +328,101 @@ class CallFlowInterpreter:
                     base_api_url=base_api_url
                 )
 
-        # 5. Working Hours Sales IVR Menu (Exact 8 Options: 1-6, 9, 0)
-        gather_url = "https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=main"
-        sales_prompt = (
-            "Welcome to Mynt Real. "
-            "For Solar, press 1. "
-            "For Insurance, press 2. "
-            "For Training, press 3. "
-            "For Manthra E V, press 4. "
-            "For V G K 4 U, press 5. "
-            "For Service Support, press 6. "
-            "To speak to Customer Care Executives, press 9. "
-            "To return to the Main Menu, press 0."
-        )
-        logger.info(f"[FLOW-INTERPRETER] Presenting Working Hours Sales IVR Menu to {caller_phone}")
+        # 4. DEFAULT FALLBACK PIPELINE (If no published custom DAG on DID)
+        # Gate 4a: Business Hours & Holiday Evaluation
+        is_open, bh_reason = cls._evaluate_business_hours(db, company_id, {}, now_ist)
+        if not is_open:
+            logger.info(
+                f"[FLOW-INTERPRETER] Inbound call outside business window ({bh_reason}) from {caller_phone} on DID {called_did}. "
+                f"Halting all staff routing -> Dispatching to After-Hours Voicemail."
+            )
+            return cls._generate_xml_response([
+                f'<Speak voice="Polly.Aditi" language="en-IN">Thank you for calling Mynt Real. Our office hours are 9:00 AM to 8:00 PM, Monday to Sunday. Please leave a message after the tone, and our team will get back to you shortly.</Speak>',
+                f'<Record maxLength="120" finishOnKey="#" action="https://www.myntreal.com/api/v1/telephony/plivo/voicemail" playBeep="true" />',
+                f'<Hangup />'
+            ])
+
+        # Gate 4b: Sticky Agent (Recent-Caller Callback Routing)
+        sticky_agent_xml = cls._check_sticky_agent(db, caller_phone, called_did, company_id, now_ist)
+        if sticky_agent_xml:
+            logger.info(f"[FLOW-INTERPRETER] Sticky agent routed caller {caller_phone} during open hours ({bh_reason}).")
+            return sticky_agent_xml
+
+        # Gate 4c: CRM Lead Language Check
+        known_lang = None
+        clean_caller_digits = re.sub(r'\D', '', str(caller_phone or ''))[-10:]
+        if clean_caller_digits:
+            try:
+                crm_lead = db.query(CRMLead).filter(
+                    (CRMLead.phone.ilike(f"%{clean_caller_digits}%")) | (CRMLead.alternate_phone.ilike(f"%{clean_caller_digits}%"))
+                ).order_by(CRMLead.id.desc()).first()
+                if crm_lead:
+                    if getattr(crm_lead, 'preferred_language', None):
+                        known_lang = str(crm_lead.preferred_language).strip().lower()
+                    elif crm_lead.metadata_json:
+                        meta = json.loads(crm_lead.metadata_json) if isinstance(crm_lead.metadata_json, str) else dict(crm_lead.metadata_json)
+                        known_lang = (meta.get('preferred_language') or meta.get('language') or '').strip().lower()
+            except Exception as le:
+                logger.warning(f"[FLOW-INTERPRETER] Lead language lookup error: {le}")
+
+        if known_lang in ('te', 'telugu'):
+            logger.info(f"[FLOW-INTERPRETER] Recognized Telugu caller {caller_phone} from CRM lead record.")
+            return cls._get_department_menu_xml(db, company_id, called_did, lang="te")
+        elif known_lang in ('en', 'english'):
+            logger.info(f"[FLOW-INTERPRETER] Recognized English caller {caller_phone} from CRM lead record.")
+            return cls._get_department_menu_xml(db, company_id, called_did, lang="en")
+
+        # Gate 4d: Bilingual Language Selection Gate (Telugu / English)
+        lang_gather_url = "https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=lang"
+        lang_prompt = "Welcome to Mynt Real. తెలుగు కొరకు 1 నొక్కండి. For English, press 2."
+        logger.info(f"[FLOW-INTERPRETER] Presenting Bilingual Language Selection Gate to {caller_phone}")
         return cls._generate_xml_response([
-            f'<GetDigits action="{gather_url}" method="POST" numDigits="1" timeout="7" retries="2">',
-            f'  <Speak voice="Polly.Aditi" language="en-IN">{sales_prompt}</Speak>',
+            f'<GetDigits action="{lang_gather_url}" method="POST" numDigits="1" timeout="7" retries="2">',
+            f'  <Speak voice="Polly.Aditi" language="en-IN">{lang_prompt}</Speak>',
             f'</GetDigits>',
             f'<Speak voice="Polly.Aditi" language="en-IN">We did not receive your input. Connecting you to Customer Care. Please hold.</Speak>',
-            cls._build_telesales_simultaneous_dial(db, company_id, "Customer Care", called_did)
+            cls._build_telesales_simultaneous_dial(db, company_id, "Customer Care", called_did, lang="te")
         ])
 
-        # 4. Create/Upsert VoIPCallSession & FlowExecutionLog
-        session_id = f"vcs_in_{provider_call_id[-12:]}"
-        session = db.query(VoIPCallSession).filter(VoIPCallSession.call_session_id == session_id).first()
-        if not session:
-            session = VoIPCallSession(
-                company_id=company_id,
-                call_session_id=session_id,
-                provider='plivo',
-                provider_call_id=provider_call_id,
-                caller_id=called_did,
-                customer_phone=caller_phone,
-                destination_number=caller_phone,
-                direction='inbound',
-                call_method=CallMethodEnum.IN_APP_PSTN.value,
-                status=CallStateEnum.RINGING.value
+    @classmethod
+    def _get_department_menu_xml(cls, db: Session, company_id: int, called_did: str, lang: str = "te") -> str:
+        """Generates full 8-option IVR menu XML in Telugu or English."""
+        selected_lang = 'te' if lang in ('te', 'telugu') else 'en'
+        gather_url = f"https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=dept&amp;lang={selected_lang}"
+        if selected_lang == "te":
+            dept_prompt = (
+                "మైంట్ రియల్‌కి స్వాగతం. "
+                "సోలార్ కొరకు 1 నొక్కండి. "
+                "ఇన్సూరెన్స్ కొరకు 2 నొక్కండి. "
+                "ట్రైనింగ్ కొరకు 3 నొక్కండి. "
+                "మంత్ర ఈవీ కొరకు 4 నొక్కండి. "
+                "వి జీ కే ఫర్ యు కొరకు 5 నొక్కండి. "
+                "సర్వీస్ మరియు సపోర్ట్ కొరకు 6 నొక్కండి. "
+                "కస్టమర్ కేర్ ఎగ్జిక్యూటివ్‌తో మాట్లాడటానికి 9 నొక్కండి. "
+                "మునుపటి మెనూ కోసం 0 నొక్కండి."
             )
-            db.add(session)
+            no_input_prompt = "మీ నుండి ఎటువంటి స్పందన రాలేదు. కస్టమర్ కేర్‌కు కనెక్ట్ చేస్తున్నాము. దయచేసి వేచి ఉండండి."
+        else:
+            dept_prompt = (
+                "Welcome to Mynt Real. "
+                "For Solar, press 1. "
+                "For Insurance, press 2. "
+                "For Training, press 3. "
+                "For Manthra E V, press 4. "
+                "For V G K 4 U, press 5. "
+                "For Service Support, press 6. "
+                "To speak to Customer Care Executives, press 9. "
+                "To replay this menu, press 0."
+            )
+            no_input_prompt = "We did not receive your input. Connecting you to Customer Care. Please hold."
 
-        exec_log = TelephonyFlowExecutionLog(
-            call_session_id=session_id,
-            company_id=company_id,
-            flow_id=flow.id,
-            flow_version_id=flow_version.id,
-            caller_phone=caller_phone,
-            did_number=called_did,
-            current_node_key="entry",
-            traversed_nodes=[],
-            final_outcome="in_progress"
-        )
-        db.add(exec_log)
-        db.commit()
-
-        # 5. Begin Traversal from Entry Node
-        return cls._execute_flow_node(
-            db=db,
-            flow_data=flow_version.flow_data,
-            company_id=company_id,
-            caller_phone=caller_phone,
-            called_did=called_did,
-            call_session_id=session_id,
-            provider_call_id=provider_call_id,
-            current_node_key=None,  # Start at root
-            dtmf_input=None,
-            exec_log=exec_log,
-            base_api_url=base_api_url
-        )
+        return cls._generate_xml_response([
+            f'<GetDigits action="{gather_url}" method="POST" numDigits="1" timeout="7" retries="2">',
+            f'  <Speak voice="Polly.Aditi" language="en-IN">{dept_prompt}</Speak>',
+            f'</GetDigits>',
+            f'<Speak voice="Polly.Aditi" language="en-IN">{no_input_prompt}</Speak>',
+            cls._build_telesales_simultaneous_dial(db, company_id, "Customer Care", called_did, lang=selected_lang)
+        ])
 
     @classmethod
     def handle_flow_step(
@@ -537,7 +570,7 @@ class CallFlowInterpreter:
             if n_type == 'trigger_did':
                 rec_action = f"{base_api_url}/api/v1/telephony/plivo/recording-callback?session_id={call_session_id}"
                 xml_elements.append(
-                    f'<Record recordSession="true" startOnDialAnswer="false" redirect="false" action="{rec_action}" method="POST" callbackUrl="{rec_action}" callbackMethod="POST" fileFormat="mp3" />'
+                    f'<Record recordSession="true" startOnDialAnswer="false" redirect="false" callbackUrl="{rec_action}" callbackMethod="POST" fileFormat="mp3" />'
                 )
                 xml_elements.append('<Wait length="1" />')
                 next_condition = 'always'
@@ -616,7 +649,7 @@ class CallFlowInterpreter:
                 rec_action = f"{base_api_url}/api/v1/telephony/plivo/recording-callback?session_id={call_session_id}"
 
                 xml_elements.append(
-                    f'<Record recordSession="true" startOnDialAnswer="true" redirect="false" action="{rec_action}" method="POST" callbackUrl="{rec_action}" callbackMethod="POST" fileFormat="mp3" />'
+                    f'<Record recordSession="true" startOnDialAnswer="true" redirect="false" callbackUrl="{rec_action}" callbackMethod="POST" fileFormat="mp3" />'
                 )
                 xml_elements.append(
                     f'<Dial timeout="{timeout}" callerId="{caller_id_val}" action="{action_url}" method="POST">'
@@ -651,7 +684,7 @@ class CallFlowInterpreter:
                 if endpoints:
                     user_tags = "".join([f"<User>{ep}</User>" for ep in endpoints])
                     xml_elements.append(
-                        f'<Record recordSession="true" startOnDialAnswer="true" redirect="false" action="{rec_action}" method="POST" callbackUrl="{rec_action}" callbackMethod="POST" fileFormat="mp3" />'
+                        f'<Record recordSession="true" startOnDialAnswer="true" redirect="false" callbackUrl="{rec_action}" callbackMethod="POST" fileFormat="mp3" />'
                     )
                     xml_elements.append(
                         f'<Dial timeout="{timeout}" callerId="{caller_id_val}" action="{action_url}" method="POST">'
@@ -687,7 +720,7 @@ class CallFlowInterpreter:
                 caller_id_val = called_did or n_cfg.get('caller_id', '+918031728899')
                 rec_action = f"{base_api_url}/api/v1/telephony/plivo/recording-callback?session_id={call_session_id}"
                 xml_elements.append(
-                    f'<Record recordSession="true" startOnDialAnswer="true" redirect="false" action="{rec_action}" method="POST" callbackUrl="{rec_action}" callbackMethod="POST" fileFormat="mp3" />'
+                    f'<Record recordSession="true" startOnDialAnswer="true" redirect="false" callbackUrl="{rec_action}" callbackMethod="POST" fileFormat="mp3" />'
                 )
                 xml_elements.append(
                     f'<Dial callerId="{caller_id_val}">'
@@ -749,7 +782,9 @@ class CallFlowInterpreter:
     @classmethod
     def _generate_xml_response(cls, elements: List[str]) -> str:
         body = "\n  ".join(elements) if elements else "<Hangup />"
-        return f'<Response>\n  {body}\n</Response>'
+        raw_xml = f'<Response>\n  {body}\n</Response>'
+        # Bulletproof XML sanitization: ensure any bare '&' in URLs/attributes is properly escaped to '&amp;'
+        return re.sub(r'&(?!(?:amp|lt|gt|quot|apos);)', '&amp;', raw_xml)
 
     @classmethod
     def _resolve_company_from_did(cls, db: Session, did_number: str) -> Optional[int]:
@@ -782,14 +817,13 @@ class CallFlowInterpreter:
 
     @classmethod
     def _resolve_staff_sip_endpoint(cls, db: Session, company_id: int, staff_id: int) -> str:
-        """Resolves real mapped Plivo SIP endpoint or constructs company-scoped endpoint"""
+        """Resolves real mapped Plivo SIP endpoint or constructs canonical endpoint agentc{company_id}s{staff_id}"""
         endpoint = db.query(TelephonyPlivoEndpoint).filter(
-            TelephonyPlivoEndpoint.company_id == company_id,
             TelephonyPlivoEndpoint.staff_id == staff_id
-        ).first()
+        ).order_by(TelephonyPlivoEndpoint.is_registered.desc(), TelephonyPlivoEndpoint.id.desc()).first()
         if endpoint and endpoint.plivo_username:
             return f"sip:{endpoint.plivo_username}@phone.plivo.com"
-        return f"sip:agent_c{company_id}_s{staff_id}@phone.plivo.com"
+        return f"sip:agentc{company_id}s{staff_id}@phone.plivo.com"
 
     @classmethod
     def _resolve_ring_group_endpoints(cls, db: Session, company_id: int, ring_group_id: int) -> List[str]:
@@ -933,17 +967,23 @@ class CallFlowInterpreter:
         return None
 
     @classmethod
-    def _build_telesales_simultaneous_dial(cls, db: Session, company_id: int, department_name: str, called_did: str) -> str:
+    def _build_telesales_simultaneous_dial(
+        cls,
+        db: Session,
+        company_id: int,
+        department_name: str,
+        called_did: str,
+        lang: str = "en"
+    ) -> str:
         """
         Builds a multi-user simultaneous <Dial> XML for the target department/ring group.
         Dynamically routes to active team members configured in CRM Lead Handlers.
         All available online agent softphones ring in parallel.
-        If no agent answers within timeout -> routes automatically to Voicemail.
+        If no agent answers within timeout -> routes automatically to Voicemail in selected language.
         """
         from app.models.crm_handler import CRMLeadHandler, CRMLeadHandlerMember
         from app.models.signup_category import SignupCategory
 
-        # 1. Resolve target category keywords based on department_name / IVR option
         dept_norm = (department_name or '').strip().lower()
         cat_search_terms = []
         if 'solar' in dept_norm:
@@ -954,8 +994,11 @@ class CallFlowInterpreter:
             cat_search_terms = ['etc training', 'training']
         elif 'ev' in dept_norm or 'manthra' in dept_norm:
             cat_search_terms = ['ev b2b', 'ev b2c', 'ev spares', 'ev']
+        elif 'vgk' in dept_norm or '4u' in dept_norm:
+            cat_search_terms = ['vgk', 'vgk 4u']
+        elif 'service' in dept_norm or 'support' in dept_norm:
+            cat_search_terms = ['service', 'support']
 
-        # 2. Look up handler members dynamically from CRMLeadHandler configuration
         staff_ids = []
         if cat_search_terms:
             cat_filter = [SignupCategory.name.ilike(f"%{term}%") for term in cat_search_terms]
@@ -989,7 +1032,6 @@ class CallFlowInterpreter:
                     ).distinct().all()
                     staff_ids = [m[0] for m in members]
 
-        # 3. If handler members found, use them
         user_tags = []
         if staff_ids:
             logger.info(f"[IVR-DIAL] Resolved {len(staff_ids)} active handler members for '{department_name}' (Company: {company_id}): {staff_ids}")
@@ -1006,38 +1048,75 @@ class CallFlowInterpreter:
                 user_tags.append(f'  <User>{sip_uri}</User>')
 
         if not user_tags:
-            user_tags.append(f'  <User>sip:agent_c{company_id}_general@phone.plivo.com</User>')
+            user_tags.append(f'  <User>sip:agentc{company_id}s_general@phone.plivo.com</User>')
 
         users_joined = "\n".join(user_tags)
         dial_complete_url = "https://www.myntreal.com/api/v1/telephony/plivo/ivr/dial-complete"
         voicemail_url = "https://www.myntreal.com/api/v1/telephony/plivo/voicemail"
+
+        if lang in ("te", "telugu"):
+            vm_prompt = "మా ఎగ్జిక్యూటివ్‌లు అందరూ ప్రస్తుతం ఇతర కాల్స్‌లో బిజీగా ఉన్నారు. దయచేసి బీప్ తర్వాత మీ వాయిస్‌మెయిల్‌ను రికార్డ్ చేయండి, మా బృందం వెంటనే మిమ్మల్ని సంప్రదిస్తుంది."
+        else:
+            vm_prompt = f"All our {department_name} executives are currently busy on other calls. Please leave a voicemail after the beep, and we will return your call promptly."
+
         return f"""<Dial timeout="25" callerId="{called_did}" action="{dial_complete_url}">
 {users_joined}
 </Dial>
-<Speak voice="Polly.Aditi" language="en-IN">All our {department_name} executives are currently busy on other calls. Please leave a voicemail after the beep, and we will return your call promptly.</Speak>
+<Speak voice="Polly.Aditi" language="en-IN">{vm_prompt}</Speak>
 <Record maxLength="120" finishOnKey="#" action="{voicemail_url}" />
 <Hangup />"""
 
     @classmethod
-    def handle_ivr_gather(cls, db: Session, caller_phone: str, called_did: str, digits: str, menu_type: str = "main") -> str:
+    def handle_ivr_gather(
+        cls,
+        db: Session,
+        caller_phone: str,
+        called_did: str,
+        digits: str,
+        menu_type: str = "main",
+        lang: str = "en"
+    ) -> str:
         """
-        Authoritative Sales IVR Keypad Router:
-        1 -> Solar
-        2 -> Insurance
-        3 -> Training
-        4 -> Manthra EV
-        5 -> VGK 4U
-        6 -> Service Support (Combined Service & Support)
-        9 -> Customer Care Executives
-        0 -> Main Menu
+        Authoritative Sales IVR Keypad Router (Bilingual Telugu & English):
+        Language Gate:
+          1 -> Telugu
+          2 -> English
+        Department Selection (1-6, 9, 0):
+          1 -> Solar Solutions
+          2 -> Insurance Advisory
+          3 -> Training Desk
+          4 -> Manthra EV
+          5 -> VGK 4U
+          6 -> Service Support (Combined Service & Support)
+          9 -> Customer Care Executives
+          0 -> Replay Menu / Return to Language Gate
         """
         company_id = cls._resolve_company_from_did(db, called_did) or 1
         d = str(digits or '').strip()
+        menu = str(menu_type or 'main').strip().lower()
+        selected_lang = 'te' if lang in ('te', 'telugu') else 'en'
 
-        logger.info(f"[SALES-IVR-GATHER] Inbound call from {caller_phone} selected DTMF: '{d}'")
+        logger.info(f"[SALES-IVR-GATHER] Inbound call from {caller_phone} selected DTMF: '{d}' (Menu: {menu}, Lang: {selected_lang})")
 
-        # Record DTMF Selection in active VoIPCallSession
-        clean_caller = re.sub(r'[^\d]', '', str(caller_phone or ''))[-10:]
+        # 1. Handle Language Selection Gate
+        if menu == "lang":
+            if d == "1":
+                logger.info(f"[SALES-IVR-GATHER] Caller {caller_phone} selected Telugu.")
+                return cls._get_department_menu_xml(db, company_id, called_did, lang="te")
+            elif d == "2":
+                logger.info(f"[SALES-IVR-GATHER] Caller {caller_phone} selected English.")
+                return cls._get_department_menu_xml(db, company_id, called_did, lang="en")
+            else:
+                lang_gather_url = "https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=lang"
+                return cls._generate_xml_response([
+                    f'<Speak voice="Polly.Aditi" language="en-IN">Invalid selection. తెలుగు కొరకు 1 నొక్కండి. For English, press 2.</Speak>',
+                    f'<GetDigits action="{lang_gather_url}" method="POST" numDigits="1" timeout="7" retries="1">',
+                    f'  <Speak voice="Polly.Aditi" language="en-IN">తెలుగు కొరకు 1, For English press 2.</Speak>',
+                    f'</GetDigits>',
+                    cls._build_telesales_simultaneous_dial(db, company_id, "Customer Care", called_did, lang="te")
+                ])
+
+        # 2. Handle Department Selection Menu
         opt_map = {
             "1": "Option 1: Solar Solutions",
             "2": "Option 2: Insurance Advisory",
@@ -1050,6 +1129,8 @@ class CallFlowInterpreter:
         }
         selected_label = opt_map.get(d, f"Option {d}")
 
+        # Persist DTMF Selection into VoIPCallSession
+        clean_caller = re.sub(r'[^\d]', '', str(caller_phone or ''))[-10:]
         try:
             session = db.query(VoIPCallSession).filter(
                 VoIPCallSession.customer_phone.ilike(f"%{clean_caller}%"),
@@ -1066,86 +1147,66 @@ class CallFlowInterpreter:
                 selections.append({
                     "digit": d,
                     "label": selected_label,
+                    "lang": selected_lang,
                     "time": datetime.now(IST).strftime('%H:%M:%S')
                 })
                 meta["ivr_selections"] = selections
                 meta["latest_selection"] = selected_label
+                meta["preferred_language"] = selected_lang
                 session.metadata_json = json.dumps(meta)
                 db.commit()
-                logger.info(f"[IVR-GATHER] Recorded selection '{selected_label}' to VoIPCallSession #{session.id}")
+                logger.info(f"[IVR-GATHER] Recorded selection '{selected_label}' ({selected_lang}) to VoIPCallSession #{session.id}")
         except Exception as e:
             logger.warning(f"[IVR-GATHER] Error persisting DTMF selection: {e}")
 
+        # Route to selected Department
         if d == "1":
-            # 1. Solar
+            announce = "మా సోలార్ సొల్యూషన్స్ బృందానికి మీ కాల్‌ను కనెక్ట్ చేస్తున్నాము. దయచేసి వేచి ఉండండి." if selected_lang == "te" else "Connecting your call to our Solar Solutions team. Please hold the line."
             return cls._generate_xml_response([
-                f'<Speak voice="Polly.Aditi" language="en-IN">Connecting your call to our Solar Solutions team. Please hold the line.</Speak>',
-                cls._build_telesales_simultaneous_dial(db, company_id, "Solar Solutions", called_did)
+                f'<Speak voice="Polly.Aditi" language="en-IN">{announce}</Speak>',
+                cls._build_telesales_simultaneous_dial(db, company_id, "Solar Solutions", called_did, lang=selected_lang)
             ])
         elif d == "2":
-            # 2. Insurance
+            announce = "మా ఇన్సూరెన్స్ అడ్వైజరీ విభాగానికి మీ కాల్‌ను కనెక్ట్ చేస్తున్నాము. దయచేసి వేచి ఉండండి." if selected_lang == "te" else "Connecting your call to our Insurance Advisory desk. Please hold the line."
             return cls._generate_xml_response([
-                f'<Speak voice="Polly.Aditi" language="en-IN">Connecting your call to our Insurance Advisory desk. Please hold the line.</Speak>',
-                cls._build_telesales_simultaneous_dial(db, company_id, "Insurance", called_did)
+                f'<Speak voice="Polly.Aditi" language="en-IN">{announce}</Speak>',
+                cls._build_telesales_simultaneous_dial(db, company_id, "Insurance", called_did, lang=selected_lang)
             ])
         elif d == "3":
-            # 3. Training
+            announce = "మా ట్రైనింగ్ విభాగానికి మీ కాల్‌ను కనెక్ట్ చేస్తున్నాము. దయచేసి వేచి ఉండండి." if selected_lang == "te" else "Connecting your call to our Training desk. Please hold the line."
             return cls._generate_xml_response([
-                f'<Speak voice="Polly.Aditi" language="en-IN">Connecting your call to our Training desk. Please hold the line.</Speak>',
-                cls._build_telesales_simultaneous_dial(db, company_id, "Training", called_did)
+                f'<Speak voice="Polly.Aditi" language="en-IN">{announce}</Speak>',
+                cls._build_telesales_simultaneous_dial(db, company_id, "Training", called_did, lang=selected_lang)
             ])
         elif d == "4":
-            # 4. Manthra EV
+            announce = "మా మంత్ర ఈవీ బృందానికి మీ కాల్‌ను కనెక్ట్ చేస్తున్నాము. దయచేసి వేచి ఉండండి." if selected_lang == "te" else "Connecting your call to our Manthra E V team. Please hold the line."
             return cls._generate_xml_response([
-                f'<Speak voice="Polly.Aditi" language="en-IN">Connecting your call to our Manthra E V team. Please hold the line.</Speak>',
-                cls._build_telesales_simultaneous_dial(db, company_id, "Manthra EV", called_did)
+                f'<Speak voice="Polly.Aditi" language="en-IN">{announce}</Speak>',
+                cls._build_telesales_simultaneous_dial(db, company_id, "Manthra EV", called_did, lang=selected_lang)
             ])
         elif d == "5":
-            # 5. VGK 4U
+            announce = "మా వి జీ కే ఫర్ యు విభాగానికి మీ కాల్‌ను కనెక్ట్ చేస్తున్నాము. దయచేసి వేచి ఉండండి." if selected_lang == "te" else "Connecting your call to our V G K 4 U desk. Please hold the line."
             return cls._generate_xml_response([
-                f'<Speak voice="Polly.Aditi" language="en-IN">Connecting your call to our V G K 4 U desk. Please hold the line.</Speak>',
-                cls._build_telesales_simultaneous_dial(db, company_id, "VGK 4U", called_did)
+                f'<Speak voice="Polly.Aditi" language="en-IN">{announce}</Speak>',
+                cls._build_telesales_simultaneous_dial(db, company_id, "VGK 4U", called_did, lang=selected_lang)
             ])
         elif d == "6":
-            # 6. Service Support (Combined)
+            announce = "మా సర్వీస్ మరియు సపోర్ట్ బృందానికి మీ కాల్‌ను కనెక్ట్ చేస్తున్నాము. దయచేసి వేచి ఉండండి." if selected_lang == "te" else "Connecting your call to our Service and Support team. Please hold the line."
             return cls._generate_xml_response([
-                f'<Speak voice="Polly.Aditi" language="en-IN">Connecting your call to our Service and Support team. Please hold the line.</Speak>',
-                cls._build_telesales_simultaneous_dial(db, company_id, "Service Support", called_did)
+                f'<Speak voice="Polly.Aditi" language="en-IN">{announce}</Speak>',
+                cls._build_telesales_simultaneous_dial(db, company_id, "Service Support", called_did, lang=selected_lang)
             ])
         elif d == "9":
-            # 9. Customer Care Executives
+            announce = "మా కస్టమర్ కేర్ ఎగ్జిక్యూటివ్‌లకు మీ కాల్‌ను కనెక్ట్ చేస్తున్నాము. దయచేసి వేచి ఉండండి." if selected_lang == "te" else "Connecting you to our Customer Care Executives. Please hold the line."
             return cls._generate_xml_response([
-                f'<Speak voice="Polly.Aditi" language="en-IN">Connecting you to our Customer Care Executives. Please hold the line.</Speak>',
-                cls._build_telesales_simultaneous_dial(db, company_id, "Customer Care", called_did)
+                f'<Speak voice="Polly.Aditi" language="en-IN">{announce}</Speak>',
+                cls._build_telesales_simultaneous_dial(db, company_id, "Customer Care", called_did, lang=selected_lang)
             ])
         elif d == "0":
-            # 0. Return to Main Menu
-            gather_url = "https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=main"
-            sales_prompt = (
-                "For Solar, press 1. "
-                "For Insurance, press 2. "
-                "For Training, press 3. "
-                "For Manthra E V, press 4. "
-                "For V G K 4 U, press 5. "
-                "For Service Support, press 6. "
-                "To speak to Customer Care Executives, press 9. "
-                "To replay this menu, press 0."
-            )
-            return cls._generate_xml_response([
-                f'<GetDigits action="{gather_url}" method="POST" numDigits="1" timeout="7" retries="2">',
-                f'  <Speak voice="Polly.Aditi" language="en-IN">{sales_prompt}</Speak>',
-                f'</GetDigits>',
-                f'<Speak voice="Polly.Aditi" language="en-IN">We did not receive your input. Connecting you to Customer Care. Please hold.</Speak>',
-                cls._build_telesales_simultaneous_dial(db, company_id, "Customer Care", called_did)
-            ])
+            return cls._get_department_menu_xml(db, company_id, called_did, lang=selected_lang)
         else:
-            # Invalid selection -> Re-prompt or route to Customer Care
-            gather_url = "https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=main"
+            reprompt = "చెల్లని ఎంపిక." if selected_lang == "te" else "You entered an invalid option."
             return cls._generate_xml_response([
-                f'<Speak voice="Polly.Aditi" language="en-IN">You entered an invalid option.</Speak>',
-                f'<GetDigits action="{gather_url}" method="POST" numDigits="1" timeout="7" retries="1">',
-                f'  <Speak voice="Polly.Aditi" language="en-IN">Press 1 for Solar, 2 for Insurance, 3 for Training, 4 for Manthra E V, 5 for V G K 4 U, 6 for Service Support, 9 for Customer Care, or 0 for Main Menu.</Speak>',
-                f'</GetDigits>',
-                f'<Speak voice="Polly.Aditi" language="en-IN">Connecting you to Customer Care. Please hold.</Speak>',
-                cls._build_telesales_simultaneous_dial(db, company_id, "Customer Care", called_did)
+                f'<Speak voice="Polly.Aditi" language="en-IN">{reprompt}</Speak>',
+                cls._get_department_menu_xml(db, company_id, called_did, lang=selected_lang)
             ])

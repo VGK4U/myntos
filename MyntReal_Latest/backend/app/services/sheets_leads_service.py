@@ -184,38 +184,52 @@ def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
     source_details = f"{{'source': '{source_tag}', 'lead_id': '{lead_id}', 'ad': '{ad_name}'}}"
 
     # Automatic Company Routing Engine based on Category & Product Interest
-    # Rules: ETC/Training/Career -> Zynovia (2); Insurance -> Zynova (2); Solar/EV -> MyntReal (4); Real Estate -> Real Dreams (1)
+    # Rules:
+    # - Zynova (2): ETC Training (42), Real Dreams (47), EV Spares (45)
+    # - MyntReal (4): EV B2B (14), EV B2C (15), Solar (6)
     combined_ctx = f"{looking or ''} {ad_name or ''} {source_tag or ''}".lower()
     target_company_id = company_id
-    if any(k in combined_ctx for k in ['etc', 'training', 'ev career', 'career & trading', 'career', 'trading', 'zynova', 'zynovia', 'insurance', 'health', 'life', 'motor']):
-        target_company_id = 2  # Zynova Mobility (Zynovia)
+    if any(k in combined_ctx for k in ['etc', 'training', 'ev career', 'career & trading', 'career', 'trading', 'zynova', 'zynovia', 'real dreams', 'real estate', 'property', 'spares', 'ev spares', 'spare parts']):
+        target_company_id = 2  # Zynova Mobility Pvt Ltd
         if any(k in combined_ctx for k in ['etc', 'training', 'career', 'trading']):
             looking = looking or 'ETC Training'
-    elif any(k in combined_ctx for k in ['solar', 'ev', 'electric vehicle', 'beb', 'b2c', 'energy', 'battery', 'har ghar solar']):
+    elif any(k in combined_ctx for k in ['solar', 'ev', 'electric vehicle', 'beb', 'b2c', 'b2b', 'energy', 'battery', 'har ghar solar']):
         target_company_id = 4  # MyntReal LLP
-    elif any(k in combined_ctx for k in ['real estate', 'property', 'plot', 'flat', 'apartment', 'villa', 'venture', 'land', 'real dreams']):
-        target_company_id = 1  # Real Dreams
 
-    # Automatic Category Resolution (Company-aware)
-    co_cat_map = {
-        1: {'training': 30, 'solar': 36, 'ev_b2c': 32, 'ev_b2b': 31, 'ev_spares': 33, 'insurance': 34, 'real_dreams': 35},
-        2: {'training': 42, 'solar': 48, 'ev_b2c': 44, 'ev_b2b': 43, 'ev_spares': 45, 'insurance': 46, 'real_dreams': 47},
-        3: {'training': 3,  'solar': 6,  'ev_b2c': 2,  'ev_b2b': 1,  'ev_spares': 5,  'insurance': 7,  'real_dreams': 4},
-        4: {'training': 13, 'solar': 19, 'ev_b2c': 15, 'ev_b2b': 14, 'ev_spares': 16, 'insurance': 17, 'real_dreams': 18},
-    }
-    cat_keys = co_cat_map.get(target_company_id, co_cat_map[4])
-    target_category_id = cat_keys.get('solar', 19)
-
-    if any(k in combined_ctx for k in ['etc', 'training', 'career', 'trading']):
-        target_category_id = cat_keys.get('training', 13)
-    elif any(k in combined_ctx for k in ['solar', 'har ghar solar', 'hrs', 'sun', 'panel', 'electricity']):
-        target_category_id = cat_keys.get('solar', 19)
-    elif any(k in combined_ctx for k in ['ev b2c', 'ev', 'vehicle', 'car', 'bike']):
-        target_category_id = cat_keys.get('ev_b2c', 15)
-    elif any(k in combined_ctx for k in ['insurance', 'health', 'life', 'motor']):
-        target_category_id = cat_keys.get('insurance', 17)
-    elif any(k in combined_ctx for k in ['real estate', 'property', 'plot', 'flat', 'apartment', 'villa']):
-        target_category_id = cat_keys.get('real_dreams', 18)
+    # Canonical Company Category Architecture:
+    # MyntReal (4): EV B2B (14), EV B2C (15), Solar (6)
+    # Zynova (2): ETC Training (42), Real Dreams (47), EV Spares (45), Insurance (46)
+    if target_company_id == 2:
+        if any(k in combined_ctx for k in ['insurance', 'health', 'life', 'motor']):
+            target_category_id = 46  # Insurance
+        elif any(k in combined_ctx for k in ['spares', 'ev spares', 'spare parts']):
+            target_category_id = 45  # EV Spares
+        elif any(k in combined_ctx for k in ['real dreams', 'real estate', 'property', 'plot', 'flat', 'apartment', 'villa']):
+            target_category_id = 47  # Real Dreams
+        else:
+            target_category_id = 42  # ETC Training
+    elif target_company_id == 4:
+        if any(k in combined_ctx for k in ['ev b2b', 'b2b']):
+            target_category_id = 14  # EV B2B
+        elif any(k in combined_ctx for k in ['ev b2c', 'ev', 'vehicle', 'car', 'bike', 'scooter']):
+            target_category_id = 15  # EV B2C
+        else:
+            target_category_id = 6   # Solar (Canonical)
+    elif target_company_id == 3:
+        # MNR legacy fallback
+        if any(k in combined_ctx for k in ['etc', 'training']):
+            target_category_id = 3
+        elif any(k in combined_ctx for k in ['ev b2b', 'b2b']):
+            target_category_id = 1
+        elif any(k in combined_ctx for k in ['ev spares', 'spares']):
+            target_category_id = 5
+        elif any(k in combined_ctx for k in ['solar']):
+            target_category_id = 6
+        else:
+            target_category_id = 2
+    else:
+        target_company_id = 4
+        target_category_id = 6
 
     return {
         'company_id':           target_company_id,

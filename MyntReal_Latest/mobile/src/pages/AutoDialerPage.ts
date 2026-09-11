@@ -11,6 +11,9 @@ import { authService } from '../services/auth.service';
 import { PageHeader } from '../components/PageHeader';
 import { routerService } from '../services/router.service';
 import { vgkBannerService } from '../services/vgk-banner.service';
+import { unifiedWAModal } from '../components/UnifiedWAModal';
+import { callController } from '../services/call-controller';
+import { telephonyService, TelephonyCallSession } from '../services/telephony.service';
 
 const LEAD_STATUSES = [
   { value: 'new', label: 'New' },
@@ -92,8 +95,12 @@ export class AutoDialerPage {
   private missedCallbacksLoaded = false;
   // DC_MYOP_001: Call method tracking — 'myoperator' | 'normal'. Persists via session.myoperator_attempts.
   private myoperatorAttemptsThisSession: number = 0;
-  private callMethod: string = 'myoperator';
+  private callMethod: string = 'softphone';
   private myopAgent: { name: string; contact_number: string; extension: string; user_id: string } | null = null;
+  private activeSoftphoneDial = false;
+  private isDialingInProgress = false;
+  private isPrewarmingTelephony = false;
+  private unsubscribeTelephony: (() => void) | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -102,6 +109,11 @@ export class AutoDialerPage {
   async init(): Promise<void> {
     this._injectStyles();
     this._renderSkeleton();
+
+    // Subscribe to central telephony service for softphone call lifecycle updates
+    this.unsubscribeTelephony = telephonyService.subscribe((session: TelephonyCallSession) => {
+      this._handleTelephonyUpdate(session);
+    });
 
     // DC_INIT_GUARD: Wrap the entire init body so ANY unexpected error (network, 403, 500, etc.)
     // transitions the page out of the skeleton into a recoverable error state instead of freezing.
@@ -142,13 +154,20 @@ export class AutoDialerPage {
       // Load missed callbacks + recent calls in background after first render
       void this._loadMissedCallbacks().then(() => this._render());
       void this._loadRecentCalls();
+      this._prewarmTelephony();
     }
   }
 
   cleanup(): void {
+    if (this.unsubscribeTelephony) {
+      this.unsubscribeTelephony();
+      this.unsubscribeTelephony = null;
+    }
     dialerService.stopCallPoll();
     dialerService.stopAppListener();
     dialerService.stopSyncPoll();
+    document.getElementById('dc-calling-screen')?.remove();
+    document.getElementById('dc-method-modal')?.remove();
   }
 
   // ── Data Loading ─────────────────────────────────────────────────────────────
@@ -266,17 +285,216 @@ export class AutoDialerPage {
     this._render();
   }
 
+  // ── Phone Masking & Telephony Lifecycle ──────────────────────────────────────
+
+  public maskPhone(s?: string | null): string {
+    return this._maskPhone(s);
+  }
+
+  private _maskPhone(s?: string | null): string {
+    if (!s) return '—';
+    const clean = String(s).trim();
+    const digits = clean.replace(/\D/g, '');
+    if (digits.length < 6) return clean;
+    const last10 = digits.slice(-10);
+    return `+91 ${last10.slice(0, 2)}••••${last10.slice(-4)}`;
+  }
+
+  public maskLeadName(name?: string | null): string {
+    return this._maskLeadName(name);
+  }
+
+  private _maskLeadName(name?: string | null): string {
+    if (!name) return 'Customer Lead';
+    return String(name).replace(/\b(\d{2})(\d{4})(\d{4})\b/g, '$1••••$3');
+  }
+
+  private _handleTelephonyUpdate(session: TelephonyCallSession): void {
+    if (!this.activeSoftphoneDial) return;
+
+    if (session.state === 'connected') {
+      if (!this.callStartTime) this.callStartTime = Date.now();
+    } else if (session.state === 'ended' || session.state === 'failed') {
+      const lead = this.currentLead;
+      const duration = session.durationSeconds > 0
+        ? session.durationSeconds
+        : Math.round((Date.now() - this.callStartTime) / 1000);
+
+      this.activeSoftphoneDial = false;
+      if (lead && !this.popupOpen) {
+        void this._openPopup(lead.lead_id, duration);
+      }
+    }
+  }
+
   // ── Dial ─────────────────────────────────────────────────────────────────────
 
-  // DC_MYOP_001: Entry point — shows method picker before dialling
+  // Primary dial: dials directly via built-in Plivo WebRTC softphone
   private _dial(phone: string, lead: QueueItem): void {
-    this._showCallMethodModal(phone, lead);
+    if (this.isDialingInProgress || this.activeSoftphoneDial) {
+      console.warn('[AutoDialer] Dial already in progress, ignoring duplicate action.');
+      return;
+    }
+    // MANDATE 1: TRUE USER-GESTURE AUDIO UNLOCK BEFORE ANY ASYNC OPERATION
+    telephonyService.prepareAudioOnUserGesture();
+    void this._dialSoftphone(phone, lead);
+  }
+
+  private async _dialSoftphone(phone: string, lead: QueueItem): Promise<void> {
+    if (this.isDialingInProgress) return;
+    this.isDialingInProgress = true;
+    telephonyService.prepareAudioOnUserGesture();
+    const dialBtns = this.container?.querySelectorAll<HTMLButtonElement>('.dc-dial-btn, .dc-direct-mobile-btn');
+    if (dialBtns) {
+      dialBtns.forEach(b => {
+        b.disabled = true;
+        b.style.opacity = '0.6';
+      });
+    }
+
+    const canonicalId = (lead as any).id || lead.lead_id;
+    if (!canonicalId) {
+      this.isDialingInProgress = false;
+      console.error('[AutoDialer] Missing canonical ID for lead:', lead);
+      alert('Corrupted lead in queue. Cannot dial.');
+      return;
+    }
+
+    try {
+      const res = await dialerService.reserveLead(canonicalId, this.sessionId || undefined);
+      if (!res.success) {
+        this.activeSoftphoneDial = false;
+        if (res.cooldown_blocked) {
+          alert(`⏳ Redial Cooldown: ${res.message || 'Recently attempted — 1-hour cooldown active'}`);
+          return;
+        }
+        if (res.compliance_blocked) {
+          alert(`Compliance: ${res.error || 'Calling not permitted on this lead'}\nAdvancing to next lead.`);
+          dialerService.skipToEnd(canonicalId);
+          this.currentLead = dialerService.getCurrentLead();
+          this._render();
+          return;
+        }
+        if (res.error === 'Invalid lead ID') {
+          alert('Lead reservation failed: Invalid lead ID. Refreshing queue.');
+          await this._loadQueue();
+          this.currentLead = dialerService.getCurrentLead();
+          this._render();
+          return;
+        }
+        alert(`Lead #${canonicalId} is currently in another agent's active preview.`);
+        return;
+      }
+
+      this.callMethod = 'softphone';
+      this.callStartTime = Date.now();
+      this.currentLead = lead;
+      this.activeSoftphoneDial = true;
+
+      // Notify backend & desktop web of active call
+      await dialerService.notifyCallActive(canonicalId);
+
+      // Launch centralized Plivo WebRTC softphone modal
+      callController.openCallDialer({
+        phoneNumber: phone,
+        name: this._maskLeadName(lead.name || 'Contact Lead'),
+        entityId: canonicalId,
+        entityType: 'lead',
+        autoStart: true,
+      });
+    } catch (err: any) {
+      console.error('[AutoDialer] Outbound softphone dial failed:', err);
+      this.activeSoftphoneDial = false;
+      alert(`Call initiation failed: ${err?.message || 'Network error'}`);
+    } finally {
+      this.isDialingInProgress = false;
+      if (dialBtns) {
+        dialBtns.forEach(b => {
+          b.disabled = false;
+          b.style.opacity = '1';
+        });
+      }
+    }
+  }
+
+  // Fallback dial: direct SIM / native device call in case of softphone issue
+  private async _dialDirectMobile(phone: string, lead: QueueItem): Promise<void> {
+    if (this.isDialingInProgress || this.activeSoftphoneDial) return;
+    this.isDialingInProgress = true;
+    const dialBtns = this.container?.querySelectorAll<HTMLButtonElement>('.dc-dial-btn, .dc-direct-mobile-btn');
+    if (dialBtns) {
+      dialBtns.forEach(b => {
+        b.disabled = true;
+        b.style.opacity = '0.6';
+      });
+    }
+
+    const canonicalId = (lead as any).id || lead.lead_id;
+    if (!canonicalId) {
+      this.isDialingInProgress = false;
+      console.error('[AutoDialer] Missing canonical ID for lead:', lead);
+      alert('Corrupted lead in queue. Cannot dial.');
+      return;
+    }
+
+    try {
+      const res = await dialerService.reserveLead(canonicalId, this.sessionId || undefined);
+      if (!res.success) {
+        if (res.cooldown_blocked) {
+          alert(`⏳ Redial Cooldown: ${res.message || 'Recently attempted — 1-hour cooldown active'}`);
+          return;
+        }
+        if (res.compliance_blocked) {
+          alert(`Compliance: ${res.error || 'Calling not permitted on this lead'}\nAdvancing to next lead.`);
+          dialerService.skipToEnd(canonicalId);
+          this.currentLead = dialerService.getCurrentLead();
+          this._render();
+          return;
+        }
+        if (res.error === 'Invalid lead ID') {
+          alert('Lead reservation failed: Invalid lead ID. Refreshing queue.');
+          await this._loadQueue();
+          this.currentLead = dialerService.getCurrentLead();
+          this._render();
+          return;
+        }
+        alert(`Lead #${canonicalId} is currently in another agent's active preview.`);
+        return;
+      }
+
+      this.callMethod = 'direct_sim';
+      this.callStartTime = Date.now();
+      this.currentLead = lead;
+      this.activeSoftphoneDial = false;
+
+      await dialerService.notifyCallActive(canonicalId);
+      this._showCallingScreen(lead, phone, 'normal');
+      telephonyService.triggerDirectSimCall(phone);
+    } catch (err: any) {
+      console.error('[AutoDialer] Direct SIM dial failed:', err);
+      alert(`Direct dial failed: ${err?.message || 'Network error'}`);
+    } finally {
+      this.isDialingInProgress = false;
+      if (dialBtns) {
+        dialBtns.forEach(b => {
+          b.disabled = false;
+          b.style.opacity = '1';
+        });
+      }
+    }
   }
 
   // DC_MYOP_001 / DC_MYOP_CTC: The actual dial — called after method is chosen in the modal.
   // MyOperator: uses Click-to-Call API (server-side bridge). Normal: uses tel: URI.
   private async _executeDial(phone: string, lead: QueueItem, method: string): Promise<void> {
-    const res = await dialerService.reserveLead(lead.lead_id, this.sessionId || undefined);
+    const canonicalId = (lead as any).id || lead.lead_id;
+    if (!canonicalId) {
+      console.error('[AutoDialer] Missing canonical ID for lead:', lead);
+      alert('Corrupted lead in queue. Cannot dial.');
+      return;
+    }
+
+    const res = await dialerService.reserveLead(canonicalId, this.sessionId || undefined);
     if (!res.success) {
       if (res.cooldown_blocked) {
         alert(`⏳ Redial Cooldown: ${res.message || 'Recently attempted — 1-hour cooldown active'}`);
@@ -286,7 +504,11 @@ export class AutoDialerPage {
         alert(`Compliance: ${res.error || 'Calling not permitted on this lead'}`);
         return;
       }
-      alert(`Lead #${lead.lead_id} is currently in another agent's active preview.`);
+      if (res.error === 'Invalid lead ID') {
+        alert('Lead reservation failed: Invalid lead ID. Please refresh queue.');
+        return;
+      }
+      alert(`Lead #${canonicalId} is currently in another agent's active preview.`);
       return;
     }
 
@@ -361,8 +583,16 @@ export class AutoDialerPage {
         <div class="dc-method-sheet">
           <div class="dc-method-handle"></div>
           <div class="dc-method-lead">${lead.name || 'Lead'}</div>
-          <div class="dc-method-phone">${phone}</div>
+          <div class="dc-method-phone">${this._maskPhone(phone)}</div>
           <p class="dc-method-title">How do you want to call?</p>
+
+          <button id="dc-method-softphone" class="dc-method-btn dc-method-btn--softphone" style="background:#eff6ff;border:1.5px solid #2563eb;margin-bottom:8px;">
+            <span class="dc-method-icon">🎧</span>
+            <span class="dc-method-label">
+              <b style="color:#1d4ed8;">Softphone (Cloud Call with Recording)</b>
+              <small style="color:#2563eb;">Plivo WebRTC · Automatic Session Recording</small>
+            </span>
+          </button>
 
           <button id="dc-method-normal" class="dc-method-btn dc-method-btn--normal" style="background:#f0fdf4;border:1.5px solid #22c55e;">
             <span class="dc-method-icon">📱</span>
@@ -384,6 +614,12 @@ export class AutoDialerPage {
         </div>
       </div>`;
     document.body.appendChild(modal);
+
+    document.getElementById('dc-method-softphone')?.addEventListener('click', () => {
+      telephonyService.prepareAudioOnUserGesture();
+      modal.remove();
+      void this._dialSoftphone(phone, lead);
+    });
 
     document.getElementById('dc-method-normal')?.addEventListener('click', () => {
       modal.remove();
@@ -418,8 +654,8 @@ export class AutoDialerPage {
       <div class="dc-calling-overlay">
         <div class="dc-calling-inner">
           <div class="dc-calling-avatar">${initial}</div>
-          <div class="dc-calling-name">${lead.name || 'Unknown Lead'}</div>
-          <div class="dc-calling-phone">${phone}</div>
+          <div class="dc-calling-name">${this._maskLeadName(lead.name || 'Unknown Lead')}</div>
+          <div class="dc-calling-phone">${this._maskPhone(phone)}</div>
           ${isMyOp ? `<div class="dc-method-badge">📞 MyOperator Agent: ${agentName || 'Connected'}</div>` : ''}
           <div class="dc-calling-status">
             <span class="dc-calling-dot"></span>
@@ -452,7 +688,7 @@ export class AutoDialerPage {
 
   // ── After-Call Popup ─────────────────────────────────────────────────────────
 
-  private async _openPopup(leadId: number): Promise<void> {
+  private async _openPopup(leadId: number, durationSecOverride?: number): Promise<void> {
     if (this.popupOpen) return;
     this.popupOpen = true;
     this._removeCallingScreen();
@@ -494,7 +730,9 @@ export class AutoDialerPage {
     } catch (_) { /* dropdown remains empty */ }
 
     this.popupLeadData = fullLead;
-    const durationSec = Math.round((Date.now() - this.callStartTime) / 1000);
+    const durationSec = durationSecOverride !== undefined
+      ? durationSecOverride
+      : (this.callStartTime ? Math.round((Date.now() - this.callStartTime) / 1000) : 0);
 
     const overlay = document.createElement('div');
     overlay.id = 'dc-dialer-popup';
@@ -551,13 +789,18 @@ export class AutoDialerPage {
       <div class="dc-popup-sheet">
         <div class="dc-popup-header">
           <div class="dc-popup-lead-info">
-            <div class="dc-popup-name">${lead?.name || 'Unknown Lead'}</div>
+            <div class="dc-popup-name">${this._maskLeadName(lead?.name || 'Unknown Lead')}</div>
             <div class="dc-popup-meta">
-              ${lead?.phone || ''} ${lead?.city ? '· ' + lead.city : ''} · ${durationStr}
+              ${this._maskPhone(lead?.phone)} ${lead?.city ? '· ' + lead.city : ''} · ${durationStr}
             </div>
           </div>
-          <div class="dc-popup-priority-badge ${lead?.queue_priority || ''}">
-            ${PRIORITY_LABELS[lead?.queue_priority || ''] || ''}
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button type="button" class="dc-popup-header-redial-btn" id="dc-popup-header-redial" style="background:#0284c7;color:#fff;border:none;border-radius:16px;padding:6px 12px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px;cursor:pointer;" title="Redial this lead">
+              <span>📞</span> Redial
+            </button>
+            <div class="dc-popup-priority-badge ${lead?.queue_priority || ''}">
+              ${PRIORITY_LABELS[lead?.queue_priority || ''] || ''}
+            </div>
           </div>
         </div>
 
@@ -626,7 +869,13 @@ export class AutoDialerPage {
             </div>
 
             <!-- ─── Contact Details ───────────────────────────── -->
-            <div class="dc-form-group-label">Contact Details</div>
+            <div class="dc-form-group-label" style="display:flex;justify-content:space-between;align-items:center;">
+              <span>Contact Details</span>
+              ${(lead?.phone || lead?.alternate_phone) ? `
+                <button type="button" class="open-lead-wa-btn" data-phone="${lead?.phone || lead?.alternate_phone || ''}" data-name="${this._escapeHtml(lead?.name || '')}" data-id="${lead?.lead_id || lead?.id || ''}" data-cat="${this._escapeHtml(lead?.category_name || '')}" style="background:#25D366;color:white;border:none;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;">
+                  💬 WhatsApp
+                </button>` : ''}
+            </div>
             <div class="dc-form-row">
               <label>Full Name</label>
               <input type="text" id="dc-edit-name" value="${lead?.name || ''}" placeholder="Lead name">
@@ -772,8 +1021,13 @@ export class AutoDialerPage {
             </div>
           </div>
           <div id="dc-popup-footer-error" style="display:none;width:100%;padding:8px 12px;margin-bottom:6px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;color:#dc2626;font-size:13px;font-weight:600;text-align:center;"></div>
-          <button class="dc-popup-skip-btn" id="dc-popup-skip">Skip → End of Queue</button>
-          <button class="dc-popup-save-btn" id="dc-popup-save">Save &amp; Next →</button>
+          <div style="display:flex;gap:8px;width:100%;align-items:center;">
+            <button type="button" class="dc-popup-redial-btn" id="dc-popup-redial" style="flex:1;padding:13px 8px;background:#0284c7;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;" title="Redial this lead">
+              <span>📞</span> Redial
+            </button>
+            <button class="dc-popup-skip-btn" id="dc-popup-skip" style="flex:1;padding:13px 8px;">Skip →</button>
+            <button class="dc-popup-save-btn" id="dc-popup-save" style="flex:2;">Save &amp; Next →</button>
+          </div>
         </div>
       </div>
     </div>`;
@@ -786,6 +1040,21 @@ export class AutoDialerPage {
     let countdownSec = 60;
     let countdownTimer: ReturnType<typeof setInterval> | null = null;
     const COUNTDOWN_TOTAL = 60;
+
+    // ── Redial from Popup ────────────────────────────────────────────────────
+    const _handlePopupRedial = () => {
+      const phoneInput = overlay.querySelector('#dc-edit-phone') as HTMLInputElement | null;
+      const altPhoneInput = overlay.querySelector('#dc-edit-alt-phone') as HTMLInputElement | null;
+      const targetPhone = (phoneInput?.value || this.popupLeadData?.phone || altPhoneInput?.value || this.popupLeadData?.alternate_phone || '').trim();
+      if (!targetPhone) {
+        alert('No phone number available to redial.');
+        return;
+      }
+      this._saveToLocalDialHistory(targetPhone, this.popupLeadData?.name || 'Customer');
+      void this._executeDial(targetPhone, this.popupLeadData || { lead_id: leadId, phone: targetPhone }, this.callMethod || 'softphone');
+    };
+    overlay.querySelector('#dc-popup-redial')?.addEventListener('click', _handlePopupRedial);
+    overlay.querySelector('#dc-popup-header-redial')?.addEventListener('click', _handlePopupRedial);
 
     // ── Popup Quick Dial ─────────────────────────────────────────────────────
     // DC_POPUP_QD: Search for any lead/contact and dial directly from after-call popup
@@ -808,18 +1077,23 @@ export class AutoDialerPage {
           <div class="dc-popup-qd-item">
             <div class="dc-popup-qd-info">
               <div class="dc-popup-qd-name">${badge} ${r.name}</div>
-              <div class="dc-popup-qd-meta">${r.phone || '—'}${r.city ? ' · ' + r.city : ''}${r.dialed_today ? ' · ✅ Called' : ''}</div>
+              <div class="dc-popup-qd-meta">${this._maskPhone(r.phone)}${r.city ? ' · ' + r.city : ''}${r.dialed_today ? ' · ✅ Called' : ''}</div>
             </div>
             <div class="dc-popup-qd-btns">
-              ${r.phone ? `<button class="dc-popup-qd-dial" data-qd-phone="${r.phone}" title="${r.phone}">📞</button>` : ''}
-              ${alt ? `<button class="dc-popup-qd-dial alt" data-qd-phone="${r.alternate_phone}" title="${r.alternate_phone}">📱</button>` : ''}
+              ${r.phone ? `<button class="dc-popup-qd-dial" data-qd-phone="${r.phone}" title="${this._maskPhone(r.phone)}">📞</button>` : ''}
+              ${alt ? `<button class="dc-popup-qd-dial alt" data-qd-phone="${r.alternate_phone}" title="${this._maskPhone(r.alternate_phone)}">📱</button>` : ''}
             </div>
           </div>`;
       }).join('');
       qdResults.querySelectorAll('[data-qd-phone]').forEach(btn => {
         btn.addEventListener('click', () => {
           const phone = (btn as HTMLElement).dataset.qdPhone!;
-          dialerService.dial(phone);
+          this.activeSoftphoneDial = true;
+          callController.openCallDialer({
+            phoneNumber: phone,
+            name: 'Quick Dial',
+            autoStart: true,
+          });
           if (qdInput) { qdInput.value = ''; }
           if (qdResults) { qdResults.innerHTML = ''; }
           if (qdClear) { qdClear.style.display = 'none'; }
@@ -1155,6 +1429,26 @@ export class AutoDialerPage {
         if (this.currentLead?.phone) this._maybeActivityThenDial(this.currentLead);
       }
     });
+
+    // Wire WhatsApp template button in popup
+    overlay.querySelectorAll('.open-lead-wa-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const phone = (btn as HTMLElement).dataset.phone || '';
+        const name = (btn as HTMLElement).dataset.name || 'Customer';
+        const id = (btn as HTMLElement).dataset.id || leadId;
+        const context = (btn as HTMLElement).dataset.cat || '';
+        if (phone) {
+          unifiedWAModal.open({
+            phone,
+            name,
+            leadId: id,
+            context
+          });
+        }
+      });
+    });
   }
 
   private _showMobileClaimBanner(leadId: number, companyId: number, reason?: string): void {
@@ -1437,7 +1731,7 @@ export class AutoDialerPage {
           <div style="font-size:72px;font-weight:800;color:#059669;line-height:1;font-variant-numeric:tabular-nums;">${count}</div>
           <div style="font-size:14px;color:#9ca3af;margin-top:6px;letter-spacing:.5px;">DIALING NEXT IN…</div>
           <div style="font-size:16px;font-weight:700;color:#1f2937;margin-top:10px;">${lead.name}</div>
-          <div style="font-size:13px;color:#6b7280;margin-top:2px;">${lead.phone}</div>
+          <div style="font-size:13px;color:#6b7280;margin-top:2px;">${this._maskPhone(lead.phone)}</div>
           <button id="dc-next-dial-cancel" style="margin-top:20px;width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb;font-size:14px;color:#6b7280;cursor:pointer;font-weight:600;">
             ✕ Cancel — I'll dial manually
           </button>
@@ -1487,7 +1781,11 @@ export class AutoDialerPage {
   private _render(): void {
     const queue = dialerService.getQueue();
     const idx = dialerService.getCurrentIndex();
-    const lead = this.currentLead;
+    let lead = this.currentLead;
+    if (!lead && (this.sessionActive || this.sessionPaused) && queue.length > 0) {
+      lead = dialerService.getCurrentLead() || queue[0];
+      this.currentLead = lead;
+    }
     const remaining = queue.length - idx;
 
     this.container.innerHTML = `
@@ -1723,7 +2021,7 @@ export class AutoDialerPage {
           <div class="dc-priority-tag">${PRIORITY_LABELS[lead.queue_priority] || ''}</div>
           <div class="dc-queue-pos">${queueIdx + 1} / ${total}</div>
         </div>
-        <div class="dc-lead-name">${lead.name}</div>
+        <div class="dc-lead-name">${this._maskLeadName(lead.name)}</div>
         <div class="dc-lead-meta">
           ${lead.city ? `📍 ${lead.city}` : ''} 
           ${lead.source ? `· ${lead.source}` : ''}
@@ -1734,13 +2032,19 @@ export class AutoDialerPage {
         <div class="dc-dial-row">
           ${lead.phone ? `
             <button class="dc-dial-btn" data-phone="${lead.phone}" data-lead="${lead.lead_id}">
-              📞 ${lead.phone}
+              🎧 Softphone (${this._maskPhone(lead.phone)})
             </button>` : '<span style="color:#ef4444">No phone number</span>'}
           ${lead.alternate_phone ? `
             <button class="dc-dial-btn alt" data-phone="${lead.alternate_phone}" data-lead="${lead.lead_id}">
-              📱 Alt: ${lead.alternate_phone}
+              🎧 Alt Softphone (${this._maskPhone(lead.alternate_phone)})
             </button>` : ''}
         </div>
+        ${(lead.phone || lead.alternate_phone) ? `
+          <div style="margin-top:8px;">
+            <button class="open-lead-wa-btn" data-phone="${lead.phone || lead.alternate_phone}" data-name="${this._escapeHtml(lead.name)}" data-id="${lead.lead_id}" data-cat="${this._escapeHtml(lead.category_name || '')}" style="width:100%;background:#25D366;color:white;border:none;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;box-shadow:0 2px 6px rgba(37,211,102,0.3);">
+              💬 Send WhatsApp
+            </button>
+          </div>` : ''}
         ${isUnassigned ? `
           <div class="dc-current-nmc-row">
             <button class="dc-current-nmc-btn" data-nmc-id="${lead.lead_id}" title="Skip this lead — not your segment">
@@ -1753,6 +2057,22 @@ export class AutoDialerPage {
               ⏬ Save all <strong>${lead.category_name}</strong> calls for later
             </button>
           </div>` : ''}
+        <!-- Fallback direct device call option -->
+        <div class="dc-direct-fallback-box" style="margin-top:14px;padding:12px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;text-align:center;">
+          <div style="font-size:11px;color:#64748b;margin-bottom:8px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:5px;">
+            <span>⚠️</span> <span>Softphone Issue? Call Directly from Device SIM:</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            ${lead.phone ? `
+              <button class="dc-direct-mobile-btn" data-phone="${lead.phone}" data-lead="${lead.lead_id}" style="width:100%;background:#ffffff;border:1.5px solid #0284c7;color:#0284c7;border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+                📱 Direct Mobile / SIM (${this._maskPhone(lead.phone)})
+              </button>` : ''}
+            ${lead.alternate_phone ? `
+              <button class="dc-direct-mobile-btn alt" data-phone="${lead.alternate_phone}" data-lead="${lead.lead_id}" style="width:100%;background:#ffffff;border:1.5px solid #0284c7;color:#0284c7;border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+                📱 Alt Direct Mobile (${this._maskPhone(lead.alternate_phone)})
+              </button>` : ''}
+          </div>
+        </div>
         ${this.webSyncMode ? `<div class="dc-web-note">💻 Web mode: tap "Call Ended" button after call</div>` : ''}
       </div>`;
   }
@@ -1799,8 +2119,8 @@ export class AutoDialerPage {
           <div class="dc-queue-item${isDeferred ? ' dc-queue-item-deferred' : ''}" data-item-lead="${item.lead_id}" style="cursor:pointer;">
             <div class="dc-queue-item-num">${absIdx}</div>
             <div class="dc-queue-item-info">
-              <div class="dc-queue-item-name">${item.name}${isUnassigned ? ' <span class="dc-unassigned-badge">Unassigned</span>' : ''}</div>
-              <div class="dc-queue-item-meta">${item.phone || 'No phone'}${lastDial} · <span class="dc-prio-${item.queue_priority}">${PRIORITY_LABELS[item.queue_priority] || ''}</span></div>
+              <div class="dc-queue-item-name">${this._maskLeadName(item.name)}${isUnassigned ? ' <span class="dc-unassigned-badge">Unassigned</span>' : ''}</div>
+              <div class="dc-queue-item-meta">${this._maskPhone(item.phone)}${lastDial} · <span class="dc-prio-${item.queue_priority}">${PRIORITY_LABELS[item.queue_priority] || ''}</span></div>
               ${nmcBtn}
             </div>
             <div class="dc-queue-item-chevron">›</div>
@@ -1970,7 +2290,7 @@ export class AutoDialerPage {
 
       sheet.querySelector('.dc-lds-body')!.innerHTML = `
         <div class="dc-lds-header">
-          <div class="dc-lds-name">${lead.name}</div>
+          <div class="dc-lds-name">${this._maskLeadName(lead.name)}</div>
           <div class="dc-lds-badges">
             <span class="dc-lds-status-badge">${statusLabel}</span>
             ${lead.handler_type === 'unassigned' ? '<span class="dc-unassigned-badge">Unassigned</span>' : ''}
@@ -1978,7 +2298,7 @@ export class AutoDialerPage {
           <button class="dc-lds-close-btn">✕</button>
         </div>
         <div class="dc-lds-scroll">
-          <div class="dc-lds-row">📞 ${lead.phone || '—'}${lead.alternate_phone && lead.alternate_phone !== lead.phone ? ' · ' + lead.alternate_phone : ''}</div>
+          <div class="dc-lds-row">📞 ${this._maskPhone(lead.phone)}${lead.alternate_phone && lead.alternate_phone !== lead.phone ? ' · ' + this._maskPhone(lead.alternate_phone) : ''}</div>
           ${lead.category_name ? `<div class="dc-lds-row">🏷 ${lead.category_name}</div>` : ''}
           ${lead.city || lead.area ? `<div class="dc-lds-row">📍 ${[lead.area, lead.city].filter(Boolean).join(', ')}</div>` : ''}
           ${budgetStr ? `<div class="dc-lds-row">💰 ${budgetStr}</div>` : ''}
@@ -2098,23 +2418,35 @@ export class AutoDialerPage {
         const hasAlt = r.alternate_phone && r.alternate_phone !== r.phone;
         const loc = [r.area, r.city].filter(Boolean).join(', ');
         const isContact = r.source === 'contact';
-        const sourceBadge = isContact
-          ? `<span class="dc-srch-src-badge contact">📱 Contact</span>`
-          : `<span class="dc-srch-src-badge lead">🎯 Lead</span>`;
+        const isVgk = r.source === 'vgk_member';
+        const isMnr = r.source === 'mnr_member';
+
+        let sourceBadge = '';
+        if (isVgk) {
+          sourceBadge = `<span class="dc-srch-src-badge vgk" style="background:rgba(245, 158, 11, 0.2);color:#fbbf24;font-weight:700;border:1px solid rgba(245,158,11,0.3);">🤝 VGK Member</span>`;
+        } else if (isMnr) {
+          sourceBadge = `<span class="dc-srch-src-badge mnr" style="background:rgba(168, 85, 247, 0.2);color:#c084fc;font-weight:700;border:1px solid rgba(168,85,247,0.3);">🌟 MNR Member</span>`;
+        } else if (isContact) {
+          sourceBadge = `<span class="dc-srch-src-badge contact">📱 Contact</span>`;
+        } else {
+          sourceBadge = `<span class="dc-srch-src-badge lead">🎯 Lead</span>`;
+        }
+
         const calledBadge = r.dialed_today
           ? `<span class="dc-srch-called-badge">✅ Called</span>`
           : '';
-        const dialAttr = (isContact && !r.lead_id)
-          ? `data-direct-phone="${r.phone}"`
-          : `data-override-phone="${r.phone}" data-override-id="${r.lead_id}" data-override-name="${r.name}"`;
-        const altDialAttr = (isContact && !r.lead_id)
-          ? `data-direct-phone="${r.alternate_phone}"`
-          : `data-override-phone="${r.alternate_phone}" data-override-id="${r.lead_id}" data-override-name="${r.name}"`;
+        const isDirect = (isContact || isVgk || isMnr) && !r.lead_id;
+        const dialAttr = isDirect
+          ? `data-direct-phone="${r.phone}" data-direct-name="${(r.name || '').replace(/"/g, '&quot;')}"`
+          : `data-override-phone="${r.phone}" data-override-id="${r.lead_id}" data-override-name="${(r.name || '').replace(/"/g, '&quot;')}"`;
+        const altDialAttr = isDirect
+          ? `data-direct-phone="${r.alternate_phone}" data-direct-name="${(r.name || '').replace(/"/g, '&quot;')}"`
+          : `data-override-phone="${r.alternate_phone}" data-override-id="${r.lead_id}" data-override-name="${(r.name || '').replace(/"/g, '&quot;')}"`;
         return `
           <div class="dc-srch-item" style="${r.dialed_today ? 'opacity:0.72;' : ''}">
             <div class="dc-srch-info">
               <div class="dc-srch-name-row"><span class="dc-srch-name">${r.name}</span>${sourceBadge}${calledBadge}</div>
-              <div class="dc-srch-meta">${r.phone || '—'}${loc ? ' · ' + loc : ''}</div>
+              <div class="dc-srch-meta">${this._maskPhone(r.phone)}${loc ? ' · ' + loc : ''}</div>
             </div>
             <div class="dc-srch-btns">
               ${r.phone ? `<button class="dc-srch-dial" ${dialAttr}>📞</button>` : ''}
@@ -2128,9 +2460,9 @@ export class AutoDialerPage {
       if (digitsOnly.length >= 6) {
         return `
           <div class="dc-srch-direct-wrap">
-            <div class="dc-srch-nr-text">Not found in CRM leads</div>
+            <div class="dc-srch-nr-text">Not found in CRM leads or members</div>
             <button class="dc-srch-direct-btn" data-direct-phone="${digitsOnly}" data-direct-name="Direct Dial">
-              📞 Call ${this.searchQuery.replace(/</g,'&lt;')} directly
+              📞 Call ${this._maskPhone(digitsOnly)} directly
             </button>
           </div>`;
       }
@@ -2179,24 +2511,32 @@ export class AutoDialerPage {
 
     const rows = combined.slice(0, 12).map(c => {
       const src = c.source || '';
-      const badge = src === 'direct'
-        ? `<span class="dc-srch-src-badge contact">Device</span>`
-        : src === 'native'
-        ? `<span class="dc-srch-src-badge contact" style="background:#dcfce7;color:#166534">Native</span>`
-        : `<span class="dc-srch-src-badge lead">CRM</span>`;
+      const cType = c.contact_type || '';
+      let badge = `<span class="dc-srch-src-badge lead">CRM</span>`;
+      if (cType === 'vgk_member') {
+        badge = `<span class="dc-srch-src-badge vgk" style="background:rgba(245, 158, 11, 0.2);color:#fbbf24;font-weight:700;border:1px solid rgba(245,158,11,0.3);">VGK</span>`;
+      } else if (cType === 'mnr_member') {
+        badge = `<span class="dc-srch-src-badge mnr" style="background:rgba(168, 85, 247, 0.2);color:#c084fc;font-weight:700;border:1px solid rgba(168,85,247,0.3);">MNR</span>`;
+      } else if (src === 'direct') {
+        badge = `<span class="dc-srch-src-badge contact">Device</span>`;
+      } else if (src === 'native') {
+        badge = `<span class="dc-srch-src-badge contact" style="background:#dcfce7;color:#166534">Native</span>`;
+      }
       const dialAttr = c.lead_id
         ? `data-override-phone="${c.phone}" data-override-id="${c.lead_id}" data-override-name="${(c.name||'').replace(/"/g,'&quot;')}"`
         : `data-direct-phone="${c.phone}" data-direct-name="${(c.name||'').replace(/"/g,'&quot;')}"`;
       const icon = callTypeIcon(c);
       const iconColor = callTypeColor(c);
-      const displayName = (c.name || c.phone || '').replace(/</g,'&lt;');
+      const rawName = (c.name || '').trim();
+      const hasRealName = rawName && !['unknown', 'null', 'none', '-'].includes(rawName.toLowerCase());
+      const displayName = (hasRealName ? rawName : this._maskPhone(c.phone) || '').replace(/</g,'&lt;');
       return `
         <div class="dc-srch-item">
           <div class="dc-srch-info">
             <div class="dc-srch-name-row">
               <span class="dc-srch-name"><span style="color:${iconColor}">${icon}</span> ${displayName}</span>${badge}
             </div>
-            <div class="dc-srch-meta">${c.phone || '—'}</div>
+            <div class="dc-srch-meta">${this._maskPhone(c.phone)}</div>
           </div>
           <div class="dc-srch-btns">
             <button class="dc-srch-dial" ${dialAttr}>📞</button>
@@ -2316,29 +2656,51 @@ export class AutoDialerPage {
   private _attachSearchResultListeners(): void {
     document.querySelectorAll('[data-override-phone]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const phone = (btn as HTMLElement).dataset.overridePhone!;
-        const idStr = (btn as HTMLElement).dataset.overrideId;
-        const id = idStr && idStr !== 'null' ? parseInt(idStr) : null;
-        const name = (btn as HTMLElement).dataset.overrideName!;
+        const el = btn as HTMLElement;
+        const phone = el.dataset.overridePhone!;
+        const idStr = el.dataset.overrideId;
+        const id = idStr && idStr !== 'null' && !isNaN(parseInt(idStr)) ? parseInt(idStr) : null;
+        const name = el.dataset.overrideName || 'Contact Lead';
+        // 1. Immediate visual feedback
+        el.style.opacity = '0.6';
+        el.style.pointerEvents = 'none';
+        const originalContent = el.innerHTML;
+        el.innerHTML = '⏳';
+        // 2. Initiate canonical dial FIRST
         if (id) {
           this._overrideDial(phone, id, name);
         } else {
-          dialerService.dial(phone);
-          this.searchQuery = '';
-          this.searchResults = [];
-          this._renderSearchOnly();
+          dialerService.dial(phone, name);
+          this._saveToLocalDialHistory(phone, name);
         }
+        // 3. Restore feedback state smoothly
+        setTimeout(() => {
+          el.style.opacity = '1';
+          el.style.pointerEvents = 'auto';
+          el.innerHTML = originalContent;
+        }, 1500);
       });
     });
     document.querySelectorAll('[data-direct-phone]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const phone = (btn as HTMLElement).dataset.directPhone!;
-        const name = (btn as HTMLElement).dataset.directName || 'Direct Dial';
+        const el = btn as HTMLElement;
+        const phone = el.dataset.directPhone!;
+        const name = el.dataset.directName || 'Direct Dial';
+        // 1. Immediate visual feedback
+        el.style.opacity = '0.6';
+        el.style.pointerEvents = 'none';
+        const originalContent = el.innerHTML;
+        el.innerHTML = '⏳';
+        // 2. Initiate canonical dial FIRST
+        dialerService.dial(phone, name);
+        // 3. Update local history asynchronously in background without destroying DOM
         this._saveToLocalDialHistory(phone, name);
-        dialerService.dial(phone);
-        this.searchQuery = '';
-        this.searchResults = [];
-        this._renderSearchOnly();
+        // 4. Restore feedback state smoothly
+        setTimeout(() => {
+          el.style.opacity = '1';
+          el.style.pointerEvents = 'auto';
+          el.innerHTML = originalContent;
+        }, 1500);
       });
     });
     const viewAllBtn = document.getElementById('dc-view-all-hist');
@@ -2399,10 +2761,27 @@ export class AutoDialerPage {
       const filtered = history.filter((h: any) => h.phone !== phone);
       filtered.unshift(entry);
       localStorage.setItem('dc_dial_history', JSON.stringify(filtered.slice(0, 20)));
-      // Invalidate so panel refreshes next time
-      this.recentCallsLoaded = false;
-      this.recentCalls = [];
-      void this._loadRecentCalls();
+      // Update in-memory recentCalls in place without clearing or setting loading state
+      if (this.recentCalls && Array.isArray(this.recentCalls)) {
+        const withoutPhone = this.recentCalls.filter((c: any) => c.phone !== phone);
+        this.recentCalls = [entry, ...withoutPhone];
+      }
+    } catch (_) {}
+  }
+
+  private _prewarmTelephony(): void {
+    if (typeof window === 'undefined' || this.isPrewarmingTelephony) return;
+    try {
+      const regState = telephonyService.getRegistrationState();
+      if (regState === 'REGISTERED' || regState === 'CONNECTING') return;
+      this.isPrewarmingTelephony = true;
+      telephonyService.initPlivoWebRTC()
+        .catch(err => {
+          console.warn('[AutoDialerPage] Telephony pre-warm notice (deferred until dial):', err);
+        })
+        .finally(() => {
+          this.isPrewarmingTelephony = false;
+        });
     } catch (_) {}
   }
 
@@ -2435,8 +2814,14 @@ export class AutoDialerPage {
     } catch (_) {}
     this.currentLead = lead as QueueItem;
     void dialerService.notifyCallActive(leadId);
-    this._showCallingScreen(lead, phone);
-    dialerService.dial(phone);
+    this.activeSoftphoneDial = true;
+    callController.openCallDialer({
+      phoneNumber: phone,
+      name: lead.name || 'Contact Lead',
+      entityId: leadId,
+      entityType: 'lead',
+      autoStart: true,
+    });
     this._render();
   }
 
@@ -2482,6 +2867,45 @@ export class AutoDialerPage {
         if (phone && lead) this._dial(phone, lead);
       });
     });
+
+    this.container.querySelectorAll('.dc-direct-mobile-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const phone = btn.getAttribute('data-phone') || '';
+        const lead = dialerService.getCurrentLead();
+        if (phone && lead) void this._dialDirectMobile(phone, lead);
+      });
+    });
+
+    // Wire WhatsApp template button on lead card
+    this.container.querySelectorAll('.open-lead-wa-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const phone = (btn as HTMLElement).dataset.phone || '';
+        const name = (btn as HTMLElement).dataset.name || 'Customer';
+        const leadId = (btn as HTMLElement).dataset.id || '';
+        const context = (btn as HTMLElement).dataset.cat || '';
+        if (phone) {
+          unifiedWAModal.open({
+            phone,
+            name,
+            leadId,
+            context
+          });
+        }
+      });
+    });
+  }
+
+  private _escapeHtml(text: string): string {
+    const map: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    };
+    return (text || '').replace(/[&<>"']/g, m => map[m]);
   }
 
   private _attachCatPriorityListeners(): void {
@@ -2654,6 +3078,9 @@ export class AutoDialerPage {
       .dc-dial-row { display: flex; flex-direction: column; gap: 8px; }
       .dc-dial-btn { background: #059669; color: white; border: none; border-radius: 30px; padding: 14px 20px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; justify-content: center; }
       .dc-dial-btn.alt { background: #0ea5e9; }
+      .dc-direct-fallback-box { transition: background 0.15s; }
+      .dc-direct-mobile-btn { transition: all 0.15s ease; }
+      .dc-direct-mobile-btn:active { background: #f0f9ff !important; border-color: #0284c7 !important; transform: scale(0.98); }
       .dc-web-note { font-size: 11px; color: #9ca3af; text-align: center; margin-top: 8px; }
 
       /* Queue List */

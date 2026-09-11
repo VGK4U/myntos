@@ -34,9 +34,22 @@ class MobileScheduler {
   async init(): Promise<void> {
     if (this.initialized) return;
     
-    this.appStateListenerHandle = await App.addListener('appStateChange', (state: AppState) => {
-      this.handleAppStateChange(state.isActive);
-    });
+    const Capacitor = (window as any).Capacitor;
+    const isNative = Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform();
+
+    if (isNative) {
+      try {
+        this.appStateListenerHandle = await App.addListener('appStateChange', (state: AppState) => {
+          this.handleAppStateChange(state.isActive);
+        });
+      } catch (e) {
+        console.warn('[DC_SCHEDULER] App.addListener failed:', e);
+      }
+    } else if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        this.handleAppStateChange(!document.hidden);
+      });
+    }
     
     this.initialized = true;
     console.log('[DC_SCHEDULER] Initialized with app lifecycle awareness');

@@ -1515,14 +1515,26 @@
             }
         }
         
-        function populateReportingManagerDropdown() {
+        function populateReportingManagerDropdown(currentEmpId = null) {
             const managerSelect = document.getElementById('reportingManagerId');
+            if (!managerSelect) return;
+            const currentVal = managerSelect.value;
             managerSelect.innerHTML = '<option value="">No Reporting Manager</option>';
             allEmployees
-                .filter(emp => emp.is_active)
+                .filter(emp => {
+                    if (!emp.is_active || (emp.status && emp.status !== 'active') || emp.is_deleted) return false;
+                    if (currentEmpId && emp.id === currentEmpId) return false;
+                    const code = (emp.employee_code || emp.emp_code || '').toUpperCase();
+                    const name = (emp.full_name || '').toLowerCase();
+                    if (code.startsWith('EMP_') || code.startsWith('SA_') || name.includes('test')) return false;
+                    if (['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'].includes(emp.staff_type)) return false;
+                    return true;
+                })
+                .sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''))
                 .forEach(emp => {
-                    managerSelect.innerHTML += `<option value="${emp.id}">${emp.full_name} (${emp.employee_code})</option>`;
+                    managerSelect.innerHTML += `<option value="${emp.id}">${emp.full_name} (${emp.employee_code || emp.emp_code})</option>`;
                 });
+            if (currentVal) managerSelect.value = currentVal;
         }
         
         function renderEmployees(employees) {
@@ -1637,6 +1649,12 @@
             const status = document.getElementById('statusFilter').value;
             
             let filtered = allEmployees.filter(emp => {
+                if (emp.is_deleted) return false;
+                const code = (emp.employee_code || emp.emp_code || '').toUpperCase();
+                const name = (emp.full_name || '').toLowerCase();
+                if (code.startsWith('EMP_') || code.startsWith('SA_') || name.includes('test')) return false;
+                if (['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'].includes(emp.staff_type)) return false;
+
                 const matchSearch = !search || 
                     emp.full_name.toLowerCase().includes(search) ||
                     (emp.email && emp.email.toLowerCase().includes(search)) ||
@@ -1698,7 +1716,14 @@
            EXECUTIVE DASHBOARD
         =================================================== */
         function updateExecDashboard() {
-            const employees = allEmployees;
+            const employees = allEmployees.filter(e => {
+                if (e.is_deleted) return false;
+                const code = (e.employee_code || e.emp_code || '').toUpperCase();
+                const name = (e.full_name || '').toLowerCase();
+                if (code.startsWith('EMP_') || code.startsWith('SA_') || name.includes('test')) return false;
+                if (['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'].includes(e.staff_type)) return false;
+                return true;
+            });
             const total = employees.length;
             const active   = employees.filter(e => (e.status || (e.is_active ? 'active' : 'inactive')) === 'active').length;
             const inactive = employees.filter(e => (e.status || (e.is_active ? 'active' : 'inactive')) === 'inactive').length;
@@ -1986,6 +2011,7 @@
             document.getElementById('freelancerAccessMode').value = 'default';
             document.getElementById('freelancerAccessContainer').style.display = 'none';
             document.getElementById('quarterlyBonusEligible').checked = false;
+            populateReportingManagerDropdown(null);
             document.getElementById('reportingManagerId').value = '';
             document.getElementById('baseCompanyId').value = '';  // DC Protocol (Dec 15, 2025)
             
@@ -2062,6 +2088,7 @@
             document.getElementById('departmentId').value = emp.department_id || '';
             document.getElementById('designation').value = emp.designation || '';
             document.getElementById('dateOfJoining').value = emp.date_of_joining || '';
+            populateReportingManagerDropdown(emp.id);
             document.getElementById('reportingManagerId').value = emp.reporting_manager_id || '';
             document.getElementById('address').value = emp.address || '';
             

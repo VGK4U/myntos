@@ -2232,20 +2232,28 @@ async def get_team_kra_summary(
     elif scope == 'team':
         if not is_manager and not is_vgk4u_or_hr:
             raise HTTPException(status_code=403, detail="Team scope requires management access")
-        employee_ids = get_team_member_ids(current_user, db, StaffEmployee, department_id=department_id)
+        employee_ids = get_team_member_ids(
+            current_user, db, StaffEmployee,
+            department_id=department_id,
+            start_date=date_from,
+            end_date=date_to
+        )
         if not employee_ids:
             employee_ids = [current_user.id]
     elif scope == 'all':
         if not is_vgk4u_or_hr:
             raise HTTPException(status_code=403, detail="All scope requires VGK/EA/Key Leadership access")
-        hidden_ids = _get_hidden_employee_ids(db, StaffEmployee)
-        all_active = db.query(StaffEmployee.id).filter(StaffEmployee.status == 'active').all()
-        employee_ids = [e.id for e in all_active if e.id not in hidden_ids]
+        employee_ids = get_team_member_ids(
+            current_user, db, StaffEmployee,
+            department_id=department_id,
+            start_date=date_from,
+            end_date=date_to
+        )
     else:
         raise HTTPException(status_code=400, detail="Invalid scope. Use: self, team, or all")
     
     # First, get all relevant employees based on scope
-    emp_query = db.query(StaffEmployee).filter(StaffEmployee.status == 'active')
+    emp_query = db.query(StaffEmployee)
     
     if employee_ids is not None:
         emp_query = emp_query.filter(StaffEmployee.id.in_(employee_ids))

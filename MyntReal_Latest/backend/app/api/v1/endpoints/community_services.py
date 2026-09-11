@@ -21,14 +21,31 @@ router = APIRouter()
 
 
 # ──────────────────────────────────────────────────────────────────────
-# 1. PUBLIC ENDPOINTS
+# 1. PUBLIC ENDPOINTS (In-Memory 60s Cached to Protect RDS Connections)
 # ──────────────────────────────────────────────────────────────────────
+
+_COMMUNITY_HEADERS_CACHE = (0.0, None)
+_COMMUNITY_POPUP_CACHE = (0.0, None)
+_COMMUNITY_CACHE_TTL = 60.0  # 60 seconds
+
+def invalidate_community_services_cache():
+    """Invalidate community services in-memory cache on admin mutation"""
+    global _COMMUNITY_HEADERS_CACHE, _COMMUNITY_POPUP_CACHE
+    _COMMUNITY_HEADERS_CACHE = (0.0, None)
+    _COMMUNITY_POPUP_CACHE = (0.0, None)
 
 @router.get("/public/active-headers")
 def get_active_headers(db: Session = Depends(get_db)):
     """
     Query currently Active community services within validity range and count approved projects.
+    Cached in-memory for 60s to prevent RDS connection starvation on public homepage.
     """
+    global _COMMUNITY_HEADERS_CACHE
+    import time
+    now = time.time()
+    if _COMMUNITY_HEADERS_CACHE[1] is not None and (now - _COMMUNITY_HEADERS_CACHE[0]) < _COMMUNITY_CACHE_TTL:
+        return _COMMUNITY_HEADERS_CACHE[1]
+
     today = get_indian_time().date()
     active_services = db.query(CommunityService).filter(
         or_(CommunityService.status == 'ACTIVE', CommunityService.status == 'active'),
@@ -58,7 +75,7 @@ def get_active_headers(db: Session = Depends(get_db)):
         } for s in active_services
     ]
     
-    return {
+    result = {
         "success": True,
         "status": "success",
         "services": service_list,
@@ -67,12 +84,21 @@ def get_active_headers(db: Session = Depends(get_db)):
         "total_registered_projects": total_approved,
         "display_registered_label": display_label
     }
+    _COMMUNITY_HEADERS_CACHE = (now, result)
+    return result
 
 @router.get("/public/homepage-popup")
 def get_active_homepage_popup(db: Session = Depends(get_db)):
     """
     Get the active homepage popup banner configuration.
+    Cached in-memory for 60s to prevent RDS connection starvation on public homepage.
     """
+    global _COMMUNITY_POPUP_CACHE
+    import time
+    now = time.time()
+    if _COMMUNITY_POPUP_CACHE[1] is not None and (now - _COMMUNITY_POPUP_CACHE[0]) < _COMMUNITY_CACHE_TTL:
+        return _COMMUNITY_POPUP_CACHE[1]
+
     today = get_indian_time().date()
     # Query all active services
     active_services = db.query(CommunityService).filter(
@@ -89,7 +115,7 @@ def get_active_homepage_popup(db: Session = Depends(get_db)):
             try:
                 till_date = datetime.strptime(till_date_str, "%Y-%m-%d").date()
                 if today <= till_date:
-                    return {
+                    result = {
                         "success": True,
                         "has_popup": True,
                         "image_url": popup_image,
@@ -97,13 +123,17 @@ def get_active_homepage_popup(db: Session = Depends(get_db)):
                         "service_name": s.service_name,
                         "till_date": till_date_str
                     }
+                    _COMMUNITY_POPUP_CACHE = (now, result)
+                    return result
             except Exception:
                 continue
                 
-    return {
+    result = {
         "success": True,
         "has_popup": False
     }
+    _COMMUNITY_POPUP_CACHE = (now, result)
+    return result
 
 @router.get("/public/services/{short_name}")
 def get_public_service_details(short_name: str, db: Session = Depends(get_db)):
@@ -1145,6 +1175,7 @@ async def edit_service_admin(
 
     db.commit()
     db.refresh(service)
+    invalidate_community_services_cache()
     return {"success": True, "message": "Service updated successfully!", "data": service.to_dict()}
 
 
@@ -1164,6 +1195,7 @@ def update_service_status(
     service.status = status_val
     service.updated_at = get_indian_time()
     db.commit()
+    invalidate_community_services_cache()
     return {"success": True, "message": f"Service status updated to {status_val}"}
 
 @router.delete("/admin/services/{service_id}")
@@ -1177,6 +1209,7 @@ def delete_service_admin(service_id: int, db: Session = Depends(get_db), current
     service.status = 'DELETED'
     service.updated_at = get_indian_time()
     db.commit()
+    invalidate_community_services_cache()
     return {"success": True, "message": "Service deleted successfully"}
 
 @router.get("/admin/registrations")
@@ -1222,6 +1255,7 @@ def list_registrations_admin(db: Session = Depends(get_db), current_user: StaffE
         d['user_partner_code'] = r.user_partner.partner_code if r.user_partner else None
         results.append(d)
     return {"success": True, "data": results}
+
 
 @router.post("/admin/registrations/{reg_id}/approve")
 def approve_registration_endpoint(reg_id: int, db: Session = Depends(get_db), current_user: StaffEmployee = Depends(get_current_staff_user)):
@@ -1284,6 +1318,7 @@ def approve_registration_endpoint(reg_id: int, db: Session = Depends(get_db), cu
     reg.status = 'APPROVED'
     reg.updated_at = get_indian_time()
     db.commit()
+    invalidate_community_services_cache()
     
     # WhatsApp welcome credentials
     try:

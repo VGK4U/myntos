@@ -15,6 +15,7 @@ Enforces:
 """
 
 from typing import Dict, Any, List, Optional
+from collections import defaultdict
 from decimal import Decimal
 from datetime import datetime
 from sqlalchemy.orm import Session
@@ -221,13 +222,167 @@ def get_partner_current_position_v18(db: Session, partner_id: int) -> Dict[str, 
 
 
 def get_bulk_partner_current_positions_v26(db: Session, partner_ids: List[int]) -> Dict[int, Dict[str, Any]]:
-    """Evaluates rank positions for a list of partner_ids in bulk."""
+    """Evaluates rank positions for a list of partner_ids in bulk using vectorized queries."""
     if not partner_ids:
         return {}
-    res = {}
+    
+    # 1. Fetch entire VGK partner tree in ONE query
+    p_rows = db.execute(text("SELECT id, parent_partner_id FROM official_partners WHERE category = 'VGK_TEAM'")).fetchall()
+    children_map = defaultdict(list)
+    for r in p_rows:
+        pid, ppid = r[0], r[1]
+        if ppid:
+            children_map[ppid].append(pid)
+            
+    # Compute L1-L4 downlines for all partner_ids in-memory
+    downlines_map = {}
+    all_downline_pids = set()
     for pid in partner_ids:
-        res[pid] = get_partner_current_position_v18(db, pid)
-    return res
+        l1 = children_map.get(pid, [])
+        l2 = [c for p in l1 for c in children_map.get(p, [])]
+        l3 = [c for p in l2 for c in children_map.get(p, [])]
+        l4 = [c for p in l3 for c in children_map.get(p, [])]
+        dids = l1 + l2 + l3 + l4
+        downlines_map[pid] = dids
+        all_downline_pids.update(dids)
+        
+    # 2. Fetch all paid lead IDs once
+    paid_lead_rows = db.execute(text("""
+        SELECT DISTINCT source_lead_id FROM vgk_cash_income_entries
+        WHERE status IN ('PAID', 'RELEASED', 'CONFIRMED') AND source_lead_id IS NOT NULL
+    """)).fetchall()
+    paid_lead_set = {r[0] for r in paid_lead_rows}
+    
+    # 3. Fetch all leads associated with any downline partner in ONE query
+    downline_leads_map = defaultdict(list)
+    if all_downline_pids:
+        lead_rows = db.execute(text("""
+            SELECT id, associated_partner_id FROM crm_leads
+            WHERE associated_partner_id = ANY(:dids)
+        """), {'dids': list(all_downline_pids)}).fetchall()
+        for lid, pid in lead_rows:
+            downline_leads_map[pid].append(lid)
+            
+    # 4. Fetch all partners with 1st payment unlocked in ONE query
+    has_fp_pids = set()
+    fp_rows = db.execute(text("""
+        SELECT DISTINCT cl.associated_partner_id 
+        FROM crm_leads cl
+        WHERE cl.associated_partner_id = ANY(:pids)
+          AND (
+            EXISTS (
+              SELECT 1 FROM vgk_cash_income_entries vci 
+              WHERE vci.source_lead_id = cl.id AND vci.status IN ('PAID', 'RELEASED', 'CONFIRMED')
+            )
+            OR EXISTS (
+              SELECT 1 FROM vgk_solar_cibil_advances vsa 
+              WHERE vsa.lead_id = cl.id AND vsa.status IN ('PAID', 'RELEASED', 'CONFIRMED', 'STAGE1_APPROVED', 'STAGE2_PAID')
+            )
+          )
+    """), {'pids': partner_ids}).fetchall()
+    for r in fp_rows:
+        if r[0]:
+            has_fp_pids.add(r[0])
+            
+    # Check fallback for has_fp from vgk_cash_income_entries
+    remaining_pids = [pid for pid in partner_ids if pid not in has_fp_pids]
+    if remaining_pids:
+        fp_fallback_rows = db.execute(text("""
+            SELECT DISTINCT partner_id FROM vgk_cash_income_entries
+            WHERE partner_id = ANY(:pids) AND status IN ('PAID', 'RELEASED', 'CONFIRMED')
+        """), {'pids': remaining_pids}).fetchall()
+        for r in fp_fallback_rows:
+            if r[0]:
+                has_fp_pids.add(r[0])
+                
+    # 5. Evaluate all partner ranks in memory
+    results = {}
+    for partner_id in partner_ids:
+        dids = downlines_map.get(partner_id, [])
+        total_downline = len(dids)
+        
+        active_team_pids = set()
+        downline_paid_counts = {}
+        for dpid in dids:
+            lids = downline_leads_map.get(dpid, [])
+            if lids:
+                active_team_pids.add(dpid)
+                p_cnt = sum(1 for lid in lids if lid in paid_lead_set)
+                if p_cnt > 0:
+                    downline_paid_counts[dpid] = p_cnt
+                    
+        active_team_cnt = len(active_team_pids)
+        activated_team_cnt = sum(1 for dpid, cnt in downline_paid_counts.items() if cnt >= 3)
+        has_fp = (partner_id in has_fp_pids)
+        
+        if not has_fp:
+            results[partner_id] = {
+                "partner_id": partner_id,
+                "rank_code": "RANK_0",
+                "position": "Member",
+                "current_rank": "Member",
+                "current_designation": "Member",
+                "rank_display": "Member",
+                "stars": 0,
+                "rate_pct": 5.00,
+                "rank_slab_pct": 5.00,
+                "base_amount": 10000.00,
+                "activated_team": 0,
+                "active_team": active_team_cnt,
+                "total_downline": total_downline,
+                "next_rank": "1★ Channel Partner",
+                "next_rank_requirement": 1,
+                "rank_gap": 1,
+                "rank_progress_percent": 0.0,
+                "is_permanent": False
+            }
+            continue
+            
+        if activated_team_cnt >= 50:
+            rank_code, pos_name, stars, pct, amt = 'RANK_5', 'Director', 5, 8.50, 17000.00
+            next_rank, next_req, gap, progress_pct = None, None, 0, 100.0
+        elif activated_team_cnt >= 25:
+            rank_code, pos_name, stars, pct, amt = 'RANK_4', 'Regional Manager', 4, 8.25, 16500.00
+            next_rank, next_req = 'Director', 50
+            gap = max(0, 50 - activated_team_cnt)
+            progress_pct = round(min(100.0, (activated_team_cnt / 50.0) * 100.0), 1)
+        elif activated_team_cnt >= 10:
+            rank_code, pos_name, stars, pct, amt = 'RANK_3', 'Zonal Manager', 3, 7.50, 15000.00
+            next_rank, next_req = 'Regional Manager', 25
+            gap = max(0, 25 - activated_team_cnt)
+            progress_pct = round(min(100.0, (activated_team_cnt / 25.0) * 100.0), 1)
+        elif activated_team_cnt >= 2:
+            rank_code, pos_name, stars, pct, amt = 'RANK_2', 'Manager', 2, 6.50, 13000.00
+            next_rank, next_req = 'Zonal Manager', 10
+            gap = max(0, 10 - activated_team_cnt)
+            progress_pct = round(min(100.0, (activated_team_cnt / 10.0) * 100.0), 1)
+        else:
+            rank_code, pos_name, stars, pct, amt = 'RANK_1', 'Channel Partner', 1, 5.00, 10000.00
+            next_rank, next_req = 'Manager', 2
+            gap = max(0, 2 - activated_team_cnt)
+            progress_pct = round(min(100.0, (activated_team_cnt / 2.0) * 100.0), 1)
+
+        results[partner_id] = {
+            "partner_id": partner_id,
+            "rank_code": rank_code,
+            "position": pos_name,
+            "current_rank": f"Rank {stars} — {pos_name}",
+            "current_designation": pos_name,
+            "rank_display": f"{stars}★ {pos_name}",
+            "stars": stars,
+            "rate_pct": float(pct),
+            "rank_slab_pct": float(pct),
+            "base_amount": float(amt),
+            "activated_team": activated_team_cnt,
+            "active_team": active_team_cnt,
+            "total_downline": total_downline,
+            "next_rank": next_rank,
+            "next_rank_requirement": next_req,
+            "rank_gap": gap,
+            "rank_progress_percent": progress_pct,
+            "is_permanent": True
+        }
+    return results
 
 
 

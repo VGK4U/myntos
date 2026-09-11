@@ -33,14 +33,27 @@
             this.registrationReject = null;
             this.loginAttemptInProgress = false;
 
-            // Active Call State
+            // Active Call State Machine
+            this.isCallActive = false;
+            this.isCallConnected = false;
+            this.callConnectedTime = null;
             this.activeCall = null;
             this.activeSessionId = null;
             this.activeLeadContext = null;
+            this.activeDestination = null;
+            this.activeLeadName = null;
             this.callTimerInterval = null;
             this.callSeconds = 0;
             this.isMuted = false;
             this.isHeld = false;
+            this.isSpeakerOn = false;
+
+            // Audio Enhancement & Mic Boost State
+            this._activePeerConnection = null;
+            this._micBoostCtx = null;
+            this._originalMicTrack = null;
+            this._boostedMicTrack = null;
+            this._isMicBoostApplied = false;
 
             // Incoming Call State
             this.incomingCallObj = null;
@@ -56,14 +69,61 @@
             if (this.isInitialized) return;
             this.isInitialized = true;
             console.log('[PLIVO-SOFTPHONE] Initializing MyntOS Browser Softphone...');
+            this.installEarlyMediaSignalingBridge();
             this.injectUIElements();
             this.ensureRemoteAudioElement();
             this.prewarmMicrophone();
             this.loadPlivoSDK();
         }
 
+        installEarlyMediaSignalingBridge() {
+            if (typeof window === 'undefined' || !window.RTCPeerConnection || window.__myntos_plivo_bridge_active) return;
+            window.__myntos_plivo_bridge_active = true;
+
+            const OriginalRTCPeerConnection = window.RTCPeerConnection;
+            const origSetRemoteDescription = OriginalRTCPeerConnection.prototype.setRemoteDescription;
+
+            // W3C RFC 8829 / JSEP Standards-Compliant Early-Media Handler:
+            // Normalize provisional SIP 180/183 SDP from 'answer' to 'pranswer' so Chrome natively
+            // transitions have-local-offer -> have-remote-pranswer (playing in-band ringback),
+            // and transitions have-remote-pranswer -> stable when the final SIP 200 OK answer arrives.
+            // RTCPeerConnection.prototype.signalingState is NEVER modified, masked, or intercepted.
+            OriginalRTCPeerConnection.prototype.setRemoteDescription = function(description) {
+                let descToApply = description;
+                try {
+                    // Strictly constrain normalization to Plivo Softphone WebRTC instances
+                    const plivoSession = window.PlivoSoftphone?.client?._currentSession?.session;
+                    const isPlivoPC = plivoSession && (plivoSession.connection === this || plivoSession._connection === this);
+
+                    if (isPlivoPC && window.PlivoSoftphone) {
+                        window.PlivoSoftphone._activePeerConnection = this;
+                    }
+
+                    if (isPlivoPC && description && description.type === 'answer' && description.sdp) {
+                        // Check if the Plivo SIP session is currently in the provisional 1xx phase (STATUS_1XX_RECEIVED = 2)
+                        const isProvisionalPhase = plivoSession._status === 2; // STATUS_1XX_RECEIVED
+
+                        if (isProvisionalPhase) {
+                            console.log('[PLIVO-EARLY-MEDIA] Applying provisional 180/183 SDP as W3C pranswer (Native state: have-remote-pranswer)');
+                            descToApply = new RTCSessionDescription({
+                                type: 'pranswer',
+                                sdp: description.sdp
+                            });
+                        } else {
+                            console.log('[PLIVO-EARLY-MEDIA] Applying final SIP 200 OK SDP as W3C answer (Native state -> stable)');
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[PLIVO-EARLY-MEDIA] Notice during description normalization:', e);
+                }
+                return origSetRemoteDescription.call(this, descToApply);
+            };
+
+            console.log('[PLIVO-SOFTPHONE] W3C RFC 8829 Early-Media signaling bridge installed successfully (signalingState untouched, instance-scoped)');
+        }
+
         ensureRemoteAudioElement() {
-            if (!document.body) return;
+            if (typeof document === 'undefined') return null;
             let audioEl = document.getElementById('plivoRemoteAudio');
             if (!audioEl) {
                 audioEl = document.createElement('audio');
@@ -72,11 +132,110 @@
                 audioEl.volume = 1.0;
                 audioEl.muted = false;
                 audioEl.setAttribute('playsinline', 'true');
-                audioEl.style.display = 'none';
-                document.body.appendChild(audioEl);
+                audioEl.setAttribute('webkit-playsinline', 'true');
+                audioEl.style.position = 'fixed';
+                audioEl.style.left = '-9999px';
+                audioEl.style.top = '-9999px';
+                audioEl.style.width = '1px';
+                audioEl.style.height = '1px';
+                audioEl.style.opacity = '0.01';
+                audioEl.style.pointerEvents = 'none';
+                const parent = document.body || document.documentElement || document.head;
+                if (parent) parent.appendChild(audioEl);
             } else {
                 audioEl.volume = 1.0;
                 audioEl.muted = false;
+            }
+            return audioEl;
+        }
+
+        unlockAudioOnUserGesture() {
+            try {
+                const audioEl = this.ensureRemoteAudioElement();
+                if (audioEl) {
+                    audioEl.volume = 1.0;
+                    audioEl.muted = false;
+                    const silentWav = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAP8A/w==';
+                    if (!audioEl.srcObject && !audioEl.src) {
+                        audioEl.src = silentWav;
+                    }
+                    const p = audioEl.play();
+                    if (p !== undefined) {
+                        p.then(() => {
+                            if (audioEl.src === silentWav) {
+                                audioEl.pause();
+                                audioEl.currentTime = 0;
+                            }
+                        }).catch((err) => {
+                            console.warn('[PLIVO-SOFTPHONE] Audio element unlock notice:', err?.name, err?.message);
+                        });
+                    }
+                }
+                const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+                if (AudioCtxClass) {
+                    if (!this.audioCtx) this.audioCtx = new AudioCtxClass();
+                    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+                        this.audioCtx.resume().catch(() => {});
+                    }
+                }
+            } catch (e) {
+                console.warn('[PLIVO-SOFTPHONE] unlockAudioOnUserGesture error:', e);
+            }
+        }
+
+        startRingback() {
+            if (this.isRingbackActive) return;
+            this.isRingbackActive = true;
+            try {
+                const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtxClass) return;
+                if (!this.audioCtx) this.audioCtx = new AudioCtxClass();
+                const ctx = this.audioCtx;
+                if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+
+                const playBurst = () => {
+                    if (!this.isRingbackActive) return;
+                    try {
+                        const now = ctx.currentTime;
+                        const gain = ctx.createGain();
+                        gain.gain.setValueAtTime(0, now);
+                        gain.gain.linearRampToValueAtTime(0.08, now + 0.05);
+                        gain.gain.setValueAtTime(0.08, now + 0.95);
+                        gain.gain.linearRampToValueAtTime(0, now + 1.0);
+
+                        const osc1 = ctx.createOscillator();
+                        const osc2 = ctx.createOscillator();
+                        osc1.type = 'sine';
+                        osc2.type = 'sine';
+                        osc1.frequency.setValueAtTime(400, now);
+                        osc2.frequency.setValueAtTime(450, now);
+
+                        osc1.connect(gain);
+                        osc2.connect(gain);
+                        gain.connect(ctx.destination);
+
+                        osc1.start(now);
+                        osc2.start(now);
+                        osc1.stop(now + 1.0);
+                        osc2.stop(now + 1.0);
+                    } catch (_) {}
+                };
+
+                playBurst();
+                this.ringbackInterval = setInterval(() => {
+                    if (this.isRingbackActive) playBurst();
+                    else this.stopRingback();
+                }, 3000);
+            } catch (err) {
+                console.warn('[PLIVO-SOFTPHONE] Ringback error:', err);
+            }
+        }
+
+        stopRingback() {
+            this.isRingbackActive = false;
+            if (this.ringbackInterval) {
+                clearInterval(this.ringbackInterval);
+                this.ringbackInterval = null;
             }
         }
 
@@ -114,7 +273,8 @@
                 console.warn('[PLIVO-SOFTPHONE] Plivo CDN unreachable. Running in Mock/Simulated WebRTC Softphone mode.');
                 this.setupMockClient();
             };
-            document.head.appendChild(script);
+            const parent = document.head || document.body || document.documentElement;
+            if (parent) parent.appendChild(script);
         }
 
         async setupPlivoClient() {
@@ -136,10 +296,13 @@
                     autoGainControl: true
                 };
 
+                this.ensureRemoteAudioElement();
+
                 if (typeof window.Plivo !== 'undefined') {
                     if (typeof window.Plivo === 'function') {
                         this.sdk = new window.Plivo({
                             allowMultipleIncomingCalls: true,
+                            enableNoiseReduction: true, // Issue #2: Plivo Native Noise Reduction
                             audioConstraints: audioConstraints,
                             audioElementOption: {
                                 remoteAudioId: 'plivoRemoteAudio'
@@ -148,6 +311,7 @@
                         this.client = this.sdk.client || this.sdk;
                     } else if (window.Plivo.Client) {
                         this.client = new window.Plivo.Client({
+                            enableNoiseReduction: true, // Issue #2: Plivo Native Noise Reduction
                             audioConstraints: audioConstraints
                         });
                     }
@@ -205,7 +369,7 @@
         bindClientEvents() {
             if (!this.client) return;
 
-            // Plivo SDK Event Listeners
+            // Plivo SDK Event Listeners (Standardized & Monotonic)
             this.client.on('onLogin', (data) => this.onLoginSuccess(data));
             this.client.on('onLogout', () => this.onLogoutSuccess());
             this.client.on('onLoginFailed', (reason) => {
@@ -217,6 +381,12 @@
             this.client.on('onIncomingCallCanceled', () => {
                 this.dismissIncomingCallBanner();
             });
+            this.client.on('onCalling', () => {
+                console.log('[PLIVO-SOFTPHONE] Outgoing call dispatched / calling...');
+            });
+            this.client.on('onCallRemoteRinging', (callInfo) => {
+                this.onCallRinging(callInfo);
+            });
             this.client.on('onCallRinging', (callInfo) => {
                 this.onCallRinging(callInfo);
             });
@@ -224,10 +394,12 @@
                 this.onCallRinging(callInfo);
             });
             this.client.on('onCallAnswered', (callInfo) => {
-                this.onCallConnected(callInfo);
+                this.handleRemoteAnswered(callInfo);
+            });
+            this.client.on('onCallConnected', (callInfo) => {
+                this.handleRemoteAnswered(callInfo);
             });
             this.client.on('onMediaConnected', (callInfo) => {
-                console.log('[PLIVO-SOFTPHONE] Media stream established / active');
                 this.onMediaConnected(callInfo);
             });
             this.client.on('onCallTerminated', () => {
@@ -235,7 +407,7 @@
             });
             this.client.on('onCallFailed', (reason) => {
                 console.warn('[PLIVO-SOFTPHONE] Call failed:', reason);
-                this.onCallTerminated();
+                this.onCallFailed(reason);
             });
         }
 
@@ -412,8 +584,8 @@
 
         // ── OUTBOUND CALLING WITH MULTI-METHOD SELECTOR ──────────────────────
 
-        dialOutboundCall(number, leadId = null, leadName = null) {
-            return this.dial(number, leadId, leadName);
+        dialOutboundCall(number, leadId = null, leadName = null, forceMethod = 'plivo') {
+            return this.dial(number, leadId, leadName, forceMethod);
         }
 
         openDialpadAndCall(number, leadName = null, leadId = null) {
@@ -456,22 +628,37 @@
 
             if (autoStart && phone) {
                 setTimeout(() => {
-                    this.dial(phone, entityId, name);
+                    this.dial(phone, entityId, name, 'plivo');
                 }, 150);
             }
         }
 
-        async dial(destinationPhone, leadId = null, leadName = null, forceMethod = null) {
-            if (!destinationPhone) {
-                alert('Please enter a valid destination phone number.');
+        normalizeDestinationPhone(destinationPhone) {
+            if (!destinationPhone || typeof destinationPhone !== 'string') return null;
+            if (destinationPhone.includes('•') || destinationPhone.includes('*')) {
+                console.warn('[PLIVO-SOFTPHONE] Masked phone number cannot be dialed directly:', destinationPhone);
+                return null;
+            }
+            const digits = destinationPhone.replace(/\D/g, '');
+            if (digits.length < 10) return null;
+            const clean10 = digits.slice(-10);
+            return `+91${clean10}`;
+        }
+
+        async dial(destinationPhone, leadId = null, leadName = null, forceMethod = 'plivo') {
+            // MANDATE 1: TRUE USER-GESTURE AUDIO UNLOCK BEFORE THE FIRST AWAIT!
+            this.unlockAudioOnUserGesture();
+
+            const cleanDest = this.normalizeDestinationPhone(destinationPhone);
+            if (!cleanDest) {
+                alert('Please enter or select a valid 10-digit phone number to place a call.');
                 return;
             }
 
-            const cleanDest = destinationPhone.startsWith('+') ? destinationPhone : `+91${destinationPhone.replace(/\D/g, '').slice(-10)}`;
             const savedPref = sessionStorage.getItem('myntos_preferred_call_method');
-            const selectedMethod = forceMethod || savedPref;
+            const selectedMethod = forceMethod || savedPref || 'plivo';
 
-            if (!selectedMethod) {
+            if (selectedMethod === 'modal' || selectedMethod === 'select') {
                 this.showCallMethodModal(cleanDest, leadId, leadName);
                 return;
             }
@@ -643,8 +830,17 @@
         }
 
         async executePlivoDial(destinationPhone, leadId = null, leadName = null) {
+            // MANDATE 1: TRUE USER-GESTURE AUDIO UNLOCK BEFORE THE FIRST AWAIT!
+            this.unlockAudioOnUserGesture();
+
             if (this.isCallActive) {
                 console.warn('[PLIVO-SOFTPHONE] A call is already active. Duplicate dial ignored.');
+                return;
+            }
+
+            const cleanDest = this.normalizeDestinationPhone(destinationPhone);
+            if (!cleanDest) {
+                alert('Please enter or select a valid 10-digit phone number to place a call.');
                 return;
             }
 
@@ -661,12 +857,12 @@
             }
 
             this.isCallActive = true;
-            this.activeDestination = destinationPhone;
+            this.activeDestination = cleanDest;
             this.activeLeadName = leadName;
 
-            console.log(`[PLIVO-SOFTPHONE] Dialing ${destinationPhone} (Lead: ${leadName || leadId})`);
+            console.log(`[PLIVO-SOFTPHONE] Dialing ${cleanDest} (Lead: ${leadName || leadId})`);
             this.openSoftphoneDock();
-            this.showCallInProgressUI(destinationPhone, leadName || 'Customer Lead');
+            this.showCallInProgressUI(cleanDest, leadName || 'Customer Lead');
 
             // Ensure remote audio playback element is ready and at full volume
             this.ensureRemoteAudioElement();
@@ -687,8 +883,10 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        destination_phone: destinationPhone,
-                        lead_id: cleanLeadId
+                        destination_phone: cleanDest,
+                        lead_id: cleanLeadId,
+                        is_webrtc: true,
+                        dispatch_provider_call: false
                     })
                 });
 
@@ -703,7 +901,6 @@
                 this.activeSessionId = sessData.call_session_id || ('vcs_local_' + Date.now());
 
                 // 2. Dispatch call through Plivo WebRTC SDK
-                const cleanDest = destinationPhone.startsWith('+') ? destinationPhone : `+91${destinationPhone.replace(/\D/g, '').slice(-10)}`;
                 const extraHeaders = {
                     'X-PH-Call-Session-ID': this.activeSessionId,
                     'X-PH-Lead-ID': String(leadId || '')
@@ -720,6 +917,11 @@
 
                 if (this.client && typeof this.client.call === 'function') {
                     this.client.call(cleanDest, extraHeaders);
+                }
+
+                // Immediately start session watcher to monitor dialing -> ringing -> connected -> ended lifecycle
+                if (this.activeSessionId) {
+                    this.startSessionWatcher(this.activeSessionId);
                 }
             } catch (err) {
                 console.error('[PLIVO-SOFTPHONE] Outbound dial error:', err);
@@ -752,6 +954,8 @@
         }
 
         answerIncomingCall() {
+            // MANDATE 1: TRUE USER-GESTURE AUDIO UNLOCK
+            this.unlockAudioOnUserGesture();
             this.stopRingtone();
             this.dismissIncomingCallBanner();
 
@@ -779,6 +983,8 @@
 
         // ── ACTIVE CALL CONTROLS & CARRIER DISCONNECT POLLER ────────────────
 
+        // ── ACTIVE CALL CONTROLS & CARRIER DISCONNECT POLLER ────────────────
+
         startSessionWatcher(sessionId) {
             this.stopSessionWatcher();
             if (!sessionId || sessionId.startsWith('vcs_local_')) return;
@@ -790,20 +996,39 @@
                     });
                     if (resp.ok) {
                         const data = await resp.json();
-                        if (data && data.success && data.is_terminal === true) {
-                            console.log(`[PLIVO-SOFTPHONE] Carrier disconnected call ${sessionId} (Status: ${data.status}, Duration: ${data.duration_seconds}s)`);
-                            this.stopSessionWatcher();
-                            this.onCallTerminated();
+                        if (data && data.success) {
+                            if (data.is_terminal === true || ['ended', 'completed', 'failed', 'busy', 'no-answer', 'rejected', 'canceled'].includes(data.status)) {
+                                console.log(`[PLIVO-SOFTPHONE] Carrier session closed ${sessionId} (Status: ${data.status}, Duration: ${data.duration_seconds}s)`);
+                                this.stopSessionWatcher();
+                                this.onCallTerminated();
+                            } else if ((data.status === 'in_progress' || data.status === 'connected' || data.is_connected) && this.isCallActive) {
+                                // Monotonic progression: Converge local state to CONNECTED if not already connected
+                                if (!this.isCallConnected || !this.callConnectedTime) {
+                                    this.handleRemoteAnswered({ destination: this.activeDestination });
+                                }
+                            } else if (data.status === 'ringing' && this.isCallActive) {
+                                // MONOTONIC PROGRESSION: Strictly ignore backend ringing if call is already connected locally
+                                if (!this.isCallConnected && !this.callConnectedTime) {
+                                    this.onCallRinging({ destination: this.activeDestination });
+                                }
+                            }
                         }
                     }
                 } catch (_) {}
-            }, 3000);
+            }, 2500);
         }
 
         stopSessionWatcher() {
             if (this.sessionWatcherInterval) {
                 clearInterval(this.sessionWatcherInterval);
                 this.sessionWatcherInterval = null;
+            }
+        }
+
+        stopHeartbeatLoop() {
+            if (this.heartbeatInterval) {
+                clearInterval(this.heartbeatInterval);
+                this.heartbeatInterval = null;
             }
         }
 
@@ -833,6 +1058,11 @@
         }
 
         onCallRinging(callInfo) {
+            // MONOTONIC PROGRESSION: Strictly ignore ringing events if call is already connected
+            if (this.isCallConnected || this.callConnectedTime) {
+                return;
+            }
+            this.startRingback();
             console.log('[PLIVO-SOFTPHONE] Destination phone ringing...');
             const statusLabel = document.getElementById('callStatusLabel');
             if (statusLabel) {
@@ -850,7 +1080,8 @@
         }
 
         onMediaConnected(callInfo) {
-            console.log('[PLIVO-SOFTPHONE] WebRTC media track active');
+            this.stopRingback();
+            console.log('[PLIVO-SOFTPHONE] WebRTC media track active (early/in-band audio)');
             const remoteAudio = document.getElementById('plivoRemoteAudio');
             if (remoteAudio) {
                 remoteAudio.volume = 1.0;
@@ -861,94 +1092,152 @@
                     });
                 }
             }
-            if (!this.isCallActive || !this.callTimerInterval) {
-                this.onCallConnected(callInfo);
+            // EARLY MEDIA != ANSWERED: Only show ringing if not yet connected
+            if (!this.isCallConnected && !this.callConnectedTime) {
+                const statusLabel = document.getElementById('callStatusLabel');
+                if (statusLabel && statusLabel.textContent !== 'Connected (In Call)') {
+                    statusLabel.textContent = 'Ringing...';
+                    statusLabel.className = 'badge bg-info px-2 py-1';
+                }
+            }
+        }
+
+        handleRemoteAnswered(callInfo) {
+            this.stopRingback();
+            if (this.isCallConnected && this.callConnectedTime) {
+                return; // Idempotent: already connected and timer running
+            }
+            console.log('[PLIVO-SOFTPHONE] Authoritative call answer/connected event received');
+            this.isCallActive = true;
+            this.isCallConnected = true;
+            this.callConnectedTime = Date.now();
+
+            try {
+                const statusLabel = document.getElementById('callStatusLabel');
+                if (statusLabel) {
+                    statusLabel.textContent = 'Connected (In Call)';
+                    statusLabel.className = 'badge bg-success px-2 py-1';
+                }
+                const remoteAudio = document.getElementById('plivoRemoteAudio');
+                if (remoteAudio) {
+                    remoteAudio.volume = 1.0;
+                    remoteAudio.muted = false;
+                    if (typeof remoteAudio.play === 'function') {
+                        remoteAudio.play().catch(() => {});
+                    }
+                }
+                if (!this.callTimerInterval) {
+                    this.startCallTimer();
+                }
+                this.startHeartbeatLoop();
+                this.syncCallEvent('connected');
+
+                // Start carrier status watcher to detect remote hangup
+                if (this.activeSessionId) {
+                    this.startSessionWatcher(this.activeSessionId);
+                }
+
+                // Start native in-call foreground service on Android/Capacitor (Issue #3)
+                if (window.Capacitor?.Plugins?.AudioRouting?.startInCallService) {
+                    window.Capacitor.Plugins.AudioRouting.startInCallService({
+                        title: this.activeLeadName || 'Active Softphone Call',
+                        text: this.activeDestination ? `In call with ${this.activeDestination}` : 'Call in progress'
+                    }).catch(e => console.warn('[PLIVO-SOFTPHONE] InCallService start notice:', e));
+                }
+
+                // Apply modest mic boost (+2.5 dB / 1.33x with limiter) (Issue #1)
+                this.applyModestMicBoost().catch(e => console.warn('[PLIVO-SOFTPHONE] Mic boost notice:', e));
+            } catch (err) {
+                console.warn('[PLIVO-SOFTPHONE] Notice in handleRemoteAnswered:', err);
+            } finally {
+                // Guaranteed dispatch of connected event for hub page and listeners
+                document.dispatchEvent(new CustomEvent('plivo:call-connected', {
+                    detail: {
+                        phone: this.activeDestination || callInfo?.destination || '',
+                        name: this.activeLeadName || 'Contact Lead',
+                        sessionId: this.activeSessionId
+                    }
+                }));
             }
         }
 
         onCallConnected(callInfo) {
-            console.log('[PLIVO-SOFTPHONE] Call connected / active');
-            this.isCallActive = true;
-            const statusLabel = document.getElementById('callStatusLabel');
-            if (statusLabel) {
-                statusLabel.textContent = 'Connected (In Call)';
-                statusLabel.className = 'badge bg-success px-2 py-1';
-            }
-            const remoteAudio = document.getElementById('plivoRemoteAudio');
-            if (remoteAudio) {
-                remoteAudio.volume = 1.0;
-                remoteAudio.muted = false;
-                if (typeof remoteAudio.play === 'function') {
-                    remoteAudio.play().catch(() => {});
-                }
-            }
-            if (!this.callTimerInterval) {
-                this.startCallTimer();
-            }
-            this.startHeartbeatLoop();
-
-            this.syncCallEvent('connected');
-
-            // Start carrier status watcher to detect remote hangup
-            if (this.activeSessionId) {
-                this.startSessionWatcher(this.activeSessionId);
-            }
-
-            // Dispatch global event for hub page and listeners
-            document.dispatchEvent(new CustomEvent('plivo:call-connected', {
-                detail: {
-                    phone: this.activeDestination || callInfo?.destination || '',
-                    name: this.activeLeadName || 'Contact Lead',
-                    sessionId: this.activeSessionId
-                }
-            }));
+            this.handleRemoteAnswered(callInfo);
         }
 
         onCallTerminated() {
             console.log('[PLIVO-SOFTPHONE] Call terminated');
-            this.stopSessionWatcher();
-            this.stopHeartbeatLoop();
-            this.isCallActive = false;
-            
+            this.stopRingback();
+            const remoteAudio = document.getElementById('plivoRemoteAudio');
+            if (remoteAudio) {
+                try {
+                    remoteAudio.pause();
+                    remoteAudio.srcObject = null;
+                    remoteAudio.src = '';
+                } catch (_) {}
+            }
             const mins = String(Math.floor(this.callSeconds / 60)).padStart(2, '0');
             const secs = String(this.callSeconds % 60).padStart(2, '0');
             const finalDuration = `${mins}:${secs}`;
             const durSecs = this.callSeconds || 0;
             const sid = this.activeSessionId;
 
-            this.stopCallTimer();
+            try {
+                this.stopSessionWatcher();
+            } catch (_) {}
 
-            const statusLabel = document.getElementById('callStatusLabel');
-            if (statusLabel) {
-                statusLabel.textContent = `Call Ended (${finalDuration})`;
-                statusLabel.className = 'badge bg-danger px-2 py-1';
-            }
+            try {
+                this.stopHeartbeatLoop();
+            } catch (_) {}
+
+            this.isCallActive = false;
+            this.isCallConnected = false;
+            this.callConnectedTime = null;
+
+            try {
+                this.stopCallTimer();
+            } catch (_) {}
+
+            try {
+                const statusLabel = document.getElementById('callStatusLabel');
+                if (statusLabel) {
+                    statusLabel.textContent = `Call Ended (${finalDuration})`;
+                    statusLabel.className = 'badge bg-danger px-2 py-1';
+                }
+            } catch (_) {}
 
             // Auto-submit quick disposition if selected
-            this.submitQuickDisposition();
+            try {
+                this.submitQuickDisposition();
+            } catch (_) {}
 
             // End session and sync terminal call duration to backend
             if (sid) {
-                const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
-                fetch('/api/v1/telephony/plivo/browser/call/end', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        call_session_id: sid,
-                        duration_seconds: durSecs
-                    })
-                }).catch(() => {});
+                try {
+                    const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
+                    fetch('/api/v1/telephony/plivo/browser/call/end', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            call_session_id: sid,
+                            duration_seconds: durSecs
+                        })
+                    }).catch(() => {});
 
-                fetch('/api/v1/telephony/plivo/browser/call-event', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        call_session_id: sid,
-                        event_type: 'ended',
-                        duration_seconds: durSecs
-                    })
-                }).catch(() => {});
+                    fetch('/api/v1/telephony/plivo/browser/call-event', {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            call_session_id: sid,
+                            event_type: 'ended',
+                            duration_seconds: durSecs
+                        })
+                    }).catch(() => {});
+                } catch (_) {}
             }
+
+            // Clean up modest mic boost audio processing pipeline (Issue #1)
+            this._cleanupMicBoost();
 
             if (this.localAudioStream) {
                 try {
@@ -957,39 +1246,210 @@
                 this.localAudioStream = null;
             }
 
-            // Reset speakerphone and audio routing to normal communication mode
-            if (this.isSpeakerOn) {
-                this.isSpeakerOn = false;
-                try {
-                    if (window.Capacitor?.Plugins?.AudioRouting) {
-                        window.Capacitor.Plugins.AudioRouting.setSpeakerphoneOn({ enabled: false });
-                    }
-                } catch (_) {}
-            }
+            // Stop background in-call foreground service (Issue #3)
+            try {
+                if (window.Capacitor?.Plugins?.AudioRouting?.stopInCallService) {
+                    window.Capacitor.Plugins.AudioRouting.stopInCallService().catch(() => {});
+                }
+            } catch (_) {}
+
+            // Unconditionally reset audio routing mode to MODE_NORMAL (Issue #5)
+            this.isSpeakerOn = false;
+            try {
+                if (window.Capacitor?.Plugins?.AudioRouting?.resetAudioMode) {
+                    window.Capacitor.Plugins.AudioRouting.resetAudioMode().catch(() => {});
+                }
+            } catch (_) {}
 
             this.activeSessionId = null;
             this.activeLeadContext = null;
 
-            // Dispatch global event so all page UI resets immediately
-            document.dispatchEvent(new CustomEvent('plivo:call-terminated', {
-                detail: { sessionId: sid, duration: finalDuration }
-            }));
+            // Guaranteed dispatch of terminal event so all page UI resets immediately
+            try {
+                document.dispatchEvent(new CustomEvent('plivo:call-terminated', {
+                    detail: { sessionId: sid, duration: finalDuration }
+                }));
+            } catch (e) {
+                console.warn('[PLIVO-SOFTPHONE] Notice on terminal event dispatch:', e);
+            }
 
             // Gracefully close overlay after 1.8s, returning user untouched to their existing window
             setTimeout(() => {
                 if (!this.isCallActive) {
-                    this.hideCallInProgressUI();
-                    this.closeSoftphoneDock();
+                    try {
+                        this.hideCallInProgressUI();
+                        this.closeSoftphoneDock();
+                    } catch (_) {}
                 }
             }, 1800);
         }
 
+        onCallFailed(reason, callInfo) {
+            console.warn('[PLIVO-SOFTPHONE] onCallFailed invoked:', reason, callInfo);
+            const statusLabel = document.getElementById('callStatusLabel');
+            if (statusLabel) {
+                try {
+                    statusLabel.textContent = `Call Failed (${reason || 'Declined'})`;
+                    statusLabel.className = 'badge bg-danger px-2 py-1';
+                } catch (_) {}
+            }
+            this.onCallTerminated();
+        }
+
+        getActivePeerConnection() {
+            if (this._activePeerConnection && this._activePeerConnection.connectionState !== 'closed') {
+                return this._activePeerConnection;
+            }
+            const plivoSession = this.client?._currentSession?.session || this.client?.currentSession?.session;
+            if (plivoSession) {
+                const pc = plivoSession.connection || plivoSession._connection;
+                if (pc && pc.connectionState !== 'closed') return pc;
+            }
+            if (this.client?._phone?.sessions) {
+                const sessions = Object.values(this.client._phone.sessions);
+                for (const s of sessions) {
+                    const pc = s?.connection || s?._connection;
+                    if (pc && pc.connectionState !== 'closed') return pc;
+                }
+            }
+            if (this.activeCall?.session) {
+                const pc = this.activeCall.session.connection || this.activeCall.session._connection;
+                if (pc && pc.connectionState !== 'closed') return pc;
+            }
+            return null;
+        }
+
+        async applyModestMicBoost() {
+            try {
+                if (this._isMicBoostApplied) return;
+                const pc = this.getActivePeerConnection();
+                if (!pc || typeof pc.getSenders !== 'function') {
+                    console.log('[PLIVO-MIC-BOOST] No active RTCPeerConnection available for mic boost.');
+                    return;
+                }
+
+                const senders = pc.getSenders();
+                const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
+                if (!audioSender || !audioSender.track) {
+                    console.log('[PLIVO-MIC-BOOST] No audio sender track found.');
+                    return;
+                }
+
+                const originalTrack = audioSender.track;
+                if (originalTrack === this._boostedMicTrack) return;
+
+                const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtxClass) {
+                    console.warn('[PLIVO-MIC-BOOST] AudioContext not supported in this browser.');
+                    return;
+                }
+
+                console.log('[PLIVO-MIC-BOOST] Applying modest mic volume improvement (+2.5 dB / 1.33x with limiter)...');
+                this._micBoostCtx = new AudioCtxClass();
+                if (this._micBoostCtx.state === 'suspended') {
+                    await this._micBoostCtx.resume();
+                }
+
+                const inputStream = new MediaStream([originalTrack]);
+                const sourceNode = this._micBoostCtx.createMediaStreamSource(inputStream);
+
+                // Modest gain increase: +2.5 dB (factor of ~1.33)
+                const gainNode = this._micBoostCtx.createGain();
+                gainNode.gain.setValueAtTime(1.33, this._micBoostCtx.currentTime);
+
+                // DynamicsCompressor limiter to prevent distortion and clipping
+                const compressor = this._micBoostCtx.createDynamicsCompressor();
+                compressor.threshold.setValueAtTime(-14, this._micBoostCtx.currentTime);
+                compressor.knee.setValueAtTime(6, this._micBoostCtx.currentTime);
+                compressor.ratio.setValueAtTime(4, this._micBoostCtx.currentTime);
+                compressor.attack.setValueAtTime(0.003, this._micBoostCtx.currentTime);
+                compressor.release.setValueAtTime(0.05, this._micBoostCtx.currentTime);
+
+                const destNode = this._micBoostCtx.createMediaStreamDestination();
+                sourceNode.connect(gainNode);
+                gainNode.connect(compressor);
+                compressor.connect(destNode);
+
+                const boostedTracks = destNode.stream.getAudioTracks();
+                if (boostedTracks.length === 0) {
+                    console.warn('[PLIVO-MIC-BOOST] Could not obtain processed audio track.');
+                    return;
+                }
+
+                const boostedTrack = boostedTracks[0];
+                this._originalMicTrack = originalTrack;
+                this._boostedMicTrack = boostedTrack;
+
+                await audioSender.replaceTrack(boostedTrack);
+                this._isMicBoostApplied = true;
+                console.log('[PLIVO-MIC-BOOST] Modest mic boost successfully applied (+2.5 dB / 1.33x with limiter).');
+            } catch (err) {
+                console.warn('[PLIVO-MIC-BOOST] Error applying modest mic boost; original track preserved:', err);
+            }
+        }
+
+        _cleanupMicBoost() {
+            try {
+                if (this._boostedMicTrack) {
+                    try { this._boostedMicTrack.stop(); } catch (_) {}
+                    this._boostedMicTrack = null;
+                }
+                if (this._micBoostCtx) {
+                    try { this._micBoostCtx.close(); } catch (_) {}
+                    this._micBoostCtx = null;
+                }
+                this._originalMicTrack = null;
+                this._isMicBoostApplied = false;
+                console.log('[PLIVO-MIC-BOOST] Mic boost pipeline cleaned up.');
+            } catch (err) {
+                console.warn('[PLIVO-MIC-BOOST] Error cleaning up mic boost:', err);
+            }
+        }
+
+        getAudioDiagnostics() {
+            return {
+                isCallActive: this.isCallActive,
+                isCallConnected: this.isCallConnected,
+                isMuted: this.isMuted,
+                isSpeakerOn: this.isSpeakerOn,
+                noiseReductionEnabled: true,
+                micBoost: {
+                    applied: this._isMicBoostApplied,
+                    gainDb: 2.5,
+                    gainFactor: 1.33,
+                    compressor: {
+                        thresholdDb: -14,
+                        kneeDb: 6,
+                        ratio: '4:1',
+                        attackSec: 0.003,
+                        releaseSec: 0.05
+                    },
+                    hasOriginalTrack: !!this._originalMicTrack,
+                    hasBoostedTrack: !!this._boostedMicTrack
+                },
+                peerConnection: {
+                    available: !!this.getActivePeerConnection(),
+                    connectionState: this.getActivePeerConnection()?.connectionState || 'none',
+                    signalingState: this.getActivePeerConnection()?.signalingState || 'none'
+                },
+                audioSink: {
+                    elementFound: !!document.getElementById('plivoRemoteAudio'),
+                    paused: document.getElementById('plivoRemoteAudio')?.paused,
+                    volume: document.getElementById('plivoRemoteAudio')?.volume
+                }
+            };
+        }
+
         async submitQuickDisposition() {
             try {
+                // On the Auto Dialer page, the unified Auto Dialer lead form is the sole authoritative disposition logger
+                if (typeof window !== 'undefined' && window.location && window.location.pathname && window.location.pathname.includes('dialer')) {
+                    return;
+                }
                 const dispEl = document.getElementById('activeCallDispositionSelect');
                 const noteEl = document.getElementById('activeCallQuickNote');
-                const disposition = dispEl ? dispEl.value : '';
-                const note = noteEl ? noteEl.value.trim() : '';
+                const disposition = dispEl && dispEl.value ? dispEl.value : '';
+                const note = noteEl && typeof noteEl.value === 'string' ? noteEl.value.trim() : '';
 
                 if ((disposition || note) && this.activeDestination) {
                     const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
@@ -1037,35 +1497,69 @@
                 if (this.isMuted && typeof this.client.mute === 'function') this.client.mute();
                 else if (!this.isMuted && typeof this.client.unmute === 'function') this.client.unmute();
             }
+            if (this.localAudioStream) {
+                this.localAudioStream.getAudioTracks().forEach(t => t.enabled = !this.isMuted);
+            }
+            if (this._boostedMicTrack) {
+                this._boostedMicTrack.enabled = !this.isMuted;
+            }
+            if (this._originalMicTrack) {
+                this._originalMicTrack.enabled = !this.isMuted;
+            }
             const btn = document.getElementById('btnMuteCall');
             if (btn) {
-                btn.className = this.isMuted ? 'btn btn-warning btn-sm' : 'btn btn-outline-secondary btn-sm';
-                btn.innerHTML = `<i class="fa-solid fa-microphone-${this.isMuted ? 'slash' : 'lines'}"></i> ${this.isMuted ? 'Unmute' : 'Mute'}`;
+                btn.style.background = this.isMuted ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255,255,255,0.1)';
+                btn.style.color = this.isMuted ? '#f87171' : '#ffffff';
+                btn.style.borderColor = this.isMuted ? '#f87171' : 'rgba(255,255,255,0.2)';
+                const icon = btn.querySelector('i');
+                if (icon) icon.className = `fa-solid fa-microphone-${this.isMuted ? 'slash' : 'lines'}`;
+                const span = btn.querySelector('span');
+                if (span) span.textContent = this.isMuted ? 'Unmute' : 'Mute';
             }
+            this.showToast(this.isMuted ? 'Microphone muted' : 'Microphone unmuted', 'info');
         }
 
         toggleHold() {
             this.isHeld = !this.isHeld;
+            if (this.client) {
+                if (this.isHeld) {
+                    if (typeof this.client.mute === 'function') this.client.mute();
+                } else {
+                    if (!this.isMuted && typeof this.client.unmute === 'function') this.client.unmute();
+                }
+            }
+            const remoteAudio = document.getElementById('plivoRemoteAudio');
+            if (remoteAudio) {
+                remoteAudio.muted = this.isHeld;
+            }
             const btn = document.getElementById('btnHoldCall');
             if (btn) {
-                btn.className = this.isHeld ? 'btn btn-warning btn-sm' : 'btn btn-outline-secondary btn-sm';
-                btn.innerHTML = `<i class="fa-solid fa-${this.isHeld ? 'play' : 'pause'}"></i> ${this.isHeld ? 'Unhold' : 'Hold'}`;
+                btn.style.background = this.isHeld ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255,255,255,0.1)';
+                btn.style.color = this.isHeld ? '#fbbf24' : '#ffffff';
+                btn.style.borderColor = this.isHeld ? '#fbbf24' : 'rgba(255,255,255,0.2)';
+                const icon = btn.querySelector('i');
+                if (icon) icon.className = `fa-solid fa-${this.isHeld ? 'play' : 'pause'}`;
+                const span = btn.querySelector('span');
+                if (span) span.textContent = this.isHeld ? 'Unhold' : 'Hold';
             }
             this.syncCallEvent(this.isHeld ? 'held' : 'active');
+            this.showToast(this.isHeld ? 'Call placed on hold' : 'Call resumed', 'info');
         }
 
         async toggleSpeaker() {
             this.isSpeakerOn = !this.isSpeakerOn;
             const btn = document.getElementById('btnSpeakerCall');
             if (btn) {
-                btn.style.background = this.isSpeakerOn ? 'rgba(59,130,246,0.35)' : 'rgba(255,255,255,0.1)';
+                btn.style.background = this.isSpeakerOn ? 'rgba(59, 130, 246, 0.4)' : 'rgba(255,255,255,0.1)';
                 btn.style.color = this.isSpeakerOn ? '#38bdf8' : '#ffffff';
                 btn.style.borderColor = this.isSpeakerOn ? '#38bdf8' : 'rgba(255,255,255,0.2)';
             }
 
             // Real WebRTC audio output device sink routing
             try {
-                if (typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.enumerateDevices) {
+                if (window.Capacitor?.Plugins?.AudioRouting) {
+                    await window.Capacitor.Plugins.AudioRouting.setSpeakerphoneOn({ enabled: this.isSpeakerOn });
+                } else if (typeof navigator !== 'undefined' && navigator.mediaDevices?.enumerateDevices) {
                     const devices = await navigator.mediaDevices.enumerateDevices();
                     const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
                     const audioElements = Array.from(document.querySelectorAll('audio, video'));
@@ -1083,22 +1577,45 @@
                         }
                     }
                 }
-                
-                // Capacitor / Native Android audio routing bridge if present
-                if (window.Capacitor?.Plugins?.AudioRouting) {
-                    await window.Capacitor.Plugins.AudioRouting.setSpeakerphoneOn({ enabled: this.isSpeakerOn });
-                }
             } catch (err) {
                 console.warn('[PLIVO-SOFTPHONE] Audio routing notice:', err.message);
             }
 
-            this.showToast(this.isSpeakerOn ? 'Speaker mode enabled' : 'Default audio output', 'info');
+            this.showToast(this.isSpeakerOn ? 'Speaker mode enabled' : 'Default audio output (Speaker OFF)', 'info');
         }
 
         sendDTMF(digit) {
+            if (!this.isCallActive || !digit) return;
+            const cleanDigit = String(digit).trim();
+            if (!/^[0-9*#]$/.test(cleanDigit)) return;
+            console.log(`[PLIVO-SOFTPHONE] Sending DTMF digit: ${cleanDigit}`);
             if (this.client && typeof this.client.sendDTMF === 'function') {
-                this.client.sendDTMF(digit);
+                this.client.sendDTMF(cleanDigit);
             }
+        }
+
+        showToast(msg, type = 'info') {
+            try {
+                if (typeof window !== 'undefined' && typeof window.showToast === 'function') {
+                    window.showToast(msg, type);
+                    return;
+                }
+                if (typeof document === 'undefined' || !document.body) return;
+                let container = document.getElementById('myntosSoftphoneToastContainer');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.id = 'myntosSoftphoneToastContainer';
+                    container.style.cssText = 'position: fixed; bottom: 80px; right: 24px; z-index: 2147483647; display: flex; flex-direction: column; gap: 8px; pointer-events: none;';
+                    document.body.appendChild(container);
+                }
+                const toast = document.createElement('div');
+                toast.style.cssText = 'background: rgba(15, 23, 42, 0.9); color: #ffffff; border: 1px solid rgba(56, 189, 248, 0.4); padding: 8px 14px; border-radius: 8px; font-size: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.2s ease;';
+                toast.textContent = msg;
+                container.appendChild(toast);
+                setTimeout(() => {
+                    if (toast.parentElement) toast.parentElement.removeChild(toast);
+                }, 2500);
+            } catch (_) {}
         }
 
         async syncCallEvent(eventType, extraData = {}) {
@@ -1180,54 +1697,54 @@
                 <div id="myntosSoftphoneBackdrop" style="display: none; position: fixed; inset: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 2147483646; transition: opacity 0.2s ease;" onclick="window.PlivoSoftphone.onBackdropClick()"></div>
 
                 <!-- Global Softphone Centered Modal -->
-                <div id="myntosSoftphoneWidget" style="position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 2147483647; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; pointer-events: none; display: none; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; isolation: isolate;">
+                <div id="myntosSoftphoneWidget" style="position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 2147483647; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; pointer-events: none; display: none; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; isolation: isolate;">
 
                     <!-- Expanded Softphone Modal Dialog Card -->
-                    <div id="plivoSoftphoneDockCard" class="card shadow-lg border-0 rounded-4" style="display: none; width: 100%; max-width: 420px; background: #ffffff; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.6), 0 0 0 1px rgba(226, 232, 240, 0.9) !important; overflow: hidden; border: none; position: relative; pointer-events: auto; margin: auto; animation: modalPopIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);">
+                    <div id="plivoSoftphoneDockCard" class="card shadow-lg border-0 rounded-4" style="display: none; width: 100%; max-width: 400px; background: #ffffff; border-radius: 20px; box-shadow: 0 25px 60px -15px rgba(0,0,0,0.6), 0 0 0 1px rgba(226, 232, 240, 0.9) !important; overflow: hidden; border: none; position: relative; pointer-events: auto; margin: auto; animation: modalPopIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);">
                         
                         <!-- Header -->
-                        <div id="desktopSoftphoneHeader" style="background: linear-gradient(135deg, #1e293b, #0f172a); padding: 14px 16px; color: #ffffff; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: move; user-select: none;">
+                        <div id="desktopSoftphoneHeader" style="background: linear-gradient(135deg, #1e293b, #0f172a); padding: 12px 16px; color: #ffffff; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: move; user-select: none;">
                             <div style="display: flex; align-items: center; gap: 8px; pointer-events: none;">
-                                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(37,99,235,0.25); color: #60a5fa; display: flex; align-items: center; justify-content: center; font-size: 14px;">
+                                <div style="width: 30px; height: 30px; border-radius: 8px; background: rgba(37,99,235,0.25); color: #60a5fa; display: flex; align-items: center; justify-content: center; font-size: 13px;">
                                     <i class="fa-solid fa-phone"></i>
                                 </div>
                                 <div>
-                                    <div style="font-weight: 700; font-size: 14px; line-height: 1.2;">MyntOS Softphone</div>
-                                    <div id="softphoneHeaderLeadName" style="font-size: 11px; color: #38bdf8; font-weight: 600; display: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;"></div>
+                                    <div style="font-weight: 700; font-size: 13.5px; line-height: 1.2;">MyntOS Softphone</div>
+                                    <div id="softphoneHeaderLeadName" style="font-size: 11px; color: #38bdf8; font-weight: 600; display: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;"></div>
                                 </div>
                             </div>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <select class="form-select form-select-sm" style="background: #334155; color: #f8fafc; border: 1px solid #475569; font-size: 11px; padding: 2px 20px 2px 8px; border-radius: 6px; cursor: pointer;" onchange="window.PlivoSoftphone.setAgentStatus(this.value)">
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <select class="form-select form-select-sm" style="background: #334155; color: #f8fafc; border: 1px solid #475569; font-size: 10.5px; padding: 2px 18px 2px 6px; border-radius: 6px; cursor: pointer;" onchange="window.PlivoSoftphone.setAgentStatus(this.value)">
                                     <option value="available" selected>🟢 Available</option>
                                     <option value="busy">🔴 Busy</option>
                                     <option value="break">🟡 Break</option>
                                 </select>
-                                <button onclick="window.PlivoSoftphone.minimizeSoftphone()" style="background: rgba(255,255,255,0.15); border: none; color: #cbd5e1; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold;" title="Minimize call window">⚊</button>
-                                <button onclick="window.PlivoSoftphone.closeSoftphoneDock()" style="background: rgba(255,255,255,0.15); border: none; color: #cbd5e1; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px;" title="Minimize or close dialpad">✕</button>
+                                <button onclick="window.PlivoSoftphone.minimizeSoftphone()" style="background: rgba(255,255,255,0.15); border: none; color: #cbd5e1; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;" title="Minimize call window">⚊</button>
+                                <button onclick="window.PlivoSoftphone.closeSoftphoneDock()" style="background: rgba(255,255,255,0.15); border: none; color: #cbd5e1; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px;" title="Minimize or close dialpad">✕</button>
                             </div>
                         </div>
 
                         <!-- Tab Navigation Bar -->
-                        <div style="display: flex; background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 6px 8px; gap: 6px;">
-                            <button id="tabBtnKeypad" onclick="window.PlivoSoftphone.switchTab('keypad')" style="flex: 1; border: none; background: #ffffff; color: #2563eb; font-weight: 700; font-size: 12px; padding: 6px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                        <div id="softphoneTabBar" style="display: flex; background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 5px 8px; gap: 6px;">
+                            <button id="tabBtnKeypad" onclick="window.PlivoSoftphone.switchTab('keypad')" style="flex: 1; border: none; background: #ffffff; color: #2563eb; font-weight: 700; font-size: 11.5px; padding: 5px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
                                 <i class="fa-solid fa-grip-vertical"></i> Keypad
                             </button>
-                            <button id="tabBtnContacts" onclick="window.PlivoSoftphone.switchTab('contacts')" style="flex: 1; border: none; background: transparent; color: #64748b; font-weight: 600; font-size: 12px; padding: 6px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                <i class="fa-solid fa-address-book"></i> Contacts & Leads
+                            <button id="tabBtnContacts" onclick="window.PlivoSoftphone.switchTab('contacts')" style="flex: 1; border: none; background: transparent; color: #64748b; font-weight: 600; font-size: 11.5px; padding: 5px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                <i class="fa-solid fa-address-book"></i> Contacts &amp; Leads
                             </button>
-                            <button id="tabBtnRecents" onclick="window.PlivoSoftphone.switchTab('recents')" style="flex: 1; border: none; background: transparent; color: #64748b; font-weight: 600; font-size: 12px; padding: 6px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                            <button id="tabBtnRecents" onclick="window.PlivoSoftphone.switchTab('recents')" style="flex: 1; border: none; background: transparent; color: #64748b; font-weight: 600; font-size: 11.5px; padding: 5px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
                                 <i class="fa-solid fa-clock-rotate-left"></i> Recents
                             </button>
                         </div>
 
                         <!-- Card Body (Tab Views) -->
-                        <div class="card-body p-0" style="min-height: 400px; position: relative;">
+                        <div class="card-body p-0" style="min-height: 390px; position: relative;">
                             
                             <!-- TAB 1: KEYPAD / MOBILE DIALER -->
-                            <div id="softphoneTabKeypad" style="padding: 16px;">
+                            <div id="softphoneTabKeypad" style="padding: 14px;">
                                 
                                 <!-- Number Display & Backspace -->
-                                <div style="background: #f1f5f9; border-radius: 12px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; border: 1px solid #cbd5e1;">
+                                <div style="background: #f1f5f9; border-radius: 12px; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; border: 1px solid #cbd5e1;">
                                     <input type="text" id="softphoneDisplayInput" placeholder="Enter number or name..." style="background: transparent; border: none; outline: none; font-size: 18px; font-weight: 700; color: #0f172a; width: 100%; letter-spacing: 0.5px;" oninput="window.PlivoSoftphone.onKeypadInputChange(this.value)" onkeydown="if(event.key==='Enter') window.PlivoSoftphone.dialCurrentKeypadNumber()">
                                     <button onclick="window.PlivoSoftphone.backspace()" style="background: transparent; border: none; color: #64748b; font-size: 16px; cursor: pointer; padding: 4px 6px;" title="Backspace">
                                         <i class="fa-solid fa-delete-left"></i>
@@ -1238,7 +1755,7 @@
                                 <div id="keypadAutoSuggest" style="display: none; max-height: 120px; overflow-y: auto; margin-bottom: 10px; border-radius: 8px; background: #ffffff; border: 1px solid #e2e8f0; font-size: 12px;"></div>
 
                                 <!-- 3x4 Mobile Phone Keypad Grid -->
-                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px;">
+                                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px;">
                                     
                                     <button class="sp-key-btn" onclick="window.PlivoSoftphone.pressKey('1')">
                                         <div class="sp-digit">1</div>
@@ -1280,7 +1797,7 @@
                                     </button>
 
                                     <button class="sp-key-btn" onclick="window.PlivoSoftphone.pressKey('*')">
-                                        <div class="sp-digit" style="font-size: 24px; line-height: 1;">*</div>
+                                        <div class="sp-digit" style="font-size: 22px; line-height: 1;">*</div>
                                         <div class="sp-sub">&nbsp;</div>
                                     </button>
                                     <button class="sp-key-btn" onclick="window.PlivoSoftphone.pressKey('0')">
@@ -1294,8 +1811,8 @@
                                 </div>
 
                                 <!-- Big Green Dial Button -->
-                                <div style="display: flex; justify-content: center; align-items: center; margin-top: 4px;">
-                                    <button onclick="window.PlivoSoftphone.dialCurrentKeypadNumber()" style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); border: none; color: #ffffff; font-size: 22px; cursor: pointer; box-shadow: 0 8px 18px rgba(16,185,129,0.35); display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;" onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
+                                <div style="display: flex; justify-content: center; align-items: center; margin-top: 2px;">
+                                    <button onclick="window.PlivoSoftphone.dialCurrentKeypadNumber()" style="width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); border: none; color: #ffffff; font-size: 20px; cursor: pointer; box-shadow: 0 6px 16px rgba(16,185,129,0.35); display: flex; align-items: center; justify-content: center; transition: all 0.15s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                                         <i class="fa-solid fa-phone"></i>
                                     </button>
                                 </div>
@@ -1311,17 +1828,17 @@
                                 </div>
 
                                 <!-- Search Results Scroll List -->
-                                <div id="softphoneSearchResults" style="height: 330px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px;">
+                                <div id="softphoneSearchResults" style="height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px;">
                                     <div style="text-align: center; color: #94a3b8; font-size: 12px; padding: 40px 10px;">
                                         <i class="fa-solid fa-users-viewfinder fa-2x mb-2" style="opacity: 0.5;"></i>
-                                        <div>Type a name, phone, or code to search CRM Leads & Staff Directory</div>
+                                        <div>Type a name, phone, or code to search CRM Leads &amp; Staff Directory</div>
                                     </div>
                                 </div>
                             </div>
 
                             <!-- TAB 3: RECENTS -->
                             <div id="softphoneTabRecents" style="display: none; padding: 14px;">
-                                <div id="softphoneRecentsList" style="height: 360px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                                <div id="softphoneRecentsList" style="height: 340px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
                                     <div style="text-align: center; color: #94a3b8; font-size: 12px; padding: 40px 10px;">
                                         <i class="fa-solid fa-phone-slash fa-2x mb-2" style="opacity: 0.5;"></i>
                                         <div>No recent calls in this session</div>
@@ -1330,27 +1847,27 @@
                             </div>
 
                             <!-- IN-CALL ACTIVE CALL SCREEN OVERLAY -->
-                            <div id="softphoneInCallView" style="display: none; position: absolute; inset: 0; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 20px 18px; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; align-items: center; border-radius: 0 0 16px 16px; overflow-y: auto;">
+                            <div id="softphoneInCallView" style="display: none; position: absolute; inset: 0; background: linear-gradient(180deg, #0b1329 0%, #0f172a 55%, #1e293b 100%); color: #ffffff; padding: 14px 16px; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; align-items: center; border-radius: 0 0 20px 20px; overflow-y: auto; box-sizing: border-box; -webkit-overflow-scrolling: touch;">
                                 
-                                <div style="text-align: center; margin-top: 4px; width: 100%;">
-                                    <div style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 10px auto; box-shadow: 0 0 20px rgba(59,130,246,0.5);">
+                                <div style="text-align: center; margin-top: 2px; width: 100%;">
+                                    <div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; margin: 0 auto 6px auto; box-shadow: 0 0 18px rgba(59,130,246,0.45);">
                                         <i class="fa-solid fa-user"></i>
                                     </div>
-                                    <div class="fw-bold fs-5" id="activeCallCustomerName" style="color: #ffffff; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 10px;">Customer Lead</div>
-                                    <div style="font-size: 13px; color: #94a3b8; margin-top: 2px;" id="activeCallPhoneDisplay">+91 XX••••XXXX</div>
-                                    <div style="margin-top: 8px;">
-                                        <span id="callStatusLabel" class="badge bg-warning text-dark px-2 py-1" style="font-size: 11px;">Dialing...</span>
-                                        <span id="callTimerDisplay" class="fw-bold ms-2" style="font-size: 13px; color: #38bdf8;">00:00</span>
+                                    <div class="fw-bold" id="activeCallCustomerName" style="font-size: 16px; color: #ffffff; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 8px; max-width: 270px; margin: 0 auto;">Customer Lead</div>
+                                    <div style="font-size: 12px; color: #94a3b8; margin-top: 1px;" id="activeCallPhoneDisplay">+91 XX••••XXXX</div>
+                                    <div style="margin-top: 5px; display: inline-flex; align-items: center; gap: 8px;">
+                                        <span id="callStatusLabel" class="badge bg-warning text-dark px-2 py-1" style="font-size: 10px; font-weight: 700; border-radius: 6px;">Dialing...</span>
+                                        <span id="callTimerDisplay" class="fw-bold" style="font-size: 13px; color: #38bdf8; font-family: ui-monospace, monospace;">00:00</span>
                                     </div>
                                 </div>
 
                                 <!-- Quick Call Disposition & Note (In-Call Log) -->
-                                <div style="width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 10px 12px; margin: 10px 0; font-size: 12px;">
-                                    <div style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                                <div id="plivoQuickDispositionWrap" style="width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 8px 10px; margin: 6px 0; font-size: 11px; box-sizing: border-box;">
+                                    <div style="font-size: 10px; font-weight: 700; color: #94a3b8; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between;">
                                         <span>QUICK CALL DISPOSITION</span>
                                         <span style="color: #38bdf8; font-size: 10px;"><i class="fa-solid fa-bolt"></i> Auto-saves</span>
                                     </div>
-                                    <select id="activeCallDispositionSelect" style="width: 100%; background: #0f172a; color: #ffffff; border: 1px solid #334155; border-radius: 6px; padding: 5px 8px; font-size: 11px; margin-bottom: 6px; outline: none;">
+                                    <select id="activeCallDispositionSelect" style="width: 100%; background: #0b1329; color: #ffffff; border: 1px solid #334155; border-radius: 6px; padding: 5px 8px; font-size: 11px; margin-bottom: 5px; outline: none;">
                                         <option value="">-- Select Call Outcome --</option>
                                         <option value="interested">✅ Interested / Followup</option>
                                         <option value="callback">📞 Callback Requested</option>
@@ -1359,7 +1876,7 @@
                                         <option value="not_interested">❌ Not Interested</option>
                                         <option value="wrong_number">⚠️ Wrong / Invalid Number</option>
                                     </select>
-                                    <input type="text" id="activeCallQuickNote" placeholder="Add quick note or key takeaways..." style="width: 100%; background: #0f172a; color: #ffffff; border: 1px solid #334155; border-radius: 6px; padding: 5px 8px; font-size: 11px; outline: none;">
+                                    <input type="text" id="activeCallQuickNote" placeholder="Add quick note or key takeaways..." style="width: 100%; background: #0b1329; color: #ffffff; border: 1px solid #334155; border-radius: 6px; padding: 5px 8px; font-size: 11px; outline: none; box-sizing: border-box;">
                                 </div>
 
                                 <!-- In-Call Mini DTMF Keypad (Collapsible) -->
@@ -1370,32 +1887,32 @@
                                 </div>
 
                                 <!-- In-Call 4-Action Button Grid -->
-                                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%;">
-                                    <div style="display: flex; justify-content: center; gap: 12px; width: 100%;">
-                                        <button id="btnMuteCall" onclick="window.PlivoSoftphone.toggleMute()" style="width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; cursor: pointer;">
+                                <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%;">
+                                    <div style="display: flex; justify-content: center; gap: 14px; width: 100%;">
+                                        <button id="btnMuteCall" onclick="window.PlivoSoftphone.toggleMute()" style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; transition: all 0.15s ease;">
                                             <i class="fa-solid fa-microphone"></i>
-                                            <span style="font-size: 9px; margin-top: 1px;">Mute</span>
+                                            <span style="font-size: 8.5px; margin-top: 1px;">Mute</span>
                                         </button>
-                                        <button id="btnSpeakerCall" onclick="window.PlivoSoftphone.toggleSpeaker()" style="width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; cursor: pointer;">
+                                        <button id="btnSpeakerCall" onclick="window.PlivoSoftphone.toggleSpeaker()" style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; transition: all 0.15s ease;">
                                             <i class="fa-solid fa-volume-high"></i>
-                                            <span style="font-size: 9px; margin-top: 1px;">Speaker</span>
+                                            <span style="font-size: 8.5px; margin-top: 1px;">Speaker</span>
                                         </button>
-                                        <button id="btnHoldCall" onclick="window.PlivoSoftphone.toggleHold()" style="width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; cursor: pointer;">
+                                        <button id="btnHoldCall" onclick="window.PlivoSoftphone.toggleHold()" style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; transition: all 0.15s ease;">
                                             <i class="fa-solid fa-pause"></i>
-                                            <span style="font-size: 9px; margin-top: 1px;">Hold</span>
+                                            <span style="font-size: 8.5px; margin-top: 1px;">Hold</span>
                                         </button>
-                                        <button onclick="window.PlivoSoftphone.toggleDTMFPad()" style="width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 14px; cursor: pointer;">
+                                        <button onclick="window.PlivoSoftphone.toggleDTMFPad()" style="width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 13px; cursor: pointer; transition: all 0.15s ease;">
                                             <i class="fa-solid fa-grip"></i>
-                                            <span style="font-size: 9px; margin-top: 1px;">Keypad</span>
+                                            <span style="font-size: 8.5px; margin-top: 1px;">Keypad</span>
                                         </button>
                                     </div>
 
                                     <!-- Hangup Red Button & Direct SIM Fallback -->
-                                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
-                                        <button onclick="window.PlivoSoftphone.hangup()" style="width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #dc2626); border: none; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 8px 20px rgba(239,68,68,0.4); display: flex; align-items: center; justify-content: center;" title="End Call">
+                                    <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%;">
+                                        <button onclick="window.PlivoSoftphone.hangup()" style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #dc2626); border: none; color: white; font-size: 20px; cursor: pointer; box-shadow: 0 6px 18px rgba(239,68,68,0.45); display: flex; align-items: center; justify-content: center; transition: transform 0.15s ease;" title="End Call">
                                             <i class="fa-solid fa-phone-slash"></i>
                                         </button>
-                                        <button onclick="window.PlivoSoftphone.executeMobileDial(window.PlivoSoftphone.activeDestination)" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #38bdf8; border-radius: 12px; padding: 3px 10px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                        <button onclick="window.PlivoSoftphone.executeMobileDial(window.PlivoSoftphone.activeDestination)" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: #38bdf8; border-radius: 12px; padding: 2px 10px; font-size: 10.5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                                             <i class="fa-solid fa-mobile-screen"></i> Direct SIM Call
                                         </button>
                                     </div>
@@ -1479,6 +1996,10 @@
                     }
 
                     @media (max-width: 600px) {
+                        #myntosSoftphoneWidget {
+                            align-items: flex-end !important;
+                            padding: 0 !important;
+                        }
                         #plivoSoftphoneDockCard {
                             position: fixed !important;
                             bottom: 0 !important;
@@ -1486,11 +2007,19 @@
                             right: 0 !important;
                             width: 100% !important;
                             max-width: 100% !important;
-                            border-radius: 20px 20px 0 0 !important;
+                            border-radius: 24px 24px 0 0 !important;
                             margin: 0 !important;
-                            max-height: 90vh !important;
-                            box-shadow: 0 -10px 40px rgba(0,0,0,0.35) !important;
+                            max-height: calc(100dvh - 30px) !important;
+                            padding-bottom: max(18px, env(safe-area-inset-bottom, 18px)) !important;
+                            box-shadow: 0 -10px 40px rgba(0,0,0,0.45) !important;
                             z-index: 100000 !important;
+                        }
+                        #plivoSoftphoneDockCard .card-body {
+                            min-height: 380px !important;
+                        }
+                        #softphoneInCallView {
+                            border-radius: 0 !important;
+                            padding-bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important;
                         }
                     }
                 </style>
@@ -1816,6 +2345,9 @@
             const backdrop = document.getElementById('myntosSoftphoneBackdrop');
             if (backdrop) backdrop.style.display = 'none'; // Unblock underlying page
 
+            const tabBar = document.getElementById('softphoneTabBar');
+            if (tabBar) tabBar.style.display = 'none';
+
             const inCallView = document.getElementById('softphoneInCallView');
             if (inCallView) inCallView.style.display = 'flex';
             
@@ -1839,6 +2371,48 @@
 
             const dispSelect = document.getElementById('activeCallDispositionSelect');
             if (dispSelect) dispSelect.value = '';
+
+            const dispWrap = document.getElementById('plivoQuickDispositionWrap');
+            if (dispWrap) {
+                const isDialer = typeof window !== 'undefined' && window.location && window.location.pathname && window.location.pathname.includes('dialer');
+                dispWrap.style.display = isDialer ? 'none' : 'block';
+            }
+
+            // Reset control states and button styles to default OFF
+            this.isMuted = false;
+            this.isHeld = false;
+            this.isSpeakerOn = false;
+            this.isCallConnected = false;
+            this.callConnectedTime = null;
+
+            const muteBtn = document.getElementById('btnMuteCall');
+            if (muteBtn) {
+                muteBtn.style.background = 'rgba(255,255,255,0.1)';
+                muteBtn.style.color = '#ffffff';
+                muteBtn.style.borderColor = 'rgba(255,255,255,0.2)';
+                const icon = muteBtn.querySelector('i');
+                if (icon) icon.className = 'fa-solid fa-microphone';
+                const span = muteBtn.querySelector('span');
+                if (span) span.textContent = 'Mute';
+            }
+            const holdBtn = document.getElementById('btnHoldCall');
+            if (holdBtn) {
+                holdBtn.style.background = 'rgba(255,255,255,0.1)';
+                holdBtn.style.color = '#ffffff';
+                holdBtn.style.borderColor = 'rgba(255,255,255,0.2)';
+                const icon = holdBtn.querySelector('i');
+                if (icon) icon.className = 'fa-solid fa-pause';
+                const span = holdBtn.querySelector('span');
+                if (span) span.textContent = 'Hold';
+            }
+            const speakerBtn = document.getElementById('btnSpeakerCall');
+            if (speakerBtn) {
+                speakerBtn.style.background = 'rgba(255,255,255,0.1)';
+                speakerBtn.style.color = '#ffffff';
+                speakerBtn.style.borderColor = 'rgba(255,255,255,0.2)';
+            }
+            const dtmfPad = document.getElementById('inCallDTMFPad');
+            if (dtmfPad) dtmfPad.style.display = 'none';
 
             this.addRecentCall(phone, name, 'outbound');
         }
@@ -1937,6 +2511,8 @@
             if (inCallView) inCallView.style.display = 'none';
             const pad = document.getElementById('inCallDTMFPad');
             if (pad) pad.style.display = 'none';
+            const tabBar = document.getElementById('softphoneTabBar');
+            if (tabBar) tabBar.style.display = 'flex';
         }
 
         updateUIStatus(status, label) {

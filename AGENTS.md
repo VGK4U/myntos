@@ -48,3 +48,20 @@ Strictly obey the following deployment and architecture rules to prevent AWS pro
   - **Single Implementation Pass**: Any feature or bug fix applicable across platforms must update Web, `/mobile`, Android, and iOS in the SAME pass. No "implement web now, mobile later".
   - **Mobile Synchronization Pipeline**: Every `/mobile` change requires: `npm run build` in `mobile/` -> Propagate assets to `frontend/public/mobile/` -> `npx cap sync android` -> `npx cap sync ios` -> Verify native assets and adapters.
   - **Explicit Adapters Only**: Platform-specific code is strictly limited to OS adapters (e.g., Android Foreground Services, iOS CoreLocation background APIs, native notification bridges). Business rules and state machines must remain unified.
+
+---
+
+### 6. FROZEN TELEPHONY & SOFTPHONE ARCHITECTURE (ZERO-MODIFICATION LOCK)
+- **Rule**: The complete production Telephony & Softphone stack is **STRICTLY FROZEN AND LOCKED**. DO NOT modify, refactor, replace, or redesign any component of this architecture.
+- **Protected Core Components**:
+  1. **Plivo WebRTC Softphone Controller** (`frontend/public/js/plivo-softphone.js`, `mobile/src/services/telephony.service.ts`):
+     - W3C RFC 8829 `pranswer` early-media signaling bridge.
+     - Dual answered state machine (`onCallAnswered` / backend session watcher).
+     - Audio routing: Earpiece/receiver by default; Speaker strictly OFF by default unless toggled by user.
+     - In-call controls: Mute, Hold, Speaker, and DTMF dialpad.
+  2. **Telephony Backend XML & Callbacks** (`backend/app/services/telephony/flow_interpreter.py`, `backend/app/api/v1/endpoints/plivo_softphone_api.py`):
+     - Dual-party session recording: `<Record recordSession="true" startOnDialAnswer="true" ... />` followed by `<Dial callbackUrl="...">`.
+     - Dial callback lifecycle endpoint (`/api/v1/telephony/plivo/dial-callback`).
+     - Recording callback endpoint and storage pipeline.
+- **Standard**: All future features, UI tweaks, CRM adjustments, or mobile builds MUST treat this stack as immutable. No modifications are permitted.
+

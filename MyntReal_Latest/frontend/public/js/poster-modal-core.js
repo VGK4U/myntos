@@ -1290,7 +1290,10 @@
     }
   }
 
-  function getPosterShareDetails() {
+  function buildPosterShareText(templateKey) {
+    if (typeof window.buildPosterShareText === 'function' && window.buildPosterShareText !== buildPosterShareText) {
+      return window.buildPosterShareText(templateKey);
+    }
     const rawName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevName')?.textContent || '').trim();
     const rawRank = (document.getElementById('postRank')?.value || document.getElementById('prevRank')?.textContent || '').trim();
     const partnerName = rawName || 'Channel Partner';
@@ -1298,6 +1301,9 @@
     const partnerOverall = (document.getElementById('postHighlight')?.value || document.getElementById('prevHighlight')?.textContent || '').trim();
     const partnerToday = (document.getElementById('prevTotalToday')?.textContent || document.getElementById('postTodayPayout')?.value || '').trim();
     const partnerPotential = (document.getElementById('postPotential')?.value || document.getElementById('prevPotential')?.textContent || '').trim();
+    const breakupText = (document.getElementById('postTodayPayout')?.value || '').trim();
+    const filesVal = (document.getElementById('postFiles')?.value || document.getElementById('prevFiles')?.textContent || '').trim();
+    const teamVal = (document.getElementById('postOverall')?.value || document.getElementById('prevOverall')?.textContent || '').trim();
 
     let seniorName = (document.getElementById('postSeniorName')?.value || document.getElementById('prevSeniorName')?.textContent || '').replace(/^Senior\s*:\s*/i, '').trim();
     const seniorToday = (document.getElementById('postSeniorToday')?.value || document.getElementById('prevSeniorToday')?.textContent || '').trim();
@@ -1307,6 +1313,37 @@
 
     const showSeniorInput = document.getElementById('postShowSenior');
     const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
+
+    const tpl = templateKey || document.getElementById('postShareTemplate')?.value || 'full';
+
+    if (tpl === 'payout') {
+      let t = `💰 *TODAY'S PAYOUT RELEASED!* 💰\n\n`;
+      t += `🎉 Congratulations to *${partnerName}*${partnerRank ? ' (' + partnerRank + ')' : ''}!\n\n`;
+      if (partnerToday) t += `💵 *Today's Earning:* ${partnerToday}\n`;
+      if (breakupText && breakupText !== 'No Payouts for Selected Date') t += `📋 *Breakup:* ${breakupText}\n`;
+      if (filesVal) t += `📂 *Files Status:* ${filesVal}\n`;
+      if (partnerOverall) t += `📈 *Overall Earned:* ${partnerOverall}\n`;
+      t += `\n🌟 Keep shining and reaching new heights with VGK4U!\n`;
+      t += `🌐 https://vgk4u.com`;
+      return t;
+    }
+
+    if (tpl === 'milestone') {
+      let t = `⭐ *NEW MILESTONE ACHIEVED!* ⭐\n\n`;
+      t += `🏆 Proud to celebrate *${partnerName}* — ${partnerRank || 'Channel Partner'}!\n\n`;
+      if (partnerOverall) t += `📈 *Total Career Earnings:* ${partnerOverall}\n`;
+      if (teamVal) t += `👥 *Total Team Size:* ${teamVal}\n`;
+      if (partnerPotential) t += `🔮 *Expected Potential:* ${partnerPotential}\n`;
+      if (partnerToday) t += `💰 *Latest Payout:* ${partnerToday}\n`;
+      t += `\n🚀 VGK4U is empowering partners across India!\n`;
+      t += `🌐 https://vgk4u.com\n`;
+      t += `📲 Join the revolution today!`;
+      return t;
+    }
+
+    if (tpl === 'short') {
+      return `🎉 Big congratulations to *${partnerName}* for earning *${partnerToday}* today with VGK4U! 🚀 Overall: ${partnerOverall}. Proud of your achievement! 👏 https://vgk4u.com`;
+    }
 
     let text = `🎉 *CONGRATULATIONS TO ${partnerName}!* 🎉\n\n`;
     if (partnerRank) {
@@ -1336,6 +1373,30 @@
     text += `🌐 *Official Website:* https://vgk4u.com\n\n`;
     text += `🚀 *Join VGK4U today & grow your earnings!*`;
 
+    return text;
+  }
+
+  function getPosterShareDetails() {
+    const rawName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevName')?.textContent || '').trim();
+    const rawRank = (document.getElementById('postRank')?.value || document.getElementById('prevRank')?.textContent || '').trim();
+    const partnerName = rawName || 'Channel Partner';
+    const partnerRank = rawRank ? (rawRank.startsWith('★') ? rawRank : `★ ${rawRank} ★`) : '';
+    const partnerOverall = (document.getElementById('postHighlight')?.value || document.getElementById('prevHighlight')?.textContent || '').trim();
+    const partnerToday = (document.getElementById('prevTotalToday')?.textContent || document.getElementById('postTodayPayout')?.value || '').trim();
+    const partnerPotential = (document.getElementById('postPotential')?.value || document.getElementById('prevPotential')?.textContent || '').trim();
+
+    let seniorName = (document.getElementById('postSeniorName')?.value || document.getElementById('prevSeniorName')?.textContent || '').replace(/^Senior\s*:\s*/i, '').trim();
+    const seniorToday = (document.getElementById('postSeniorToday')?.value || document.getElementById('prevSeniorToday')?.textContent || '').trim();
+    const seniorOverall = (document.getElementById('postSeniorEarning')?.value || document.getElementById('prevSeniorEarning')?.textContent || '').trim();
+    const prevSeniorPot = document.getElementById('prevSeniorPotential');
+    const seniorPotential = prevSeniorPot ? prevSeniorPot.textContent.trim() : (document.getElementById('postSeniorPotential')?.value || '₹0/-');
+
+    const showSeniorInput = document.getElementById('postShowSenior');
+    const isSeniorVisible = showSeniorInput ? showSeniorInput.checked : (document.getElementById('prevSeniorRow')?.style.display !== 'none');
+
+    const customTextEl = document.getElementById('postShareCustomText');
+    let text = (customTextEl && customTextEl.value.trim()) ? customTextEl.value.trim() : buildPosterShareText();
+
     return { partnerName, partnerRank, partnerOverall, partnerToday, partnerPotential, seniorName, seniorToday, seniorOverall, seniorPotential, isSeniorVisible, text };
   }
 
@@ -1363,15 +1424,8 @@
     const spinner = document.getElementById('posterSpinner');
     if (spinner) spinner.style.display = 'flex';
 
-    let dataUrl = null;
-    try {
-      const canvas = await capturePosterCanvas(container);
-      if (canvas) {
-        dataUrl = safeToDataURL(canvas);
-      }
-    } catch (capErr) {
-      console.warn("capturePosterCanvas error:", capErr);
-    }
+    // If an image was uploaded by staff, USE THAT UPLOADED IMAGE!
+    let dataUrl = window._customUploadedCreativeImage || window._customUploadedPosterImage || null;
 
     if (spinner) spinner.style.display = 'none';
 
@@ -1383,7 +1437,7 @@
       });
       const json = await res.json();
       if (json.success) {
-        alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nImage: ${dataUrl ? 'Attached 🖼️' : 'Text Only'}\n\nPlease check your WhatsApp on +91 ${cleanPhone.slice(-10)} to verify!`);
+        alert(`✅ TEST SHARE SENT SUCCESSFULLY!\n----------------------------------------\nRecipient: +91 ${cleanPhone.slice(-10)}\nAttachment: ${dataUrl ? 'Uploaded Image 🖼️' : 'Text Only (Default Message)'}\n\nPlease check your WhatsApp on +91 ${cleanPhone.slice(-10)} to verify!`);
       } else {
         const errNotice = json.error || 'WhatsApp bot not connected';
         const useFallback = confirm(`⚠️ Automated Background Bot Notice:\n${errNotice}\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
@@ -1468,6 +1522,16 @@
     const partnerName = shareDetails.partnerName;
     const text = shareDetails.text;
 
+    // Check if custom uploaded creative image is present:
+    const customImage = window._customUploadedCreativeImage || window._customUploadedPosterImage;
+
+    if (!customImage) {
+      // Text only: directly open WhatsApp with default template message!
+      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+      return;
+    }
+
     const shareWindow = window.open('', '_blank');
     if (shareWindow) {
       shareWindow.document.write('<html><head><title>Loading WhatsApp...</title><style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f3f4f6;color:#374151;} .loader{border:4px solid #e5e7eb;border-top:4px solid #25d366;border-radius:50%;width:40px;height:40px;animation:spin 1s linear infinite;margin-bottom:16px;} @keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style></head><body><div style="text-align:center"><div class="loader" style="margin:0 auto 16px;"></div><div>Preparing your WhatsApp share & download... Please wait.</div></div></body></html>');
@@ -1476,11 +1540,8 @@
     const spinner = document.getElementById('posterSpinner');
     if (spinner) spinner.style.display = 'flex';
 
-    capturePosterCanvas(container).then(canvas => {
+    const proceedWithImageBlob = async (blob, dUrl) => {
       if (spinner) spinner.style.display = 'none';
-      if (!canvas) { if (shareWindow) shareWindow.close(); return; }
-
-      const dUrl = safeToDataURL(canvas);
       if (dUrl) {
         try {
           const link = document.createElement('a');
@@ -1489,23 +1550,21 @@
           link.click();
         } catch (e) {}
       }
-
-      safeToBlob(canvas, async (blob) => {
-        if (!blob) { alert('Failed to generate sharing image.'); if (shareWindow) shareWindow.close(); return; }
+      if (blob && navigator.clipboard && window.ClipboardItem) {
         try {
-          if (navigator.clipboard && window.ClipboardItem) {
-            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-          }
+          await navigator.clipboard.write([new ClipboardItem({ [blob.type || 'image/png']: blob })]);
+          alert('Poster image downloaded and copied to clipboard! You can paste (Cmd+V / Ctrl+V) the image directly inside the WhatsApp chat.');
         } catch (e) {}
-        const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
-        if (shareWindow) shareWindow.location.href = url;
-        else window.open(url, '_blank');
-      }, 'image/png');
-    }).catch(err => {
-      if (spinner) spinner.style.display = 'none';
-      if (shareWindow) shareWindow.close();
-      alert('Failed to generate sharing image: ' + err.message);
-    });
+      }
+      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+      if (shareWindow) shareWindow.location.href = url;
+      else window.open(url, '_blank');
+    };
+
+    fetch(customImage)
+      .then(r => r.blob())
+      .then(blob => proceedWithImageBlob(blob, customImage))
+      .catch(() => proceedWithImageBlob(null, customImage));
   }
 
   async function shareDefaultChannel() {
@@ -1550,20 +1609,15 @@
     let dataUrl = null;
     let blob = null;
 
-    try {
-      console.log('[MYNTOS SHARE DEBUG] 4. Capturing poster canvas...');
-      const canvas = await capturePosterCanvas(container);
-      if (canvas) {
-        try {
-          dataUrl = canvas.toDataURL('image/png');
-          blob = await (await fetch(dataUrl)).blob();
-          console.log('[MYNTOS SHARE DEBUG] Canvas captured successfully');
-        } catch (cErr) {
-          console.warn('[MYNTOS SHARE DEBUG] Poster toDataURL failed:', cErr);
-        }
-      }
-    } catch (capErr) {
-      console.warn('[MYNTOS SHARE DEBUG] capturePosterCanvas error:', capErr);
+    const customImage = window._customUploadedCreativeImage || window._customUploadedPosterImage;
+    if (customImage) {
+      dataUrl = customImage;
+      try {
+        blob = await (await fetch(dataUrl)).blob();
+      } catch (bErr) {}
+    } else {
+      dataUrl = null;
+      blob = null;
     }
 
     const fetchWithTimeout = async (url, opts = {}, ms = 2500) => {

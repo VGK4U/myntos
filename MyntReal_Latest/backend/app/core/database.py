@@ -95,42 +95,34 @@ else:
             echo=False
         )
     else:
-        # RDS PostgreSQL — Robust connection pool sized for concurrent API traffic
-        print("[DC-DB-INIT] Creating PostgreSQL engine (High-Throughput Pool mode)...", flush=True)
-
-        _connect_args = {
-            "connect_timeout": 10,
-            "sslmode": "require",
-            "keepalives": 1,
-            "keepalives_idle": 60,
-            "keepalives_interval": 10,
-            "keepalives_count": 5,
-        }
+        # RDS PostgreSQL — Bound pool sized for EB auto-scale instances (max 4 instances * 12 = 48 <= 76)
+        print("[DC-DB-INIT] Creating PostgreSQL engine (Bounded Pool mode - Max 12 conns/worker)...", flush=True)
 
         engine = create_engine(
             settings.DATABASE_URL,
             pool_pre_ping=True,
-            pool_size=30,
-            max_overflow=30,
-            pool_timeout=15,
-            pool_recycle=300,
+            pool_size=8,              # 8 connections per worker
+            max_overflow=4,           # 4 burst overflow
+            pool_timeout=10,          # 10s timeout to prevent thread pile-up
+            pool_recycle=1800,        # Recycle idle connections every 30m
             pool_use_lifo=True,
             pool_reset_on_return='rollback',
             connect_args={
-                "connect_timeout": 15,
+                "connect_timeout": 10,
                 "sslmode": "require",
                 "keepalives": 1,
                 "keepalives_idle": 30,
                 "keepalives_interval": 10,
                 "keepalives_count": 3,
+                "options": "-c idle_in_transaction_session_timeout=5000 -c statement_timeout=30000",
             },
             echo=False
         )
 
 print("[DC-DB-INIT] Engine created successfully", flush=True)
 
-# Create SessionLocal class
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Create SessionLocal class with expire_on_commit=False to safely allow rollback without attribute expiration
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, expire_on_commit=False)
 
 # Create Base class for declarative models
 Base = declarative_base()
@@ -140,8 +132,9 @@ metadata = MetaData()
 
 def get_db():
     """
-    Dependency function to get database session
-    Used in FastAPI route dependencies.
+    Dependency function to get database session.
+    Guarantees deterministic rollback before close so no connection returns
+    to pool in 'idle in transaction' state.
     """
     db = SessionLocal()
     try:
@@ -153,6 +146,10 @@ def get_db():
             pass
         raise
     finally:
+        try:
+            db.rollback()
+        except Exception:
+            pass
         try:
             db.close()
         except Exception:
@@ -1226,10 +1223,13 @@ def init_db():
     # Staff Call Tracking System (DC Protocol - Feb 2026)
     from app.models import call_tracking
     
-    # DC Protocol (Dec 18, 2025): Verify schema integrity
-    print("🔄 Verifying schema integrity...")
-    run_pending_migrations()
-    
-    # Create all tables (only if they don't exist)
-    Base.metadata.create_all(bind=engine)
-    print("✅ Database initialized with preserved schema")
+    # DC Protocol (ARCHITECTURAL FIX - Sep 2026):
+    # Schema mutations are strictly decoupled from application startup.
+    # DDL can ONLY run via scripts/run_schema_migrations.py (RUN_EXPLICIT_MIGRATIONS=1).
+    if os.getenv("RUN_EXPLICIT_MIGRATIONS") == "1":
+        print("🔄 Running explicit schema migrations...")
+        run_pending_migrations()
+        Base.metadata.create_all(bind=engine)
+        print("✅ Database schema synchronized")
+    else:
+        print("✅ Database models registered (DDL strictly skipped in runtime startup)")

@@ -55,6 +55,40 @@ def require_ea(current_user: StaffEmployee = Depends(get_current_staff_user)):
     return current_user
 
 
+def _is_vgk_admin(user: StaffEmployee) -> bool:
+    """Check if user has administrative authority over VGK partner assignments & configurations."""
+    if not user:
+        return False
+    emp = (getattr(user, 'emp_code', '') or '').upper()
+    if emp in ('MR10001', 'MR10016'):
+        return True
+    st = (getattr(user, 'staff_type', '') or '').upper()
+    if 'VGK' in st or st == 'EA':
+        return True
+    role = getattr(user, 'role', None)
+    if role:
+        rcode = (getattr(role, 'role_code', '') or '').lower()
+        if rcode in ('vgk4u', 'ea', 'super_admin', 'key_leadership', 'director', 'tenant_admin'):
+            return True
+        if getattr(role, 'hierarchy_level', 0) >= 85:
+            return True
+    return False
+
+
+def _has_full_vgk_visibility(user: StaffEmployee) -> bool:
+    """
+    Check if user is permitted to see all VGK members across the platform.
+    MR10001, Yashwant (MR10016), Poojitha (MN10016), and VGK Leadership have full visibility.
+    Ordinary staff are restricted to their assigned members.
+    """
+    if not user:
+        return False
+    emp = (getattr(user, 'emp_code', '') or '').upper()
+    if emp in ('MR10001', 'MR10016', 'MN10016'):
+        return True
+    return _is_vgk_admin(user)
+
+
 def _next_vgk_partner_code(db: Session, company_id: int) -> str:
     import random as _rnd
     for _ in range(50):
@@ -218,6 +252,9 @@ class VGKMemberUpdate(BaseModel):
     idcard_enabled: Optional[bool] = None   # [DC_VGK_CARD_ENABLED_001]
     # [DC-VGK-STAFF-REG-001] Admin-editable: which staff emp registered this member
     registered_by_emp_code: Optional[str] = None
+    # [DC-VGK-ASSIGN-001] Assigned staff & status notes
+    assigned_staff_id: Optional[int] = None
+    status_note: Optional[str] = None
 
 
 @router.get("/members/search")
@@ -326,6 +363,7 @@ def search_vgk_members(
 @router.get("/members")
 def list_vgk_members(
     is_active: Optional[bool] = Query(None),
+    status: Optional[str] = Query(None, description="all|active|inactive|blocked"),
     search: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(25, ge=5, le=100),
@@ -337,6 +375,8 @@ def list_vgk_members(
     designation_tier: Optional[str] = Query(None, description="none|channel_partner|sr_channel_partner|official_partner"),
     # [DC-VGK-STAFF-REG-001] Filter by registering staff emp code
     registered_by_emp_code: Optional[str] = Query(None, description="Filter by registering staff emp code"),
+    assigned_staff_id: Optional[int] = Query(None, description="Filter by assigned staff ID"),
+    contacted_days: Optional[str] = Query(None, description="Filter by contacted days: <5|5-10|11-20|21-30|>30|never"),
     referred_by: Optional[str] = Query(None, description="Filter by referrer partner name or code"),
     category_id: Optional[str] = Query(None, description="Category ID or Category Name e.g. Solar, EV"),
     rank_level: Optional[int] = Query(None, description="Filter by rank level 1 to 5"),
@@ -346,8 +386,62 @@ def list_vgk_members(
 ):
     from datetime import date, timedelta
     query = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
-    if isinstance(is_active, bool):
-        query = query.filter(OfficialPartner.is_active == is_active)
+
+    # [DC-VGK-RBAC-001] Role-based member visibility: Ordinary staff are restricted to assigned members
+    if not _has_full_vgk_visibility(current_user):
+        query = query.filter(or_(
+            OfficialPartner.assigned_staff_id == current_user.id,
+            and_(OfficialPartner.assigned_staff_id.is_(None), OfficialPartner.registered_by_emp_code == current_user.emp_code)
+        ))
+
+    # [DC-VGK-ASSIGN-001] Filter by assigned staff ID
+    if assigned_staff_id is not None:
+        query = query.filter(OfficialPartner.assigned_staff_id == assigned_staff_id)
+
+    # [DC-VGK-CONTACT-DAYS-001] Filter by contacted calendar days
+    if isinstance(contacted_days, str) and contacted_days.strip():
+        cd = contacted_days.strip().lower()
+        now_ist = get_indian_time()
+        today_ist = now_ist.date()
+        if cd in ('<5', 'lt5', '0-4'):
+            # < 5 Days: 0, 1, 2, 3, 4 calendar days (today - 4 <= date <= today)
+            min_dt = datetime.combine(today_ist - timedelta(days=4), datetime.min.time())
+            query = query.filter(OfficialPartner.last_contact_at >= min_dt)
+        elif cd in ('5-10', '5_10'):
+            # 5-10 Days: 5, 6, 7, 8, 9, 10 days
+            min_dt = datetime.combine(today_ist - timedelta(days=10), datetime.min.time())
+            max_dt = datetime.combine(today_ist - timedelta(days=4), datetime.min.time())
+            query = query.filter(OfficialPartner.last_contact_at >= min_dt, OfficialPartner.last_contact_at < max_dt)
+        elif cd in ('11-20', '11_20'):
+            # 11-20 Days: 11 to 20 days
+            min_dt = datetime.combine(today_ist - timedelta(days=20), datetime.min.time())
+            max_dt = datetime.combine(today_ist - timedelta(days=10), datetime.min.time())
+            query = query.filter(OfficialPartner.last_contact_at >= min_dt, OfficialPartner.last_contact_at < max_dt)
+        elif cd in ('21-30', '21_30'):
+            # 21-30 Days: 21 to 30 days
+            min_dt = datetime.combine(today_ist - timedelta(days=30), datetime.min.time())
+            max_dt = datetime.combine(today_ist - timedelta(days=20), datetime.min.time())
+            query = query.filter(OfficialPartner.last_contact_at >= min_dt, OfficialPartner.last_contact_at < max_dt)
+        elif cd in ('>30', 'gt30', '30plus'):
+            # > 30 Days: strictly older than 30 days
+            max_dt = datetime.combine(today_ist - timedelta(days=30), datetime.min.time())
+            query = query.filter(OfficialPartner.last_contact_at < max_dt, OfficialPartner.last_contact_at.isnot(None))
+        elif cd in ('never', 'none'):
+            query = query.filter(OfficialPartner.last_contact_at.is_(None))
+    # [DC-VGK-BLOCKED-001] Status filter (Active / Inactive / Blocked)
+    if isinstance(status, str) and status.strip():
+        st = status.strip().lower()
+        if st == 'blocked':
+            query = query.filter(OfficialPartner.is_blocked == True)
+        elif st == 'active':
+            query = query.filter(OfficialPartner.is_active == True, or_(OfficialPartner.is_blocked == False, OfficialPartner.is_blocked.is_(None)))
+        elif st == 'inactive':
+            query = query.filter(OfficialPartner.is_active == False, or_(OfficialPartner.is_blocked == False, OfficialPartner.is_blocked.is_(None)))
+    elif isinstance(is_active, bool):
+        if is_active:
+            query = query.filter(OfficialPartner.is_active == True, or_(OfficialPartner.is_blocked == False, OfficialPartner.is_blocked.is_(None)))
+        else:
+            query = query.filter(OfficialPartner.is_active == False, or_(OfficialPartner.is_blocked == False, OfficialPartner.is_blocked.is_(None)))
     if isinstance(search, str) and search.strip():
         term = f"%{search.strip()}%"
         query = query.filter(or_(
@@ -453,12 +547,12 @@ def list_vgk_members(
     else:
         members = query.order_by(_order).offset((page - 1) * page_size).limit(page_size).all()
 
-    # Bulk fetch income totals — vgk_cash_income_entries, RELEASED+PAID = confirmed/paid out
+    # Bulk fetch income totals — vgk_cash_income_entries, status != 'CANCELLED'
     member_ids = [m.id for m in members]
     income_rows = db.execute(text(
         "SELECT partner_id, SUM(commission_amount) "
         "FROM vgk_cash_income_entries WHERE partner_id = ANY(:ids) "
-        "AND status IN ('RELEASED','PAID') AND status != 'CANCELLED' "
+        "AND status != 'CANCELLED' "
         "GROUP BY partner_id"
     ), {"ids": member_ids}).fetchall() if member_ids else []
     income_map = {row[0]: float(row[1]) for row in income_rows}
@@ -468,8 +562,8 @@ def list_vgk_members(
     cm_income_rows = db.execute(text(
         "SELECT partner_id, COALESCE(SUM(commission_amount),0) "
         "FROM vgk_cash_income_entries WHERE partner_id = ANY(:ids) "
-        "AND status IN ('RELEASED','PAID') AND status != 'CANCELLED' "
-        "AND income_date >= :cm_start "
+        "AND status != 'CANCELLED' "
+        "AND COALESCE(income_date, created_at::date) >= :cm_start "
         "GROUP BY partner_id"
     ), {"ids": member_ids, "cm_start": curr_month_start}).fetchall() if member_ids else []
     cm_income_map = {row[0]: float(row[1]) for row in cm_income_rows}
@@ -796,11 +890,594 @@ def list_vgk_members(
         except Exception:
             pass
 
+    # [DC-VGK-ASSIGN-001] Bulk resolve assigned staff names & emp_codes from staff_employees
+    assigned_staff_ids = list({d.get('assigned_staff_id') for d in items if d.get('assigned_staff_id')})
+    staff_info_map = {}
+    if assigned_staff_ids:
+        try:
+            st_rows = db.execute(text(
+                "SELECT id, emp_code, full_name FROM staff_employees WHERE id = ANY(:ids)"
+            ), {"ids": assigned_staff_ids}).fetchall()
+            for r in st_rows:
+                staff_info_map[r[0]] = {"emp_code": r[1], "full_name": r[2] or r[1]}
+        except Exception:
+            pass
+
+    is_admin = _is_vgk_admin(current_user)
+    is_poojitha = (getattr(current_user, 'emp_code', '') or '').upper() == 'MN10016'
+    today_ist = get_indian_time().date()
+
     for d in items:
         code = d.get('registered_by_emp_code')
         d['registered_by_name'] = name_map.get(code, None)
 
+        as_id = d.get('assigned_staff_id')
+        if as_id and as_id in staff_info_map:
+            d['assigned_staff_name'] = staff_info_map[as_id]['full_name']
+            d['assigned_staff_emp_code'] = staff_info_map[as_id]['emp_code']
+        else:
+            d['assigned_staff_name'] = None
+            d['assigned_staff_emp_code'] = None
+
+        # Calculate contacted_days_since: integer calendar days or None if never contacted
+        lcat = d.get('last_contact_at')
+        if lcat:
+            try:
+                if isinstance(lcat, str):
+                    lcat_dt = datetime.fromisoformat(lcat.replace('Z', '+00:00'))
+                    lcat_date = lcat_dt.date()
+                elif hasattr(lcat, 'date'):
+                    lcat_date = lcat.date()
+                else:
+                    lcat_date = None
+                if lcat_date:
+                    d['contacted_days_since'] = max(0, (today_ist - lcat_date).days)
+                else:
+                    d['contacted_days_since'] = None
+            except Exception:
+                d['contacted_days_since'] = None
+        else:
+            d['contacted_days_since'] = None
+
+        # Blocked / Status enrichment
+        is_blk = bool(d.get('is_blocked'))
+        d['is_blocked'] = is_blk
+        if is_blk:
+            d['member_status'] = 'BLOCKED'
+            d['status_label'] = 'Blocked'
+        elif d.get('is_active'):
+            d['member_status'] = 'ACTIVE'
+            d['status_label'] = 'Active'
+        else:
+            d['member_status'] = 'INACTIVE'
+            d['status_label'] = 'Inactive'
+
+        # Authoritative UI capability flags
+        d['can_edit_assignment'] = is_admin and not is_poojitha
+        d['can_edit_status'] = (is_admin or (as_id == current_user.id)) and not is_poojitha
+
     return {"success": True, "total": total, "page": page, "page_size": page_size, "data": items, "members": items}
+
+
+# ── [DC-VGK-ASSIGN-001] VGK Staff Options & Management Endpoints ─────────────
+
+@router.get("/staff-options")
+def get_vgk_staff_options(
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """Return active staff members for assignment dropdown and filters."""
+    rows = db.execute(text("""
+        SELECT s.id, s.emp_code, s.full_name, r.role_name
+        FROM staff_employees s
+        LEFT JOIN staff_roles r ON s.role_id = r.id
+        WHERE (s.is_deleted IS FALSE OR s.is_deleted IS NULL)
+          AND (LOWER(s.status) = 'active' OR s.status IS NULL)
+        ORDER BY s.full_name ASC
+    """)).fetchall()
+    return {
+        "success": True,
+        "staff": [{
+            "id": r[0],
+            "emp_code": r[1],
+            "full_name": r[2] or r[1],
+            "role_name": r[3] or '',
+            "label": f"{r[2]} ({r[1]})" if r[2] and r[1] else (r[2] or r[1] or f"Staff #{r[0]}")
+        } for r in rows]
+    }
+
+
+class AssignMemberPayload(BaseModel):
+    assigned_staff_id: Optional[int] = None
+    assignment_reason: Optional[str] = None
+
+
+@router.patch("/members/{member_id}/assign")
+def assign_vgk_member(
+    member_id: int = Path(...),
+    payload: AssignMemberPayload = Body(...),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Manually assign a VGK Channel Partner to a staff employee.
+    Authorization: MR10001, Yashwant (MR10016), or VGK Admin/Leadership only.
+    Poojitha (MN10016) and Ordinary Staff are strictly forbidden (HTTP 403).
+    """
+    emp = (getattr(current_user, 'emp_code', '') or '').upper()
+    if emp == 'MN10016' or not _is_vgk_admin(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Only MR10001 and Yashwant (VGK Mentors/EA) have permission to assign members."
+        )
+
+    member = db.query(OfficialPartner).filter(
+        OfficialPartner.id == member_id,
+        OfficialPartner.category == 'VGK_TEAM'
+    ).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="VGK member not found")
+
+    old_staff_id = member.assigned_staff_id
+    new_staff_id = payload.assigned_staff_id
+    new_staff_name = None
+
+    if new_staff_id is not None:
+        target_staff = db.query(StaffEmployee).filter(StaffEmployee.id == new_staff_id).first()
+        if not target_staff:
+            raise HTTPException(status_code=400, detail="Target staff member does not exist")
+        new_staff_name = target_staff.full_name or target_staff.emp_code
+        member.assigned_staff_id = target_staff.id
+        member.assigned_at = get_indian_time()
+        member.assigned_by_id = current_user.id
+    else:
+        member.assigned_staff_id = None
+        member.assigned_at = None
+        member.assigned_by_id = current_user.id
+
+    # Log to data_change_log audit trail
+    from app.models.system_log import DataChangeLog
+    audit = DataChangeLog(
+        table_name='official_partners',
+        record_id=str(member.id),
+        operation='UPDATE',
+        changed_by_id=str(current_user.id),
+        changed_by_role=current_user.emp_code or 'STAFF',
+        field_name='assigned_staff_id',
+        old_value=str(old_staff_id) if old_staff_id else 'None',
+        new_value=str(new_staff_id) if new_staff_id else 'None',
+        change_reason=payload.assignment_reason or f"Manual assignment change by {current_user.emp_code}"
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(member)
+
+    return {
+        "success": True,
+        "message": f"Member {member.partner_code} assigned to {new_staff_name or 'Unassigned'}",
+        "assigned_staff_id": member.assigned_staff_id,
+        "assigned_staff_name": new_staff_name
+    }
+
+
+class UpdateMemberStatusPayload(BaseModel):
+    is_active: Optional[bool] = None
+    is_blocked: Optional[bool] = None
+    status: Optional[str] = None  # "ACTIVE", "INACTIVE", "BLOCKED"
+    status_note: Optional[str] = None
+
+
+@router.patch("/members/{member_id}/status")
+def update_vgk_member_status(
+    member_id: int = Path(...),
+    payload: UpdateMemberStatusPayload = Body(...),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Update Active/Inactive/Blocked status of a VGK Channel Partner.
+    Authorization:
+    - MR10001, Yashwant (MR10016), VGK Leadership: Can toggle any member.
+    - Ordinary staff: Can toggle only for their assigned members.
+    - Poojitha (MN10016): Strictly read-only (HTTP 403).
+    """
+    emp = (getattr(current_user, 'emp_code', '') or '').upper()
+    if emp == 'MN10016':
+        raise HTTPException(status_code=403, detail="Forbidden: Poojitha account is read-only for status changes.")
+
+    member = db.query(OfficialPartner).filter(
+        OfficialPartner.id == member_id,
+        OfficialPartner.category == 'VGK_TEAM'
+    ).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="VGK member not found")
+
+    is_admin = _is_vgk_admin(current_user)
+    if not is_admin:
+        if member.assigned_staff_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Forbidden: You can only edit status for your assigned VGK members.")
+
+    # Determine old status
+    old_status_str = 'Blocked' if member.is_blocked else ('Active' if member.is_active else 'Inactive')
+
+    # Resolve target status
+    target_active = False
+    target_blocked = False
+    target_status_str = 'Inactive'
+
+    if payload.status:
+        st_input = payload.status.strip().upper()
+        if st_input == 'BLOCKED':
+            target_blocked = True
+            target_active = False
+            target_status_str = 'Blocked'
+        elif st_input == 'ACTIVE':
+            target_blocked = False
+            target_active = True
+            target_status_str = 'Active'
+        else:
+            target_blocked = False
+            target_active = False
+            target_status_str = 'Inactive'
+    elif payload.is_blocked is True:
+        target_blocked = True
+        target_active = False
+        target_status_str = 'Blocked'
+    elif payload.is_active is not None:
+        target_blocked = False
+        target_active = bool(payload.is_active)
+        target_status_str = 'Active' if target_active else 'Inactive'
+    else:
+        target_blocked = False
+        target_active = False
+        target_status_str = 'Inactive'
+
+    member.is_active = target_active
+    member.is_blocked = target_blocked
+    member.member_status = target_status_str.upper()
+    if payload.status_note:
+        member.status_note = payload.status_note
+
+    from app.models.system_log import DataChangeLog
+    audit = DataChangeLog(
+        table_name='official_partners',
+        record_id=str(member.id),
+        operation='UPDATE',
+        changed_by_id=str(current_user.id),
+        changed_by_role=current_user.emp_code or 'STAFF',
+        field_name='status',
+        old_value=old_status_str,
+        new_value=target_status_str,
+        change_reason=payload.status_note or f"Status changed to {target_status_str} by {current_user.emp_code}"
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(member)
+
+    return {
+        "success": True,
+        "message": f"Member {member.partner_code} status set to {target_status_str}",
+        "is_active": member.is_active,
+        "is_blocked": member.is_blocked,
+        "status": target_status_str,
+        "member_status": member.member_status,
+        "status_note": member.status_note
+    }
+
+
+@router.post("/members/{member_id}/call-intent")
+def record_vgk_call_intent(
+    member_id: int = Path(...),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Connected to the authenticated call workflow:
+    When staff initiates an outbound call to a VGK member via the softphone bridge:
+    1. Validates member existence and access permissions.
+    2. Auto-assignment rule:
+       - If assigned_staff_id IS NULL: automatically assign to calling staff.
+       - If assigned_staff_id IS NOT NULL: NEVER overwrite existing assignment (manual precedence!).
+    3. Updates last_contact_at = now().
+    4. Returns sanitized member details for window.PlivoSoftphone.dialOutboundCall().
+    """
+    member = db.query(OfficialPartner).filter(
+        OfficialPartner.id == member_id,
+        OfficialPartner.category == 'VGK_TEAM'
+    ).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="VGK member not found")
+
+    # [DC-VGK-BLOCKED-001] Strictly block outbound communications to blocked members
+    if getattr(member, 'is_blocked', False) or getattr(member, 'member_status', '') == 'BLOCKED':
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot initiate call: This Channel Partner is Blocked from all communications. Change status to Active to enable calls."
+        )
+
+    # Verify visibility: ordinary staff can only call permitted members
+    if not _has_full_vgk_visibility(current_user):
+        if member.assigned_staff_id is not None and member.assigned_staff_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Forbidden: You can only call your assigned VGK members.")
+
+    phone = (member.phone or member.whatsapp_number or '').strip()
+    clean_phone = ''.join(filter(str.isdigit, phone))
+    if clean_phone.startswith('91') and len(clean_phone) == 12:
+        clean_phone = clean_phone[2:]
+    if not clean_phone:
+        raise HTTPException(status_code=400, detail="Member does not have a valid phone number")
+
+    was_assigned = False
+    assigned_name = None
+    if member.assigned_staff_id is None:
+        member.assigned_staff_id = current_user.id
+        member.assigned_at = get_indian_time()
+        member.assigned_by_id = current_user.id
+        was_assigned = True
+        assigned_name = current_user.full_name or current_user.emp_code
+        # Audit
+        from app.models.system_log import DataChangeLog
+        audit = DataChangeLog(
+            table_name='official_partners',
+            record_id=str(member.id),
+            operation='UPDATE',
+            changed_by_id=str(current_user.id),
+            changed_by_role=current_user.emp_code or 'STAFF',
+            field_name='assigned_staff_id',
+            old_value='None',
+            new_value=str(current_user.id),
+            change_reason=f"Auto-assigned upon softphone call by {current_user.emp_code}"
+        )
+        db.add(audit)
+    else:
+        # Resolve existing assigned staff name
+        assigned_staff = db.query(StaffEmployee).filter(StaffEmployee.id == member.assigned_staff_id).first()
+        if assigned_staff:
+            assigned_name = assigned_staff.full_name or assigned_staff.emp_code
+
+    # Update last_contact_at
+    member.last_contact_at = get_indian_time()
+    db.commit()
+    db.refresh(member)
+
+    return {
+        "success": True,
+        "member_id": member.id,
+        "partner_code": member.partner_code,
+        "partner_name": member.partner_name,
+        "clean_phone": clean_phone,
+        "was_assigned": was_assigned,
+        "assigned_staff_id": member.assigned_staff_id,
+        "assigned_staff_name": assigned_name,
+        "last_contact_at": member.last_contact_at.isoformat()
+    }
+
+
+@router.get("/members/{member_id}/communication-history")
+def get_vgk_communication_history(
+    member_id: int = Path(...),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=5, le=100),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Unified communication history for a VGK Channel Partner.
+    Aggregates:
+    - staff_call_logs (synced and mobile calls with recording links)
+    - voip_call_sessions (in-app WebRTC softphone calls)
+    - message_log (outbound WhatsApp messages)
+    - wa_inbox (inbound WhatsApp messages)
+    Permissions: Ordinary staff can only view history for their assigned members.
+    """
+    member = db.query(OfficialPartner).filter(
+        OfficialPartner.id == member_id,
+        OfficialPartner.category == 'VGK_TEAM'
+    ).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="VGK member not found")
+
+    if not _has_full_vgk_visibility(current_user):
+        if member.assigned_staff_id != current_user.id and member.registered_by_emp_code != current_user.emp_code:
+            raise HTTPException(status_code=403, detail="Forbidden: You can only view history for your assigned VGK members.")
+
+    phone = (member.phone or member.whatsapp_number or '').strip()
+    digits = ''.join(filter(str.isdigit, phone))
+    last10 = digits[-10:] if len(digits) >= 10 else digits
+
+    if not last10:
+        return {
+            "success": True,
+            "member": {
+                "id": member.id,
+                "partner_code": member.partner_code,
+                "partner_name": member.partner_name,
+                "phone": member.phone,
+                "assigned_staff_id": member.assigned_staff_id,
+                "is_active": member.is_active,
+                "last_contact_at": None,
+                "contacted_days_since": None
+            },
+            "total_calls": 0,
+            "total_messages": 0,
+            "items": []
+        }
+
+    items = []
+
+    # 1. Calls from staff_call_logs
+    try:
+        scl_rows = db.execute(text("""
+            SELECT scl.id, scl.call_datetime, scl.call_type, scl.duration_seconds,
+                   scl.has_recording, scl.recording_id, se.full_name, se.emp_code
+            FROM staff_call_logs scl
+            LEFT JOIN staff_employees se ON scl.staff_id = se.id
+            WHERE RIGHT(REGEXP_REPLACE(scl.phone_number, '[^0-9]', '', 'g'), 10) = :p10
+            ORDER BY scl.call_datetime DESC
+            LIMIT 100
+        """), {"p10": last10}).fetchall()
+
+        for r in scl_rows:
+            dt = r[1]
+            dur = int(r[3] or 0)
+            rec_id = r[5]
+            has_rec = bool(r[4] and rec_id)
+            c_type = (r[2] or 'OUTGOING').upper()
+            direction = 'inbound' if c_type == 'INCOMING' else 'outbound'
+            status = 'Answered' if dur > 0 else c_type.capitalize()
+            items.append({
+                "id": f"scl_{r[0]}",
+                "type": "call",
+                "channel": "Mobile / Staff Phone",
+                "timestamp": dt.isoformat() if dt else None,
+                "direction": direction,
+                "staff_name": r[6] or r[7] or 'Staff',
+                "duration_seconds": dur,
+                "status": status,
+                "has_recording": has_rec,
+                "recording_url": f"/api/v1/call-tracking/recordings/{rec_id}/stream" if has_rec else None,
+                "details": f"{c_type} call ({dur}s)" if dur > 0 else f"{c_type} call (No answer)"
+            })
+    except Exception as _e:
+        logger.warning(f"[VGK-HISTORY] staff_call_logs error: {_e}")
+
+    # 2. Calls from voip_call_sessions
+    try:
+        vcs_rows = db.execute(text("""
+            SELECT vcs.id, vcs.call_session_id, vcs.started_at, vcs.duration_seconds,
+                   vcs.direction, vcs.status, vcs.operator_name, vcs.operator_user_ref,
+                   vcs.recording_storage_key, vcs.recording_status
+            FROM voip_call_sessions vcs
+            WHERE RIGHT(REGEXP_REPLACE(vcs.customer_phone, '[^0-9]', '', 'g'), 10) = :p10
+               OR RIGHT(REGEXP_REPLACE(vcs.destination_number, '[^0-9]', '', 'g'), 10) = :p10
+            ORDER BY vcs.started_at DESC
+            LIMIT 100
+        """), {"p10": last10}).fetchall()
+
+        for r in vcs_rows:
+            dt = r[2]
+            dur = int(r[3] or 0)
+            sid = r[1]
+            rec_key = r[8]
+            rec_st = (r[9] or '').upper()
+            has_rec = bool(rec_key or rec_st == 'AVAILABLE')
+            direction = r[4] or 'outbound'
+            c_status = (r[5] or 'completed').capitalize()
+            items.append({
+                "id": f"vcs_{r[0]}",
+                "type": "call",
+                "channel": "Web Softphone",
+                "timestamp": dt.isoformat() if dt else None,
+                "direction": direction,
+                "staff_name": r[6] or r[7] or 'Staff',
+                "duration_seconds": dur,
+                "status": c_status,
+                "has_recording": has_rec,
+                "recording_url": f"/api/v1/telephony/calls/{sid}/recording" if (has_rec and sid) else None,
+                "details": f"Softphone {direction} call ({dur}s)"
+            })
+    except Exception as _e:
+        logger.warning(f"[VGK-HISTORY] voip_call_sessions error: {_e}")
+
+    # 3. Outbound messages from message_log
+    try:
+        ml_rows = db.execute(text("""
+            SELECT ml.id, ml.message_body, ml.sent_at, ml.sender_type, ml.sent_by_name,
+                   ml.message_type, ml.current_status, ml.provider
+            FROM message_log ml
+            WHERE RIGHT(REGEXP_REPLACE(ml.mobile_number, '[^0-9]', '', 'g'), 10) = :p10
+               OR ml.to_number LIKE :p10_to
+            ORDER BY ml.sent_at DESC
+            LIMIT 100
+        """), {"p10": last10, "p10_to": f"%{last10}"}).fetchall()
+
+        for r in ml_rows:
+            dt = r[2]
+            prov = r[7] or 'WhatsApp'
+            status = r[6] or 'Sent'
+            items.append({
+                "id": f"ml_{r[0]}",
+                "type": "message",
+                "channel": f"WhatsApp ({prov})",
+                "timestamp": dt.isoformat() if dt else None,
+                "direction": "outbound",
+                "staff_name": r[4] or r[3] or 'Staff',
+                "duration_seconds": None,
+                "status": status.capitalize(),
+                "has_recording": False,
+                "recording_url": None,
+                "details": r[1] or f"[{r[5] or 'Message'}]"
+            })
+    except Exception as _e:
+        logger.warning(f"[VGK-HISTORY] message_log error: {_e}")
+
+    # 4. Inbound messages from wa_inbox
+    try:
+        wi_rows = db.execute(text("""
+            SELECT wi.id, wi.body_text, wi.from_name, wi.message_type, wi.received_at, wi.media_url
+            FROM wa_inbox wi
+            WHERE RIGHT(REGEXP_REPLACE(wi.from_phone, '[^0-9]', '', 'g'), 10) = :p10
+            ORDER BY wi.received_at DESC
+            LIMIT 100
+        """), {"p10": last10}).fetchall()
+
+        for r in wi_rows:
+            dt = r[4]
+            items.append({
+                "id": f"wi_{r[0]}",
+                "type": "message",
+                "channel": "WhatsApp Inbound",
+                "timestamp": dt.isoformat() if dt else None,
+                "direction": "inbound",
+                "staff_name": r[2] or member.partner_name,
+                "duration_seconds": None,
+                "status": "Received",
+                "has_recording": False,
+                "recording_url": None,
+                "details": r[1] or f"[{r[3] or 'Inbound Media'}]"
+            })
+    except Exception as _e:
+        logger.warning(f"[VGK-HISTORY] wa_inbox error: {_e}")
+
+    # Sort chronological descending
+    items.sort(key=lambda x: x.get('timestamp') or '', reverse=True)
+
+    total_calls = sum(1 for i in items if i['type'] == 'call')
+    total_messages = sum(1 for i in items if i['type'] == 'message')
+
+    # Resolve assigned staff name
+    assigned_name = None
+    if member.assigned_staff_id:
+        st_emp = db.query(StaffEmployee).filter(StaffEmployee.id == member.assigned_staff_id).first()
+        if st_emp:
+            assigned_name = st_emp.full_name or st_emp.emp_code
+
+    today_ist = get_indian_time().date()
+    contacted_days_since = None
+    if member.last_contact_at:
+        contacted_days_since = max(0, (today_ist - member.last_contact_at.date()).days)
+
+    return {
+        "success": True,
+        "member": {
+            "id": member.id,
+            "partner_code": member.partner_code,
+            "partner_name": member.partner_name,
+            "phone": member.phone,
+            "assigned_staff_id": member.assigned_staff_id,
+            "assigned_staff_name": assigned_name,
+            "is_active": member.is_active,
+            "is_blocked": bool(member.is_blocked),
+            "member_status": member.member_status or ('BLOCKED' if member.is_blocked else ('ACTIVE' if member.is_active else 'INACTIVE')),
+            "last_contact_at": member.last_contact_at.isoformat() if member.last_contact_at else None,
+            "contacted_days_since": contacted_days_since
+        },
+        "total_calls": total_calls,
+        "total_messages": total_messages,
+        "last_contact_at": member.last_contact_at.isoformat() if member.last_contact_at else None,
+        "contacted_days_since": contacted_days_since,
+        "items": items
+    }
 
 
 @router.post("/members/send-otp")
@@ -855,22 +1532,12 @@ def create_vgk_member(
     if existing:
         raise HTTPException(status_code=400, detail="VGK member with this phone already exists")
 
-    # [DC-PHONE-OTP-001] OTP bypass rules:
-    # 1. No referrer (default root will be used) → OTP bypassed
-    # 2. Staff emp_code == MR10001 → OTP bypassed
-    # 3. Otherwise → phone_verified_token required
-    _otp_bypass = (
-        not payload.parent_partner_id or
-        (getattr(current_user, 'emp_code', '') or '').strip().upper() == VGK_MENTOR_BYPASS_CODE.upper()
-    )
-    if not _otp_bypass:
-        if not payload.phone_verified_token:
-            raise HTTPException(
-                status_code=400,
-                detail="Phone verification required. Please send an OTP to the member's WhatsApp and verify before creating."
-            )
+    # [DC-PHONE-OTP-001] OTP verification is OPTIONAL
+    phone_verified = False
+    if payload.phone_verified_token:
         from app.utils.phone_otp import validate_and_consume_token
         validate_and_consume_token(phone=phone, token=payload.phone_verified_token, purpose='vgk_staff_add', db=db)
+        phone_verified = True
 
     if payload.parent_partner_id:
         parent = db.query(OfficialPartner).filter(
@@ -903,6 +1570,7 @@ def create_vgk_member(
         email=payload.email,
         category='VGK_TEAM',
         is_active=False,
+        phone_verified=phone_verified,
         parent_partner_id=payload.parent_partner_id,
         vgk_role=payload.vgk_role or 'VGK_ASSOCIATE',
         vgk_points_balance=Decimal('0'),
@@ -981,6 +1649,7 @@ def bulk_send_preview(
     base_q = db.query(OfficialPartner).filter(
         OfficialPartner.company_id == company_id,
         OfficialPartner.is_active == True,
+        or_(OfficialPartner.is_blocked == False, OfficialPartner.is_blocked.is_(None)),
         (OfficialPartner.phone != None) | (OfficialPartner.whatsapp_number != None),
     )
     if target_filter == "all_active":
@@ -1257,8 +1926,8 @@ def get_vgk_member_tree(
     cm_income_rows = db.execute(text(
         "SELECT partner_id, COALESCE(SUM(commission_amount),0) "
         "FROM vgk_cash_income_entries "
-        "WHERE status IN ('RELEASED','PAID') AND status != 'CANCELLED' "
-        "  AND income_date >= :cm_start "
+        "WHERE status != 'CANCELLED' "
+        "  AND COALESCE(income_date, created_at::date) >= :cm_start "
         "GROUP BY partner_id"
     ), {"cm_start": curr_month_start}).fetchall()
     cm_income_map = {r[0]: float(r[1]) for r in cm_income_rows}
@@ -3768,6 +4437,10 @@ def send_vgk_member_credentials_wa(
     if not member:
         raise HTTPException(status_code=404, detail="VGK member not found")
 
+    # [DC-VGK-BLOCKED-001] Blocked members are strictly avoided from communications
+    if getattr(member, 'is_blocked', False) or getattr(member, 'member_status', '') == 'BLOCKED':
+        raise HTTPException(status_code=400, detail="Cannot send WhatsApp message: This Channel Partner is Blocked from all communications.")
+
     phone = member.whatsapp_number or member.phone
     if not phone:
         raise HTTPException(status_code=400, detail="No phone number on this member record")
@@ -3858,6 +4531,7 @@ def bulk_send_vgk_credentials_wa(
     base_q = db.query(OfficialPartner).filter(
         OfficialPartner.company_id == company_id,
         OfficialPartner.is_active == True,
+        or_(OfficialPartner.is_blocked == False, OfficialPartner.is_blocked.is_(None)),
         (OfficialPartner.phone != None) | (OfficialPartner.whatsapp_number != None),
     )
 
@@ -3881,7 +4555,10 @@ def bulk_send_vgk_credentials_wa(
     elif tf == "custom":
         if not payload.member_ids:
             raise HTTPException(status_code=400, detail="member_ids required for custom filter")
-        members = base_q.filter(OfficialPartner.id.in_(payload.member_ids)).all()
+        members = base_q.filter(
+            OfficialPartner.id.in_(payload.member_ids),
+            or_(OfficialPartner.is_blocked == False, OfficialPartner.is_blocked.is_(None))
+        ).all()
     else:
         raise HTTPException(status_code=400, detail="Unknown target_filter")
 
@@ -4537,92 +5214,68 @@ def member_earnings_dashboard(
         except Exception:
             pass
 
-    # Bulk: income summary per member per status (with optional date + status filter)
-    # DC-VGK-MEMBER-EARN-002 (Jun 2026): also fetch net_payout per status for Gross/Net Pending KPIs
+    # Bulk: combined income metrics (status, level, files, l1_files, installed_files) in a single pass
     inc_map: dict = {}
-    if member_ids:
-        try:
-            inc_sql = (
-                "SELECT e.partner_id, e.status, COUNT(*), COALESCE(SUM(e.commission_amount),0), COALESCE(SUM(e.net_payout),0) "
-                "FROM vgk_cash_income_entries e " + cibil_join_sql + cust_join_sql +
-                " WHERE e.partner_id = ANY(:ids) "
-                + date_sql + (" " + status_sql if status_val else "") +
-                " GROUP BY e.partner_id, e.status"
-            )
-            rows = db.execute(text(inc_sql), {"ids": member_ids, **date_params}).fetchall()
-            for r in rows:
-                pid = int(r[0])
-                if pid not in inc_map:
-                    inc_map[pid] = {}
-                inc_map[pid][r[1]] = {"count": int(r[2]), "amount": float(r[3]), "net_amount": float(r[4])}
-        except Exception:
-            pass
-
-    # DC-VGK-EARN-DASH-001: Bulk income by level for level-wise column breakdown
-    # DC-DVR-LVL-CANCELLED-001 (Jul 2026): Exclude CANCELLED entries so l1_source/l2_senior/
-    # l5_support totals are not inflated by cancelled-then-reissued entries.
     lvl_map: dict = {}
-    if member_ids:
-        try:
-            lvl_sql_q = (
-                "SELECT e.partner_id, e.level, COUNT(*), COALESCE(SUM(e.commission_amount),0), COALESCE(SUM(e.net_payout),0) "
-                "FROM vgk_cash_income_entries e " + cibil_join_sql + cust_join_sql +
-                " WHERE e.partner_id = ANY(:ids) AND e.status != 'CANCELLED' "
-                + date_sql + (" " + status_sql if status_val else "") +
-                " GROUP BY e.partner_id, e.level"
-            )
-            rows = db.execute(text(lvl_sql_q), {"ids": member_ids, **date_params}).fetchall()
-            for r in rows:
-                pid = int(r[0])
-                if pid not in lvl_map:
-                    lvl_map[pid] = {}
-                lvl_map[pid][int(r[1])] = {"count": int(r[2]), "amount": float(r[3]), "net_amount": float(r[4])}
-        except Exception:
-            pass
-
-    # DC-VGK-EARN-DASH-001: Total files (non-cancelled entries for CIBIL verified leads) per member
     files_map: dict = {}
-    if member_ids:
-        try:
-            f_sql = (
-                "SELECT e.partner_id, COUNT(DISTINCT e.source_lead_id) FROM vgk_cash_income_entries e " + cibil_join_sql + cust_join_sql +
-                " WHERE e.partner_id = ANY(:ids) AND e.status != 'CANCELLED' "
-                + date_sql + (" " + status_sql if status_val else "") +
-                " GROUP BY e.partner_id"
-            )
-            files_rows = db.execute(text(f_sql), {"ids": member_ids, **date_params}).fetchall()
-            files_map = {int(r[0]): int(r[1]) for r in files_rows}
-        except Exception:
-            pass
-
-    # DC-VGK-L1-FILES-001: Files where member is ground source (level=1 only, CIBIL verified, non-cancelled)
     l1_files_map: dict = {}
     installed_files_map: dict = {}
+
     if member_ids:
         try:
-            l1f_sql = (
-                "SELECT e.partner_id, COUNT(DISTINCT e.source_lead_id) FROM vgk_cash_income_entries e " + cibil_join_sql + cust_join_sql +
-                " WHERE e.partner_id = ANY(:ids) AND e.level = 1 AND e.status != 'CANCELLED' "
-                + date_sql + (" " + status_sql if status_val else "") +
-                " GROUP BY e.partner_id"
+            combined_sql = (
+                "SELECT e.partner_id, e.status, e.level, e.source_lead_id, e.commission_amount, e.net_payout, "
+                "       (_cbl.status IN ('completed', 'installed', 'subsidy_pending') OR _cbl.solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed', 'net_meter_pending', 'balance_pending', 'balance_received')) AS is_installed "
+                "FROM vgk_cash_income_entries e " + cibil_join_sql + cust_join_sql +
+                " WHERE e.partner_id = ANY(:ids) "
+                + date_sql + (" " + status_sql if status_val else "")
             )
-            l1f_rows = db.execute(text(l1f_sql), {"ids": member_ids, **date_params}).fetchall()
-            l1_files_map = {int(r[0]): int(r[1]) for r in l1f_rows}
+            combined_rows = db.execute(text(combined_sql), {"ids": member_ids, **date_params}).fetchall()
+            
+            _files_set = {}
+            _l1_files_set = {}
+            _inst_files_set = {}
 
-            # Installed files (level=1 leads that reached completed / installed stage in Executive Dashboard & CIBIL verified)
-            inst_sql = (
-                "SELECT e.partner_id, COUNT(DISTINCT e.source_lead_id) FROM vgk_cash_income_entries e " +
-                cibil_join_sql +
-                cust_join_sql +
-                " WHERE e.partner_id = ANY(:ids) AND e.level = 1 AND e.status != 'CANCELLED' " +
-                " AND (_cbl.status IN ('completed', 'installed', 'subsidy_pending') OR _cbl.solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed', 'net_meter_pending', 'balance_pending', 'balance_received')) "
-                + date_sql + (" " + status_sql if status_val else "") +
-                " GROUP BY e.partner_id"
-            )
-            inst_rows = db.execute(text(inst_sql), {"ids": member_ids, **date_params}).fetchall()
-            installed_files_map = {int(r[0]): int(r[1]) for r in inst_rows}
-        except Exception:
-            pass
+            for pid_raw, st, lv_raw, lead_id, comm_amt, net_p, is_inst in combined_rows:
+                pid = int(pid_raw)
+                # 1. inc_map by status
+                if pid not in inc_map:
+                    inc_map[pid] = {}
+                st_entry = inc_map[pid].setdefault(st, {"count": 0, "amount": 0.0, "net_amount": 0.0})
+                st_entry["count"] += 1
+                st_entry["amount"] += float(comm_amt or 0)
+                st_entry["net_amount"] += float(net_p or 0)
+
+                # 2. Non-cancelled metrics
+                if st != 'CANCELLED':
+                    lv = int(lv_raw or 1)
+                    if pid not in lvl_map:
+                        lvl_map[pid] = {}
+                    lv_entry = lvl_map[pid].setdefault(lv, {"count": 0, "amount": 0.0, "net_amount": 0.0})
+                    lv_entry["count"] += 1
+                    lv_entry["amount"] += float(comm_amt or 0)
+                    lv_entry["net_amount"] += float(net_p or 0)
+
+                    if lead_id is not None:
+                        if pid not in _files_set:
+                            _files_set[pid] = set()
+                        _files_set[pid].add(lead_id)
+
+                        if lv == 1:
+                            if pid not in _l1_files_set:
+                                _l1_files_set[pid] = set()
+                            _l1_files_set[pid].add(lead_id)
+
+                            if is_inst:
+                                if pid not in _inst_files_set:
+                                    _inst_files_set[pid] = set()
+                                _inst_files_set[pid].add(lead_id)
+
+            files_map = {p: len(s) for p, s in _files_set.items()}
+            l1_files_map = {p: len(s) for p, s in _l1_files_set.items()}
+            installed_files_map = {p: len(s) for p, s in _inst_files_set.items()}
+        except Exception as e:
+            print("[MEMBER_EARN_AGG_ERR]", e)
 
     # Bulk: registered_by names
     emp_codes = list({m.registered_by_emp_code for m in members if m.registered_by_emp_code})
@@ -6271,9 +6924,22 @@ def vgk_top_partners_leaderboard_table(
                op.partner_code,
                (SELECT COUNT(*) FROM official_partners sub WHERE sub.parent_partner_id = op.id) AS team_added,
                COUNT(cl.id) AS total_leads,
-               COUNT(*) FILTER (WHERE cl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change') OR cl.status IN ('submitted', 'application_submitted')) AS submits_count,
-               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change') OR cl.status IN ('submitted', 'application_submitted')), 0) AS submits_val,
-               COUNT(*) FILTER ({dvr_filter}) AS dvr_count,
+               COUNT(*) FILTER (WHERE (cl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change', 'documents_pending') OR cl.status IN ('submitted', 'application_submitted'))
+                                  AND (cl.first_payment_received_date IS NULL AND COALESCE(cl.deal_value_received, 0) = 0)
+                                  AND (cl.installation_date IS NULL AND COALESCE(cl.solar_pipeline_status, '') NOT IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') AND COALESCE(cl.status, '') != 'completed')) AS submits_count,
+               COUNT(*) FILTER (WHERE (
+                   cl.solar_pipeline_status IN ('pending_with_bank', 'with_bank', 'waiting_for_bank_loan')
+                   OR cl.solar_pipeline_status IN ('balance_pending', 'installation_pending', 'net_meter_pending', 'subsidy_pending', 'completed', 'completed_paid', 'installed', 'net_meter_done', 'subsidy_received', 'loan_rejected', 'bank_loan_rejected')
+                   OR cl.first_payment_received_date IS NOT NULL
+                   OR EXISTS (SELECT 1 FROM crm_lead_audit_log al WHERE al.lead_id = cl.id AND al.new_value IN ('pending_with_bank', 'with_bank', 'waiting_for_bank_loan'))
+               )) AS with_bank_count,
+               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE (cl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change', 'documents_pending') OR cl.status IN ('submitted', 'application_submitted'))
+                                                           AND (cl.first_payment_received_date IS NULL AND COALESCE(cl.deal_value_received, 0) = 0)
+                                                           AND (cl.installation_date IS NULL AND COALESCE(cl.solar_pipeline_status, '') NOT IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') AND COALESCE(cl.status, '') != 'completed')), 0) AS submits_val,
+               COUNT(*) FILTER (WHERE (cl.first_payment_received_date IS NOT NULL OR COALESCE(cl.deal_value_received, 0) > 0)
+                                  AND (cl.installation_date IS NULL AND COALESCE(cl.solar_pipeline_status, '') NOT IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') AND COALESCE(cl.status, '') != 'completed')) AS first_pmt_count,
+               COUNT(*) FILTER (WHERE cl.installation_date IS NOT NULL OR cl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') OR cl.status = 'completed') AS completed_count,
+               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.installation_date IS NOT NULL OR cl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') OR cl.status = 'completed'), 0) AS completed_val,
                COALESCE(SUM(
                    CASE 
                        WHEN cl.deal_value_received > 0 THEN cl.deal_value_received
@@ -6282,17 +6948,32 @@ def vgk_top_partners_leaderboard_table(
                        WHEN cl.first_payment_received_date IS NOT NULL THEN cl.deal_value_total
                        ELSE 0
                    END
-               ) FILTER ({dvr_filter}), 0) AS dvr_val,
-               COUNT(*) FILTER (WHERE cl.status = 'won' OR cl.solar_pipeline_status IN ('balance_received', 'subsidy_pending')) AS won_count,
-               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status = 'won' OR cl.solar_pipeline_status IN ('balance_received', 'subsidy_pending')), 0) AS won_val,
-               COUNT(*) FILTER (WHERE cl.status IN ('completed', 'subsidy_pending') OR cl.solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done')) AS completed_count,
-               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status IN ('completed', 'subsidy_pending') OR cl.solar_pipeline_status IN ('completed', 'subsidy_pending', 'subsidy_received', 'net_meter_done')), 0) AS completed_val,
+               ), 0) AS received_val,
+               COUNT(*) FILTER (WHERE cl.status = 'won' OR cl.solar_pipeline_status IN ('balance_received', 'subsidy_pending', 'completed')) AS won_count,
+               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status = 'won' OR cl.solar_pipeline_status IN ('balance_received', 'subsidy_pending', 'completed')), 0) AS won_val,
                COUNT(*) FILTER (WHERE cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled')) AS lost_count,
                COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled')), 0) AS lost_val,
                (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id){tcl_date_filter}) AS team_leads,
-               (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id) AND (tcl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change') OR tcl.status IN ('submitted', 'application_submitted')){tcl_date_filter}) AS team_submits_count,
-               (SELECT COALESCE(SUM(tcl.deal_value_total), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id) AND (tcl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change') OR tcl.status IN ('submitted', 'application_submitted')){tcl_date_filter}) AS team_submits_val,
-               (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id){tcl_dvr_date_filter}) AS team_dvr_count,
+               (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id)
+                                                     AND (tcl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change', 'documents_pending') OR tcl.status IN ('submitted', 'application_submitted'))
+                                                     AND (tcl.first_payment_received_date IS NULL AND COALESCE(tcl.deal_value_received, 0) = 0)
+                                                     AND (tcl.installation_date IS NULL AND COALESCE(tcl.solar_pipeline_status, '') NOT IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') AND COALESCE(tcl.status, '') != 'completed'){tcl_date_filter}) AS team_submits_count,
+               (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id)
+                                                     AND (
+                                                         tcl.solar_pipeline_status IN ('pending_with_bank', 'with_bank', 'waiting_for_bank_loan')
+                                                         OR tcl.solar_pipeline_status IN ('balance_pending', 'installation_pending', 'net_meter_pending', 'subsidy_pending', 'completed', 'completed_paid', 'installed', 'net_meter_done', 'subsidy_received', 'loan_rejected', 'bank_loan_rejected')
+                                                         OR tcl.first_payment_received_date IS NOT NULL
+                                                         OR EXISTS (SELECT 1 FROM crm_lead_audit_log al WHERE al.lead_id = tcl.id AND al.new_value IN ('pending_with_bank', 'with_bank', 'waiting_for_bank_loan'))
+                                                     ){tcl_date_filter}) AS team_with_bank_count,
+               (SELECT COALESCE(SUM(tcl.deal_value_total), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id)
+                                                                                  AND (tcl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change', 'documents_pending') OR tcl.status IN ('submitted', 'application_submitted'))
+                                                                                  AND (tcl.first_payment_received_date IS NULL AND COALESCE(tcl.deal_value_received, 0) = 0)
+                                                                                  AND (tcl.installation_date IS NULL AND COALESCE(tcl.solar_pipeline_status, '') NOT IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') AND COALESCE(tcl.status, '') != 'completed'){tcl_date_filter}) AS team_submits_val,
+               (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id)
+                                                     AND (tcl.first_payment_received_date IS NOT NULL OR COALESCE(tcl.deal_value_received, 0) > 0)
+                                                     AND (tcl.installation_date IS NULL AND COALESCE(tcl.solar_pipeline_status, '') NOT IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') AND COALESCE(tcl.status, '') != 'completed'){tcl_date_filter}) AS team_first_pmt_count,
+               (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id)
+                                                     AND (tcl.installation_date IS NOT NULL OR tcl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') OR tcl.status = 'completed'){tcl_date_filter}) AS team_completed_count,
                (SELECT COALESCE(SUM(
                    CASE 
                        WHEN tcl.deal_value_received > 0 THEN tcl.deal_value_received
@@ -6301,16 +6982,7 @@ def vgk_top_partners_leaderboard_table(
                        WHEN tcl.first_payment_received_date IS NOT NULL THEN tcl.deal_value_total
                        ELSE 0
                    END
-               ), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id){tcl_dvr_date_filter}) AS team_dvr_val,
-               (SELECT COALESCE(SUM(
-                   CASE 
-                       WHEN tcl.deal_value_received > 0 THEN tcl.deal_value_received
-                       WHEN EXISTS (SELECT 1 FROM crm_lead_transactions tx WHERE tx.lead_id = tcl.id) 
-                            THEN (SELECT COALESCE(SUM(amount), 0) FROM crm_lead_transactions tx WHERE tx.lead_id = tcl.id)
-                       WHEN tcl.first_payment_received_date IS NOT NULL THEN tcl.deal_value_total
-                       ELSE 0
-                   END
-               ), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id){tcl_dvr_date_filter}) AS team_total_received_val
+               ), 0) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id){tcl_date_filter}) AS team_total_received_val
         FROM official_partners op
         LEFT JOIN crm_leads cl ON op.id = cl.associated_partner_id
         {join_staff}
@@ -6331,11 +7003,20 @@ def vgk_top_partners_leaderboard_table(
     cm_income_rows = db.execute(text(
         "SELECT partner_id, COALESCE(SUM(commission_amount),0) "
         "FROM vgk_cash_income_entries "
-        "WHERE status IN ('RELEASED','PAID') AND status != 'CANCELLED' "
-        "  AND income_date >= :cm_start "
+        "WHERE status != 'CANCELLED' "
+        "  AND COALESCE(income_date, created_at::date) >= :cm_start "
         "GROUP BY partner_id"
     ), {"cm_start": curr_month_start}).fetchall()
     cm_income_map = {r[0]: float(r[1]) for r in cm_income_rows}
+
+    # Bulk fetch overall confirmed payout/earnings
+    overall_income_rows = db.execute(text(
+        "SELECT partner_id, COALESCE(SUM(commission_amount),0) "
+        "FROM vgk_cash_income_entries "
+        "WHERE status != 'CANCELLED' "
+        "GROUP BY partner_id"
+    )).fetchall()
+    overall_income_map = {r[0]: float(r[1]) for r in overall_income_rows}
 
     # Bulk fetch installed files
     inst_lead_rows = db.execute(text(
@@ -6354,30 +7035,34 @@ def vgk_top_partners_leaderboard_table(
 
     partners = []
     for r in raw_rows:
-        pid = int(r[0])
-        tm_added = int(r[3] or 0)
-        tot = int(r[4] or 0)
-        sub_c = int(r[5] or 0)
-        sub_v = float(r[6] or 0)
-        dvr_c = int(r[7] or 0)
-        dvr_v = float(r[8] or 0)
-        won_c = int(r[9] or 0)
-        won_v = float(r[10] or 0)
-        comp_c = int(r[11] or 0)
-        comp_v = float(r[12] or 0)
-        lost_c = int(r[13] or 0)
-        lost_v = float(r[14] or 0)
-        tm_leads = int(r[15] or 0)
-        tm_sub_c = int(r[16] or 0)
-        tm_sub_v = float(r[17] or 0)
-        tm_dvr_c = int(r[18] or 0)
-        tm_dvr_v = float(r[19] or 0)
-        tm_tot_recv_v = float(r[20] or 0)
+        m = r._mapping if hasattr(r, '_mapping') else {}
+        pid = int(m.get("id", r[0]))
+        tm_added = int(m.get("team_added", r[3]) or 0)
+        tot = int(m.get("total_leads", r[4]) or 0)
+        sub_c = int(m.get("submits_count", r[5]) or 0)
+        with_bank_c = int(m.get("with_bank_count", 0) or 0)
+        sub_v = float(m.get("submits_val", r[7] if "with_bank_count" in m else r[6]) or 0)
+        first_pmt_c = int(m.get("first_pmt_count", 0) or 0)
+        comp_c = int(m.get("completed_count", 0) or 0)
+        comp_v = float(m.get("completed_val", 0) or 0)
+        recv_v = float(m.get("received_val", 0) or 0)
+        won_c = int(m.get("won_count", 0) or 0)
+        won_v = float(m.get("won_val", 0) or 0)
+        lost_c = int(m.get("lost_count", 0) or 0)
+        lost_v = float(m.get("lost_val", 0) or 0)
+        tm_leads = int(m.get("team_leads", 0) or 0)
+        tm_sub_c = int(m.get("team_submits_count", 0) or 0)
+        tm_with_bank_c = int(m.get("team_with_bank_count", 0) or 0)
+        tm_sub_v = float(m.get("team_submits_val", 0) or 0)
+        tm_first_pmt_c = int(m.get("team_first_pmt_count", 0) or 0)
+        tm_comp_c = int(m.get("team_completed_count", 0) or 0)
+        tm_tot_recv_v = float(m.get("team_total_received_val", 0) or 0)
 
         sub_pct = round((sub_c / tot * 100), 1) if tot > 0 else 0.0
-        dvr_pct = round((dvr_c / tot * 100), 1) if tot > 0 else 0.0
-        won_pct = round((won_c / tot * 100), 1) if tot > 0 else 0.0
+        with_bank_pct = round((with_bank_c / tot * 100), 1) if tot > 0 else 0.0
+        first_pmt_pct = round((first_pmt_c / tot * 100), 1) if tot > 0 else 0.0
         comp_pct = round((comp_c / tot * 100), 1) if tot > 0 else 0.0
+        won_pct = round((won_c / tot * 100), 1) if tot > 0 else 0.0
         lost_pct = round((lost_c / tot * 100), 1) if tot > 0 else 0.0
         win_rate = round(((won_c + comp_c) / tot * 100), 1) if tot > 0 else 0.0
 
@@ -6390,28 +7075,35 @@ def vgk_top_partners_leaderboard_table(
 
         partners.append({
             "id": pid,
-            "name": r[1] or "Unknown Partner",
-            "code": r[2] or f"VGK{pid}",
+            "name": m.get("partner_name", r[1]) or "Unknown Partner",
+            "code": m.get("partner_code", r[2]) or f"VGK{pid}",
             "rank_num": resolved_stars,
             "rank_display": resolved_display,
             "rank_slab_pct": resolved_slab,
+            "overall_payout": overall_income_map.get(pid, 0.0),
             "current_month_earning": cm_income_map.get(pid, 0.0),
             "eligible_files_total": _lm["total_files"],
             "eligible_files_installed": _lm["installed_files"],
             "team_added": tm_added,
             "total_leads": tot,
             "submits_count": sub_c, "submits_val": sub_v, "submits_pct": sub_pct,
-            "dvr_count": dvr_c, "dvr_val": dvr_v, "dvr_pct": dvr_pct,
-            "overall_dvr_val": dvr_v,
-            "won_count": won_c, "won_val": won_v, "won_pct": won_pct,
+            "with_bank_count": with_bank_c, "with_bank_pct": with_bank_pct,
+            "first_pmt_count": first_pmt_c, "first_pmt_pct": first_pmt_pct,
+            "dvr_count": first_pmt_c, "dvr_val": recv_v, "dvr_pct": first_pmt_pct,
             "completed_count": comp_c, "completed_val": comp_v, "completed_pct": comp_pct,
+            "received_val": recv_v,
+            "overall_dvr_val": recv_v,
+            "won_count": won_c, "won_val": won_v, "won_pct": won_pct,
             "lost_count": lost_c, "lost_val": lost_v, "lost_pct": lost_pct,
             "win_rate": win_rate,
             "team_leads": tm_leads,
             "team_submits_count": tm_sub_c,
+            "team_with_bank_count": tm_with_bank_c,
             "team_submits_val": tm_sub_v,
-            "team_dvr_count": tm_dvr_c,
-            "team_dvr_val": tm_dvr_v,
+            "team_first_pmt_count": tm_first_pmt_c,
+            "team_dvr_count": tm_first_pmt_c,
+            "team_dvr_val": tm_tot_recv_v,
+            "team_completed_count": tm_comp_c,
             "team_total_received_val": tm_tot_recv_v
         })
 
@@ -6428,22 +7120,40 @@ def vgk_top_partners_leaderboard_table(
         "team_added": lambda x: x["team_added"],
         "total_leads": lambda x: x["total_leads"],
         "submits_count": lambda x: x["submits_count"],
+        "with_bank_count": lambda x: x["with_bank_count"],
+        "with_bank": lambda x: x["with_bank_count"],
         "submits_val": lambda x: x["submits_val"],
-        "dvr_count": lambda x: x["dvr_count"],
-        "dvr_val": lambda x: x["dvr_val"],
-        "won_count": lambda x: x["won_count"],
-        "won_val": lambda x: x["won_val"],
+        "first_pmt_count": lambda x: x["first_pmt_count"],
+        "dvr_count": lambda x: x["first_pmt_count"],
         "completed_count": lambda x: x["completed_count"],
         "completed_val": lambda x: x["completed_val"],
+        "received_val": lambda x: x["received_val"],
+        "dvr_val": lambda x: x["received_val"],
+        "overall_dvr_val": lambda x: x["received_val"],
+        "won_count": lambda x: x["won_count"],
+        "won_val": lambda x: x["won_val"],
         "lost_count": lambda x: x["lost_count"],
         "lost_val": lambda x: x["lost_val"],
         "win_rate": lambda x: x["win_rate"],
+        "rank_num": lambda x: x["rank_num"],
+        "current_rank": lambda x: x["rank_num"],
+        "rank_slab_pct": lambda x: x["rank_slab_pct"],
+        "earning_slab": lambda x: x["rank_slab_pct"],
+        "eligible_files_installed": lambda x: x["eligible_files_installed"],
+        "eligible_files": lambda x: x["eligible_files_installed"],
+        "eligibility_files": lambda x: x["eligible_files_installed"],
+        "eligible_files_total": lambda x: x["eligible_files_total"],
+        "overall_payout": lambda x: x["overall_payout"],
         "current_month_earning": lambda x: x["current_month_earning"],
         "team_leads": lambda x: x["team_leads"],
         "team_submits_count": lambda x: x["team_submits_count"],
+        "team_with_bank_count": lambda x: x["team_with_bank_count"],
+        "team_with_bank": lambda x: x["team_with_bank_count"],
         "team_submits_val": lambda x: x["team_submits_val"],
-        "team_dvr_count": lambda x: x["team_dvr_count"],
-        "team_dvr_val": lambda x: x["team_dvr_val"],
+        "team_first_pmt_count": lambda x: x["team_first_pmt_count"],
+        "team_dvr_count": lambda x: x["team_first_pmt_count"],
+        "team_completed_count": lambda x: x["team_completed_count"],
+        "team_dvr_val": lambda x: x["team_total_received_val"],
         "team_total_received_val": lambda x: x["team_total_received_val"],
     }
     key_func = sort_key_map.get(sort_by, lambda x: x["total_leads"])
@@ -6457,8 +7167,8 @@ def vgk_top_partners_leaderboard_table(
     total_team_files = sum(p["team_leads"] for p in partners)
     team_submits_count = sum(p["team_submits_count"] for p in partners)
     team_submits_val = sum(p["team_submits_val"] for p in partners)
-    team_dvr_count = sum(p["team_dvr_count"] for p in partners)
-    team_dvr_val = sum(p["team_dvr_val"] for p in partners)
+    team_first_pmt_count = sum(p["team_first_pmt_count"] for p in partners)
+    team_completed_count = sum(p["team_completed_count"] for p in partners)
     team_total_received_val = sum(p["team_total_received_val"] for p in partners)
 
     team_summary = {
@@ -6466,8 +7176,10 @@ def vgk_top_partners_leaderboard_table(
         "total_team_files": total_team_files,
         "submitted_count": team_submits_count,
         "submitted_val": team_submits_val,
-        "dvr_count": team_dvr_count,
-        "dvr_val": team_dvr_val,
+        "first_pmt_count": team_first_pmt_count,
+        "completed_count": team_completed_count,
+        "dvr_count": team_first_pmt_count,
+        "dvr_val": team_total_received_val,
         "total_received_val": team_total_received_val
     }
 
@@ -6498,6 +7210,331 @@ def vgk_top_partners_leaderboard_table(
             "rank_summary": rank_summary,
             "partners": paginated_partners
         }
+    }
+
+
+# ── DC-VGK-TOP-PARTNERS-LEADS-001: Leaderboard Metric Lead Drilldown Endpoint ──
+@router.get("/dashboard/top-partners-leads")
+def vgk_top_partners_leads(
+    partner_id: int = Query(..., description="ID of official partner"),
+    metric: str = Query("total_leads", description="Metric to drill down into"),
+    period: str = Query("overall", description="overall|today|yesterday|this_week|last_week|this_month|last_month|this_fy|custom"),
+    date_from: Optional[str] = Query(None, description="ISO date YYYY-MM-DD for custom period"),
+    date_to: Optional[str] = Query(None, description="ISO date YYYY-MM-DD for custom period"),
+    company_id: Optional[int] = Query(None),
+    category_id: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    limit: int = Query(300, ge=1, le=1000),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Leaderboard Drilldown endpoint returning detailed lead records (matching Executive Dashboard modal structure)
+    or child team members when drilling into 'team_members'.
+    """
+    from datetime import date, timedelta
+    from app.models.crm import CRMLead, CRMLeadNote, CRMLeadTransaction
+    from app.models.signup_category import SignupCategory
+    from app.models.vgk_incentive_brands import VGKIncentiveBrand
+    from app.models.user import User
+
+    partner = db.query(OfficialPartner).filter(OfficialPartner.id == partner_id).first()
+    if not partner:
+        raise HTTPException(status_code=404, detail="Partner not found")
+
+    # If drilling into direct team members list
+    if metric in ("team_members", "team_added"):
+        child_rows = db.execute(text("""
+            SELECT op.id, op.partner_name, op.partner_code, op.phone, op.created_at, op.member_status,
+                   (SELECT COUNT(*) FROM crm_leads cl WHERE cl.associated_partner_id = op.id) AS total_leads,
+                   (SELECT COUNT(*) FROM crm_leads cl WHERE cl.associated_partner_id = op.id AND (cl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') OR cl.installation_date IS NOT NULL OR cl.status = 'completed')) AS completed_leads
+            FROM official_partners op
+            WHERE op.parent_partner_id = :pid
+            ORDER BY op.partner_name ASC
+        """), {"pid": partner_id}).fetchall()
+
+        members_data = []
+        for r in child_rows:
+            m = r._mapping if hasattr(r, '_mapping') else {}
+            members_data.append({
+                "id": m.get("id", r[0]),
+                "partner_name": m.get("partner_name", r[1]),
+                "partner_code": m.get("partner_code", r[2]),
+                "phone": m.get("phone", r[3]),
+                "created_at": m.get("created_at", r[4]).isoformat() if m.get("created_at", r[4]) else None,
+                "member_status": m.get("member_status", r[5]) or "ACTIVE",
+                "total_leads": int(m.get("total_leads", r[6]) or 0),
+                "completed_leads": int(m.get("completed_leads", r[7]) or 0),
+            })
+
+        return {
+            "success": True,
+            "is_team_members": True,
+            "metric": metric,
+            "partner": {
+                "id": partner.id,
+                "name": partner.partner_name,
+                "code": partner.partner_code
+            },
+            "total": len(members_data),
+            "data": members_data
+        }
+
+    # Otherwise, drilldown into LEADS
+    today = date.today()
+    def _get_dates(p: str):
+        if p == "today":
+            return today, today
+        if p == "yesterday":
+            y = today - timedelta(days=1)
+            return y, y
+        if p in ("this_week", "week"):
+            mon = today - timedelta(days=today.weekday())
+            return mon, today
+        if p == "last_week":
+            mon = today - timedelta(days=today.weekday() + 7)
+            sun = mon + timedelta(days=6)
+            return mon, sun
+        if p in ("this_month", "month", "mtd"):
+            return today.replace(day=1), today
+        if p == "last_month":
+            first_this = today.replace(day=1)
+            last_prev = first_this - timedelta(days=1)
+            first_prev = last_prev.replace(day=1)
+            return first_prev, last_prev
+        if p == "this_fy":
+            fy_start_year = today.year if today.month >= 4 else today.year - 1
+            return date(fy_start_year, 4, 1), today
+        if p == "custom" and date_from and date_to:
+            try:
+                return date.fromisoformat(date_from), date.fromisoformat(date_to)
+            except Exception:
+                pass
+        return None, None
+
+    f_from, f_to = _get_dates(period)
+
+    is_team = metric.startswith("team_")
+    if is_team:
+        where_clauses = ["cl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = :partner_id)"]
+    else:
+        where_clauses = ["cl.associated_partner_id = :partner_id"]
+
+    params: dict = {"partner_id": partner_id}
+
+    # Date filter (only applied if not eligible_total / eligible_files_total)
+    if f_from and f_to and metric not in ("eligible_total", "eligible_files_total"):
+        params["from_d"] = f_from.isoformat()
+        params["to_d_end"] = f"{f_to.isoformat()}T23:59:59"
+        if metric in ("first_pmt_count", "first_pmt", "team_first_pmt_count", "team_first_pmt"):
+            where_clauses.append("(cl.first_payment_received_date >= CAST(:from_d AS date) AND cl.first_payment_received_date <= CAST(:to_d_end AS date))")
+        else:
+            where_clauses.append("""(
+                (cl.created_at >= :from_d AND cl.created_at <= :to_d_end)
+                OR (cl.first_payment_received_date >= CAST(:from_d AS date) AND cl.first_payment_received_date <= CAST(:to_d_end AS date))
+            )""")
+
+    # Metric Stage Filters
+    if metric in ("submits_count", "submits", "team_submits_count", "team_submits"):
+        where_clauses.append("""(
+            (cl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change', 'documents_pending') OR cl.status IN ('submitted', 'application_submitted'))
+            AND (cl.first_payment_received_date IS NULL AND COALESCE(cl.deal_value_received, 0) = 0)
+            AND (cl.installation_date IS NULL AND COALESCE(cl.solar_pipeline_status, '') NOT IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') AND COALESCE(cl.status, '') != 'completed')
+        )""")
+    elif metric in ("with_bank_count", "with_bank", "team_with_bank_count", "team_with_bank"):
+        where_clauses.append("""(
+            cl.solar_pipeline_status IN ('pending_with_bank', 'with_bank', 'waiting_for_bank_loan')
+            OR cl.solar_pipeline_status IN ('balance_pending', 'installation_pending', 'net_meter_pending', 'subsidy_pending', 'completed', 'completed_paid', 'installed', 'net_meter_done', 'subsidy_received', 'loan_rejected', 'bank_loan_rejected')
+            OR cl.first_payment_received_date IS NOT NULL
+            OR EXISTS (SELECT 1 FROM crm_lead_audit_log al WHERE al.lead_id = cl.id AND al.new_value IN ('pending_with_bank', 'with_bank', 'waiting_for_bank_loan'))
+        )""")
+    elif metric in ("first_pmt_count", "first_pmt", "team_first_pmt_count", "team_first_pmt"):
+        where_clauses.append("""(
+            (cl.first_payment_received_date IS NOT NULL OR COALESCE(cl.deal_value_received, 0) > 0)
+            AND (cl.installation_date IS NULL AND COALESCE(cl.solar_pipeline_status, '') NOT IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') AND COALESCE(cl.status, '') != 'completed')
+        )""")
+    elif metric in ("completed_count", "completed", "team_completed_count", "team_completed"):
+        where_clauses.append("""(
+            cl.installation_date IS NOT NULL 
+            OR cl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') 
+            OR cl.status = 'completed'
+        )""")
+    elif metric in ("eligible_files_installed", "eligible_installed"):
+        where_clauses.append("""(
+            cl.installation_date IS NOT NULL 
+            OR cl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed')
+        )""")
+
+    if company_id:
+        where_clauses.append("cl.company_id = :cid")
+        params["cid"] = company_id
+
+    if category_id:
+        if str(category_id).isdigit():
+            where_clauses.append("cl.category_id = :catid")
+            params["catid"] = int(category_id)
+        else:
+            where_clauses.append("cl.category_id IN (SELECT id FROM signup_categories WHERE name ILIKE :cat_name)")
+            params["cat_name"] = f"%{str(category_id).strip()}%"
+
+    if search:
+        where_clauses.append("(cl.name ILIKE :srch OR cl.phone ILIKE :srch)")
+        params["srch"] = f"%{search.strip()}%"
+
+    where_sql = " AND ".join(where_clauses)
+    params["lim"] = limit
+
+    count_sql = f"SELECT COUNT(*) FROM crm_leads cl WHERE {where_sql}"
+    total_leads_count = db.execute(text(count_sql), params).scalar() or 0
+
+    ids_sql = f"SELECT cl.id FROM crm_leads cl WHERE {where_sql} ORDER BY cl.created_at DESC LIMIT :lim"
+    lead_id_rows = db.execute(text(ids_sql), params).fetchall()
+    matched_lead_ids = [r[0] for r in lead_id_rows]
+
+    if not matched_lead_ids:
+        return {
+            "success": True,
+            "is_team_members": False,
+            "metric": metric,
+            "partner": {
+                "id": partner.id,
+                "name": partner.partner_name,
+                "code": partner.partner_code
+            },
+            "total": total_leads_count,
+            "data": []
+        }
+
+    leads = db.query(CRMLead).filter(CRMLead.id.in_(matched_lead_ids)).all()
+    # Preserve order of matched_lead_ids
+    id_order = {lid: idx for idx, lid in enumerate(matched_lead_ids)}
+    leads.sort(key=lambda l: id_order.get(l.id, 999999))
+
+    # Bulk enrich: category names
+    cids = list({l.category_id for l in leads if l.category_id})
+    cmap = {}
+    if cids:
+        for c in db.query(SignupCategory).filter(SignupCategory.id.in_(cids)).all():
+            cmap[c.id] = c.name
+
+    # Bulk enrich: solar brand names
+    bids = list({l.solar_brand_id for l in leads if l.solar_brand_id})
+    bmap = {}
+    if bids:
+        for b in db.query(VGKIncentiveBrand).filter(VGKIncentiveBrand.id.in_(bids)).all():
+            bmap[b.id] = b.brand_name
+
+    # Bulk enrich: latest note per lead
+    nmap = {}
+    lead_ids_list = [l.id for l in leads]
+    if lead_ids_list:
+        mnq = db.query(
+            CRMLeadNote.lead_id,
+            func.max(CRMLeadNote.id).label('mid')
+        ).filter(CRMLeadNote.lead_id.in_(lead_ids_list)).group_by(CRMLeadNote.lead_id).subquery()
+        for n in db.query(CRMLeadNote).join(mnq, CRMLeadNote.id == mnq.c.mid).all():
+            nmap[n.lead_id] = {
+                'note': n.note,
+                'by': n.created_by_id or '',
+                'at': n.created_at.isoformat() if n.created_at else None,
+            }
+
+    # Bulk enrich: user names and staff employee names for ground support and telecaller
+    mnr_str_ids = list({str(l.mnr_handler_id) for l in leads if l.mnr_handler_id})
+    tc_str_ids = list({str(l.telecaller_id) for l in leads if l.telecaller_id})
+    unmap = {}
+    all_str_ids = list(set(mnr_str_ids + tc_str_ids))
+    if all_str_ids:
+        for u in db.query(User).filter(User.id.in_(all_str_ids)).all():
+            unmap[str(u.id)] = u.name or u.id
+            unmap[u.id] = u.name or u.id
+        all_int_ids = [int(x) for x in all_str_ids if str(x).isdigit()]
+        if all_int_ids:
+            for e in db.query(StaffEmployee).filter(StaffEmployee.id.in_(all_int_ids)).all():
+                emp_n = e.full_name or getattr(e, 'name', None) or e.emp_code or f"MR{e.id}"
+                unmap[str(e.id)] = emp_n
+                unmap[e.id] = emp_n
+
+    # Bulk enrich: partner names for team leads
+    partner_ids_set = list({l.associated_partner_id for l in leads if l.associated_partner_id})
+    pmap = {}
+    if partner_ids_set:
+        for op_item in db.query(OfficialPartner).filter(OfficialPartner.id.in_(partner_ids_set)).all():
+            pmap[op_item.id] = f"{op_item.partner_name} ({op_item.partner_code})"
+
+    # Bulk enrich: earliest transaction date per lead
+    txmap = {}
+    if lead_ids_list:
+        txs = db.query(CRMLeadTransaction.lead_id, func.min(CRMLeadTransaction.transaction_date).label('min_date')).filter(
+            CRMLeadTransaction.lead_id.in_(lead_ids_list),
+            CRMLeadTransaction.transaction_date.isnot(None)
+        ).group_by(CRMLeadTransaction.lead_id).all()
+        for t in txs:
+            if t.min_date:
+                txmap[t.lead_id] = t.min_date.date() if hasattr(t.min_date, 'date') else t.min_date
+
+    def _mask(ph):
+        if not ph:
+            return None
+        d = ''.join(c for c in str(ph) if c.isdigit())
+        return (d[:2] + '×' * (len(d) - 4) + d[-2:]) if len(d) >= 5 else ('×' * len(str(ph)))
+
+    enriched = []
+    for l in leads:
+        first_pmt_d = l.first_payment_received_date or txmap.get(l.id)
+        bal_pend = float(l.deal_value_balance or 0)
+        if bal_pend <= 0 and (l.deal_value_total or 0) > 0:
+            bal_pend = float(l.deal_value_total or 0) - float(l.deal_value_received or 0)
+
+        ground_src = pmap.get(l.associated_partner_id) or l.source_ref_name or (f"{partner.partner_name} ({partner.partner_code})" if not is_team else '—')
+
+        enriched.append({
+            'id': l.id,
+            'company_id': l.company_id,
+            'name': l.name or '—',
+            'phone': _mask(l.phone),
+            'phone_raw': l.phone,
+            'created_at': l.created_at.isoformat() if l.created_at else None,
+            'submit_date': l.submit_date.isoformat() if l.submit_date else None,
+            'first_payment_received_date': first_pmt_d.isoformat() if first_pmt_d else None,
+            'installation_date': l.installation_date.isoformat() if l.installation_date else None,
+            'source': l.source or '—',
+            'ground_source': ground_src,
+            'ground_support': unmap.get(l.mnr_handler_id, l.mnr_handler_id) if l.mnr_handler_id else '—',
+            'telecaller_name': unmap.get(l.telecaller_id, l.telecaller_id) if l.telecaller_id else '—',
+            'status': l.status or '—',
+            'solar_pipeline_status': l.solar_pipeline_status,
+            'category_name': cmap.get(l.category_id) if l.category_id else 'Solar',
+            'loan_bank': l.loan_bank or None,
+            'bank_branch': l.bank_branch or None,
+            'brand_name': bmap.get(l.solar_brand_id) if l.solar_brand_id else None,
+            'deal_value_total': float(l.deal_value_total or 0),
+            'deal_value_received': float(l.deal_value_received or 0),
+            'balance_pending': max(0.0, bal_pend),
+            'area': l.area or l.address or '—',
+            'city': l.city or '—',
+            'state': l.state or '—',
+            'pincode': l.pincode or '—',
+            'address': l.address or '—',
+            'latitude': l.latitude or None,
+            'longitude': l.longitude or None,
+            'google_maps_link': l.google_maps_link or None,
+            'solar_pipeline_status_updated_at': l.solar_pipeline_status_updated_at.isoformat() if getattr(l, 'solar_pipeline_status_updated_at', None) else None,
+            'updated_at': l.updated_at.isoformat() if getattr(l, 'updated_at', None) else None,
+            'latest_note': nmap.get(l.id),
+        })
+
+    return {
+        "success": True,
+        "is_team_members": False,
+        "metric": metric,
+        "partner": {
+            "id": partner.id,
+            "name": partner.partner_name,
+            "code": partner.partner_code
+        },
+        "total": total_leads_count,
+        "data": enriched
     }
 
 

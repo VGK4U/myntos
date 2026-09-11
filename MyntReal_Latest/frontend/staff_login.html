@@ -698,8 +698,10 @@
                 let userMessage = 'Unable to complete login. Please try again.';
                 const rawMsg = error && error.message ? String(error.message) : '';
                 
-                // Preserve legitimate application-level authentication messages
-                if (rawMsg && !/pattern|syntaxerror|domexception|object error/i.test(rawMsg)) {
+                // Preserve legitimate application-level authentication messages while normalizing network/abort errors
+                if (error.name === 'AbortError' || /abort/i.test(rawMsg)) {
+                    userMessage = 'Login request timed out. Please try again.';
+                } else if (rawMsg && !/pattern|syntaxerror|domexception|object error/i.test(rawMsg)) {
                     if (/failed to fetch|network error|networkrequestfailed/i.test(rawMsg)) {
                         userMessage = 'Unable to connect to server. Please check your network connection.';
                     } else {
@@ -1045,7 +1047,7 @@
             }
         };
 
-        loadStaffAnnouncements();
+        setTimeout(loadStaffAnnouncements, 200);
     })();
     </script>
     <script src="/public/js/mnr-lightbox.js"></script>

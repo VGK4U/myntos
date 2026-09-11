@@ -32,6 +32,11 @@ def ensure_initialized():
     """
     global _initialization_complete, _initialization_error
     
+    import os
+    if os.getenv("SKIP_MODULE_MIGRATIONS") == "1" or os.getenv("SKIP_LAZY_INIT") == "1":
+        _initialization_complete = True
+        return
+
     # Fast path: Already initialized
     if _initialization_complete:
         if _initialization_error:
@@ -49,17 +54,8 @@ def ensure_initialized():
         try:
             logger.info("[LAZY-INIT] Starting system initialization...")
             
-            # DC PROTOCOL: Schema bootstrap (idempotent)
-            try:
-                from app.core.schema_bootstrap import run_schema_bootstrap
-                logger.info("[LAZY-INIT] Running schema bootstrap...")
-                run_schema_bootstrap()
-                logger.info("[LAZY-INIT] ✅ Schema bootstrap complete")
-            except Exception as e:
-                logger.error(f"[LAZY-INIT] ❌ Schema bootstrap failed: {e}")
-                _initialization_error = e
-                _initialization_complete = True
-                raise
+            # DC PROTOCOL: Runtime initialization only — DDL schema bootstrap is moved to standalone migration scripts.
+            # Schema bootstrap is NOT run during HTTP request handling.
             
             # DC PROTOCOL: Verify/Create critical system checkpoints
             try:

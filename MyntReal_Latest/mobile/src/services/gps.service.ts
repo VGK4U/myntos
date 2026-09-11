@@ -106,10 +106,18 @@ class GpsService {
   private lastBackgroundReason: string = 'app_background';
 
   constructor() {
-    this.setupAppStateListener();
-    this.setupOfflineListener();
-    this.setupSessionExpirationListener();
-    this.setupNativeLocationListener();
+    if (typeof window !== 'undefined') {
+      setTimeout(() => {
+        try {
+          this.setupAppStateListener();
+          this.setupOfflineListener();
+          this.setupSessionExpirationListener();
+          this.setupNativeLocationListener();
+        } catch (err) {
+          console.warn('[DC_GPS] Error during deferred listener setup:', err);
+        }
+      }, 0);
+    }
   }
 
   private async setupNativeLocationListener(): Promise<void> {
@@ -254,25 +262,28 @@ class GpsService {
   }
 
   private setupOfflineListener(): void {
-    offlineQueueService.onStatusChange((status) => {
-      this.isOfflineMode = !status.isOnline;
-      this.notifyStatusChange();
-    });
+    if (offlineQueueService && typeof offlineQueueService.onStatusChange === 'function') {
+      offlineQueueService.onStatusChange((status) => {
+        this.isOfflineMode = !status.isOnline;
+        this.notifyStatusChange();
+      });
+    }
   }
 
   // DC_SESSION_EXPIRY_001: Handle session expiration during journey tracking
   private setupSessionExpirationListener(): void {
-    this.sessionExpiredUnsubscribe = apiService.onSessionExpired((endpoint) => {
-      console.warn(`[DC_GPS_SESSION] Session expired during: ${endpoint}`);
-      this.isSessionExpired = true;
-      this.notifyStatusChange();
-      
-      // Don't stop journey tracking - queue points locally instead
-      // User will be prompted to re-authenticate
-      if (this.activeJourneyId) {
-        if (GPS_DEBUG()) console.log('[DC_GPS_SESSION] Active journey detected - continuing with offline queue');
-      }
-    });
+    if (apiService && typeof apiService.onSessionExpired === 'function') {
+      this.sessionExpiredUnsubscribe = apiService.onSessionExpired((endpoint) => {
+        console.warn(`[DC_GPS_SESSION] Session expired during: ${endpoint}`);
+        this.isSessionExpired = true;
+        this.notifyStatusChange();
+        
+        // Don't stop journey tracking - queue points locally instead
+        if (this.activeJourneyId && GPS_DEBUG()) {
+          console.log('[DC_GPS_SESSION] Active journey detected - continuing with offline queue');
+        }
+      });
+    }
   }
 
   resetSessionExpiredState(): void {

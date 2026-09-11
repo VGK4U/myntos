@@ -48,13 +48,31 @@ class AuthLifecycle {
 
     this.options = { ...DEFAULT_OPTIONS, ...options };
 
-    this.appStateListenerHandle = await App.addListener('appStateChange', (state: AppState) => {
-      if (state.isActive) {
-        this.handleAppResume();
-      }
-    });
+    const Capacitor = (window as any).Capacitor;
+    const isNative = Capacitor && typeof Capacitor.isNativePlatform === 'function' && Capacitor.isNativePlatform();
 
-    await this.loadTokenExpiry();
+    if (isNative) {
+      try {
+        this.appStateListenerHandle = await App.addListener('appStateChange', (state: AppState) => {
+          if (state.isActive) {
+            this.handleAppResume();
+          }
+        });
+      } catch (e) {
+        console.warn('[DC_AUTH_LIFECYCLE] App.addListener failed:', e);
+      }
+      await this.loadTokenExpiry();
+    } else if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(`${this.options.tokenKey}_expires_at`);
+      if (stored) {
+        this.tokenExpiresAt = parseInt(stored, 10);
+      }
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          this.handleAppResume();
+        }
+      });
+    }
 
     this.initialized = true;
     console.log('[DC_AUTH_LIFECYCLE] Initialized');

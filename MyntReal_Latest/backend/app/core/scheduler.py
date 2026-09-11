@@ -4561,12 +4561,10 @@ def init_scheduler():
     from apscheduler.executors.pool import ThreadPoolExecutor
     from apscheduler.jobstores.memory import MemoryJobStore
 
-    # DC Protocol (May 2026): Reduced from 20 → 8 concurrent threads.
-    # Each background job opens a DB connection. 20 threads could saturate the
-    # Neon pool (15 max) and starve incoming API requests. 8 threads leaves
-    # enough pool slots for simultaneous user traffic.
+    # DC Protocol (Sep 2026): Bound to 4 concurrent background threads to stay safely
+    # within the RDS 79-connection budget and avoid connection starvation.
     executors = {
-        'default': ThreadPoolExecutor(8),   # 8 concurrent background jobs (was 20)
+        'default': ThreadPoolExecutor(4),   # 4 concurrent background jobs
     }
 
     # DC Protocol Mar 2026: MemoryJobStore replaces SQLAlchemyJobStore

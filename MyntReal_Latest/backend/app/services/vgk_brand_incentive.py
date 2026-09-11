@@ -30,10 +30,10 @@ from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
-CIBIL_MIN_SCORE = 650
+CIBIL_MIN_SCORE = 700
 
 ELIGIBLE_STAGES = frozenset({
-    'application_submitted', 'pending_with_bank', 'documents_issue',
+    'pending_with_bank', 'with_bank',
     'load_extension', 'electricity_bill_change', 'installation_pending',
     'net_meter_pending', 'balance_pending', 'balance_received',
     'subsidy_pending', 'completed',

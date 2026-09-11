@@ -60,6 +60,7 @@ def run_vgk_member_daily_morning_statement_dispatch(db: Session, trigger_type: s
         FROM official_partners p
         JOIN crm_leads c ON (c.associated_partner_id = p.id OR c.primary_owner_id = p.id OR c.source_ref_id = CAST(p.id AS VARCHAR))
         WHERE p.is_active = TRUE
+          AND (p.is_blocked IS FALSE OR p.is_blocked IS NULL)
         GROUP BY p.id, p.partner_name, p.partner_code, p.phone, p.whatsapp_number
         HAVING COUNT(c.id) >= 1
         ORDER BY p.id ASC

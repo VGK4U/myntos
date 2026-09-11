@@ -43,7 +43,12 @@ from app.models.staff_attendance_sheet import StaffAttendanceSheet
 from app.models.crm import CRMLead, CRMLeadTransaction
 from app.models.ticket import ServiceTicket
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
-from app.utils.staff_hierarchy import HIDDEN_FROM_TEAM_CODES
+from app.utils.staff_hierarchy import (
+    HIDDEN_FROM_TEAM_CODES,
+    get_team_member_ids,
+    get_downline_employee_ids,
+    get_employee_eligibility_filter
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -107,48 +112,6 @@ def get_indian_time():
     """Get current time in Indian timezone (IST)"""
     return datetime.now(IST).replace(tzinfo=None)
 
-
-def get_downline_employee_ids(db: Session, manager_id: int, recursive: bool = True) -> List[int]:
-    """
-    Get all employee IDs reporting to a manager
-    DC Protocol: Uses reporting_manager_id for hierarchy
-    
-    Args:
-        db: Database session
-        manager_id: Manager's employee ID
-        recursive: If True, get full tree (all levels). If False, only direct reports.
-    
-    Returns:
-        List of employee IDs in downline
-    """
-    if not recursive:
-        direct_reports = db.query(StaffEmployee.id).filter(
-            StaffEmployee.reporting_manager_id == manager_id,
-            StaffEmployee.status == 'active'
-        ).all()
-        return [r.id for r in direct_reports]
-    
-    all_downline = []
-    queue = [manager_id]
-    visited = set()
-    
-    while queue:
-        current_id = queue.pop(0)
-        if current_id in visited:
-            continue
-        visited.add(current_id)
-        
-        direct_reports = db.query(StaffEmployee.id).filter(
-            StaffEmployee.reporting_manager_id == current_id,
-            StaffEmployee.status == 'active'
-        ).all()
-        
-        for report in direct_reports:
-            if report.id not in visited:
-                all_downline.append(report.id)
-                queue.append(report.id)
-    
-    return all_downline
 
 
 def is_manager_or_leadership(employee: StaffEmployee) -> bool:
@@ -250,7 +213,7 @@ def get_progress_summary(
                         StaffEmployee.id == employee_id
                     ).first()
                 else:
-                    downline_ids = get_downline_employee_ids(db, current_user.id, recursive=True)
+                    downline_ids = get_downline_employee_ids(db, current_user.id, recursive=True, as_of_date=target_date)
                     if employee_id not in downline_ids:
                         raise HTTPException(status_code=403, detail="Employee not in your downline")
                     target_employee = db.query(StaffEmployee).options(
@@ -279,12 +242,12 @@ def get_progress_summary(
         # detect departments of their direct reports so the dept performance section shows.
         also_manages_depts: list = []
         if dept_type == 'other' and is_manager_or_leadership(current_user):
-            _report_ids = get_downline_employee_ids(db, target_employee_id, recursive=False)
+            _report_ids = get_downline_employee_ids(db, target_employee_id, recursive=False, as_of_date=target_date)
             if _report_ids:
                 from app.models.staff import StaffDepartment
                 _rep_depts = db.query(StaffEmployee.department_id).filter(
                     StaffEmployee.id.in_(_report_ids),
-                    StaffEmployee.status == 'active'
+                    get_employee_eligibility_filter(StaffEmployee, as_of_date=target_date)
                 ).all()
                 _rep_dept_ids = [r[0] for r in _rep_depts if r[0]]
                 if _rep_dept_ids:
@@ -326,13 +289,22 @@ def get_progress_summary(
                     StaffCallLog.staff_id == target_employee_id,
                     StaffCallLog.call_date == call_date_str
                 ).all()
+                # DC_PERF_OFFICIAL_FILTER: Official calls (softphone, dialer, or matched CRM leads)
+                _official_day_logs = [
+                    l for l in _day_logs
+                    if (
+                        l.matched_lead_id is not None
+                        or (l.source and l.source.lower() in ('softphone', 'plivo', 'voip', 'dialer', 'autodialer'))
+                        or (l.device_call_id and (l.device_call_id.startswith('vcs_') or l.device_call_id.startswith('dialer_')))
+                    )
+                ]
                 def _tt_fmt(s):
                     s = int(s or 0)
                     h, m = s // 3600, (s % 3600) // 60
                     return f"{h}h {m}m"
-                talk_secs = sum(l.duration_seconds or 0 for l in _day_logs)
-                leads_talk_secs = sum(l.duration_seconds or 0 for l in _day_logs if l.matched_lead_id)
-                other_talk_secs = talk_secs - leads_talk_secs
+                talk_secs = sum(l.duration_seconds or 0 for l in _official_day_logs)
+                leads_talk_secs = sum(l.duration_seconds or 0 for l in _official_day_logs if l.matched_lead_id)
+                other_talk_secs = max(0, talk_secs - leads_talk_secs)
                 talk_h = talk_secs // 3600
                 talk_m = (talk_secs % 3600) // 60
                 # DC_OVERDUE_FIX: Use full OR-based assignment filter (matches Auto Dialer logic).
@@ -646,13 +618,22 @@ def get_progress_summary(
         
         downline_options = None
         if is_manager_or_leadership(current_user):
-            # DC Protocol: VGK4U Supreme gets ALL active employees including self; others get downline
+            # DC Protocol: VGK4U Supreme gets ALL eligible employees including self; others get downline
+            _opt_asof = target_date if not is_range_query else None
+            _opt_start = query_start if is_range_query else None
+            _opt_end = query_end if is_range_query else None
             if has_unrestricted_access(current_user):
                 _rc = (current_user.role.role_code if current_user.role else '').lower()
                 _is_vgk = _rc in ('vgk4u', 'vgk4u_supreme')
-                downline_options = _get_all_employees_options(db, current_user.id, current_user.base_company_id, is_vgk_supreme=_is_vgk)
+                downline_options = _get_all_employees_options(
+                    db, current_user.id, current_user.base_company_id, is_vgk_supreme=_is_vgk,
+                    as_of_date=_opt_asof, start_date=_opt_start, end_date=_opt_end
+                )
             else:
-                downline_options = _get_downline_options(db, current_user.id)
+                downline_options = _get_downline_options(
+                    db, current_user.id,
+                    as_of_date=_opt_asof, start_date=_opt_start, end_date=_opt_end
+                )
         
         logger.info(f"[DC-PROGRESS] Building response")
 
@@ -668,7 +649,13 @@ def get_progress_summary(
             _tp_source_opts = [o for o in downline_options if o.get('id') != current_user.id]
         elif target_employee_id != current_user.id and has_unrestricted_access(current_user):
             # Admin viewing another employee's page — show that employee's team if they have a downline
-            _target_downline = _get_downline_options(db, target_employee_id)
+            _opt_asof = target_date if not is_range_query else None
+            _opt_start = query_start if is_range_query else None
+            _opt_end = query_end if is_range_query else None
+            _target_downline = _get_downline_options(
+                db, target_employee_id,
+                as_of_date=_opt_asof, start_date=_opt_start, end_date=_opt_end
+            )
             if _target_downline:
                 _tp_ids = [o['id'] for o in _target_downline]
                 _tp_source_opts = _target_downline
@@ -905,34 +892,26 @@ def get_team_overview(
 
         hidden_codes = HIDDEN_FROM_TEAM_CODES or []
 
-        if has_unrestricted_access(current_user):
-            q = db.query(StaffEmployee).options(
-                joinedload(StaffEmployee.department),
-                joinedload(StaffEmployee.role)
-            ).filter(
-                StaffEmployee.status == 'active',
-                StaffEmployee.id != current_user.id
-            )
-            if hidden_codes:
-                q = q.filter(~StaffEmployee.emp_code.in_(hidden_codes))
-            if current_user.base_company_id:
-                q = q.filter(StaffEmployee.base_company_id == current_user.base_company_id)
-            downline_employees = q.order_by(StaffEmployee.full_name).limit(200).all()
-        else:
-            downline_ids = get_downline_employee_ids(db, current_user.id, recursive=True)
-            if not downline_ids:
-                return {"success": True, "data": {"members": [], "summary": {}}}
-            q2 = db.query(StaffEmployee).options(
-                joinedload(StaffEmployee.department),
-                joinedload(StaffEmployee.role)
-            ).filter(
-                StaffEmployee.id.in_(downline_ids)
-            )
-            if hidden_codes:
-                q2 = q2.filter(~StaffEmployee.emp_code.in_(hidden_codes))
-            if current_user.base_company_id:
-                q2 = q2.filter(StaffEmployee.base_company_id == current_user.base_company_id)
-            downline_employees = q2.order_by(StaffEmployee.full_name).all()
+        _asof_d = target_date if not (date_from and date_to) else None
+        _start_d = date_from if (date_from and date_to) else None
+        _end_d = date_to if (date_from and date_to) else None
+
+        downline_ids = get_team_member_ids(
+            current_user, db, StaffEmployee,
+            as_of_date=_asof_d, start_date=_start_d, end_date=_end_d
+        )
+        if not downline_ids:
+            return {"success": True, "data": {"members": [], "summary": {}}}
+
+        q = db.query(StaffEmployee).options(
+            joinedload(StaffEmployee.department),
+            joinedload(StaffEmployee.role)
+        ).filter(
+            StaffEmployee.id.in_(downline_ids)
+        )
+        if current_user.base_company_id and not has_unrestricted_access(current_user):
+            q = q.filter(StaffEmployee.base_company_id == current_user.base_company_id)
+        downline_employees = q.order_by(StaffEmployee.full_name).all()
 
         emp_ids = [e.id for e in downline_employees]
         if not emp_ids:
@@ -1234,14 +1213,26 @@ def _safe_date(dt):
     return dt.date() if hasattr(dt, 'date') and callable(getattr(dt, 'date', None)) else dt
 
 
-def _get_downline_options(db: Session, manager_id: int) -> Optional[List[dict]]:
-    """Get downline employee options for team filter dropdown (DC Protocol)"""
-    downline_ids = get_downline_employee_ids(db, manager_id, recursive=True)
+def _get_downline_options(
+    db: Session,
+    manager_id: int,
+    as_of_date: Optional[date] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None
+) -> Optional[List[dict]]:
+    """Get downline employee options for team filter dropdown (DC Protocol) with effective-date eligibility"""
+    downline_ids = get_downline_employee_ids(
+        db, manager_id, recursive=True,
+        as_of_date=as_of_date, start_date=start_date, end_date=end_date
+    )
     if not downline_ids:
         return None
     
     hidden_codes = HIDDEN_FROM_TEAM_CODES or []
-    q = db.query(StaffEmployee).filter(
+    q = db.query(StaffEmployee).options(
+        joinedload(StaffEmployee.role),
+        joinedload(StaffEmployee.department)
+    ).filter(
         StaffEmployee.id.in_(downline_ids)
     )
     if hidden_codes:
@@ -1260,18 +1251,30 @@ def _get_downline_options(db: Session, manager_id: int) -> Optional[List[dict]]:
     ]
 
 
-def _get_all_employees_options(db: Session, current_user_id: int, company_id: Optional[int], is_vgk_supreme: bool = False) -> Optional[List[dict]]:
+def _get_all_employees_options(
+    db: Session,
+    current_user_id: int,
+    company_id: Optional[int],
+    is_vgk_supreme: bool = False,
+    as_of_date: Optional[date] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None
+) -> Optional[List[dict]]:
     """
-    DC Protocol: Get ALL active employees for VGK4U Supreme and Key Leadership
-    - VGK4U Supreme: sees ALL employees across ALL companies including themselves
-    - Key Leadership: sees ALL employees across ALL companies (excludes HIDDEN_FROM_TEAM_CODES)
+    DC Protocol: Get ALL eligible employees for VGK4U Supreme and Key Leadership
+    with effective-date eligibility.
+    - VGK4U Supreme: sees ALL eligible employees across ALL companies including themselves
+    - Key Leadership: sees ALL eligible employees across ALL companies (excludes HIDDEN_FROM_TEAM_CODES)
     - HIDDEN_FROM_TEAM_CODES (MR10001) is only hidden from non-VGK-Supreme users
     """
+    eligibility_cond = get_employee_eligibility_filter(
+        StaffEmployee, as_of_date=as_of_date, start_date=start_date, end_date=end_date
+    )
     query = db.query(StaffEmployee).options(
         joinedload(StaffEmployee.department),
         joinedload(StaffEmployee.role)
     ).filter(
-        StaffEmployee.status == 'active',
+        eligibility_cond
     )
 
     if not is_vgk_supreme:
@@ -2503,7 +2506,12 @@ def get_calls_range_summary(db: Session, employee_id: int, date_from: date, date
         func.sum(StaffCallLog.duration_seconds).label('total_seconds')
     ).filter(
         StaffCallLog.staff_id == employee_id,
-        StaffCallLog.call_date.between(str(date_from), str(date_to))
+        StaffCallLog.call_date.between(str(date_from), str(date_to)),
+        or_(
+            StaffCallLog.matched_lead_id.isnot(None),
+            StaffCallLog.source.in_(['softphone', 'plivo', 'voip', 'dialer', 'autodialer']),
+            StaffCallLog.device_call_id.like('vcs_%')
+        )
     ).group_by(StaffCallLog.call_date).all()
     daily_map = {str(r.call_date): {'total_calls': int(r.total_calls or 0), 'total_seconds': int(r.total_seconds or 0)} for r in rows}
     total_calls = sum(v['total_calls'] for v in daily_map.values())
@@ -2726,6 +2734,17 @@ def get_calls_summary(db: Session, employee_id: int, date_from: date, date_to: d
         StaffCallLog.call_date <= date_to_str
     ).all()
 
+    # DC_PERF_OFFICIAL_FILTER: Filter for official performance calls (dialed from login or matched CRM lead)
+    # Excludes personal/unmatched carrier SIM device calls from talk time and dial metrics
+    logs = [
+        l for l in logs
+        if (
+            l.matched_lead_id is not None
+            or (l.source and l.source.lower() in ('softphone', 'plivo', 'voip', 'dialer', 'autodialer'))
+            or (l.device_call_id and (l.device_call_id.startswith('vcs_') or l.device_call_id.startswith('dialer_')))
+        )
+    ]
+
     total_calls = len(logs)
     outgoing = sum(1 for l in logs if l.call_type == 'OUTGOING')
     incoming = sum(1 for l in logs if l.call_type == 'INCOMING')
@@ -2777,11 +2796,12 @@ def get_calls_summary(db: Session, employee_id: int, date_from: date, date_to: d
 
 @router.get("/team-members", summary="Get downline team members for filter dropdown")
 async def get_team_members(
+    target_date: Optional[str] = Query(None, description="Optional date for as-of eligibility (YYYY-MM-DD)"),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
     """
-    DC Protocol: Get list of downline team members for managers
+    DC Protocol: Get list of downline team members for managers with effective-date eligibility
     Used to populate the employee filter dropdown
     """
     if not is_manager_or_leadership(current_user):
@@ -2791,20 +2811,31 @@ async def get_team_members(
             "message": "No team members (not a manager)"
         }
     
-    downline_ids = get_downline_employee_ids(db, current_user.id, recursive=True)
+    as_of = None
+    if target_date:
+        try:
+            as_of = datetime.strptime(target_date, "%Y-%m-%d").date()
+        except Exception:
+            as_of = get_indian_date()
+    else:
+        as_of = get_indian_date()
+
+    team_member_ids = get_team_member_ids(
+        current_user, db, StaffEmployee, as_of_date=as_of
+    )
     
-    if not downline_ids:
+    if not team_member_ids:
         return {
             "success": True,
             "data": [],
             "message": "No direct reports found"
         }
-    
-    hidden_codes = HIDDEN_FROM_TEAM_CODES or []
 
-    employees = db.query(StaffEmployee).filter(
-        StaffEmployee.id.in_(downline_ids),
-        StaffEmployee.status == 'active'
+    employees = db.query(StaffEmployee).options(
+        joinedload(StaffEmployee.role),
+        joinedload(StaffEmployee.department)
+    ).filter(
+        StaffEmployee.id.in_(team_member_ids)
     ).order_by(StaffEmployee.full_name).all()
     
     return {
@@ -2818,7 +2849,6 @@ async def get_team_members(
                 "department": emp.department.name if emp.department else None
             }
             for emp in employees
-            if emp.emp_code not in hidden_codes
         ]
     }
 
@@ -2850,25 +2880,28 @@ def get_team_daily_compliance(
     if (date_to - date_from).days > 90:
         raise HTTPException(status_code=400, detail="Date range cannot exceed 90 days")
 
-    # Get all active downline employees (or all org for VGK Supreme)
+    # Get all eligible downline employees (or all org for VGK Supreme) with date range eligibility
+    eligibility_cond = get_employee_eligibility_filter(StaffEmployee, start_date=date_from, end_date=date_to)
     if has_unrestricted_access(current_user):
         hidden_codes = HIDDEN_FROM_TEAM_CODES or []
         all_emp_q = db.query(StaffEmployee).options(
             joinedload(StaffEmployee.role),
             joinedload(StaffEmployee.department),
-        ).filter(StaffEmployee.status == 'active')
+        ).filter(eligibility_cond)
         if hidden_codes:
             all_emp_q = all_emp_q.filter(~StaffEmployee.emp_code.in_(hidden_codes))
         all_employees = all_emp_q.all()
     else:
-        downline_ids = get_downline_employee_ids(db, current_user.id, recursive=True)
+        downline_ids = get_downline_employee_ids(
+            db, current_user.id, recursive=True, start_date=date_from, end_date=date_to
+        )
         hidden_codes = HIDDEN_FROM_TEAM_CODES or []
         all_employees = db.query(StaffEmployee).options(
             joinedload(StaffEmployee.role),
             joinedload(StaffEmployee.department),
         ).filter(
             StaffEmployee.id.in_(downline_ids),
-            StaffEmployee.status == 'active',
+            eligibility_cond,
         ).all()
         if hidden_codes:
             all_employees = [e for e in all_employees if e.emp_code not in hidden_codes]
@@ -3071,9 +3104,10 @@ def get_team_compliance(
     ftd = target_date or today
     mtd_start = ftd.replace(day=1)
 
-    # All active employees with a team_tag
+    # All eligible employees in date range with a team_tag
+    eligibility_cond = get_employee_eligibility_filter(StaffEmployee, start_date=mtd_start, end_date=ftd)
     all_emps = db.query(StaffEmployee).filter(
-        StaffEmployee.status == 'active',
+        eligibility_cond,
         StaffEmployee.team_tag.isnot(None)
     ).all()
 
@@ -3428,11 +3462,12 @@ def get_employee_ranking(
         # Layer 2: shared file cache
         scores_map = _read_ranking_file_cache(cache_key)
         if scores_map is None:
-            # Cache miss on both layers — compute all active employees
+            # Cache miss on both layers — compute all eligible employees in period
+            eligibility_cond = get_employee_eligibility_filter(StaffEmployee, start_date=date_from, end_date=date_to)
             all_emps = db.query(StaffEmployee).options(
                 joinedload(StaffEmployee.department)
             ).filter(
-                StaffEmployee.status == 'active',
+                eligibility_cond,
                 StaffEmployee.base_company_id == target_emp.base_company_id,
                 StaffEmployee.emp_code.isnot(None),
             ).all()
@@ -3529,11 +3564,12 @@ def get_executive_dashboard(
     from app.models.ticket import ServiceTicket
     from app.models.staff_accounts import AssociatedCompany
 
+    eligibility_cond = get_employee_eligibility_filter(StaffEmployee, start_date=date_from, end_date=date_to)
     emp_q = (
         db.query(StaffEmployee)
         .options(joinedload(StaffEmployee.department), joinedload(StaffEmployee.role))
         .filter(
-            StaffEmployee.status == 'active',
+            eligibility_cond,
             StaffEmployee.emp_code.isnot(None),
         )
     )
@@ -3552,7 +3588,9 @@ def get_executive_dashboard(
     # VGK4U/VGK4U Supreme are always unrestricted — this param is ignored for them
     _downline_ids_for_filter: Optional[List[int]] = None
     if my_team_only and not _viewer_is_unrestricted:
-        _downline_ids_for_filter = get_downline_employee_ids(db, current_user.id, recursive=True)
+        _downline_ids_for_filter = get_downline_employee_ids(
+            db, current_user.id, recursive=True, start_date=date_from, end_date=date_to
+        )
         if _downline_ids_for_filter:
             emp_q = emp_q.filter(StaffEmployee.id.in_(_downline_ids_for_filter))
         else:
@@ -3720,6 +3758,11 @@ def get_executive_dashboard(
     ).filter(
         StaffCallLog.staff_id.in_(all_ids),
         StaffCallLog.call_date.between(str(date_from), str(date_to)),
+        or_(
+            StaffCallLog.matched_lead_id.isnot(None),
+            StaffCallLog.source.in_(['softphone', 'plivo', 'voip', 'dialer', 'autodialer']),
+            StaffCallLog.device_call_id.like('vcs_%')
+        )
     ).group_by(StaffCallLog.staff_id).all()
     call_map = {r.staff_id: int(r.total_seconds or 0) for r in call_rows}
 

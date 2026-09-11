@@ -49,25 +49,18 @@ def _is_key_leadership(employee: StaffEmployee) -> bool:
     return rc in ok_codes or 'vgk4u' in rc or rn in ok_names
 
 
-def _get_downline_ids(db: Session, manager_id: int) -> List[int]:
-    """BFS downline traversal — DC Protocol: no recursion, explicit queue."""
-    all_ids: List[int] = []
-    queue = [manager_id]
-    visited: set = set()
-    while queue:
-        cur = queue.pop(0)
-        if cur in visited:
-            continue
-        visited.add(cur)
-        rows = db.query(StaffEmployee.id).filter(
-            StaffEmployee.reporting_manager_id == cur,
-            StaffEmployee.status == 'active'
-        ).all()
-        for r in rows:
-            if r.id not in visited:
-                all_ids.append(r.id)
-                queue.append(r.id)
-    return all_ids
+def _get_downline_ids(
+    db: Session,
+    manager_id: int,
+    from_date: Optional[date] = None,
+    to_date: Optional[date] = None
+) -> List[int]:
+    """DC Protocol: Authoritative downline retrieval with effective-date eligibility."""
+    from app.utils.staff_hierarchy import get_downline_employee_ids
+    return list(get_downline_employee_ids(
+        db, manager_id, recursive=True,
+        start_date=from_date, end_date=to_date
+    ))
 
 
 @router.get("/overview", summary="Staff Operations Snapshot — all metrics per employee")
@@ -91,7 +84,12 @@ def get_ops_snapshot(
     rc = (current_user.role.role_code if current_user.role else '').lower()
     is_supreme = 'vgk4u' in rc or rc in {'vgk4u_supreme', 'key_leadership', 'ea', 'executive_admin'}
 
+    from app.utils.staff_hierarchy import get_employee_eligibility_filter
+
     if is_supreme:
+        eligibility_cond = get_employee_eligibility_filter(
+            StaffEmployee, start_date=from_date, end_date=to_date
+        ) if is_range else get_employee_eligibility_filter(StaffEmployee)
         emp_rows = db.query(
             StaffEmployee.id,
             StaffEmployee.emp_code,
@@ -99,9 +97,13 @@ def get_ops_snapshot(
             StaffEmployee.department_id,
             StaffEmployee.reporting_manager_id,
             StaffEmployee.base_company_id,
-        ).filter(StaffEmployee.status == 'active').all()
+        ).filter(eligibility_cond).all()
     else:
-        dl_ids = _get_downline_ids(db, current_user.id)
+        dl_ids = _get_downline_ids(
+            db, current_user.id,
+            from_date=from_date if is_range else None,
+            to_date=to_date if is_range else None
+        )
         if not dl_ids:
             return []
         emp_rows = db.query(
@@ -112,8 +114,7 @@ def get_ops_snapshot(
             StaffEmployee.reporting_manager_id,
             StaffEmployee.base_company_id,
         ).filter(
-            StaffEmployee.id.in_(dl_ids),
-            StaffEmployee.status == 'active'
+            StaffEmployee.id.in_(dl_ids)
         ).all()
 
     if not emp_rows:
@@ -368,7 +369,14 @@ def get_ops_snapshot(
     call_map = {}
     try:
         from app.models.call_tracking import StaffCallLog
-        call_filters = [StaffCallLog.staff_id.in_(emp_ids)]
+        call_filters = [
+            StaffCallLog.staff_id.in_(emp_ids),
+            or_(
+                StaffCallLog.matched_lead_id.isnot(None),
+                StaffCallLog.source.in_(['softphone', 'plivo', 'voip', 'dialer', 'autodialer']),
+                StaffCallLog.device_call_id.like('vcs_%')
+            )
+        ]
         if is_range:
             call_filters += [
                 StaffCallLog.call_date >= from_date.isoformat(),
@@ -899,7 +907,14 @@ def _ops_metrics_for_ids(db: Session, emp_ids: List[int], is_range: bool,
     call_map = {}
     try:
         from app.models.call_tracking import StaffCallLog
-        clf = [StaffCallLog.staff_id.in_(emp_ids)]
+        clf = [
+            StaffCallLog.staff_id.in_(emp_ids),
+            or_(
+                StaffCallLog.matched_lead_id.isnot(None),
+                StaffCallLog.source.in_(['softphone', 'plivo', 'voip', 'dialer', 'autodialer']),
+                StaffCallLog.device_call_id.like('vcs_%')
+            )
+        ]
         if is_range:
             clf += [StaffCallLog.call_date >= from_date.isoformat(), StaffCallLog.call_date <= to_date.isoformat()]
         cl_rows = db.query(
@@ -1256,8 +1271,13 @@ def get_my_team_summary(
     self_metrics_map = _ops_metrics_for_ids(db, [target_id], is_range, from_date, to_date, today)
     self_metrics = self_metrics_map.get(target_id, {})
 
-    # Full downline team (excluding self)
-    team_ids = _get_downline_ids(db, target_id)
+    # Full downline team (excluding self) with authoritative effective-date eligibility
+    from app.utils.staff_hierarchy import get_team_member_ids
+    team_ids = get_team_member_ids(
+        target_emp, db, StaffEmployee,
+        start_date=from_date if is_range else None,
+        end_date=to_date if is_range else None
+    )
     team_rows_map: dict = {}
     team_members_info: List[dict] = []
     if team_ids:

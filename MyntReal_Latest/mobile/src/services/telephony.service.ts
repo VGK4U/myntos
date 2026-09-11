@@ -1,13 +1,16 @@
 /**
- * Authoritative Telephony Service & Call Session Engine — MyntOS Mobile
+ * Authoritative Telephony Service & Canonical Call Session Engine — MyntOS Mobile
  * Unified Plivo WebRTC client, session polling, active call state machine, and audio controls.
- * Reusable by both SoftphoneModal (in-place) and SoftphonePage (standalone).
+ * Implements the Canonical Telephony Audio Architecture with low-level Platform Audio Adapter.
+ * Reusable across SoftphonePage, SoftphoneModal, and AutoDialerPage.
  */
 
 import { apiService } from './api.service';
+import { platformAudioAdapter, IPlatformAudioAdapter } from './platform-audio.adapter';
 
 export type CallState = 'idle' | 'initializing' | 'connecting' | 'ringing' | 'connected' | 'ended' | 'failed';
 export type RegistrationState = 'UNINITIALIZED' | 'CONNECTING' | 'REGISTERED' | 'REGISTRATION_FAILED';
+export type RecordingState = 'NONE' | 'PROCESSING' | 'AVAILABLE' | 'FAILED';
 
 export interface TelephonyCallSession {
   sessionId: string | null;
@@ -15,6 +18,8 @@ export interface TelephonyCallSession {
   contactName: string;
   leadId: number | string | null;
   state: CallState;
+  recordingState: RecordingState;
+  recordingUrl: string | null;
   durationSeconds: number;
   isMuted: boolean;
   isSpeaker: boolean;
@@ -34,6 +39,12 @@ class TelephonyService {
   private registrationState: RegistrationState = 'UNINITIALIZED';
   private registrationPromise: Promise<boolean> | null = null;
   private localAudioStream: MediaStream | null = null;
+  private audioAdapter: IPlatformAudioAdapter = platformAudioAdapter;
+
+  // Mic Boost & Audio Enhancement State
+  private boostedMicTrack: MediaStreamTrack | null = null;
+  private micBoostCtx: AudioContext | null = null;
+  private isMicBoostApplied: boolean = false;
 
   // Active Session State
   private session: TelephonyCallSession = {
@@ -42,6 +53,8 @@ class TelephonyService {
     contactName: '',
     leadId: null,
     state: 'idle',
+    recordingState: 'NONE',
+    recordingUrl: null,
     durationSeconds: 0,
     isMuted: false,
     isSpeaker: false,
@@ -64,6 +77,11 @@ class TelephonyService {
         document.addEventListener('DOMContentLoaded', () => this.prewarm());
       }
     }
+  }
+
+  public isTerminalState(state?: CallState): boolean {
+    const s = state || this.session.state;
+    return s === 'ended' || s === 'failed';
   }
 
   public subscribe(listener: TelephonyStateListener): () => void {
@@ -98,22 +116,15 @@ class TelephonyService {
   }
 
   private async prewarm(): Promise<void> {
-    this.ensureAudioElement();
+    this.audioAdapter.initializeAudio();
   }
 
-  private ensureAudioElement(): void {
-    if (typeof document === 'undefined') return;
-    let audioEl = document.getElementById('plivoRemoteAudio') as HTMLAudioElement;
-    if (!audioEl) {
-      audioEl = document.createElement('audio');
-      audioEl.id = 'plivoRemoteAudio';
-      audioEl.autoplay = true;
-      audioEl.setAttribute('playsinline', 'true');
-      audioEl.style.display = 'none';
-      document.body.appendChild(audioEl);
-    }
-    audioEl.volume = 1.0;
-    audioEl.muted = false;
+  /**
+   * TRUE USER-GESTURE AUDIO UNLOCK (SYNCHRONOUS ENTRY POINT)
+   * Must be called in the direct user click/touch handler BEFORE any await.
+   */
+  public prepareAudioOnUserGesture(): boolean {
+    return this.audioAdapter.unlockAudio();
   }
 
   private registrationResolve: ((val: boolean) => void) | null = null;
@@ -145,7 +156,7 @@ class TelephonyService {
       }, 12000);
 
       try {
-        this.ensureAudioElement();
+        this.audioAdapter.initializeAudio();
 
         const isSecureOrLocal =
           typeof window !== 'undefined' &&
@@ -169,14 +180,14 @@ class TelephonyService {
           return;
         }
 
-        // Pre-warm local microphone tracks to initialize hardware AEC and verify permissions
+        // Pre-warm local microphone tracks with hardware AEC
         if (hasMedia) {
           try {
-            const testStream = await navigator.mediaDevices.getUserMedia({
-              audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-            });
-            testStream.getTracks().forEach((t) => t.stop());
-            console.log('[TelephonyService] Microphone AEC initialized and ready');
+            const testStream = await this.audioAdapter.startMicrophone();
+            if (testStream) {
+              testStream.getTracks().forEach((t) => t.stop());
+              console.log('[TelephonyService] Microphone AEC initialized and ready.');
+            }
           } catch (micErr) {
             console.warn('[TelephonyService] Mic pre-warm notice:', micErr);
           }
@@ -223,6 +234,7 @@ class TelephonyService {
               const sdk = new PlivoConstructor({
                 allowMultipleIncomingCalls: true,
                 enableDscp: true,
+                enableNoiseReduction: true,
                 audioConstraints: audioConstraints,
                 audioElementOption: {
                   remoteAudioId: 'plivoRemoteAudio'
@@ -231,11 +243,17 @@ class TelephonyService {
               this.plivoClient = sdk.client || sdk;
             } else if (PlivoConstructor.Client) {
               this.plivoClient = new PlivoConstructor.Client({
+                enableNoiseReduction: true,
                 audioConstraints: audioConstraints
               });
             }
 
             if (this.plivoClient) {
+              // Attach canonical remote audio element to Plivo WebRTC client
+              const audioEl = this.audioAdapter.ensureRemoteAudioSink();
+              if (audioEl && typeof this.plivoClient.setAudioElement === 'function') {
+                this.plivoClient.setAudioElement(audioEl);
+              }
               this.bindClientEvents();
             }
           }
@@ -336,6 +354,8 @@ class TelephonyService {
         contactName: leadName,
         leadId: extraHeaders?.['X-PH-Lead-ID'] || null,
         state: 'ringing',
+        recordingState: 'NONE',
+        recordingUrl: null,
         durationSeconds: 0,
         isMuted: false,
         isSpeaker: false,
@@ -354,35 +374,32 @@ class TelephonyService {
       this.handleCallEnd('Call missed / canceled');
     });
 
-    this.plivoClient.on('onCallAnswered', (callInfo: any) => {
-      console.log('[TelephonyService] Call connected / answered:', callInfo);
-      this.session.state = 'connected';
-      this.session.startedAt = Date.now();
-      const remoteAudio = document.getElementById('plivoRemoteAudio') as HTMLAudioElement;
-      if (remoteAudio) {
-        remoteAudio.volume = 1.0;
-        remoteAudio.muted = false;
-        if (typeof remoteAudio.play === 'function') {
-          remoteAudio.play().catch(() => {});
-        }
-      }
-      this.applyAudioRouting(this.session.isSpeaker);
-      this.startTimer();
-      this.startHeartbeat();
+    this.plivoClient.on('onCallRinging', (callInfo: any) => {
+      console.log('[TelephonyService] Call ringing on destination device:', callInfo);
+      if (this.isTerminalState() || this.session.state === 'connected') return;
+      this.session.state = 'ringing';
+      this.audioAdapter.startRingback();
       this.notify();
     });
 
-    this.plivoClient.on('onMediaConnected', () => {
-      console.log('[TelephonyService] Media stream established');
-      const remoteAudio = document.getElementById('plivoRemoteAudio') as HTMLAudioElement;
-      if (remoteAudio) {
-        remoteAudio.volume = 1.0;
-        remoteAudio.muted = false;
-        if (typeof remoteAudio.play === 'function') {
-          remoteAudio.play().catch(() => {});
-        }
-      }
-      this.applyAudioRouting(this.session.isSpeaker);
+    this.plivoClient.on('onRinging', (callInfo: any) => {
+      console.log('[TelephonyService] Call ringing on destination device:', callInfo);
+      if (this.isTerminalState() || this.session.state === 'connected') return;
+      this.session.state = 'ringing';
+      this.audioAdapter.startRingback();
+      this.notify();
+    });
+
+    this.plivoClient.on('onCallConnected', async (callInfo: any) => {
+      await this.handleCallConnected('onCallConnected', callInfo);
+    });
+
+    this.plivoClient.on('onCallAnswered', async (callInfo: any) => {
+      await this.handleCallConnected('onCallAnswered', callInfo);
+    });
+
+    this.plivoClient.on('onMediaConnected', async (callInfo: any) => {
+      await this.handleCallConnected('onMediaConnected', callInfo);
     });
 
     this.plivoClient.on('onCallTerminated', () => {
@@ -392,11 +409,127 @@ class TelephonyService {
 
     this.plivoClient.on('onCallFailed', (reason: any) => {
       console.warn('[TelephonyService] Call failed:', reason);
-      this.handleCallEnd(typeof reason === 'string' ? reason : 'Call failed');
+      this.handleCallEnd(typeof reason === 'string' ? reason : 'Call failed', true);
     });
   }
 
+  /**
+   * CANONICAL IDEMPOTENT CALL CONNECTED HANDLER
+   * Authoritative convergence point for onCallConnected, onCallAnswered, onMediaConnected,
+   * user manual answer, and backend session watcher.
+   */
+  private async handleCallConnected(sourceEvent: string, callInfo?: any): Promise<void> {
+    console.log(`[TelephonyService] handleCallConnected invoked from '${sourceEvent}':`, callInfo);
+
+    // 1. Ignore if session is already terminal
+    if (this.isTerminalState()) {
+      console.log(`[TelephonyService] Ignoring '${sourceEvent}': Session is already terminal (${this.session.state})`);
+      return;
+    }
+
+    // 2. Stop ringback immediately upon any connected or media event
+    this.audioAdapter.stopRingback();
+
+    // 3. Resolve remote MediaStream from Plivo SDK / callInfo / PeerConnection / Plivo remoteview
+    let remoteStream: MediaStream | undefined = undefined;
+    if (callInfo?.stream instanceof MediaStream) {
+      remoteStream = callInfo.stream;
+    } else if (callInfo?.mediaStream instanceof MediaStream) {
+      remoteStream = callInfo.mediaStream;
+    } else if (callInfo?.remoteStream instanceof MediaStream) {
+      remoteStream = callInfo.remoteStream;
+    } else {
+      // Trace from active Plivo WebRTC PeerConnection
+      try {
+        const pc =
+          (typeof this.plivoClient?._getPeerConnection === 'function' ? this.plivoClient._getPeerConnection()?.pc : null) ||
+          this.plivoClient?._currentSession?.session?.connection ||
+          this.plivoClient?._currentSession?.session?._connection;
+        if (pc) {
+          if (typeof pc.getRemoteStreams === 'function') {
+            const streams = pc.getRemoteStreams();
+            if (streams && streams.length > 0) {
+              remoteStream = streams[0];
+            }
+          }
+          if (!remoteStream && typeof pc.getReceivers === 'function') {
+            const audioTracks = pc
+              .getReceivers()
+              .map((r: any) => r.track)
+              .filter((t: any) => t && t.kind === 'audio' && t.readyState === 'live');
+            if (audioTracks.length > 0) {
+              remoteStream = new MediaStream(audioTracks);
+            }
+          }
+        }
+      } catch (pcErr) {
+        console.warn('[TelephonyService] Remote stream extraction notice:', pcErr);
+      }
+
+      // Check Plivo SDK internal remoteview sink (#plivo_webrtc_remoteview)
+      if (!remoteStream && typeof document !== 'undefined') {
+        const plivoRemoteEl = document.getElementById('plivo_webrtc_remoteview') as HTMLAudioElement | null;
+        if (plivoRemoteEl?.srcObject instanceof MediaStream) {
+          remoteStream = plivoRemoteEl.srcObject;
+          console.log('[TelephonyService] Acquired remote MediaStream from plivo_webrtc_remoteview.');
+        }
+      }
+    }
+
+    // 4. Attach REAL remote MediaStream to canonical #plivoRemoteAudio sink and play
+    await this.audioAdapter.attachRemoteStream(remoteStream);
+
+    // If stream was not yet populated due to Plivo internal ontrack timeout (100ms), bridge with micro-recheck
+    if (!remoteStream && typeof document !== 'undefined') {
+      setTimeout(() => {
+        if (!this.isTerminalState()) {
+          const deferredEl = document.getElementById('plivo_webrtc_remoteview') as HTMLAudioElement | null;
+          if (deferredEl?.srcObject instanceof MediaStream) {
+            console.log('[TelephonyService] Deferred remote MediaStream acquired from plivo_webrtc_remoteview.');
+            void this.audioAdapter.attachRemoteStream(deferredEl.srcObject);
+          }
+        }
+      }, 150);
+    }
+
+    // 5. Apply confirmed audio routing (earpiece by default, speaker if user toggled)
+    await this.audioAdapter.setAudioRoute(this.session.isSpeaker);
+
+    // Start Android InCallService for lock-screen & background microphone retention (Issue #3)
+    try {
+      const cap = (window as any).Capacitor;
+      if (cap?.Plugins?.AudioRouting?.startInCallService) {
+        cap.Plugins.AudioRouting.startInCallService({
+          title: this.session.contactName || 'Active Softphone Call',
+          text: this.session.destinationPhone ? `In call with ${this.session.destinationPhone}` : 'Call in progress'
+        }).catch(() => {});
+      }
+    } catch (_) {}
+
+    // Apply modest mic boost (+2.5 dB / 1.33x with limiter) (Issue #1)
+    void this.applyModestMicBoost();
+
+    // 6. Transition state idempotently: ringing/connecting -> connected
+    const wasAlreadyConnected = this.session.state === 'connected';
+    this.session.state = 'connected';
+    this.session.recordingState = 'PROCESSING';
+
+    if (!wasAlreadyConnected) {
+      // Set startedAt exactly once
+      if (!this.session.startedAt) {
+        this.session.startedAt = Date.now();
+      }
+      // Start duration timer and heartbeat exactly once
+      this.startTimer();
+      this.startHeartbeat();
+      this.notify();
+    }
+  }
+
   public answerIncomingCall(): void {
+    // MANDATE 1: TRUE USER-GESTURE AUDIO UNLOCK BEFORE ANY ASYNC OPERATION
+    this.audioAdapter.unlockAudio();
+
     if (this.incomingCallObj && typeof this.incomingCallObj.answer === 'function') {
       try {
         this.incomingCallObj.answer();
@@ -404,12 +537,7 @@ class TelephonyService {
         console.warn('[TelephonyService] Answer error:', err);
       }
     }
-    this.session.state = 'connected';
-    this.session.startedAt = Date.now();
-    this.applyAudioRouting(this.session.isSpeaker);
-    this.startTimer();
-    this.startHeartbeat();
-    this.notify();
+    void this.handleCallConnected('user-answer-incoming');
   }
 
   public rejectIncomingCall(): void {
@@ -429,13 +557,25 @@ class TelephonyService {
     contactName: string = 'Contact Lead',
     leadId: number | string | null = null
   ): Promise<{ success: boolean; sessionId?: string; error?: string }> {
+    // MANDATE 1: TRUE USER-GESTURE AUDIO UNLOCK BEFORE THE FIRST AWAIT!
+    // The browser media unlock (HTMLAudioElement.play() and AudioContext.resume())
+    // MUST occur synchronously at the very entry point of the call stack before any await.
+    this.audioAdapter.unlockAudio();
+
     if (this.isCallActive()) {
       return { success: false, error: 'A call is already in progress.' };
     }
 
-    const cleanDest = destinationPhone.startsWith('+')
-      ? destinationPhone
-      : `+91${destinationPhone.replace(/\D/g, '').slice(-10)}`;
+    if (!destinationPhone || typeof destinationPhone !== 'string' || destinationPhone.includes('•') || destinationPhone.includes('*')) {
+      return { success: false, error: 'Please provide a valid 10-digit phone number.' };
+    }
+
+    const digits = destinationPhone.replace(/\D/g, '');
+    if (digits.length < 10) {
+      return { success: false, error: 'Please enter a valid 10-digit phone number.' };
+    }
+
+    const cleanDest = `+91${digits.slice(-10)}`;
 
     this.session = {
       sessionId: null,
@@ -443,6 +583,8 @@ class TelephonyService {
       contactName: contactName || 'Contact Lead',
       leadId: leadId ? String(leadId) : null,
       state: 'connecting',
+      recordingState: 'NONE',
+      recordingUrl: null,
       durationSeconds: 0,
       isMuted: false,
       isSpeaker: false,
@@ -460,14 +602,21 @@ class TelephonyService {
         this.session.errorMessage =
           'Telephony network unavailable: Plivo registration failed. Please check your internet connection or use Direct SIM.';
         this.notify();
+        setTimeout(() => {
+          if (this.session.state === 'failed') {
+            this.session.state = 'idle';
+            this.session.errorMessage = null;
+            this.notify();
+          }
+        }, 1500);
         return { success: false, error: this.session.errorMessage };
       }
     }
 
     // Ensure remote audio playback element is ready and full volume
-    this.ensureAudioElement();
+    this.audioAdapter.ensureRemoteAudioSink();
 
-    // Create session on backend
+    // Create session on backend with lead_id preserved
     try {
       const cleanLeadId =
         leadId && String(leadId).trim() !== '' && !isNaN(parseInt(String(leadId)))
@@ -476,7 +625,9 @@ class TelephonyService {
 
       const initResp = await apiService.post<any>('/telephony/plivo/browser/call/initiate', {
         destination_phone: cleanDest,
-        lead_id: cleanLeadId
+        lead_id: cleanLeadId,
+        is_webrtc: true,
+        dispatch_provider_call: false
       });
 
       let sessData: any = null;
@@ -485,16 +636,23 @@ class TelephonyService {
       } else if (initResp && (initResp as any).call_session_id) {
         sessData = initResp;
       } else {
-        sessData = { call_session_id: 'vcs_mob_' + Date.now() };
+        throw new Error(initResp?.error || initResp?.message || initResp?.detail || 'Failed to initiate telephony session on server');
       }
 
-      this.session.sessionId = sessData.call_session_id || 'vcs_mob_' + Date.now();
+      if (!sessData?.call_session_id) {
+        throw new Error('Server returned invalid call session ID');
+      }
+
+      this.session.sessionId = sessData.call_session_id;
       this.session.state = 'ringing';
       this.session.isSpeaker = false;
-      this.applyAudioRouting(false);
+      this.audioAdapter.setAudioRoute(false);
+
+      // Start audible synthetic ringback during ringing phase
+      this.audioAdapter.startRingback();
       this.notify();
 
-      // Dispatch Plivo Call
+      // Dispatch Plivo Call with session and lead headers
       const extraHeaders = {
         'X-PH-Call-Session-ID': this.session.sessionId,
         'X-PH-Lead-ID': String(leadId || '')
@@ -510,32 +668,18 @@ class TelephonyService {
       return { success: true, sessionId: this.session.sessionId || undefined };
     } catch (err: any) {
       console.error('[TelephonyService] Outbound dial error:', err);
+      this.audioAdapter.stopRingback();
       this.session.state = 'failed';
       this.session.errorMessage = err.message || 'Call placement failed';
       this.notify();
+      setTimeout(() => {
+        if (this.session.state === 'failed') {
+          this.session.state = 'idle';
+          this.session.errorMessage = null;
+          this.notify();
+        }
+      }, 1500);
       return { success: false, error: this.session.errorMessage || undefined };
-    }
-  }
-
-  private async applyAudioRouting(speakerOn: boolean): Promise<void> {
-    try {
-      const cap = (window as any).Capacitor;
-      if (cap?.Plugins?.AudioRouting) {
-        await cap.Plugins.AudioRouting.setSpeakerphoneOn({ enabled: speakerOn });
-      }
-    } catch (err) {
-      console.warn('[TelephonyService] Audio routing error:', err);
-    }
-  }
-
-  private async resetAudioRouting(): Promise<void> {
-    try {
-      const cap = (window as any).Capacitor;
-      if (cap?.Plugins?.AudioRouting) {
-        await cap.Plugins.AudioRouting.resetAudioMode();
-      }
-    } catch (err) {
-      console.warn('[TelephonyService] Audio reset error:', err);
     }
   }
 
@@ -543,7 +687,7 @@ class TelephonyService {
     if (this.sessionPollInterval) clearInterval(this.sessionPollInterval);
 
     this.sessionPollInterval = setInterval(async () => {
-      if (!this.isCallActive()) {
+      if (!this.isCallActive() || this.isTerminalState()) {
         clearInterval(this.sessionPollInterval);
         this.sessionPollInterval = null;
         return;
@@ -551,18 +695,21 @@ class TelephonyService {
 
       try {
         const resp = await apiService.get<any>(`/telephony/plivo/calls/session-status/${sessionId}`);
+        if (this.isTerminalState()) {
+          clearInterval(this.sessionPollInterval);
+          this.sessionPollInterval = null;
+          return;
+        }
         const data = resp?.data || resp;
         if (data) {
           const s = String(data.status || data.call_state || '').toLowerCase();
           if (
             (s === 'in-progress' || s === 'answered' || s === 'connected' || data.is_connected === true) &&
+            !this.isTerminalState() &&
             this.session.state !== 'connected'
           ) {
-            this.session.state = 'connected';
-            this.session.startedAt = Date.now();
-            this.applyAudioRouting(this.session.isSpeaker);
-            this.startTimer();
-            this.notify();
+            console.log('[TelephonyService] Carrier session poller detected connected call state');
+            await this.handleCallConnected('session-status-polling', data);
           } else if (
             s === 'completed' ||
             s === 'failed' ||
@@ -571,7 +718,8 @@ class TelephonyService {
             s === 'no-answer' ||
             s === 'rejected'
           ) {
-            this.handleCallEnd(`Call finished (${s})`);
+            const isFailed = (s === 'failed' || s === 'busy' || s === 'no-answer' || s === 'rejected');
+            this.handleCallEnd(`Call finished (${s})`, isFailed);
           }
         }
       } catch (_) {}
@@ -602,7 +750,13 @@ class TelephonyService {
     }, 15000);
   }
 
-  private handleCallEnd(reason: string = 'Call ended'): void {
+  private handleCallEnd(reason: string = 'Call ended', isFailed: boolean = false): void {
+    // Monotonic Terminal State Lock: Once terminal, no subsequent event or callback can modify it
+    if (this.isTerminalState()) {
+      console.log(`[TelephonyService] handleCallEnd ignored: already in terminal state (${this.session.state})`);
+      return;
+    }
+
     if (this.callTimerInterval) {
       clearInterval(this.callTimerInterval);
       this.callTimerInterval = null;
@@ -616,12 +770,9 @@ class TelephonyService {
       this.heartbeatInterval = null;
     }
 
-    if (this.localAudioStream) {
-      try {
-        this.localAudioStream.getTracks().forEach((t) => t.stop());
-      } catch (_) {}
-      this.localAudioStream = null;
-    }
+    // Authoritative audio cleanup: stop ringback, pause sink, stop mic, reset route
+    this.cleanupMicBoost();
+    this.audioAdapter.cleanupAudio();
 
     const sid = this.session.sessionId;
     const durSecs = this.session.durationSeconds || 0;
@@ -634,24 +785,27 @@ class TelephonyService {
 
       apiService.post('/telephony/plivo/browser/call-event', {
         call_session_id: sid,
-        event_type: 'ended',
+        event_type: isFailed ? 'failed' : 'ended',
         duration_seconds: durSecs
       }).catch(() => {});
     }
 
-    this.resetAudioRouting();
     this.saveRecentCall(this.session.destinationPhone, this.session.contactName, this.session.durationSeconds);
 
-    this.session.state = 'ended';
+    this.session.state = isFailed ? 'failed' : 'ended';
+    if (isFailed) {
+      this.session.errorMessage = reason;
+    }
     this.session.isSpeaker = false;
     this.notify();
 
     // Reset to idle after 1.5s
     setTimeout(() => {
-      if (this.session.state === 'ended') {
+      if (this.session.state === 'ended' || this.session.state === 'failed') {
         this.session.state = 'idle';
         this.session.sessionId = null;
         this.session.durationSeconds = 0;
+        this.session.errorMessage = null;
         this.notify();
       }
     }, 1500);
@@ -680,30 +834,27 @@ class TelephonyService {
     if (this.localAudioStream) {
       this.localAudioStream.getAudioTracks().forEach((t) => (t.enabled = !this.session.isMuted));
     }
+    if (this.boostedMicTrack) {
+      this.boostedMicTrack.enabled = !this.session.isMuted;
+    }
     this.notify();
     return this.session.isMuted;
   }
 
   public async toggleSpeaker(): Promise<boolean> {
     const nextSpeakerState = !this.session.isSpeaker;
-    try {
-      const cap = (window as any).Capacitor;
-      if (cap?.Plugins?.AudioRouting) {
-        const res = await cap.Plugins.AudioRouting.setSpeakerphoneOn({ enabled: nextSpeakerState });
-        this.session.isSpeaker = (res && typeof res.speakerOn === 'boolean') ? res.speakerOn : nextSpeakerState;
-      } else {
-        this.session.isSpeaker = nextSpeakerState;
-      }
-    } catch (err) {
-      console.warn('[TelephonyService] Speakerphone toggle warning:', err);
-      this.session.isSpeaker = nextSpeakerState;
-    }
+    const finalSpeaker = await this.audioAdapter.setAudioRoute(nextSpeakerState);
+    this.session.isSpeaker = finalSpeaker;
     this.notify();
     return this.session.isSpeaker;
   }
 
   public toggleHold(): boolean {
     this.session.isHeld = !this.session.isHeld;
+    const audioEl = this.audioAdapter.ensureRemoteAudioSink();
+    if (audioEl) {
+      audioEl.muted = this.session.isHeld;
+    }
     this.notify();
     return this.session.isHeld;
   }
@@ -753,6 +904,84 @@ class TelephonyService {
     }
   }
 
+  private async applyModestMicBoost(): Promise<void> {
+    try {
+      if (this.isMicBoostApplied) return;
+      const pc =
+        (typeof this.plivoClient?._getPeerConnection === 'function' ? this.plivoClient._getPeerConnection()?.pc : null) ||
+        this.plivoClient?._currentSession?.session?.connection ||
+        this.plivoClient?._currentSession?.session?._connection;
+
+      if (!pc || typeof pc.getSenders !== 'function') return;
+
+      const senders = pc.getSenders();
+      const audioSender = senders.find((s: any) => s.track && s.track.kind === 'audio');
+      if (!audioSender || !audioSender.track) return;
+
+      const originalTrack = audioSender.track;
+      if (originalTrack === this.boostedMicTrack) return;
+
+      const AudioCtxClass = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtxClass) return;
+
+      console.log('[TelephonyService] Applying modest mic boost (+2.5 dB / 1.33x with limiter)...');
+      const ctx: AudioContext = new AudioCtxClass();
+      this.micBoostCtx = ctx;
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+      }
+
+      const inputStream = new MediaStream([originalTrack]);
+      const sourceNode = ctx.createMediaStreamSource(inputStream);
+
+      // Gain +2.5 dB (1.33x factor)
+      const gainNode = ctx.createGain();
+      gainNode.gain.setValueAtTime(1.33, ctx.currentTime);
+
+      // Dynamics limiter
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.setValueAtTime(-14, ctx.currentTime);
+      compressor.knee.setValueAtTime(6, ctx.currentTime);
+      compressor.ratio.setValueAtTime(4, ctx.currentTime);
+      compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+      compressor.release.setValueAtTime(0.05, ctx.currentTime);
+
+      const destNode = ctx.createMediaStreamDestination();
+      sourceNode.connect(gainNode);
+      gainNode.connect(compressor);
+      compressor.connect(destNode);
+
+      const boostedTracks = destNode.stream.getAudioTracks();
+      if (boostedTracks.length === 0) return;
+
+      const boostedTrack = boostedTracks[0];
+      this.boostedMicTrack = boostedTrack;
+
+      await audioSender.replaceTrack(boostedTrack);
+      this.isMicBoostApplied = true;
+      console.log('[TelephonyService] Modest mic boost applied successfully (+2.5 dB / 1.33x).');
+    } catch (err) {
+      console.warn('[TelephonyService] Notice applying mic boost:', err);
+    }
+  }
+
+  private cleanupMicBoost(): void {
+    try {
+      if (this.boostedMicTrack) {
+        try { this.boostedMicTrack.stop(); } catch (_) {}
+        this.boostedMicTrack = null;
+      }
+      if (this.micBoostCtx) {
+        try { this.micBoostCtx.close(); } catch (_) {}
+        this.micBoostCtx = null;
+      }
+      this.isMicBoostApplied = false;
+      console.log('[TelephonyService] Mic boost cleaned up.');
+    } catch (err) {
+      console.warn('[TelephonyService] Notice cleaning up mic boost:', err);
+    }
+  }
+
   private saveRecentCall(phone: string, name: string, duration: number): void {
     if (typeof localStorage === 'undefined' || !phone) return;
     try {
@@ -773,3 +1002,7 @@ class TelephonyService {
 }
 
 export const telephonyService = new TelephonyService();
+
+if (typeof window !== 'undefined') {
+  (window as any).telephonyService = telephonyService;
+}

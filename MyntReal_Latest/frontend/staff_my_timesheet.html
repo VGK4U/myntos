@@ -6,86 +6,146 @@
     <title>MyntReal LLP - My Timesheet</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/shared/dc-theme.css" rel="stylesheet">
+    <link href="/public/css/mobile-responsive.css" rel="stylesheet">
     <script src="/public/js/staff-token-manager.js"></script>
     <script src="/public/js/staff-fetch.js"></script>
-  <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f8fafc; color: #0f172a; min-height: 100vh; }
 
         .header-logo { height: 36px; width: auto; }
         .user-info-details { display: flex; flex-direction: column; }
-        .user-info-name { font-size: 14px; font-weight: 600; color: #1f2937; }
-        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7280; }
+        .user-info-name { font-size: 14px; font-weight: 600; color: #0f172a; }
+        .user-info-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #64748b; }
         
-        .content-area { padding: 16px 24px; max-width: 1400px; margin: 0 auto; }
+        .content-area { padding: 20px 24px; max-width: 1400px; margin: 0 auto; width: 100%; }
         
+        /* Corporate Date Navigator */
         .date-nav {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-            border-radius: 12px;
-            padding: 16px 24px;
-            color: white;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border-radius: 14px;
+            padding: 20px 24px;
+            color: #ffffff;
             text-align: center;
-            margin-bottom: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        .date-nav-controls { display: flex; align-items: center; justify-content: center; gap: 24px; }
+        .date-nav-controls { display: flex; align-items: center; justify-content: center; gap: 20px; }
         .date-nav-btn {
-            width: 44px; height: 44px;
+            width: 40px; height: 40px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.2);
-            border: none;
-            color: white;
-            font-size: 18px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            font-size: 15px;
             cursor: pointer;
-            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .date-nav-btn:hover { background: rgba(255,255,255,0.3); }
-        .current-date { font-size: 24px; font-weight: 700; }
-        .date-subtitle { font-size: 14px; opacity: 0.9; margin-top: 4px; }
+        .date-nav-btn:hover { background: rgba(255, 255, 255, 0.25); transform: scale(1.06); }
+        .current-date { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; color: #ffffff; }
+        .date-subtitle {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding: 3px 12px;
+            background: rgba(37, 99, 235, 0.25);
+            border: 1px solid rgba(37, 99, 235, 0.45);
+            border-radius: 20px;
+            color: #93c5fd;
+            margin-top: 6px;
+        }
+        .date-picker-wrap { margin-top: 14px; }
+        .date-input-field {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 8px;
+            color: #ffffff;
+            padding: 7px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color-scheme: dark;
+        }
+        .date-input-field:focus {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+        }
         
-        .summary-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+        /* Summary KPI Cards */
+        .summary-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 20px;
+        }
         .summary-card {
-            background: white;
-            border-radius: 10px;
-            padding: 14px 16px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 16px 18px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+            border: 1px solid #e2e8f0;
             text-align: center;
+            transition: transform 0.15s, box-shadow 0.15s;
         }
-        .summary-value { font-size: 24px; font-weight: 700; color: #1f2937; }
-        .summary-label { font-size: 12px; color: #6b7280; margin-top: 2px; }
-        .summary-value.text-success { color: #059669; }
-        .summary-value.text-warning { color: #d97706; }
-        .summary-value.text-danger { color: #dc2626; }
+        .summary-card:hover {
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+            transform: translateY(-1px);
+        }
+        .summary-value { font-size: 24px; font-weight: 700; color: #0f172a; line-height: 1.2; }
+        .summary-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-top: 4px; }
+        .summary-value.text-success { color: #059669 !important; }
+        .summary-value.text-warning { color: #d97706 !important; }
+        .summary-value.text-danger { color: #dc2626 !important; }
         
+        /* Segmented Corporate Tabs */
         .tab-navigation {
             display: flex;
-            gap: 0;
-            margin-bottom: 16px;
-            background: white;
-            border-radius: 10px;
-            padding: 4px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            gap: 6px;
+            margin-bottom: 18px;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 5px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+            border: 1px solid #e2e8f0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
         }
+        .tab-navigation::-webkit-scrollbar { display: none; }
         .tab-btn {
             flex: 1;
-            padding: 10px 20px;
+            min-width: 130px;
+            padding: 10px 18px;
             border: none;
             background: transparent;
             font-size: 13px;
             font-weight: 600;
-            color: #6b7280;
+            color: #64748b;
             cursor: pointer;
-            border-radius: 6px;
-            transition: all 0.2s;
+            border-radius: 8px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: center;
             justify-content: center;
             gap: 8px;
+            white-space: nowrap;
         }
-        .tab-btn:hover { background: #f3f4f6; color: #374151; }
+        .tab-btn:hover { background: #f1f5f9; color: #0f172a; }
         .tab-btn.active {
-            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-            color: white;
+            background: #0f172a;
+            color: #ffffff;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
         }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -884,7 +944,32 @@
             }
         }
         
+        @media (max-width: 991px) {
+            .summary-row {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 10px;
+            }
+            .timeline-entry-container {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+        }
+        
         @media (max-width: 768px) {
+            .content-area { padding: 12px; }
+            .date-nav { padding: 16px 12px; border-radius: 12px; }
+            .date-nav-controls { gap: 12px; }
+            .date-nav-btn { width: 36px; height: 36px; font-size: 13px; }
+            .current-date { font-size: 16px; }
+            .summary-row {
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px;
+                margin-bottom: 14px;
+            }
+            .summary-card { padding: 12px 10px; border-radius: 10px; }
+            .summary-value { font-size: 18px; }
+            .summary-label { font-size: 10px; }
+            .tab-btn { min-width: 110px; padding: 8px 12px; font-size: 12px; }
             .timeline-entry-container {
                 grid-template-columns: 1fr;
                 gap: 12px;
@@ -895,6 +980,8 @@
             .timeline-entry-container #timelineContainer {
                 max-height: none;
             }
+            .entry-item { flex-wrap: wrap; }
+            .entry-form { grid-template-columns: 1fr; }
         }
         
         .modal-content { border-radius: 16px; }
@@ -911,7 +998,7 @@
         
         .team-filter-btn { background: white; border: 1px solid #e5e7eb; padding: 6px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; }
         .team-filter-btn:hover { background: #f3f4f6; }
-        .team-filter-btn.active { background: #6366f1; color: white; border-color: #6366f1; }
+        .team-filter-btn.active { background: #0f172a; color: white; border-color: #0f172a; }
         .entry-action-btn { padding: 4px 10px; border: none; border-radius: 4px; font-size: 11px; font-weight: 600; cursor: pointer; }
         .entry-action-btn.approve { background: #d1fae5; color: #065f46; }
         .entry-action-btn.approve:hover { background: #a7f3d0; }
@@ -931,14 +1018,6 @@
         }
         .accordion-employee.expanded .toggle-icon-emp::before { content: '-'; }
         .toggle-icon-emp::before { content: '+'; }
-
-        @media (max-width: 768px) {
-            .content-area { padding: 16px; }
-            .date-nav { padding: 20px; }
-            .current-date { font-size: 20px; }
-            .entry-item { flex-wrap: wrap; }
-            .entry-form { grid-template-columns: 1fr; }
-        }
     </style>
 </head>
 <body>
@@ -967,19 +1046,19 @@
 
         <div class="date-nav">
             <div class="date-nav-controls">
-                <button class="date-nav-btn" onclick="changeDate(-1)">
+                <button class="date-nav-btn" onclick="changeDate(-1)" title="Previous Day">
                     <i class="fas fa-chevron-left"></i>
                 </button>
                 <div>
                     <div class="current-date" id="currentDate">Loading...</div>
                     <div class="date-subtitle" id="dayName">-</div>
                 </div>
-                <button class="date-nav-btn" onclick="changeDate(1)">
+                <button class="date-nav-btn" onclick="changeDate(1)" title="Next Day">
                     <i class="fas fa-chevron-right"></i>
                 </button>
             </div>
-            <div class="mt-3">
-                <input type="date" id="datePicker" class="form-control" style="width: auto; display: inline-block; background: rgba(255,255,255,0.2); border: none; color: white;" onchange="goToDate(this.value)">
+            <div class="date-picker-wrap">
+                <input type="date" id="datePicker" class="date-input-field" onchange="goToDate(this.value)">
             </div>
         </div>
 

@@ -671,15 +671,20 @@ def get_team_day_plans(
     ).filter(StaffDayPlan.plan_date == target_date)
 
     if employee_id:
+        if not is_admin:
+            from app.utils.staff_hierarchy import get_team_member_ids
+            allowed_ids = get_team_member_ids(current_user, db, StaffEmployee, as_of_date=target_date)
+            if employee_id not in allowed_ids:
+                raise HTTPException(status_code=403, detail="Not authorized to view this employee's day plan")
         query = query.filter(StaffDayPlan.employee_id == employee_id)
     elif is_admin:
         from app.utils.staff_hierarchy import get_team_member_ids
-        team_ids = get_team_member_ids(current_user, db, StaffEmployee)
+        team_ids = get_team_member_ids(current_user, db, StaffEmployee, as_of_date=target_date)
         if team_ids:
             query = query.filter(StaffDayPlan.employee_id.in_(team_ids))
     else:
         from app.utils.staff_hierarchy import get_team_member_ids
-        team_ids = get_team_member_ids(current_user, db, StaffEmployee)
+        team_ids = get_team_member_ids(current_user, db, StaffEmployee, as_of_date=target_date)
         if not team_ids:
             return {"plans": [], "plan_date": target_date.isoformat(), "total": 0, "is_admin_view": False}
         query = query.filter(StaffDayPlan.employee_id.in_(team_ids))
@@ -728,10 +733,10 @@ def get_team_day_plans(
         all_team_ids = [employee_id]
     elif is_admin:
         from app.utils.staff_hierarchy import get_team_member_ids as gtm2
-        all_team_ids = gtm2(current_user, db, StaffEmployee)
+        all_team_ids = gtm2(current_user, db, StaffEmployee, as_of_date=target_date)
     else:
         from app.utils.staff_hierarchy import get_team_member_ids as gtm2
-        all_team_ids = gtm2(current_user, db, StaffEmployee) or []
+        all_team_ids = gtm2(current_user, db, StaffEmployee, as_of_date=target_date) or []
 
     all_bucket_ids = list(set(emp_ids_in_plans + all_team_ids))
     activity_buckets = {}
@@ -830,7 +835,7 @@ def get_pending_activities(
 
     if not is_admin and current_user.id != employee_id:
         from app.utils.staff_hierarchy import get_team_member_ids
-        team_ids = get_team_member_ids(current_user, db, StaffEmployee)
+        team_ids = get_team_member_ids(current_user, db, StaffEmployee, as_of_date=get_indian_date())
         if employee_id not in team_ids:
             raise HTTPException(status_code=403, detail="Not authorized to view this employee's activities")
 
@@ -981,7 +986,8 @@ def push_item_to_team_plan(
     is_admin = _is_admin_user(current_user)
     if not is_admin and current_user.id != employee_id:
         from app.utils.staff_hierarchy import get_team_member_ids
-        team_ids = get_team_member_ids(current_user, db, StaffEmployee)
+        today = get_indian_date()
+        team_ids = get_team_member_ids(current_user, db, StaffEmployee, as_of_date=today)
         if employee_id not in team_ids:
             raise HTTPException(status_code=403, detail="Not authorized to manage this employee's day plan")
 
@@ -1043,19 +1049,39 @@ def push_item_to_team_plan(
 
 @router.get("/team/members", summary="Get team members for manager filter")
 def get_team_members(
+    plan_date: Optional[str] = None,
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
     is_admin = _is_admin_user(current_user)
 
-    from app.utils.staff_hierarchy import get_team_member_ids
-    team_ids = get_team_member_ids(current_user, db, StaffEmployee)
+    target_date = get_indian_date()
+    if plan_date and plan_date.strip():
+        pd = plan_date.strip()
+        parsed = None
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
+            try:
+                parsed = datetime.strptime(pd, fmt).date()
+                break
+            except ValueError:
+                pass
+        if parsed:
+            target_date = parsed
+        else:
+            try:
+                target_date = date.fromisoformat(pd)
+            except ValueError:
+                pass
+
+    from app.utils.staff_hierarchy import get_team_member_ids, get_employee_eligibility_filter
+    team_ids = get_team_member_ids(current_user, db, StaffEmployee, as_of_date=target_date)
     if not team_ids:
         return {"members": [], "is_admin_view": is_admin}
 
+    eligibility_cond = get_employee_eligibility_filter(StaffEmployee, as_of_date=target_date)
     members = db.query(StaffEmployee).filter(
         StaffEmployee.id.in_(team_ids),
-        StaffEmployee.status == 'active'
+        eligibility_cond
     ).order_by(StaffEmployee.full_name).all()
 
     return {
@@ -1130,7 +1156,7 @@ def get_day_progress(
     is_admin = _is_admin_user(current_user)
 
     from app.utils.staff_hierarchy import get_team_member_ids
-    team_member_ids = get_team_member_ids(current_user, db, StaffEmployee)
+    team_member_ids = get_team_member_ids(current_user, db, StaffEmployee, as_of_date=target_date)
     all_emp_ids = [current_user.id] + list(team_member_ids)
 
     team_members = []
@@ -1144,8 +1170,7 @@ def get_day_progress(
         ).outerjoin(
             StaffDepartment, StaffEmployee.department_id == StaffDepartment.id
         ).filter(
-            StaffEmployee.id.in_(team_member_ids),
-            StaffEmployee.status == 'active'
+            StaffEmployee.id.in_(team_member_ids)
         ).order_by(StaffEmployee.full_name).all()
         for r in team_rows:
             team_members.append(r)
@@ -1537,7 +1562,12 @@ def get_day_progress(
         from app.models.crm import CRMLead
         _call_secs = int(db.query(func.sum(StaffCallLog.duration_seconds)).filter(
             StaffCallLog.staff_id == current_user.id,
-            StaffCallLog.call_date == target_date.isoformat()
+            StaffCallLog.call_date == target_date.isoformat(),
+            or_(
+                StaffCallLog.matched_lead_id.isnot(None),
+                StaffCallLog.source.in_(['softphone', 'plivo', 'voip', 'dialer', 'autodialer']),
+                StaffCallLog.device_call_id.like('vcs_%')
+            )
         ).scalar() or 0)
         _talk_h = _call_secs // 3600
         _talk_m = (_call_secs % 3600) // 60
@@ -1574,7 +1604,12 @@ def get_day_progress(
             func.sum(StaffCallLog.duration_seconds).label('total_secs')
         ).filter(
             StaffCallLog.staff_id.in_(team_member_ids),
-            StaffCallLog.call_date == target_date.isoformat()
+            StaffCallLog.call_date == target_date.isoformat(),
+            or_(
+                StaffCallLog.matched_lead_id.isnot(None),
+                StaffCallLog.source.in_(['softphone', 'plivo', 'voip', 'dialer', 'autodialer']),
+                StaffCallLog.device_call_id.like('vcs_%')
+            )
         ).group_by(StaffCallLog.staff_id).all()
         _call_secs_map = {r.staff_id: int(r.total_secs or 0) for r in _call_log_rows}
 
@@ -1603,6 +1638,14 @@ def get_day_progress(
             team_on_leave.append(p)
         else:
             team_progress.append(p)
+
+    # DC Protocol (ARCHITECTURAL FIX - Sep 2026):
+    # Deterministically end read transaction before returning large day progress response.
+    # Data is already formatted into Python dictionaries; releasing session releases locks immediately.
+    try:
+        db.rollback()
+    except Exception:
+        pass
 
     return {
         "date": target_date.isoformat(),

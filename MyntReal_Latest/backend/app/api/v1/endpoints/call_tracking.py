@@ -11,8 +11,8 @@ Features:
 - Management overview with per-staff stats
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Body, UploadFile, File, Form
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, UploadFile, File, Form, Request
+from fastapi.responses import FileResponse, StreamingResponse, RedirectResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text, and_, or_, case, distinct
 from app.core.database import get_db
@@ -1526,6 +1526,7 @@ async def upload_call_recording(
 @router.get("/recordings/{recording_id}/stream")
 async def stream_call_recording(
     recording_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user_hybrid)
 ):
@@ -1536,17 +1537,46 @@ async def stream_call_recording(
     if not staff:
         raise HTTPException(status_code=404, detail="Staff not found")
 
-    recording = db.query(StaffCallRecording).filter(
-        StaffCallRecording.id == recording_id,
-        StaffCallRecording.company_id == staff.base_company_id
-    ).first()
-
+    recording = db.query(StaffCallRecording).filter(StaffCallRecording.id == recording_id).first()
     if not recording:
         raise HTTPException(status_code=404, detail="Recording not found")
 
-    s3_key = recording.storage_path.replace('\\', '/')
-    from fastapi.responses import RedirectResponse
+    is_admin = False
+    try:
+        from app.core.security import HybridUserContext
+        is_admin = HybridUserContext(current_user).has_admin_access()
+    except Exception:
+        pass
+
+    allowed = (
+        is_admin
+        or recording.company_id is None
+        or staff.base_company_id is None
+        or recording.company_id == staff.base_company_id
+        or recording.staff_id == staff.id
+    )
+    if not allowed:
+        has_log = db.query(StaffCallLog.id).filter(StaffCallLog.recording_id == recording_id).first()
+        if not has_log:
+            raise HTTPException(status_code=403, detail="Not authorized to access this recording")
+
+    s3_key = (recording.storage_path or "").replace('\\', '/')
     if s3_key.startswith("http://") or s3_key.startswith("https://"):
+        if "plivo.com" in s3_key:
+            import requests as _requests
+            from app.core.config import settings
+            from app.api.v1.endpoints.call_flow_api import _serve_audio_bytes
+            plivo_auth_id = getattr(settings, 'PLIVO_AUTH_ID', None)
+            plivo_auth_token = getattr(settings, 'PLIVO_AUTH_TOKEN', None)
+            auth = (plivo_auth_id, plivo_auth_token) if plivo_auth_id and plivo_auth_token else None
+            try:
+                p_resp = _requests.get(s3_key, auth=auth, timeout=15)
+                if p_resp.status_code == 200 and len(p_resp.content) > 50:
+                    media_type = "audio/mpeg" if ".mp3" in s3_key.lower() else "audio/wav"
+                    return _serve_audio_bytes(request, p_resp.content, media_type=media_type)
+            except Exception as pe:
+                import logging
+                logging.getLogger("dc.call_tracking").warning(f"[RECORDING-STREAM] Proxying Plivo recording {s3_key} failed: {pe}")
         return RedirectResponse(url=s3_key)
 
     if "uploads/" in s3_key:
@@ -1572,13 +1602,28 @@ async def get_recording_metadata(
     if not staff:
         raise HTTPException(status_code=404, detail="Staff not found")
 
-    recording = db.query(StaffCallRecording).filter(
-        StaffCallRecording.id == recording_id,
-        StaffCallRecording.company_id == staff.base_company_id
-    ).first()
-
+    recording = db.query(StaffCallRecording).filter(StaffCallRecording.id == recording_id).first()
     if not recording:
         raise HTTPException(status_code=404, detail="Recording not found")
+
+    is_admin = False
+    try:
+        from app.core.security import HybridUserContext
+        is_admin = HybridUserContext(current_user).has_admin_access()
+    except Exception:
+        pass
+
+    allowed = (
+        is_admin
+        or recording.company_id is None
+        or staff.base_company_id is None
+        or recording.company_id == staff.base_company_id
+        or recording.staff_id == staff.id
+    )
+    if not allowed:
+        has_log = db.query(StaffCallLog.id).filter(StaffCallLog.recording_id == recording_id).first()
+        if not has_log:
+            raise HTTPException(status_code=403, detail="Not authorized to access this recording")
 
     staff_info = db.query(StaffEmployee.full_name, StaffEmployee.emp_code).filter(
         StaffEmployee.id == recording.staff_id

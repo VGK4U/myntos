@@ -896,6 +896,7 @@
                     <div class="gst-row" id="viewCourierGstRow" style="display:none;"><span>Courier GST:</span><span id="viewCourierGstAmt">0.00</span></div>
                     <div class="gst-row" id="viewTransportRow" style="display:none;"><span>Transport Charges:</span><span id="viewTransportAmt">0.00</span></div>
                     <div class="gst-row" id="viewTransportGstRow" style="display:none;"><span>Transport GST:</span><span id="viewTransportGstAmt">0.00</span></div>
+                    <div class="gst-row" id="viewRoundOffRow" style="display:none;"><span>Round Off:</span><span id="viewRoundOff">0.00</span></div>
                     <div class="gst-row total"><span>Grand Total:</span><span id="viewGrandTotal">0.00</span></div>
                 </div>
                 <div id="viewNotesSection" style="margin-top: 16px; display: none;">
@@ -2513,7 +2514,20 @@
                     document.getElementById('viewTransportGstRow').style.display = 'none';
                 }
 
-                // Use server-computed grand_total (includes courier/transport + GST)
+                // Display manual/calculated round-off
+                const roVal = parseFloat(invoice.round_off || 0);
+                const viewRoRow = document.getElementById('viewRoundOffRow');
+                const viewRoEl = document.getElementById('viewRoundOff');
+                if (viewRoRow && viewRoEl) {
+                    if (Math.abs(roVal) >= 0.005) {
+                        viewRoRow.style.display = 'flex';
+                        viewRoEl.textContent = (roVal >= 0 ? '+ ' : '- ') + formatCurrency(Math.abs(roVal));
+                    } else {
+                        viewRoRow.style.display = 'none';
+                    }
+                }
+
+                // Use server-computed grand_total (includes courier/transport + GST + round_off)
                 document.getElementById('viewGrandTotal').textContent = formatCurrency(invoice.grand_total || (totalTaxable + totalTax));
                 
                 if (invoice.review_notes) {
@@ -3449,6 +3463,31 @@
 
             document.getElementById('summaryGrandTotal').textContent = formatCurrency(grandTotal);
         }
+
+        function autoCalcRoundOff() {
+            const rows = document.querySelectorAll('#lineItemsBody tr');
+            let taxable = 0;
+            let totalTax = 0;
+            rows.forEach(row => {
+                taxable += parseFloat(row.querySelector('.amount')?.value) || 0;
+                totalTax += parseFloat(row.querySelector('.tax-amount')?.value) || 0;
+            });
+            const courierAmt = parseFloat(document.getElementById('reviewCourierAmount')?.value) || 0;
+            const courierGstRate = parseFloat(document.getElementById('reviewCourierGstRate')?.value) || 0;
+            const courierGst = parseFloat((courierAmt * courierGstRate / 100).toFixed(2));
+            const transportAmt = parseFloat(document.getElementById('reviewTransportAmount')?.value) || 0;
+            const transportGstRate = parseFloat(document.getElementById('reviewTransportGstRate')?.value) || 0;
+            const transportGst = parseFloat((transportAmt * transportGstRate / 100).toFixed(2));
+
+            const gross = taxable + totalTax + courierAmt + courierGst + transportAmt + transportGst;
+            const rounded = Math.round(gross);
+            const diff = parseFloat((rounded - gross).toFixed(2));
+            const roundOffInput = document.getElementById('reviewRoundOff');
+            if (roundOffInput) {
+                roundOffInput.value = diff.toFixed(2);
+            }
+            calculateTotals();
+        }
         
         async function saveReview() {
             if (!selectedInvoice) return;
@@ -3649,12 +3688,14 @@
             }
             
             try {
+                const roundOffVal = parseFloat(document.getElementById('reviewRoundOff')?.value) || 0;
                 const updateData = {
                     vendor_id: parseInt(vendorId),
                     vendor_invoice_no: invoiceNo,
                     vendor_invoice_date: invoiceDate,
                     due_date: document.getElementById('reviewDueDate').value || null,
                     review_notes: document.getElementById('reviewNotes').value,
+                    round_off: roundOffVal,
                     courier_amount: parseFloat(document.getElementById('reviewCourierAmount').value) || 0,
                     courier_hsn_code: document.getElementById('reviewCourierHsnCode').value || null,
                     courier_hsn_id: parseInt(document.getElementById('reviewCourierHsnId').value) || null,
@@ -3687,7 +3728,13 @@
                 
                 const response = await fetch(`${API_BASE}/purchase-uploads/${selectedInvoice.id}/confirm`, {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        round_off: roundOffVal
+                    })
                 });
                 
                 if (response.ok) {
@@ -4995,6 +5042,7 @@
                 is_igst: currentInvoiceGstType === 'IGST',
                 document_type: _manualDocType,
                 return_reference: _manualDocType === 'purchase_return' ? (document.getElementById('manualReturnRef')?.value.trim() || null) : null,
+                round_off: parseFloat(document.getElementById('manualRounding')?.value) || 0,
             };
             
             try {
@@ -5011,9 +5059,16 @@
                     const result = await response.json();
                     
                     if (confirmAfterSave && result.upload?.id) {
+                        const manualRoundOff = parseFloat(document.getElementById('manualRounding')?.value) || 0;
                         const confirmResponse = await fetch(`${API_BASE}/purchase-uploads/${result.upload.id}/confirm`, {
                             method: 'POST',
-                            headers: { 'Authorization': `Bearer ${token}` }
+                            headers: {
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                round_off: manualRoundOff
+                            })
                         });
                         
                         if (confirmResponse.ok) {

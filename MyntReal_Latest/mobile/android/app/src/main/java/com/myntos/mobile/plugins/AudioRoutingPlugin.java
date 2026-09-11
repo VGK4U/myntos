@@ -1,6 +1,7 @@
 package com.myntos.mobile.plugins;
 
 import android.content.Context;
+import android.content.Intent;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.os.Build;
@@ -105,6 +106,18 @@ public class AudioRoutingPlugin extends Plugin {
     @PluginMethod
     public void resetAudioMode(PluginCall call) {
         try {
+            // Stop foreground in-call service as fail-safe when audio resets
+            try {
+                Context context = getContext();
+                if (context != null) {
+                    Intent intent = new Intent(context, InCallService.class);
+                    intent.setAction(InCallService.ACTION_STOP);
+                    context.stopService(intent);
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Notice stopping in-call service during reset: " + e.getMessage());
+            }
+
             AudioManager am = getAudioManager();
             if (am != null) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -119,6 +132,60 @@ public class AudioRoutingPlugin extends Plugin {
         } catch (Exception e) {
             Log.e(TAG, "Failed to reset audio mode: " + e.getMessage(), e);
             call.reject("Failed to reset audio mode: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void startInCallService(PluginCall call) {
+        try {
+            Context context = getContext();
+            if (context == null) {
+                call.reject("Context unavailable");
+                return;
+            }
+            String title = call.getString("title", "Active Softphone Call");
+            String text = call.getString("text", "Call in progress...");
+
+            Intent intent = new Intent(context, InCallService.class);
+            intent.setAction(InCallService.ACTION_START);
+            intent.putExtra("title", title);
+            intent.putExtra("text", text);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent);
+            } else {
+                context.startService(intent);
+            }
+            Log.d(TAG, "InCallService start requested");
+            JSObject ret = new JSObject();
+            ret.put("success", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to start InCallService: " + e.getMessage(), e);
+            call.reject("Failed to start InCallService: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void stopInCallService(PluginCall call) {
+        try {
+            Context context = getContext();
+            if (context != null) {
+                Intent intent = new Intent(context, InCallService.class);
+                intent.setAction(InCallService.ACTION_STOP);
+                context.stopService(intent);
+            }
+            Log.d(TAG, "InCallService stop requested");
+            if (call != null) {
+                JSObject ret = new JSObject();
+                ret.put("success", true);
+                call.resolve(ret);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to stop InCallService: " + e.getMessage(), e);
+            if (call != null) {
+                call.reject("Failed to stop InCallService: " + e.getMessage());
+            }
         }
     }
 

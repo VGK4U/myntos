@@ -30,7 +30,7 @@ import re
 import os
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict, Tuple, Any
 from fastapi import UploadFile, HTTPException
 try:
     from app.services.s3_storage import s3_storage_service as storage_service
@@ -104,6 +104,7 @@ class UniversalUploadService:
         'rvz_expense': 'EXPENSE',
         # Support Tickets
         'ticket_attachment': 'TICKET',
+        'service_media': 'TICKET',
         # Attendance Evidence (WVV Protocol)
         'attendance_evidence': 'SAE',
         # Real Dreams - Real Estate Marketplace (Dec 08, 2025)
@@ -170,7 +171,12 @@ class UniversalUploadService:
         Returns: 'image', 'video', or 'document'
         Raises: HTTPException if invalid type
         """
-        content_type = file.content_type
+        content_type = getattr(file, 'content_type', None)
+        if not content_type or content_type == 'application/octet-stream':
+            import mimetypes
+            guessed, _ = mimetypes.guess_type(getattr(file, 'filename', '') or '')
+            if guessed:
+                content_type = guessed
         
         if content_type in cls.IMAGE_MIME_TYPES:
             return 'image'
@@ -241,11 +247,11 @@ class UniversalUploadService:
         cls,
         segment_key: str,
         entity_type: str,
-        entity_id: int,
-        attachment_id: int,
-        uploader_code: str,
+        entity_id: Any,
+        attachment_id: Any,
+        uploader_code: Any,
         original_filename: str,
-        uploaded_at: datetime
+        uploaded_at: Optional[datetime] = None
     ) -> str:
         """
         Generate DC/WVV compliant download filename
@@ -258,21 +264,6 @@ class UniversalUploadService:
         - Includes full audit context (segment, entity, uploader, time)
         - Filesystem-safe characters only
         - Max length: 255 chars (OS compatibility)
-        
-        Args:
-            segment_key: Functional segment ('task_attachment', 'mnr_kyc', etc.)
-            entity_type: Entity type ('task', 'mnr_user', 'staff_employee', etc.)
-            entity_id: Entity ID (40, 123, etc.)
-            attachment_id: Unique attachment ID
-            uploader_code: Employee code (MR10009) or Member code (MR10025)
-            original_filename: User's uploaded filename
-            uploaded_at: Upload timestamp (IST)
-            
-        Returns:
-            Formatted filename string
-            
-        Raises:
-            HTTPException: If segment_key or entity_type not recognized (audit compliance)
         """
         # DC PROTOCOL: Hard-fail on UNKNOWN segments (prevents audit trail corruption)
         # WVV: Validate metadata before filename generation
@@ -288,14 +279,16 @@ class UniversalUploadService:
                 detail=f"Invalid entity_type '{entity_type}' - must be one of: {', '.join(cls.ENTITY_PREFIXES.keys())}"
             )
         
-        # WVV: Validate required parameters
-        if not uploader_code or not uploader_code.strip():
+        # WVV: Validate required parameters (safely stringify uploader_code)
+        uploader_code_str = str(uploader_code or '').strip()
+        if not uploader_code_str:
             raise HTTPException(
                 status_code=500,
                 detail="uploader_code is required for download filename generation"
             )
         
-        if not original_filename or not original_filename.strip():
+        original_filename_str = str(original_filename or '').strip()
+        if not original_filename_str:
             raise HTTPException(
                 status_code=500,
                 detail="original_filename is required for download filename generation"
@@ -311,12 +304,14 @@ class UniversalUploadService:
         entity_id_str = f"{entity_prefix}{entity_id}"
         
         # Format timestamp (IST, filesystem-safe)
-        # DC: Use YYYYMMDD_HHMMSS format (sortable, no special chars)
-        timestamp = uploaded_at.strftime('%Y%m%d_%H%M%S')
+        if uploaded_at and hasattr(uploaded_at, 'strftime'):
+            timestamp = uploaded_at.strftime('%Y%m%d_%H%M%S')
+        else:
+            timestamp = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
         
         # Sanitize original filename
         # DC: Keep extension, sanitize name, limit length
-        original_name, ext = os.path.splitext(original_filename)
+        original_name, ext = os.path.splitext(original_filename_str)
         
         # WVV: Remove unsafe characters (keep only alphanumeric, underscore, dash)
         sanitized_name = re.sub(r'[^a-zA-Z0-9_-]', '_', original_name)
@@ -328,14 +323,21 @@ class UniversalUploadService:
         sanitized_ext = ext.lower()[:10] if ext else ''
         
         # WVV: Sanitize uploader code (alphanumeric only)
-        safe_uploader = re.sub(r'[^a-zA-Z0-9]', '_', uploader_code)[:20]
+        safe_uploader = re.sub(r'[^a-zA-Z0-9]', '_', uploader_code_str)[:20]
+        
+        # Safe attachment ID format (integer padded to 5 digits, fallback to string)
+        try:
+            att_id_int = int(attachment_id)
+            att_id_str = f"{att_id_int:05d}"
+        except (ValueError, TypeError):
+            att_id_str = str(attachment_id or "0")[:10]
         
         # Build filename
         # Format: {SEGMENT}_{ENTITY_ID}_{ATTACHMENT_ID}_{TIMESTAMP}_{UPLOADER}_{ORIGINAL}
         download_name = (
             f"{segment_code}_"
             f"{entity_id_str}_"
-            f"{attachment_id:05d}_"  # DC: 5-digit padding (00024, 00156)
+            f"{att_id_str}_"
             f"{timestamp}_"
             f"{safe_uploader}_"
             f"{sanitized_name}{sanitized_ext}"
@@ -350,7 +352,7 @@ class UniversalUploadService:
             
             # Rebuild with truncated name
             download_name = (
-                f"{segment_code}_{entity_id_str}_{attachment_id:05d}_"
+                f"{segment_code}_{entity_id_str}_{att_id_str}_"
                 f"{timestamp}_{safe_uploader}_{sanitized_name}{sanitized_ext}"
             )
         
@@ -361,16 +363,18 @@ class UniversalUploadService:
         cls,
         file: UploadFile,
         table_name: str,
-        record_id: int,
-        uploaded_by_id: int,
-        uploaded_by_type: str,  # 'staff' or 'user'
+        record_id: Any,
+        uploaded_by_id: Any,
+        uploaded_by_type: str,  # 'staff', 'user', 'partner', etc.
         storage_dir: str,
         db,
         emp_code: Optional[str] = None,  # For staff uploads
+        mnr_id: Optional[str] = None,    # For user/MNR uploads or staff legacy
         ip_address: Optional[str] = None,
         device_info: Optional[str] = None,
         allow_videos: bool = False,  # NEW: Enable video uploads (20MB limit)
-        defer_scheduler: bool = False  # DC: Defer APScheduler until after caller commits
+        defer_scheduler: bool = False,  # DC: Defer APScheduler until after caller commits
+        **kwargs  # Absorb any caller-specific metadata (segment_key, entity_type, uploader_code, etc.)
     ) -> Dict:
         """
         Handle file upload with validation, storage, and compression queue
@@ -475,7 +479,8 @@ class UniversalUploadService:
                 'original_checksum': original_checksum,  # DC: SHA-256 before compression
                 'uploaded_by_id': uploaded_by_id,
                 'uploaded_by_type': uploaded_by_type,
-                'emp_code': emp_code,
+                'emp_code': emp_code or (mnr_id if uploaded_by_type == 'user' else None),
+                'mnr_id': mnr_id,
                 'uploaded_ip': ip_address,
                 'uploaded_device': device_info
             }
@@ -567,3 +572,70 @@ class UniversalUploadService:
         except Exception as e:
             logger.error(f"[DELETE] Failed to delete {file_path}: {str(e)}")
             return False
+
+    def __init__(self, db=None, current_user=None):
+        """
+        Instance initializer for backward-compatible call patterns.
+        Supports: upload_service = UniversalUploadService(db, current_user)
+        """
+        self.db = db
+        self.current_user = current_user
+
+    @classmethod
+    def upload_file(
+        cls,
+        file_data: Optional[bytes] = None,
+        file_bytes: Optional[bytes] = None,
+        original_filename: Optional[str] = None,
+        filename: Optional[str] = None,
+        content_type: str = "image/jpeg",
+        entity_id: Optional[Any] = None,
+        segment: Optional[str] = None,
+        module: Optional[str] = None,
+        description: Optional[str] = None,
+        employee_code: Optional[str] = None,
+        is_primary: bool = False,
+        **kwargs
+    ) -> Dict:
+        """
+        Unified in-memory bytes upload adapter for direct byte uploads (Stock item images, Journey photos).
+        DC Protocol: Works with object storage and returns standard metadata.
+        """
+        raw_bytes = file_data if file_data is not None else file_bytes
+        if raw_bytes is None:
+            return {"success": False, "error": "No file data provided"}
+
+        clean_filename = original_filename or filename or f"upload_{uuid.uuid4().hex[:8]}.jpg"
+        ext = Path(clean_filename).suffix or ".jpg"
+        storage_folder = (segment or module or "uploads").lower().strip()
+        unique_name = f"{entity_id or '0'}_{uuid.uuid4().hex}{ext}"
+
+        public_segments = {'rd_property', 'stock_item_image', 'community_services', 'stock'}
+        prefix = "public" if storage_folder in public_segments else "private"
+        canonical_object_key = f"{prefix}/{storage_folder}/{unique_name}"
+
+        # Upload to storage
+        success = storage_service.upload_file(canonical_object_key, raw_bytes)
+        if not success:
+            logger.warning(f"[UniversalUploadService.upload_file] Storage upload returned False for {canonical_object_key}")
+
+        file_size = len(raw_bytes)
+        return {
+            "success": True,
+            "file_path": canonical_object_key,
+            "storage_path": canonical_object_key,
+            "relative_path": canonical_object_key,
+            "url": f"/storage/{canonical_object_key}",
+            "file_name": unique_name,
+            "original_filename": clean_filename,
+            "file_size": file_size,
+            "size": file_size,
+            "compressed_path": canonical_object_key,
+            "thumbnail_path": canonical_object_key,
+            "compressed_size": file_size
+        }
+
+
+# Module-level singleton instance for backward-compatible imports
+universal_upload_service = UniversalUploadService()
+

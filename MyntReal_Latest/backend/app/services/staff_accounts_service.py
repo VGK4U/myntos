@@ -253,6 +253,18 @@ def validate_accounts_read_access(employee: StaffEmployee) -> bool:
     return True
 
 
+def _accounts_audit_sanitize(obj):
+    if isinstance(obj, dict):
+        return {k: _accounts_audit_sanitize(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_accounts_audit_sanitize(i) for i in obj]
+    elif isinstance(obj, Decimal):
+        return float(obj)
+    elif hasattr(obj, 'isoformat'):
+        return obj.isoformat()
+    return obj
+
+
 def log_accounts_audit(
     db: Session,
     employee_id: int,
@@ -270,8 +282,8 @@ def log_accounts_audit(
         action=f"ACCOUNTS_{action}",
         resource_type=entity_type,
         resource_id=entity_id,
-        old_data=old_values,
-        new_data=new_values
+        old_data=_accounts_audit_sanitize(old_values),
+        new_data=_accounts_audit_sanitize(new_values)
     )
 
 
@@ -13072,7 +13084,8 @@ class PurchaseInvoiceUploadService:
         line_items: List[dict] = None,
         is_igst: Optional[bool] = None,
         document_type: str = 'invoice',
-        return_reference: Optional[str] = None
+        return_reference: Optional[str] = None,
+        round_off: Optional[float] = None
     ) -> 'PurchaseInvoiceUpload':
         """Create a manual purchase invoice without file upload - DC_PURCHASE_002"""
         import logging
@@ -13234,9 +13247,13 @@ class PurchaseInvoiceUploadService:
                 total_taxable += amount
                 total_tax += tax_amount
         
-        upload.taxable_amount = total_taxable
-        upload.total_tax = total_tax
-        upload.grand_total = total_taxable + total_tax
+        upload.taxable_amount = Decimal(str(total_taxable)).quantize(Decimal('0.01'))
+        upload.total_tax = Decimal(str(total_tax)).quantize(Decimal('0.01'))
+        if round_off is not None:
+            upload.round_off = Decimal(str(round_off)).quantize(Decimal('0.01'))
+        else:
+            upload.round_off = Decimal('0.00')
+        upload.grand_total = (upload.taxable_amount + upload.total_tax + upload.round_off).quantize(Decimal('0.01'))
         
         if is_igst:
             upload.igst_amount = total_tax
@@ -13536,6 +13553,8 @@ class PurchaseInvoiceUploadService:
         _gross = _taxable + _tax + _courier_total + _transport_total
         if 'round_off' in kwargs and kwargs['round_off'] is not None:
             _round_off = Decimal(str(kwargs['round_off']))
+        elif upload.round_off is not None and upload.round_off != Decimal('0'):
+            _round_off = Decimal(str(upload.round_off))
         else:
             _round_off = Decimal(str(round(float(_gross)))) - _gross
         _grand_total = _gross + _round_off
@@ -14248,6 +14267,7 @@ class PurchaseInvoiceUploadService:
                 self.facilitated_by = None
                 # DC_PDF_REMARKS_001: Pass review notes through to PDF
                 self.remarks = (getattr(up, 'review_notes', '') or '').strip()
+                self.round_off = float(up.round_off or 0)
 
         class _PurchaseItemAdapter:
             def __init__(self, li, igst=False, stock_name=''):
@@ -19913,52 +19933,8 @@ class ServiceCenterGivenOutService:
 
     @staticmethod
     def _ensure_table(db: Session):
-        """Create table if not exists — migration-free startup."""
-        try:
-            db.execute(text("""
-                CREATE TABLE IF NOT EXISTS service_center_given_out (
-                    id SERIAL PRIMARY KEY,
-                    given_out_number VARCHAR(30) UNIQUE NOT NULL,
-                    company_id INTEGER NOT NULL REFERENCES associated_companies(id),
-                    service_center_id INTEGER NOT NULL REFERENCES official_partners(id),
-                    service_ticket_id INTEGER REFERENCES service_ticket(id),
-                    recipient_type VARCHAR(20) NOT NULL DEFAULT 'CUSTOMER',
-                    recipient_name VARCHAR(200) NOT NULL,
-                    recipient_contact VARCHAR(20),
-                    recipient_email VARCHAR(200),
-                    recipient_partner_id INTEGER REFERENCES official_partners(id),
-                    item_id INTEGER REFERENCES stock_item_master(id),
-                    item_name VARCHAR(200) NOT NULL,
-                    item_code VARCHAR(30),
-                    serial_number VARCHAR(100),
-                    quantity NUMERIC(15,3) NOT NULL DEFAULT 1,
-                    unit_rate NUMERIC(15,2) DEFAULT 0,
-                    purpose VARCHAR(20) NOT NULL DEFAULT 'LOAN',
-                    notes TEXT,
-                    given_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    expected_return_date DATE,
-                    status VARCHAR(20) NOT NULL DEFAULT 'GIVEN_OUT',
-                    returned_at TIMESTAMP,
-                    return_notes TEXT,
-                    return_item_condition VARCHAR(30),
-                    exchange_return_type VARCHAR(20),
-                    sales_invoice_id INTEGER REFERENCES sales_invoices(id),
-                    invoice_reference VARCHAR(100),
-                    reminder_sent_at TIMESTAMP,
-                    reminder_count INTEGER NOT NULL DEFAULT 0,
-                    created_by_id INTEGER,
-                    updated_by_id INTEGER,
-                    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-                    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
-                );
-                CREATE INDEX IF NOT EXISTS idx_given_out_company ON service_center_given_out(company_id);
-                CREATE INDEX IF NOT EXISTS idx_given_out_center ON service_center_given_out(service_center_id);
-                CREATE INDEX IF NOT EXISTS idx_given_out_status ON service_center_given_out(status);
-                CREATE INDEX IF NOT EXISTS idx_given_out_ticket ON service_center_given_out(service_ticket_id);
-            """))
-            db.commit()
-        except Exception:
-            db.rollback()
+        """DC Protocol (ARCHITECTURAL FIX - Sep 2026): Schema managed by standalone migration runner."""
+        pass
 
     @staticmethod
     def _next_number(db: Session, company_id: int) -> str:
@@ -19980,7 +19956,6 @@ class ServiceCenterGivenOutService:
 
     @staticmethod
     def list_given_out(db: Session, current_user, filters: dict, page: int = 1, page_size: int = 20) -> dict:
-        ServiceCenterGivenOutService._ensure_table(db)
         query = db.query(ServiceCenterGivenOut)
         company_id = filters.get('company_id') or (current_user.company_id if hasattr(current_user, 'company_id') else None)
         if company_id:
@@ -20042,7 +20017,6 @@ class ServiceCenterGivenOutService:
 
     @staticmethod
     def create_given_out(db: Session, current_user, data: dict) -> dict:
-        ServiceCenterGivenOutService._ensure_table(db)
         from datetime import date as date_type
         if not data.get('recipient_name'):
             raise HTTPException(status_code=422, detail="Recipient name is required")
@@ -21217,9 +21191,24 @@ class LedgerPostingService:
                         narration_base, voucher, vendor_name, confirmed_by_id, now
                     )
 
-            # 3. Vendor PARTY CREDIT — AP liability leg (DC_PURCHASE_LEDGER_002)
-            #    Total payable to vendor = taxable + all GST components.
-            vendor_total = taxable + cgst + sgst + igst
+            # 3. Round Off entry if non-zero
+            ro_val = Decimal(str(upload.round_off or 0))
+            if ro_val != Decimal('0'):
+                if ro_val > Decimal('0'):
+                    ro_type = 'CREDIT' if is_reversal else 'DEBIT'
+                    ro_amt = ro_val
+                else:
+                    ro_type = 'DEBIT' if is_reversal else 'CREDIT'
+                    ro_amt = abs(ro_val)
+                LedgerPostingService._add_acct(
+                    db, company_id, 'EXPENSE', 'Round Off A/c', txn_date,
+                    ro_type, 'PURCHASE_UPLOAD', ref_id, ref_number, ro_amt,
+                    narration_base, voucher, vendor_name, confirmed_by_id, now
+                )
+
+            # 4. Vendor PARTY CREDIT — AP liability leg (DC_PURCHASE_LEDGER_002)
+            #    Total payable to vendor = upload.grand_total (taxable + GST + round_off + additional charges).
+            vendor_total = upload.grand_total if (upload.grand_total and upload.grand_total > Decimal('0')) else (taxable + cgst + sgst + igst + ro_val)
             if vendor_total > Decimal('0'):
                 vendor_credit_type = 'DEBIT' if is_reversal else 'CREDIT'
                 LedgerPostingService._add_acct(

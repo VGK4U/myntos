@@ -110,6 +110,34 @@ async def mnr_verify_otp(
     return {"success": True, "phone_verified_token": token, "message": "Phone verified successfully."}
 
 
+@router.post("/verify-phone/send-otp")
+async def mnr_verify_phone_send_otp(
+    req: dict,
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """[DC-PHONE-OTP-001] Send WhatsApp OTP for later phone verification of registered MNR member."""
+    phone = (req.get("phone") or "").strip().replace(" ", "")
+    if not phone or len(phone) < 10 or not phone.isdigit():
+        raise HTTPException(status_code=400, detail="Please provide a valid 10-digit mobile number.")
+    from app.utils.phone_otp import generate_and_send_otp
+    return generate_and_send_otp(phone=phone, purpose='mnr_verify_later', db=db)
+
+
+@router.post("/verify-phone/confirm")
+async def mnr_verify_phone_confirm(
+    req: dict,
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
+    """[DC-PHONE-OTP-001] Verify WhatsApp OTP for registered MNR user and mark mobile_verified=True."""
+    phone = (req.get("phone") or "").strip().replace(" ", "")
+    otp_code = (req.get("otp_code") or "").strip()
+    user_id = req.get("user_id")
+    if not phone or not otp_code:
+        raise HTTPException(status_code=400, detail="Phone and OTP code are required.")
+    from app.utils.phone_otp import verify_and_mark_user_phone
+    return verify_and_mark_user_phone(phone=phone, otp_code=otp_code, purpose='mnr_verify_later', db=db, user_id=user_id)
+
+
 @router.post("/register")
 async def register_new_user(
     user_data: UserRegistrationRequest,
@@ -120,17 +148,16 @@ async def register_new_user(
     REQUIRES: sponsor_id and position (Left/Right preference)
     System automatically finds extreme left or extreme right position under sponsor
     """
-    # [DC-PHONE-OTP-001] Validate phone verification token before account creation
+    # [DC-PHONE-OTP-001] Validate phone verification token before account creation (OPTIONAL)
     _phone = (user_data.mobile or user_data.phone_number or '').strip().replace(" ", "")
     if not _phone:
         raise HTTPException(status_code=400, detail="Mobile number is required.")
-    if not user_data.phone_verified_token:
-        raise HTTPException(
-            status_code=400,
-            detail="Phone verification required. Please verify your WhatsApp number with OTP before registering."
-        )
-    from app.utils.phone_otp import validate_and_consume_token
-    validate_and_consume_token(phone=_phone, token=user_data.phone_verified_token, purpose='mnr_register', db=db)
+    
+    mobile_verified = False
+    if user_data.phone_verified_token:
+        from app.utils.phone_otp import validate_and_consume_token
+        validate_and_consume_token(phone=_phone, token=user_data.phone_verified_token, purpose='mnr_register', db=db)
+        mobile_verified = True
 
     # Check if user registration is allowed
     check_user_update_allowed(db, 'user_registration_signup')
@@ -191,6 +218,10 @@ async def register_new_user(
         )
     
     new_user_id = create_result["user_id"]
+    new_user_row = db.query(User).filter(User.id == new_user_id).first()
+    if new_user_row:
+        new_user_row.mobile_verified = mobile_verified
+        db.commit()
     
     # AUTOMATIC EXTREME PLACEMENT - find extreme position based on user's preference
     placement_result = None
@@ -212,6 +243,7 @@ async def register_new_user(
     return {
         "success": True,
         "user_details": create_result["user_details"],
+        "mobile_verified": mobile_verified,
         "placement_result": placement_result,
         "message": "User registered successfully with automatic extreme placement"
     }

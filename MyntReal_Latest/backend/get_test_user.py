@@ -8,7 +8,11 @@ from werkzeug.security import generate_password_hash
 sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
 from app.models.user import User
 
-DATABASE_URL = "postgresql://postgres:MyntRealAdmin2026!@myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com:5432/postgres"
+import dotenv
+dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
+DATABASE_URL = os.environ.get('PROD_DATABASE_URL') or os.environ.get('DATABASE_URL')
+if not DATABASE_URL:
+    raise ValueError("Database URL environment variable is not set")
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 db = SessionLocal()

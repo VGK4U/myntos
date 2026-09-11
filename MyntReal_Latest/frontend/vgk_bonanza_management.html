@@ -91,6 +91,10 @@ tbody tr { background: #ffffff !important; }
 .mtrack-eligible td:first-child { border-left: 3px solid #059669; }
 .mtrack-close    td:first-child { border-left: 3px solid #d97706; }
 .mtrack-stat-card { background: white; border-radius: 10px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+.bonanza-stepper { display: flex; gap: 4px; margin-bottom: 16px; background: #f3f4f6; border-radius: 10px; padding: 4px; }
+.btn-step { flex: 1; border: none; background: transparent; padding: 8px 4px; font-size: 11px; font-weight: 700; color: #6b7280; border-radius: 7px; cursor: pointer; transition: all 0.2s; text-align: center; }
+.btn-step.active { background: #7c3aed; color: #fff; box-shadow: 0 2px 6px rgba(124,58,237,.3); }
+.btn-step.completed { color: #059669; }
 </style>
 </head>
 <body>
@@ -279,101 +283,194 @@ tbody tr { background: #ffffff !important; }
 
 <!-- Create / Edit Modal -->
 <div class="modal-overlay" id="bonanzaModal">
-    <div class="modal-box">
+    <div class="modal-box" style="width:780px;max-width:96vw;max-height:92vh">
         <div class="modal-header">
             <h4 id="modalTitle"><i class="fas fa-trophy me-2" style="color:#7c3aed"></i>New VGK Bonanza</h4>
             <button onclick="closeModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#6b7280">&times;</button>
         </div>
-        <div class="modal-body">
+        <div class="modal-body" style="padding:18px 22px">
             <input type="hidden" id="editBonanzaId">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                <div class="form-group" id="mBonanzaNumberGrp" style="grid-column:span 2; display:none">
-                    <label>Bonanza # / Campaign Code</label>
-                    <input class="form-control" id="mBonanzaNumber" readonly style="background:#f3f4f6 !important;color:#4b5563 !important;cursor:not-allowed">
+
+            <!-- 1-Click Preset Templates Header -->
+            <div style="background:linear-gradient(135deg,#1e1b4b,#31104b);border:1.5px solid #7c3aed;border-radius:10px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+                <div>
+                    <div style="font-size:12.5px;font-weight:700;color:#fbcfe8"><i class="fas fa-magic me-1"></i> Quick-Start Campaign Templates</div>
+                    <div style="font-size:11px;color:#cbd5e1">1-Click setup for verified operational campaign models</div>
                 </div>
-                <div class="form-group" style="grid-column:span 2">
-                    <label>Campaign Name *</label>
-                    <input class="form-control" id="mName" placeholder="e.g. VGK Solar Sprint Q1 2026">
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="applyTemplateA()" style="font-size:11px;font-weight:700;border-radius:6px;padding:4px 10px">
+                        <i class="fas fa-bolt me-1"></i> ⚡ 1st Stage Solar Advance
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-info" onclick="applyTemplateB()" style="font-size:11px;font-weight:700;border-radius:6px;padding:4px 10px">
+                        <i class="fas fa-trophy me-1"></i> 🏆 Solar Festival Milestones
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label>Start Date *</label>
-                    <input class="form-control" id="mStartDate" type="date">
+            </div>
+
+            <!-- Stepper Navigation -->
+            <div class="bonanza-stepper" style="display:flex;gap:4px;margin-bottom:18px;background:#f3f4f6;border-radius:10px;padding:4px">
+                <button type="button" class="btn-step active" id="stepTab1" onclick="goToStep(1)">1. Basics</button>
+                <button type="button" class="btn-step" id="stepTab2" onclick="goToStep(2)">2. Eligibility & Gating</button>
+                <button type="button" class="btn-step" id="stepTab3" onclick="goToStep(3)">3. Reward Type</button>
+                <button type="button" class="btn-step" id="stepTab4" onclick="goToStep(4)">4. Tiers & Milestones</button>
+                <button type="button" class="btn-step" id="stepTab5" onclick="goToStep(5)">5. Review & Confirm</button>
+            </div>
+
+            <!-- STEP 1: BASICS -->
+            <div id="wizardStep1">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="form-group" id="mBonanzaNumberGrp" style="grid-column:span 2; display:none">
+                        <label>Bonanza # / Campaign Code</label>
+                        <input class="form-control" id="mBonanzaNumber" readonly style="background:#f3f4f6 !important;color:#4b5563 !important;cursor:not-allowed">
+                    </div>
+                    <div class="form-group" style="grid-column:span 2">
+                        <label>Campaign Name *</label>
+                        <input class="form-control" id="mName" placeholder="e.g. VGK Solar Sprint Q1 2026">
+                    </div>
+                    <div class="form-group">
+                        <label>Start Date *</label>
+                        <input class="form-control" id="mStartDate" type="date">
+                    </div>
+                    <div class="form-group">
+                        <label>End Date *</label>
+                        <input class="form-control" id="mEndDate" type="date">
+                    </div>
+                    <div class="form-group">
+                        <label>Grace Days (after end date) *</label>
+                        <input class="form-control" id="mGrace" type="number" min="0" max="90" value="15" placeholder="15">
+                        <div style="font-size:10.5px;color:#6b7280;margin-top:2px">Window after campaign end date for files to cross completion stage.</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Segment (Category)</label>
+                        <select class="form-select" id="mSegment" onchange="toggleRewardFields()">
+                            <option value="">All Segments</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="mBrandGrp" style="grid-column:span 2">
+                        <label>Brand Filters (Select one or more, Optional)</label>
+                        <select class="form-select" id="mBrand" multiple style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12.5px;height:75px" onchange="onBrandChange()">
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>End Date *</label>
-                    <input class="form-control" id="mEndDate" type="date">
+            </div>
+
+            <!-- STEP 2: ELIGIBILITY & GATING -->
+            <div id="wizardStep2" style="display:none">
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:14px">
+                    <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:4px"><i class="fas fa-filter me-2" style="color:#7c3aed"></i>Stage 1: Lead Qualification Rules</div>
+                    <div style="font-size:11.5px;color:#64748b;margin-bottom:14px">Define the trigger that makes a deal qualify within the campaign start and end dates.</div>
+                    
+                    <div class="form-group" style="margin-bottom:14px">
+                        <label>Qualification Event *</label>
+                        <select class="form-select" id="mQualEvent" onchange="updateReviewSummary()" style="font-weight:600">
+                            <option value="first_payment" selected>💳 First Payment Received (Qualifies when 1st payment is received in campaign window)</option>
+                            <option value="file_submitted">📋 File Submitted (Qualifies when lead is submitted / CIBIL cleared in campaign window)</option>
+                            <option value="completed">✅ File Completed (Qualifies when lead installation/pipeline completes in campaign window)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="mAdvanceCountBasisGrp" style="display:none;margin-bottom:0">
+                        <label style="font-size:12px;color:#4338ca;font-weight:600;display:block;margin-bottom:4px">Advance Count Basis</label>
+                        <select class="form-select" id="mAdvanceCountBasis" style="background:#0f172a;border-color:#4338ca;color:#e2e8f0;font-size:12.5px">
+                            <option value="DVR">DVR Only — count 1st-payment DVR advances (₹1,000/₹500 per file, ≥ 1 Jul 2026)</option>
+                            <option value="CIBIL">CIBIL Only — count file submissions/clearances (₹1,000 per file)</option>
+                            <option value="BOTH">Both — count either kind (each lead counted once)</option>
+                        </select>
+                        <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Controls which advance type is evaluated for solar deals.</div>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Segment (Category)</label>
-                    <select class="form-select" id="mSegment" onchange="toggleRewardFields()">
-                        <option value="">All Segments</option>
-                    </select>
+
+                <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px">
+                    <div style="font-size:13px;font-weight:700;color:#1e293b;margin-bottom:4px"><i class="fas fa-lock me-2" style="color:#059669"></i>Stage 2: Completion Gating & Cutoff</div>
+                    <div style="font-size:11.5px;color:#64748b;margin-bottom:14px">Define the stage deals must reach by <em>End Date + Grace Days</em> to unlock rewards.</div>
+
+                    <div class="form-group" style="margin-bottom:0">
+                        <label>Completion Criteria *</label>
+                        <select class="form-select" id="mCompCriteria" onchange="updateReviewSummary()" style="font-weight:600">
+                            <option value="balance_received_plus" selected>⚡ Crosses Balance Pending Stage (Balance Received, Subsidy Pending, or Completed)</option>
+                            <option value="completed">🏆 Fully Completed Stage (Pipeline status must be Completed)</option>
+                            <option value="none">🔓 No Completion Gating (Immediate claim upon qualification)</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group" id="mBrandGrp">
-                    <label>Brand Filters (Select one or more, Optional)</label>
-                    <select class="form-select" id="mBrand" multiple style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12.5px;height:80px" onchange="onBrandChange()">
-                    </select>
+            </div>
+
+            <!-- STEP 3: REWARD TYPE & GENERAL LIMITS -->
+            <div id="wizardStep3" style="display:none">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="form-group" style="grid-column:span 2">
+                        <label>Reward Type *</label>
+                        <select class="form-select" id="mRewardType" onchange="toggleRewardFields()" style="font-weight:600">
+                            <option value="award">🏆 Award / Milestone Tiers</option>
+                            <option value="gift">🎁 Gift / Milestone Tiers</option>
+                            <option value="cash">💵 Cash Reward</option>
+                            <option value="bonus">✨ Bonus</option>
+                            <option value="extra_commission">🎯 Special Bonanza — Extra Commission (Per-File / Multi-Level)</option>
+                            <option value="slab_wise">⚡ Slab Wise (Solar File Advance + Extra)</option>
+                            <option value="brand_wise_commission">🏷️ Brand Specific Extra Commission</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="mTargetGrp">
+                        <label>Target — Activated Members (deals) *</label>
+                        <input class="form-control" id="mTarget" type="number" min="1" placeholder="e.g. 5">
+                    </div>
+                    <div class="form-group" id="mRegBonusGrp">
+                        <label>Extra Deals for Registered Members</label>
+                        <input class="form-control" id="mRegBonus" type="number" min="0" placeholder="e.g. 3 (blank = same)">
+                    </div>
+                    <div class="form-group" id="mMaxWinnersGrp">
+                        <label>Max Winners</label>
+                        <input class="form-control" id="mMaxWinners" type="number" min="1" value="50" placeholder="50">
+                    </div>
+                    <div class="form-group">
+                        <label>Total Budget (₹)</label>
+                        <input class="form-control" id="mBudget" type="number" min="0" placeholder="Optional">
+                    </div>
+                    <div class="form-group" id="rewardAmtGrp" style="display:none">
+                        <label>Reward Amount (₹) *</label>
+                        <input class="form-control" id="mRewardAmount" type="number" min="0" placeholder="e.g. 5000">
+                    </div>
+                    <div class="form-group" id="awardNameGrp">
+                        <label>Award / Campaign Headline Name *</label>
+                        <input class="form-control" id="mAwardName" placeholder="e.g. Festival Awards / Gold Trophy">
+                    </div>
+                    <div class="form-group" style="grid-column:span 2">
+                        <label>Reward Description</label>
+                        <textarea class="form-control" id="mRewardText" rows="2" placeholder="Additional details about campaign terms and rewards…"></textarea>
+                    </div>
+                    <!-- Promo Image Upload -->
+                    <div class="form-group" style="grid-column:span 2" id="mImageGroup">
+                        <label>Promo / Banner Image <span style="font-weight:400;color:#9ca3af">(optional — shown on /voffers page)</span></label>
+                        <div id="mImagePreviewWrap" style="display:none;margin-bottom:8px;position:relative;width:160px;height:160px">
+                            <img id="mImagePreview" src="" alt="Preview" style="width:160px;height:160px;object-fit:cover;border-radius:10px;border:1.5px solid #e5e7eb;display:block">
+                            <button type="button" onclick="clearBonanzaImage()" style="position:absolute;top:6px;right:6px;background:rgba(220,38,38,.85);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:13px;cursor:pointer;line-height:1">&times;</button>
+                        </div>
+                        <div id="mImageUploadArea" style="border:2px dashed #d1d5db;border-radius:10px;padding:14px;text-align:center;cursor:pointer;color:#6b7280;font-size:12.5px" onclick="document.getElementById('mImageFile').click()" ondragover="event.preventDefault();this.style.borderColor='#7c3aed'" ondragleave="this.style.borderColor='#d1d5db'" ondrop="handleBonanzaImageDrop(event)">
+                            <i class="fas fa-image" style="font-size:22px;display:block;margin-bottom:6px;color:#9ca3af"></i>
+                            <span style="display:block;font-size:12.5px;color:#4b5563;font-weight:600">Click or drag &amp; drop to upload promo banner</span>
+                            <span style="display:block;font-size:11px;color:#9ca3af;margin-top:2px">JPEG · PNG · WebP &nbsp;|&nbsp; Max 5 MB</span>
+                        </div>
+                        <input type="file" id="mImageFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleBonanzaImageSelect(event)">
+                        <input type="hidden" id="mImageUrl" value="">
+                        <div id="mImageStatus" style="font-size:12px;margin-top:6px;color:#059669;display:none"></div>
+                    </div>
                 </div>
-                <div class="form-group" id="mTargetGrp">
-                    <label>Target — Activated Members (deals) *</label>
-                    <input class="form-control" id="mTarget" type="number" min="1" placeholder="e.g. 5">
-                </div>
-                <div class="form-group" id="mRegBonusGrp">
-                    <label>Extra Deals for Registered Members</label>
-                    <input class="form-control" id="mRegBonus" type="number" min="0" placeholder="e.g. 3 (blank = same as activated)">
-                    <div style="font-size:10px;color:#6b7280;margin-top:3px">Registered (non-activated) members must complete <em>Target + this bonus</em> deals. Leave blank to use the same target for all.</div>
-                </div>
-                <div class="form-group" id="mGraceGrp">
-                    <label>Grace Days (after end date)</label>
-                    <input class="form-control" id="mGrace" type="number" min="1" max="90" value="15" placeholder="15">
-                </div>
-                <div class="form-group" id="mMaxWinnersGrp">
-                    <label>Max Winners</label>
-                    <input class="form-control" id="mMaxWinners" type="number" min="1" value="50" placeholder="50">
-                </div>
-                <div class="form-group" id="mAdvanceCountBasisGrp" style="display:none;grid-column:span 2">
-                    <label style="font-size:12px;color:#a5b4fc;font-weight:600;display:block;margin-bottom:4px">Advance Count Basis</label>
-                    <select class="form-select" id="mAdvanceCountBasis" style="background:#0f172a;border-color:#4338ca;color:#e2e8f0;font-size:13px">
-                        <option value="DVR">DVR Only — count 1st-payment DVR advances (₹1,000/₹500 per file, ≥ 1 Jul 2026)</option>
-                        <option value="CIBIL">CIBIL Only — count file submissions/clearances (₹1,000 per file)</option>
-                        <option value="BOTH">Both — count either kind (each lead counted once)</option>
-                    </select>
-                    <div style="font-size:10.5px;color:#6b7280;margin-top:3px">Controls which type of solar advance is counted when measuring a partner's progress toward this bonanza's targets.</div>
-                </div>
-                <div class="form-group">
-                    <label>Reward Type *</label>
-                    <select class="form-select" id="mRewardType" onchange="toggleRewardFields()">
-                        <option value="cash">Cash</option>
-                        <option value="bonus">Bonus</option>
-                        <option value="slab_wise">⚡ Slab Wise (Solar File Advance + Extra)</option>
-                        <option value="extra_commission">🎯 Special Bonanza — Extra Commission</option>
-                        <option value="brand_wise_commission">🏷️ Brand Specific Extra Commission</option>
-                        <option value="award">Award</option>
-                        <option value="gift">Gift</option>
-                    </select>
-                </div>
-                <div class="form-group" id="rewardAmtGrp">
-                    <label>Reward Amount (₹) *</label>
-                    <input class="form-control" id="mRewardAmount" type="number" min="0" placeholder="e.g. 5000">
-                </div>
-                <div class="form-group" id="awardNameGrp" style="display:none">
-                    <label>Award Name *</label>
-                    <input class="form-control" id="mAwardName" placeholder="e.g. Gold Trophy">
-                </div>
+            </div>
+
+            <!-- STEP 4: TIERS & MILESTONES -->
+            <div id="wizardStep4" style="display:none">
                 <!-- DC_BONANZA_SLABWISE_001: Slab Wise fields -->
-                <div class="form-group" id="slabWiseGrp" style="display:none;grid-column:span 2">
+                <div class="form-group" id="slabWiseGrp" style="display:none;margin-bottom:14px">
                     <div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border:1.5px solid #7c3aed;border-radius:12px;padding:16px 18px">
                         <div style="font-weight:700;font-size:13px;color:#c4b5fd;margin-bottom:12px"><i class="fas fa-layer-group me-2"></i>Slab Wise Bonus Configuration</div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                             <div>
                                 <label style="font-size:12px;color:#a5b4fc;font-weight:600;display:block;margin-bottom:4px">Base Reference Amount (₹) <span style="font-weight:400;color:#6b7280">display only</span></label>
                                 <input class="form-control" id="mSlabBaseRef" type="number" min="0" step="1" value="1000" placeholder="e.g. 1000" oninput="updateSlabPreview()" style="background:#0f172a;border-color:#4338ca;color:#e2e8f0">
-                                <div style="font-size:10.5px;color:#7c3aed;margin-top:3px">The Solar File Advance base members already receive — shown on their earner card for context, not paid by this bonanza.</div>
                             </div>
                             <div>
                                 <label style="font-size:12px;color:#a5b4fc;font-weight:600;display:block;margin-bottom:4px">Extra Slab Amount (₹) *</label>
                                 <input class="form-control" id="mSlabExtra" type="number" min="1" step="1" placeholder="e.g. 3000" oninput="updateSlabPreview()" style="background:#0f172a;border-color:#4338ca;color:#e2e8f0">
-                                <div style="font-size:10.5px;color:#7c3aed;margin-top:3px">The additional bonus this bonanza campaign pays on top of the base.</div>
                             </div>
                         </div>
 
@@ -387,45 +484,16 @@ tbody tr { background: #ffffff !important; }
                                 <span id="slabPreviewExtra" style="color:#fbbf24;font-weight:700;font-size:14px"></span>
                                 <span style="color:#6b7280">=</span>
                                 <span style="color:#34d399;font-weight:800;font-size:17px" id="slabPreviewTotal"></span>
-                                <span style="color:#a5b4fc;font-size:12px">per file, auto-credited on release</span>
-                            </div>
-                            <div style="margin-top:6px;padding:5px 8px;background:rgba(52,211,153,.08);border-radius:6px;font-size:10.5px;color:#6ee7b7">
-                                <i class="fas fa-bolt me-1"></i>No claim required — bonus fires automatically when staff releases any Solar File Advance during the campaign period.
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="form-group" style="grid-column:span 2">
-                    <label>Reward Description</label>
-                    <textarea class="form-control" id="mRewardText" rows="2" placeholder="Additional details about the reward…"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Total Budget (₹)</label>
-                    <input class="form-control" id="mBudget" type="number" min="0" placeholder="Optional">
-                </div>
-                <!-- Promo Image Upload -->
-                <div class="form-group" style="grid-column:span 2" id="mImageGroup">
-                    <label>Promo / Banner Image <span style="font-weight:400;color:#9ca3af">(optional — shown on /voffers page)</span></label>
-                    <div id="mImagePreviewWrap" style="display:none;margin-bottom:8px;position:relative;width:200px;height:200px">
-                        <img id="mImagePreview" src="" alt="Preview" style="width:200px;height:200px;object-fit:cover;border-radius:10px;border:1.5px solid #e5e7eb;display:block">
-                        <button type="button" onclick="clearBonanzaImage()" style="position:absolute;top:6px;right:6px;background:rgba(220,38,38,.85);color:#fff;border:none;border-radius:50%;width:26px;height:26px;font-size:14px;cursor:pointer;line-height:1">&times;</button>
-                    </div>
-                    <div id="mImageUploadArea" style="border:2px dashed #d1d5db;border-radius:10px;padding:18px;text-align:center;cursor:pointer;color:#6b7280;font-size:13px;transition:border-color .2s" onclick="document.getElementById('mImageFile').click()" ondragover="event.preventDefault();this.style.borderColor='#7c3aed'" ondragleave="this.style.borderColor='#d1d5db'" ondrop="handleBonanzaImageDrop(event)">
-                        <i class="fas fa-image" style="font-size:24px;display:block;margin-bottom:8px;color:#9ca3af"></i>
-                        <span style="display:block;font-size:13px;color:#4b5563;font-weight:600">Click or drag &amp; drop to upload</span>
-                        <span style="display:block;font-size:12px;color:#9ca3af;margin-top:3px">JPEG · PNG · WebP &nbsp;|&nbsp; Max 5 MB</span>
-                        <span style="display:block;font-size:11.5px;color:#a78bfa;margin-top:2px;font-weight:500">Recommended: 400 × 400 px (1:1 square)</span>
-                    </div>
-                    <input type="file" id="mImageFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleBonanzaImageSelect(event)">
-                    <input type="hidden" id="mImageUrl" value="">
-                    <div id="mImageStatus" style="font-size:12px;margin-top:6px;color:#059669;display:none"></div>
-                </div>
-                <!-- DC-EXTRA-COMM-001: Special Bonanza Extra Commission configuration -->
-                <!-- DC-EC-PER-LEVEL-TRIGGER-001: Unified Per-Level Trigger Configuration (all non-slab types) -->
-                <div class="form-group" id="perLevelTriggerGrp" style="display:none;grid-column:span 2">
+
+                <!-- DC-EC-PER-LEVEL-TRIGGER-001: Unified Per-Level Trigger Configuration -->
+                <div class="form-group" id="perLevelTriggerGrp" style="display:none;margin-bottom:14px">
                     <div style="background:linear-gradient(135deg,#0c1a2e,#0f2a1a);border:1.5px solid #059669;border-radius:12px;padding:16px 18px">
                         <div style="font-weight:700;font-size:13px;color:#6ee7b7;margin-bottom:4px"><i class="fas fa-bolt me-2"></i>Per-Level Trigger Configuration</div>
-                        <div id="pltSubtitle" style="font-size:11.5px;color:#9ca3af;margin-bottom:14px">Each level fires at its own trigger point. Same lead fires independently per bonanza. Idempotent — once per lead per level per bonanza.</div>
+                        <div id="pltSubtitle" style="font-size:11.5px;color:#9ca3af;margin-bottom:14px">Each level fires at its own trigger point. Idempotent — credited once per lead per level.</div>
                         <div style="overflow-x:auto">
                             <table style="width:100%;border-collapse:collapse;font-size:12.5px">
                                 <thead>
@@ -441,32 +509,32 @@ tbody tr { background: #ffffff !important; }
                                     <tr style="border-bottom:1px solid #1a2a1a">
                                         <td style="padding:7px 10px;color:#a5b4fc;font-weight:700;font-size:11.5px">L1 — Direct</td>
                                         <td style="padding:7px 10px"><select class="form-select" id="pltL1Trigger" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px;padding:4px 8px"><option value="">— no trigger —</option><option value="file_submitted">📋 File Submitted</option><option value="first_payment">💳 First Payment</option><option value="file_completed">✅ File Completed</option></select></td>
-                                        <td class="pltAmtCol" style="padding:7px 10px"><input class="form-control" id="pltL1Amt" type="number" min="0" step="1" placeholder="e.g. 500" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px"></td>
+                                        <td class="pltAmtCol" style="padding:7px 10px"><input class="form-control" id="pltL1Amt" type="number" min="0" step="1" placeholder="e.g. 1000" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px"></td>
                                         <td class="pltPartCol" style="padding:7px 10px;display:none;text-align:center"><input type="checkbox" id="pltL1Part" style="accent-color:#7c3aed;width:16px;height:16px;cursor:pointer"></td>
                                         <td class="pltNoteCol" style="padding:7px 10px;display:none"><input class="form-control" id="pltL1Note" type="text" placeholder="Note (optional)" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:11px;padding:4px 8px"></td>
                                     </tr>
                                     <tr style="border-bottom:1px solid #1a2a1a">
                                         <td style="padding:7px 10px;color:#a5b4fc;font-weight:700;font-size:11.5px">L2 — Senior</td>
                                         <td style="padding:7px 10px"><select class="form-select" id="pltL2Trigger" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px;padding:4px 8px"><option value="">— no trigger —</option><option value="file_submitted">📋 File Submitted</option><option value="first_payment">💳 First Payment</option><option value="file_completed">✅ File Completed</option></select></td>
-                                        <td class="pltAmtCol" style="padding:7px 10px"><input class="form-control" id="pltL2Amt" type="number" min="0" step="1" placeholder="e.g. 300" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px"></td>
+                                        <td class="pltAmtCol" style="padding:7px 10px"><input class="form-control" id="pltL2Amt" type="number" min="0" step="1" placeholder="e.g. 500" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px"></td>
                                         <td class="pltPartCol" style="padding:7px 10px;display:none;text-align:center"><input type="checkbox" id="pltL2Part" style="accent-color:#7c3aed;width:16px;height:16px;cursor:pointer"></td>
                                         <td class="pltNoteCol" style="padding:7px 10px;display:none"><input class="form-control" id="pltL2Note" type="text" placeholder="Note (optional)" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:11px;padding:4px 8px"></td>
                                     </tr>
                                     <tr style="border-bottom:1px solid #1a2a1a">
-                                        <td style="padding:7px 10px;color:#a5b4fc;font-weight:700;font-size:11.5px">L3 — Extended</td>
+                                        <td style="padding:7px 10px;color:#a5b4fc;font-weight:700;font-size:11.5px">L3 — Manager</td>
                                         <td style="padding:7px 10px"><select class="form-select" id="pltL3Trigger" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px;padding:4px 8px"><option value="">— no trigger —</option><option value="file_submitted">📋 File Submitted</option><option value="first_payment">💳 First Payment</option><option value="file_completed">✅ File Completed</option></select></td>
-                                        <td class="pltAmtCol" style="padding:7px 10px"><input class="form-control" id="pltL3Amt" type="number" min="0" step="1" placeholder="e.g. 200" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px"></td>
+                                        <td class="pltAmtCol" style="padding:7px 10px"><input class="form-control" id="pltL3Amt" type="number" min="0" step="1" placeholder="e.g. 250" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px"></td>
                                         <td class="pltPartCol" style="padding:7px 10px;display:none;text-align:center"><input type="checkbox" id="pltL3Part" style="accent-color:#7c3aed;width:16px;height:16px;cursor:pointer"></td>
                                         <td class="pltNoteCol" style="padding:7px 10px;display:none"><input class="form-control" id="pltL3Note" type="text" placeholder="Note (optional)" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:11px;padding:4px 8px"></td>
                                     </tr>
                                     <tr style="border-bottom:1px solid #1a2a1a">
-                                        <td style="padding:7px 10px;color:#a5b4fc;font-weight:700;font-size:11.5px">L4 — Core</td>
+                                        <td style="padding:7px 10px;color:#a5b4fc;font-weight:700;font-size:11.5px">L4 — Director</td>
                                         <td style="padding:7px 10px"><select class="form-select" id="pltL4Trigger" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px;padding:4px 8px"><option value="">— no trigger —</option><option value="file_submitted">📋 File Submitted</option><option value="first_payment">💳 First Payment</option><option value="file_completed">✅ File Completed</option></select></td>
                                         <td class="pltAmtCol" style="padding:7px 10px"><input class="form-control" id="pltL4Amt" type="number" min="0" step="1" placeholder="e.g. 150" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px"></td>
                                         <td class="pltPartCol" style="padding:7px 10px;display:none;text-align:center"><input type="checkbox" id="pltL4Part" style="accent-color:#7c3aed;width:16px;height:16px;cursor:pointer"></td>
                                         <td class="pltNoteCol" style="padding:7px 10px;display:none"><input class="form-control" id="pltL4Note" type="text" placeholder="Note (optional)" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:11px;padding:4px 8px"></td>
                                     </tr>
-                                    <tr>
+                                    <tr style="border-bottom:1px solid #1a2a1a">
                                         <td style="padding:7px 10px;color:#a5b4fc;font-weight:700;font-size:11.5px">L5 — Field</td>
                                         <td style="padding:7px 10px"><select class="form-select" id="pltL5Trigger" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px;padding:4px 8px"><option value="">— no trigger —</option><option value="file_submitted">📋 File Submitted</option><option value="first_payment">💳 First Payment</option><option value="file_completed">✅ File Completed</option></select></td>
                                         <td class="pltAmtCol" style="padding:7px 10px"><input class="form-control" id="pltL5Amt" type="number" min="0" step="1" placeholder="e.g. 100" style="background:#0f172a;border-color:#374151;color:#e2e8f0;font-size:12px"></td>
@@ -476,103 +544,147 @@ tbody tr { background: #ffffff !important; }
                                 </tbody>
                             </table>
                         </div>
-                        <div style="font-size:10.5px;color:#6b7280;margin-top:8px">
-                            Bonanza fires <b style="color:#9ca3af">at</b> these pipeline events — &nbsp;
-                            <b style="color:#9ca3af">📋 File Submitted</b>: fires <i>when</i> Solar CIBIL advance is released &nbsp;|&nbsp;
-                            <b style="color:#9ca3af">💳 First Payment</b>: fires <i>when</i> DVR / first-payment advance is released &nbsp;|&nbsp;
-                            <b style="color:#9ca3af">✅ File Completed</b>: fires <i>when</i> lead is marked completed (all categories). Leave trigger blank to skip a level.
-                        </div>
-
-                        <div id="pltInfoNote" style="margin-top:10px;padding:8px 12px;background:rgba(5,150,105,.08);border-radius:6px;font-size:11px;color:#6ee7b7">
-                            <i class="fas fa-info-circle me-1"></i>Each level fires at its own configured trigger. Same lead fires once per level per bonanza — counted independently across different bonanzas.
-                        </div>
                     </div>
                 </div>
 
                 <!-- Brand specific incentives configuration -->
-                <div class="form-group" id="brandWiseIncentiveGrp" style="display:none;grid-column:span 2">
+                <div class="form-group" id="brandWiseIncentiveGrp" style="display:none;margin-bottom:14px">
                     <div style="background:linear-gradient(135deg,#0c1022,#1d1330);border:1.5px solid #a78bfa;border-radius:12px;padding:16px 18px">
                         <div style="font-weight:700;font-size:13px;color:#c4b5fd;margin-bottom:4px"><i class="fas fa-tags me-2"></i>Brand-Specific Extra Commission Overrides</div>
-                        <div style="font-size:11px;color:#9ca3af;margin-bottom:14px">Select brand and define custom trigger events and payout amounts. If a brand is enabled but has no custom settings, it will use global defaults (if set) or skip.</div>
-                        <div id="brandConfigContainer" style="display:grid;grid-template-columns:1fr;gap:12px">
-                            <!-- JS will dynamically populate brand config boxes here -->
-                        </div>
+                        <div id="brandConfigContainer" style="display:grid;grid-template-columns:1fr;gap:12px"></div>
                     </div>
                 </div>
 
                 <!-- Inline Slab Builder -->
-                <div class="form-group" style="grid-column:span 2" id="inlineSlabsSection">
-                    <hr style="margin:4px 0 14px;border-color:#e5e7eb">
+                <div class="form-group" id="inlineSlabsSection">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                        <div style="font-weight:700;font-size:13px;color:#374151"><i class="fas fa-layer-group me-2" style="color:#7c3aed"></i>Reward Slabs <span style="font-weight:400;color:#6b7280;font-size:11.5px">(optional — define multiple tiers)</span></div>
-                        <button type="button" onclick="toggleInlineSlabForm()" id="inlineSlabToggleBtn" style="font-size:12px;padding:4px 11px;border:1px solid #c4b5fd;border-radius:6px;background:#f5f3ff;color:#7c3aed;cursor:pointer"><i class="fas fa-plus me-1"></i>Add Slab</button>
+                        <div>
+                            <div style="font-weight:700;font-size:13px;color:#374151"><i class="fas fa-layer-group me-2" style="color:#7c3aed"></i>Reward Slabs / Milestones</div>
+                            <div style="font-size:11px;color:#6b7280">Define target milestones with configurable reward behavior (One-time, Repeatable, Highest-only)</div>
+                        </div>
+                        <button type="button" onclick="toggleInlineSlabForm()" id="inlineSlabToggleBtn" style="font-size:12px;padding:5px 12px;border:1px solid #c4b5fd;border-radius:6px;background:#f5f3ff;color:#7c3aed;cursor:pointer;font-weight:600"><i class="fas fa-plus me-1"></i>Add Milestone</button>
                     </div>
-                    <div id="inlineSlabsList" style="margin-bottom:6px"></div>
-                    <div id="inlineSlabForm" style="display:none;background:#faf5ff;border:1px solid #ddd6fe;border-radius:10px;padding:14px;margin-bottom:6px">
+
+                    <div id="inlineSlabsList" style="margin-bottom:8px"></div>
+
+                    <div id="inlineSlabForm" style="display:none;background:#faf5ff;border:1.5px solid #ddd6fe;border-radius:10px;padding:14px;margin-bottom:10px">
+                        <div style="font-size:12px;font-weight:700;color:#5b21b6;margin-bottom:10px"><i class="fas fa-plus-circle me-1"></i> New Milestone Tier Configuration</div>
                         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
                             <div>
-                                <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Label *</label>
-                                <input class="form-control" id="isLabel" placeholder="e.g. Silver" style="font-size:12.5px">
+                                <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:3px">Milestone Label *</label>
+                                <input class="form-control" id="isLabel" placeholder="e.g. Milestone 2 (6 Deals)" style="font-size:12px">
                             </div>
                             <div>
-                                <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Target From *</label>
-                                <input class="form-control" id="isFrom" type="number" min="1" placeholder="e.g. 1" style="font-size:12.5px">
+                                <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:3px">Target Deals *</label>
+                                <input class="form-control" id="isFrom" type="number" min="1" placeholder="e.g. 6" style="font-size:12px">
                             </div>
                             <div>
-                                <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Target To</label>
-                                <input class="form-control" id="isTo" type="number" min="1" placeholder="blank = unlimited" style="font-size:12.5px">
-                            </div>
-                            <div>
-                                <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Reward Type</label>
-                                <select class="form-select" id="isType" onchange="toggleInlineRewardFields()" style="font-size:12.5px">
-                                    <option value="cash">Cash</option>
-                                    <option value="bonus">Bonus</option>
-                                    <option value="award">Award</option>
-                                    <option value="gift">Gift</option>
+                                <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:3px">Reward Mode *</label>
+                                <select class="form-select" id="isMode" style="font-size:12px;font-weight:600">
+                                    <option value="one_time">One-Time (Earned once)</option>
+                                    <option value="repeatable">Repeatable (Earned for every multiple)</option>
+                                    <option value="highest_only">Highest Only (Top milestone unlocked)</option>
                                 </select>
                             </div>
-                            <div id="isAmtGrp">
-                                <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Amount (₹) *</label>
-                                <input class="form-control" id="isAmt" type="number" min="0" placeholder="e.g. 5000" style="font-size:12.5px">
-                            </div>
-                            <div id="isNameGrp" style="display:none">
-                                <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Award Name *</label>
-                                <input class="form-control" id="isAwardName" placeholder="e.g. Gold Trophy" style="font-size:12.5px">
+                            <div>
+                                <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:3px">Entitlement Cost (Units) *</label>
+                                <input class="form-control" id="isCost" type="number" min="1" value="1" placeholder="1" style="font-size:12px">
                             </div>
                             <div>
-                                <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Max Winners</label>
-                                <input class="form-control" id="isMaxW" type="number" min="1" placeholder="blank = unlimited" style="font-size:12.5px">
+                                <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:3px">Max Repeats</label>
+                                <input class="form-control" id="isMaxRepeat" type="number" min="1" placeholder="Blank = unlimited" style="font-size:12px">
+                            </div>
+                            <div>
+                                <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:3px">Reward Type</label>
+                                <select class="form-select" id="isType" onchange="toggleInlineRewardFields()" style="font-size:12px">
+                                    <option value="award">Award / Physical Gift</option>
+                                    <option value="gift">Gift Voucher / Package</option>
+                                    <option value="cash">Cash Reward</option>
+                                    <option value="bonus">Bonus</option>
+                                </select>
+                            </div>
+                            <div id="isAmtGrp" style="display:none">
+                                <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:3px">Amount (₹) *</label>
+                                <input class="form-control" id="isAmt" type="number" min="0" placeholder="e.g. 5000" style="font-size:12px">
+                            </div>
+                            <div id="isNameGrp" style="grid-column:span 2">
+                                <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:3px">Award / Gift Name *</label>
+                                <input class="form-control" id="isAwardName" placeholder="e.g. Goa Trip / Silver / E-Scooter" style="font-size:12px">
+                            </div>
+                            <div>
+                                <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:3px">Max Winners</label>
+                                <input class="form-control" id="isMaxW" type="number" min="1" placeholder="blank = unlimited" style="font-size:12px">
                             </div>
                         </div>
+
                         <!-- Slab promo image -->
                         <div style="margin-top:10px">
-                            <label style="font-size:11.5px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Slab Image <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
-                            <div id="isImagePreviewWrap" style="display:none;margin-bottom:6px;position:relative;width:90px;height:90px">
-                                <img id="isImagePreview" src="" alt="" style="width:90px;height:90px;object-fit:cover;border-radius:7px;border:1.5px solid #e5e7eb;display:block">
-                                <button type="button" onclick="clearSlabImage()" style="position:absolute;top:3px;right:3px;background:rgba(220,38,38,.85);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;line-height:1">&times;</button>
+                            <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:3px">Milestone Image <span style="font-weight:400;color:#9ca3af">(optional)</span></label>
+                            <div id="isImagePreviewWrap" style="display:none;margin-bottom:6px;position:relative;width:80px;height:80px">
+                                <img id="isImagePreview" src="" alt="" style="width:80px;height:80px;object-fit:cover;border-radius:7px;border:1.5px solid #e5e7eb;display:block">
+                                <button type="button" onclick="clearSlabImage()" style="position:absolute;top:3px;right:3px;background:rgba(220,38,38,.85);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1">&times;</button>
                             </div>
-                            <div id="isImageUploadArea" style="border:1.5px dashed #d1d5db;border-radius:8px;padding:12px 10px;text-align:center;cursor:pointer;color:#6b7280;font-size:12px;transition:border-color .2s" onclick="document.getElementById('isImageFile').click()" ondragover="event.preventDefault();this.style.borderColor='#7c3aed'" ondragleave="this.style.borderColor='#d1d5db'" ondrop="handleSlabImageDrop(event)">
-                                <i class="fas fa-image" style="display:block;font-size:20px;color:#9ca3af;margin-bottom:5px"></i>
-                                <span style="display:block;font-size:12px;color:#4b5563;font-weight:600">Click or drag &amp; drop to upload</span>
-                                <span style="display:block;font-size:11px;color:#9ca3af;margin-top:3px">JPEG · PNG · WebP &nbsp;|&nbsp; Max 2 MB</span>
-                                <span style="display:block;font-size:10.5px;color:#a78bfa;margin-top:2px;font-weight:500">Recommended: 400 × 400 px (1:1 square)</span>
+                            <div id="isImageUploadArea" style="border:1.5px dashed #d1d5db;border-radius:8px;padding:10px;text-align:center;cursor:pointer;color:#6b7280;font-size:11.5px" onclick="document.getElementById('isImageFile').click()" ondragover="event.preventDefault();this.style.borderColor='#7c3aed'" ondragleave="this.style.borderColor='#d1d5db'" ondrop="handleSlabImageDrop(event)">
+                                <i class="fas fa-image" style="display:block;font-size:18px;color:#9ca3af;margin-bottom:4px"></i>
+                                <span style="display:block;font-size:11.5px;color:#4b5563;font-weight:600">Click to upload milestone image</span>
                             </div>
                             <input type="file" id="isImageFile" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleSlabImageSelect(event)">
                         </div>
+
                         <div id="isError" style="display:none;color:#dc2626;font-size:12px;margin-top:6px"></div>
                         <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
                             <button type="button" onclick="hideInlineSlabForm()" style="font-size:12px;padding:5px 12px;border:1px solid #d1d5db;border-radius:6px;background:white;cursor:pointer;color:#6b7280">Cancel</button>
-                            <button type="button" onclick="addInlineSlab()" style="font-size:12px;padding:5px 14px;border:none;border-radius:6px;background:#7c3aed;color:white;cursor:pointer;font-weight:700"><i class="fas fa-plus me-1"></i>Add</button>
+                            <button type="button" onclick="addInlineSlab()" style="font-size:12px;padding:5px 14px;border:none;border-radius:6px;background:#7c3aed;color:white;cursor:pointer;font-weight:700"><i class="fas fa-plus me-1"></i>Add Milestone</button>
                         </div>
                     </div>
                     <div id="inlineSlabsNote" style="display:none;font-size:11px;color:#7c3aed;margin-top:4px"><i class="fas fa-info-circle me-1"></i>To edit or delete existing slabs, use the <strong><i class="fas fa-layer-group"></i> Manage Slabs</strong> button on the campaign row.</div>
                 </div>
             </div>
-            <div id="modalError" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:8px"></div>
+
+            <!-- STEP 5: REVIEW & CONFIRM -->
+            <div id="wizardStep5" style="display:none">
+                <div style="background:white;border:2px solid #7c3aed;border-radius:12px;padding:18px;box-shadow:0 4px 14px rgba(124,58,237,0.1)">
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+                        <span style="background:#7c3aed;color:#fff;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px"><i class="fas fa-clipboard-check"></i></span>
+                        <div>
+                            <h5 style="margin:0;font-weight:800;color:#1e1b4b" id="revCampaignName">Campaign Summary</h5>
+                            <div style="font-size:12px;color:#6b7280" id="revCampaignDates">Period: —</div>
+                        </div>
+                    </div>
+                    
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+                        <div style="background:#f8fafc;border-radius:8px;padding:12px;border:1px solid #e2e8f0">
+                            <div style="font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase"><i class="fas fa-filter me-1"></i> Stage 1: Qualification</div>
+                            <div style="font-size:12.5px;font-weight:700;color:#0f172a;margin-top:3px" id="revQualEvent">—</div>
+                            <div style="font-size:11.5px;color:#64748b;margin-top:3px" id="revQualDesc">Leads in campaign period qualify.</div>
+                        </div>
+                        <div style="background:#f8fafc;border-radius:8px;padding:12px;border:1px solid #e2e8f0">
+                            <div style="font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase"><i class="fas fa-lock me-1"></i> Stage 2: Completion Gating</div>
+                            <div style="font-size:12.5px;font-weight:700;color:#0f172a;margin-top:3px" id="revCompCriteria">—</div>
+                            <div style="font-size:11.5px;color:#64748b;margin-top:3px" id="revCompDeadline">Deadline: —</div>
+                        </div>
+                    </div>
+
+                    <div style="background:#f5f3ff;border-radius:8px;padding:12px 14px;border:1px solid #ddd6fe;margin-bottom:14px">
+                        <div style="font-size:11px;font-weight:800;color:#6d28d9;text-transform:uppercase;margin-bottom:6px"><i class="fas fa-gift me-1"></i> Stage 3 & 4: Rewards & Entitlements Configured</div>
+                        <div id="revRewardsList" style="font-size:12px;color:#374151"></div>
+                    </div>
+
+                    <div style="padding:10px 14px;background:#ecfdf5;border-radius:8px;border:1px solid #a7f3d0;font-size:12px;color:#065f46">
+                        <i class="fas fa-check-circle me-1"></i> <strong>Configuration Validated:</strong> All campaign rules are consistent. Click "Confirm & Save Campaign" below to activate.
+                    </div>
+                </div>
+            </div>
+
+            <div id="modalError" style="display:none;background:#fef2f2;color:#dc2626;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:12px"></div>
         </div>
-        <div class="modal-footer">
-            <button class="btn-secondary-vgk" onclick="closeModal()">Cancel</button>
-            <button class="btn-primary-vgk" id="modalSaveBtn" onclick="saveBonanza()"><i class="fas fa-save me-1"></i>Save Campaign</button>
+        <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center">
+            <button type="button" class="btn-secondary-vgk" id="btnWizardPrev" onclick="prevStep()" style="display:none"><i class="fas fa-arrow-left me-1"></i> Previous Step</button>
+            <div style="display:flex;gap:8px;margin-left:auto">
+                <button type="button" class="btn-secondary-vgk" onclick="closeModal()">Cancel</button>
+                <button type="button" class="btn-primary-vgk" id="btnWizardNext" onclick="nextStep()">Next Step <i class="fas fa-arrow-right ms-1"></i></button>
+                <button type="button" class="btn-primary-vgk" id="modalSaveBtn" onclick="saveBonanza()" style="display:none;background:#059669"><i class="fas fa-save me-1"></i>Confirm & Save Campaign</button>
+            </div>
         </div>
     </div>
 </div>
@@ -612,6 +724,22 @@ tbody tr { background: #ffffff !important; }
                     <div class="form-group">
                         <label>Display Order</label>
                         <input class="form-control" id="slabOrder" type="number" min="1" value="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Reward Mode *</label>
+                        <select class="form-select" id="slabRewardMode">
+                            <option value="one_time">One-Time (Earned once)</option>
+                            <option value="repeatable">Repeatable (Earned for each multiple)</option>
+                            <option value="highest_only">Highest Only (Top milestone unlocked)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Entitlement Cost (Units) *</label>
+                        <input class="form-control" id="slabEntitlementCost" type="number" min="1" value="1" placeholder="e.g. 1">
+                    </div>
+                    <div class="form-group">
+                        <label>Max Repeats</label>
+                        <input class="form-control" id="slabMaxRepeat" type="number" min="1" placeholder="Blank = unlimited">
                     </div>
                     <div class="form-group">
                         <label>Reward Type *</label>
@@ -879,6 +1007,7 @@ async function loadBonanzas() {
                 <td>
                     <button class="btn-sm-icon edit" title="Edit" onclick="openEditModal(${b.id})"><i class="fas fa-edit"></i></button>
                     <button class="btn-sm-icon" title="Manage Slabs" onclick="openSlabsModal(${b.id},\`${escH(b.name)}\`)" style="color:#7c3aed;border-color:#c4b5fd"><i class="fas fa-layer-group"></i></button>
+                    <button class="btn-sm-icon" title="Recalculate Entitlements" onclick="recalculateBonanza(${b.id},\`${escH(b.name)}\`)" style="color:#0284c7;border-color:#bae6fd"><i class="fas fa-sync-alt"></i></button>
                     ${b.status === 'Pending'   ? `<button class="btn-sm-icon approve"  title="Approve"    onclick="openApprove(${b.id},\`${escH(b.name)}\`)"><i class="fas fa-check"></i></button>` : ''}
                     ${b.status === 'Approved'  ? `<button class="btn-sm-icon pause"    title="Pause"      onclick="pauseBonanza(${b.id},\`${escH(b.name)}\`)"><i class="fas fa-pause"></i></button>` : ''}
                     ${(b.status === 'Cancelled' || b.status === 'Paused') ? `<button class="btn-sm-icon activate" title="Activate / Re-activate" onclick="activateBonanza(${b.id},\`${escH(b.name)}\`,\`${escH(b.status)}\`)"><i class="fas fa-play"></i></button>` : ''}
@@ -936,11 +1065,13 @@ function onBrandChange() {
             rtSelect.value = 'extra_commission';
             toggleRewardFields();
         }
-        // Set L1 = 1000 (file_submitted) and L5 = 500 (first_payment)
+        // Set L1 = 1000 (file_submitted) and L2 = 500 (file_submitted)
         document.getElementById('pltL1Trigger').value = 'file_submitted';
         document.getElementById('pltL1Amt').value = '1000';
-        document.getElementById('pltL5Trigger').value = 'first_payment';
-        document.getElementById('pltL5Amt').value = '500';
+        document.getElementById('pltL2Trigger').value = 'file_submitted';
+        document.getElementById('pltL2Amt').value = '500';
+        document.getElementById('pltL5Trigger').value = '';
+        document.getElementById('pltL5Amt').value = '';
     }
 }
 
@@ -1048,6 +1179,268 @@ function _previewAndUploadBonanzaImage(file) {
     status.style.color = '#7c3aed';
 }
 
+// ── Guided 5-Step Wizard Navigation & Templates ────────────────────────────
+let _currentWizardStep = 1;
+
+function goToStep(step) {
+    if (step < 1 || step > 5) return;
+    _currentWizardStep = step;
+    for (let i = 1; i <= 5; i++) {
+        const stepEl = document.getElementById('wizardStep' + i);
+        if (stepEl) stepEl.style.display = (i === step) ? '' : 'none';
+        const tabEl = document.getElementById('stepTab' + i);
+        if (tabEl) {
+            tabEl.classList.toggle('active', i === step);
+            tabEl.classList.toggle('completed', i < step);
+        }
+    }
+    const btnPrev = document.getElementById('btnWizardPrev');
+    const btnNext = document.getElementById('btnWizardNext');
+    const btnSave = document.getElementById('modalSaveBtn');
+    if (btnPrev) btnPrev.style.display = (step > 1) ? '' : 'none';
+    if (btnNext) btnNext.style.display = (step < 5) ? '' : 'none';
+    if (btnSave) btnSave.style.display = (step === 5) ? '' : 'none';
+    if (step === 5) updateReviewSummary();
+}
+
+function nextStep() {
+    const errEl = document.getElementById('modalError');
+    if (errEl) errEl.style.display = 'none';
+    if (_currentWizardStep === 1) {
+        const name = document.getElementById('mName').value.trim();
+        const start = document.getElementById('mStartDate').value;
+        const end = document.getElementById('mEndDate').value;
+        if (!name) { showErr('Please enter Campaign Name'); return; }
+        if (!start || !end) { showErr('Please specify Start and End dates'); return; }
+        if (new Date(end) <= new Date(start)) { showErr('End Date must be after Start Date'); return; }
+    } else if (_currentWizardStep === 3) {
+        const rt = document.getElementById('mRewardType').value;
+        const isMonetary = ['cash','bonus'].includes(rt);
+        const isAwardGift = rt === 'award' || rt === 'gift';
+        if (isMonetary && !document.getElementById('mRewardAmount').value) {
+            showErr('Please enter Reward Amount'); return;
+        }
+        if (isAwardGift && !document.getElementById('mAwardName').value.trim()) {
+            showErr('Please enter Award/Headline Name'); return;
+        }
+    }
+    goToStep(_currentWizardStep + 1);
+}
+
+function prevStep() {
+    const errEl = document.getElementById('modalError');
+    if (errEl) errEl.style.display = 'none';
+    goToStep(_currentWizardStep - 1);
+}
+
+function applyTemplateA() {
+    document.getElementById('mName').value = '⚡ 1st Stage Solar Advance Bonanza';
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const startStr = `${y}-${m}-01`;
+    const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();
+    const endStr = `${y}-${m}-${String(lastDay).padStart(2, '0')}`;
+    document.getElementById('mStartDate').value = startStr;
+    document.getElementById('mEndDate').value = endStr;
+    document.getElementById('mGrace').value = '0';
+    document.getElementById('mSegment').value = '6';
+    document.getElementById('mQualEvent').value = 'file_submitted';
+    document.getElementById('mCompCriteria').value = 'none';
+    document.getElementById('mRewardType').value = 'extra_commission';
+    toggleRewardFields();
+    document.getElementById('pltL1Trigger').value = 'file_submitted';
+    document.getElementById('pltL1Amt').value = '1000';
+    document.getElementById('pltL2Trigger').value = 'file_submitted';
+    document.getElementById('pltL2Amt').value = '500';
+    [3, 4, 5].forEach(lv => {
+        document.getElementById('pltL' + lv + 'Trigger').value = '';
+        document.getElementById('pltL' + lv + 'Amt').value = '';
+    });
+    _inlineSlabs = [];
+    renderInlineSlabs();
+    goToStep(5);
+}
+
+function applyTemplateB() {
+    document.getElementById('mName').value = '🏆 VGK Mega Solar Festival Bonanza 2026';
+    document.getElementById('mStartDate').value = '2026-09-01';
+    document.getElementById('mEndDate').value = '2026-10-31';
+    document.getElementById('mGrace').value = '15';
+    document.getElementById('mSegment').value = '6';
+    document.getElementById('mQualEvent').value = 'first_payment';
+    document.getElementById('mCompCriteria').value = 'balance_received_plus';
+    document.getElementById('mAdvanceCountBasis').value = 'DVR';
+    document.getElementById('mRewardType').value = 'award';
+    document.getElementById('mAwardName').value = 'Festival Milestone Rewards';
+    document.getElementById('mTarget').value = '3';
+    document.getElementById('mMaxWinners').value = '500';
+    toggleRewardFields();
+    _inlineSlabs = [
+        {
+            slab_label: 'Milestone 1 — Geyser + Room Heater',
+            slab_order: 1,
+            target_from: 3,
+            target_to: null,
+            reward_type: 'award',
+            is_monetary: false,
+            reward_amount: null,
+            award_name: 'Geyser + Room Heater',
+            max_winners: null,
+            reward_mode: 'one_time',
+            entitlement_cost: 1,
+            max_repeat: null,
+            reward_quantity: 1
+        },
+        {
+            slab_label: 'Milestone 2 — Goa Trip',
+            slab_order: 2,
+            target_from: 6,
+            target_to: null,
+            reward_type: 'award',
+            is_monetary: false,
+            reward_amount: null,
+            award_name: 'Goa Trip',
+            max_winners: null,
+            reward_mode: 'repeatable',
+            entitlement_cost: 1,
+            max_repeat: null,
+            reward_quantity: 1
+        },
+        {
+            slab_label: 'Milestone 3 — 100 Grams of Silver',
+            slab_order: 3,
+            target_from: 7,
+            target_to: null,
+            reward_type: 'award',
+            is_monetary: false,
+            reward_amount: null,
+            award_name: '100 Grams of Silver',
+            max_winners: null,
+            reward_mode: 'one_time',
+            entitlement_cost: 1,
+            max_repeat: null,
+            reward_quantity: 1
+        },
+        {
+            slab_label: 'Milestone 4 — E-Scooter (Graphene Battery)',
+            slab_order: 4,
+            target_from: 9,
+            target_to: null,
+            reward_type: 'award',
+            is_monetary: false,
+            reward_amount: null,
+            award_name: 'E-Scooter with Graphene Battery',
+            max_winners: null,
+            reward_mode: 'one_time',
+            entitlement_cost: 1,
+            max_repeat: null,
+            reward_quantity: 1
+        },
+        {
+            slab_label: 'Milestone 5 — Thailand Trip',
+            slab_order: 5,
+            target_from: 12,
+            target_to: null,
+            reward_type: 'award',
+            is_monetary: false,
+            reward_amount: null,
+            award_name: 'Thailand Trip',
+            max_winners: null,
+            reward_mode: 'one_time',
+            entitlement_cost: 1,
+            max_repeat: null,
+            reward_quantity: 1
+        }
+    ];
+    renderInlineSlabs();
+    goToStep(5);
+}
+
+function updateReviewSummary() {
+    const name = document.getElementById('mName').value.trim() || 'Untitled Campaign';
+    const start = document.getElementById('mStartDate').value;
+    const end = document.getElementById('mEndDate').value;
+    const grace = parseInt(document.getElementById('mGrace').value) || 0;
+    
+    document.getElementById('revCampaignName').textContent = name;
+    document.getElementById('revCampaignDates').textContent = `Campaign Window: ${start || '—'} → ${end || '—'} (${grace} days completion grace)`;
+    
+    const qEv = document.getElementById('mQualEvent').value;
+    const qNames = {
+        'first_payment': '💳 First Payment Received in Window',
+        'file_submitted': '📋 File Submitted / CIBIL Cleared in Window',
+        'completed': '✅ File Completed in Window'
+    };
+    document.getElementById('revQualEvent').textContent = qNames[qEv] || qEv;
+    
+    const cCrit = document.getElementById('mCompCriteria').value;
+    const cNames = {
+        'balance_received_plus': '⚡ Crosses Balance Pending (Balance Received, Subsidy Pending, Completed)',
+        'completed': '🏆 Pipeline Fully Completed',
+        'none': '🔓 No Completion Gating (Immediate on qualification)'
+    };
+    document.getElementById('revCompCriteria').textContent = cNames[cCrit] || cCrit;
+    
+    if (end) {
+        const endDate = new Date(end);
+        const cutoffDate = new Date(endDate.getTime() + grace * 24 * 60 * 60 * 1000);
+        const pad = n => String(n).padStart(2, '0');
+        const cutoffStr = `${pad(cutoffDate.getDate())}-${cutoffDate.toLocaleString('default', { month: 'short' })}-${cutoffDate.getFullYear()}`;
+        document.getElementById('revCompDeadline').textContent = (cCrit === 'none') ? 'Immediate — no cutoff gate' : `Completion Cutoff: ${cutoffStr}`;
+    } else {
+        document.getElementById('revCompDeadline').textContent = 'Deadline: —';
+    }
+    
+    const rt = document.getElementById('mRewardType').value;
+    const rewardsListEl = document.getElementById('revRewardsList');
+    
+    if (rt === 'extra_commission') {
+        const l1Trg = document.getElementById('pltL1Trigger').value;
+        const l1Amt = document.getElementById('pltL1Amt').value;
+        const l2Trg = document.getElementById('pltL2Trigger').value;
+        const l2Amt = document.getElementById('pltL2Amt').value;
+        let ecHtml = '<div style="margin-bottom:4px"><strong>⚡ Extra Commission (Per-File Flat Payout):</strong></div>';
+        if (l1Amt) ecHtml += `<div>• L1 (Direct): <strong>₹${Number(l1Amt).toLocaleString('en-IN')}</strong> on <code>${l1Trg || 'no trigger'}</code></div>`;
+        if (l2Amt) ecHtml += `<div>• L2 (Senior): <strong>₹${Number(l2Amt).toLocaleString('en-IN')}</strong> on <code>${l2Trg || 'no trigger'}</code></div>`;
+        rewardsListEl.innerHTML = ecHtml;
+    } else if (_inlineSlabs.length > 0 || _existingSlabs.length > 0) {
+        const allSlabs = [..._existingSlabs, ..._inlineSlabs];
+        let slabsHtml = `<div style="font-weight:700;margin-bottom:6px">${allSlabs.length} Configured Milestone Tiers:</div><div style="display:flex;flex-direction:column;gap:5px">`;
+        allSlabs.forEach((s, idx) => {
+            const modeLabel = s.reward_mode === 'repeatable' ? '<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">🔁 Repeatable</span>' : (s.reward_mode === 'highest_only' ? '<span style="background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">🔝 Highest-Only</span>' : '<span style="background:#f3f4f6;color:#374151;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">1️⃣ One-Time</span>');
+            const rName = s.award_name || (s.reward_amount ? `₹${Number(s.reward_amount).toLocaleString('en-IN')}` : 'Reward');
+            slabsHtml += `<div style="display:flex;align-items:center;justify-content:space-between;background:white;padding:4px 8px;border-radius:6px;border:1px solid #e2e8f0">
+                <span><strong>${idx+1}. ${escH(s.slab_label || rName)}</strong> &nbsp;(${s.target_from}+ files)</span>
+                <span>${escH(rName)} &nbsp;·&nbsp; Cost: ${s.entitlement_cost || 1}u &nbsp;·&nbsp; ${modeLabel}</span>
+            </div>`;
+        });
+        slabsHtml += '</div>';
+        rewardsListEl.innerHTML = slabsHtml;
+    } else {
+        const rewAmt = document.getElementById('mRewardAmount').value;
+        const awName = document.getElementById('mAwardName').value;
+        rewardsListEl.innerHTML = `<div>Reward: <strong>${escH(awName || (rewAmt ? '₹' + rewAmt : '—'))}</strong> (${rt})</div>`;
+    }
+}
+
+async function recalculateBonanza(id, name) {
+    if (!confirm(`Recalculate all member entitlements and achievements for campaign "${name}"?\n\nThis will re-evaluate all qualifying leads and sync member rewards.`)) return;
+    try {
+        const r = await staffFetch(`${BONANZA_BASE}/admin/recalculate/${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}'
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || d.message || 'Recalculation failed');
+        alert(`✅ Recalculation Complete!\n\nEvaluated: ${d.members_evaluated || 0} active partners.\nMember progress and entitlements have been synchronized.`);
+        loadBonanzas();
+    } catch(e) {
+        alert('Error: ' + e.message);
+    }
+}
+
 function openCreateModal() {
     document.getElementById('editBonanzaId').value = '';
     document.getElementById('modalTitle').innerHTML = '<i class="fas fa-trophy me-2" style="color:#7c3aed"></i>New VGK Bonanza';
@@ -1066,6 +1459,8 @@ function openCreateModal() {
     document.getElementById('mAwardName').value = '';
     document.getElementById('mRewardText').value = '';
     document.getElementById('mBudget').value = '';
+    document.getElementById('mQualEvent').value = 'first_payment';
+    document.getElementById('mCompCriteria').value = 'balance_received_plus';
     // DC_BONANZA_SLABWISE_001: reset slab fields
     document.getElementById('mSlabBaseRef').value = '1000';
     document.getElementById('mSlabExtra').value = '';
@@ -1091,6 +1486,7 @@ function openCreateModal() {
     renderInlineSlabs();
     renderBrandConfigs();
     toggleRewardFields();
+    goToStep(1);
     document.getElementById('bonanzaModal').classList.add('open');
 }
 
@@ -1115,6 +1511,8 @@ function openEditModal(id) {
     document.getElementById('mStartDate').value = _toLocalDatetimeValue(b.start_date);
     document.getElementById('mEndDate').value = _toLocalDatetimeValue(b.end_date);
     document.getElementById('mSegment').value = b.segment_id || '';
+    document.getElementById('mQualEvent').value = b.qualification_event || 'first_payment';
+    document.getElementById('mCompCriteria').value = b.completion_criteria || 'balance_received_plus';
     
     const _savedBrandIds = new Set((b.brand_filter_ids || []).map(Number));
     Array.from(document.getElementById('mBrand').options).forEach(o => {
@@ -1164,6 +1562,7 @@ function openEditModal(id) {
     _loadExistingSlabsForEdit(id);
     renderBrandConfigs(b);
     toggleRewardFields();
+    goToStep(1);
     document.getElementById('bonanzaModal').classList.add('open');
 }
 
@@ -1215,6 +1614,9 @@ async function saveBonanza() {
         slab_base_reference: slabBase,
         // DC-SOLAR-DVR-ADV-20260701-001
         advance_count_basis: ['6', '19', '36', '48'].includes(String(document.getElementById('mSegment').value)) ? (document.getElementById('mAdvanceCountBasis').value || 'DVR') : 'DVR',
+        // DC-BONANZA-ENTITLEMENT-001: Qualification & Gating
+        qualification_event: document.getElementById('mQualEvent')?.value || 'first_payment',
+        completion_criteria: document.getElementById('mCompCriteria')?.value || 'balance_received_plus',
     };
     // DC-EC-PER-LEVEL-TRIGGER-001: unified per-level trigger payload for all non-slab types
     if (!isSlabWise && !isBrandWiseComm) {
@@ -1699,6 +2101,11 @@ function addInlineSlab() {
     if (monetary && !amt)  { errEl.textContent = 'Amount is required for cash/bonus rewards'; errEl.style.display=''; return; }
     if (!monetary && !awardName) { errEl.textContent = 'Award name is required'; errEl.style.display=''; return; }
     errEl.style.display = 'none';
+    const mode = document.getElementById('isMode') ? document.getElementById('isMode').value : 'one_time';
+    const cost = document.getElementById('isCost') ? (parseInt(document.getElementById('isCost').value) || 1) : 1;
+    const maxRep = document.getElementById('isMaxRepeat') && document.getElementById('isMaxRepeat').value ? parseInt(document.getElementById('isMaxRepeat').value) : null;
+    const qty = 1;
+
     _inlineSlabs.push({
         slab_label:   label,
         slab_order:   _inlineSlabs.length + 1,
@@ -1709,18 +2116,26 @@ function addInlineSlab() {
         reward_amount: monetary ? amt : null,
         award_name:   !monetary ? awardName : null,
         max_winners:  maxW,
+        reward_mode:  mode,
+        entitlement_cost: cost,
+        max_repeat:   maxRep,
+        reward_quantity: qty,
         _imageFile:   window._pendingSlabImageFile || null
     });
     // clear inline form fields
-    ['isLabel','isFrom','isTo','isAmt','isAwardName','isMaxW'].forEach(id => { document.getElementById(id).value = ''; });
+    ['isLabel','isFrom','isTo','isAmt','isAwardName','isMaxW','isMaxRepeat'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    if (document.getElementById('isCost')) document.getElementById('isCost').value = '1';
+    if (document.getElementById('isMode')) document.getElementById('isMode').value = 'one_time';
     _resetSlabImageField();
     hideInlineSlabForm();
     renderInlineSlabs();
+    updateReviewSummary();
 }
 
 function removeInlineSlab(idx) {
     _inlineSlabs.splice(idx, 1);
     renderInlineSlabs();
+    updateReviewSummary();
 }
 
 function renderInlineSlabs() {
@@ -1735,9 +2150,10 @@ function renderInlineSlabs() {
         html += `<div style="font-size:12px;color:#5b21b6;margin-bottom:4px;font-weight:600">${_existingSlabs.length} saved slab${_existingSlabs.length !== 1 ? 's' : ''}:</div>`;
         html += _existingSlabs.map(s => {
             const rText = s.is_monetary ? `₹${(s.reward_amount||0).toLocaleString('en-IN')}` : (s.award_name || '—');
+            const modeBadge = s.reward_mode === 'repeatable' ? '<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;margin-left:4px">🔁 Repeatable</span>' : '';
             return `<div style="font-size:12px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:7px;padding:7px 12px;margin-bottom:5px;display:flex;justify-content:space-between">
                 <span style="font-weight:700;color:#5b21b6">${escH(s.slab_label)}</span>
-                <span style="color:#374151">Deals ${s.target_from}–${s.target_to != null ? s.target_to : '∞'} &nbsp;·&nbsp; ${escH(rText)} (${escH(s.reward_type)})</span>
+                <span style="color:#374151">Deals ${s.target_from}–${s.target_to != null ? s.target_to : '∞'} &nbsp;·&nbsp; ${escH(rText)} (${escH(s.reward_type)})${modeBadge}</span>
             </div>`;
         }).join('');
     } else if (editId) {
@@ -1751,8 +2167,10 @@ function renderInlineSlabs() {
         if (editId) html += `<div style="font-size:12px;color:#059669;margin-top:6px;margin-bottom:4px;font-weight:600">New slabs to add on save:</div>`;
         html += _inlineSlabs.map((s, i) => {
             const rText = s.reward_amount != null ? `₹${(+s.reward_amount).toLocaleString('en-IN')}` : (s.award_name || '—');
+            const modeBadge = s.reward_mode === 'repeatable' ? '<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;margin-left:4px">🔁 Repeatable</span>' : '';
+            const costBadge = (s.entitlement_cost && s.entitlement_cost > 1) ? `<span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:10px;margin-left:4px">Cost: ${s.entitlement_cost}u</span>` : '';
             return `<div style="font-size:12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:7px;padding:7px 12px;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center">
-                <span><strong style="color:#059669">${escH(s.slab_label)}</strong> &nbsp;·&nbsp; Deals ${s.target_from}–${s.target_to != null ? s.target_to : '∞'} &nbsp;·&nbsp; <strong>${escH(rText)}</strong> (${escH(s.reward_type)})</span>
+                <span><strong style="color:#059669">${escH(s.slab_label)}</strong> &nbsp;·&nbsp; Deals ${s.target_from}–${s.target_to != null ? s.target_to : '∞'} &nbsp;·&nbsp; <strong>${escH(rText)}</strong> (${escH(s.reward_type)})${modeBadge}${costBadge}</span>
                 <button type="button" onclick="removeInlineSlab(${i})" style="border:none;background:none;cursor:pointer;color:#dc2626;font-size:15px;line-height:1" title="Remove">✕</button>
             </div>`;
         }).join('');
@@ -1807,6 +2225,9 @@ function resetSlabForm() {
     document.getElementById('slabTargetFrom').value = '';
     document.getElementById('slabTargetTo').value = '';
     document.getElementById('slabOrder').value = '1';
+    document.getElementById('slabRewardMode').value = 'one_time';
+    document.getElementById('slabEntitlementCost').value = '1';
+    document.getElementById('slabMaxRepeat').value = '';
     document.getElementById('slabRewardType').value = 'cash';
     document.getElementById('slabRewardAmount').value = '';
     document.getElementById('slabAwardName').value = '';
@@ -1836,13 +2257,17 @@ async function loadSlabs() {
                 const rewardStr = s.is_monetary ? `₹${(s.reward_amount||0).toLocaleString('en-IN')}` : (s.award_name || '—');
                 const rangeStr = s.target_from + ' – ' + (s.target_to != null ? s.target_to : '∞');
                 const clr = slabColors[s.reward_type] || '#6b7280';
+                const modeBadge = s.reward_mode === 'repeatable' 
+                    ? '<span class="badge" style="background:#fef3c7;color:#92400e;font-size:10px;margin-left:4px">🔁 Repeatable</span>' 
+                    : (s.reward_mode === 'highest_only' ? '<span class="badge" style="background:#e0f2fe;color:#0369a1;font-size:10px;margin-left:4px">🔝 Highest</span>' : '<span class="badge" style="background:#f3f4f6;color:#374151;font-size:10px;margin-left:4px">1️⃣ One-Time</span>');
+                const costBadge = (s.entitlement_cost && s.entitlement_cost > 1) ? `<span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:10px;margin-left:4px">Cost: ${s.entitlement_cost}u</span>` : '';
                 const thumb = s.image_url
                     ? `<img src="${escH(s.image_url)}" alt="" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1.5px solid #e5e7eb;display:block;flex-shrink:0">`
                     : `<div style="flex:0 0 44px;height:44px;background:${clr}15;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:11px;color:${clr};text-align:center;line-height:1.2">${escH(s.slab_label)}</div>`;
                 return `<div style="display:flex;align-items:center;gap:10px;background:white;border:1px solid #e5e7eb;border-radius:9px;padding:10px 14px;margin-bottom:8px">
                     ${thumb}
                     <div style="flex:1;min-width:0">
-                        <div style="font-weight:700;font-size:13px;color:#111">${escH(s.slab_label)}</div>
+                        <div style="font-weight:700;font-size:13px;color:#111">${escH(s.slab_label)} ${modeBadge}${costBadge}</div>
                         <div style="font-size:11px;color:#6b7280">Deals: ${rangeStr} &nbsp;·&nbsp; Reward: <span style="color:${clr};font-weight:700">${escH(rewardStr)}</span> (${escH(s.reward_type)})</div>
                         <div style="font-size:11px;color:#9ca3af">Order: ${s.slab_order} &nbsp;·&nbsp; Max Winners: ${s.max_winners ?? '∞'} &nbsp;·&nbsp; ${s.is_active ? '<span style="color:#059669">Active</span>' : '<span style="color:#dc2626">Inactive</span>'}</div>
                     </div>
@@ -1863,6 +2288,9 @@ function editSlab(s) {
     document.getElementById('slabTargetFrom').value = s.target_from ?? '';
     document.getElementById('slabTargetTo').value = s.target_to != null ? s.target_to : '';
     document.getElementById('slabOrder').value = s.slab_order || 1;
+    document.getElementById('slabRewardMode').value = s.reward_mode || 'one_time';
+    document.getElementById('slabEntitlementCost').value = s.entitlement_cost != null ? s.entitlement_cost : 1;
+    document.getElementById('slabMaxRepeat').value = s.max_repeat != null ? s.max_repeat : '';
     document.getElementById('slabRewardType').value = s.reward_type || 'cash';
     document.getElementById('slabRewardAmount').value = s.reward_amount != null ? s.reward_amount : '';
     document.getElementById('slabAwardName').value = s.award_name || '';
@@ -1900,6 +2328,11 @@ async function saveSlab() {
         award_name: !isMonetary ? document.getElementById('slabAwardName').value.trim() : null,
         max_winners: document.getElementById('slabMaxWinners').value ? parseInt(document.getElementById('slabMaxWinners').value) : null,
         budget_amount: document.getElementById('slabBudget').value ? parseFloat(document.getElementById('slabBudget').value) : null,
+        reward_mode: document.getElementById('slabRewardMode').value || 'one_time',
+        entitlement_cost: parseInt(document.getElementById('slabEntitlementCost').value) || 1,
+        max_repeat: document.getElementById('slabMaxRepeat').value ? parseInt(document.getElementById('slabMaxRepeat').value) : null,
+        reward_quantity: 1,
+        selection_enabled: true,
         is_active: true
     };
     try {

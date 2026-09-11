@@ -1,0 +1,9 @@
+{
+  "auto_publish_disabled": true,
+  "final_publish_timestamp": 1788870110.552487,
+  "final_publish_iso": "2026-09-08T12:21:50Z",
+  "last_deploy_zip_sha256": "6ba80e7ac5c47fdfc6767996d0b2371e73928eaf2c6a79488a68c0da254ff806",
+  "deployed_version_label": "v2.1.4-universal-storage-production-1788869886689",
+  "production_environment": "Vgk4u-env",
+  "rule": "Antigravity automatic publishing is permanently disabled. Only manual user-initiated builds allowed."
+}

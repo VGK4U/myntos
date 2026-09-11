@@ -1,69 +1,179 @@
 /**
  * Mobile Softphone Page
- * DC Protocol: DC_MOBILE_SOFTPHONE_001
- * Dedicated mobile softphone dialer with in-app call engine, synced mobile call logs,
- * sub-filters (All, In, Out, Missed), date range selector, upline manager downline team access,
- * and inline call recording playback player!
+ * DC Protocol: DC_MOBILE_SOFTPHONE_PARITY_001
+ * Full Web -> Mobile functional parity with Web Softphone Center (/staff/softphone):
+ * - 6 Authoritative Scopes: Dialer (Keypad + 20 Recent Calls + 6 KPIs), My Calls, New Calls, Team Calls, Contacts & Leads, Overall Calls (Leadership/Admin)
+ * - Live Today's Telephony Metrics: Total Calls, Answered, Missed by Staff, Unanswered, Talk Time, Connection Rate
+ * - Customer Timeline Bottom Sheet: /calls/{phone}/customer-history with CRM lead details and interaction timeline
+ * - Missed Call Action Taken Bottom Sheet: /calls/{sessionId}/action-taken note recording
+ * - Authoritative Contacts Contract: /telephony/my-contacts with All, Assigned Leads, Synced Contacts
+ * - In-Call DTMF Keypad with direct telephonyService.sendDTMF(digit)
+ * - Call Flow Studio link for Admin/Leadership users
  */
 
 import { apiService } from '../services/api.service';
 import { telephonyService } from '../services/telephony.service';
+import { authService } from '../services/auth.service';
 import { PageHeader } from '../components/PageHeader';
 
-interface CallRecord {
-  id?: string | number;
-  phone_number: string;
-  contact_name?: string;
-  call_type?: 'INCOMING' | 'OUTGOING' | 'MISSED' | 'REJECTED' | 'incoming' | 'outgoing' | 'missed';
-  timestamp?: string;
-  dialed_at?: string;
-  duration_seconds?: number;
-  source?: 'softphone' | 'native' | 'dialer';
-  status?: string;
-  has_recording?: boolean;
-  recording_id?: number | null;
-  recording_stream_url?: string | null;
-  staff_id?: number | null;
-  staff_name?: string | null;
-  staff_emp_code?: string | null;
-  is_downline?: boolean;
+export type SoftphoneScope = 'dialer' | 'my' | 'new_calls' | 'team' | 'contacts' | 'overall';
+export type ContactSourceType = 'all' | 'leads' | 'vgk' | 'mnr' | 'synced_contacts';
+export type DatePreset = 'TODAY' | 'YESTERDAY' | '3DAYS' | '7DAYS' | 'CUSTOM';
+
+interface TelephonyMetrics {
+  total: number;
+  answered: number;
+  missed: number;
+  unanswered: number;
+  talkTimeFormatted: string;
+  connRate: string;
 }
 
-interface ContactItem {
+interface CallItem {
+  id: string | number;
+  call_session_id?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  customer_phone_masked?: string;
+  raw_caller_number?: string;
+  direction?: 'inbound' | 'outbound' | string;
+  computed_type?: string;
+  type_label?: string;
+  status?: string;
+  duration_seconds?: number;
+  duration_formatted?: string;
+  started_at?: string;
+  answered_at?: string;
+  created_at?: string;
+  operator_name?: string;
+  operator_emp_code?: string;
+  operator_id?: number;
+  has_recording?: boolean;
+  recording_url?: string;
+  contact_source?: string;
+  action_taken?: boolean;
+  action_by?: string;
+  action_at?: string;
+  action_notes?: string;
+  source?: string;
+  channel?: string;
+  channel_label?: string;
+  lead_scope?: string;
+  lead_scope_label?: string;
+  is_performance_call?: boolean;
+  crm_lead_id?: string | number;
+  called_did?: string;
+}
+
+interface CustomerContact {
   id?: string | number;
   name: string;
-  phone: string;
+  phone?: string;
   masked_phone?: string;
-  source?: string;
-  status?: string;
-  badge_color?: string;
+  raw_phone?: string;
+  source_type?: string;
+  badge?: string;
+  subtitle?: string;
+  lead_id?: string | number;
 }
 
 interface TeamMember {
   id: number;
   name: string;
   emp_code: string;
+  department?: string;
   designation?: string;
+}
+
+interface CustomerTimelineData {
+  customer_name?: string;
+  phone_masked?: string;
+  raw_phone?: string;
+  total_calls?: number;
+  lead?: {
+    name?: string;
+    status?: string;
+    email?: string;
+    city?: string;
+    phone?: string;
+  };
+  history?: Array<{
+    id: string | number;
+    type: string;
+    direction?: string;
+    duration_formatted?: string;
+    duration_seconds?: number;
+    started_at?: string;
+    created_at?: string;
+    operator_name?: string;
+    called_did?: string;
+    has_recording?: boolean;
+    recording_url?: string;
+    ivr_selections?: Array<{ label?: string; digit?: string; time?: string }>;
+    latest_selection?: string;
+  }>;
 }
 
 export class SoftphonePage {
   private container: HTMLElement;
   private dialNumber: string = '';
   private selectedContactName: string = '';
+  private selectedLeadId: number | string | null = null;
   private agentStatus: 'available' | 'busy' | 'break' = 'available';
-  private activeTab: 'dialer' | 'contacts' | 'history' = 'dialer';
+  private activeScope: SoftphoneScope = 'dialer';
 
-  // Recents Filters
-  private channelFilter: 'ALL' | 'SOFTPHONE' | 'MOBILE' = 'ALL';
-  private directionFilter: 'ALL' | 'INCOMING' | 'OUTGOING' | 'MISSED' = 'ALL';
-  private dateRangePreset: 'ALL' | 'TODAY' | 'YESTERDAY' | 'WEEK' | 'CUSTOM' = 'ALL';
+  // Live Top Metrics (Today)
+  private todayMetrics: TelephonyMetrics = {
+    total: 0,
+    answered: 0,
+    missed: 0,
+    unanswered: 0,
+    talkTimeFormatted: '00m 00s',
+    connRate: '0%'
+  };
+  private isLoadingMetrics: boolean = false;
+
+  // Dialer Scope - Recent 20 Calls
+  private recent20Calls: CallItem[] = [];
+  private isLoadingRecent20: boolean = false;
+  private recentSearchQuery: string = '';
+
+  // Call History Scope State (my, new_calls, team, overall)
+  private scopeCalls: CallItem[] = [];
+  private isLoadingScopeCalls: boolean = false;
+  private scopeTotalCount: number = 0;
+  private scopeCurrentPage: number = 1;
+  private scopePageSize: number = 25;
+  private scopeFilterSearch: string = '';
+  private scopeFilterType: string = '';
+  private scopeFilterChannel: string = '';
+  private scopeFilterLeadScope: string = '';
+  private scopeFilterTeamMember: string = '';
+  private scopeFilterSort: string = 'newest';
+  private scopeDatePreset: DatePreset = '7DAYS';
   private customStartDate: string = '';
   private customEndDate: string = '';
-  private targetStaffId: string = 'all';
+  private scopeMetrics = {
+    total: 0,
+    answered: 0,
+    missed: 0,
+    unanswered: 0,
+    talkTimeFormatted: '00m 00s'
+  };
 
-  // Manager & Team State
-  private isManager: boolean = false;
-  private downlineMembers: TeamMember[] = [];
+  // Contacts Tab State
+  private contactsList: CustomerContact[] = [];
+  private contactsTotal: number = 0;
+  private contactsPage: number = 1;
+  private contactsPageSize: number = 30;
+  private contactsSourceType: ContactSourceType = 'all';
+  private contactsSearchQuery: string = '';
+  private isLoadingContacts: boolean = false;
+  private contactsDebounceTimer: any = null;
+
+  // Team & RBAC State
+  private teamMembers: TeamMember[] = [];
+  private canViewOverall: boolean = false;
 
   // In-App Call Engine
   private isInCall: boolean = false;
@@ -71,29 +181,28 @@ export class SoftphonePage {
   private isMuted: boolean = false;
   private isSpeaker: boolean = false;
   private isHold: boolean = false;
+  private showInCallDTMF: boolean = false;
   private callDuration: number = 0;
-  private callTimerInterval: any = null;
-  private callStartTime: number = 0;
   private activeCallSessionId: string | null = null;
-  private callStatusPollInterval: any = null;
   private isCallConnected: boolean = false;
 
-  // History & Contacts
-  private recentCalls: CallRecord[] = [];
-  private isLoadingHistory: boolean = false;
-  private contactsList: ContactItem[] = [];
-  private searchContactsQuery: string = '';
-  private isSearchingContacts: boolean = false;
-  private searchDebounceTimer: any = null;
-  private liveMatchingContacts: ContactItem[] = [];
-
-  // Call Recording Player
+  // Audio Player State
   private currentAudio: HTMLAudioElement | null = null;
-  private playingRecordingId: number | string | null = null;
-  private audioPlayProgress: number = 0;
+  private playingAudioKey: string | null = null;
+
   // Return route (for automatic return to CRM page after call)
   private returnUrl: string | null = null;
   private telephonyUnsub: (() => void) | null = null;
+
+  // Bottom Sheet Drawer State
+  private activeBottomSheet: 'customer_history' | 'action_taken' | null = null;
+  private customerHistoryData: CustomerTimelineData | null = null;
+  private customerHistoryLoading: boolean = false;
+  private actionModalSessionId: string = '';
+  private actionModalCustomerName: string = '';
+  private actionModalPhone: string = '';
+  private actionModalNotes: string = '';
+  private isSubmittingAction: boolean = false;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -110,9 +219,13 @@ export class SoftphonePage {
       const urlParams = new URLSearchParams(hash.substring(queryIndex));
       const dial = urlParams.get('dial') || (params && params.dial);
       const name = urlParams.get('name') || (params && params.name);
+      const leadId = urlParams.get('lead_id') || urlParams.get('leadId') || (params && (params.lead_id || params.leadId));
       const returnParam = urlParams.get('return') || (params && params.return);
+      const scopeParam = urlParams.get('scope') as SoftphoneScope;
       const autoStart = urlParams.get('auto_start') === 'true' || urlParams.get('autostart') === 'true' || (params && (params.auto_start || params.autostart));
       if (returnParam) this.returnUrl = returnParam;
+      if (scopeParam) this.activeScope = scopeParam;
+      if (leadId) this.selectedLeadId = leadId;
       if (dial) {
         this.dialNumber = dial;
         autoDialNum = dial;
@@ -120,7 +233,7 @@ export class SoftphonePage {
           this.selectedContactName = name;
           autoDialName = name;
         }
-        this.activeTab = 'dialer';
+        this.activeScope = 'dialer';
         if (autoStart) shouldAutoStart = true;
       }
     } else if (params && params.dial) {
@@ -130,14 +243,28 @@ export class SoftphonePage {
         this.selectedContactName = params.name;
         autoDialName = params.name;
       }
+      if (params.lead_id || params.leadId) this.selectedLeadId = params.lead_id || params.leadId;
       if (params.return) this.returnUrl = params.return;
-      this.activeTab = 'dialer';
+      this.activeScope = 'dialer';
       if (params.auto_start || params.autostart) shouldAutoStart = true;
     }
 
     this.render();
-    this.loadRecentCalls();
 
+    // Initial background data loads
+    this.loadTodayMetrics();
+    if (this.activeScope === 'dialer') {
+      this.loadRecent20Calls();
+    } else if (this.activeScope === 'contacts') {
+      this.loadContacts(1);
+    } else {
+      this.loadScopeCalls(1);
+      if (this.activeScope === 'team' || this.activeScope === 'overall') {
+        this.loadTeamMembers();
+      }
+    }
+
+    // Subscribe to telephony service
     if (!this.telephonyUnsub) {
       this.telephonyUnsub = telephonyService.subscribe((session) => {
         this.handleTelephonyStateChange(session);
@@ -175,8 +302,21 @@ export class SoftphonePage {
       this.callStatusText = 'Connected / In Call';
     } else if (session.state === 'ended') {
       this.callStatusText = 'Call ended';
+      this.showInCallDTMF = false;
+      // Immediate refresh for UI responsiveness
+      this.loadTodayMetrics();
+      if (this.activeScope === 'dialer') this.loadRecent20Calls();
+      else if (this.activeScope !== 'contacts') this.loadScopeCalls(this.scopeCurrentPage);
+
+      // HISTORY/RECORDING RECONCILIATION ONLY: Non-authoritative fallback to fetch eventual recording URL and carrier duration
+      setTimeout(() => {
+        this.loadTodayMetrics();
+        if (this.activeScope === 'dialer') this.loadRecent20Calls();
+        else if (this.activeScope !== 'contacts') this.loadScopeCalls(this.scopeCurrentPage);
+      }, 1800);
     } else if (session.state === 'failed') {
       this.callStatusText = session.errorMessage || 'Call failed';
+      this.showInCallDTMF = false;
     }
 
     if (this.isInCall !== wasInCall || session.state === 'ended' || session.state === 'failed') {
@@ -205,400 +345,46 @@ export class SoftphonePage {
       this.currentAudio.pause();
       this.currentAudio = null;
     }
+    if (this.contactsDebounceTimer) {
+      clearTimeout(this.contactsDebounceTimer);
+      this.contactsDebounceTimer = null;
+    }
   }
 
-  private getISTDateString(d: Date = new Date()): string {
-    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
-  }
+  // ──────────────────────────── RBAC & USER UTILS ────────────────────────────
 
-  private getDateRangeParams(): { start_date?: string; end_date?: string } {
-    const todayStr = this.getISTDateString();
-    if (this.dateRangePreset === 'TODAY') {
-      return { start_date: todayStr, end_date: todayStr };
-    }
-    if (this.dateRangePreset === 'YESTERDAY') {
-      const d = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      const yestStr = this.getISTDateString(d);
-      return { start_date: yestStr, end_date: yestStr };
-    }
-    if (this.dateRangePreset === 'WEEK') {
-      const d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      const pastStr = this.getISTDateString(d);
-      return { start_date: pastStr, end_date: todayStr };
-    }
-    if (this.dateRangePreset === 'CUSTOM' && this.customStartDate) {
-      return {
-        start_date: this.customStartDate,
-        end_date: this.customEndDate || todayStr
-      };
-    }
+  private getCurrentUser(): any {
+    try {
+      const fromAuth = authService.getAuthState()?.user;
+      if (fromAuth) return fromAuth;
+      const staffUser = localStorage.getItem('staff_user') || sessionStorage.getItem('staff_user');
+      if (staffUser) return JSON.parse(staffUser);
+      const mnrState = localStorage.getItem('mnr_auth_state');
+      if (mnrState) {
+        const parsed = JSON.parse(mnrState);
+        if (parsed.user) return parsed.user;
+      }
+    } catch (e) {}
     return {};
   }
 
-  private async loadRecentCalls(): Promise<void> {
-    this.isLoadingHistory = true;
-    try {
-      const dateParams = this.getDateRangeParams();
-      let queryUrl = `/telephony/incoming-calls?scope=my&page=1&page_size=50`;
-      if (dateParams.start_date) {
-        queryUrl += `&start_date=${dateParams.start_date}`;
-      }
-      if (dateParams.end_date) {
-        queryUrl += `&end_date=${dateParams.end_date}`;
-      }
-
-      let apiEntries: CallRecord[] = [];
-      try {
-        const response = await apiService.get<any>(queryUrl);
-        if (response && (response.items || response.entries)) {
-          const rawItems = response.items || response.entries || [];
-          this.isManager = Boolean(response.current_user_can_view_overall || response.is_manager);
-
-          apiEntries = rawItems.map((e: any) => ({
-            id: e.id,
-            phone_number: e.customer_phone_masked || e.phone_masked || e.customer_phone || e.phone || '',
-            contact_name: e.customer_name || e.name || e.contact_name || 'Guest Caller',
-            call_type: (e.direction === 'inbound' ? (e.duration_seconds > 0 ? 'INCOMING' : 'MISSED') : 'OUTGOING') as any,
-            dialed_at: e.started_at || e.dialed_at,
-            duration_seconds: e.duration_seconds || 0,
-            source: (e.direction === 'inbound' ? 'native' : 'softphone') as any,
-            has_recording: Boolean(e.has_recording || e.recording_url),
-            recording_id: e.id,
-            recording_stream_url: e.recording_url || (e.has_recording ? `/api/v1/telephony/calls/${e.call_session_id || e.id}/recording` : null),
-            staff_id: e.operator_id,
-            staff_name: e.operator_name,
-            staff_emp_code: e.operator_emp_code,
-            is_downline: false
-          }));
-        }
-      } catch (err) {
-        console.warn('[SoftphonePage] Primary telephony API failed, trying CRM fallback:', err);
-        const fallbackRes = await apiService.get<any>(`/crm/dialer/call-history?per_page=50`);
-        if (fallbackRes && (fallbackRes.entries || fallbackRes.data)) {
-          const rawEntries = fallbackRes.entries || fallbackRes.data?.entries || [];
-          apiEntries = rawEntries.map((e: any) => ({
-            phone_number: e.phone || '',
-            contact_name: e.name || e.contact_name || '',
-            call_type: (e.call_type || 'OUTGOING').toUpperCase() as any,
-            dialed_at: e.dialed_at,
-            duration_seconds: e.duration_seconds || 0,
-            source: 'dialer' as any,
-            has_recording: Boolean(e.has_recording || e.recording_id),
-            recording_id: e.recording_id || null,
-            recording_stream_url: e.recording_stream_url || (e.recording_id ? `/api/v1/call-tracking/recordings/${e.recording_id}/stream` : null),
-            staff_id: e.staff_id,
-            staff_name: e.staff_name,
-            staff_emp_code: e.staff_emp_code,
-            is_downline: Boolean(e.is_downline)
-          }));
-        }
-      }
-
-      // 2. Merge with locally saved in-app softphone calls
-      let localSoftphoneCalls: CallRecord[] = [];
-      try {
-        const stored = localStorage.getItem('mnr_softphone_call_logs');
-        if (stored) {
-          localSoftphoneCalls = JSON.parse(stored).map((c: any) => ({
-            ...c,
-            has_recording: true,
-            source: 'softphone'
-          }));
-        }
-      } catch (e) {}
-
-      // Combine and sort by timestamp descending
-      const combined = [...localSoftphoneCalls, ...apiEntries];
-      combined.sort((a, b) => {
-        const tA = new Date(a.dialed_at || a.timestamp || 0).getTime();
-        const tB = new Date(b.dialed_at || b.timestamp || 0).getTime();
-        return tB - tA;
-      });
-
-      this.recentCalls = combined;
-    } catch (e) {
-      console.warn('[SoftphonePage] Error loading call history:', e);
-    } finally {
-      this.isLoadingHistory = false;
-      if (this.activeTab === 'history') {
-        this.renderHistoryList();
-      }
-    }
+  private isLeadershipUser(): boolean {
+    const user = this.getCurrentUser();
+    const empCode = (user.emp_code || '').toUpperCase();
+    const roleCode = (user.role?.role_code || user.role_code || '').toLowerCase();
+    const staffType = (user.staff_type || '').toUpperCase();
+    const isSupreme = Boolean(user.is_supreme);
+    return isSupreme ||
+      ['vgk4u', 'vgk4u_supreme', 'key_leadership', 'ea', 'executive_admin', 'super_admin', 'admin', 'director'].includes(roleCode) ||
+      ['VGK4U', 'VGK4U_SUPREME', 'KEY_LEADERSHIP', 'EA', 'DIRECTOR'].includes(staffType) ||
+      ['MR10001', 'MR10018', 'MR10016', 'MR10025'].includes(empCode) ||
+      Boolean(this.canViewOverall);
   }
 
-  private saveSoftphoneCall(phone: string, name: string, duration: number): void {
-    try {
-      const recId = `soft_rec_${Date.now()}`;
-      const record: CallRecord = {
-        id: recId,
-        phone_number: phone,
-        contact_name: name,
-        call_type: 'OUTGOING',
-        dialed_at: new Date().toISOString(),
-        timestamp: this.formatRelativeTime(new Date().toISOString()),
-        duration_seconds: duration,
-        source: 'softphone',
-        status: 'Completed',
-        has_recording: true,
-        recording_id: Date.now(),
-        recording_stream_url: `/api/v1/telephony/plivo/recordings/${recId}/stream`
-      };
+  // ──────────────────────────── TIME & DATE UTILS ────────────────────────────
 
-      let stored: CallRecord[] = [];
-      const raw = localStorage.getItem('mnr_softphone_call_logs');
-      if (raw) {
-        stored = JSON.parse(raw);
-      }
-      stored.unshift(record);
-      if (stored.length > 50) stored = stored.slice(0, 50);
-      localStorage.setItem('mnr_softphone_call_logs', JSON.stringify(stored));
-
-      this.recentCalls.unshift(record);
-    } catch (e) {
-      console.warn('[SoftphonePage] Could not save softphone log:', e);
-    }
-  }
-
-  private async searchContacts(query: string): Promise<void> {
-    const q = (query || '').trim();
-    if (!q) {
-      this.liveMatchingContacts = [];
-      this.contactsList = [];
-      this.updateMatchingDrawer();
-      return;
-    }
-
-    this.isSearchingContacts = true;
-    const spinner = document.getElementById('softphoneSearchSpinner');
-    if (spinner) spinner.style.display = 'inline-block';
-
-    try {
-      const res = await apiService.get<any>(`/whatsapp/search-contacts?q=${encodeURIComponent(q)}`);
-      if (res && res.success && res.data && res.data.contacts) {
-        this.liveMatchingContacts = res.data.contacts;
-        this.contactsList = res.data.contacts;
-      } else if (res && res.contacts) {
-        this.liveMatchingContacts = res.contacts;
-        this.contactsList = res.contacts;
-      } else {
-        this.liveMatchingContacts = [];
-      }
-    } catch (err) {
-      console.warn('[SoftphonePage] Contact search error:', err);
-    } finally {
-      this.isSearchingContacts = false;
-      const spin = document.getElementById('softphoneSearchSpinner');
-      if (spin) spin.style.display = 'none';
-      if (this.activeTab === 'contacts') {
-        this.renderContactsList();
-      } else {
-        this.updateMatchingDrawer();
-      }
-    }
-  }
-
-  private updateMatchingDrawer(): void {
-    const drawer = document.getElementById('softphoneMatchingDrawer');
-    const list = document.getElementById('softphoneMatchingList');
-    if (!drawer || !list) return;
-
-    if (this.liveMatchingContacts.length === 0 || !this.dialNumber) {
-      drawer.style.display = 'none';
-      return;
-    }
-
-    list.innerHTML = this.liveMatchingContacts.slice(0, 5).map(c => `
-      <div 
-        class="softphone-matched-item" 
-        data-phone="${c.phone}" 
-        data-name="${this.escapeAttr(c.name)}"
-        style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.06); transition: background 0.15s; background: rgba(30, 41, 59, 0.95);"
-      >
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="width: 32px; height: 32px; border-radius: 50%; background: ${c.badge_color || '#3b82f6'}; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff;">
-            ${(c.name ? c.name.charAt(0) : 'C').toUpperCase()}
-          </div>
-          <div>
-            <div style="font-size: 13.5px; font-weight: 700; color: #fff;">${c.name}</div>
-            <div style="font-size: 11px; color: #94a3b8; margin-top: 1px;">+91 ${c.phone}</div>
-          </div>
-        </div>
-        <span style="font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px; background: rgba(255,255,255,0.1); color: ${c.badge_color || '#38bdf8'};">
-          ${c.source || 'Contact'}
-        </span>
-      </div>
-    `).join('');
-
-    drawer.style.display = 'block';
-
-    list.querySelectorAll('.softphone-matched-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        const target = e.currentTarget as HTMLElement;
-        const phone = target.dataset.phone || '';
-        const name = target.dataset.name || '';
-        this.selectMatchedContact(phone, name);
-      });
-    });
-  }
-
-  private selectMatchedContact(phone: string, name: string): void {
-    this.dialNumber = phone;
-    this.selectedContactName = name;
-    this.liveMatchingContacts = [];
-    const drawer = document.getElementById('softphoneMatchingDrawer');
-    if (drawer) drawer.style.display = 'none';
-    this.updateDialDisplay();
-  }
-
-  private pressKey(digit: string): void {
-    if (this.dialNumber.length < 15) {
-      this.dialNumber += digit;
-      this.selectedContactName = '';
-      this.updateDialDisplay();
-    }
-  }
-
-  private backspace(): void {
-    if (this.dialNumber.length > 0) {
-      this.dialNumber = this.dialNumber.slice(0, -1);
-      this.selectedContactName = '';
-      this.updateDialDisplay();
-    }
-  }
-
-  private clearNumber(): void {
-    this.dialNumber = '';
-    this.selectedContactName = '';
-    this.liveMatchingContacts = [];
-    this.updateDialDisplay();
-  }
-
-  private updateDialDisplay(): void {
-    const input = document.getElementById('softphoneDialInput') as HTMLInputElement;
-    if (input) {
-      input.value = this.dialNumber;
-    }
-    const nameLabel = document.getElementById('softphoneMatchedNameLabel');
-    if (nameLabel) {
-      if (this.selectedContactName) {
-        nameLabel.textContent = `👤 ${this.selectedContactName}`;
-        nameLabel.style.display = 'block';
-      } else {
-        nameLabel.style.display = 'none';
-      }
-    }
-    const clearBtn = document.getElementById('softphoneClearBtn');
-    if (clearBtn) {
-      clearBtn.style.visibility = this.dialNumber ? 'visible' : 'hidden';
-    }
-    const clearAllBtn = document.getElementById('softphoneClearAllBtn');
-    if (clearAllBtn) {
-      clearAllBtn.style.display = this.dialNumber ? 'inline-block' : 'none';
-    }
-  }
-
-  private async startCall(numberToDial?: string, contactName?: string, isDirectSim: boolean = false): Promise<void> {
-    const target = (numberToDial || this.dialNumber || '').trim();
-    if (!target || target.replace(/[^0-9]/g, '').length < 3) {
-      alert('Please enter a valid phone number');
-      return;
-    }
-
-    const cleanNumber = target.startsWith('+') ? target : `+91${target.replace(/\D/g, '').slice(-10)}`;
-    this.dialNumber = target;
-    if (contactName) this.selectedContactName = contactName;
-
-    const res = await telephonyService.startCall(cleanNumber, this.selectedContactName);
-    if (!res.success) {
-      alert(res.error || 'Failed to place call');
-      this.isInCall = false;
-      this.render();
-      return;
-    }
-  }
-
-  private triggerNativeSimCall(): void {
-    telephonyService.triggerDirectSimCall(this.dialNumber);
-  }
-
-  private endCall(): void {
-    this.isInCall = false;
-    this.isCallConnected = false;
-    telephonyService.endCall();
-
-    if (this.returnUrl) {
-      const dest = this.returnUrl;
-      this.returnUrl = null;
-      setTimeout(() => {
-        window.location.hash = dest.startsWith('#') ? dest : `#${dest}`;
-      }, 600);
-      return;
-    }
-
-    this.render();
-  }
-
-  private toggleMute(): void {
-    this.isMuted = telephonyService.toggleMute();
-    this.render();
-  }
-
-  private async toggleSpeaker(): Promise<void> {
-    this.isSpeaker = await telephonyService.toggleSpeaker();
-    this.render();
-  }
-
-  private toggleHold(): void {
-    this.isHold = telephonyService.toggleHold();
-    this.render();
-  }
-
-  private togglePlayRecording(recId: number | string, streamUrl: string): void {
-    if (this.playingRecordingId === recId && this.currentAudio) {
-      if (!this.currentAudio.paused) {
-        this.currentAudio.pause();
-        this.playingRecordingId = null;
-        this.renderHistoryList();
-        return;
-      }
-    }
-
-    if (this.currentAudio) {
-      this.currentAudio.pause();
-      this.currentAudio = null;
-    }
-
-    const token = localStorage.getItem('staff_token') || localStorage.getItem('token') || '';
-    const fullUrl = streamUrl.startsWith('http') ? streamUrl : `${window.location.origin}${streamUrl}`;
-    
-    // Create Audio with auth header or bearer param
-    const audioUrl = fullUrl.includes('?') ? `${fullUrl}&token=${token}` : `${fullUrl}?token=${token}`;
-    this.currentAudio = new Audio(audioUrl);
-    this.playingRecordingId = recId;
-    this.audioPlayProgress = 0;
-
-    this.currentAudio.play().then(() => {
-      this.renderHistoryList();
-    }).catch(err => {
-      console.warn('[SoftphonePage] Audio playback error:', err);
-      alert('Unable to play audio recording: Stream unavailable or expired.');
-      this.playingRecordingId = null;
-      this.renderHistoryList();
-    });
-
-    this.currentAudio.onended = () => {
-      this.playingRecordingId = null;
-      this.renderHistoryList();
-    };
-
-    this.currentAudio.onerror = () => {
-      this.playingRecordingId = null;
-      this.renderHistoryList();
-    };
-  }
-
-  private escapeAttr(str: string): string {
-    return (str || '').replace(/"/g, '&quot;');
+  private getISTDateString(d: Date = new Date()): string {
+    return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
   }
 
   private parseISTDate(dateStr?: string): Date | null {
@@ -635,109 +421,668 @@ export class SoftphonePage {
   }
 
   private formatDuration(seconds: number): string {
-    if (!seconds || seconds <= 0) return '0s';
-    if (seconds < 60) return `${seconds}s`;
+    if (!seconds || seconds <= 0) return '00m 00s';
     const mins = Math.floor(seconds / 60);
     const rem = seconds % 60;
-    return rem > 0 ? `${mins}m ${rem}s` : `${mins}m`;
+    return `${mins}m ${rem.toString().padStart(2, '0')}s`;
   }
 
+  private maskPhone(p?: string): string {
+    if (!p || p === '—' || p === '-' || p === 'null') return '—';
+    const s = String(p).trim();
+    if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+    const digits = s.replace(/\D/g, '');
+    if (digits.length < 6) return s;
+    const clean10 = digits.slice(-10);
+    return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+  }
+
+  private escapeAttr(str: string): string {
+    return (str || '').replace(/"/g, '&quot;');
+  }
+
+  private escapeHtml(str: string): string {
+    return (str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  private getDateRangeForPreset(preset: DatePreset): { start_date: string; end_date: string } {
+    const now = new Date();
+    const todayStr = this.getISTDateString(now);
+    if (preset === 'TODAY') {
+      return { start_date: todayStr, end_date: todayStr };
+    }
+    if (preset === 'YESTERDAY') {
+      const yest = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const yestStr = this.getISTDateString(yest);
+      return { start_date: yestStr, end_date: yestStr };
+    }
+    if (preset === '3DAYS') {
+      const past = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+      return { start_date: this.getISTDateString(past), end_date: todayStr };
+    }
+    if (preset === '7DAYS') {
+      const past = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      return { start_date: this.getISTDateString(past), end_date: todayStr };
+    }
+    if (preset === 'CUSTOM' && this.customStartDate) {
+      return {
+        start_date: this.customStartDate,
+        end_date: this.customEndDate || todayStr
+      };
+    }
+    return { start_date: todayStr, end_date: todayStr };
+  }
+
+  // ──────────────────────────── DATA FETCHERS ────────────────────────────
+
+  private async loadTodayMetrics(): Promise<void> {
+    this.isLoadingMetrics = true;
+    try {
+      const todayStr = this.getISTDateString();
+      const res = await apiService.get<any>(`/telephony/incoming-calls?scope=my&start_date=${todayStr}&end_date=${todayStr}&page=1&page_size=100`);
+      const data = (res && res.data) ? res.data : res;
+      if (data && data.items) {
+        const items = data.items || [];
+        const totalToday = data.total_count || items.length;
+        const answeredToday = items.filter((c: any) => c.computed_type === 'inbound_answered' || c.computed_type === 'outbound_answered').length;
+        const missedToday = items.filter((c: any) => c.computed_type === 'missed_by_staff').length;
+        const unansToday = items.filter((c: any) => c.computed_type === 'outbound_unanswered').length;
+        const totalSec = items.filter((c: any) => c.computed_type === 'inbound_answered' || c.computed_type === 'outbound_answered')
+                              .reduce((acc: number, c: any) => acc + (c.duration_seconds || 0), 0);
+        const connRate = totalToday > 0 ? `${Math.round((answeredToday / totalToday) * 100)}%` : '0%';
+
+        this.todayMetrics = {
+          total: totalToday,
+          answered: answeredToday,
+          missed: missedToday,
+          unanswered: unansToday,
+          talkTimeFormatted: `${Math.floor(totalSec / 60)}m ${(totalSec % 60).toString().padStart(2, '0')}s`,
+          connRate: connRate
+        };
+
+        if (data.current_user_can_view_overall) {
+          this.canViewOverall = true;
+        }
+      }
+    } catch (err) {
+      console.warn('[SoftphonePage] Error loading today metrics:', err);
+    } finally {
+      this.isLoadingMetrics = false;
+      this.updateMetricsDisplay();
+    }
+  }
+
+  private async loadRecent20Calls(): Promise<void> {
+    this.isLoadingRecent20 = true;
+    this.renderRecent20List();
+
+    try {
+      const res = await apiService.get<any>(`/telephony/incoming-calls?scope=my&page=1&page_size=20&sort_by=newest`);
+      const data = (res && res.data) ? res.data : res;
+      const items = (data && Array.isArray(data.items)) ? data.items : ((data && Array.isArray(data.data)) ? data.data : (Array.isArray(data) ? data : []));
+      this.recent20Calls = items;
+      if (data && data.current_user_can_view_overall) {
+        this.canViewOverall = true;
+      }
+    } catch (err) {
+      console.warn('[SoftphonePage] Error loading recent 20 calls:', err);
+      this.recent20Calls = [];
+    } finally {
+      this.isLoadingRecent20 = false;
+      this.renderRecent20List();
+    }
+  }
+
+  private async loadScopeCalls(page: number = 1): Promise<void> {
+    this.scopeCurrentPage = page;
+    this.isLoadingScopeCalls = true;
+    this.renderScopeCallsList();
+
+    try {
+      const dateRange = this.getDateRangeForPreset(this.scopeDatePreset);
+      let url = `/telephony/incoming-calls?scope=${this.activeScope}&page=${page}&page_size=${this.scopePageSize}&sort_by=${this.scopeFilterSort}`;
+      if (this.scopeFilterSearch) url += `&search=${encodeURIComponent(this.scopeFilterSearch)}`;
+      if (this.scopeFilterType) url += `&call_type=${encodeURIComponent(this.scopeFilterType)}`;
+      if (this.scopeFilterChannel) url += `&channel=${encodeURIComponent(this.scopeFilterChannel)}`;
+      if (this.scopeFilterLeadScope) url += `&lead_scope=${encodeURIComponent(this.scopeFilterLeadScope)}`;
+      if (this.scopeFilterTeamMember && (this.activeScope === 'team' || this.activeScope === 'overall')) {
+        url += `&staff_id=${encodeURIComponent(this.scopeFilterTeamMember)}`;
+      }
+      if (dateRange.start_date) url += `&start_date=${encodeURIComponent(dateRange.start_date)}`;
+      if (dateRange.end_date) url += `&end_date=${encodeURIComponent(dateRange.end_date)}`;
+
+      const res = await apiService.get<any>(url);
+      const data = (res && res.data) ? res.data : res;
+      if (data) {
+        this.scopeCalls = data.items || [];
+        this.scopeTotalCount = data.total_count || this.scopeCalls.length;
+        if (data.current_user_can_view_overall) {
+          this.canViewOverall = true;
+        }
+        const answered = this.scopeCalls.filter(c => c.computed_type === 'inbound_answered' || c.computed_type === 'outbound_answered').length;
+        const missed = this.scopeCalls.filter(c => c.computed_type === 'missed_by_staff').length;
+        const unans = this.scopeCalls.filter(c => c.computed_type === 'outbound_unanswered').length;
+        const totalSec = this.scopeCalls.reduce((acc, c) => acc + (c.duration_seconds || 0), 0);
+        this.scopeMetrics = {
+          total: this.scopeTotalCount,
+          answered,
+          missed,
+          unanswered: unans,
+          talkTimeFormatted: `${Math.floor(totalSec / 60)}m ${(totalSec % 60).toString().padStart(2, '0')}s`
+        };
+      }
+    } catch (err) {
+      console.warn('[SoftphonePage] Error loading scope calls:', err);
+      this.scopeCalls = [];
+    } finally {
+      this.isLoadingScopeCalls = false;
+      this.renderScopeCallsList();
+    }
+  }
+
+  private async loadContacts(page: number = 1): Promise<void> {
+    this.contactsPage = page;
+    this.isLoadingContacts = true;
+    this.renderContactsList();
+
+    try {
+      let url = `/telephony/my-contacts?page=${page}&page_size=${this.contactsPageSize}&source_type=${this.contactsSourceType}`;
+      if (this.contactsSearchQuery) {
+        url += `&q=${encodeURIComponent(this.contactsSearchQuery)}`;
+      }
+      const res = await apiService.get<any>(url);
+      const data = (res && res.data) ? res.data : res;
+      if (data) {
+        this.contactsList = data.contacts || [];
+        this.contactsTotal = data.total || this.contactsList.length;
+      }
+    } catch (err) {
+      console.warn('[SoftphonePage] Error loading contacts:', err);
+      this.contactsList = [];
+    } finally {
+      this.isLoadingContacts = false;
+      this.renderContactsList();
+    }
+  }
+
+  private async loadTeamMembers(): Promise<void> {
+    try {
+      const res = await apiService.get<any>('/telephony/team-members');
+      const data = (res && res.data) ? res.data : res;
+      if (data && data.team_members) {
+        this.teamMembers = data.team_members;
+        const select = document.getElementById('scopeTeamSelect') as HTMLSelectElement;
+        if (select) {
+          select.innerHTML = `<option value="">All Team Members (${this.teamMembers.length})</option>` +
+            this.teamMembers.map(m => `<option value="${m.id}" ${this.scopeFilterTeamMember === String(m.id) ? 'selected' : ''}>${this.escapeHtml(m.name)} (${m.emp_code})</option>`).join('');
+        }
+      }
+    } catch (err) {
+      console.warn('[SoftphonePage] Error loading team members:', err);
+    }
+  }
+
+  // ──────────────────────────── DIALER & CALL ACTIONS ────────────────────────────
+
+  private pressKey(digit: string): void {
+    if (this.dialNumber.length < 15) {
+      this.dialNumber += digit;
+      this.selectedContactName = '';
+      this.updateDialDisplay();
+    }
+  }
+
+  private backspace(): void {
+    if (this.dialNumber.length > 0) {
+      this.dialNumber = this.dialNumber.slice(0, -1);
+      this.selectedContactName = '';
+      this.updateDialDisplay();
+    }
+  }
+
+  private clearNumber(): void {
+    this.dialNumber = '';
+    this.selectedContactName = '';
+    this.updateDialDisplay();
+  }
+
+  private updateDialDisplay(): void {
+    const input = document.getElementById('softphoneDialInput') as HTMLInputElement;
+    if (input) {
+      input.value = this.dialNumber;
+    }
+    const nameLabel = document.getElementById('softphoneMatchedNameLabel');
+    if (nameLabel) {
+      if (this.selectedContactName) {
+        nameLabel.textContent = `👤 ${this.selectedContactName}`;
+        nameLabel.style.display = 'block';
+      } else {
+        nameLabel.style.display = 'none';
+      }
+    }
+    const clearBtn = document.getElementById('softphoneClearBtn');
+    if (clearBtn) {
+      clearBtn.style.visibility = this.dialNumber ? 'visible' : 'hidden';
+    }
+    const clearAllBtn = document.getElementById('softphoneClearAllBtn');
+    if (clearAllBtn) {
+      clearAllBtn.style.display = this.dialNumber ? 'inline-block' : 'none';
+    }
+  }
+
+  private async startCall(
+    numberToDial?: string,
+    contactName?: string,
+    isDirectSim: boolean = false,
+    leadId?: number | string | null
+  ): Promise<void> {
+    // MANDATE 1: TRUE USER-GESTURE AUDIO UNLOCK BEFORE ANY ASYNC OPERATION
+    telephonyService.prepareAudioOnUserGesture();
+
+    const target = (numberToDial || this.dialNumber || '').trim();
+    if (!target || target.replace(/[^0-9]/g, '').length < 3) {
+      alert('Please enter a valid phone number');
+      return;
+    }
+
+    const cleanNumber = target.startsWith('+') ? target : `+91${target.replace(/\D/g, '').slice(-10)}`;
+    this.dialNumber = target;
+    if (contactName) this.selectedContactName = contactName;
+    if (leadId !== undefined && leadId !== null) this.selectedLeadId = leadId;
+
+    if (isDirectSim) {
+      telephonyService.triggerDirectSimCall(cleanNumber);
+      return;
+    }
+
+    const effectiveLeadId = this.selectedLeadId ?? null;
+    const res = await telephonyService.startCall(cleanNumber, this.selectedContactName, effectiveLeadId);
+    if (!res.success) {
+      alert(res.error || 'Failed to place call');
+      this.isInCall = false;
+      this.render();
+      return;
+    }
+  }
+
+  private endCall(): void {
+    this.isInCall = false;
+    this.isCallConnected = false;
+    this.showInCallDTMF = false;
+    telephonyService.endCall();
+
+    if (this.returnUrl) {
+      const dest = this.returnUrl;
+      this.returnUrl = null;
+      setTimeout(() => {
+        window.location.hash = dest.startsWith('#') ? dest : `#${dest}`;
+      }, 600);
+      return;
+    }
+
+    this.render();
+  }
+
+  private toggleMute(): void {
+    this.isMuted = telephonyService.toggleMute();
+    this.render();
+  }
+
+  private async toggleSpeaker(): Promise<void> {
+    this.isSpeaker = await telephonyService.toggleSpeaker();
+    this.render();
+  }
+
+  private toggleHold(): void {
+    this.isHold = telephonyService.toggleHold();
+    this.render();
+  }
+
+  private sendInCallDTMF(digit: string): void {
+    telephonyService.sendDTMF(digit);
+  }
+
+  // ──────────────────────────── AUDIO PLAYER ────────────────────────────
+
+  private toggleAudioPlayback(key: string, rawUrl: string): void {
+    if (this.playingAudioKey === key && this.currentAudio) {
+      if (!this.currentAudio.paused) {
+        this.currentAudio.pause();
+        this.playingAudioKey = null;
+        this.updateAudioIcons();
+        return;
+      }
+    }
+
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio = null;
+    }
+
+    // Ensure in-communication mode is reset to media loudspeaker (Issue #5)
+    try {
+      const cap = (window as any).Capacitor;
+      if (cap?.Plugins?.AudioRouting?.resetAudioMode) {
+        cap.Plugins.AudioRouting.resetAudioMode().catch(() => {});
+      }
+    } catch (_) {}
+
+    const token = localStorage.getItem('auth_token') || localStorage.getItem('staff_token') || localStorage.getItem('token') || '';
+    const fullUrl = rawUrl.startsWith('http') ? rawUrl : `${window.location.origin}${rawUrl}`;
+    const audioUrl = fullUrl.includes('?') ? `${fullUrl}&token=${token}` : `${fullUrl}?token=${token}`;
+
+    this.currentAudio = new Audio(audioUrl);
+    this.playingAudioKey = key;
+    this.updateAudioIcons();
+
+    this.currentAudio.play().then(() => {
+      this.updateAudioIcons();
+    }).catch(err => {
+      console.warn('[SoftphonePage] Audio playback error:', err);
+      alert('Unable to play recording. Stream unavailable or expired.');
+      this.playingAudioKey = null;
+      this.updateAudioIcons();
+    });
+
+    this.currentAudio.onended = () => {
+      this.playingAudioKey = null;
+      this.updateAudioIcons();
+    };
+
+    this.currentAudio.onerror = () => {
+      this.playingAudioKey = null;
+      this.updateAudioIcons();
+    };
+  }
+
+  private updateAudioIcons(): void {
+    document.querySelectorAll('.audio-play-trigger-btn').forEach(btn => {
+      const key = btn.getAttribute('data-audio-key');
+      const icon = btn.querySelector('i');
+      if (icon) {
+        if (key === this.playingAudioKey) {
+          icon.className = 'fas fa-pause';
+          (btn as HTMLElement).style.background = '#eab308';
+          (btn as HTMLElement).style.color = '#000';
+        } else {
+          icon.className = 'fas fa-play';
+          (btn as HTMLElement).style.background = 'rgba(56, 189, 248, 0.15)';
+          (btn as HTMLElement).style.color = '#38bdf8';
+        }
+      }
+    });
+  }
+
+  // ──────────────────────────── BOTTOM SHEETS ────────────────────────────
+
+  private async openCustomerHistory(rawPhone: string, customerName: string = 'Guest Customer'): Promise<void> {
+    const clean = (rawPhone || '').replace(/\D/g, '').slice(-10);
+    if (!clean) return;
+
+    this.customerHistoryLoading = true;
+    this.customerHistoryData = null;
+    this.activeBottomSheet = 'customer_history';
+    this.renderBottomSheet();
+
+    try {
+      const res = await apiService.get<any>(`/telephony/calls/${clean}/customer-history`);
+      const data = (res && res.data) ? res.data : res;
+      this.customerHistoryData = data;
+    } catch (err: any) {
+      console.warn('[SoftphonePage] Error fetching customer timeline:', err);
+    } finally {
+      this.customerHistoryLoading = false;
+      this.renderBottomSheet();
+    }
+  }
+
+  private openActionTakenModal(sessionId: string, rawPhone: string, customerName: string = 'Customer'): void {
+    this.actionModalSessionId = sessionId;
+    this.actionModalPhone = (rawPhone || '').replace(/\D/g, '').slice(-10);
+    this.actionModalCustomerName = customerName;
+    this.actionModalNotes = '';
+    this.activeBottomSheet = 'action_taken';
+    this.renderBottomSheet();
+  }
+
+  private async submitActionTaken(): Promise<void> {
+    if (!this.actionModalNotes.trim()) {
+      alert('Please enter a brief resolution note for this missed call.');
+      return;
+    }
+    this.isSubmittingAction = true;
+    try {
+      await apiService.post<any>(`/telephony/calls/${this.actionModalSessionId}/action-taken`, {
+        notes: this.actionModalNotes.trim()
+      });
+
+      // Update calls list item state locally
+      const foundScopeCall = this.scopeCalls.find(c => c.call_session_id === this.actionModalSessionId);
+      if (foundScopeCall) {
+        foundScopeCall.action_taken = true;
+        foundScopeCall.action_notes = this.actionModalNotes.trim();
+      }
+      const foundRecent = this.recent20Calls.find(c => c.call_session_id === this.actionModalSessionId);
+      if (foundRecent) {
+        foundRecent.action_taken = true;
+        foundRecent.action_notes = this.actionModalNotes.trim();
+      }
+
+      this.closeBottomSheet();
+      if (this.activeScope === 'dialer') {
+        this.renderRecent20List();
+      } else {
+        this.renderScopeCallsList();
+      }
+    } catch (err: any) {
+      alert(`Failed to save action: ${err?.message || err}`);
+    } finally {
+      this.isSubmittingAction = false;
+    }
+  }
+
+  private closeBottomSheet(): void {
+    this.activeBottomSheet = null;
+    this.customerHistoryData = null;
+    this.renderBottomSheet();
+  }
+
+  // ──────────────────────────── MAIN RENDER ────────────────────────────
+
   private render(): void {
+    const isLeadership = this.isLeadershipUser();
+
     this.container.innerHTML = `
-      <div class="page-container softphone-page" style="padding-bottom: 90px; min-height: 100vh; background: #0f172a; color: #fff;">
-        ${PageHeader.render({ title: 'Softphone', showMenu: true, showBack: false })}
+      <div class="page-container softphone-page" style="padding-bottom: 90px; min-height: 100vh; background: #0f172a; color: #fff; position: relative;">
+        ${PageHeader.render({ title: 'Softphone Center', showMenu: true, showBack: false })}
 
-        <!-- Mode Toggle & Status -->
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.08);">
-          <div style="display: flex; gap: 6px;">
-            <button id="tabDialerBtn" style="padding: 6px 12px; border-radius: 20px; font-size: 12.5px; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s; background: ${this.activeTab === 'dialer' ? '#3b82f6' : 'rgba(255,255,255,0.08)'}; color: #fff;">
-              <i class="fas fa-keyboard" style="margin-right: 4px;"></i>Keypad
-            </button>
-            <button id="tabContactsBtn" style="padding: 6px 12px; border-radius: 20px; font-size: 12.5px; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s; background: ${this.activeTab === 'contacts' ? '#3b82f6' : 'rgba(255,255,255,0.08)'}; color: #fff;">
-              <i class="fas fa-address-book" style="margin-right: 4px;"></i>Contacts
-            </button>
-            <button id="tabHistoryBtn" style="padding: 6px 12px; border-radius: 20px; font-size: 12.5px; font-weight: 600; border: none; cursor: pointer; transition: all 0.2s; background: ${this.activeTab === 'history' ? '#3b82f6' : 'rgba(255,255,255,0.08)'}; color: #fff;">
-              <i class="fas fa-clock-rotate-left" style="margin-right: 4px;"></i>Recents
-            </button>
-          </div>
-
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <select id="softphoneStatusSelect" style="background: #1e293b; color: ${this.agentStatus === 'available' ? '#22c55e' : this.agentStatus === 'busy' ? '#ef4444' : '#eab308'}; border: 1px solid rgba(255,255,255,0.15); border-radius: 14px; padding: 4px 8px; font-size: 11.5px; font-weight: 600; outline: none;">
+        <!-- Top Controls Bar: Status, Call Flow Studio (Leadership), Refresh -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.08); gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <select id="softphoneStatusSelect" style="background: #1e293b; color: ${this.agentStatus === 'available' ? '#22c55e' : this.agentStatus === 'busy' ? '#ef4444' : '#eab308'}; border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; padding: 4px 8px; font-size: 11.5px; font-weight: 700; outline: none; cursor: pointer;">
               <option value="available" ${this.agentStatus === 'available' ? 'selected' : ''}>🟢 Available</option>
               <option value="busy" ${this.agentStatus === 'busy' ? 'selected' : ''}>🔴 Busy</option>
               <option value="break" ${this.agentStatus === 'break' ? 'selected' : ''}>🟡 Break</option>
             </select>
+            <span class="badge" style="background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); font-size: 11px; padding: 4px 8px; border-radius: 10px;">
+              <i class="fas fa-circle-check" style="margin-right: 4px;"></i>Online
+            </span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 6px;">
+            ${isLeadership ? `
+              <a href="/staff/call-flow-studio" target="_blank" style="text-decoration: none; padding: 5px 9px; border-radius: 10px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px;">
+                <i class="fas fa-diagram-project"></i> Studio
+              </a>
+            ` : ''}
+            <button id="softphoneRefreshBtn" title="Refresh" style="width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #94a3b8; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+              <i class="fas fa-rotate"></i>
+            </button>
           </div>
         </div>
 
-        ${this.isInCall ? this.renderInCallScreen() : (this.activeTab === 'dialer' ? this.renderDialpad() : (this.activeTab === 'contacts' ? this.renderContacts() : this.renderHistory()))}
+        <!-- 6-Scope Horizontal Navigation Bar (Touch-Optimized, Horizontal Scroll) -->
+        <div style="background: #111827; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 8px 12px; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
+          <div style="display: inline-flex; gap: 6px;">
+            <button class="scope-nav-btn" data-scope="dialer" style="padding: 6px 12px; border-radius: 18px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; background: ${this.activeScope === 'dialer' ? '#3b82f6' : 'rgba(255,255,255,0.06)'}; color: ${this.activeScope === 'dialer' ? '#fff' : '#94a3b8'};">
+              <i class="fas fa-keyboard" style="margin-right: 5px;"></i>Dialer
+            </button>
+            <button class="scope-nav-btn" data-scope="my" style="padding: 6px 12px; border-radius: 18px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; background: ${this.activeScope === 'my' ? '#3b82f6' : 'rgba(255,255,255,0.06)'}; color: ${this.activeScope === 'my' ? '#fff' : '#94a3b8'};">
+              <i class="fas fa-user" style="margin-right: 5px;"></i>My Calls
+            </button>
+            <button class="scope-nav-btn" data-scope="new_calls" style="padding: 6px 12px; border-radius: 18px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; background: ${this.activeScope === 'new_calls' ? '#3b82f6' : 'rgba(255,255,255,0.06)'}; color: ${this.activeScope === 'new_calls' ? '#fff' : '#94a3b8'};">
+              <i class="fas fa-sparkles" style="color: #f59e0b; margin-right: 5px;"></i>New Calls
+            </button>
+            <button class="scope-nav-btn" data-scope="team" style="padding: 6px 12px; border-radius: 18px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; background: ${this.activeScope === 'team' ? '#3b82f6' : 'rgba(255,255,255,0.06)'}; color: ${this.activeScope === 'team' ? '#fff' : '#94a3b8'};">
+              <i class="fas fa-users" style="margin-right: 5px;"></i>Team Calls
+            </button>
+            <button class="scope-nav-btn" data-scope="contacts" style="padding: 6px 12px; border-radius: 18px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; background: ${this.activeScope === 'contacts' ? '#3b82f6' : 'rgba(255,255,255,0.06)'}; color: ${this.activeScope === 'contacts' ? '#fff' : '#94a3b8'};">
+              <i class="fas fa-address-book" style="color: #38bdf8; margin-right: 5px;"></i>Contacts & Leads
+            </button>
+            ${isLeadership ? `
+              <button class="scope-nav-btn" data-scope="overall" style="padding: 6px 12px; border-radius: 18px; font-size: 12px; font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; background: ${this.activeScope === 'overall' ? '#f59e0b' : 'rgba(245, 158, 11, 0.15)'}; color: ${this.activeScope === 'overall' ? '#000' : '#f59e0b'};">
+                <i class="fas fa-shield-halved" style="margin-right: 5px;"></i>Overall Calls
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Scope Content -->
+        ${this.isInCall ? this.renderInCallScreen() : this.renderScopeBody()}
+
+        <!-- Bottom Sheet Container (Customer Timeline & Action Taken) -->
+        <div id="softphoneBottomSheetContainer"></div>
       </div>
     `;
 
     this.attachListeners();
+    this.renderBottomSheet();
   }
 
-  private renderDialpad(): string {
+  private renderScopeBody(): string {
+    if (this.activeScope === 'dialer') {
+      return this.renderDialerView();
+    }
+    if (this.activeScope === 'contacts') {
+      return this.renderContactsView();
+    }
+    return this.renderHistoryScopeView();
+  }
+
+  // ──────────────────────────── 1. DIALER VIEW ────────────────────────────
+
+  private renderDialerView(): string {
     return `
-      <div style="max-width: 380px; margin: 0 auto; padding: 16px; position: relative;">
+      <div style="max-width: 480px; margin: 0 auto; padding: 14px 16px;">
         
-        <!-- Number Screen & Clean Dial Display -->
-        <div style="background: #1e293b; border-radius: 16px; padding: 14px 18px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative;">
+        <!-- Interactive Keypad Box -->
+        <div style="background: #1e293b; border-radius: 16px; padding: 14px 16px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 4px 16px rgba(0,0,0,0.3);">
           
           <div id="softphoneMatchedNameLabel" style="display: ${this.selectedContactName ? 'block' : 'none'}; font-size: 12px; font-weight: 700; color: #38bdf8; margin-bottom: 4px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
             👤 ${this.selectedContactName}
           </div>
 
-          <div style="display: flex; align-items: center; justify-content: space-between;">
+          <!-- Dial Input & Clear Buttons -->
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
             <input 
               type="tel" 
               inputmode="tel"
               id="softphoneDialInput" 
               value="${this.dialNumber}" 
               placeholder="Enter phone number..." 
-              style="background: transparent; border: none; outline: none; color: #fff; font-size: 24px; font-weight: 700; width: 100%; letter-spacing: 0.5px;"
+              style="background: transparent; border: none; outline: none; color: #fff; font-size: 22px; font-weight: 700; width: 100%; letter-spacing: 0.5px;"
             />
             <div style="display: flex; align-items: center; gap: 8px;">
-              <button id="softphoneClearAllBtn" title="Clear all" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; font-size: 11px; font-weight: 700; border-radius: 12px; padding: 3px 8px; cursor: pointer; display: ${this.dialNumber ? 'inline-block' : 'none'};">
+              <button id="softphoneClearAllBtn" title="Clear all" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; font-size: 10.5px; font-weight: 700; border-radius: 10px; padding: 3px 7px; cursor: pointer; display: ${this.dialNumber ? 'inline-block' : 'none'};">
                 Clear
               </button>
-              <button id="softphoneClearBtn" title="Backspace (Hold to clear all)" style="background: transparent; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; visibility: ${this.dialNumber ? 'visible' : 'hidden'}; padding: 4px; display: flex; align-items: center; user-select: none;">
+              <button id="softphoneClearBtn" title="Backspace" style="background: transparent; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; visibility: ${this.dialNumber ? 'visible' : 'hidden'}; padding: 4px; display: flex; align-items: center; user-select: none;">
                 <i class="fas fa-delete-left"></i>
               </button>
             </div>
           </div>
-        </div>
 
-        <!-- 3x4 Dialpad Grid -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
-          ${this.renderKey('1', '&nbsp;')}
-          ${this.renderKey('2', 'ABC')}
-          ${this.renderKey('3', 'DEF')}
+          <!-- 3x4 Dialpad Grid -->
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px;">
+            ${this.renderKey('1', '&nbsp;')}
+            ${this.renderKey('2', 'ABC')}
+            ${this.renderKey('3', 'DEF')}
 
-          ${this.renderKey('4', 'GHI')}
-          ${this.renderKey('5', 'JKL')}
-          ${this.renderKey('6', 'MNO')}
+            ${this.renderKey('4', 'GHI')}
+            ${this.renderKey('5', 'JKL')}
+            ${this.renderKey('6', 'MNO')}
 
-          ${this.renderKey('7', 'PQRS')}
-          ${this.renderKey('8', 'TUV')}
-          ${this.renderKey('9', 'WXYZ')}
+            ${this.renderKey('7', 'PQRS')}
+            ${this.renderKey('8', 'TUV')}
+            ${this.renderKey('9', 'WXYZ')}
 
-          ${this.renderKey('*', '&nbsp;')}
-          ${this.renderKey('0', '+')}
-          ${this.renderKey('#', '&nbsp;')}
-        </div>
-
-        <!-- Bottom Dual Call Actions: Softphone & Direct SIM -->
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
-          <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
-            <button id="softphoneStartCallBtn" title="Call via Cloud Softphone" style="width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(34, 197, 94, 0.4); cursor: pointer;">
-              <i class="fas fa-phone"></i>
-            </button>
+            ${this.renderKey('*', '&nbsp;')}
+            ${this.renderKey('0', '+')}
+            ${this.renderKey('#', '&nbsp;')}
           </div>
 
-          <button id="softphoneDirectSimBtn" style="padding: 6px 14px; border-radius: 20px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #38bdf8; font-size: 11.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
-            <i class="fas fa-mobile-screen"></i> Direct SIM Call
-          </button>
+          <!-- Dual Call Actions -->
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <button id="softphoneStartCallBtn" title="Call via Cloud Softphone" style="width: 62px; height: 62px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: #fff; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(34, 197, 94, 0.4); cursor: pointer;">
+              <i class="fas fa-phone"></i>
+            </button>
+
+            <button id="softphoneDirectSimBtn" style="padding: 5px 12px; border-radius: 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #38bdf8; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+              <i class="fas fa-mobile-screen"></i> Direct SIM Call
+            </button>
+          </div>
+        </div>
+
+        <!-- Today's 6 Live KPI Metrics Chips -->
+        <div style="margin-bottom: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">
+              <i class="fas fa-chart-pie" style="margin-right: 4px; color: #38bdf8;"></i> Today's Performance
+            </span>
+            <span style="font-size: 10.5px; color: #64748b;">Asia/Kolkata</span>
+          </div>
+
+          <div id="softphoneTodayMetricsGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+            ${this.renderMetricsCardsHtml(this.todayMetrics)}
+          </div>
+        </div>
+
+        <!-- Last 20 Recent Calls Section -->
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 13px; font-weight: 700; color: #fff;">
+                <i class="fas fa-clock-rotate-left" style="color: #60a5fa; margin-right: 4px;"></i> Recent 20 Calls
+              </span>
+              <span id="recent20CountBadge" class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; font-size: 10px; padding: 2px 6px; border-radius: 10px;">
+                ${this.recent20Calls.length}
+              </span>
+            </div>
+          </div>
+
+          <!-- Quick Search Filter for Recent Calls -->
+          <div style="background: #1e293b; border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.08);">
+            <i class="fas fa-search" style="color: #64748b; font-size: 12px;"></i>
+            <input 
+              type="text" 
+              id="recentCallsSearchInput" 
+              value="${this.recentSearchQuery}" 
+              placeholder="Filter recent 20 calls by name or phone..." 
+              style="background: transparent; border: none; outline: none; color: #fff; font-size: 12px; width: 100%;"
+            />
+            ${this.recentSearchQuery ? `
+              <button id="clearRecentSearchBtn" style="background: transparent; border: none; color: #94a3b8; font-size: 12px; cursor: pointer;">✕</button>
+            ` : ''}
+          </div>
+
+          <div id="recent20CallsContainer">
+            ${this.renderRecent20ListHtml()}
+          </div>
         </div>
       </div>
     `;
@@ -748,93 +1093,577 @@ export class SoftphonePage {
       <button 
         class="dialpad-key-btn" 
         data-digit="${digit}" 
-        style="height: 64px; border-radius: 16px; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(255,255,255,0.08); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; user-select: none;"
+        style="height: 56px; border-radius: 14px; background: rgba(30, 41, 59, 0.85); border: 1px solid rgba(255,255,255,0.08); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; user-select: none;"
       >
-        <span style="font-size: 22px; font-weight: 700; line-height: 1;">${digit}</span>
-        <span style="font-size: 9px; font-weight: 700; color: #94a3b8; letter-spacing: 1px; margin-top: 2px;">${sub}</span>
+        <span style="font-size: 20px; font-weight: 700; line-height: 1;">${digit}</span>
+        <span style="font-size: 8.5px; font-weight: 700; color: #94a3b8; letter-spacing: 0.5px; margin-top: 2px;">${sub}</span>
       </button>
     `;
   }
 
-  private renderContacts(): string {
+  private renderMetricsCardsHtml(metrics: TelephonyMetrics): string {
     return `
-      <div style="padding: 16px; max-width: 500px; margin: 0 auto;">
-        <!-- Search Input Header -->
-        <div style="background: #1e293b; border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; border: 1px solid rgba(255,255,255,0.1);">
-          <i class="fas fa-search" style="color: #94a3b8; font-size: 14px;"></i>
-          <input 
-            type="text" 
-            id="softphoneContactsSearchInput" 
-            value="${this.searchContactsQuery}" 
-            placeholder="Search CRM leads, mobile contacts, staff..." 
-            style="background: transparent; border: none; outline: none; color: #fff; font-size: 13.5px; width: 100%;"
-          />
+      <div style="background: #1e293b; border-radius: 12px; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.06); text-align: center;">
+        <div id="dialer-stat-total" style="font-size: 18px; font-weight: 800; color: #fff;">${metrics.total}</div>
+        <div style="font-size: 10px; font-weight: 600; color: #94a3b8; margin-top: 2px;">Total Calls</div>
+      </div>
+      <div style="background: #1e293b; border-radius: 12px; padding: 10px 12px; border: 1px solid rgba(34, 197, 94, 0.2); text-align: center;">
+        <div id="dialer-stat-answered" style="font-size: 18px; font-weight: 800; color: #22c55e;">${metrics.answered}</div>
+        <div style="font-size: 10px; font-weight: 600; color: #86efac; margin-top: 2px;">Answered</div>
+      </div>
+      <div style="background: #1e293b; border-radius: 12px; padding: 10px 12px; border: 1px solid rgba(239, 68, 68, 0.2); text-align: center;">
+        <div id="dialer-stat-missed" style="font-size: 18px; font-weight: 800; color: #ef4444;">${metrics.missed}</div>
+        <div style="font-size: 10px; font-weight: 600; color: #fca5a5; margin-top: 2px;">Missed</div>
+      </div>
+      <div style="background: #1e293b; border-radius: 12px; padding: 10px 12px; border: 1px solid rgba(148, 163, 184, 0.2); text-align: center;">
+        <div id="dialer-stat-unanswered" style="font-size: 18px; font-weight: 800; color: #cbd5e1;">${metrics.unanswered}</div>
+        <div style="font-size: 10px; font-weight: 600; color: #94a3b8; margin-top: 2px;">Unanswered</div>
+      </div>
+      <div style="background: #1e293b; border-radius: 12px; padding: 10px 12px; border: 1px solid rgba(192, 132, 252, 0.2); text-align: center;">
+        <div id="dialer-stat-talktime" style="font-size: 14px; font-weight: 800; color: #c084fc; font-family: monospace;">${metrics.talkTimeFormatted}</div>
+        <div style="font-size: 10px; font-weight: 600; color: #d8b4fe; margin-top: 2px;">Talk Time</div>
+      </div>
+      <div style="background: #1e293b; border-radius: 12px; padding: 10px 12px; border: 1px solid rgba(56, 189, 248, 0.2); text-align: center;">
+        <div id="dialer-stat-connrate" style="font-size: 18px; font-weight: 800; color: #38bdf8;">${metrics.connRate}</div>
+        <div style="font-size: 10px; font-weight: 600; color: #7dd3fc; margin-top: 2px;">Conn Rate</div>
+      </div>
+    `;
+  }
+
+  private updateMetricsDisplay(): void {
+    const grid = document.getElementById('softphoneTodayMetricsGrid');
+    if (grid) {
+      grid.innerHTML = this.renderMetricsCardsHtml(this.todayMetrics);
+    }
+  }
+
+  private renderRecent20List(): void {
+    const container = document.getElementById('recent20CallsContainer');
+    if (container) {
+      container.innerHTML = this.renderRecent20ListHtml();
+      this.attachCallCardListeners();
+    }
+    const badge = document.getElementById('recent20CountBadge');
+    if (badge) badge.textContent = String(this.recent20Calls.length);
+  }
+
+  private renderRecent20ListHtml(): string {
+    if (this.isLoadingRecent20) {
+      return `<div style="text-align: center; padding: 30px; color: #94a3b8;"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Loading recent calls...</div>`;
+    }
+
+    let filtered = this.recent20Calls;
+    if (this.recentSearchQuery) {
+      const q = this.recentSearchQuery.toLowerCase();
+      filtered = filtered.filter(c => 
+        (c.customer_name || '').toLowerCase().includes(q) ||
+        (c.customer_phone || '').includes(q) ||
+        (c.customer_phone_masked || '').includes(q) ||
+        (c.raw_caller_number || '').includes(q)
+      );
+    }
+
+    if (filtered.length === 0) {
+      return `
+        <div style="text-align: center; padding: 36px 16px; color: #64748b; background: #1e293b; border-radius: 14px; border: 1px solid rgba(255,255,255,0.06);">
+          <i class="fas fa-phone-slash" style="font-size: 28px; margin-bottom: 8px; color: #475569;"></i>
+          <p style="font-weight: 600; font-size: 13px; margin: 0;">${this.recentSearchQuery ? 'No recent calls match filter' : 'No recent calls yet'}</p>
+        </div>
+      `;
+    }
+
+    return `
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        ${filtered.map(c => this.renderCallCardHtml(c, 'recent')).join('')}
+      </div>
+    `;
+  }
+
+  // ──────────────────────────── 2. CALL HISTORY SCOPES (my, new_calls, team, overall) ────────────────────────────
+
+  private renderHistoryScopeView(): string {
+    const isTeamOrOverall = this.activeScope === 'team' || this.activeScope === 'overall';
+
+    return `
+      <div style="max-width: 540px; margin: 0 auto; padding: 14px 16px;">
+        
+        <!-- Filter Controls Bar -->
+        <div style="background: #1e293b; border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 10px;">
+          
+          <!-- Search Input -->
+          <div style="display: flex; align-items: center; gap: 8px; background: #0f172a; padding: 7px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+            <i class="fas fa-search" style="color: #64748b; font-size: 12px;"></i>
+            <input 
+              type="text" 
+              id="scopeSearchInput" 
+              value="${this.scopeFilterSearch}" 
+              placeholder="Search caller name, masked phone..." 
+              style="background: transparent; border: none; outline: none; color: #fff; font-size: 12px; width: 100%;"
+            />
+            ${this.scopeFilterSearch ? `
+              <button id="clearScopeSearchBtn" style="background: transparent; border: none; color: #94a3b8; font-size: 12px; cursor: pointer;">✕</button>
+            ` : ''}
+          </div>
+
+          <!-- Date Range Presets -->
+          <div style="display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;">
+            ${['TODAY', 'YESTERDAY', '3DAYS', '7DAYS', 'CUSTOM'].map(p => `
+              <button 
+                class="date-preset-btn" 
+                data-preset="${p}" 
+                style="flex: 1; padding: 5px 6px; border-radius: 6px; font-size: 10.5px; font-weight: 700; border: none; cursor: pointer; white-space: nowrap; background: ${this.scopeDatePreset === p ? '#3b82f6' : 'rgba(255,255,255,0.06)'}; color: ${this.scopeDatePreset === p ? '#fff' : '#94a3b8'};"
+              >
+                ${p === 'TODAY' ? 'Today' : p === 'YESTERDAY' ? 'Yesterday' : p === '3DAYS' ? '3 Days' : p === '7DAYS' ? '7 Days' : 'Custom'}
+              </button>
+            `).join('')}
+          </div>
+
+          <!-- Custom Date Range Row -->
+          ${this.scopeDatePreset === 'CUSTOM' ? `
+            <div style="display: flex; gap: 8px; align-items: center; background: #0f172a; padding: 6px 8px; border-radius: 8px;">
+              <input type="date" id="scopeCustomStartInput" value="${this.customStartDate}" style="flex: 1; background: #1e293b; border: 1px solid #475569; color: #fff; padding: 4px 6px; border-radius: 6px; font-size: 11px;">
+              <span style="font-size: 11px; color: #94a3b8;">to</span>
+              <input type="date" id="scopeCustomEndInput" value="${this.customEndDate}" style="flex: 1; background: #1e293b; border: 1px solid #475569; color: #fff; padding: 4px 6px; border-radius: 6px; font-size: 11px;">
+              <button id="applyScopeCustomDateBtn" style="padding: 4px 8px; background: #3b82f6; border: none; border-radius: 6px; color: #fff; font-size: 11px; font-weight: 700; cursor: pointer;">Go</button>
+            </div>
+          ` : ''}
+
+          <!-- Type Filter & Sort Row -->
+          <div style="display: flex; gap: 8px;">
+            <select id="scopeTypeSelect" style="flex: 1; background: #0f172a; color: #fff; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 6px 8px; font-size: 11px; font-weight: 600; outline: none;">
+              <option value="" ${this.scopeFilterType === '' ? 'selected' : ''}>All Call Types</option>
+              <option value="inbound_answered" ${this.scopeFilterType === 'inbound_answered' ? 'selected' : ''}>↙️ Incoming Answered</option>
+              <option value="missed_by_staff" ${this.scopeFilterType === 'missed_by_staff' ? 'selected' : ''}>🚫 Missed by Staff</option>
+              <option value="outbound_answered" ${this.scopeFilterType === 'outbound_answered' ? 'selected' : ''}>↗️ Outbound Answered</option>
+              <option value="outbound_unanswered" ${this.scopeFilterType === 'outbound_unanswered' ? 'selected' : ''}>⏳ Outbound Unanswered</option>
+              <option value="voicemail" ${this.scopeFilterType === 'voicemail' ? 'selected' : ''}>📼 Voicemail</option>
+            </select>
+
+            <select id="scopeSortSelect" style="flex: 1; background: #0f172a; color: #fff; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 6px 8px; font-size: 11px; font-weight: 600; outline: none;">
+              <option value="newest" ${this.scopeFilterSort === 'newest' ? 'selected' : ''}>Newest First</option>
+              <option value="oldest" ${this.scopeFilterSort === 'oldest' ? 'selected' : ''}>Oldest First</option>
+              <option value="longest" ${this.scopeFilterSort === 'longest' ? 'selected' : ''}>Longest Duration</option>
+            </select>
+          </div>
+
+          <!-- Channel & Lead Scope Filter Row -->
+          <div style="display: flex; gap: 8px;">
+            <select id="scopeChannelSelect" style="flex: 1; background: #0f172a; color: #fff; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 6px 8px; font-size: 11px; font-weight: 600; outline: none;">
+              <option value="" ${this.scopeFilterChannel === '' ? 'selected' : ''}>All Channels</option>
+              <option value="softphone" ${this.scopeFilterChannel === 'softphone' ? 'selected' : ''}>🎧 Softphone (WebRTC)</option>
+              <option value="autodialer" ${this.scopeFilterChannel === 'autodialer' ? 'selected' : ''}>🤖 Auto Dialer</option>
+              <option value="device" ${this.scopeFilterChannel === 'device' ? 'selected' : ''}>📱 Local Device (Carrier)</option>
+            </select>
+
+            <select id="scopeLeadScopeSelect" style="flex: 1; background: #0f172a; color: #fff; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 6px 8px; font-size: 11px; font-weight: 600; outline: none;">
+              <option value="" ${this.scopeFilterLeadScope === '' ? 'selected' : ''}>All Calls & Leads</option>
+              <option value="my_leads" ${this.scopeFilterLeadScope === 'my_leads' ? 'selected' : ''}>👤 My Leads</option>
+              <option value="staff_leads" ${this.scopeFilterLeadScope === 'staff_leads' ? 'selected' : ''}>👥 Staff Leads</option>
+              <option value="others" ${this.scopeFilterLeadScope === 'others' ? 'selected' : ''}>📋 Others (Non-CRM)</option>
+            </select>
+          </div>
+
+          <!-- Team Member Dropdown (if team or overall) -->
+          ${isTeamOrOverall ? `
+            <div>
+              <select id="scopeTeamSelect" style="width: 100%; background: #0f172a; color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 6px 8px; font-size: 11px; font-weight: 700; outline: none;">
+                <option value="">All Team Members (${this.teamMembers.length})</option>
+                ${this.teamMembers.map(m => `
+                  <option value="${m.id}" ${this.scopeFilterTeamMember === String(m.id) ? 'selected' : ''}>
+                    ${this.escapeHtml(m.name)} (${m.emp_code})
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+          ` : ''}
         </div>
 
-        <div id="softphoneContactsContainer">
+        <!-- Scope Dynamic Result Metrics -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px;">
+          <div style="background: #1e293b; border-radius: 8px; padding: 6px 8px; text-align: center; border: 1px solid rgba(255,255,255,0.06);">
+            <div style="font-size: 14px; font-weight: 800; color: #fff;">${this.scopeMetrics.total}</div>
+            <div style="font-size: 9px; color: #94a3b8;">Total</div>
+          </div>
+          <div style="background: #1e293b; border-radius: 8px; padding: 6px 8px; text-align: center; border: 1px solid rgba(34, 197, 94, 0.2);">
+            <div style="font-size: 14px; font-weight: 800; color: #22c55e;">${this.scopeMetrics.answered}</div>
+            <div style="font-size: 9px; color: #86efac;">Answered</div>
+          </div>
+          <div style="background: #1e293b; border-radius: 8px; padding: 6px 8px; text-align: center; border: 1px solid rgba(239, 68, 68, 0.2);">
+            <div style="font-size: 14px; font-weight: 800; color: #ef4444;">${this.scopeMetrics.missed}</div>
+            <div style="font-size: 9px; color: #fca5a5;">Missed</div>
+          </div>
+          <div style="background: #1e293b; border-radius: 8px; padding: 6px 8px; text-align: center; border: 1px solid rgba(192, 132, 252, 0.2);">
+            <div style="font-size: 12px; font-weight: 800; color: #c084fc; font-family: monospace;">${this.scopeMetrics.talkTimeFormatted}</div>
+            <div style="font-size: 9px; color: #d8b4fe;">Talk Time</div>
+          </div>
+        </div>
+
+        <!-- Scope Calls List Container -->
+        <div id="scopeCallsListContainer">
+          ${this.renderScopeCallsListHtml()}
+        </div>
+
+        <!-- Scope Pagination Controls -->
+        <div id="scopePaginationContainer" style="margin-top: 14px;">
+          ${this.renderPaginationHtml(this.scopeTotalCount, this.scopePageSize, this.scopeCurrentPage, 'scope')}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderScopeCallsList(): void {
+    const container = document.getElementById('scopeCallsListContainer');
+    if (container) {
+      container.innerHTML = this.renderScopeCallsListHtml();
+      this.attachCallCardListeners();
+    }
+    const pag = document.getElementById('scopePaginationContainer');
+    if (pag) {
+      pag.innerHTML = this.renderPaginationHtml(this.scopeTotalCount, this.scopePageSize, this.scopeCurrentPage, 'scope');
+      this.attachPaginationListeners();
+    }
+  }
+
+  private renderScopeCallsListHtml(): string {
+    if (this.isLoadingScopeCalls) {
+      return `<div style="text-align: center; padding: 40px; color: #94a3b8;"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Loading calls...</div>`;
+    }
+
+    if (this.scopeCalls.length === 0) {
+      return `
+        <div style="text-align: center; padding: 40px 16px; color: #64748b; background: #1e293b; border-radius: 14px; border: 1px solid rgba(255,255,255,0.06);">
+          <i class="fas fa-phone-slash" style="font-size: 32px; margin-bottom: 10px; color: #475569;"></i>
+          <p style="font-weight: 700; font-size: 14px; margin: 0 0 4px 0; color: #cbd5e1;">No call records found</p>
+          <p style="font-size: 12px; margin: 0;">Try adjusting your filters or date range.</p>
+        </div>
+      `;
+    }
+
+    return `
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        ${this.scopeCalls.map(c => this.renderCallCardHtml(c, 'scope')).join('')}
+      </div>
+    `;
+  }
+
+  // ──────────────────────────── 3. CONTACTS & ASSIGNED LEADS VIEW ────────────────────────────
+
+  private renderContactsView(): string {
+    return `
+      <div style="max-width: 500px; margin: 0 auto; padding: 14px 16px;">
+        
+        <!-- Search Input -->
+        <div style="background: #1e293b; border-radius: 12px; padding: 8px 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.08);">
+          <i class="fas fa-search" style="color: #64748b; font-size: 12px;"></i>
+          <input 
+            type="text" 
+            id="contactsSearchInput" 
+            value="${this.contactsSearchQuery}" 
+            placeholder="Search CRM leads, VGK, MNR, contacts..." 
+            style="background: transparent; border: none; outline: none; color: #fff; font-size: 12.5px; width: 100%;"
+          />
+          ${this.contactsSearchQuery ? `
+            <button id="clearContactsSearchBtn" style="background: transparent; border: none; color: #94a3b8; font-size: 12px; cursor: pointer;">✕</button>
+          ` : ''}
+        </div>
+
+        <!-- 5 Authoritative Source Pills: All, Assigned Leads, VGK Members, MNR Members, Synced Mobile Contacts -->
+        <div style="display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch;">
+          <button class="contacts-source-btn" data-source="all" style="flex-shrink: 0; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; background: ${this.contactsSourceType === 'all' ? '#3b82f6' : 'rgba(255,255,255,0.06)'}; color: ${this.contactsSourceType === 'all' ? '#fff' : '#94a3b8'};">
+            All Contacts
+          </button>
+          <button class="contacts-source-btn" data-source="leads" style="flex-shrink: 0; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; background: ${this.contactsSourceType === 'leads' ? '#0284c7' : 'rgba(255,255,255,0.06)'}; color: ${this.contactsSourceType === 'leads' ? '#fff' : '#94a3b8'};">
+            <i class="fas fa-user-tag" style="margin-right: 4px;"></i>Assigned Leads
+          </button>
+          <button class="contacts-source-btn" data-source="vgk" style="flex-shrink: 0; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; background: ${this.contactsSourceType === 'vgk' ? '#d97706' : 'rgba(255,255,255,0.06)'}; color: ${this.contactsSourceType === 'vgk' ? '#fff' : '#94a3b8'};">
+            <i class="fas fa-handshake" style="margin-right: 4px;"></i>VGK Members
+          </button>
+          <button class="contacts-source-btn" data-source="mnr" style="flex-shrink: 0; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; background: ${this.contactsSourceType === 'mnr' ? '#9333ea' : 'rgba(255,255,255,0.06)'}; color: ${this.contactsSourceType === 'mnr' ? '#fff' : '#94a3b8'};">
+            <i class="fas fa-star" style="margin-right: 4px;"></i>MNR Members
+          </button>
+          <button class="contacts-source-btn" data-source="synced_contacts" style="flex-shrink: 0; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; background: ${this.contactsSourceType === 'synced_contacts' ? '#059669' : 'rgba(255,255,255,0.06)'}; color: ${this.contactsSourceType === 'synced_contacts' ? '#fff' : '#94a3b8'};">
+            <i class="fas fa-mobile-screen" style="margin-right: 4px;"></i>Synced Contacts
+          </button>
+        </div>
+
+        <!-- Contacts Count Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 11px; color: #94a3b8;">
+          <span id="contactsCountSpan">Showing ${this.contactsList.length} of ${this.contactsTotal} contacts</span>
+        </div>
+
+        <!-- Contacts List Container -->
+        <div id="contactsListContainer">
           ${this.renderContactsListHtml()}
+        </div>
+
+        <!-- Contacts Pagination -->
+        <div id="contactsPaginationContainer" style="margin-top: 14px;">
+          ${this.renderPaginationHtml(this.contactsTotal, this.contactsPageSize, this.contactsPage, 'contacts')}
         </div>
       </div>
     `;
   }
 
   private renderContactsList(): void {
-    const container = document.getElementById('softphoneContactsContainer');
+    const countSpan = document.getElementById('contactsCountSpan');
+    if (countSpan) {
+      countSpan.textContent = `Showing ${this.contactsList.length} of ${this.contactsTotal} contacts`;
+    }
+    const container = document.getElementById('contactsListContainer');
     if (container) {
       container.innerHTML = this.renderContactsListHtml();
       this.attachContactCardListeners();
     }
+    const pag = document.getElementById('contactsPaginationContainer');
+    if (pag) {
+      pag.innerHTML = this.renderPaginationHtml(this.contactsTotal, this.contactsPageSize, this.contactsPage, 'contacts');
+      this.attachPaginationListeners();
+    }
   }
 
   private renderContactsListHtml(): string {
-    if (this.isSearchingContacts) {
-      return `<div style="text-align: center; padding: 40px; color: #94a3b8;"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Searching contacts...</div>`;
+    if (this.isLoadingContacts) {
+      return `<div style="text-align: center; padding: 40px; color: #94a3b8;"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Loading contacts...</div>`;
     }
 
     if (this.contactsList.length === 0) {
       return `
-        <div style="text-align: center; padding: 50px 20px; color: #64748b;">
-          <i class="fas fa-address-book" style="font-size: 36px; margin-bottom: 12px; color: #475569;"></i>
-          <p style="font-weight: 600; font-size: 14px;">${this.searchContactsQuery ? 'No contacts match your search' : 'Type name or phone number above to search'}</p>
+        <div style="text-align: center; padding: 40px 16px; color: #64748b; background: #1e293b; border-radius: 14px; border: 1px solid rgba(255,255,255,0.06);">
+          <i class="fas fa-address-book" style="font-size: 32px; margin-bottom: 10px; color: #475569;"></i>
+          <p style="font-weight: 700; font-size: 14px; margin: 0 0 4px 0; color: #cbd5e1;">No contacts found</p>
+          <p style="font-size: 12px; margin: 0;">Try adjusting your search query.</p>
         </div>
       `;
     }
 
     return `
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        ${this.contactsList.map(c => `
-          <div style="background: #1e293b; border-radius: 14px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.06);">
-            <div style="display: flex; align-items: center; gap: 12px;">
-              <div style="width: 38px; height: 38px; border-radius: 50%; background: ${c.badge_color || '#3b82f6'}; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #fff;">
-                ${(c.name ? c.name.charAt(0) : 'C').toUpperCase()}
-              </div>
-              <div>
-                <div style="font-weight: 700; font-size: 14px; color: #fff;">${c.name}</div>
-                <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">
-                  +91 ${c.phone} • <span style="color: ${c.badge_color || '#38bdf8'}; font-weight: 600;">${c.source || 'Lead'}</span>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        ${this.contactsList.map(c => {
+          const name = this.escapeHtml(c.name || 'Contact');
+          const maskedPhone = this.escapeHtml(c.masked_phone || c.phone || '—');
+          const cleanPhone = (c.raw_phone || c.phone || '').replace(/\D/g, '').slice(-10);
+          const initial = (name.replace(/[^a-zA-Z]/g, '') || 'C').slice(0, 2).toUpperCase();
+          const isLead = c.source_type === 'assigned_lead' || c.source_type === 'lead';
+          const isVgk = c.source_type === 'vgk_member';
+          const isMnr = c.source_type === 'mnr_member';
+
+          let avatarBg = 'linear-gradient(135deg, #059669, #047857)'; // green default (synced)
+          let badgeBg = 'rgba(34, 197, 94, 0.2)';
+          let badgeColor = '#4ade80';
+          let defaultBadge = 'Contact';
+
+          if (isLead) {
+            avatarBg = 'linear-gradient(135deg, #0284c7, #0369a1)';
+            badgeBg = 'rgba(59, 130, 246, 0.2)';
+            badgeColor = '#60a5fa';
+            defaultBadge = 'Lead';
+          } else if (isVgk) {
+            avatarBg = 'linear-gradient(135deg, #d97706, #b45309)';
+            badgeBg = 'rgba(245, 158, 11, 0.2)';
+            badgeColor = '#fbbf24';
+            defaultBadge = 'VGK Member';
+          } else if (isMnr) {
+            avatarBg = 'linear-gradient(135deg, #9333ea, #7e22ce)';
+            badgeBg = 'rgba(168, 85, 247, 0.2)';
+            badgeColor = '#c084fc';
+            defaultBadge = 'MNR Member';
+          }
+
+          return `
+            <div style="background: #1e293b; border-radius: 12px; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                <div style="width: 38px; height: 38px; border-radius: 50%; background: ${avatarBg}; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;">
+                  ${initial}
+                </div>
+                <div style="min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <span class="customer-history-trigger" data-phone="${cleanPhone}" data-name="${this.escapeAttr(c.name)}" style="font-weight: 700; font-size: 13px; color: #fff; cursor: pointer; text-decoration: underline; text-decoration-color: rgba(255,255,255,0.3);">
+                      ${name}
+                    </span>
+                    <span style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: ${badgeBg}; color: ${badgeColor};">
+                      ${this.escapeHtml(c.badge || defaultBadge)}
+                    </span>
+                  </div>
+                  <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">
+                    <span style="font-family: monospace;">${maskedPhone}</span>
+                    ${c.subtitle ? ` · <span style="color: #64748b;">${this.escapeHtml(c.subtitle)}</span>` : ''}
+                  </div>
                 </div>
               </div>
+
+              <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                <button class="customer-history-trigger-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(c.name)}" title="Customer Timeline" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                  <i class="fas fa-clock-rotate-left fa-xs"></i>
+                </button>
+                <button class="call-action-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(c.name)}" title="Call Now" style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                  <i class="fas fa-phone fa-xs"></i>
+                </button>
+              </div>
             </div>
-            <div style="display: flex; gap: 6px;">
-              <button class="contact-call-btn" data-phone="${c.phone}" data-name="${this.escapeAttr(c.name)}" title="Softphone Call" style="width: 38px; height: 38px; border-radius: 50%; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                <i class="fas fa-phone fa-sm"></i>
-              </button>
-            </div>
-          </div>
-        `).join('')}
+          `;
+        }).join('')}
       </div>
     `;
   }
 
-  private maskPhone(p: string): string {
-    if (!p || p === '—' || p === '-' || p === 'null') return '—';
-    const s = String(p).trim();
-    if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
-    const digits = s.replace(/\D/g, '');
-    if (digits.length < 6) return s;
-    const clean10 = digits.slice(-10);
-    return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+  // ──────────────────────────── SHARED CALL CARD RENDERER ────────────────────────────
+
+  private renderCallCardHtml(c: CallItem, originContext: string): string {
+    const rawCustomerNum = c.raw_caller_number || c.customer_phone || '';
+    const cleanPhone = (rawCustomerNum || '').replace(/\D/g, '').slice(-10);
+    const name = this.escapeHtml(c.customer_name || 'Customer Lead');
+    const maskedPhone = this.escapeHtml(c.customer_phone_masked || this.maskPhone(cleanPhone));
+    const initial = (name.replace(/[^a-zA-Z]/g, '') || 'C').slice(0, 2).toUpperCase();
+
+    // Direction Pill
+    const isIncoming = (c.direction === 'inbound') || ['inbound_answered', 'missed_by_staff', 'voicemail'].includes(c.computed_type || '');
+    const dirBadgeColor = isIncoming ? 'rgba(34, 197, 94, 0.2)' : 'rgba(59, 130, 246, 0.2)';
+    const dirTextColor = isIncoming ? '#4ade80' : '#60a5fa';
+    const dirText = isIncoming ? '↙ IN' : '↗ OUT';
+
+    // Type Badge
+    let typeBadgeBg = 'rgba(148, 163, 184, 0.2)';
+    let typeBadgeColor = '#cbd5e1';
+    let typeText = c.type_label || (isIncoming ? 'Incoming' : 'Outgoing');
+
+    if (c.computed_type === 'inbound_answered') {
+      typeBadgeBg = 'rgba(34, 197, 94, 0.25)';
+      typeBadgeColor = '#86efac';
+      typeText = 'Incoming';
+    } else if (c.computed_type === 'missed_by_staff') {
+      typeBadgeBg = 'rgba(239, 68, 68, 0.25)';
+      typeBadgeColor = '#fca5a5';
+      typeText = 'Missed';
+    } else if (c.computed_type === 'outbound_answered') {
+      typeBadgeBg = 'rgba(59, 130, 246, 0.25)';
+      typeBadgeColor = '#93c5fd';
+      typeText = 'Outgoing';
+    } else if (c.computed_type === 'outbound_unanswered') {
+      typeBadgeBg = 'rgba(148, 163, 184, 0.2)';
+      typeBadgeColor = '#94a3b8';
+      typeText = 'Unanswered';
+    } else if (c.computed_type === 'voicemail') {
+      typeBadgeBg = 'rgba(192, 132, 252, 0.25)';
+      typeBadgeColor = '#d8b4fe';
+      typeText = 'Voicemail';
+    }
+
+    const durationText = c.duration_formatted || this.formatDuration(c.duration_seconds || 0);
+    const timeFormatted = this.formatRelativeTime(c.started_at || c.answered_at || c.created_at);
+    const audioKey = `rec_${c.id}`;
+    const hasRecording = Boolean((c.has_recording || (c.duration_seconds && c.duration_seconds > 0)) && c.recording_url);
+
+    // Missed Call Action Taken UI
+    let actionTakenHtml = '';
+    if (c.computed_type === 'missed_by_staff') {
+      if (c.action_taken) {
+        actionTakenHtml = `
+          <span style="display: inline-flex; align-items: center; gap: 3px; font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 6px; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); color: #4ade80;" title="${this.escapeAttr(c.action_notes || '')}">
+            <i class="fas fa-check-double"></i> Action Taken
+          </span>
+        `;
+      } else {
+        actionTakenHtml = `
+          <button class="action-taken-open-btn" data-session-id="${this.escapeAttr(c.call_session_id || String(c.id))}" data-phone="${cleanPhone}" data-name="${this.escapeAttr(name)}" style="display: inline-flex; align-items: center; gap: 3px; font-size: 9.5px; font-weight: 700; padding: 2px 6px; border-radius: 6px; background: rgba(234, 179, 8, 0.15); border: 1px solid rgba(234, 179, 8, 0.3); color: #facc15; cursor: pointer;">
+            <i class="fas fa-clipboard-check"></i> Action Taken
+          </button>
+        `;
+      }
+    }
+
+    // Channel & Lead Scope Badges
+    const chanKey = c.channel || (c.source === 'device' ? 'device' : (c.source === 'dialer' ? 'autodialer' : 'softphone'));
+    let chanBg = 'rgba(56, 189, 248, 0.15)';
+    let chanColor = '#38bdf8';
+    let chanText = '🎧 VoIP';
+    if (chanKey === 'device') {
+      chanBg = 'rgba(148, 163, 184, 0.15)';
+      chanColor = '#cbd5e1';
+      chanText = '📱 SIM';
+    } else if (chanKey === 'autodialer') {
+      chanBg = 'rgba(168, 85, 247, 0.15)';
+      chanColor = '#c084fc';
+      chanText = '🤖 Dialer';
+    }
+
+    const scopeKey = c.lead_scope || (c.crm_lead_id ? 'my_leads' : 'others');
+    let scopeBg = 'rgba(148, 163, 184, 0.12)';
+    let scopeColor = '#94a3b8';
+    let scopeText = '📋 Non-CRM';
+    if (scopeKey === 'my_leads') {
+      scopeBg = 'rgba(34, 197, 94, 0.15)';
+      scopeColor = '#4ade80';
+      scopeText = '👤 My Lead';
+    } else if (scopeKey === 'staff_leads') {
+      scopeBg = 'rgba(234, 179, 8, 0.15)';
+      scopeColor = '#facc15';
+      scopeText = '👥 Team Lead';
+    }
+
+    return `
+      <div style="background: #1e293b; border-radius: 12px; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.06);">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
+          
+          <div style="display: flex; align-items: flex-start; gap: 10px; min-width: 0; flex: 1;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: ${isIncoming ? 'rgba(34, 197, 94, 0.15)' : 'rgba(59, 130, 246, 0.15)'}; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: ${isIncoming ? '#4ade80' : '#60a5fa'}; flex-shrink: 0; margin-top: 2px;">
+              ${initial}
+            </div>
+
+            <div style="min-width: 0; flex: 1;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 2px;">
+                <span class="customer-history-trigger" data-phone="${cleanPhone}" data-name="${this.escapeAttr(name)}" style="font-weight: 700; font-size: 13px; color: #fff; cursor: pointer; text-decoration: underline; text-decoration-color: rgba(255,255,255,0.3);">
+                  ${name}
+                </span>
+                <span style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: ${dirBadgeColor}; color: ${dirTextColor}; font-family: monospace;">
+                  ${dirText}
+                </span>
+                <span style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: ${typeBadgeBg}; color: ${typeBadgeColor};">
+                  ${this.escapeHtml(typeText)}
+                </span>
+                <span style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,0.06); color: #cbd5e1; font-family: monospace;">
+                  ${durationText}
+                </span>
+                <span style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: ${chanBg}; color: ${chanColor}; font-family: monospace;">
+                  ${chanText}
+                </span>
+                <span style="font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: ${scopeBg}; color: ${scopeColor};" title="${scopeKey === 'others' ? 'Non-CRM / Personal call — excluded from staff performance metrics' : ''}">
+                  ${scopeText}
+                </span>
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: #94a3b8;">
+                <span style="font-family: monospace;">${maskedPhone}</span>
+                <span>·</span>
+                <span>${timeFormatted}</span>
+                ${c.operator_name ? `<span>· 👤 ${this.escapeHtml(c.operator_name)}</span>` : ''}
+              </div>
+
+              ${actionTakenHtml ? `<div style="margin-top: 4px;">${actionTakenHtml}</div>` : ''}
+            </div>
+          </div>
+
+          <!-- Actions: Audio Recording Play + Customer Timeline + Redial Call -->
+          <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-top: 2px;">
+            ${hasRecording ? `
+              <button class="audio-play-trigger-btn" data-audio-key="${audioKey}" data-stream-url="${this.escapeAttr(c.recording_url || '')}" title="Listen to Call Recording" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <i class="fas ${this.playingAudioKey === audioKey ? 'fa-pause' : 'fa-play'} fa-xs"></i>
+              </button>
+            ` : ''}
+
+            <button class="customer-history-trigger-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(name)}" title="Customer Timeline" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-clock-rotate-left fa-xs"></i>
+            </button>
+
+            <button class="call-action-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(name)}" title="Call Now" style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+              <i class="fas fa-phone fa-xs"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
   }
+
+  // ──────────────────────────── 4. IN-CALL ACTIVE SCREEN ────────────────────────────
 
   private renderInCallScreen(): string {
     const mins = Math.floor(this.callDuration / 60).toString().padStart(2, '0');
@@ -845,21 +1674,20 @@ export class SoftphonePage {
 
     if (isIncomingRinging) {
       return `
-        <div style="max-width: 380px; margin: 20px auto; padding: 20px; text-align: center;">
-          <div style="width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 800; color: #fff; margin: 0 auto 16px auto; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);">
+        <div style="max-width: 380px; margin: 30px auto; padding: 20px; text-align: center;">
+          <div style="width: 86px; height: 86px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); display: flex; align-items: center; justify-content: center; font-size: 32px; color: #fff; margin: 0 auto 16px auto; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4);">
             <i class="fas fa-phone-volume fa-shake"></i>
           </div>
 
-          <h3 style="font-size: 22px; font-weight: 700; margin: 0 0 4px 0; color: #fff;">${this.selectedContactName || 'Incoming Caller'}</h3>
-          <div style="font-size: 14px; color: #94a3b8; margin-bottom: 6px;">${maskedPhone}</div>
-          <p id="softphoneCallStatusText" style="font-size: 14px; color: #38bdf8; font-weight: 600; margin: 0 0 24px 0;">Incoming Call...</p>
+          <h3 style="font-size: 20px; font-weight: 700; margin: 0 0 4px 0; color: #fff;">${this.selectedContactName || 'Incoming Caller'}</h3>
+          <div style="font-size: 13px; color: #94a3b8; margin-bottom: 6px;">${maskedPhone}</div>
+          <p id="softphoneCallStatusText" style="font-size: 13px; color: #38bdf8; font-weight: 600; margin: 0 0 24px 0;">Incoming Call...</p>
 
-          <!-- Answer & Reject Button Pair -->
           <div style="display: flex; align-items: center; justify-content: center; gap: 32px; margin-top: 24px;">
-            <button id="softphoneAnswerCallBtn" style="width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); border: none; color: #fff; font-size: 26px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4); cursor: pointer;" title="Answer Call">
+            <button id="softphoneAnswerCallBtn" style="width: 66px; height: 66px; border-radius: 50%; background: linear-gradient(135deg, #10b981, #059669); border: none; color: #fff; font-size: 24px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(16, 185, 129, 0.4); cursor: pointer;" title="Answer Call">
               <i class="fas fa-phone"></i>
             </button>
-            <button id="softphoneRejectCallBtn" style="width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #b91c1c); border: none; color: #fff; font-size: 26px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4); cursor: pointer;" title="Decline Call">
+            <button id="softphoneRejectCallBtn" style="width: 66px; height: 66px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #b91c1c); border: none; color: #fff; font-size: 24px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4); cursor: pointer;" title="Decline Call">
               <i class="fas fa-phone-slash"></i>
             </button>
           </div>
@@ -869,43 +1697,62 @@ export class SoftphonePage {
 
     return `
       <div style="max-width: 380px; margin: 20px auto; padding: 20px; text-align: center;">
-        <div style="width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 800; color: #fff; margin: 0 auto 16px auto; box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);">
+        <div style="width: 86px; height: 86px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); display: flex; align-items: center; justify-content: center; font-size: 32px; color: #fff; margin: 0 auto 16px auto; box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);">
           <i class="fas fa-user"></i>
         </div>
 
-        <h3 style="font-size: 22px; font-weight: 700; margin: 0 0 4px 0; color: #fff;">${this.selectedContactName || maskedPhone}</h3>
+        <h3 style="font-size: 20px; font-weight: 700; margin: 0 0 4px 0; color: #fff;">${this.selectedContactName || maskedPhone}</h3>
         ${this.selectedContactName ? `<div style="font-size: 13px; color: #94a3b8; margin-bottom: 6px;">${maskedPhone}</div>` : ''}
-        <p id="softphoneCallStatusText" style="font-size: 14px; color: ${this.isCallConnected ? '#22c55e' : '#38bdf8'}; font-weight: 600; margin: 0 0 12px 0;">${this.callStatusText}</p>
+        <p id="softphoneCallStatusText" style="font-size: 13px; color: ${this.isCallConnected ? '#22c55e' : '#38bdf8'}; font-weight: 600; margin: 0 0 8px 0;">${this.callStatusText}</p>
         
-        <div id="softphoneCallTimer" style="font-size: ${this.isCallConnected ? '26px' : '17px'}; font-weight: 700; font-family: ${this.isCallConnected ? 'monospace' : 'inherit'}; color: ${this.isCallConnected ? '#cbd5e1' : '#38bdf8'}; margin-bottom: 28px;">
+        <div id="softphoneCallTimer" style="font-size: ${this.isCallConnected ? '26px' : '16px'}; font-weight: 700; font-family: ${this.isCallConnected ? 'monospace' : 'inherit'}; color: ${this.isCallConnected ? '#cbd5e1' : '#38bdf8'}; margin-bottom: 24px;">
           ${this.isCallConnected ? `${mins}:${secs}` : `<i class="fas fa-phone-volume fa-shake" style="margin-right: 6px;"></i> Ringing...`}
         </div>
 
-        <!-- In-Call Control Grid -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px;">
-          <button id="callMuteBtn" style="padding: 14px; border-radius: 14px; background: ${this.isMuted ? '#ef4444' : 'rgba(255,255,255,0.08)'}; border: none; color: #fff; cursor: pointer;">
-            <i class="fas fa-microphone-slash" style="font-size: 20px; margin-bottom: 6px;"></i>
+        <!-- In-Call Control Grid: Mute, Speaker, Hold -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px;">
+          <button id="callMuteBtn" style="padding: 12px; border-radius: 14px; background: ${this.isMuted ? '#ef4444' : 'rgba(255,255,255,0.08)'}; border: none; color: #fff; cursor: pointer;">
+            <i class="fas fa-microphone-slash" style="font-size: 18px; margin-bottom: 4px;"></i>
             <div style="font-size: 11px; font-weight: 600;">${this.isMuted ? 'Muted' : 'Mute'}</div>
           </button>
           
-          <button id="callSpeakerBtn" style="padding: 14px; border-radius: 14px; background: ${this.isSpeaker ? '#3b82f6' : 'rgba(255,255,255,0.08)'}; border: none; color: #fff; cursor: pointer;">
-            <i class="fas fa-volume-high" style="font-size: 20px; margin-bottom: 6px;"></i>
+          <button id="callSpeakerBtn" style="padding: 12px; border-radius: 14px; background: ${this.isSpeaker ? '#3b82f6' : 'rgba(255,255,255,0.08)'}; border: none; color: #fff; cursor: pointer;">
+            <i class="fas fa-volume-high" style="font-size: 18px; margin-bottom: 4px;"></i>
             <div style="font-size: 11px; font-weight: 600;">Speaker</div>
           </button>
 
-          <button id="callHoldBtn" style="padding: 14px; border-radius: 14px; background: ${this.isHold ? '#eab308' : 'rgba(255,255,255,0.08)'}; border: none; color: #fff; cursor: pointer;">
-            <i class="fas fa-pause" style="font-size: 20px; margin-bottom: 6px;"></i>
+          <button id="callHoldBtn" style="padding: 12px; border-radius: 14px; background: ${this.isHold ? '#eab308' : 'rgba(255,255,255,0.08)'}; border: none; color: #fff; cursor: pointer;">
+            <i class="fas fa-pause" style="font-size: 18px; margin-bottom: 4px;"></i>
             <div style="font-size: 11px; font-weight: 600;">${this.isHold ? 'On Hold' : 'Hold'}</div>
           </button>
         </div>
 
-        <!-- Big Red Hangup Button & Direct SIM Fallback Below -->
-        <div style="display: flex; flex-direction: column; align-items: center; gap: 16px;">
-          <button id="softphoneEndCallBtn" style="width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #b91c1c); border: none; color: #fff; font-size: 26px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4); cursor: pointer;">
+        <!-- In-Call DTMF Keypad Toggle & Drawer -->
+        <div style="margin-bottom: 24px;">
+          <button id="inCallDTMFToggleBtn" style="padding: 6px 14px; border-radius: 16px; background: ${this.showInCallDTMF ? '#3b82f6' : 'rgba(255,255,255,0.06)'}; border: 1px solid rgba(255,255,255,0.12); color: #fff; font-size: 11.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fas fa-table-cells"></i> ${this.showInCallDTMF ? 'Hide DTMF Keypad' : 'DTMF Keypad'}
+          </button>
+
+          ${this.showInCallDTMF ? `
+            <div style="margin-top: 14px; background: rgba(30, 41, 59, 0.9); padding: 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.1);">
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                ${['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map(d => `
+                  <button class="in-call-dtmf-btn" data-digit="${d}" style="height: 44px; border-radius: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #fff; font-size: 18px; font-weight: 700; cursor: pointer;">
+                    ${d}
+                  </button>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Hangup Call Button -->
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 14px;">
+          <button id="softphoneEndCallBtn" style="width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #b91c1c); border: none; color: #fff; font-size: 24px; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4); cursor: pointer;">
             <i class="fas fa-phone-slash"></i>
           </button>
 
-          <button id="softphoneDirectSimBtn" style="padding: 6px 14px; border-radius: 20px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #38bdf8; font-size: 11.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+          <button id="softphoneDirectSimBtn" style="padding: 5px 12px; border-radius: 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #38bdf8; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
             <i class="fas fa-mobile-screen"></i> Direct SIM Call
           </button>
         </div>
@@ -913,273 +1760,255 @@ export class SoftphonePage {
     `;
   }
 
-  private renderHistory(): string {
+  // ──────────────────────────── 5. BOTTOM SHEETS RENDERER ────────────────────────────
+
+  private renderBottomSheet(): void {
+    const container = document.getElementById('softphoneBottomSheetContainer');
+    if (!container) return;
+
+    if (!this.activeBottomSheet) {
+      container.innerHTML = '';
+      return;
+    }
+
+    if (this.activeBottomSheet === 'customer_history') {
+      container.innerHTML = this.renderCustomerHistorySheetHtml();
+    } else if (this.activeBottomSheet === 'action_taken') {
+      container.innerHTML = this.renderActionTakenSheetHtml();
+    }
+
+    this.attachBottomSheetListeners();
+  }
+
+  private renderCustomerHistorySheetHtml(): string {
+    const data = this.customerHistoryData;
+    const custName = this.escapeHtml(data?.lead?.name || data?.customer_name || 'Customer Lead');
+    const rawPhone = data?.raw_phone || '';
+    const cleanPhone = rawPhone.replace(/\D/g, '').slice(-10);
+    const maskedPhone = this.escapeHtml(data?.phone_masked || this.maskPhone(cleanPhone));
+    const historyList = data?.history || [];
+
     return `
-      <div style="padding: 16px; max-width: 500px; margin: 0 auto;">
+      <!-- Backdrop Overlay -->
+      <div id="bottomSheetBackdrop" style="position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 999; backdrop-filter: blur(2px);"></div>
+
+      <!-- Slide-Up Drawer -->
+      <div style="position: fixed; bottom: 0; left: 0; right: 0; max-height: 85vh; background: #0f172a; border-top-left-radius: 20px; border-top-right-radius: 20px; z-index: 1000; display: flex; flex-direction: column; box-shadow: 0 -8px 30px rgba(0,0,0,0.6); border-top: 1px solid rgba(255,255,255,0.12);">
         
-        <!-- 1. Channel Filter: All Calls | Softphone | Mobile -->
-        <div style="display: flex; gap: 6px; margin-bottom: 10px; background: #1e293b; padding: 4px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);">
-          <button class="recents-channel-btn" data-channel="ALL" style="flex: 1; padding: 7px 4px; border-radius: 8px; font-size: 11.5px; font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; background: ${this.channelFilter === 'ALL' ? '#3b82f6' : 'transparent'}; color: ${this.channelFilter === 'ALL' ? '#fff' : '#94a3b8'};">
-            All Channels
-          </button>
-          <button class="recents-channel-btn" data-channel="SOFTPHONE" style="flex: 1; padding: 7px 4px; border-radius: 8px; font-size: 11.5px; font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; background: ${this.channelFilter === 'SOFTPHONE' ? '#3b82f6' : 'transparent'}; color: ${this.channelFilter === 'SOFTPHONE' ? '#fff' : '#94a3b8'};">
-            <i class="fas fa-phone" style="margin-right: 3px;"></i>Softphone
-          </button>
-          <button class="recents-channel-btn" data-channel="MOBILE" style="flex: 1; padding: 7px 4px; border-radius: 8px; font-size: 11.5px; font-weight: 700; border: none; cursor: pointer; transition: all 0.15s; background: ${this.channelFilter === 'MOBILE' ? '#3b82f6' : 'transparent'}; color: ${this.channelFilter === 'MOBILE' ? '#fff' : '#94a3b8'};">
-            <i class="fas fa-mobile-screen" style="margin-right: 3px;"></i>Mobile
-          </button>
-        </div>
-
-        <!-- 2. Sub-tabs / Direction Filter: All | In | Out | Missed -->
-        <div style="display: flex; gap: 4px; margin-bottom: 10px; background: rgba(30, 41, 59, 0.6); padding: 3px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
-          <button class="recents-direction-btn" data-dir="ALL" style="flex: 1; padding: 5px; border-radius: 6px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; background: ${this.directionFilter === 'ALL' ? '#2563eb' : 'transparent'}; color: ${this.directionFilter === 'ALL' ? '#fff' : '#94a3b8'};">
-            All
-          </button>
-          <button class="recents-direction-btn" data-dir="INCOMING" style="flex: 1; padding: 5px; border-radius: 6px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; background: ${this.directionFilter === 'INCOMING' ? '#059669' : 'transparent'}; color: ${this.directionFilter === 'INCOMING' ? '#fff' : '#94a3b8'};">
-            ↙️ In
-          </button>
-          <button class="recents-direction-btn" data-dir="OUTGOING" style="flex: 1; padding: 5px; border-radius: 6px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; background: ${this.directionFilter === 'OUTGOING' ? '#0284c7' : 'transparent'}; color: ${this.directionFilter === 'OUTGOING' ? '#fff' : '#94a3b8'};">
-            ↗️ Out
-          </button>
-          <button class="recents-direction-btn" data-dir="MISSED" style="flex: 1; padding: 5px; border-radius: 6px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; background: ${this.directionFilter === 'MISSED' ? '#dc2626' : 'transparent'}; color: ${this.directionFilter === 'MISSED' ? '#fff' : '#94a3b8'};">
-            🚫 Missed
-          </button>
-        </div>
-
-        <!-- 3. Date Range & Team Hierarchy Controls -->
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px;">
-          <!-- Date Presets -->
-          <select id="recentsDateRangeSelect" style="flex: 1; min-width: 120px; background: #1e293b; color: #fff; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 6px 10px; font-size: 11.5px; font-weight: 600; outline: none;">
-            <option value="ALL" ${this.dateRangePreset === 'ALL' ? 'selected' : ''}>📅 All Time</option>
-            <option value="TODAY" ${this.dateRangePreset === 'TODAY' ? 'selected' : ''}>📅 Today</option>
-            <option value="YESTERDAY" ${this.dateRangePreset === 'YESTERDAY' ? 'selected' : ''}>📅 Yesterday</option>
-            <option value="WEEK" ${this.dateRangePreset === 'WEEK' ? 'selected' : ''}>📅 Last 7 Days</option>
-            <option value="CUSTOM" ${this.dateRangePreset === 'CUSTOM' ? 'selected' : ''}>📅 Custom Range</option>
-          </select>
-
-          <!-- Upline Manager Team Selector -->
-          ${this.isManager || this.downlineMembers.length > 0 ? `
-            <select id="recentsTeamSelect" style="flex: 1.2; min-width: 140px; background: #1e293b; color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 8px; padding: 6px 10px; font-size: 11.5px; font-weight: 700; outline: none;">
-              <option value="all" ${this.targetStaffId === 'all' ? 'selected' : ''}>👥 All Team Calls</option>
-              <option value="self" ${this.targetStaffId === 'self' ? 'selected' : ''}>👤 My Calls Only</option>
-              ${this.downlineMembers.map(m => `
-                <option value="${m.id}" ${String(this.targetStaffId) === String(m.id) ? 'selected' : ''}>
-                  👤 ${m.name}
-                </option>
-              `).join('')}
-            </select>
-          ` : ''}
-        </div>
-
-        <!-- Custom Date Inputs (when CUSTOM is chosen) -->
-        ${this.dateRangePreset === 'CUSTOM' ? `
-          <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 14px; background: #1e293b; padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);">
-            <div style="flex: 1;">
-              <label style="font-size: 10px; color: #94a3b8; display: block; margin-bottom: 2px;">Start Date</label>
-              <input type="date" id="customStartDateInput" value="${this.customStartDate}" style="background: #0f172a; border: 1px solid #475569; color: #fff; padding: 4px 6px; border-radius: 6px; font-size: 11px; width: 100%;">
+        <!-- Drawer Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+          <div>
+            <div style="font-size: 15px; font-weight: 700; color: #fff;">
+              <i class="fas fa-user-clock" style="color: #38bdf8; margin-right: 6px;"></i>${custName}
             </div>
-            <div style="flex: 1;">
-              <label style="font-size: 10px; color: #94a3b8; display: block; margin-bottom: 2px;">End Date</label>
-              <input type="date" id="customEndDateInput" value="${this.customEndDate}" style="background: #0f172a; border: 1px solid #475569; color: #fff; padding: 4px 6px; border-radius: 6px; font-size: 11px; width: 100%;">
+            <div style="font-size: 11.5px; color: #94a3b8; font-family: monospace; margin-top: 2px;">
+              ${maskedPhone}
             </div>
-            <button id="applyCustomDateBtn" style="margin-top: 14px; padding: 6px 12px; background: #3b82f6; border: none; border-radius: 6px; color: #fff; font-size: 11px; font-weight: 700; cursor: pointer;">
-              Apply
-            </button>
           </div>
-        ` : ''}
-
-        <div id="softphoneHistoryContainer">
-          ${this.renderHistoryListHtml()}
+          <button id="closeBottomSheetBtn" style="background: rgba(255,255,255,0.08); border: none; color: #cbd5e1; width: 32px; height: 32px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+            ✕
+          </button>
         </div>
-      </div>
-    `;
-  }
 
-  private renderHistoryList(): void {
-    const container = document.getElementById('softphoneHistoryContainer');
-    if (container) {
-      container.innerHTML = this.renderHistoryListHtml();
-      this.attachHistoryCardListeners();
-    }
-  }
+        <!-- Scrollable Content -->
+        <div style="padding: 16px; overflow-y: auto; flex: 1;">
+          ${this.customerHistoryLoading ? `
+            <div style="text-align: center; padding: 40px; color: #94a3b8;">
+              <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Fetching customer timeline...
+            </div>
+          ` : `
+            <!-- Lead Details Card -->
+            <div style="background: #1e293b; border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 13px; font-weight: 700; color: #fff;">${custName}</span>
+                <span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; font-size: 10.5px; padding: 2px 7px; border-radius: 8px;">
+                  ${this.escapeHtml(data?.lead?.status || 'Customer')}
+                </span>
+              </div>
+              <div style="font-size: 11.5px; color: #94a3b8; display: flex; flex-direction: column; gap: 4px;">
+                <div><i class="fas fa-phone" style="width: 16px; color: #64748b;"></i> <span style="font-family: monospace; color: #cbd5e1;">${maskedPhone}</span></div>
+                ${data?.lead?.email ? `<div><i class="fas fa-envelope" style="width: 16px; color: #64748b;"></i> ${this.escapeHtml(data.lead.email)}</div>` : ''}
+                ${data?.lead?.city ? `<div><i class="fas fa-location-dot" style="width: 16px; color: #64748b;"></i> ${this.escapeHtml(data.lead.city)}</div>` : ''}
+              </div>
+            </div>
 
-  private renderHistoryListHtml(): string {
-    if (this.isLoadingHistory) {
-      return `<div style="text-align: center; padding: 40px; color: #94a3b8;"><i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>Loading call history...</div>`;
-    }
+            <!-- Interaction History Header & Call Now Button -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <span style="font-size: 13px; font-weight: 700; color: #fff;">
+                <i class="fas fa-timeline" style="color: #60a5fa; margin-right: 5px;"></i> Interaction History (${data?.total_calls || historyList.length})
+              </span>
+              <button class="call-action-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(custName)}" style="padding: 6px 14px; border-radius: 16px; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: #fff; font-size: 11.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                <i class="fas fa-phone fa-xs"></i> Call Now
+              </button>
+            </div>
 
-    // Filter calls based on selected channel and direction
-    const filtered = this.recentCalls.filter(c => {
-      // Channel Filter
-      if (this.channelFilter === 'SOFTPHONE' && (c.source !== 'softphone' && c.source !== 'dialer')) return false;
-      if (this.channelFilter === 'MOBILE' && (c.source !== 'native' && c.source !== undefined)) return false;
+            <!-- Timeline Items -->
+            ${historyList.length === 0 ? `
+              <div style="text-align: center; padding: 30px; color: #64748b;">No previous calls found.</div>
+            ` : `
+              <div style="display: flex; flex-direction: column; gap: 10px; border-left: 2px solid rgba(255,255,255,0.1); padding-left: 14px; margin-left: 6px;">
+                ${historyList.map(h => {
+                  const isIncoming = (h.direction === 'inbound') || (h.type && h.type.toLowerCase().includes('in')) || h.type === 'Missed by Staff';
+                  const timeFormatted = this.formatRelativeTime(h.started_at || h.created_at);
+                  const audioKey = `timeline_${h.id}`;
+                  const hasRecording = Boolean(h.has_recording && h.recording_url);
 
-      // Direction Filter
-      const typeUpper = (c.call_type || 'OUTGOING').toUpperCase();
-      if (this.directionFilter === 'INCOMING' && typeUpper !== 'INCOMING') return false;
-      if (this.directionFilter === 'OUTGOING' && typeUpper !== 'OUTGOING') return false;
-      if (this.directionFilter === 'MISSED' && (typeUpper !== 'MISSED' && typeUpper !== 'REJECTED')) return false;
+                  return `
+                    <div style="position: relative; background: #1e293b; border-radius: 10px; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.06);">
+                      <!-- Timeline Node Dot -->
+                      <div style="position: absolute; left: -21px; top: 12px; width: 12px; height: 12px; border-radius: 50%; background: ${isIncoming ? '#22c55e' : '#3b82f6'}; border: 2px solid #0f172a;"></div>
 
-      return true;
-    });
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                          <span style="font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: ${isIncoming ? 'rgba(34, 197, 94, 0.2)' : 'rgba(59, 130, 246, 0.2)'}; color: ${isIncoming ? '#4ade80' : '#60a5fa'}; font-family: monospace;">
+                            ${isIncoming ? '↙ IN' : '↗ OUT'}
+                          </span>
+                          <span style="font-size: 11px; font-weight: 700; color: #fff;">${this.escapeHtml(h.type)}</span>
+                          <span style="font-size: 10px; font-weight: 600; color: #facc15; font-family: monospace;">${this.escapeHtml(h.duration_formatted || '00m 00s')}</span>
+                        </div>
+                        <span style="font-size: 10.5px; color: #94a3b8;">${timeFormatted}</span>
+                      </div>
 
-    if (filtered.length === 0) {
-      return `
-        <div style="text-align: center; padding: 50px 20px; color: #64748b;">
-          <i class="fas fa-phone-slash" style="font-size: 38px; margin-bottom: 12px; color: #475569;"></i>
-          <p style="font-weight: 600; font-size: 14px;">No call records found matching filters</p>
-        </div>
-      `;
-    }
+                      <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">
+                        Handled By: <strong style="color: #cbd5e1;">${this.escapeHtml(h.operator_name || 'System')}</strong>
+                        ${h.called_did ? ` · DID: <span style="color: #64748b;">${this.escapeHtml(this.maskPhone(h.called_did))}</span>` : ''}
+                      </div>
 
-    return `
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        ${filtered.map(c => {
-          const typeUpper = (c.call_type || 'OUTGOING').toUpperCase();
-          const isMissed = typeUpper === 'MISSED' || typeUpper === 'REJECTED';
-          const isIncoming = typeUpper === 'INCOMING';
-          const icon = isIncoming ? 'fa-arrow-down-left text-primary' : (isMissed ? 'fa-phone-slash text-danger' : 'fa-arrow-up-right text-success');
-          const isSoftphone = c.source === 'softphone' || c.source === 'dialer';
-          const durationFormatted = this.formatDuration(c.duration_seconds || 0);
-          const timeFormatted = this.formatRelativeTime(c.dialed_at || c.timestamp);
-          const recId = c.recording_id || (c.has_recording ? (c.id || 'rec') : null);
-          const isPlaying = this.playingRecordingId && String(this.playingRecordingId) === String(recId);
+                      ${h.ivr_selections && h.ivr_selections.length > 0 ? `
+                        <div style="margin-top: 6px; padding: 4px 8px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid rgba(234, 179, 8, 0.2); font-size: 10.5px; color: #facc15;">
+                          <i class="fas fa-list-check" style="margin-right: 4px;"></i>IVR Selected: 
+                          ${h.ivr_selections.map(s => `<strong>${this.escapeHtml(s.label || s.digit || '')}</strong>`).join(', ')}
+                        </div>
+                      ` : ''}
 
-          return `
-            <div style="background: #1e293b; border-radius: 14px; padding: 13px 16px; border: 1px solid rgba(255,255,255,0.06);">
-              <div style="display: flex; align-items: center; justify-content: space-between;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                  <div style="width: 38px; height: 38px; border-radius: 50%; background: ${isSoftphone ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255,255,255,0.06)'}; display: flex; align-items: center; justify-content: center; font-size: 14px;">
-                    <i class="fa-solid ${icon}"></i>
-                  </div>
-                  <div>
-                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                      <span style="font-weight: 700; font-size: 14px; color: ${isMissed ? '#f87171' : '#fff'};">${c.contact_name || c.phone_number}</span>
-                      <span style="font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: ${isSoftphone ? 'rgba(59, 130, 246, 0.2)' : 'rgba(148, 163, 184, 0.15)'}; color: ${isSoftphone ? '#60a5fa' : '#94a3b8'};">
-                        ${isSoftphone ? 'Softphone' : 'Mobile'}
-                      </span>
-                      ${c.is_downline && c.staff_name ? `
-                        <span style="font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: rgba(234, 179, 8, 0.2); color: #facc15;">
-                          👤 ${c.staff_name}
-                        </span>
+                      ${hasRecording ? `
+                        <div style="margin-top: 6px;">
+                          <button class="audio-play-trigger-btn" data-audio-key="${audioKey}" data-stream-url="${this.escapeAttr(h.recording_url || '')}" style="padding: 4px 10px; border-radius: 12px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; font-size: 10.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                            <i class="fas ${this.playingAudioKey === audioKey ? 'fa-pause' : 'fa-play'} fa-xs"></i> Play Audio
+                          </button>
+                        </div>
                       ` : ''}
                     </div>
-                    <div style="font-size: 11.5px; color: #94a3b8; margin-top: 2px;">
-                      ${c.contact_name ? `${c.phone_number} • ` : ''}${timeFormatted} ${durationFormatted ? `(${durationFormatted})` : ''}
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Right Action Buttons: Play Recording & Call -->
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  ${(isSoftphone || c.has_recording || c.recording_stream_url) ? `
-                    <button 
-                      class="history-play-rec-btn" 
-                      data-rec-id="${recId}" 
-                      data-stream-url="${c.recording_stream_url || `/api/v1/call-tracking/recordings/${recId}/stream`}"
-                      title="${isPlaying ? 'Pause Recording' : 'Listen to Call Recording'}"
-                      style="width: 36px; height: 36px; border-radius: 50%; background: ${isPlaying ? '#eab308' : 'rgba(56, 189, 248, 0.15)'}; border: 1px solid ${isPlaying ? '#facc15' : 'rgba(56, 189, 248, 0.3)'}; color: ${isPlaying ? '#000' : '#38bdf8'}; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.1s;"
-                    >
-                      <i class="fas ${isPlaying ? 'fa-pause' : 'fa-play'} fa-xs"></i>
-                    </button>
-                  ` : ''}
-
-                  <button class="history-call-btn" data-phone="${c.phone_number}" data-name="${this.escapeAttr(c.contact_name || '')}" style="width: 36px; height: 36px; border-radius: 50%; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-phone fa-xs"></i>
-                  </button>
-                </div>
+                  `;
+                }).join('')}
               </div>
-
-              <!-- Inline Audio Player Banner when playing -->
-              ${isPlaying ? `
-                <div style="margin-top: 10px; padding: 8px 12px; background: rgba(15, 23, 42, 0.8); border-radius: 8px; border: 1px solid rgba(234, 179, 8, 0.3); display: flex; align-items: center; justify-content: space-between;">
-                  <div style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: #facc15; font-weight: 600;">
-                    <i class="fas fa-volume-high fa-beat"></i>
-                    <span>Playing Call Audio (${durationFormatted || 'Audio'})</span>
-                  </div>
-                  <button class="history-stop-rec-btn" style="background: transparent; border: none; color: #94a3b8; font-size: 12px; cursor: pointer;">
-                    ✕ Close
-                  </button>
-                </div>
-              ` : ''}
-            </div>
-          `;
-        }).join('')}
+            `}
+          `}
+        </div>
       </div>
     `;
   }
 
+  private renderActionTakenSheetHtml(): string {
+    return `
+      <!-- Backdrop Overlay -->
+      <div id="bottomSheetBackdrop" style="position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 999; backdrop-filter: blur(2px);"></div>
+
+      <!-- Slide-Up Drawer -->
+      <div style="position: fixed; bottom: 0; left: 0; right: 0; background: #0f172a; border-top-left-radius: 20px; border-top-right-radius: 20px; z-index: 1000; box-shadow: 0 -8px 30px rgba(0,0,0,0.6); border-top: 1px solid rgba(255,255,255,0.12); padding: 18px;">
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <div>
+            <div style="font-size: 15px; font-weight: 700; color: #fff;">
+              <i class="fas fa-clipboard-check" style="color: #facc15; margin-right: 6px;"></i>Missed Call Action Taken
+            </div>
+            <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">
+              ${this.escapeHtml(this.actionModalCustomerName)} (${this.maskPhone(this.actionModalPhone)})
+            </div>
+          </div>
+          <button id="closeBottomSheetBtn" style="background: rgba(255,255,255,0.08); border: none; color: #cbd5e1; width: 32px; height: 32px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+            ✕
+          </button>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 11.5px; font-weight: 600; color: #94a3b8; margin-bottom: 6px;">
+            Resolution Note (Describe action taken with customer):
+          </label>
+          <textarea 
+            id="actionTakenNoteInput" 
+            rows="3" 
+            placeholder="e.g. Called customer back via mobile SIM, shared brochure on WhatsApp, scheduled site visit."
+            style="width: 100%; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; color: #fff; padding: 10px; font-size: 12.5px; outline: none; box-sizing: border-box;"
+          >${this.actionModalNotes}</textarea>
+        </div>
+
+        <button 
+          id="submitActionTakenBtn" 
+          style="width: 100%; padding: 12px; border-radius: 12px; background: linear-gradient(135deg, #f59e0b, #d97706); border: none; color: #000; font-size: 13.5px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;"
+          ${this.isSubmittingAction ? 'disabled' : ''}
+        >
+          ${this.isSubmittingAction ? '<i class="fas fa-spinner fa-spin"></i> Saving...' : '<i class="fas fa-check"></i> Save Action Taken'}
+        </button>
+      </div>
+    `;
+  }
+
+  // ──────────────────────────── 6. PAGINATION RENDERER ────────────────────────────
+
+  private renderPaginationHtml(total: number, pageSize: number, currentPage: number, context: 'scope' | 'contacts'): string {
+    const totalPages = Math.ceil(total / pageSize);
+    if (totalPages <= 1) return '';
+
+    const startIdx = (currentPage - 1) * pageSize + 1;
+    const endIdx = Math.min(currentPage * pageSize, total);
+
+    return `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 11px; color: #94a3b8;">
+        <span>Showing ${startIdx}–${endIdx} of ${total}</span>
+        <div style="display: flex; gap: 4px;">
+          <button class="pag-btn" data-context="${context}" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : 'style="cursor: pointer;"'}>
+            ‹
+          </button>
+          <span style="padding: 4px 8px; font-weight: 700; color: #fff;">${currentPage} / ${totalPages}</span>
+          <button class="pag-btn" data-context="${context}" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled style="opacity: 0.4; cursor: not-allowed;"' : 'style="cursor: pointer;"'}>
+            ›
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  // ──────────────────────────── EVENT LISTENERS ────────────────────────────
+
   private attachListeners(): void {
-    // Mode toggles
-    document.getElementById('tabDialerBtn')?.addEventListener('click', () => {
-      this.activeTab = 'dialer';
-      this.render();
-    });
-
-    document.getElementById('tabContactsBtn')?.addEventListener('click', () => {
-      this.activeTab = 'contacts';
-      this.render();
-      if (this.contactsList.length === 0) {
-        this.searchContacts('a');
-      }
-    });
-
-    document.getElementById('tabHistoryBtn')?.addEventListener('click', () => {
-      this.activeTab = 'history';
-      this.render();
-      this.loadRecentCalls();
-    });
-
-    // Channel Filters (All | Softphone | Mobile)
-    this.container.querySelectorAll('.recents-channel-btn').forEach(btn => {
+    // 1. Scope Navigation Bar Buttons
+    this.container.querySelectorAll('.scope-nav-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const target = e.currentTarget as HTMLElement;
-        this.channelFilter = (target.dataset.channel || 'ALL') as any;
-        this.renderHistoryList();
-      });
-    });
-
-    // Direction Sub-tabs (All | In | Out | Missed)
-    this.container.querySelectorAll('.recents-direction-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const target = e.currentTarget as HTMLElement;
-        this.directionFilter = (target.dataset.dir || 'ALL') as any;
+        const scope = (target.dataset.scope || 'dialer') as SoftphoneScope;
+        this.activeScope = scope;
         this.render();
-        this.loadRecentCalls();
+
+        if (scope === 'dialer') {
+          this.loadRecent20Calls();
+          this.loadTodayMetrics();
+        } else if (scope === 'contacts') {
+          this.loadContacts(1);
+        } else {
+          this.loadScopeCalls(1);
+          if (scope === 'team' || scope === 'overall') {
+            if (this.teamMembers.length === 0) this.loadTeamMembers();
+          }
+        }
       });
     });
 
-    // Date Range Presets
-    document.getElementById('recentsDateRangeSelect')?.addEventListener('change', (e) => {
-      this.dateRangePreset = (e.target as HTMLSelectElement).value as any;
-      this.render();
-      if (this.dateRangePreset !== 'CUSTOM') {
-        this.loadRecentCalls();
-      }
-    });
-
-    // Custom Date Apply
-    document.getElementById('applyCustomDateBtn')?.addEventListener('click', () => {
-      const sInput = document.getElementById('customStartDateInput') as HTMLInputElement;
-      const eInput = document.getElementById('customEndDateInput') as HTMLInputElement;
-      if (sInput) this.customStartDate = sInput.value;
-      if (eInput) this.customEndDate = eInput.value;
-      this.loadRecentCalls();
-    });
-
-    // Team Member Filter (for Upline Managers)
-    document.getElementById('recentsTeamSelect')?.addEventListener('change', (e) => {
-      this.targetStaffId = (e.target as HTMLSelectElement).value;
-      this.loadRecentCalls();
-    });
-
-    // Agent status change
+    // 2. Header Agent Status select
     document.getElementById('softphoneStatusSelect')?.addEventListener('change', (e) => {
       this.agentStatus = (e.target as HTMLSelectElement).value as any;
       this.render();
     });
 
-    // Keypad button presses
+    // 3. Header Refresh button
+    document.getElementById('softphoneRefreshBtn')?.addEventListener('click', () => {
+      this.loadTodayMetrics();
+      if (this.activeScope === 'dialer') this.loadRecent20Calls();
+      else if (this.activeScope === 'contacts') this.loadContacts(this.contactsPage);
+      else this.loadScopeCalls(this.scopeCurrentPage);
+    });
+
+    // 4. Keypad Buttons
     this.container.querySelectorAll('.dialpad-key-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const digit = (btn as HTMLElement).dataset.digit;
@@ -1187,78 +2016,141 @@ export class SoftphonePage {
       });
     });
 
-    // Clear All Button (One-tap full clear)
+    // 5. Dialpad Clear All & Backspace
     document.getElementById('softphoneClearAllBtn')?.addEventListener('click', () => this.clearNumber());
+    document.getElementById('softphoneClearBtn')?.addEventListener('click', () => this.backspace());
 
-    // Backspace with Long-Press Detection (Tap = delete 1 digit, Hold > 320ms = clear all)
-    const clearBtn = document.getElementById('softphoneClearBtn');
-    if (clearBtn) {
-      let longPressTimer: any = null;
-      let didLongPress = false;
-
-      const handlePressStart = () => {
-        didLongPress = false;
-        longPressTimer = setTimeout(() => {
-          didLongPress = true;
-          this.clearNumber();
-        }, 320);
-      };
-
-      const handlePressEnd = () => {
-        if (longPressTimer) {
-          clearTimeout(longPressTimer);
-          longPressTimer = null;
-        }
-      };
-
-      clearBtn.addEventListener('pointerdown', handlePressStart);
-      clearBtn.addEventListener('pointerup', handlePressEnd);
-      clearBtn.addEventListener('pointercancel', handlePressEnd);
-      clearBtn.addEventListener('pointerleave', handlePressEnd);
-      clearBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (!didLongPress) {
-          this.backspace();
-        }
-      });
-    }
-
-    // Manual input sync (clean, no search interference)
-    const input = document.getElementById('softphoneDialInput') as HTMLInputElement;
-    input?.addEventListener('input', () => {
-      this.dialNumber = input.value;
+    // 6. Manual dial input change
+    const dialInput = document.getElementById('softphoneDialInput') as HTMLInputElement;
+    dialInput?.addEventListener('input', () => {
+      this.dialNumber = dialInput.value;
       this.selectedContactName = '';
       this.updateDialDisplay();
     });
 
-    // Contacts Tab search input
-    const contactsSearchInput = document.getElementById('softphoneContactsSearchInput') as HTMLInputElement;
-    contactsSearchInput?.addEventListener('input', () => {
-      this.searchContactsQuery = contactsSearchInput.value;
-      if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
-      this.searchDebounceTimer = setTimeout(() => {
-        this.searchContacts(this.searchContactsQuery || 'a');
-      }, 200);
+    // 7. Call Initiation Buttons
+    document.getElementById('softphoneStartCallBtn')?.addEventListener('click', () => this.startCall());
+    document.getElementById('softphoneDirectSimBtn')?.addEventListener('click', () => this.startCall(undefined, undefined, true));
+
+    // 8. Recent Calls Quick Search
+    const recentSearchInput = document.getElementById('recentCallsSearchInput') as HTMLInputElement;
+    recentSearchInput?.addEventListener('input', () => {
+      this.recentSearchQuery = recentSearchInput.value;
+      this.renderRecent20List();
+    });
+    document.getElementById('clearRecentSearchBtn')?.addEventListener('click', () => {
+      this.recentSearchQuery = '';
+      this.renderRecent20List();
     });
 
-    // Call Actions
-    document.getElementById('softphoneStartCallBtn')?.addEventListener('click', () => this.startCall());
+    // 9. Scope Filter Bar Events (for history scopes)
+    const scopeSearch = document.getElementById('scopeSearchInput') as HTMLInputElement;
+    scopeSearch?.addEventListener('input', () => {
+      this.scopeFilterSearch = scopeSearch.value;
+      if (this.contactsDebounceTimer) clearTimeout(this.contactsDebounceTimer);
+      this.contactsDebounceTimer = setTimeout(() => {
+        this.loadScopeCalls(1);
+      }, 300);
+    });
+    document.getElementById('clearScopeSearchBtn')?.addEventListener('click', () => {
+      this.scopeFilterSearch = '';
+      this.loadScopeCalls(1);
+    });
+
+    this.container.querySelectorAll('.date-preset-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        this.scopeDatePreset = (target.dataset.preset || '7DAYS') as DatePreset;
+        this.render();
+        if (this.scopeDatePreset !== 'CUSTOM') {
+          this.loadScopeCalls(1);
+        }
+      });
+    });
+
+    document.getElementById('applyScopeCustomDateBtn')?.addEventListener('click', () => {
+      const sInput = document.getElementById('scopeCustomStartInput') as HTMLInputElement;
+      const eInput = document.getElementById('scopeCustomEndInput') as HTMLInputElement;
+      if (sInput) this.customStartDate = sInput.value;
+      if (eInput) this.customEndDate = eInput.value;
+      this.loadScopeCalls(1);
+    });
+
+    document.getElementById('scopeTypeSelect')?.addEventListener('change', (e) => {
+      this.scopeFilterType = (e.target as HTMLSelectElement).value;
+      this.loadScopeCalls(1);
+    });
+
+    document.getElementById('scopeSortSelect')?.addEventListener('change', (e) => {
+      this.scopeFilterSort = (e.target as HTMLSelectElement).value;
+      this.loadScopeCalls(1);
+    });
+
+    document.getElementById('scopeChannelSelect')?.addEventListener('change', (e) => {
+      this.scopeFilterChannel = (e.target as HTMLSelectElement).value;
+      this.loadScopeCalls(1);
+    });
+
+    document.getElementById('scopeLeadScopeSelect')?.addEventListener('change', (e) => {
+      this.scopeFilterLeadScope = (e.target as HTMLSelectElement).value;
+      this.loadScopeCalls(1);
+    });
+
+    document.getElementById('scopeTeamSelect')?.addEventListener('change', (e) => {
+      this.scopeFilterTeamMember = (e.target as HTMLSelectElement).value;
+      this.loadScopeCalls(1);
+    });
+
+    // 10. Contacts Tab Events
+    const contactsSearch = document.getElementById('contactsSearchInput') as HTMLInputElement;
+    contactsSearch?.addEventListener('input', () => {
+      this.contactsSearchQuery = contactsSearch.value;
+      if (this.contactsDebounceTimer) clearTimeout(this.contactsDebounceTimer);
+      this.contactsDebounceTimer = setTimeout(() => {
+        this.loadContacts(1);
+      }, 300);
+    });
+    document.getElementById('clearContactsSearchBtn')?.addEventListener('click', () => {
+      this.contactsSearchQuery = '';
+      this.loadContacts(1);
+    });
+
+    this.container.querySelectorAll('.contacts-source-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        this.contactsSourceType = (target.dataset.source || 'all') as ContactSourceType;
+        this.render();
+        this.loadContacts(1);
+      });
+    });
+
+    // 11. In-Call Events
     document.getElementById('softphoneAnswerCallBtn')?.addEventListener('click', () => telephonyService.answerIncomingCall());
     document.getElementById('softphoneRejectCallBtn')?.addEventListener('click', () => telephonyService.rejectIncomingCall());
-    document.getElementById('softphoneDirectSimBtn')?.addEventListener('click', () => this.startCall(undefined, undefined, true));
-    document.getElementById('inCallSwitchSimBtn')?.addEventListener('click', () => this.triggerNativeSimCall());
     document.getElementById('softphoneEndCallBtn')?.addEventListener('click', () => this.endCall());
     document.getElementById('callMuteBtn')?.addEventListener('click', () => this.toggleMute());
     document.getElementById('callSpeakerBtn')?.addEventListener('click', () => this.toggleSpeaker());
     document.getElementById('callHoldBtn')?.addEventListener('click', () => this.toggleHold());
+    document.getElementById('inCallDTMFToggleBtn')?.addEventListener('click', () => {
+      this.showInCallDTMF = !this.showInCallDTMF;
+      this.render();
+    });
 
-    this.attachHistoryCardListeners();
+    this.container.querySelectorAll('.in-call-dtmf-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const digit = (btn as HTMLElement).dataset.digit;
+        if (digit) this.sendInCallDTMF(digit);
+      });
+    });
+
+    this.attachCallCardListeners();
     this.attachContactCardListeners();
+    this.attachPaginationListeners();
   }
 
-  private attachHistoryCardListeners(): void {
+  private attachCallCardListeners(): void {
     // Redial call button
-    this.container.querySelectorAll('.history-call-btn').forEach(btn => {
+    this.container.querySelectorAll('.call-action-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const phone = (btn as HTMLElement).dataset.phone;
         const name = (btn as HTMLElement).dataset.name;
@@ -1266,40 +2158,102 @@ export class SoftphonePage {
       });
     });
 
-    // Play Recording audio button
-    this.container.querySelectorAll('.history-play-rec-btn').forEach(btn => {
+    // Customer timeline trigger button & customer name click
+    this.container.querySelectorAll('.customer-history-trigger, .customer-history-trigger-btn').forEach(el => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = el as HTMLElement;
+        const phone = target.dataset.phone || '';
+        const name = target.dataset.name || 'Customer';
+        if (phone) this.openCustomerHistory(phone, name);
+      });
+    });
+
+    // Audio Play / Pause Trigger
+    this.container.querySelectorAll('.audio-play-trigger-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const target = btn as HTMLElement;
-        const recId = target.dataset.recId || '';
+        const key = target.dataset.audioKey || '';
         const streamUrl = target.dataset.streamUrl || '';
-        if (recId && streamUrl) {
-          this.togglePlayRecording(recId, streamUrl);
+        if (key && streamUrl) {
+          this.toggleAudioPlayback(key, streamUrl);
         }
       });
     });
 
-    // Stop recording
-    this.container.querySelectorAll('.history-stop-rec-btn').forEach(btn => {
+    // Action Taken Open Modal Button
+    this.container.querySelectorAll('.action-taken-open-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (this.currentAudio) {
-          this.currentAudio.pause();
-          this.currentAudio = null;
+        const target = btn as HTMLElement;
+        const sessionId = target.dataset.sessionId || '';
+        const phone = target.dataset.phone || '';
+        const name = target.dataset.name || 'Customer';
+        if (sessionId) {
+          this.openActionTakenModal(sessionId, phone, name);
         }
-        this.playingRecordingId = null;
-        this.renderHistoryList();
       });
     });
   }
 
   private attachContactCardListeners(): void {
-    this.container.querySelectorAll('.contact-call-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const phone = (btn as HTMLElement).dataset.phone;
-        const name = (btn as HTMLElement).dataset.name;
-        if (phone) this.startCall(phone, name);
+    this.attachCallCardListeners();
+  }
+
+  private attachPaginationListeners(): void {
+    this.container.querySelectorAll('.pag-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = btn as HTMLElement;
+        const context = target.dataset.context;
+        const page = parseInt(target.dataset.page || '1', 10);
+        if (page > 0) {
+          if (context === 'contacts') {
+            this.loadContacts(page);
+          } else {
+            this.loadScopeCalls(page);
+          }
+        }
       });
     });
+  }
+
+  private attachBottomSheetListeners(): void {
+    document.getElementById('bottomSheetBackdrop')?.addEventListener('click', () => this.closeBottomSheet());
+    document.getElementById('closeBottomSheetBtn')?.addEventListener('click', () => this.closeBottomSheet());
+
+    const noteInput = document.getElementById('actionTakenNoteInput') as HTMLTextAreaElement;
+    noteInput?.addEventListener('input', () => {
+      this.actionModalNotes = noteInput.value;
+    });
+
+    document.getElementById('submitActionTakenBtn')?.addEventListener('click', () => this.submitActionTaken());
+
+    // Inside bottom sheet customer timeline: Audio play triggers & Call button
+    const container = document.getElementById('softphoneBottomSheetContainer');
+    if (container) {
+      container.querySelectorAll('.audio-play-trigger-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const target = btn as HTMLElement;
+          const key = target.dataset.audioKey || '';
+          const streamUrl = target.dataset.streamUrl || '';
+          if (key && streamUrl) {
+            this.toggleAudioPlayback(key, streamUrl);
+          }
+        });
+      });
+
+      container.querySelectorAll('.call-action-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const phone = (btn as HTMLElement).dataset.phone;
+          const name = (btn as HTMLElement).dataset.name;
+          if (phone) {
+            this.closeBottomSheet();
+            this.startCall(phone, name);
+          }
+        });
+      });
+    }
   }
 }

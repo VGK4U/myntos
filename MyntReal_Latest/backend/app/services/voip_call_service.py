@@ -24,6 +24,8 @@ from app.models.staff import StaffEmployee
 from app.services.telephony.factory import get_telephony_provider
 from app.services.s3_storage import s3_storage_service
 
+from app.services.telephony.canonical_phone import CanonicalPhoneValidator
+
 logger = logging.getLogger(__name__)
 
 
@@ -38,34 +40,18 @@ class VoIPCallService:
     def normalize_phone_e164(phone: str) -> str:
         """
         Normalize telephone number to standard E.164 format (+91XXXXXXXXXX for India).
-        Rejects invalid or ambiguous numbers.
+        Rejects invalid or ambiguous numbers via CanonicalPhoneValidator.
         """
         if not phone:
             raise HTTPException(status_code=400, detail="Phone number is required")
 
-        cleaned = re.sub(r'[^\d+]', '', str(phone).strip())
-        digits_only = re.sub(r'[^\d]', '', cleaned)
-
-        # Handle 10-digit standard Indian mobile
-        if len(digits_only) == 10:
-            return f"+91{digits_only}"
-        
-        # Handle 11-digit with leading 0 (e.g. 09703118501)
-        if len(digits_only) == 11 and digits_only.startswith('0'):
-            return f"+91{digits_only[1:]}"
-
-        # Handle 12-digit with 91 country code (e.g. 919703118501)
-        if len(digits_only) == 12 and digits_only.startswith('91'):
-            return f"+{digits_only}"
-
-        # International E.164 check (between 10 and 15 digits)
-        if cleaned.startswith('+') and 10 <= len(digits_only) <= 15:
-            return cleaned
-
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid phone number '{phone}'. Expected 10-digit mobile or valid E.164 format (+91XXXXXXXXXX)."
-        )
+        valid, normalized, err = CanonicalPhoneValidator.validate(phone)
+        if not valid or not normalized:
+            raise HTTPException(
+                status_code=400,
+                detail=err or f"Invalid phone number '{phone}'. Expected 10-digit mobile or valid E.164 format (+91XXXXXXXXXX)."
+            )
+        return normalized
 
     @classmethod
     def initiate_in_app_call(
@@ -97,6 +83,26 @@ class VoIPCallService:
         # 2. Normalize customer phone number
         dest_e164 = cls.normalize_phone_e164(customer_phone)
 
+        # Resolve accessible companies for the operator based on CRM authorization model
+        allowed_company_ids = []
+        if company_id:
+            allowed_company_ids.append(company_id)
+        if is_staff:
+            try:
+                for cid in (getattr(current_user, 'data_companies', []) or []):
+                    if isinstance(cid, dict) and 'company_id' in cid:
+                        cid = cid['company_id']
+                    if cid and int(cid) not in allowed_company_ids:
+                        allowed_company_ids.append(int(cid))
+            except Exception:
+                pass
+
+        is_supreme = (
+            getattr(current_user, 'is_supreme', False) or
+            getattr(current_user, 'staff_type', '') in ('VGK4U', 'VGK4U Supreme') or
+            getattr(current_user, 'emp_code', '') == 'MR10001'
+        )
+
         # 3. Validate Lead & Tenant Isolation (if lead_id supplied)
         lead = None
         if lead_id:
@@ -104,9 +110,13 @@ class VoIPCallService:
             if not lead:
                 raise HTTPException(status_code=404, detail=f"Lead with ID {lead_id} not found")
             
-            # Tenant check: Ensure lead belongs to operator's company
-            if lead.company_id and lead.company_id != company_id:
+            # Tenant check: Ensure lead belongs to operator's accessible companies or user is supreme
+            if lead.company_id and not is_supreme and lead.company_id not in allowed_company_ids:
                 raise HTTPException(status_code=403, detail="Unauthorized: Lead belongs to a different company organization")
+            
+            # Set legitimate session company context matching the lead
+            if lead.company_id:
+                company_id = lead.company_id
 
         # 4. Concurrency & Double-Dial Protection
         # Check if this operator already has an active ongoing call to prevent rapid double-clicks (within last 45 seconds)
@@ -201,18 +211,18 @@ class VoIPCallService:
             if call_result.client_token:
                 session.client_token = json.dumps(call_result.client_token)
             db.commit()
-            db.refresh(session)
+        provider_call_id = session.provider_call_id or f"webrtc_{call_session_id}"
 
         # 10. Idempotently Associate with OperatorCall Tracking
         op_call = db.query(OperatorCall).filter(
             OperatorCall.company_id == company_id,
-            OperatorCall.call_id == call_result.provider_call_id
+            OperatorCall.call_id == provider_call_id
         ).first()
 
         if not op_call:
             op_call = OperatorCall(
                 company_id=company_id,
-                call_id=call_result.provider_call_id,
+                call_id=provider_call_id,
                 caller_number=caller_id,
                 called_number=dest_e164,
                 operator_name=operator_name,
@@ -268,7 +278,7 @@ class VoIPCallService:
 
         db.commit()
         db.refresh(session)
-        logger.info(f"[VOIP-CALL-INITIATED] Session {call_session_id} -> {dest_e164} (Provider ID: {call_result.provider_call_id})")
+        logger.info(f"[VOIP-CALL-INITIATED] Session {call_session_id} -> {dest_e164} (Provider ID: {provider_call_id})")
         return session
 
     @classmethod

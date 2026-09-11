@@ -21,6 +21,7 @@ export type CallOutcome = 'answered' | 'no_answer' | 'busy' | 'callback' | 'skip
 export type QueuePriority = 'overdue' | 'due_today' | 'new' | 'second_contact' | 'upcoming';
 
 export interface QueueItem {
+  id?: number;
   lead_id: number;
   name: string;
   phone: string;
@@ -229,6 +230,10 @@ class DialerService {
   // ── Queue Navigation ────────────────────────────────────────────────────────
 
   getCurrentLead(): QueueItem | null {
+    if (this.queue.length === 0) return null;
+    if (this.currentIndex >= this.queue.length || this.currentIndex < 0) {
+      this.currentIndex = 0;
+    }
     return this.queue[this.currentIndex] ?? null;
   }
 
@@ -271,7 +276,12 @@ class DialerService {
   }
 
   getQueue(): QueueItem[] { return this.queue; }
-  getQueueLeadIds(): number[] { return this.queue.map(q => q.lead_id); }
+  getQueueLeadIds(): number[] {
+    return this.queue
+      .map(q => (q as any).id || q.lead_id)
+      .filter(id => id && !isNaN(Number(id)) && Number(id) > 0)
+      .map(id => Number(id));
+  }
   getCurrentIndex(): number { return this.currentIndex; }
   getSession(): DialerSession | null { return this.session; }
   isActive(): boolean { return this.session?.status === 'active'; }
@@ -279,14 +289,29 @@ class DialerService {
 
   // ── Dial + Call-End Detection ────────────────────────────────────────────────
 
+  normalizePhone(phone: string): string {
+    if (!phone) return '';
+    // Strip protocol prefix if present
+    const raw = String(phone).replace(/^(p:|tel:|phone:|m:)\s*/i, '').trim();
+    // Reject alphabetic / hex characters
+    if (/[a-zA-Z]/.test(raw)) return '';
+    const digits = raw.replace(/\D/g, '');
+    if (digits.length < 10 || digits.length > 15) return '';
+    if (digits.length === 10) return `+91${digits}`;
+    if (digits.length === 11 && digits.startsWith('0')) return `+91${digits.slice(1)}`;
+    if (digits.length === 12 && digits.startsWith('91')) return `+${digits}`;
+    if (digits.length > 10 && raw.startsWith('+')) return `+${digits}`;
+    return `+91${digits.slice(-10)}`;
+  }
+
   dial(phone: string, name?: string): void {
     this.isDialing = true;
     this.lastDialedAt = Date.now();
-    const cleaned = phone.replace(/[^+\d]/g, '');
-    callController.openCallDialer({ phoneNumber: cleaned, name: name || '', autoStart: true });
+    const normalized = this.normalizePhone(phone);
+    callController.openCallDialer({ phoneNumber: normalized, name: name || '', autoStart: true });
     // Start polling for call end on Android
     if (APP_CONFIG.isNativeApp()) {
-      this._startCallEndPoll(phone);
+      this._startCallEndPoll(normalized);
     }
   }
 
@@ -486,6 +511,10 @@ class DialerService {
     cooldown_until?: string;
     error?: string;
   }> {
+    if (!leadId || isNaN(Number(leadId)) || Number(leadId) <= 0) {
+      console.error('[DialerService] Invalid canonical leadId passed to reserveLead:', leadId);
+      return { success: false, error: 'Invalid lead ID' };
+    }
     try {
       const res = await apiService.post<{
         success: boolean;

@@ -620,6 +620,15 @@ async def meta_webhook_status_canonical(request: Request, db: Session = Depends(
             value = change.get("value", {})
 
             # ── 1. Delivery status updates ─────────────────────────────────
+            STATUS_PRECEDENCE = {
+                "failed": 99,
+                "read": 4,
+                "delivered": 3,
+                "sent": 2,
+                "api_accepted": 1,
+                "queued": 0
+            }
+
             for su in value.get("statuses", []):
                 wamid       = su.get("id")
                 meta_status = su.get("status")
@@ -631,8 +640,20 @@ async def meta_webhook_status_canonical(request: Request, db: Session = Depends(
                 mapped = status_map.get(meta_status, meta_status)
                 ml = db.query(MessageLog).filter(MessageLog.message_sid == wamid).first()
                 if not ml:
-                    logger.warning(f"[WA-WEBHOOK] ⚠️ wamid not found in message_log: {wamid}")
+                    # Log structured orphan webhook event for auditing
+                    logger.warning(f"[WA-ORPHAN-WEBHOOK] wamid={wamid} status={mapped} recipient={recipient_id} timestamp={status_timestamp} raw={_json.dumps(su)[:150]}")
                     continue
+
+                # State Machine Regression Guard: higher precedence cannot be overwritten by lower
+                curr_prec = STATUS_PRECEDENCE.get(str(ml.current_status).lower(), 0)
+                new_prec = STATUS_PRECEDENCE.get(mapped.lower(), 0)
+
+                # If current state is 'read' and incoming is 'delivered' or 'sent' -> Ignore regression
+                if curr_prec > new_prec and curr_prec != 99:
+                    logger.info(f"[WA-WEBHOOK-GUARD] Ignored state regression for {wamid}: current='{ml.current_status}' incoming='{mapped}'")
+                    continue
+
+                # Idempotent status update
                 ml.current_status     = mapped
                 ml.status_source      = 'META_WEBHOOK'
                 ml.last_status_update = datetime.utcnow()
@@ -643,21 +664,22 @@ async def meta_webhook_status_canonical(request: Request, db: Session = Depends(
                 err_msg = None
                 
                 if mapped == "delivered":
-                    ml.delivered_at = datetime.utcnow()
+                    if not ml.delivered_at:
+                        ml.delivered_at = datetime.utcnow()
                 elif mapped == "read":
-                    ml.read_at = datetime.utcnow()
+                    if not ml.read_at:
+                        ml.read_at = datetime.utcnow()
                     if not ml.delivered_at:
                         ml.delivered_at = datetime.utcnow()
                 elif mapped == "failed":
-                    ml.failed_at = datetime.utcnow()
+                    if not ml.failed_at:
+                        ml.failed_at = datetime.utcnow()
                     errs = su.get("errors", [])
                     if errs:
                         err_code = str(errs[0].get("code", ""))
                         err_msg  = errs[0].get("message", "") or errs[0].get("title", "")
                         details  = errs[0].get("error_data", {}).get("details", "")
                         
-                        # DC Fix: Postgres schema still has VARCHAR(100) for these fields despite SQLAlchemy model having Text.
-                        # We truncate to 95 chars here to prevent 500 crashes during webhook updates.
                         ml.error_code    = err_code[:20] if err_code else err_code
                         ml.error_message = err_msg[:95] if err_msg else err_msg
                         full_reason = f"{err_msg}: {details}" if details else err_msg
@@ -666,20 +688,54 @@ async def meta_webhook_status_canonical(request: Request, db: Session = Depends(
                 # Structured Logging
                 logger.info(f"WHATSAPP_STATUS message_id={wamid} recipient={recipient_id or ml.mobile_number} status={mapped} timestamp={status_timestamp} error_code={err_code} error_message={err_msg}")
                 
+                # Synchronize to WAInbox
+                try:
+                    from app.models.whatsapp import WAInbox
+                    inb_row = db.query(WAInbox).filter(WAInbox.wamid == wamid).first()
+                    if inb_row:
+                        inb_curr_prec = STATUS_PRECEDENCE.get(str(inb_row.status).lower(), 0)
+                        if inb_curr_prec <= new_prec or mapped == "failed":
+                            inb_row.status = mapped
+                            if mapped == "read":
+                                inb_row.is_read = True
+                except Exception as _inb_sync_err:
+                    logger.warning(f"[WA-WEBHOOK] Could not sync status to WAInbox for {wamid}: {_inb_sync_err}")
+
+                # Synchronize to WAMessage (wa_messages table)
+                try:
+                    from app.models.wa_audit import WAMessage
+                    wa_msg = db.query(WAMessage).filter(WAMessage.wamid == wamid).first()
+                    if wa_msg:
+                        wa_curr_prec = STATUS_PRECEDENCE.get(str(wa_msg.delivery_status).lower(), 0)
+                        if wa_curr_prec <= new_prec or mapped == "failed":
+                            wa_msg.delivery_status = mapped.upper()
+                            if mapped == "delivered" and not wa_msg.delivered_at:
+                                wa_msg.delivered_at = datetime.utcnow()
+                            elif mapped == "read":
+                                if not wa_msg.read_at:
+                                    wa_msg.read_at = datetime.utcnow()
+                                if not wa_msg.delivered_at:
+                                    wa_msg.delivered_at = datetime.utcnow()
+                except Exception as _wamsg_sync_err:
+                    logger.warning(f"[WA-WEBHOOK] Could not sync status to WAMessage for {wamid}: {_wamsg_sync_err}")
+
                 # Also update WhatsAppCampaignLog if matching wamid
                 try:
                     from app.models.whatsapp import WhatsAppCampaignLog
                     c_log = db.query(WhatsAppCampaignLog).filter(WhatsAppCampaignLog.wamid == wamid).first()
                     if c_log:
-                        c_log.status = mapped
-                        if mapped == "delivered":
-                            c_log.delivered_at = datetime.utcnow()
-                        elif mapped == "read":
-                            c_log.read_at = datetime.utcnow()
-                            if not c_log.delivered_at:
+                        c_curr = STATUS_PRECEDENCE.get(str(c_log.status).lower(), 0)
+                        if new_prec >= c_curr or c_curr == 99:
+                            c_log.status = mapped
+                            if mapped == "delivered" and not c_log.delivered_at:
                                 c_log.delivered_at = datetime.utcnow()
-                        elif mapped == "failed":
-                            c_log.failed_at = datetime.utcnow()
+                            elif mapped == "read":
+                                if not c_log.read_at:
+                                    c_log.read_at = datetime.utcnow()
+                                if not c_log.delivered_at:
+                                    c_log.delivered_at = datetime.utcnow()
+                            elif mapped == "failed" and not c_log.failed_at:
+                                c_log.failed_at = datetime.utcnow()
                 except Exception as _ce:
                     pass
                 print(f"[WA-WEBHOOK] 📨 {wamid} → {mapped}")
@@ -2376,17 +2432,16 @@ def _get_permitted_phones_for_staff(db: Session, staff: StaffEmployee, scope: st
     - downline: Leads assigned or tagged to staff or downline team + downline sent messages
     - all: Full access (Admin / EA / Leadership level >= 80, otherwise fallbacks gracefully to all staff-accessible messages so it never 403s)
     """
-    role_code = _get_role_code_wa(staff)
-    is_admin = role_code in {"vgk4u_supreme", "admin", "super_admin", "ea"}
+    role_code = (_get_role_code_wa(staff) or "").lower()
+    is_admin = role_code in {"vgk4u", "vgk4u_supreme", "admin", "super_admin", "ea"} or getattr(staff, 'id', None) == 1 or getattr(staff, 'emp_code', '') in ("MR10001", "VGK4U")
     
-    if scope == 'all':
-        if is_admin:
-            return None  # Unrestricted access
-        role_obj = getattr(staff, 'role', None)
-        level = getattr(role_obj, 'hierarchy_level', 0) if role_obj else 0
-        if level >= 80:
-            return None  # Unrestricted access for leadership
-        # For general staff requesting 'all', seamlessly fallback to their full accessible scope without 403 error
+    if is_admin or scope == 'all':
+        return None  # Unrestricted access for admin / leadership / all
+    
+    role_obj = getattr(staff, 'role', None)
+    level = getattr(role_obj, 'hierarchy_level', 0) if role_obj else 0
+    if level >= 80:
+        return None  # Unrestricted access for leadership
 
     from app.models.crm import CRMLead
     from app.models.whatsapp import MessageLog, WAInbox
@@ -2410,10 +2465,9 @@ def _get_permitted_phones_for_staff(db: Session, staff: StaffEmployee, scope: st
             CRMLead.telecaller_id.in_(target_staff_ids),
             CRMLead.field_staff_id.in_(target_staff_ids),
             CRMLead.depends_on_staff_id.in_(target_staff_ids),
-            (CRMLead.handler_type == 'staff') & (CRMLead.handler_id.in_([str(sid) for sid in target_staff_ids])),
-            CRMLead.tags.like(f"%{staff.emp_code}%")
+            (CRMLead.handler_type == 'staff') & (CRMLead.handler_id.in_([str(sid) for sid in target_staff_ids]))
         )
-    )
+    ).limit(300)
     for p1, p2 in lead_query.all():
         if p1:
             c1 = ''.join(filter(str.isdigit, str(p1)))[-10:]
@@ -2422,13 +2476,10 @@ def _get_permitted_phones_for_staff(db: Session, staff: StaffEmployee, scope: st
             c2 = ''.join(filter(str.isdigit, str(p2)))[-10:]
             if len(c2) == 10: permitted_phones.add(c2)
 
-    # Query messages sent by target staff IDs or logged with their employee code
+    # Query messages sent by target staff IDs
     log_query = db.query(MessageLog.mobile_number).filter(
-        or_(
-            MessageLog.sent_by_staff_id.in_(target_staff_ids),
-            MessageLog.sent_by_name.like(f"%{staff.emp_code}%")
-        )
-    )
+        MessageLog.sent_by_staff_id.in_(target_staff_ids)
+    ).order_by(MessageLog.id.desc()).limit(200)
     for (mob,) in log_query.all():
         if mob:
             cm = ''.join(filter(str.isdigit, str(mob)))[-10:]
@@ -2440,7 +2491,7 @@ def _get_permitted_phones_for_staff(db: Session, staff: StaffEmployee, scope: st
             WAInbox.replied_by_id.in_(target_staff_ids),
             WAInbox.assigned_to_emp_id.in_(target_staff_ids)
         )
-    )
+    ).order_by(WAInbox.id.desc()).limit(200)
     for (f_ph,) in inbox_query.all():
         if f_ph:
             c_in = ''.join(filter(str.isdigit, str(f_ph)))[-10:]
@@ -2573,6 +2624,53 @@ def claim_whatsapp_conversation(
         raise HTTPException(status_code=500, detail=f"Failed to claim conversation: {e}")
 
 
+def is_known_whatsapp_group(ident: str, target_map: Optional[dict] = None) -> bool:
+    """
+    Safely determine whether an identifier represents a WhatsApp group or channel.
+    Uses canonical group indicators (@g.us, @broadcast, @newsletter, group invite URLs,
+    standard WhatsApp group 120363... JID format with >=15 digits, or configured target targets).
+    Never applies Indian 10-digit phone normalization to known group identifiers.
+    """
+    if not ident:
+        return False
+    s = str(ident).strip().lower()
+    if s.endswith("@g.us") or s.endswith("@broadcast") or s.endswith("@newsletter"):
+        return True
+    if "chat.whatsapp.com" in s or "whatsapp.com/channel" in s:
+        return True
+    digits = ''.join(filter(str.isdigit, s))
+    if digits.startswith("120363") and len(digits) >= 15:
+        return True
+    if target_map:
+        if s in target_map:
+            t_type = str(target_map[s].get("type") or "").upper()
+            if t_type in ("GROUP", "CHANNEL"):
+                return True
+        if digits and digits in target_map:
+            t_type = str(target_map[digits].get("type") or "").upper()
+            if t_type in ("GROUP", "CHANNEL"):
+                return True
+    return False
+
+
+def _build_target_map(targets_dict: dict) -> dict:
+    target_map = {}
+    for j_id, g_list in (targets_dict or {}).items():
+        for g in (g_list or []):
+            t_type = (g.get("type") or "group").upper()
+            g_name = g.get("name") or "WhatsApp Target"
+            ident = (g.get("identifier") or "").strip()
+            digits = ''.join(filter(str.isdigit, ident))
+            info = {"name": g_name, "type": t_type, "raw_ident": ident}
+            if ident:
+                target_map[ident.lower()] = info
+                if ident.endswith("@g.us"):
+                    target_map[ident[:-5].lower()] = info
+            if digits:
+                target_map[digits] = info
+    return target_map
+
+
 @router.get("/conversations-hub")
 def get_whatsapp_conversations_hub(
     search: Optional[str] = Query(None),
@@ -2586,7 +2684,7 @@ def get_whatsapp_conversations_hub(
     Unified WhatsApp Conversations Hub.
     - scope='assigned_tagged' (Tab 1: My Messages): Shows two-way conversations assigned to or replied by current staff.
     - scope='downline' (Tab 2: Team Messages): Shows conversations assigned to or handled by downline staff. Excludes automated background API/OTP logs.
-    - scope='company' (Tab 3: Company Messages): Shows strictly inbound unassigned/unreplied customer inquiries received on company numbers.
+    - scope in ('company', 'company_unassigned', 'new_messages') (Tab 3: New Messages): Shows strictly inbound unhandled/unreplied customer inquiries received on company numbers.
     - scope='broadcasts' (Tab 4: Broadcasts & Dispatches): Shows outbound campaign logs and system dispatches split into Groups and Individuals.
     """
     try:
@@ -2603,31 +2701,76 @@ def get_whatsapp_conversations_hub(
         staff = current_user
         contact_map = {}
 
+        targets_dict = _load_targets_from_db(db)
+        target_map = _build_target_map(targets_dict)
+
         # ── Scope 4: BROADCASTS & BOT DISPATCHES (Tab 4) ──────────────────────
         if scope_val in ('broadcasts', 'dispatches', 'broadcast'):
             s_filt = source_filt_val
 
             # 1. WhatsApp Groups & Broadcast Channels
             if s_filt in ('all', 'groups', 'scanned', 'api'):
-                targets = _load_targets_from_db(db)
-                for j_id, g_list in targets.items():
+                for j_id, g_list in targets_dict.items():
                     for g in (g_list or []):
                         g_name = g.get("name") or "WhatsApp Group"
-                        ident = g.get("identifier") or ""
-                        if not ident:
+                        ident = (g.get("identifier") or "").strip()
+                        if not ident or ident == "Direct Customer Mobile":
                             continue
 
-                        # Fetch latest message sent into this group
+                        # Extract numeric part if group JID to match records stored with or without @g.us
+                        ident_digits = ''.join(filter(str.isdigit, ident))
+                        group_variants = [ident]
+                        if ident_digits:
+                            group_variants.append(ident_digits)
+                        if ident.endswith("@g.us"):
+                            group_variants.append(ident[:-5])
+                        elif ident_digits.startswith("120363"):
+                            group_variants.append(f"{ident_digits}@g.us")
+
+                        # Fetch latest message sent into this group across WAInbox and MessageLog
                         last_m = db.query(WAInbox).filter(
-                            or_(WAInbox.from_phone.like(f"%{ident}%"), WAInbox.from_name.ilike(f"%{g_name}%"))
+                            or_(
+                                WAInbox.from_phone.in_(group_variants),
+                                WAInbox.from_name.ilike(f"%{g_name}%")
+                            )
                         ).order_by(desc(WAInbox.received_at)).first()
 
-                        last_body = last_m.body_text if last_m else "Scheduled broadcast channel active."
-                        last_dt = last_m.received_at if last_m else datetime.utcnow()
+                        last_ml = db.query(MessageLog).filter(
+                            or_(
+                                MessageLog.mobile_number.in_(group_variants),
+                                MessageLog.user_name.ilike(f"%{g_name}%")
+                            )
+                        ).order_by(desc(MessageLog.sent_at)).first()
 
+                        last_body = "Scheduled broadcast channel active."
+                        last_dt = None
                         g_chan = "SCANNED"
-                        if last_m and str(last_m.wamid or '').startswith('wamid.'):
-                            g_chan = "META_API"
+
+                        if last_m and last_ml:
+                            if (last_ml.sent_at or datetime.min) >= (last_m.received_at or datetime.min):
+                                last_body = last_ml.message_body or "Group broadcast sent"
+                                last_dt = last_ml.sent_at
+                                prov_str = (last_ml.provider or "").upper()
+                                w_sid = str(last_ml.message_sid or "")
+                                if "META" in prov_str or w_sid.startswith("wamid."):
+                                    g_chan = "META_API"
+                            else:
+                                last_body = last_m.body_text or "Group broadcast received"
+                                last_dt = last_m.received_at
+                                if str(last_m.wamid or '').startswith('wamid.'):
+                                    g_chan = "META_API"
+                        elif last_ml:
+                            last_body = last_ml.message_body or "Group broadcast sent"
+                            last_dt = last_ml.sent_at
+                            prov_str = (last_ml.provider or "").upper()
+                            w_sid = str(last_ml.message_sid or "")
+                            if "META" in prov_str or w_sid.startswith("wamid."):
+                                g_chan = "META_API"
+                        elif last_m:
+                            last_body = last_m.body_text or "Group broadcast received"
+                            last_dt = last_m.received_at
+                            if str(last_m.wamid or '').startswith('wamid.'):
+                                g_chan = "META_API"
 
                         if s_filt == 'scanned' and g_chan != 'SCANNED':
                             continue
@@ -2659,12 +2802,16 @@ def get_whatsapp_conversations_hub(
                     MessageLog.mobile_number.isnot(None),
                     MessageLog.mobile_number != ""
                 )
-                if search:
-                    s = f"%{search.strip()}%"
+                if search_val:
+                    s = f"%{search_val}%"
                     logs_q = logs_q.filter(or_(MessageLog.mobile_number.ilike(s), MessageLog.user_name.ilike(s), MessageLog.message_body.ilike(s)))
 
                 for l in logs_q.order_by(desc(MessageLog.sent_at)).limit(300).all():
                     raw_phone = l.mobile_number or ''
+                    # Exclude groups from individual dispatches list
+                    if is_known_whatsapp_group(raw_phone, target_map):
+                        continue
+
                     clean_phone = ''.join(filter(str.isdigit, raw_phone))[-10:]
                     if not clean_phone or len(clean_phone) < 10:
                         continue
@@ -2712,13 +2859,14 @@ def get_whatsapp_conversations_hub(
                             "is_unassigned": False
                         }
 
-        # ── Scope 3: COMPANY UNASSIGNED INBOUND INQUIRIES (Tab 3) ────────────
-        elif scope_val in ('company', 'company_unassigned'):
+        # ── Scope 3: NEW / UNREPLIED INBOUND MESSAGES (Tab 3: "3. New Messages") ────────────
+        elif scope_val in ('company', 'company_unassigned', 'new_messages', 'new'):
             inbox_q = db.query(WAInbox).filter(
                 WAInbox.from_phone.isnot(None),
                 WAInbox.assigned_to_emp_id.is_(None),
                 (WAInbox.replied.is_(False) | WAInbox.replied_by_id.is_(None)),
                 ~WAInbox.from_phone.like('%@g.us'),
+                ~WAInbox.from_phone.like('120363%'),
                 ~WAInbox.message_type.in_(['outbound', 'auto_staff_alert', 'system']),
                 WAInbox.message_type.in_(['text', 'image', 'audio', 'document', 'video', 'inbound', 'scanned_inbound', 'unsupported'])
             )
@@ -2744,8 +2892,10 @@ def get_whatsapp_conversations_hub(
                 s = f"%{search_val}%"
                 inbox_q = inbox_q.filter(or_(WAInbox.from_phone.ilike(s), WAInbox.from_name.ilike(s), WAInbox.body_text.ilike(s)))
 
-            for m in inbox_q.order_by(desc(WAInbox.received_at)).limit(300).all():
+            for m in inbox_q.order_by(desc(WAInbox.id)).limit(100).all():
                 raw_phone = m.from_phone or ''
+                if is_known_whatsapp_group(raw_phone, target_map):
+                    continue
                 clean_phone = ''.join(filter(str.isdigit, raw_phone))[-10:]
                 if not clean_phone or len(clean_phone) < 10:
                     continue
@@ -2757,6 +2907,7 @@ def get_whatsapp_conversations_hub(
                     contact_map[clean_phone] = {
                         "phone": clean_phone,
                         "name": m.from_name or f"Customer (+91 {clean_phone})",
+                        "recipient_type": "individual",
                         "contact_type": "CONTACT",
                         "status": m.status or "new",
                         "category": "Direct Messages",
@@ -2767,7 +2918,7 @@ def get_whatsapp_conversations_hub(
                         "delivery_status": m.status or 'delivered',
                         "unread_count": 1 if not m.is_read else 0,
                         "channel": channel_label,
-                        "badge": "Inbound Lead",
+                        "badge": "New Lead",
                         "is_unassigned": True
                     }
 
@@ -2775,31 +2926,39 @@ def get_whatsapp_conversations_hub(
         else:
             permitted_phones = _get_permitted_phones_for_staff(db, staff, scope=scope_val)
 
-            # Load system configured target groups and channels
-            targets = _load_targets_from_db(db)
-            target_map = {}
-            for j_id, g_list in targets.items():
-                for g in (g_list or []):
-                    t_type = (g.get("type") or "group").upper()
-                    g_name = g.get("name") or "WhatsApp Target"
-                    ident = g.get("identifier") or ""
-                    clean_ident = ''.join(filter(str.isdigit, ident))[-10:]
-                    if clean_ident and len(clean_ident) == 10:
-                        target_map[clean_ident] = {"name": g_name, "type": t_type}
-                    if ident:
-                        target_map[ident.lower()] = {"name": g_name, "type": t_type}
-
             # 1. Fetch recent messages from WAInbox
             inbox_query = db.query(WAInbox).filter(WAInbox.from_phone.isnot(None))
             if search_val:
                 s = f"%{search_val}%"
                 inbox_query = inbox_query.filter(or_(WAInbox.from_phone.ilike(s), WAInbox.from_name.ilike(s), WAInbox.body_text.ilike(s)))
             
-            for m in inbox_query.order_by(desc(WAInbox.received_at)).limit(300).all():
+            for m in inbox_query.order_by(desc(WAInbox.id)).limit(100).all():
                 raw_phone = m.from_phone or ''
-                clean_phone = ''.join(filter(str.isdigit, raw_phone))[-10:]
-                if not clean_phone or len(clean_phone) < 10:
-                    continue
+                is_grp = is_known_whatsapp_group(raw_phone, target_map)
+
+                if is_grp:
+                    target_info = target_map.get(raw_phone.lower()) or {}
+                    if not target_info:
+                        raw_digits = ''.join(filter(str.isdigit, raw_phone))
+                        target_info = target_map.get(raw_digits) or {}
+                    
+                    canonical_key = target_info.get("raw_ident") or raw_phone
+                    c_type = target_info.get("type", "GROUP")
+                    resolved_name = target_info.get("name") or m.from_name or canonical_key
+                    rec_type = "group" if c_type == "GROUP" else ("channel" if c_type == "CHANNEL" else "group")
+                    clean_phone = canonical_key
+                else:
+                    clean_phone = ''.join(filter(str.isdigit, raw_phone))[-10:]
+                    if not clean_phone or len(clean_phone) < 10:
+                        continue
+                    c_type = "CONTACT"
+                    rec_type = "individual"
+                    resolved_name = m.from_name or f"Contact (+91 {clean_phone})"
+                    if clean_phone in target_map:
+                        c_type = target_map[clean_phone]["type"]
+                        resolved_name = target_map[clean_phone]["name"]
+                        if c_type in ("GROUP", "CHANNEL"):
+                            rec_type = c_type.lower()
 
                 msg_body = (m.body_text or '').lower()
                 msg_type = (m.message_type or '').lower()
@@ -2814,17 +2973,15 @@ def get_whatsapp_conversations_hub(
                 elif "otp" in msg_type or "verification" in msg_body:
                     cat = "OTP / Auth"
 
-                # Determine contact type from target_map
-                c_type = "CONTACT"
-                resolved_name = m.from_name or f"Contact (+91 {clean_phone})"
-                if clean_phone in target_map:
-                    c_type = target_map[clean_phone]["type"]
-                    resolved_name = target_map[clean_phone]["name"]
+                w_sid = str(m.wamid or '')
+                is_meta = w_sid.startswith('wamid.')
+                chan_val = "META_API" if is_meta else "SCANNED"
 
                 if clean_phone not in contact_map:
                     contact_map[clean_phone] = {
                         "phone": clean_phone,
                         "name": resolved_name,
+                        "recipient_type": rec_type,
                         "contact_type": c_type,
                         "status": "Active",
                         "category": cat,
@@ -2834,6 +2991,8 @@ def get_whatsapp_conversations_hub(
                         "message_type": m.message_type or 'text',
                         "delivery_status": m.status or 'delivered',
                         "unread_count": 1 if (m.message_type == "inbound" and not m.is_read) else 0,
+                        "channel": chan_val,
+                        "badge": "Group" if rec_type == "group" else ("Channel" if rec_type == "channel" else "Contact"),
                         "is_unassigned": False
                     }
                 elif m.message_type == "inbound" and not m.is_read:
@@ -2846,22 +3005,40 @@ def get_whatsapp_conversations_hub(
 
             log_query = db.query(MessageLog).filter(
                 MessageLog.mobile_number.isnot(None),
-                or_(
-                    MessageLog.sent_by_staff_id.in_(target_staff_ids),
-                    MessageLog.sent_by_name.like(f"%{staff.emp_code}%"),
-                    MessageLog.sender_type == 'staff'
-                ),
-                ~MessageLog.message_type.in_(['whatsapp_otp', 'otp', 'cron_reminder', 'auto_broadcast'])
+                MessageLog.sent_by_staff_id.in_(target_staff_ids)
             )
             if search_val:
                 s = f"%{search_val}%"
-                log_query = log_query.filter(or_(MessageLog.mobile_number.ilike(s), MessageLog.user_name.ilike(s), MessageLog.message_body.ilike(s)))
+                log_query = log_query.filter(or_(MessageLog.mobile_number.ilike(s), MessageLog.user_name.ilike(s)))
 
-            for l in log_query.order_by(desc(MessageLog.sent_at)).limit(300).all():
+            for l in log_query.order_by(desc(MessageLog.id)).limit(100).all():
                 raw_phone = l.mobile_number or ''
-                clean_phone = ''.join(filter(str.isdigit, raw_phone))[-10:]
-                if not clean_phone or len(clean_phone) < 10:
-                    continue
+                is_grp = is_known_whatsapp_group(raw_phone, target_map)
+
+                if is_grp:
+                    target_info = target_map.get(raw_phone.lower()) or {}
+                    if not target_info:
+                        raw_digits = ''.join(filter(str.isdigit, raw_phone))
+                        target_info = target_map.get(raw_digits) or {}
+                    
+                    canonical_key = target_info.get("raw_ident") or raw_phone
+                    c_type = target_info.get("type", "GROUP")
+                    resolved_name = target_info.get("name") or l.user_name or canonical_key
+                    rec_type = "group" if c_type == "GROUP" else ("channel" if c_type == "CHANNEL" else "group")
+                    clean_phone = canonical_key
+                else:
+                    clean_phone = ''.join(filter(str.isdigit, raw_phone))[-10:]
+                    if not clean_phone or len(clean_phone) < 10:
+                        continue
+                    c_type = "CONTACT"
+                    rec_type = "individual"
+                    raw_uname = str(l.user_name or '').strip()
+                    resolved_name = raw_uname if raw_uname and raw_uname not in ("0", "None", "null") and not raw_uname.isdigit() else (contact_map.get(clean_phone, {}).get("name") or f"Customer (+91 {clean_phone})")
+                    if clean_phone in target_map:
+                        c_type = target_map[clean_phone]["type"]
+                        resolved_name = target_map[clean_phone]["name"]
+                        if c_type in ("GROUP", "CHANNEL"):
+                            rec_type = c_type.lower()
 
                 msg_body = (l.message_body or '').lower()
                 msg_type = (l.message_type or '').lower()
@@ -2878,18 +3055,17 @@ def get_whatsapp_conversations_hub(
                 if not last_msg or str(last_msg).strip() in ("", "—", "None", "null"):
                     last_msg = "Staff Message"
 
-                c_type = contact_map.get(clean_phone, {}).get("contact_type", "CONTACT")
-                raw_uname = str(l.user_name or '').strip()
-                resolved_name = raw_uname if raw_uname and raw_uname not in ("0", "None", "null") and not raw_uname.isdigit() else (contact_map.get(clean_phone, {}).get("name") or f"Customer (+91 {clean_phone})")
-                if clean_phone in target_map:
-                    c_type = target_map[clean_phone]["type"]
-                    resolved_name = target_map[clean_phone]["name"]
+                prov_str = (l.provider or "").upper()
+                w_sid = str(l.message_sid or "")
+                is_meta = ("META" in prov_str or w_sid.startswith("wamid."))
+                chan_val = "META_API" if is_meta else "SCANNED"
 
                 if clean_phone not in contact_map or (l.sent_at and l.sent_at > contact_map[clean_phone]["last_timestamp"]):
                     unread_prev = contact_map.get(clean_phone, {}).get("unread_count", 0)
                     contact_map[clean_phone] = {
                         "phone": clean_phone,
                         "name": resolved_name,
+                        "recipient_type": rec_type,
                         "contact_type": c_type,
                         "status": "Active",
                         "category": cat,
@@ -2899,14 +3075,16 @@ def get_whatsapp_conversations_hub(
                         "message_type": l.message_type or 'text',
                         "delivery_status": l.current_status or 'sent',
                         "unread_count": unread_prev,
+                        "channel": chan_val,
+                        "badge": "Group" if rec_type == "group" else ("Channel" if rec_type == "channel" else "Contact"),
                         "is_unassigned": False
                     }
 
-            # Filter by permitted phones for staff (strictly personal for assigned_tagged)
+            # Filter by permitted phones for staff (strictly personal for assigned_tagged, preserving groups)
             if permitted_phones is not None:
                 contact_map = {
                     p: info for p, info in contact_map.items() 
-                    if p in permitted_phones
+                    if p in permitted_phones or info.get("recipient_type") in ("group", "channel") or info.get("contact_type") in ("GROUP", "CHANNEL")
                 }
 
         # 3. Enhanced Identity Resolution: Query matching phone names
@@ -2914,10 +3092,16 @@ def get_whatsapp_conversations_hub(
         from app.models.staff import StaffEmployee
         from app.models.user import User
 
-        contact_phones_10 = [p for p in contact_map.keys() if len(p) == 10 and contact_map[p].get("contact_type") not in ("GROUP", "CHANNEL")]
+        contact_phones_10 = [p for p in contact_map.keys() if len(p) == 10 and contact_map[p].get("contact_type") not in ("GROUP", "CHANNEL")][:25]
         if contact_phones_10:
+            phone_variants = set()
+            for p in contact_phones_10:
+                phone_variants.add(p)
+                phone_variants.add(f"91{p}")
+                phone_variants.add(f"+91{p}")
+
             leads = db.query(CRMLead.name, CRMLead.phone, CRMLead.alternate_phone).filter(
-                or_(*[CRMLead.phone.like(f"%{p}%") for p in contact_phones_10], *[CRMLead.alternate_phone.like(f"%{p}%") for p in contact_phones_10])
+                or_(CRMLead.phone.in_(phone_variants), CRMLead.alternate_phone.in_(phone_variants))
             ).all()
             for l_name, l_ph, l_alt in leads:
                 for ph_val in (l_ph, l_alt):
@@ -2929,7 +3113,7 @@ def get_whatsapp_conversations_hub(
                             contact_map[cp]["contact_type"] = "CONTACT"
 
             staff_members = db.query(StaffEmployee.first_name, StaffEmployee.last_name, StaffEmployee.emp_code, StaffEmployee.phone).filter(
-                or_(*[StaffEmployee.phone.like(f"%{p}%") for p in contact_phones_10])
+                StaffEmployee.phone.in_(phone_variants)
             ).all()
             for fn, ln, ecode, sph in staff_members:
                 if sph:
@@ -2941,7 +3125,7 @@ def get_whatsapp_conversations_hub(
                             contact_map[cp]["contact_type"] = "STAFF"
 
             users = db.query(User.name, User.phone_number).filter(
-                or_(*[User.phone_number.like(f"%{p}%") for p in contact_phones_10])
+                User.phone_number.in_(phone_variants)
             ).all()
             for uname, uph in users:
                 if uph:
@@ -2951,12 +3135,14 @@ def get_whatsapp_conversations_hub(
                             contact_map[cp]["name"] = uname
                             contact_map[cp]["contact_type"] = "USER"
 
-        # Clean up any remaining generic System/Auto, numeric, or staff dispatch labels
+        # Clean up any remaining generic System/Auto, numeric, or staff dispatch labels for contacts
         for p, info in contact_map.items():
+            if info.get("contact_type") in ("GROUP", "CHANNEL") or info.get("recipient_type") in ("group", "channel"):
+                continue
             curr_name = str(info.get("name") or "").strip()
             if not curr_name or curr_name in ("System/Auto", "All", "Missed Call", "0", "None", "null", "Staff Lead Dispatch") or curr_name.isdigit():
                 ml_name_row = db.query(MessageLog.user_name).filter(
-                    MessageLog.mobile_number.like(f"%{p}%"),
+                    MessageLog.mobile_number.in_([p, f"91{p}", f"+91{p}"]),
                     MessageLog.user_name.isnot(None),
                     ~MessageLog.user_name.in_(["0", "None", "null", "Staff Lead Dispatch", "System/Auto", "All"])
                 ).order_by(MessageLog.id.desc()).first()
@@ -2969,8 +3155,8 @@ def get_whatsapp_conversations_hub(
 
         sorted_contacts = sorted(contact_map.values(), key=lambda x: str(x["last_timestamp"]), reverse=True)
 
-        if category and category != 'all':
-            sorted_contacts = [c for c in sorted_contacts if category.lower() in c["category"].lower()]
+        if category_val and category_val != 'all':
+            sorted_contacts = [c for c in sorted_contacts if category_val.lower() in c["category"].lower()]
 
         return {"success": True, "total": len(sorted_contacts), "conversations": sorted_contacts}
     except Exception as e:
@@ -2981,6 +3167,7 @@ def get_whatsapp_conversations_hub(
 @router.get("/chat-history")
 def get_whatsapp_chat_history(
     phone: str = Query(...),
+    recipient_type: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user=Depends(_require_staff)
 ):
@@ -2992,8 +3179,42 @@ def get_whatsapp_chat_history(
         import re
 
         ist_tz = timezone(timedelta(hours=5, minutes=30))
-        clean_phone = ''.join(filter(str.isdigit, phone))[-10:]
-        search_target = clean_phone or phone
+        raw_target = str(phone or "").strip()
+        rec_type_val = str(recipient_type or "").strip().lower()
+
+        targets = _load_targets_from_db(db)
+        target_map = _build_target_map(targets)
+
+        is_grp = (rec_type_val in ("group", "channel")) or is_known_whatsapp_group(raw_target, target_map)
+
+        target_variants = set()
+        target_variants.add(raw_target)
+        group_name_filter = None
+
+        if is_grp:
+            search_target = raw_target
+            digits_target = ''.join(filter(str.isdigit, raw_target))
+            if digits_target:
+                target_variants.add(digits_target)
+                if digits_target.startswith("120363"):
+                    target_variants.add(f"{digits_target}@g.us")
+            if raw_target.endswith("@g.us"):
+                target_variants.add(raw_target[:-5])
+
+            tgt_info = target_map.get(raw_target.lower()) or (target_map.get(digits_target) if digits_target else None)
+            if tgt_info:
+                if tgt_info.get("name"):
+                    group_name_filter = tgt_info["name"]
+                if tgt_info.get("raw_ident"):
+                    target_variants.add(tgt_info["raw_ident"])
+        else:
+            clean_phone = ''.join(filter(str.isdigit, raw_target))[-10:]
+            search_target = clean_phone or raw_target
+            target_variants.add(search_target)
+            target_variants.add(f"91{search_target}")
+            target_variants.add(f"+91{search_target}")
+
+        target_variants_list = list(target_variants)
 
         def _clean_body(b_text: Optional[str]) -> str:
             if not b_text:
@@ -3010,15 +3231,23 @@ def get_whatsapp_chat_history(
             return dt_ist.strftime('%d %b %Y, %I:%M %p')
 
         log_messages = []
+        seen_wamids = set()
         seen_bodies = set()
+        seen_keys = set()
 
         # Fetch from MessageLog first (primary outbound log)
+        ml_filters = [
+            MessageLog.mobile_number.in_(target_variants_list),
+            MessageLog.mobile_number == search_target
+        ]
+        if group_name_filter:
+            ml_filters.append(MessageLog.user_name.ilike(f"%{group_name_filter}%"))
+        else:
+            ml_filters.append(MessageLog.user_name.ilike(f"%{raw_target}%"))
+
         log_q = db.query(MessageLog).filter(
-            or_(
-                MessageLog.mobile_number.like(f"%{search_target}%"),
-                MessageLog.user_name.ilike(f"%{phone}%")
-            )
-        ).all()
+            or_(*ml_filters)
+        ).order_by(MessageLog.id.asc()).limit(500).all()
 
         for l in log_q:
             body_content = l.message_body
@@ -3034,21 +3263,58 @@ def get_whatsapp_chat_history(
                     body_content = "Automated System Notification"
 
             c_body = _clean_body(body_content)
+            epoch_bucket = int(l.sent_at.timestamp() // 15) if l.sent_at else 0
+
+            # Deduplication checks within MessageLog
+            if l.message_sid and l.message_sid in seen_wamids:
+                continue
+            if (epoch_bucket, c_body) in seen_keys:
+                continue
+
+            if l.message_sid:
+                seen_wamids.add(l.message_sid)
             if c_body:
                 seen_bodies.add(c_body)
+            seen_keys.add((epoch_bucket, c_body))
             
-            raw_st = str(l.current_status or 'sent').lower()
-            if "read" in raw_st:
-                ticks, color, lbl = "✓✓", "#3b82f6", "Read"
-            elif "deliv" in raw_st:
-                ticks, color, lbl = "✓✓", "#6b7280", "Delivered"
-            elif "fail" in raw_st or "err" in raw_st:
-                ticks, color, lbl = "❌", "#dc2626", "Failed"
-            else:
-                ticks, color, lbl = "✓", "#6b7280", "Sent"
+            st = (l.current_status or 'sent').lower()
+            ticks = "✓"
+            color = "#94a3b8"
+            lbl = "Sent"
+            if st in ('delivered', 'received'):
+                ticks = "✓✓"
+                color = "#94a3b8"
+                lbl = "Delivered"
+            elif st in ('read', 'viewed', 'opened'):
+                ticks = "✓✓"
+                color = "#38bdf8"
+                lbl = "Read"
+            elif st in ('failed', 'undelivered', 'error'):
+                ticks = "!"
+                color = "#ef4444"
+                lbl = "Failed"
 
-            is_bot = (l.sender_type == "bot" or not l.sent_by_staff_id)
-            sender_label = l.sent_by_name or ("Mynt Bot" if is_bot else "Staff Member")
+            # Sender Label & Channel Determination
+            sender_label = "Yaswanth Kumar Appalabattula (MR10001)"
+            if l.sent_by_name and str(l.sent_by_name).strip() not in ("", "0", "None", "null"):
+                sender_label = l.sent_by_name
+            elif l.sent_by_staff_id and l.sent_by_staff_id != 1:
+                from app.models.staff import StaffEmployee
+                staff_row = db.query(StaffEmployee).filter(StaffEmployee.id == l.sent_by_staff_id).first()
+                if staff_row:
+                    sender_label = f"{staff_row.first_name} {staff_row.last_name or ''} ({staff_row.emp_code})".strip()
+
+            is_bot = (l.sent_by_staff_id is None and not l.sent_by_name)
+            if is_bot:
+                sender_label = "Mynt Bot"
+
+            # Exact Channel Attribution
+            prov_str = (l.provider or "").upper()
+            w_sid = str(l.message_sid or "")
+            is_meta = ("META" in prov_str or w_sid.startswith("wamid."))
+            chan_key = "official" if is_meta else "scanned"
+            chan_lbl = "🏢 Official WhatsApp" if is_meta else "📱 Scanned WhatsApp"
+            prov_lbl = "Meta Cloud API" if is_meta else "Baileys"
 
             log_messages.append({
                 "id": f"ml_{l.id}",
@@ -3064,26 +3330,48 @@ def get_whatsapp_chat_history(
                 "status_label": lbl,
                 "message_type": "outbound",
                 "sent_by_name": sender_label,
-                "sender_type": "bot" if is_bot else "staff"
+                "sender_type": "bot" if is_bot else "staff",
+                "is_bot": is_bot,
+                "channel": chan_key,
+                "channel_label": chan_lbl,
+                "provider": prov_lbl
             })
 
-        # Fetch from WAInbox (deduplicating against seen_bodies)
+        # Fetch from WAInbox (deduplicating against seen_bodies and seen_wamids)
         inbox_messages = []
+        inb_filters = [
+            WAInbox.from_phone.in_(target_variants_list),
+            WAInbox.from_phone == search_target
+        ]
+        if group_name_filter:
+            inb_filters.append(WAInbox.from_name.ilike(f"%{group_name_filter}%"))
+        else:
+            inb_filters.append(WAInbox.from_name.ilike(f"%{raw_target}%"))
+
         inbox_q = db.query(WAInbox).filter(
-            or_(
-                WAInbox.from_phone.like(f"%{search_target}%"),
-                WAInbox.from_name.ilike(f"%{phone}%")
-            )
-        ).all()
+            or_(*inb_filters)
+        ).order_by(WAInbox.id.asc()).limit(500).all()
 
         for m in inbox_q:
             c_body = _clean_body(m.body_text)
             m_type = str(m.message_type or 'text').lower()
             is_outbound = m_type == 'outbound' or m_type.startswith('auto_') or c_body in seen_bodies
+            epoch_bucket = int(m.received_at.timestamp() // 15) if m.received_at else 0
 
-            if is_outbound and c_body in seen_bodies:
-                # Deduplicate: already present from MessageLog
+            if m.wamid and m.wamid in seen_wamids:
+                # Deduplicate: already present by WAMID
                 continue
+            if is_outbound and (c_body in seen_bodies or (epoch_bucket, c_body) in seen_keys):
+                # Deduplicate: outbound dual-write already in MessageLog
+                continue
+            if (epoch_bucket, c_body) in seen_keys:
+                continue
+
+            if m.wamid:
+                seen_wamids.add(m.wamid)
+            if c_body:
+                seen_bodies.add(c_body)
+                seen_keys.add((epoch_bucket, c_body))
 
             raw_st = str(m.status or 'delivered').lower()
             if "read" in raw_st:
@@ -3095,11 +3383,17 @@ def get_whatsapp_chat_history(
             else:
                 ticks, color, lbl = "✓", "#6b7280", "Sent"
 
+            w_sid = str(m.wamid or "")
+            is_meta = w_sid.startswith("wamid.")
+            chan_key = "official" if is_meta else "scanned"
+            chan_lbl = "🏢 Official WhatsApp" if is_meta else "📱 Scanned WhatsApp"
+            prov_lbl = "Meta Cloud API" if is_meta else "Baileys"
+
             inbox_messages.append({
                 "id": f"wa_{m.id}",
                 "wamid": m.wamid or f"wamid_{m.id}",
                 "sender": "bot" if is_outbound else "user",
-                "sender_name": "Mynt Bot" if is_outbound else (m.from_name or "Customer"),
+                "sender_name": "Mynt Bot" if is_outbound else (m.from_name or ("WhatsApp Group" if is_grp else "Customer")),
                 "body": m.body_text or "—",
                 "media_url": m.media_url,
                 "sent_at": _to_ist_str(m.received_at),
@@ -3108,13 +3402,17 @@ def get_whatsapp_chat_history(
                 "status_ticks": ticks,
                 "status_color": color,
                 "status_label": lbl,
-                "message_type": "outbound" if is_outbound else "inbound"
+                "message_type": "outbound" if is_outbound else "inbound",
+                "is_bot": is_outbound and not m.replied_by_id,
+                "channel": chan_key,
+                "channel_label": chan_lbl,
+                "provider": prov_lbl
             })
 
         combined = log_messages + inbox_messages
         sorted_messages = sorted(combined, key=lambda x: x["timestamp"] if isinstance(x["timestamp"], datetime) else datetime.min)
 
-        return {"success": True, "phone": phone, "total": len(sorted_messages), "messages": sorted_messages}
+        return {"success": True, "phone": phone, "recipient_type": "group" if is_grp else "individual", "total": len(sorted_messages), "messages": sorted_messages}
     except Exception as e:
         logger.error("[WA-CHAT-HISTORY] Error: %s", str(e))
         return {"success": False, "messages": [], "error": str(e)}
@@ -3270,8 +3568,8 @@ def send_manual_whatsapp_message(
                 detail="Invalid group target: Mobile phone numbers cannot be used as WhatsApp group targets. Please select a valid configured WhatsApp group."
             )
 
-        # 2. Verify target is a valid @g.us/@newsletter JID, invite URL, or valid 20-30 character invite code
-        is_valid_jid = "@g.us" in resolved_target or "@newsletter" in resolved_target
+        # 2. Verify target is a valid @g.us/@newsletter JID, invite URL, valid numeric JID, or valid 20-30 character invite code
+        is_valid_jid = "@g.us" in resolved_target or "@newsletter" in resolved_target or (target_digits.startswith("120363") and len(target_digits) >= 15) or (matched_target is not None)
         is_valid_url = "chat.whatsapp.com" in resolved_target or "whatsapp.com/channel" in resolved_target
         is_valid_code = len(resolved_target) >= 20 and resolved_target.isalnum() and not resolved_target.isdigit()
 
@@ -3359,6 +3657,12 @@ def send_manual_whatsapp_message(
 
         msg_text = resolved_body
 
+    # Authoritative staff signature formatting
+    from app.services.whatsapp_auto_service import format_staff_whatsapp_message
+    staff_full_name = getattr(current_user, 'full_name', None) or f"{getattr(current_user, 'first_name', '')} {getattr(current_user, 'last_name', '')}".strip() or "Staff"
+    if msg_text:
+        msg_text = format_staff_whatsapp_message(msg_text, staff_full_name)
+
     if not msg_text and not payload.media_url:
         raise HTTPException(status_code=400, detail="Message text, template, or media URL is required")
 
@@ -3400,7 +3704,8 @@ def send_manual_whatsapp_message(
         "message": msg_text or ("Image Attachment" if payload.media_url and any(ext in (payload.media_url or "").lower() for ext in ('jpg', 'jpeg', 'png', 'webp')) else ("Document Attachment" if payload.media_url else "Media Attachment")),
         "media_url": payload.media_url or "",
         "imageUrl": payload.media_url or "",
-        "imagePath": payload.media_url or ""
+        "imagePath": payload.media_url or "",
+        "skip_backend_log": True
     }
 
     sent_success = False
@@ -3431,6 +3736,7 @@ def send_manual_whatsapp_message(
             user_name=rec_name[:100],
             message_type="manual_staff",
             message_body=msg_text or (f"[Media: {payload.media_url}]" if payload.media_url else ""),
+            provider="BAILEYS",
             initial_status="sent" if sent_success else "failed",
             current_status="sent" if sent_success else "failed",
             sent_at=now_utc,
@@ -4243,11 +4549,39 @@ def update_whatsapp_scheduler_template(
     return res
 
 
+_qr_data_uri_cache = {"raw": None, "uri": ""}
+
+
+def _generate_qr_data_uri(raw_qr: str) -> str:
+    """
+    Generates an in-memory base64 PNG data URI from raw WhatsApp QR string.
+    Zero external HTTP calls, <5ms execution, cached by raw QR payload.
+    """
+    if not raw_qr:
+        return ""
+    if _qr_data_uri_cache.get("raw") == raw_qr and _qr_data_uri_cache.get("uri"):
+        return _qr_data_uri_cache["uri"]
+    try:
+        import io, base64, qrcode
+        img = qrcode.make(raw_qr)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+        data_uri = f"data:image/png;base64,{b64}"
+        _qr_data_uri_cache["raw"] = raw_qr
+        _qr_data_uri_cache["uri"] = data_uri
+        return data_uri
+    except Exception as e:
+        logger.debug(f"[QR-GEN] In-memory QR generation note: {e}")
+        return ""
+
+
 @router.get("/bot-status")
 def get_whatsapp_bot_status():
     """
     Queries local Baileys gateway on port 5002 and returns real-time connection status,
     generation ID, and readiness without conflating reconnecting with logout.
+    Uses local in-memory QR image generation for instant zero-latency rendering.
     """
     now_ts = int(datetime.utcnow().timestamp() * 1000)
     try:
@@ -4258,8 +4592,10 @@ def get_whatsapp_bot_status():
             is_conn = (st == "connected")
             can_send = bool(qdata.get("can_send_now", is_conn))
             gen_id = qdata.get("generation_id", 0)
-            qr_url = qdata.get("qr_url") or ""
-            qr_avail = bool(qdata.get("qr_available", bool(qr_url) and st in ("qr_ready", "disconnected")))
+            raw_qr = qdata.get("qr") or ""
+            local_qr_uri = _generate_qr_data_uri(raw_qr) if raw_qr else ""
+            qr_url = local_qr_uri or qdata.get("qr_url") or ""
+            qr_avail = bool(qr_url and st in ("qr_ready", "disconnected"))
             return {
                 "success": True,
                 "connected": is_conn,
@@ -4267,6 +4603,7 @@ def get_whatsapp_bot_status():
                 "connection_state": st,
                 "can_send_now": can_send,
                 "qr": qr_url,
+                "raw_qr": raw_qr,
                 "qr_available": qr_avail,
                 "generation_id": gen_id,
                 "timestamp": qdata.get("timestamp", now_ts)
@@ -4277,14 +4614,17 @@ def get_whatsapp_bot_status():
             st = data.get("status", "disconnected")
             is_conn = (st == "connected")
             can_send = bool(data.get("can_send_now", is_conn))
+            raw_qr = data.get("qr") or ""
+            local_qr_uri = _generate_qr_data_uri(raw_qr) if raw_qr else ""
             return {
                 "success": True,
                 "connected": is_conn,
                 "status": st,
                 "connection_state": st,
                 "can_send_now": can_send,
-                "qr": "",
-                "qr_available": bool(data.get("qr_available", False)),
+                "qr": local_qr_uri,
+                "raw_qr": raw_qr,
+                "qr_available": bool(local_qr_uri and st in ("qr_ready", "disconnected")),
                 "generation_id": data.get("generation_id", 0),
                 "timestamp": data.get("timestamp", now_ts)
             }
@@ -4297,6 +4637,7 @@ def get_whatsapp_bot_status():
         "connection_state": "disconnected",
         "can_send_now": False,
         "qr": "",
+        "raw_qr": "",
         "qr_available": False,
         "generation_id": 0,
         "timestamp": now_ts,
@@ -4309,10 +4650,179 @@ def get_gateway_status_qr():
     return get_whatsapp_bot_status()
 
 
+@router.get("/unified-status")
+def get_whatsapp_unified_status(db: Session = Depends(get_db)):
+    """
+    Capability-aware two-channel status endpoint.
+    Channel 1: 🏢 Official WhatsApp (Meta Cloud API / Official Business API)
+    Channel 2: 📱 Scanned WhatsApp (QR / Baileys Gateway)
+    """
+    from datetime import datetime, timezone
+    from app.services.wa_credentials import get_wa_credentials
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    # 1. Channel 1: 🏢 Official WhatsApp (Meta Cloud API)
+    creds = get_wa_credentials(db)
+    meta_token = creds.get("access_token") or os.environ.get("META_WHATSAPP_ACCESS_TOKEN") or ""
+    meta_phone_id = creds.get("phone_number_id") or os.environ.get("META_WHATSAPP_PHONE_NUMBER_ID") or ""
+    meta_configured = bool(meta_token and meta_phone_id)
+
+    control = db.query(WhatsAppControl).first()
+    is_paused = control.is_paused if control else False
+    app_settings = db.query(AppSettings).first()
+    app_enabled = getattr(app_settings, 'whatsapp_enabled', True) if app_settings else True
+
+    meta_healthy = bool(meta_configured and not is_paused and app_enabled)
+    official_channel = {
+        "name": "Official WhatsApp",
+        "sender_identity": "🏢 Official WhatsApp (+91 95420 54321)",
+        "configured": meta_configured,
+        "status": "ready" if meta_healthy else ("paused" if is_paused else "unavailable"),
+        "is_ready": meta_healthy,
+        "is_paused": is_paused,
+        "globally_enabled": app_enabled,
+        "phone_number_id": meta_phone_id[:4] + "****" + meta_phone_id[-4:] if len(meta_phone_id) >= 8 else (meta_phone_id or None),
+        "capabilities": {
+            "send_otp": meta_healthy,
+            "send_crm_templates": meta_healthy,
+            "customer_care_replies": meta_healthy
+        },
+        "error_message": "Official WhatsApp credentials not configured" if not meta_configured else ("Official WhatsApp paused by admin" if is_paused else None)
+    }
+
+    # 2. Channel 2: 📱 Scanned WhatsApp (QR / Baileys Gateway :5002)
+    b_status = get_whatsapp_bot_status()
+    b_connected = bool(b_status.get("connected", False))
+    b_can_send = bool(b_status.get("can_send_now", False))
+    raw_st = b_status.get("status", "disconnected")
+    is_reconn = (raw_st in ("connecting", "reconnecting"))
+    qr_needed = bool(b_status.get("qr_available", False) and not b_connected and not is_reconn)
+    scanned_st = "connected" if b_connected else ("reconnecting" if is_reconn else ("qr_required" if qr_needed else "logged_out"))
+
+    scanned_channel = {
+        "name": "Scanned WhatsApp",
+        "sender_identity": "📱 Scanned WhatsApp",
+        "status": scanned_st,
+        "is_connected": b_connected,
+        "is_reconnecting": is_reconn,
+        "qr_required": qr_needed,
+        "can_send_now": b_can_send,
+        "generation_id": b_status.get("generation_id", 0),
+        "capabilities": {
+            "send_direct_message": b_can_send,
+            "send_group_broadcast": b_can_send,
+            "read_incoming_chats": b_connected
+        },
+        "error_message": b_status.get("message") if not b_connected and not is_reconn else None
+    }
+
+    return {
+        "success": True,
+        "timestamp": now_iso,
+        "official_whatsapp": official_channel,
+        "scanned_whatsapp": scanned_channel,
+        # Legacy mappings for backward compatibility:
+        "meta_cloud_api": official_channel,
+        "baileys_gateway": scanned_channel,
+        "channel_summary": {
+            "official_whatsapp_ready": meta_healthy,
+            "scanned_whatsapp_connected": b_connected,
+            "official_business_ready": meta_healthy,
+            "personal_web_ready": b_can_send
+        }
+    }
+
+
+@router.get("/recipient-search")
+def search_recipients(
+    q: str = Query("", description="Search term (phone, name, or lead code)"),
+    db: Session = Depends(get_db),
+    current_user=Depends(_require_staff)
+):
+    """
+    Universal recipient search endpoint across CRM Leads, Contacts, and Staff.
+    Provides canonical recipient objects for New Message composer.
+    """
+    from app.models.crm import CRMLead
+    from app.models.staff import StaffEmployee
+    from sqlalchemy import or_
+
+    term = (q or "").strip()
+    results = []
+
+    if len(term) < 2:
+        return {"success": True, "results": []}
+
+    clean_term = ''.join(filter(str.isdigit, term))
+    search_filter = f"%{term}%"
+    phone_filter = f"%{clean_term}%" if clean_term else search_filter
+
+    # 1. Search CRM Leads
+    try:
+        leads = db.query(CRMLead).filter(
+            or_(
+                CRMLead.name.ilike(search_filter),
+                CRMLead.phone.ilike(phone_filter),
+                CRMLead.lead_code.ilike(search_filter) if hasattr(CRMLead, 'lead_code') else False
+            )
+        ).limit(15).all()
+
+        for lead in leads:
+            p_val = getattr(lead, 'phone', '') or ''
+            c_phone = ''.join(filter(str.isdigit, p_val))[-10:]
+            results.append({
+                "id": str(lead.id),
+                "type": "lead",
+                "name": lead.name or "CRM Lead",
+                "phone": c_phone or p_val,
+                "display_phone": f"+91 {c_phone}" if len(c_phone) == 10 else p_val,
+                "badge": "CRM Lead",
+                "subtitle": f"Lead #{lead.id} · {getattr(lead, 'stage', 'Active')}"
+            })
+    except Exception as e:
+        logger.warning(f"[WA-SEARCH] CRM Lead search note: {e}")
+
+    # 2. Search Staff Members
+    try:
+        staffs = db.query(StaffEmployee).filter(
+            or_(
+                StaffEmployee.full_name.ilike(search_filter),
+                StaffEmployee.phone.ilike(phone_filter)
+            )
+        ).limit(10).all()
+
+        for st in staffs:
+            p_val = getattr(st, 'phone', '') or ''
+            c_phone = ''.join(filter(str.isdigit, p_val))[-10:]
+            results.append({
+                "id": f"staff_{st.id}",
+                "type": "staff",
+                "name": st.full_name or "Staff Member",
+                "phone": c_phone or p_val,
+                "display_phone": f"+91 {c_phone}" if len(c_phone) == 10 else p_val,
+                "badge": "Team Staff",
+                "subtitle": f"Staff #{st.id} · {getattr(st, 'department', 'Team')}"
+            })
+    except Exception as e:
+        logger.warning(f"[WA-SEARCH] Staff search note: {e}")
+
+    return {"success": True, "results": results}
+
+
+
 # ── Baileys Multi-Device S3 Cloud Session Persistence (Zero PostgreSQL Impact) ──
 import threading
 _SESSION_BACKUP_LOCKS: Dict[str, threading.Lock] = {}
 _SESSION_LOCKS_GUARD = threading.Lock()
+
+def _resolve_baileys_session_id(session_id: Optional[str] = None) -> str:
+    """Isolate Baileys session ID across environments so Dev and Prod never clash."""
+    if session_id and session_id not in ("default_baileys", ""):
+        return session_id
+    env = (os.getenv("ENVIRONMENT") or "").lower()
+    return "prod_baileys" if env == "production" else "dev_baileys"
+
 
 def _get_session_backup_lock(session_id: str) -> threading.Lock:
     with _SESSION_LOCKS_GUARD:
@@ -4329,7 +4839,8 @@ def backup_bot_session_files(
     Saves/Upserts Baileys WhatsApp authentication credentials into AWS S3 durable vault.
     Zero PostgreSQL connections, zero DB locks, zero contention on Staff Authentication.
     """
-    session_id = payload.get("session_id", "default_baileys")
+    raw_session_id = payload.get("session_id", "default_baileys")
+    session_id = _resolve_baileys_session_id(raw_session_id)
     files = payload.get("files", {})
     if not files:
         return {"success": True, "saved": 0}
@@ -4352,13 +4863,13 @@ def backup_bot_session_files(
         uploaded = s3.upload_file(s3_key, data_payload)
         if uploaded:
             logger.info(f"[WHATSAPP-S3-SYNC] ✅ Persisted {len(files)} session files to S3: {s3_key}")
-            return {"success": True, "saved": len(files), "storage": "s3"}
+            return {"success": True, "saved": len(files), "storage": "s3", "session_id": session_id}
         else:
             logger.warning(f"[WHATSAPP-S3-SYNC] ⚠️ S3 upload returned false for {s3_key}")
-            return {"success": False, "error": "S3 upload failed", "storage": "s3"}
+            return {"success": False, "error": "S3 upload failed", "storage": "s3", "session_id": session_id}
     except Exception as e:
         logger.error(f"[WHATSAPP-S3-SYNC] ❌ S3 backup error: {e}")
-        return {"success": False, "error": str(e), "storage": "s3"}
+        return {"success": False, "error": str(e), "storage": "s3", "session_id": session_id}
     finally:
         lock.release()
 
@@ -4371,10 +4882,11 @@ def restore_bot_session_files(
     Restores Baileys WhatsApp authentication credentials from AWS S3 durable vault.
     Falls back to legacy PostgreSQL data if S3 snapshot is not yet created.
     """
+    resolved_id = _resolve_baileys_session_id(session_id)
     try:
         from app.services.s3_storage import S3StorageService
         s3 = S3StorageService()
-        s3_key = f"whatsapp-sessions/{session_id}.json"
+        s3_key = f"whatsapp-sessions/{resolved_id}.json"
         
         if s3.bucket_name:
             try:
@@ -4383,15 +4895,15 @@ def restore_bot_session_files(
                 files = content.get("files", {})
                 if files:
                     logger.info(f"[WHATSAPP-S3-RESTORE] ✅ Restored {len(files)} session files from S3: {s3_key}")
-                    return {"success": True, "session_id": session_id, "files": files, "count": len(files), "source": "s3"}
+                    return {"success": True, "session_id": resolved_id, "files": files, "count": len(files), "source": "s3"}
             except s3.s3_client.exceptions.NoSuchKey:
                 logger.info(f"[WHATSAPP-S3-RESTORE] S3 key {s3_key} not found, checking legacy DB fallback...")
             except Exception as s3_err:
                 logger.warning(f"[WHATSAPP-S3-RESTORE] S3 fetch note: {s3_err}")
         # WhatsApp sessions are strictly isolated outside PostgreSQL
-        return {"success": True, "session_id": session_id, "files": {}, "count": 0, "source": "s3_isolated"}
+        return {"success": True, "session_id": resolved_id, "files": {}, "count": 0, "source": "s3_isolated"}
     except Exception as e:
-        return {"success": False, "error": str(e), "files": {}}
+        return {"success": False, "error": str(e), "files": {}, "session_id": resolved_id}
 
 
 @router.post("/bot-session-clear")
@@ -4401,16 +4913,352 @@ def clear_bot_session_files(
     """
     Purges session credentials from AWS S3 durable vault upon explicit logout.
     """
+    resolved_id = _resolve_baileys_session_id(session_id)
     try:
         from app.services.s3_storage import S3StorageService
         s3 = S3StorageService()
-        s3_key = f"whatsapp-sessions/{session_id}.json"
+        s3_key = f"whatsapp-sessions/{resolved_id}.json"
         if s3.bucket_name:
             try:
                 s3.s3_client.delete_object(Bucket=s3.bucket_name, Key=s3_key)
             except Exception as e:
                 logger.warning(f"[WHATSAPP-S3-CLEAR] S3 delete note: {e}")
-        return {"success": True, "message": "Session cleared from S3 vault"}
+        return {"success": True, "message": "Session cleared from S3 vault", "session_id": resolved_id}
+    except Exception as e:
+        return {"success": False, "error": str(e), "session_id": resolved_id}
+
+
+# ── Baileys Multi-Instance Distributed Leader Lease & Outbound Queue ─────────
+
+@router.post("/bot-cluster-heartbeat")
+def bot_cluster_heartbeat(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Heartbeat and atomic leader lease coordinator for multi-instance Elastic Beanstalk.
+    Ensures only ONE instance holds the Baileys WebSocket connection at any time.
+    Follower instances receive the leader's QR code and status to serve to users.
+    """
+    from sqlalchemy import text
+    instance_id = payload.get("instance_id")
+    instance_host = payload.get("instance_host") or "127.0.0.1"
+    status = payload.get("status")
+    qr_data = payload.get("qr_data")
+    qr_url = payload.get("qr_url")
+    can_send_now = payload.get("can_send_now")
+    generation_id = payload.get("generation_id")
+    target_jid = payload.get("target_jid")
+
+    if not instance_id:
+        raise HTTPException(status_code=400, detail="instance_id is required")
+
+    try:
+        # Atomic row lock on lease row id = 1 with database-side epoch delta (timezone-safe across UTC/IST)
+        row = db.execute(text("SELECT id, leader_id, leader_host, heartbeat_at, status, qr_data, qr_url, can_send_now, generation_id, target_jid, command, EXTRACT(EPOCH FROM (NOW() - heartbeat_at)) AS time_since_hb FROM whatsapp_bot_lease WHERE id = 1 FOR UPDATE")).fetchone()
+
+        if not row:
+            # First instance initializes the lease table and becomes leader
+            db.execute(
+                text("""
+                    INSERT INTO whatsapp_bot_lease (id, leader_id, leader_host, acquired_at, heartbeat_at, status, qr_data, qr_url, can_send_now, generation_id, target_jid)
+                    VALUES (1, :leader_id, :leader_host, NOW(), NOW(), :status, :qr_data, :qr_url, :can_send_now, :generation_id, :target_jid)
+                """),
+                {
+                    "leader_id": instance_id,
+                    "leader_host": instance_host,
+                    "status": status or "qr_ready",
+                    "qr_data": qr_data,
+                    "qr_url": qr_url,
+                    "can_send_now": can_send_now if can_send_now is not None else False,
+                    "generation_id": generation_id or 1,
+                    "target_jid": target_jid
+                }
+            )
+            db.commit()
+            return {"is_leader": True, "leader_id": instance_id, "command": None}
+
+        curr_leader_id = row[1]
+        curr_leader_host = row[2]
+        curr_heartbeat = row[3]
+        curr_status = row[4]
+        curr_qr_data = row[5]
+        curr_qr_url = row[6]
+        curr_can_send_now = row[7]
+        curr_generation_id = row[8]
+        curr_target_jid = row[9]
+        curr_command = row[10]
+        time_since_hb = float(row[11]) if (len(row) > 11 and row[11] is not None) else 999.0
+
+        # Case 1: Current instance is already the leader
+        if curr_leader_id == instance_id:
+            update_fields = ["heartbeat_at = NOW()", "leader_host = :leader_host"]
+            params = {"leader_host": instance_host}
+
+            if status is not None:
+                update_fields.append("status = :status")
+                params["status"] = status
+            if qr_data is not None:
+                update_fields.append("qr_data = :qr_data")
+                params["qr_data"] = qr_data
+            elif status == "connected":
+                update_fields.append("qr_data = NULL")
+            if qr_url is not None:
+                update_fields.append("qr_url = :qr_url")
+                params["qr_url"] = qr_url
+            elif status == "connected":
+                update_fields.append("qr_url = NULL")
+            if can_send_now is not None:
+                update_fields.append("can_send_now = :can_send_now")
+                params["can_send_now"] = can_send_now
+            if generation_id is not None:
+                update_fields.append("generation_id = :generation_id")
+                params["generation_id"] = generation_id
+            if target_jid is not None:
+                update_fields.append("target_jid = :target_jid")
+                params["target_jid"] = target_jid
+
+            consumed_cmd = curr_command
+            if consumed_cmd:
+                update_fields.append("command = NULL")
+
+            sql = f"UPDATE whatsapp_bot_lease SET {', '.join(update_fields)} WHERE id = 1"
+            db.execute(text(sql), params)
+            db.commit()
+
+            return {
+                "is_leader": True,
+                "leader_id": instance_id,
+                "command": consumed_cmd
+            }
+
+        # Case 2: Another instance is leader. Check if expired (>15s)
+        if time_since_hb > 15.0:
+            # Lease expired! Claim leadership
+            logger.info(f"[WA-CLUSTER] Leader {curr_leader_id} lease expired ({time_since_hb:.1f}s ago). Instance {instance_id} taking over leadership!")
+            db.execute(
+                text("""
+                    UPDATE whatsapp_bot_lease
+                    SET leader_id = :leader_id,
+                        leader_host = :leader_host,
+                        acquired_at = NOW(),
+                        heartbeat_at = NOW(),
+                        status = 'qr_ready',
+                        qr_data = NULL,
+                        qr_url = NULL,
+                        can_send_now = FALSE,
+                        command = NULL
+                    WHERE id = 1
+                """),
+                {
+                    "leader_id": instance_id,
+                    "leader_host": instance_host
+                }
+            )
+            db.commit()
+            return {"is_leader": True, "leader_id": instance_id, "command": None}
+
+        # Case 3: Another instance is leader and still active. This instance is a follower.
+        db.commit()
+        return {
+            "is_leader": False,
+            "leader_id": curr_leader_id,
+            "leader_host": curr_leader_host,
+            "command": curr_command,
+            "leader_state": {
+                "status": curr_status or "qr_ready",
+                "qr_data": curr_qr_data,
+                "qr_url": curr_qr_url,
+                "can_send_now": bool(curr_can_send_now),
+                "generation_id": curr_generation_id,
+                "target_jid": curr_target_jid,
+                "heartbeat_at": curr_heartbeat.isoformat() if curr_heartbeat else None
+            }
+        }
+    except Exception as e:
+        db.rollback()
+        logger.error(f"[WA-CLUSTER] Heartbeat error: {e}")
+        return {"is_leader": False, "error": str(e)}
+
+
+@router.get("/bot-cluster-state")
+def get_bot_cluster_state(db: Session = Depends(get_db)):
+    """Read authoritative cluster state from database."""
+    from sqlalchemy import text
+    try:
+        row = db.execute(text("SELECT leader_id, leader_host, heartbeat_at, status, qr_data, qr_url, can_send_now, generation_id, target_jid, EXTRACT(EPOCH FROM (NOW() - heartbeat_at)) AS time_since_hb FROM whatsapp_bot_lease WHERE id = 1")).fetchone()
+        if not row:
+            return {"status": "uninitialized", "is_leader_alive": False}
+
+        hb = row[2]
+        time_since_hb = float(row[9]) if (len(row) > 9 and row[9] is not None) else 999.0
+        is_alive = time_since_hb < 15.0
+
+        return {
+            "status": row[3] or "disconnected",
+            "leader_id": row[0],
+            "leader_host": row[1],
+            "is_leader_alive": is_alive,
+            "qr": row[4],
+            "qr_url": row[5],
+            "can_send_now": bool(row[6]) if is_alive else False,
+            "generation_id": row[7],
+            "target_jid": row[8],
+            "heartbeat_at": hb.isoformat() if hb else None
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
+@router.post("/bot-cluster-command")
+def send_bot_cluster_command(payload: dict = Body(...), db: Session = Depends(get_db)):
+    """Set a remote cluster command (e.g. 'logout' or 'reconnect') for the leader to execute."""
+    from sqlalchemy import text
+    cmd = payload.get("command")
+    if not cmd:
+        raise HTTPException(status_code=400, detail="command is required")
+
+    try:
+        db.execute(text("UPDATE whatsapp_bot_lease SET command = :cmd WHERE id = 1"), {"cmd": cmd})
+        if cmd == "logout":
+            db.execute(text("UPDATE whatsapp_bot_lease SET status = 'qr_ready', qr_data = NULL, qr_url = NULL, can_send_now = FALSE WHERE id = 1"))
+        db.commit()
+        return {"success": True, "command": cmd}
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/bot-queue-enqueue")
+def enqueue_bot_message(payload: dict = Body(...), db: Session = Depends(get_db)):
+    """Enqueue an outbound bot message into PostgreSQL for the leader instance to dispatch."""
+    from sqlalchemy import text
+    target_type = payload.get("target_type", "direct")
+    target_jid = payload.get("target_jid")
+    message = payload.get("message")
+    media_url = payload.get("media_url")
+    instance_id = payload.get("instance_id")
+
+    if not target_jid or (not message and not media_url):
+        raise HTTPException(status_code=400, detail="target_jid and message or media_url required")
+
+    try:
+        res = db.execute(
+            text("""
+                INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, media_url, status, created_at, instance_id)
+                VALUES (:target_type, :target_jid, :message, :media_url, 'pending', NOW(), :instance_id)
+                RETURNING id
+            """),
+            {
+                "target_type": target_type,
+                "target_jid": target_jid,
+                "message": message,
+                "media_url": media_url,
+                "instance_id": instance_id
+            }
+        )
+        db.commit()
+        queue_id = res.fetchone()[0]
+        return {"success": True, "queue_id": queue_id}
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/bot-queue-poll")
+def poll_bot_queue(limit: int = 5, db: Session = Depends(get_db)):
+    """Leader polls pending outbound messages from queue."""
+    from sqlalchemy import text
+    try:
+        rows = db.execute(
+            text("""
+                SELECT id, target_type, target_jid, message, media_url
+                FROM whatsapp_bot_queue
+                WHERE status = 'pending'
+                ORDER BY id ASC
+                LIMIT :limit
+                FOR UPDATE SKIP LOCKED
+            """),
+            {"limit": limit}
+        ).fetchall()
+
+        if not rows:
+            db.commit()
+            return {"success": True, "items": []}
+
+        ids = [r[0] for r in rows]
+        db.execute(
+            text(f"UPDATE whatsapp_bot_queue SET status = 'processing' WHERE id IN ({','.join(str(i) for i in ids)})")
+        )
+        db.commit()
+
+        items = [{
+            "id": r[0],
+            "target_type": r[1],
+            "target_jid": r[2],
+            "message": r[3],
+            "media_url": r[4]
+        } for r in rows]
+        return {"success": True, "items": items}
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "error": str(e), "items": []}
+
+
+@router.post("/bot-queue-complete")
+def complete_bot_queue(payload: dict = Body(...), db: Session = Depends(get_db)):
+    """Leader reports completion status for queued messages."""
+    from sqlalchemy import text
+    import json
+    queue_id = payload.get("queue_id")
+    status = payload.get("status", "sent")
+    error_message = payload.get("error_message")
+    result_payload = payload.get("result_payload")
+
+    if not queue_id:
+        raise HTTPException(status_code=400, detail="queue_id is required")
+
+    try:
+        db.execute(
+            text("""
+                UPDATE whatsapp_bot_queue
+                SET status = :status,
+                    error_message = :error_message,
+                    result_payload = CAST(:result_payload AS jsonb),
+                    sent_at = NOW()
+                WHERE id = :queue_id
+            """),
+            {
+                "queue_id": queue_id,
+                "status": status,
+                "error_message": error_message,
+                "result_payload": json.dumps(result_payload) if result_payload else None
+            }
+        )
+        db.commit()
+        return {"success": True}
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/bot-queue-check")
+def check_bot_queue(queue_id: int = Query(...), db: Session = Depends(get_db)):
+    """Follower checks status of its queued message."""
+    from sqlalchemy import text
+    try:
+        row = db.execute(
+            text("SELECT status, error_message, result_payload FROM whatsapp_bot_queue WHERE id = :queue_id"),
+            {"queue_id": queue_id}
+        ).fetchone()
+        if not row:
+            return {"success": False, "status": "not_found"}
+        return {
+            "success": True,
+            "status": row[0],
+            "error_message": row[1],
+            "result_payload": row[2]
+        }
     except Exception as e:
         return {"success": False, "error": str(e)}
 

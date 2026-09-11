@@ -55,10 +55,13 @@
 	<string>MyntReal requires background location access for continuous field journey reimbursement tracking during active shifts.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>MyntReal requires Face ID access for secure biometric authentication.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>MyntReal requires microphone access for VoIP softphone calling and clear audio communication.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
 		<string>remote-notification</string>
+		<string>audio</string>
 	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>

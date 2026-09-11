@@ -1,0 +1,3579 @@
+[
+  {
+    "path": "_vgk_member_page_template.html",
+    "filename": "_vgk_member_page_template.html",
+    "title": "TITLE_PLACEHOLDER \u00b7 VGK4U Member",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "admin_awards.html",
+    "filename": "admin_awards.html",
+    "title": "Awards - Admin Panel",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Awards & Bonanza"
+  },
+  {
+    "path": "admin_awards_all.html",
+    "filename": "admin_awards_all.html",
+    "title": "Awards - Admin Panel",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Awards & Bonanza"
+  },
+  {
+    "path": "admin_awards_awardwise.html",
+    "filename": "admin_awards_awardwise.html",
+    "title": "admin_awards_awardwise.html",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Awards & Bonanza"
+  },
+  {
+    "path": "admin_awards_bonanza.html",
+    "filename": "admin_awards_bonanza.html",
+    "title": "Bonanza Awards - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Awards & Bonanza"
+  },
+  {
+    "path": "admin_awards_simple.html",
+    "filename": "admin_awards_simple.html",
+    "title": "admin_awards_simple.html",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Awards & Bonanza"
+  },
+  {
+    "path": "admin_awards_userwise.html",
+    "filename": "admin_awards_userwise.html",
+    "title": "admin_awards_userwise.html",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Awards & Bonanza"
+  },
+  {
+    "path": "admin_bank_all.html",
+    "filename": "admin_bank_all.html",
+    "title": "All Bank Details",
+    "portal": "RVZ Supreme / Admin",
+    "module": "KYC & Banking"
+  },
+  {
+    "path": "admin_bank_pending.html",
+    "filename": "admin_bank_pending.html",
+    "title": "Bank Details Pending Approval",
+    "portal": "RVZ Supreme / Admin",
+    "module": "KYC & Banking"
+  },
+  {
+    "path": "admin_banners_management.html",
+    "filename": "admin_banners_management.html",
+    "title": "Banner & Communication Management - Admin Panel",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Banners & Media"
+  },
+  {
+    "path": "admin_birthdays.html",
+    "filename": "admin_birthdays.html",
+    "title": "Birthday Management - Admin Panel",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "admin_coupons_activate.html",
+    "filename": "admin_coupons_activate.html",
+    "title": "Activate Coupon - Mynt Real Staff Portal",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Coupon Management"
+  },
+  {
+    "path": "admin_coupons_buy.html",
+    "filename": "admin_coupons_buy.html",
+    "title": "Purchase Coupon - Admin - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Coupon Management"
+  },
+  {
+    "path": "admin_coupons_progress.html",
+    "filename": "admin_coupons_progress.html",
+    "title": "Coupon Modules - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Coupon Management"
+  },
+  {
+    "path": "admin_coupons_status.html",
+    "filename": "admin_coupons_status.html",
+    "title": "Coupon Modules - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Coupon Management"
+  },
+  {
+    "path": "admin_coupons_transfer.html",
+    "filename": "admin_coupons_transfer.html",
+    "title": "Coupon Modules - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Coupon Management"
+  },
+  {
+    "path": "admin_data_recovery.html",
+    "filename": "admin_data_recovery.html",
+    "title": "Data Recovery Center - RVZ Admin",
+    "portal": "RVZ Supreme / Admin",
+    "module": "System Controls"
+  },
+  {
+    "path": "admin_delete_management.html",
+    "filename": "admin_delete_management.html",
+    "title": "Delete Management - RVZ Admin",
+    "portal": "RVZ Supreme / Admin",
+    "module": "System Controls"
+  },
+  {
+    "path": "admin_earnings_direct.html",
+    "filename": "admin_earnings_direct.html",
+    "title": "Direct Facilitation Income - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Finance & Income"
+  },
+  {
+    "path": "admin_earnings_gurudakshina.html",
+    "filename": "admin_earnings_gurudakshina.html",
+    "title": "Gurudakshina - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Finance & Income"
+  },
+  {
+    "path": "admin_earnings_matching.html",
+    "filename": "admin_earnings_matching.html",
+    "title": "Group Performance Recognition Income - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Finance & Income"
+  },
+  {
+    "path": "admin_earnings_summary_new.html",
+    "filename": "admin_earnings_summary_new.html",
+    "title": "Earnings Summary - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Finance & Income"
+  },
+  {
+    "path": "admin_earnings_ved.html",
+    "filename": "admin_earnings_ved.html",
+    "title": "VED Leadership Recognition - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Finance & Income"
+  },
+  {
+    "path": "admin_earnings_withdrawals.html",
+    "filename": "admin_earnings_withdrawals.html",
+    "title": "Withdrawals - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Finance & Income"
+  },
+  {
+    "path": "admin_emergency_wallet.html",
+    "filename": "admin_emergency_wallet.html",
+    "title": "Emergency Wallet - Admin",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "admin_ev_benefit_analytics.html",
+    "filename": "admin_ev_benefit_analytics.html",
+    "title": "EV Benefit Analytics - Admin Dashboard",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "admin_feedback_pending.html",
+    "filename": "admin_feedback_pending.html",
+    "title": "Pending Announcements - Admin Panel",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "admin_income_pending.html",
+    "filename": "admin_income_pending.html",
+    "title": "Income Pending - Admin Verification - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Finance & Income"
+  },
+  {
+    "path": "admin_income_verified.html",
+    "filename": "admin_income_verified.html",
+    "title": "Income Verified - Super Admin & Finance Admin - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Finance & Income"
+  },
+  {
+    "path": "admin_kyc_management.html",
+    "filename": "admin_kyc_management.html",
+    "title": "KYC Management - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "KYC & Banking"
+  },
+  {
+    "path": "admin_members_all.html",
+    "filename": "admin_members_all.html",
+    "title": "All Connections - MNR Business Access Program Reference System",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Member Governance"
+  },
+  {
+    "path": "admin_members_direct.html",
+    "filename": "admin_members_direct.html",
+    "title": "Direct Connections - MNR Business Access Program Reference System",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Member Governance"
+  },
+  {
+    "path": "admin_members_picture.html",
+    "filename": "admin_members_picture.html",
+    "title": "Connections Gallery - MNR Business Access Program Reference System",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Member Governance"
+  },
+  {
+    "path": "admin_members_ved.html",
+    "filename": "admin_members_ved.html",
+    "title": "Leadership Group (VED) - MNR Business Access Program Reference System",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Member Governance"
+  },
+  {
+    "path": "admin_password_reset.html",
+    "filename": "admin_password_reset.html",
+    "title": "User Password Reset - Admin - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "admin_popups.html",
+    "filename": "admin_popups.html",
+    "title": "Popup Management",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Banners & Media"
+  },
+  {
+    "path": "admin_reports.html",
+    "filename": "admin_reports.html",
+    "title": "Reports",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "admin_tickets_assigned.html",
+    "filename": "admin_tickets_assigned.html",
+    "title": "Assigned Tickets",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Support & Tickets"
+  },
+  {
+    "path": "admin_tickets_management.html",
+    "filename": "admin_tickets_management.html",
+    "title": "Ticket Management - Admin Panel",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Support & Tickets"
+  },
+  {
+    "path": "admin_user_status.html",
+    "filename": "admin_user_status.html",
+    "title": "User Status Management - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Member Governance"
+  },
+  {
+    "path": "admin_users.html",
+    "filename": "admin_users.html",
+    "title": "User Management - MNR Business Access Program Admin",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Member Governance"
+  },
+  {
+    "path": "admin_vgk_all-benefits.html",
+    "filename": "admin_vgk_all-benefits.html",
+    "title": "RVZ Earnings - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "admin_vgk_ev-discount-training.html",
+    "filename": "admin_vgk_ev-discount-training.html",
+    "title": "EV Discount & Training - RVZ Earnings - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "admin_vgk_fleet-orders.html",
+    "filename": "admin_vgk_fleet-orders.html",
+    "title": "RVZ Earnings - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "admin_vgk_franchise-earnings.html",
+    "filename": "admin_vgk_franchise-earnings.html",
+    "title": "RVZ Earnings - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Finance & Income"
+  },
+  {
+    "path": "admin_vgk_insurance-earnings.html",
+    "filename": "admin_vgk_insurance-earnings.html",
+    "title": "RVZ Earnings - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Finance & Income"
+  },
+  {
+    "path": "admin_vgk_referral-income.html",
+    "filename": "admin_vgk_referral-income.html",
+    "title": "RVZ Earnings - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Finance & Income"
+  },
+  {
+    "path": "admin_view_announcements.html",
+    "filename": "admin_view_announcements.html",
+    "title": "View Announcements - Admin Panel",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Banners & Media"
+  },
+  {
+    "path": "architecture_view.html",
+    "filename": "architecture_view.html",
+    "title": "System Architecture & Master Blueprint \u2014 Mynt OS",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "b2b_signup.html",
+    "filename": "b2b_signup.html",
+    "title": "Start your free trial \u2014 VGK4U \u00b7 MyntReal SFMS",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "catalog.html",
+    "filename": "catalog.html",
+    "title": "MNR Business Access Program",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "community_landing.html",
+    "filename": "community_landing.html",
+    "title": "Community Services Registration | VGK4U Platform",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "components/admin_user_filter.html",
+    "filename": "admin_user_filter.html",
+    "title": "admin_user_filter.html",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Member Governance"
+  },
+  {
+    "path": "components/user_filter.html",
+    "filename": "user_filter.html",
+    "title": "user_filter.html",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "contact.html",
+    "filename": "contact.html",
+    "title": "Contact Us \u2014 Myntreal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "dashboard.html",
+    "filename": "dashboard.html",
+    "title": "MNR User Dashboard - Sandbox",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "delete-account.html",
+    "filename": "delete-account.html",
+    "title": "Account Deletion Request \u2014 Mynt Real LLP | Myntreal",
+    "portal": "Public / Marketing / Static",
+    "module": "Legal & Compliance"
+  },
+  {
+    "path": "docs_access.html",
+    "filename": "docs_access.html",
+    "title": "Protected Documents \u2014 Access Reference | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "finance_admin_pins.html",
+    "filename": "finance_admin_pins.html",
+    "title": "PIN Approvals | Staff Portal",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "finance_awards_payment_processing.html",
+    "filename": "finance_awards_payment_processing.html",
+    "title": "finance_awards_payment_processing.html",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "finance_awards_payment_v2.html",
+    "filename": "finance_awards_payment_v2.html",
+    "title": "finance_awards_payment_v2.html",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "finance_compliance.html",
+    "filename": "finance_compliance.html",
+    "title": "Compliance Dashboard - Finance Admin",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "finance_cost_analysis.html",
+    "filename": "finance_cost_analysis.html",
+    "title": "Cost Analysis - Finance Admin",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "finance_tds_management.html",
+    "filename": "finance_tds_management.html",
+    "title": "TDS Management - Finance Admin",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "lead-share.html",
+    "filename": "lead-share.html",
+    "title": "Lead Documents \u2014 Myntreal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "lead-status-share.html",
+    "filename": "lead-status-share.html",
+    "title": "Solar Leads Status View \u2014 Myntreal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "marketplace.html",
+    "filename": "marketplace.html",
+    "title": "EV Spare Parts Marketplace \u2014 Genuine 2-Wheeler Parts | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "mnr_guide.html",
+    "filename": "mnr_guide.html",
+    "title": "MyntReal LLP - MNR System Guide",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "mnr_my_commissions.html",
+    "filename": "mnr_my_commissions.html",
+    "title": "mnr_my_commissions.html",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "mnr_user_guide.html",
+    "filename": "mnr_user_guide.html",
+    "title": "MyntReal LLP - MNR Member Portal Guide",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "mnr_validation.html",
+    "filename": "mnr_validation.html",
+    "title": "MNR System Validation | MNR Platform",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "order_fulfillment_dashboard.html",
+    "filename": "order_fulfillment_dashboard.html",
+    "title": "Order Fulfillment Dashboard - DC_FULFILLMENT_001",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "pages/admin_banners_management_standalone.html",
+    "filename": "admin_banners_management_standalone.html",
+    "title": "Banner Management - Admin Panel",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Banners & Media"
+  },
+  {
+    "path": "pages/admin_password_reset_standalone.html",
+    "filename": "admin_password_reset_standalone.html",
+    "title": "Password Reset - Admin Panel",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "partner_change_password.html",
+    "filename": "partner_change_password.html",
+    "title": "Change Password | Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "partner_commissions.html",
+    "filename": "partner_commissions.html",
+    "title": "My Reference Bonus - Partner Portal - Mynt Real LLP",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "partner_dashboard.html",
+    "filename": "partner_dashboard.html",
+    "title": "Partner Dashboard - Mynt Real LLP",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "partner_dispatch.html",
+    "filename": "partner_dispatch.html",
+    "title": "Dispatch Management - DC_PARTNER_001",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "partner_invoices.html",
+    "filename": "partner_invoices.html",
+    "title": "Partner Invoices - DC_PARTNER_001",
+    "portal": "Partner Portal",
+    "module": "Invoices & Billing"
+  },
+  {
+    "path": "partner_kyc_documents.html",
+    "filename": "partner_kyc_documents.html",
+    "title": "KYC &amp; Documents \u2014 Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Leads & Profile"
+  },
+  {
+    "path": "partner_login.html",
+    "filename": "partner_login.html",
+    "title": "Mynt Real LLP - Partner Portal Login",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "partner_marketplace.html",
+    "filename": "partner_marketplace.html",
+    "title": "Marketplace - Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "partner_master.html",
+    "filename": "partner_master.html",
+    "title": "Business Partner Master - DC_PARTNER_002",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "partner_my_leads.html",
+    "filename": "partner_my_leads.html",
+    "title": "My Leads - Partner Portal - Mynt Real LLP",
+    "portal": "Partner Portal",
+    "module": "Leads & Profile"
+  },
+  {
+    "path": "partner_order_approval.html",
+    "filename": "partner_order_approval.html",
+    "title": "Order Approval Console - DC_PARTNER_001",
+    "portal": "Partner Portal",
+    "module": "Orders & Spares"
+  },
+  {
+    "path": "partner_order_routing.html",
+    "filename": "partner_order_routing.html",
+    "title": "Order Routing - DC_PARTNER_001",
+    "portal": "Partner Portal",
+    "module": "Orders & Spares"
+  },
+  {
+    "path": "partner_orders.html",
+    "filename": "partner_orders.html",
+    "title": "Partner Orders - DC_PARTNER_001",
+    "portal": "Partner Portal",
+    "module": "Orders & Spares"
+  },
+  {
+    "path": "partner_payments.html",
+    "filename": "partner_payments.html",
+    "title": "Partner Payments - DC_PARTNER_001",
+    "portal": "Partner Portal",
+    "module": "Invoices & Billing"
+  },
+  {
+    "path": "partner_portal_invoices.html",
+    "filename": "partner_portal_invoices.html",
+    "title": "My Invoices | Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Invoices & Billing"
+  },
+  {
+    "path": "partner_portal_orders.html",
+    "filename": "partner_portal_orders.html",
+    "title": "My Orders | Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Orders & Spares"
+  },
+  {
+    "path": "partner_portal_payments.html",
+    "filename": "partner_portal_payments.html",
+    "title": "My Payments | Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Invoices & Billing"
+  },
+  {
+    "path": "partner_pricing.html",
+    "filename": "partner_pricing.html",
+    "title": "Product Catalog | Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "partner_purchases.html",
+    "filename": "partner_purchases.html",
+    "title": "My Purchases | Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "partner_revenue_dashboard.html",
+    "filename": "partner_revenue_dashboard.html",
+    "title": "Revenue Dashboard | Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Invoices & Billing"
+  },
+  {
+    "path": "partner_sales_invoices.html",
+    "filename": "partner_sales_invoices.html",
+    "title": "Sales Invoices - Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Invoices & Billing"
+  },
+  {
+    "path": "partner_service.html",
+    "filename": "partner_service.html",
+    "title": "Service Tickets - Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Service & Support"
+  },
+  {
+    "path": "partner_solar_vendor.html",
+    "filename": "partner_solar_vendor.html",
+    "title": "MyntReal SOLAR Vendor Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "partner_spare_orders.html",
+    "filename": "partner_spare_orders.html",
+    "title": "Spare Parts Orders | Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Orders & Spares"
+  },
+  {
+    "path": "partner_stock.html",
+    "filename": "partner_stock.html",
+    "title": "My Stock | Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "partner_support.html",
+    "filename": "partner_support.html",
+    "title": "Service Requests | Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "partner_vendor_returns.html",
+    "filename": "partner_vendor_returns.html",
+    "title": "My Returns - DC_INTAKE_001",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "partner_walkins.html",
+    "filename": "partner_walkins.html",
+    "title": "Walk-ins - Partner Portal",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "playwright-report/index.html",
+    "filename": "index.html",
+    "title": "Playwright Test Report",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "privacy-policy.html",
+    "filename": "privacy-policy.html",
+    "title": "Privacy Policy \u2014 Mynt Real LLP | Myntreal",
+    "portal": "Public / Marketing / Static",
+    "module": "Legal & Compliance"
+  },
+  {
+    "path": "promo_dashboard.html",
+    "filename": "promo_dashboard.html",
+    "title": "Promoter Dashboard \u2014 VGK4U",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "promo_login.html",
+    "filename": "promo_login.html",
+    "title": "Promoter Portal \u2014 VGK4U | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "Authentication"
+  },
+  {
+    "path": "public/ads/solar-angle1.html",
+    "filename": "solar-angle1.html",
+    "title": "Ad: Pain Point",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/ads/solar-angle2.html",
+    "filename": "solar-angle2.html",
+    "title": "Ad: Outcome",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/ads/solar-angle3.html",
+    "filename": "solar-angle3.html",
+    "title": "Ad: Urgency",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/app.html",
+    "filename": "app.html",
+    "title": "Download MyntReal App - Official Mobile Portal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/bonanza-awards.html",
+    "filename": "bonanza-awards.html",
+    "title": "Bonanza Awards - MNR Business Access Program",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/bonanza-content.html",
+    "filename": "bonanza-content.html",
+    "title": "Bonanza Awards",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/card_preview.html",
+    "filename": "card_preview.html",
+    "title": "VGK4U Earner Card \u2014 Layout Preview",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/careers.html",
+    "filename": "careers.html",
+    "title": "Careers \u2014 Join the MyntReal Team | Jobs in EV, Solar & Real Estate",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/delete-account.html",
+    "filename": "delete-account.html",
+    "title": "Account Deletion Request \u2014 Mynt Real LLP | Myntreal",
+    "portal": "Public / Marketing / Static",
+    "module": "Legal & Compliance"
+  },
+  {
+    "path": "public/download-app.html",
+    "filename": "download-app.html",
+    "title": "Download MyntReal App - Official Mobile Portal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/download_app.html",
+    "filename": "download_app.html",
+    "title": "Download MyntReal App - Official Mobile Portal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/engineering/index.html",
+    "filename": "index.html",
+    "title": "MYNT OS \u2014 Antigravity Engineering AI (Phase 3.3)",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/hub/about.html",
+    "filename": "about.html",
+    "title": "About MyntReal \u2014 ISO 9001:2015 Certified Business Ecosystem",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/hub/care.html",
+    "filename": "care.html",
+    "title": "VGK Care \u2014 Insurance & Financial Protection | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/hub/contact.html",
+    "filename": "contact.html",
+    "title": "Contact MyntReal \u2014 Get in Touch | Visakhapatnam Office",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/hub/etc.html",
+    "filename": "etc.html",
+    "title": "EVolution Training Centre \u2014 EV Spares & Professional Training | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/hub/faq.html",
+    "filename": "faq.html",
+    "title": "FAQ \u2014 MyntReal / VGK4U",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/hub/hgs.html",
+    "filename": "hgs.html",
+    "title": "Har Ghar Solar \u2014 Rooftop Solar Energy for Every Home | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/hub/index.html",
+    "filename": "index.html",
+    "title": "MyntReal \u2014 Multi-Business Ecosystem | EV, Solar, Real Estate & More",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/hub/manthra.html",
+    "filename": "manthra.html",
+    "title": "Manthra EV \u2014 Electric Scooters & EV Mobility | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/hub/media.html",
+    "filename": "media.html",
+    "title": "Media Hub \u2014 News, Blogs, Videos & Publications | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/hub/product.html",
+    "filename": "product.html",
+    "title": "Manthra EV Products \u2014 Electric Scooters & Vehicles | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/hub/realestate.html",
+    "filename": "realestate.html",
+    "title": "VGK Real Dreams \u2014 Premium Real Estate in Andhra Pradesh | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/hub/verticals.html",
+    "filename": "verticals.html",
+    "title": "Business Verticals \u2014 EV, Solar, Training, Real Estate & Insurance | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/landing.html",
+    "filename": "landing.html",
+    "title": "MyntReal - Redefining Future",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/layouts/staff-header.html",
+    "filename": "staff-header.html",
+    "title": "staff-header.html",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "public/poster-fresh-test.html",
+    "filename": "poster-fresh-test.html",
+    "title": "VGK Channel Partner Achievement Poster",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public/privacy-policy.html",
+    "filename": "privacy-policy.html",
+    "title": "Privacy Policy \u2014 Mynt Real LLP | Myntreal",
+    "portal": "Public / Marketing / Static",
+    "module": "Legal & Compliance"
+  },
+  {
+    "path": "public/seo/andhra-pradesh.html",
+    "filename": "andhra-pradesh.html",
+    "title": "MyntReal Andhra Pradesh | EV, Solar & Business Hub",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/business-opportunities.html",
+    "filename": "business-opportunities.html",
+    "title": "EV & Solar Business Opportunities | MyntReal AP",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-business-op-ap.html",
+    "filename": "ev-business-op-ap.html",
+    "title": "EV Business Opportunity in Andhra Pradesh | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-company-ap.html",
+    "filename": "ev-company-ap.html",
+    "title": "Best EV Company in Andhra Pradesh | MyntReal \u2014 Manthra EV",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-company-guntur.html",
+    "filename": "ev-company-guntur.html",
+    "title": "EV Company in Guntur | MyntReal \u2014 Manthra EV Guntur",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-company-hyderabad.html",
+    "filename": "ev-company-hyderabad.html",
+    "title": "EV Company in Hyderabad | MyntReal \u2014 Manthra EV Hyderabad",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-company-kakinada.html",
+    "filename": "ev-company-kakinada.html",
+    "title": "EV Company in Kakinada | MyntReal \u2014 Manthra EV Kakinada",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-company-karimnagar.html",
+    "filename": "ev-company-karimnagar.html",
+    "title": "EV Company in Karimnagar | MyntReal \u2014 Manthra EV Karimnagar",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-company-rajahmundry.html",
+    "filename": "ev-company-rajahmundry.html",
+    "title": "EV Company in Rajahmundry | MyntReal \u2014 Manthra EV Rajahmundry",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-company-srikakulam.html",
+    "filename": "ev-company-srikakulam.html",
+    "title": "EV Company in Srikakulam | MyntReal \u2014 Manthra EV Srikakulam",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-company-tirupati.html",
+    "filename": "ev-company-tirupati.html",
+    "title": "EV Company in Tirupati | MyntReal \u2014 Manthra EV Tirupati",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-company-ts.html",
+    "filename": "ev-company-ts.html",
+    "title": "Best EV Company in Telangana | MyntReal \u2014 Manthra EV",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-company-vijayawada.html",
+    "filename": "ev-company-vijayawada.html",
+    "title": "EV Company in Vijayawada | MyntReal \u2014 Manthra EV Vijayawada",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-company-visakhapatnam.html",
+    "filename": "ev-company-visakhapatnam.html",
+    "title": "EV Company in Visakhapatnam | MyntReal \u2014 Manthra EV Vizag",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-company-vizianagaram.html",
+    "filename": "ev-company-vizianagaram.html",
+    "title": "EV Company in Vizianagaram | MyntReal \u2014 Manthra EV Vizianagaram",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-company-warangal.html",
+    "filename": "ev-company-warangal.html",
+    "title": "EV Company in Warangal | MyntReal \u2014 Manthra EV Warangal",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-dealership-ap.html",
+    "filename": "ev-dealership-ap.html",
+    "title": "EV Dealership in Andhra Pradesh | MyntReal Manthra",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-franchise-ap.html",
+    "filename": "ev-franchise-ap.html",
+    "title": "EV Franchise in Andhra Pradesh | MyntReal Manthra EV",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-franchise-ts.html",
+    "filename": "ev-franchise-ts.html",
+    "title": "EV Franchise in Telangana | MyntReal \u2014 Manthra EV Business",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/ev-training-ap.html",
+    "filename": "ev-training-ap.html",
+    "title": "EV Training in Andhra Pradesh | MyntReal EVolution",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/pm-surya-ghar-ap.html",
+    "filename": "pm-surya-ghar-ap.html",
+    "title": "PM Surya Ghar in Andhra Pradesh | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-company-ap.html",
+    "filename": "solar-company-ap.html",
+    "title": "Best Solar Company in Andhra Pradesh | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-company-guntur.html",
+    "filename": "solar-company-guntur.html",
+    "title": "Solar Company in Guntur | MyntReal \u2014 PM Surya Ghar Rooftop Solar",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-company-hyderabad.html",
+    "filename": "solar-company-hyderabad.html",
+    "title": "Solar Company in Hyderabad | MyntReal \u2014 PM Surya Ghar Rooftop Solar",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-company-kakinada.html",
+    "filename": "solar-company-kakinada.html",
+    "title": "Solar Company in Kakinada | MyntReal \u2014 PM Surya Ghar Rooftop Solar",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-company-karimnagar.html",
+    "filename": "solar-company-karimnagar.html",
+    "title": "Solar Company in Karimnagar | MyntReal \u2014 PM Surya Ghar Rooftop Solar",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-company-rajahmundry.html",
+    "filename": "solar-company-rajahmundry.html",
+    "title": "Solar Company in Rajahmundry | MyntReal \u2014 PM Surya Ghar Rooftop Solar",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-company-srikakulam.html",
+    "filename": "solar-company-srikakulam.html",
+    "title": "Solar Company in Srikakulam | MyntReal \u2014 Har Ghar Solar",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-company-tirupati.html",
+    "filename": "solar-company-tirupati.html",
+    "title": "Solar Company in Tirupati | MyntReal \u2014 PM Surya Ghar Rooftop Solar",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-company-ts.html",
+    "filename": "solar-company-ts.html",
+    "title": "Best Solar Company in Telangana | MyntReal \u2014 Har Ghar Solar",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-company-vijayawada.html",
+    "filename": "solar-company-vijayawada.html",
+    "title": "Solar Company in Vijayawada | MyntReal \u2014 PM Surya Ghar Rooftop Solar",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-company-visakhapatnam.html",
+    "filename": "solar-company-visakhapatnam.html",
+    "title": "Solar Company in Visakhapatnam | MyntReal \u2014 PM Surya Ghar Rooftop Solar",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-company-vizianagaram.html",
+    "filename": "solar-company-vizianagaram.html",
+    "title": "Solar Company in Vizianagaram | MyntReal \u2014 Har Ghar Solar",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-company-warangal.html",
+    "filename": "solar-company-warangal.html",
+    "title": "Solar Company in Warangal | MyntReal \u2014 PM Surya Ghar Rooftop Solar",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-dealership-ap.html",
+    "filename": "solar-dealership-ap.html",
+    "title": "Solar Dealership in Andhra Pradesh | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-franchise-ap.html",
+    "filename": "solar-franchise-ap.html",
+    "title": "Solar Franchise in Andhra Pradesh | MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/solar-franchise-ts.html",
+    "filename": "solar-franchise-ts.html",
+    "title": "Solar Franchise in Telangana | MyntReal Har Ghar",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public/seo/telangana.html",
+    "filename": "telangana.html",
+    "title": "MyntReal in Telangana | EV, Solar & Business Opportunities",
+    "portal": "Public / Marketing / Static",
+    "module": "SEO Landing Pages"
+  },
+  {
+    "path": "public_announcement.html",
+    "filename": "public_announcement.html",
+    "title": "Announcement - MNR Business Access Program",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public_partner.html",
+    "filename": "public_partner.html",
+    "title": "Partner \u2014 MyntReal",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "public_service_ticket.html",
+    "filename": "public_service_ticket.html",
+    "title": "Support Form \u2014 MyntReal",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "public_ticket_status.html",
+    "filename": "public_ticket_status.html",
+    "title": "Track Service Ticket - VGK4U",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "real_dreams_compare.html",
+    "filename": "real_dreams_compare.html",
+    "title": "Compare Properties - Real Dreams",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Real Estate Marketplace"
+  },
+  {
+    "path": "real_dreams_marketplace.html",
+    "filename": "real_dreams_marketplace.html",
+    "title": "Real Dreams - Property Marketplace",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Real Estate Marketplace"
+  },
+  {
+    "path": "real_dreams_property_detail.html",
+    "filename": "real_dreams_property_detail.html",
+    "title": "Property Details - Real Dreams",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Real Estate Marketplace"
+  },
+  {
+    "path": "rvz_banners_management.html",
+    "filename": "rvz_banners_management.html",
+    "title": "Banner & Communication Management - Admin Panel",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Banners & Media"
+  },
+  {
+    "path": "rvz_banners_standalone.html",
+    "filename": "rvz_banners_standalone.html",
+    "title": "Banner & Communication Management - Admin Panel",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Banners & Media"
+  },
+  {
+    "path": "rvz_crm_leads.html",
+    "filename": "rvz_crm_leads.html",
+    "title": "CRM - Lead Management",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "rvz_department_management.html",
+    "filename": "rvz_department_management.html",
+    "title": "Mynt Real LLP - Configuration",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "rvz_menu_access_config.html",
+    "filename": "rvz_menu_access_config.html",
+    "title": "Staff Page Access Matrix - RVZ",
+    "portal": "RVZ Supreme / Admin",
+    "module": "System Controls"
+  },
+  {
+    "path": "rvz_real_dreams_banners.html",
+    "filename": "rvz_real_dreams_banners.html",
+    "title": "Real Dreams - Banner Management",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Banners & Media"
+  },
+  {
+    "path": "rvz_real_dreams_dashboard.html",
+    "filename": "rvz_real_dreams_dashboard.html",
+    "title": "Property Amenities",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "rvz_real_dreams_marketplace.html",
+    "filename": "rvz_real_dreams_marketplace.html",
+    "title": "Property Marketplace - Staff Portal",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "rvz_real_dreams_partners.html",
+    "filename": "rvz_real_dreams_partners.html",
+    "title": "Real Dreams - Partner Management",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "rvz_real_dreams_properties.html",
+    "filename": "rvz_real_dreams_properties.html",
+    "title": "Real Dreams - Property Handler",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "rvz_sales_revenue.html",
+    "filename": "rvz_sales_revenue.html",
+    "title": "Sales Revenue",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "saas_admin.html",
+    "filename": "saas_admin.html",
+    "title": "Zynova Cloud \u2014 SaaS Segment B Administration",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "saas_login.html",
+    "filename": "saas_login.html",
+    "title": "Zynova Enterprise Cloud \u2014 SaaS Client Portal",
+    "portal": "Public / Marketing / Static",
+    "module": "Authentication"
+  },
+  {
+    "path": "saas_signup.html",
+    "filename": "saas_signup.html",
+    "title": "Get Started with Zynova Cloud | SaaS Tenant Registration",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "saas_workspace.html",
+    "filename": "saas_workspace.html",
+    "title": "Tenant Workspace \u2014 Zynova Cloud",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "solar.html",
+    "filename": "solar.html",
+    "title": "Har Ghar Solar \u2014 Myntreal | Switch to Solar, Save Every Month",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "staff_2fa_settings.html",
+    "filename": "staff_2fa_settings.html",
+    "title": "Mynt Real LLP Staff Portal - 2FA Settings",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_accounts_bom.html",
+    "filename": "staff_accounts_bom.html",
+    "title": "Bill of Materials - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_capital.html",
+    "filename": "staff_accounts_capital.html",
+    "title": "Capital Account - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_cash_in_hand.html",
+    "filename": "staff_accounts_cash_in_hand.html",
+    "title": "Cash in Hand - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_community_services.html",
+    "filename": "staff_accounts_community_services.html",
+    "title": "Community Services Manager | Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_companies.html",
+    "filename": "staff_accounts_companies.html",
+    "title": "Companies - Executive Snapshot - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_dar.html",
+    "filename": "staff_accounts_dar.html",
+    "title": "DAR \u2014 Daily Activity Report \u2014 SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_duties_taxes.html",
+    "filename": "staff_accounts_duties_taxes.html",
+    "title": "Duties &amp; Taxes (GST) - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_estimations.html",
+    "filename": "staff_accounts_estimations.html",
+    "title": "Estimations - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_expense_categories.html",
+    "filename": "staff_accounts_expense_categories.html",
+    "title": "In &amp; Out Cat. - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_expense_entries.html",
+    "filename": "staff_accounts_expense_entries.html",
+    "title": "Expense Entries - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_fund_allocations.html",
+    "filename": "staff_accounts_fund_allocations.html",
+    "title": "Fund Allocations - SFMS",
+    "portal": "Staff Portal",
+    "module": "Field & GPS Journeys"
+  },
+  {
+    "path": "staff_accounts_general_ledger.html",
+    "filename": "staff_accounts_general_ledger.html",
+    "title": "General Ledger - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_hsn.html",
+    "filename": "staff_accounts_hsn.html",
+    "title": "HSN Master - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_income_entries.html",
+    "filename": "staff_accounts_income_entries.html",
+    "title": "Income Entries - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_journal_voucher.html",
+    "filename": "staff_accounts_journal_voucher.html",
+    "title": "Entries - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_ledger_masters.html",
+    "filename": "staff_accounts_ledger_masters.html",
+    "title": "Redirecting\u2026",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_manufacturing.html",
+    "filename": "staff_accounts_manufacturing.html",
+    "title": "Manufacturing Orders - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_parties_master.html",
+    "filename": "staff_accounts_parties_master.html",
+    "title": "Parties Master - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_party_ledger.html",
+    "filename": "staff_accounts_party_ledger.html",
+    "title": "Party Ledger - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_payables.html",
+    "filename": "staff_accounts_payables.html",
+    "title": "Accounts Payable - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_pending_clear.html",
+    "filename": "staff_accounts_pending_clear.html",
+    "title": "Pending to Clear - Accounts",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_pricing.html",
+    "filename": "staff_accounts_pricing.html",
+    "title": "Pricing Configuration - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_procurement.html",
+    "filename": "staff_accounts_procurement.html",
+    "title": "Procurement Requirements - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_purchase_invoices.html",
+    "filename": "staff_accounts_purchase_invoices.html",
+    "title": "Purchase Invoices - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_receivables.html",
+    "filename": "staff_accounts_receivables.html",
+    "title": "Accounts Receivable - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_reports.html",
+    "filename": "staff_accounts_reports.html",
+    "title": "SFMS Reports | Staff Financial Management System",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_sales_invoices.html",
+    "filename": "staff_accounts_sales_invoices.html",
+    "title": "Sales Invoices - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_segments.html",
+    "filename": "staff_accounts_segments.html",
+    "title": "Company Segments - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_stock_items.html",
+    "filename": "staff_accounts_stock_items.html",
+    "title": "Stock Items - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_accounts_vendors.html",
+    "filename": "staff_accounts_vendors.html",
+    "title": "Vendors - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_ai_calling.html",
+    "filename": "staff_ai_calling.html",
+    "title": "AI Calling \u2014 Mynt Real LLP",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_ai_marketing_pro.html",
+    "filename": "staff_ai_marketing_pro.html",
+    "title": "AI Marketing Pro \u2014 MYNT OS",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_ai_segments.html",
+    "filename": "staff_ai_segments.html",
+    "title": "AI Segments & Brochures \u2014 Mynt Real LLP",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_all_journeys.html",
+    "filename": "staff_all_journeys.html",
+    "title": "All Journeys - MyntReal LLP",
+    "portal": "Staff Portal",
+    "module": "Field & GPS Journeys"
+  },
+  {
+    "path": "staff_attendance_computation.html",
+    "filename": "staff_attendance_computation.html",
+    "title": "Attendance Computation - MyntReal",
+    "portal": "Staff Portal",
+    "module": "HR & Attendance"
+  },
+  {
+    "path": "staff_attendance_exceptions.html",
+    "filename": "staff_attendance_exceptions.html",
+    "title": "Exception Approvals - MNR",
+    "portal": "Staff Portal",
+    "module": "HR & Attendance"
+  },
+  {
+    "path": "staff_attendance_reports.html",
+    "filename": "staff_attendance_reports.html",
+    "title": "MyntReal LLP - Attendance Dashboard",
+    "portal": "Staff Portal",
+    "module": "HR & Attendance"
+  },
+  {
+    "path": "staff_attendance_sheet.html",
+    "filename": "staff_attendance_sheet.html",
+    "title": "Attendance Records - MNR",
+    "portal": "Staff Portal",
+    "module": "HR & Attendance"
+  },
+  {
+    "path": "staff_audit_logs.html",
+    "filename": "staff_audit_logs.html",
+    "title": "Staff Portal - Audit Logs & Analytics",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_b2b_clients.html",
+    "filename": "staff_b2b_clients.html",
+    "title": "B2B SaaS Admin \u2014 Phase 2",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_bank_wise_leads.html",
+    "filename": "staff_bank_wise_leads.html",
+    "title": "Mynt Real LLP Staff Portal - Field staff leads",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_call_flow_studio.html",
+    "filename": "staff_call_flow_studio.html",
+    "title": "Call Flow Studio \u2014 MyntOS Telephony",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_call_management.html",
+    "filename": "staff_call_management.html",
+    "title": "Call Tracking Dashboard - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_call_quality.html",
+    "filename": "staff_call_quality.html",
+    "title": "Call Quality Review \u2014 Staff Portal",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_change_password.html",
+    "filename": "staff_change_password.html",
+    "title": "Mynt Real LLP Staff Portal - Change Password",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_configuration_a1top.html",
+    "filename": "staff_configuration_a1top.html",
+    "title": "A1Top Executive Dashboard \u2014 Mynt Real",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_configuration_razorpay.html",
+    "filename": "staff_configuration_razorpay.html",
+    "title": "Razorpay Executive Dashboard \u2014 Mynt Real",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_consolidated.html",
+    "filename": "staff_consolidated.html",
+    "title": "Consolidated Reports - SFMS",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_coupon_status.html",
+    "filename": "staff_coupon_status.html",
+    "title": "Coupon Status - Mynt Real Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_crm_dashboard.html",
+    "filename": "staff_crm_dashboard.html",
+    "title": "CRM & Team Performance 360\u00b0 - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_crm_dashboard_backup.html",
+    "filename": "staff_crm_dashboard_backup.html",
+    "title": "My CRM Dashboard - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_crm_team_leads.html",
+    "filename": "staff_crm_team_leads.html",
+    "title": "Team Leads - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_crm_whatsapp_bot.html",
+    "filename": "staff_crm_whatsapp_bot.html",
+    "title": "WhatsApp Bot Management Hub - Staff CRM",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_crm_whatsapp_inbox.html",
+    "filename": "staff_crm_whatsapp_inbox.html",
+    "title": "CRM WhatsApp Inbox \u2014 MyntReal",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_dashboard.html",
+    "filename": "staff_dashboard.html",
+    "title": "Mynt Real LLP Staff Portal - Dashboard",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_day_planner.html",
+    "filename": "staff_day_planner.html",
+    "title": "MyntReal LLP - Task Planner",
+    "portal": "Staff Portal",
+    "module": "Tasks, KRAs & Planner"
+  },
+  {
+    "path": "staff_day_planner_guide.html",
+    "filename": "staff_day_planner_guide.html",
+    "title": "MyntReal LLP - Staff System Guide",
+    "portal": "Staff Portal",
+    "module": "Tasks, KRAs & Planner"
+  },
+  {
+    "path": "staff_day_planner_manager.html",
+    "filename": "staff_day_planner_manager.html",
+    "title": "MyntReal LLP - Team Day Plans",
+    "portal": "Staff Portal",
+    "module": "Tasks, KRAs & Planner"
+  },
+  {
+    "path": "staff_departments.html",
+    "filename": "staff_departments.html",
+    "title": "Mynt Real LLP Staff Portal - Department Management",
+    "portal": "Staff Portal",
+    "module": "Employees & Management"
+  },
+  {
+    "path": "staff_dialer.html",
+    "filename": "staff_dialer.html",
+    "title": "Auto Dialer | Mynt Real",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_employee_directory.html",
+    "filename": "staff_employee_directory.html",
+    "title": "Employee Directory - Mynt Real LLP",
+    "portal": "Staff Portal",
+    "module": "Employees & Management"
+  },
+  {
+    "path": "staff_employees.html",
+    "filename": "staff_employees.html",
+    "title": "Mynt Real LLP Staff Portal - Employee Management",
+    "portal": "Staff Portal",
+    "module": "Employees & Management"
+  },
+  {
+    "path": "staff_etc_students.html",
+    "filename": "staff_etc_students.html",
+    "title": "ETC Student Master \u2014 VGK4U Training Centre",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_executive_dashboard.html",
+    "filename": "staff_executive_dashboard.html",
+    "title": "Mynt Real \u2014 Executive Dashboard",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_hr_candidates.html",
+    "filename": "staff_hr_candidates.html",
+    "title": "Candidates \u2014 HR",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_hr_job_postings.html",
+    "filename": "staff_hr_job_postings.html",
+    "title": "Job Postings \u2014 HR",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_incentive_source.html",
+    "filename": "staff_incentive_source.html",
+    "title": "Incentive Source Verification",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_incentives_approvals.html",
+    "filename": "staff_incentives_approvals.html",
+    "title": "Incentive Approvals - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_incentives_points.html",
+    "filename": "staff_incentives_points.html",
+    "title": "User Deliverables - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_incentives_vgk4u.html",
+    "filename": "staff_incentives_vgk4u.html",
+    "title": "VGK4U Members - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "VGK / Zynova Operations"
+  },
+  {
+    "path": "staff_income_trigger.html",
+    "filename": "staff_income_trigger.html",
+    "title": "Mynt Real LLP Staff Portal - Income Trigger",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_incoming_calls.html",
+    "filename": "staff_incoming_calls.html",
+    "title": "Softphone Center \u2014 MyntOS",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_inventory_accessories.html",
+    "filename": "staff_inventory_accessories.html",
+    "title": "Inventory Stock Sheet \u2014 Vehicles &amp; Accessories",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_inventory_color_sheet.html",
+    "filename": "staff_inventory_color_sheet.html",
+    "title": "Vehicle Color Sheet \u2014 Inventory",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_inventory_intake.html",
+    "filename": "staff_inventory_intake.html",
+    "title": "Purchase Intake Validation - Inventory Management",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_inventory_stock_ledger.html",
+    "filename": "staff_inventory_stock_ledger.html",
+    "title": "Stock Ledger - Inventory Management",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_inventory_stock_transfers.html",
+    "filename": "staff_inventory_stock_transfers.html",
+    "title": "Stock Transfers - Inventory Management",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_inventory_stock_validation.html",
+    "filename": "staff_inventory_stock_validation.html",
+    "title": "Stock Validation - Inventory Management",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_kra_review.html",
+    "filename": "staff_kra_review.html",
+    "title": "Mynt Real LLP - KRA Reviews",
+    "portal": "Staff Portal",
+    "module": "Tasks, KRAs & Planner"
+  },
+  {
+    "path": "staff_kra_status.html",
+    "filename": "staff_kra_status.html",
+    "title": "Mynt Real LLP - KRA Status",
+    "portal": "Staff Portal",
+    "module": "Tasks, KRAs & Planner"
+  },
+  {
+    "path": "staff_kra_templates.html",
+    "filename": "staff_kra_templates.html",
+    "title": "Mynt Real LLP - KRA Templates",
+    "portal": "Staff Portal",
+    "module": "Tasks, KRAs & Planner"
+  },
+  {
+    "path": "staff_kra_tracking_sheet.html",
+    "filename": "staff_kra_tracking_sheet.html",
+    "title": "KRA Tracking Sheet - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Tasks, KRAs & Planner"
+  },
+  {
+    "path": "staff_kyc_approvals.html",
+    "filename": "staff_kyc_approvals.html",
+    "title": "Mynt Real LLP - KYC Approvals",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_lead_category.html",
+    "filename": "staff_lead_category.html",
+    "title": "Mynt Real \u2014 Category Leads",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_lead_sources.html",
+    "filename": "staff_lead_sources.html",
+    "title": "Mynt Real LLP Staff Portal - CRM Settings",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_lead_sync.html",
+    "filename": "staff_lead_sync.html",
+    "title": "Lead Sync \u2014 Mynt Real LLP Staff Portal",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_leads.html",
+    "filename": "staff_leads.html",
+    "title": "Staff Leads",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_leave_approvals.html",
+    "filename": "staff_leave_approvals.html",
+    "title": "MyntReal LLP - Leave Approvals",
+    "portal": "Staff Portal",
+    "module": "HR & Attendance"
+  },
+  {
+    "path": "staff_login.html",
+    "filename": "staff_login.html",
+    "title": "Mynt Real LLP - Staff Portal Login",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_marketplace_codes_segments.html",
+    "filename": "staff_marketplace_codes_segments.html",
+    "title": "Codes & Segments - SFMS",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_marketplace_config.html",
+    "filename": "staff_marketplace_config.html",
+    "title": "Marketplace Config \u2014 MNR Staff",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_meta_ads_center.html",
+    "filename": "staff_meta_ads_center.html",
+    "title": "Meta Ads Center \u2014 MYNT OS",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_meta_ai_agent.html",
+    "filename": "staff_meta_ai_agent.html",
+    "title": "AI Marketing Agent \u2014 MYNT OS",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_meta_campaigns.html",
+    "filename": "staff_meta_campaigns.html",
+    "title": "Meta Campaigns \u2014 MYNT OS",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_meta_creative_studio.html",
+    "filename": "staff_meta_creative_studio.html",
+    "title": "Creative Studio \u2014 MYNT OS",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_meta_leads.html",
+    "filename": "staff_meta_leads.html",
+    "title": "Meta Leads Ingestion \u2014 MYNT OS",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_meta_settings.html",
+    "filename": "staff_meta_settings.html",
+    "title": "Meta Settings \u2014 MYNT OS",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_mnr_announcements_view.html",
+    "filename": "staff_mnr_announcements_view.html",
+    "title": "View Announcements - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "staff_mnr_leads_master.html",
+    "filename": "staff_mnr_leads_master.html",
+    "title": "Mynt Real \u2014 VGK4U Leads Master",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_my_attendance.html",
+    "filename": "staff_my_attendance.html",
+    "title": "MyntReal LLP - In/Out Time",
+    "portal": "Staff Portal",
+    "module": "HR & Attendance"
+  },
+  {
+    "path": "staff_my_incentives.html",
+    "filename": "staff_my_incentives.html",
+    "title": "My Lead Incentives - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_my_journeys.html",
+    "filename": "staff_my_journeys.html",
+    "title": "My Journeys - MyntReal LLP",
+    "portal": "Staff Portal",
+    "module": "Field & GPS Journeys"
+  },
+  {
+    "path": "staff_my_kras.html",
+    "filename": "staff_my_kras.html",
+    "title": "My KRAs - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Tasks, KRAs & Planner"
+  },
+  {
+    "path": "staff_my_kyc.html",
+    "filename": "staff_my_kyc.html",
+    "title": "Mynt Real LLP - My KYC",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_my_leads.html",
+    "filename": "staff_my_leads.html",
+    "title": "My Leads \u2014 Personal Workspace",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_my_leaves.html",
+    "filename": "staff_my_leaves.html",
+    "title": "MyntReal LLP - My Leaves",
+    "portal": "Staff Portal",
+    "module": "HR & Attendance"
+  },
+  {
+    "path": "staff_my_location_history.html",
+    "filename": "staff_my_location_history.html",
+    "title": "MyntReal LLP - My Location History",
+    "portal": "Staff Portal",
+    "module": "Field & GPS Journeys"
+  },
+  {
+    "path": "staff_my_reimbursement_claims.html",
+    "filename": "staff_my_reimbursement_claims.html",
+    "title": "My Reimbursement Claims - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_my_tenant.html",
+    "filename": "staff_my_tenant.html",
+    "title": "All Tenants \u2014 VGK SaaS",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_my_timesheet.html",
+    "filename": "staff_my_timesheet.html",
+    "title": "MyntReal LLP - My Timesheet",
+    "portal": "Staff Portal",
+    "module": "Tasks, KRAs & Planner"
+  },
+  {
+    "path": "staff_my_vgk_registrations.html",
+    "filename": "staff_my_vgk_registrations.html",
+    "title": "My VGK Registrations \u2014 MNR Staff",
+    "portal": "Staff Portal",
+    "module": "VGK / Zynova Operations"
+  },
+  {
+    "path": "staff_nda_acceptance_audit.html",
+    "filename": "staff_nda_acceptance_audit.html",
+    "title": "MyntReal LLP - NDA Acceptance Audit",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_nda_editor.html",
+    "filename": "staff_nda_editor.html",
+    "title": "MyntReal LLP - NDA Editor",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_nda_pending.html",
+    "filename": "staff_nda_pending.html",
+    "title": "MyntReal LLP - Pending Agreement Acceptances",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_nda_versions.html",
+    "filename": "staff_nda_versions.html",
+    "title": "MyntReal LLP - NDA Versions",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_offboarding.html",
+    "filename": "staff_offboarding.html",
+    "title": "Mynt Real LLP Staff Portal - Employee Offboarding",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_operator_calls.html",
+    "filename": "staff_operator_calls.html",
+    "title": "Operator Calls Dashboard - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_page_registry.html",
+    "filename": "staff_page_registry.html",
+    "title": "Page Registry Manager - Mynt Real LLP",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_partner_sales.html",
+    "filename": "staff_partner_sales.html",
+    "title": "Partner Sales Invoices - SFMS",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_partner_stock.html",
+    "filename": "staff_partner_stock.html",
+    "title": "Partner Stock - SFMS",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_partner_walkins.html",
+    "filename": "staff_partner_walkins.html",
+    "title": "Partner Walk-ins - SFMS",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_performance_config.html",
+    "filename": "staff_performance_config.html",
+    "title": "Performance Configuration & Report \u2014 MNR Staff",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_platform_setup_guide.html",
+    "filename": "staff_platform_setup_guide.html",
+    "title": "Platform Setup Guide \u2014 MyntReal / VGK4U SFMS",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_progress.html",
+    "filename": "staff_progress.html",
+    "title": "Mynt Real LLP Staff Portal - Progress",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_promo_nda_audit.html",
+    "filename": "staff_promo_nda_audit.html",
+    "title": "Promoter NDA Audit \u2014 MyntReal LLP",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_promo_nda_editor.html",
+    "filename": "staff_promo_nda_editor.html",
+    "title": "Promoter NDA Editor \u2014 MyntReal LLP",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_promoters.html",
+    "filename": "staff_promoters.html",
+    "title": "Promoter Management \u2014 Internal | MNR Staff",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_reimbursement_approval.html",
+    "filename": "staff_reimbursement_approval.html",
+    "title": "Reimbursement Approvals - SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_sales_report.html",
+    "filename": "staff_sales_report.html",
+    "title": "Sales Team Report \u2014 Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_service_center_revenue.html",
+    "filename": "staff_service_center_revenue.html",
+    "title": "Service Center Revenue - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Service Center & Tickets"
+  },
+  {
+    "path": "staff_service_center_tracking.html",
+    "filename": "staff_service_center_tracking.html",
+    "title": "Service Center Tracking - SFMS",
+    "portal": "Staff Portal",
+    "module": "Service Center & Tickets"
+  },
+  {
+    "path": "staff_service_dashboard.html",
+    "filename": "staff_service_dashboard.html",
+    "title": "Service Dashboard - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Service Center & Tickets"
+  },
+  {
+    "path": "staff_service_performance.html",
+    "filename": "staff_service_performance.html",
+    "title": "Team Performance - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Service Center & Tickets"
+  },
+  {
+    "path": "staff_service_procurement.html",
+    "filename": "staff_service_procurement.html",
+    "title": "Procurement Queue - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Service Center & Tickets"
+  },
+  {
+    "path": "staff_service_queue.html",
+    "filename": "staff_service_queue.html",
+    "title": "Service Queue - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Service Center & Tickets"
+  },
+  {
+    "path": "staff_service_raise_ticket.html",
+    "filename": "staff_service_raise_ticket.html",
+    "title": "Raise Service Ticket - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Service Center & Tickets"
+  },
+  {
+    "path": "staff_service_reports.html",
+    "filename": "staff_service_reports.html",
+    "title": "Service Reports - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Service Center & Tickets"
+  },
+  {
+    "path": "staff_service_ticket_guide.html",
+    "filename": "staff_service_ticket_guide.html",
+    "title": "Service Ticket Module \u2014 Complete Guide",
+    "portal": "Staff Portal",
+    "module": "Service Center & Tickets"
+  },
+  {
+    "path": "staff_session_guide.html",
+    "filename": "staff_session_guide.html",
+    "title": "Staff Features Guide \u2014 Session March 2026",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_settings.html",
+    "filename": "staff_settings.html",
+    "title": "Mynt Real LLP Staff Portal - System Settings",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_sidebar_sync.html",
+    "filename": "staff_sidebar_sync.html",
+    "title": "Sidebar Menu Sync - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_signup_categories.html",
+    "filename": "staff_signup_categories.html",
+    "title": "Signup Categories - Configuration",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_snapshot.html",
+    "filename": "staff_snapshot.html",
+    "title": "Staff Overview \u2014 Operations Snapshot",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_softphone_hub.html",
+    "filename": "staff_softphone_hub.html",
+    "title": "Softphone Center \u2014 MyntOS",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_solar_vendors.html",
+    "filename": "staff_solar_vendors.html",
+    "title": "Solar Vendors \u2014 SFMS",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_task_review.html",
+    "filename": "staff_task_review.html",
+    "title": "Mynt Real LLP - Task Reviews",
+    "portal": "Staff Portal",
+    "module": "Tasks, KRAs & Planner"
+  },
+  {
+    "path": "staff_task_tracker.html",
+    "filename": "staff_task_tracker.html",
+    "title": "MyntReal LLP - Task Dashboard",
+    "portal": "Staff Portal",
+    "module": "Tasks, KRAs & Planner"
+  },
+  {
+    "path": "staff_tasks_assigned_by_me.html",
+    "filename": "staff_tasks_assigned_by_me.html",
+    "title": "MyntReal LLP - Tasks Assigned By Me",
+    "portal": "Staff Portal",
+    "module": "Tasks, KRAs & Planner"
+  },
+  {
+    "path": "staff_tasks_assigned_to_me.html",
+    "filename": "staff_tasks_assigned_to_me.html",
+    "title": "MyntReal LLP - Tasks Assigned To Me",
+    "portal": "Staff Portal",
+    "module": "Tasks, KRAs & Planner"
+  },
+  {
+    "path": "staff_team_activities.html",
+    "filename": "staff_team_activities.html",
+    "title": "MyntReal LLP - Team Activities",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_team_attendance.html",
+    "filename": "staff_team_attendance.html",
+    "title": "MyntReal LLP - In/Out Records - Admin",
+    "portal": "Staff Portal",
+    "module": "HR & Attendance"
+  },
+  {
+    "path": "staff_team_attendance_summary.html",
+    "filename": "staff_team_attendance_summary.html",
+    "title": "MyntReal LLP - Team Attendance Summary",
+    "portal": "Staff Portal",
+    "module": "HR & Attendance"
+  },
+  {
+    "path": "staff_team_journeys.html",
+    "filename": "staff_team_journeys.html",
+    "title": "Team Journeys - MyntReal LLP",
+    "portal": "Staff Portal",
+    "module": "Field & GPS Journeys"
+  },
+  {
+    "path": "staff_team_leads.html",
+    "filename": "staff_team_leads.html",
+    "title": "Team Leads - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_team_leads_consolidated.html",
+    "filename": "staff_team_leads_consolidated.html",
+    "title": "Team Leads - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_team_location_tracker.html",
+    "filename": "staff_team_location_tracker.html",
+    "title": "Team Location Tracker - MyntReal LLP",
+    "portal": "Staff Portal",
+    "module": "Field & GPS Journeys"
+  },
+  {
+    "path": "staff_testing_req.html",
+    "filename": "staff_testing_req.html",
+    "title": "Testing Requirements \u2014 MNR Platform",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_timesheet_approval.html",
+    "filename": "staff_timesheet_approval.html",
+    "title": "MyntReal LLP - Timesheet Approval",
+    "portal": "Staff Portal",
+    "module": "Tasks, KRAs & Planner"
+  },
+  {
+    "path": "staff_training_videos.html",
+    "filename": "staff_training_videos.html",
+    "title": "Training Videos - MNR Platform",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_validation.html",
+    "filename": "staff_validation.html",
+    "title": "Staff System Validation | MNR Platform",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_vendor_returns.html",
+    "filename": "staff_vendor_returns.html",
+    "title": "Vendor Returns - Inventory Management",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_vgk4u_insurance.html",
+    "filename": "staff_vgk4u_insurance.html",
+    "title": "VGK Care (ZC) - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "VGK / Zynova Operations"
+  },
+  {
+    "path": "staff_vgk4u_journeys.html",
+    "filename": "staff_vgk4u_journeys.html",
+    "title": "Journeys Dashboard - MyntReal LLP",
+    "portal": "Staff Portal",
+    "module": "Field & GPS Journeys"
+  },
+  {
+    "path": "staff_vgk4u_po.html",
+    "filename": "staff_vgk4u_po.html",
+    "title": "EV Spares PO Management \u2014 Staff Portal",
+    "portal": "Staff Portal",
+    "module": "VGK / Zynova Operations"
+  },
+  {
+    "path": "staff_vgk4u_real_estate.html",
+    "filename": "staff_vgk4u_real_estate.html",
+    "title": "VGK Real Dreams (ZR) - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "VGK / Zynova Operations"
+  },
+  {
+    "path": "staff_vgk_config.html",
+    "filename": "staff_vgk_config.html",
+    "title": "VGK Commission Config \u2014 Staff",
+    "portal": "Staff Portal",
+    "module": "VGK / Zynova Operations"
+  },
+  {
+    "path": "staff_vgk_coupons.html",
+    "filename": "staff_vgk_coupons.html",
+    "title": "VGK PIN Activation | Staff Portal",
+    "portal": "Staff Portal",
+    "module": "VGK / Zynova Operations"
+  },
+  {
+    "path": "staff_vgk_income.html",
+    "filename": "staff_vgk_income.html",
+    "title": "VGK Income Management \u2014 Staff",
+    "portal": "Staff Portal",
+    "module": "VGK / Zynova Operations"
+  },
+  {
+    "path": "staff_vgk_media.html",
+    "filename": "staff_vgk_media.html",
+    "title": "VGK Media Manager \u2014 Staff",
+    "portal": "Staff Portal",
+    "module": "VGK / Zynova Operations"
+  },
+  {
+    "path": "staff_vgk_members.html",
+    "filename": "staff_vgk_members.html",
+    "title": "VGK Channel Partners \u2014 Staff",
+    "portal": "Staff Portal",
+    "module": "VGK / Zynova Operations"
+  },
+  {
+    "path": "staff_vgk_promo_codes.html",
+    "filename": "staff_vgk_promo_codes.html",
+    "title": "VGK Promo Codes \u2014 Staff",
+    "portal": "Staff Portal",
+    "module": "VGK / Zynova Operations"
+  },
+  {
+    "path": "staff_vgk_vendor_categories.html",
+    "filename": "staff_vgk_vendor_categories.html",
+    "title": "VGK Vendor Categories",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_vgk_vendor_detail.html",
+    "filename": "staff_vgk_vendor_detail.html",
+    "title": "Vendor Detail \u2014 Staff",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_vgk_vendor_products.html",
+    "filename": "staff_vgk_vendor_products.html",
+    "title": "Vendor Marketplace Products \u2014 Staff",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_vgk_vendor_transactions.html",
+    "filename": "staff_vgk_vendor_transactions.html",
+    "title": "Vendor Transactions \u2014 Accounts Approval",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_vgk_vendors.html",
+    "filename": "staff_vgk_vendors.html",
+    "title": "VGK Vendor Master \u2014 Staff",
+    "portal": "Staff Portal",
+    "module": "Accounts & Finance"
+  },
+  {
+    "path": "staff_website_assets.html",
+    "filename": "staff_website_assets.html",
+    "title": "Website Asset Manager \u2014 Staff",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "staff_whatsapp_center.html",
+    "filename": "staff_whatsapp_center.html",
+    "title": "Mynt Real LLP Staff Portal \u2014 WhatsApp Center",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_whatsapp_config.html",
+    "filename": "staff_whatsapp_config.html",
+    "title": "Mynt Real \u2014 WhatsApp Center",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_whatsapp_inbox.html",
+    "filename": "staff_whatsapp_inbox.html",
+    "title": "WhatsApp Inbox \u2014 MyntReal",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "staff_whatsapp_monitor.html",
+    "filename": "staff_whatsapp_monitor.html",
+    "title": "Mynt Real \u2014 WhatsApp Monitor",
+    "portal": "Staff Portal",
+    "module": "CRM, Calling & WhatsApp"
+  },
+  {
+    "path": "super_admin_awards_approval.html",
+    "filename": "super_admin_awards_approval.html",
+    "title": "super_admin_awards_approval.html",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "superadmin_awards_simple.html",
+    "filename": "superadmin_awards_simple.html",
+    "title": "superadmin_awards_simple.html",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Awards & Bonanza"
+  },
+  {
+    "path": "superadmin_global_config.html",
+    "filename": "superadmin_global_config.html",
+    "title": "Global Configuration - Super Admin",
+    "portal": "RVZ Supreme / Admin",
+    "module": "System Controls"
+  },
+  {
+    "path": "superadmin_password_reset.html",
+    "filename": "superadmin_password_reset.html",
+    "title": "User Password Reset - Super Admin - MNR Business Access Program",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "superadmin_placement_approvals.html",
+    "filename": "superadmin_placement_approvals.html",
+    "title": "Placement Approvals - Super Admin",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "superadmin_red_id_oversight.html",
+    "filename": "superadmin_red_id_oversight.html",
+    "title": "Red ID Oversight - Super Admin",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "superadmin_system_health.html",
+    "filename": "superadmin_system_health.html",
+    "title": "System Health - Super Admin",
+    "portal": "RVZ Supreme / Admin",
+    "module": "System Controls"
+  },
+  {
+    "path": "team_leads.html",
+    "filename": "team_leads.html",
+    "title": "Team Leads",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "templates/rvz/awards_approval.html",
+    "filename": "awards_approval.html",
+    "title": "Awards & Bonanza Status - RVZ Supreme",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Awards & Bonanza"
+  },
+  {
+    "path": "templates/rvz/awards_approval_OLD_BACKUP.html",
+    "filename": "awards_approval_OLD_BACKUP.html",
+    "title": "Awards Approval - RVZ Supreme",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Awards & Bonanza"
+  },
+  {
+    "path": "templates/rvz/bonanza_procurement.html",
+    "filename": "bonanza_procurement.html",
+    "title": "RVZ Supreme - Bonanza Procurement",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Awards & Bonanza"
+  },
+  {
+    "path": "templates/rvz/income_finance_complete.html",
+    "filename": "income_finance_complete.html",
+    "title": "income_finance_complete.html",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Finance & Income"
+  },
+  {
+    "path": "templates/rvz/kyc_banking_approval.html",
+    "filename": "kyc_banking_approval.html",
+    "title": "RVZ Supreme - KYC/Banking Approval",
+    "portal": "RVZ Supreme / Admin",
+    "module": "KYC & Banking"
+  },
+  {
+    "path": "templates/rvz/training_claims_approval.html",
+    "filename": "training_claims_approval.html",
+    "title": "RVZ Supreme - Training Claims Approval",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Administration"
+  },
+  {
+    "path": "templates/rvz/user_data_search.html",
+    "filename": "user_data_search.html",
+    "title": "User Data Search - RVZ ID Dashboard",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Member Governance"
+  },
+  {
+    "path": "templates/rvz/user_management.html",
+    "filename": "user_management.html",
+    "title": "RVZ Supreme - User Management",
+    "portal": "RVZ Supreme / Admin",
+    "module": "Member Governance"
+  },
+  {
+    "path": "templates/staff_mnr_awards_config.html",
+    "filename": "staff_mnr_awards_config.html",
+    "title": "Awards Configuration",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_mnr_awards_management.html",
+    "filename": "staff_mnr_awards_management.html",
+    "title": "Awards Management - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_mnr_field_allowances.html",
+    "filename": "staff_mnr_field_allowances.html",
+    "title": "Field Allowance Management - Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_mnr_financial_statement.html",
+    "filename": "staff_mnr_financial_statement.html",
+    "title": "MNR Financial Statement",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_mnr_income_unified.html",
+    "filename": "staff_mnr_income_unified.html",
+    "title": "staff_mnr_income_unified.html",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_mnr_user_allowances.html",
+    "filename": "staff_mnr_user_allowances.html",
+    "title": "MNR \u2014 Allowances | Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_mnr_user_announcements.html",
+    "filename": "staff_mnr_user_announcements.html",
+    "title": "User Announcements | Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_mnr_user_audit.html",
+    "filename": "staff_mnr_user_audit.html",
+    "title": "MNR \u2014 Audit Log | Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_mnr_user_awards.html",
+    "filename": "staff_mnr_user_awards.html",
+    "title": "MNR \u2014 Awards | Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_mnr_user_coupons.html",
+    "filename": "staff_mnr_user_coupons.html",
+    "title": "MNR \u2014 Coupons | Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_mnr_user_dashboard.html",
+    "filename": "staff_mnr_user_dashboard.html",
+    "title": "MNR \u2014 Member Dashboard | Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_mnr_user_members.html",
+    "filename": "staff_mnr_user_members.html",
+    "title": "MNR \u2014 Members | Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_mnr_user_mnr.html",
+    "filename": "staff_mnr_user_mnr.html",
+    "title": "MNR \u2014 Earnings | Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_mnr_user_myntreal.html",
+    "filename": "staff_mnr_user_myntreal.html",
+    "title": "MNR \u2014 Myntreal | Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_mnr_user_profile.html",
+    "filename": "staff_mnr_user_profile.html",
+    "title": "MNR \u2014 Member Profile | Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_mnr_user_vgk4u.html",
+    "filename": "staff_mnr_user_vgk4u.html",
+    "title": "MNR \u2014 VGK4U | Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff MNR Management"
+  },
+  {
+    "path": "templates/staff_sheets_import.html",
+    "filename": "staff_sheets_import.html",
+    "title": "Import Leads from Google Sheets \u2014 Staff Portal",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "templates/vgk/awards_approval.html",
+    "filename": "awards_approval.html",
+    "title": "Awards & Bonanza Status - RVZ Supreme",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "templates/vgk/awards_approval_OLD_BACKUP.html",
+    "filename": "awards_approval_OLD_BACKUP.html",
+    "title": "Awards Approval - RVZ Supreme",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "templates/vgk/bonanza_procurement.html",
+    "filename": "bonanza_procurement.html",
+    "title": "RVZ Supreme - Bonanza Procurement",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "templates/vgk/income_finance_complete.html",
+    "filename": "income_finance_complete.html",
+    "title": "income_finance_complete.html",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Income & Franchises"
+  },
+  {
+    "path": "templates/vgk/kyc_banking_approval.html",
+    "filename": "kyc_banking_approval.html",
+    "title": "RVZ Supreme - KYC/Banking Approval",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "templates/vgk/partner_kyc_review.html",
+    "filename": "partner_kyc_review.html",
+    "title": "VGK Partner KYC Review",
+    "portal": "Partner Portal",
+    "module": "Leads & Profile"
+  },
+  {
+    "path": "templates/vgk/training_claims_approval.html",
+    "filename": "training_claims_approval.html",
+    "title": "RVZ Supreme - Training Claims Approval",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Training & Academics"
+  },
+  {
+    "path": "templates/vgk/user_data_search.html",
+    "filename": "user_data_search.html",
+    "title": "User Data Search - RVZ ID Dashboard",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "templates/vgk/user_management.html",
+    "filename": "user_management.html",
+    "title": "RVZ Supreme - User Management",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "test_categories.html",
+    "filename": "test_categories.html",
+    "title": "Test Categories Endpoint",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "test_landing.html",
+    "filename": "test_landing.html",
+    "title": "MNR Test Environment",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "test_login.html",
+    "filename": "test_login.html",
+    "title": "MNR Test Login",
+    "portal": "Public / Marketing / Static",
+    "module": "Authentication"
+  },
+  {
+    "path": "test_partner_login.html",
+    "filename": "test_partner_login.html",
+    "title": "Partner Test Login",
+    "portal": "Partner Portal",
+    "module": "Partner Operations"
+  },
+  {
+    "path": "test_staff_login.html",
+    "filename": "test_staff_login.html",
+    "title": "Staff Test Login",
+    "portal": "Staff Portal",
+    "module": "Staff Operations"
+  },
+  {
+    "path": "user_announcements.html",
+    "filename": "user_announcements.html",
+    "title": "Official Updates - MNR Business Access Program",
+    "portal": "MNR Member Portal",
+    "module": "News & Feedback"
+  },
+  {
+    "path": "user_change_password.html",
+    "filename": "user_change_password.html",
+    "title": "Security Settings - MNR Business Access Program",
+    "portal": "MNR Member Portal",
+    "module": "Profile & KYC"
+  },
+  {
+    "path": "user_coupon_benefits.html",
+    "filename": "user_coupon_benefits.html",
+    "title": "user_coupon_benefits.html",
+    "portal": "MNR Member Portal",
+    "module": "Coupons & Benefits"
+  },
+  {
+    "path": "user_daywise_income.html",
+    "filename": "user_daywise_income.html",
+    "title": "Facilitation Summary - MNR Business Access Program",
+    "portal": "MNR Member Portal",
+    "module": "Income & Payouts"
+  },
+  {
+    "path": "user_direct_referral.html",
+    "filename": "user_direct_referral.html",
+    "title": "user_direct_referral.html",
+    "portal": "MNR Member Portal",
+    "module": "Income & Payouts"
+  },
+  {
+    "path": "user_earnings.html",
+    "filename": "user_earnings.html",
+    "title": "My Earnings - MNR Business Access Program",
+    "portal": "MNR Member Portal",
+    "module": "Income & Payouts"
+  },
+  {
+    "path": "user_ev_benefits.html",
+    "filename": "user_ev_benefits.html",
+    "title": "EV Purchase Benefits - MNR Business Access Program Discount Coupon",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "user_ev_discount.html",
+    "filename": "user_ev_discount.html",
+    "title": "EV Purchase Benefits Coupons - MNR Business Access Program Discount Coupon",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "user_feedback_submit.html",
+    "filename": "user_feedback_submit.html",
+    "title": "Submit Announcement | MNR Business Access Program",
+    "portal": "MNR Member Portal",
+    "module": "News & Feedback"
+  },
+  {
+    "path": "user_franchise_earnings.html",
+    "filename": "user_franchise_earnings.html",
+    "title": "user_franchise_earnings.html",
+    "portal": "MNR Member Portal",
+    "module": "Income & Payouts"
+  },
+  {
+    "path": "user_guru_dakshina.html",
+    "filename": "user_guru_dakshina.html",
+    "title": "user_guru_dakshina.html",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "user_matching_referral.html",
+    "filename": "user_matching_referral.html",
+    "title": "user_matching_referral.html",
+    "portal": "MNR Member Portal",
+    "module": "Income & Payouts"
+  },
+  {
+    "path": "user_my_announcements.html",
+    "filename": "user_my_announcements.html",
+    "title": "My Updates - MNR Business Access Program",
+    "portal": "MNR Member Portal",
+    "module": "News & Feedback"
+  },
+  {
+    "path": "user_my_announcements_approved.html",
+    "filename": "user_my_announcements_approved.html",
+    "title": "Published Announcements - MNR Business Access Program",
+    "portal": "MNR Member Portal",
+    "module": "News & Feedback"
+  },
+  {
+    "path": "user_my_announcements_pending.html",
+    "filename": "user_my_announcements_pending.html",
+    "title": "Under Review Announcements - MNR Business Access Program",
+    "portal": "MNR Member Portal",
+    "module": "News & Feedback"
+  },
+  {
+    "path": "user_my_announcements_rejected.html",
+    "filename": "user_my_announcements_rejected.html",
+    "title": "Not Approved Announcements - MNR Business Access Program",
+    "portal": "MNR Member Portal",
+    "module": "News & Feedback"
+  },
+  {
+    "path": "user_my_leads.html",
+    "filename": "user_my_leads.html",
+    "title": "user_my_leads.html",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "user_my_submissions.html",
+    "filename": "user_my_submissions.html",
+    "title": "My Announcement Submissions - MNR Business Access Program",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "user_points_utilisation.html",
+    "filename": "user_points_utilisation.html",
+    "title": "user_points_utilisation.html",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "user_tickets.html",
+    "filename": "user_tickets.html",
+    "title": "My Support Tickets - MNR Business Access Program",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "user_vgk4u_insurance.html",
+    "filename": "user_vgk4u_insurance.html",
+    "title": "user_vgk4u_insurance.html",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "user_vgk4u_my_leads.html",
+    "filename": "user_vgk4u_my_leads.html",
+    "title": "user_vgk4u_my_leads.html",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "user_vgk4u_real_estate.html",
+    "filename": "user_vgk4u_real_estate.html",
+    "title": "user_vgk4u_real_estate.html",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "user_vgk4u_training.html",
+    "filename": "user_vgk4u_training.html",
+    "title": "user_vgk4u_training.html",
+    "portal": "MNR Member Portal",
+    "module": "Member Operations"
+  },
+  {
+    "path": "user_withdrawals.html",
+    "filename": "user_withdrawals.html",
+    "title": "user_withdrawals.html",
+    "portal": "MNR Member Portal",
+    "module": "Income & Payouts"
+  },
+  {
+    "path": "vendor_login.html",
+    "filename": "vendor_login.html",
+    "title": "Vendor Portal \u2014 Login",
+    "portal": "Public / Marketing / Static",
+    "module": "Authentication"
+  },
+  {
+    "path": "vendor_portal.html",
+    "filename": "vendor_portal.html",
+    "title": "VGK Vendor Portal \u2014 Dashboard",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "vendor_scan.html",
+    "filename": "vendor_scan.html",
+    "title": "VGK Shop",
+    "portal": "Public / Marketing / Static",
+    "module": "Public & Static"
+  },
+  {
+    "path": "vgk_awards_oversight.html",
+    "filename": "vgk_awards_oversight.html",
+    "title": "vgk_awards_oversight.html",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_awards_procurement.html",
+    "filename": "vgk_awards_procurement.html",
+    "title": "vgk_awards_procurement.html",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_bonanza_claims.html",
+    "filename": "vgk_bonanza_claims.html",
+    "title": "VGK Bonanza Claims \u2014 Staff",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_bonanza_management.html",
+    "filename": "vgk_bonanza_management.html",
+    "title": "VGK Bonanza Management \u2014 Staff",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_cash_income_accounts.html",
+    "filename": "vgk_cash_income_accounts.html",
+    "title": "VGK Cash Income \u2014 Accounts Release",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Income & Franchises"
+  },
+  {
+    "path": "vgk_cash_income_sales.html",
+    "filename": "vgk_cash_income_sales.html",
+    "title": "VGK Cash Income \u2014 Sales Review",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Income & Franchises"
+  },
+  {
+    "path": "vgk_categories.html",
+    "filename": "vgk_categories.html",
+    "title": "Manage Categories - RVZ Admin",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_company_earnings.html",
+    "filename": "vgk_company_earnings.html",
+    "title": "Company Earnings - RVZ Supreme",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Income & Franchises"
+  },
+  {
+    "path": "vgk_company_earnings_landing.html",
+    "filename": "vgk_company_earnings_landing.html",
+    "title": "Company Earnings - RVZ Supreme",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Income & Franchises"
+  },
+  {
+    "path": "vgk_compliance.html",
+    "filename": "vgk_compliance.html",
+    "title": "Compliance Dashboard - RVZ Supreme",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_dashboard.html",
+    "filename": "vgk_dashboard.html",
+    "title": "VGK4U Channel Partner Portal \u2014 Dashboard",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_dc_shadow_mode.html",
+    "filename": "vgk_dc_shadow_mode.html",
+    "title": "DC Protocol Shadow Mode Monitor - MNR Business Access Program",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_expense_details.html",
+    "filename": "vgk_expense_details.html",
+    "title": "Expense Details - RVZ Supreme",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_expenses_management.html",
+    "filename": "vgk_expenses_management.html",
+    "title": "RVZ Expense Management - Supreme Authority",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_finance_supreme.html",
+    "filename": "vgk_finance_supreme.html",
+    "title": "\ud83c\udfe6 Bank Transfers (Skip-Level) - RVZ Supreme - MNR Business Access Program",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_history_supreme.html",
+    "filename": "vgk_history_supreme.html",
+    "title": "\ud83d\udcdc Complete History (All Stages) - RVZ Supreme - MNR Business Access Program",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_income_finance_complete.html",
+    "filename": "vgk_income_finance_complete.html",
+    "title": "\ud83d\udcb0 Finance Completion (Final Step) - RVZ Supreme - MNR Business Access Program",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Income & Franchises"
+  },
+  {
+    "path": "vgk_income_history.html",
+    "filename": "vgk_income_history.html",
+    "title": "\ud83d\udcca Income History - RVZ Supreme",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Income & Franchises"
+  },
+  {
+    "path": "vgk_income_records.html",
+    "filename": "vgk_income_records.html",
+    "title": "\ud83d\udccb Income Records - RVZ Supreme - MNR Business Access Program",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Income & Franchises"
+  },
+  {
+    "path": "vgk_income_supreme.html",
+    "filename": "vgk_income_supreme.html",
+    "title": "\ud83d\udcb0 Income Approval - RVZ Supreme",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Income & Franchises"
+  },
+  {
+    "path": "vgk_income_unified.html",
+    "filename": "vgk_income_unified.html",
+    "title": "VGK Income \u2014 Unified Management",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Income & Franchises"
+  },
+  {
+    "path": "vgk_login.html",
+    "filename": "vgk_login.html",
+    "title": "VGK4U Channel Partner Portal",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_announcements.html",
+    "filename": "vgk_member_announcements.html",
+    "title": "Create Announcement \u2014 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_awards.html",
+    "filename": "vgk_member_awards.html",
+    "title": "Awards \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_bank_details.html",
+    "filename": "vgk_member_bank_details.html",
+    "title": "Bank Details \u2014 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_birthdays.html",
+    "filename": "vgk_member_birthdays.html",
+    "title": "Birthdays \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_coupon_activate.html",
+    "filename": "vgk_member_coupon_activate.html",
+    "title": "Activate Coupon \u2014 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Coupons & Benefits"
+  },
+  {
+    "path": "vgk_member_coupon_benefits.html",
+    "filename": "vgk_member_coupon_benefits.html",
+    "title": "Coupon Benefits \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Coupons & Benefits"
+  },
+  {
+    "path": "vgk_member_coupon_progress.html",
+    "filename": "vgk_member_coupon_progress.html",
+    "title": "Coupon Progress \u2014 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Coupons & Benefits"
+  },
+  {
+    "path": "vgk_member_coupon_transfer.html",
+    "filename": "vgk_member_coupon_transfer.html",
+    "title": "Transfer Coupons \u2014 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Coupons & Benefits"
+  },
+  {
+    "path": "vgk_member_daywise_income.html",
+    "filename": "vgk_member_daywise_income.html",
+    "title": "Daywise Income \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Income & Franchises"
+  },
+  {
+    "path": "vgk_member_direct_summary.html",
+    "filename": "vgk_member_direct_summary.html",
+    "title": "Direct Summary \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_ev_benefits.html",
+    "filename": "vgk_member_ev_benefits.html",
+    "title": "EV Benefits \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_ev_discount.html",
+    "filename": "vgk_member_ev_discount.html",
+    "title": "EV Discount \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_feedback.html",
+    "filename": "vgk_member_feedback.html",
+    "title": "Submit Feedback \u2014 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_franchise_earnings.html",
+    "filename": "vgk_member_franchise_earnings.html",
+    "title": "Franchise Earnings \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Income & Franchises"
+  },
+  {
+    "path": "vgk_member_guru_summary.html",
+    "filename": "vgk_member_guru_summary.html",
+    "title": "Guru Dakshina \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_income_types.html",
+    "filename": "vgk_member_income_types.html",
+    "title": "Income Types \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Income & Franchises"
+  },
+  {
+    "path": "vgk_member_insurance.html",
+    "filename": "vgk_member_insurance.html",
+    "title": "Insurance \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Insurance"
+  },
+  {
+    "path": "vgk_member_kyc.html",
+    "filename": "vgk_member_kyc.html",
+    "title": "KYC Documents \u2014 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_matching_summary.html",
+    "filename": "vgk_member_matching_summary.html",
+    "title": "Matching Summary \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_my_announcements.html",
+    "filename": "vgk_member_my_announcements.html",
+    "title": "My Announcements \u2014 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_my_submissions.html",
+    "filename": "vgk_member_my_submissions.html",
+    "title": "My Submissions \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_offers.html",
+    "filename": "vgk_member_offers.html",
+    "title": "VGK4U Channel Partner Offers \u2014 Loyalty Program",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_offers_telugu.html",
+    "filename": "vgk_member_offers_telugu.html",
+    "title": "VGK4U Channel Partner Offers \u2014 Loyalty Program | \u0c24\u0c46\u0c32\u0c41\u0c17\u0c41",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_profile_edit.html",
+    "filename": "vgk_member_profile_edit.html",
+    "title": "Edit Profile \u2014 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_settings.html",
+    "filename": "vgk_member_settings.html",
+    "title": "Notification Settings \u2014 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_top_earners.html",
+    "filename": "vgk_member_top_earners.html",
+    "title": "Top Earners \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_member_training.html",
+    "filename": "vgk_member_training.html",
+    "title": "Training \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "Training & Academics"
+  },
+  {
+    "path": "vgk_member_ved_summary.html",
+    "filename": "vgk_member_ved_summary.html",
+    "title": "VED \u00b7 VGK4U Member",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_password_change.html",
+    "filename": "vgk_password_change.html",
+    "title": "RVZ User Password Reset",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_payout_details.html",
+    "filename": "vgk_payout_details.html",
+    "title": "Payout Details - RVZ Supreme",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_popup_control.html",
+    "filename": "vgk_popup_control.html",
+    "title": "Popup Control - RVZ Dashboard",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_revenue_details.html",
+    "filename": "vgk_revenue_details.html",
+    "title": "Revenue Details - RVZ Supreme",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_sandbox_manager.html",
+    "filename": "vgk_sandbox_manager.html",
+    "title": "Sandbox Test Environment Manager | MNR Staff",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_secondary_password_setup.html",
+    "filename": "vgk_secondary_password_setup.html",
+    "title": "Secondary Password Setup - RVZ Dashboard",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_vendor_directory.html",
+    "filename": "vgk_vendor_directory.html",
+    "title": "VGK Vendor Directory",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_wallet_withdrawals.html",
+    "filename": "vgk_wallet_withdrawals.html",
+    "title": "VGK Wallet & Withdrawals \u2014 Staff",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  },
+  {
+    "path": "vgk_withdrawal_supreme.html",
+    "filename": "vgk_withdrawal_supreme.html",
+    "title": "\ud83d\udcb8 Withdrawal Supreme - RVZ Supreme",
+    "portal": "VGK4U / Zynova / Real Estate",
+    "module": "VGK Operations"
+  }
+]

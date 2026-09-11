@@ -13,6 +13,8 @@ Created: Sep 2026
 import unittest
 import time
 import uuid
+from datetime import datetime
+import pytz
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
@@ -22,6 +24,8 @@ from app.models.telephony_call_flow import (
 )
 from app.models.voip_call_session import VoIPCallSession
 from app.services.telephony.flow_interpreter import CallFlowInterpreter
+
+IST = pytz.timezone('Asia/Kolkata')
 
 
 class TestDIDTenantIsolation(unittest.TestCase):
@@ -149,7 +153,8 @@ class TestDIDTenantIsolation(unittest.TestCase):
             caller_phone="+919876543210",
             called_did=self.unmapped_did,
             provider_call_id="call_unmapped_test_123",
-            base_api_url="https://api.myntreal.com"
+            base_api_url="https://api.myntreal.com",
+            now_dt=datetime(2026, 9, 2, 11, 30, 0, tzinfo=IST)
         )
 
         # Must return unconfigured message and Hangup
@@ -166,7 +171,8 @@ class TestDIDTenantIsolation(unittest.TestCase):
             caller_phone="+919876543210",
             called_did=self.mapped_did_comp1,
             provider_call_id="call_mapped_comp1_test",
-            base_api_url="https://api.myntreal.com"
+            base_api_url="https://api.myntreal.com",
+            now_dt=datetime(2026, 9, 2, 11, 30, 0, tzinfo=IST)
         )
 
         # Should execute Company 1's flow

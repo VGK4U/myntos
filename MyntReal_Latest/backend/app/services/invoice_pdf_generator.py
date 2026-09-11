@@ -708,6 +708,12 @@ def generate_invoice_pdf(billing, items, ticket, mode: str = 'tax_invoice',
     # DC_IGST_PDF_001: Only mark coupon row if the coupon row was actually appended (saving > 0)
     _coupon_row_idx = (len(summary_data) - 1) if (_has_coupon and not is_estimate and _coupon_saving > 0) else None
 
+    # Round Off row (if present on invoice)
+    _round_off = float(getattr(billing, 'round_off', None) or 0)
+    if not is_estimate and abs(_round_off) >= 0.005:
+        _ro_sign = '+ ' if _round_off > 0 else '- '
+        summary_data.append(['', '', 'Round Off:', f"{_ro_sign}Rs.{abs(_round_off):.2f}"])
+
     # Grand total row
     summary_data.append(['', '', grand_label + ':', f"Rs.{grand_value:.2f}"])
     _grand_row_idx = len(summary_data) - 1

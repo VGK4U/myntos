@@ -281,34 +281,35 @@
                     </div>
 
                     <!-- ========================================== -->
-                    <!-- TAB 2: HANDLERS & ROUTING                  -->
+                    <!-- TAB 2: EMPLOYEE LEAD ROUTING & HANDLERS    -->
                     <!-- ========================================== -->
                     <div class="tab-pane fade" id="handlersPane" role="tabpanel">
                         <div class="card mb-4">
                             <div class="card-body">
                                 <div class="row g-3 align-items-center">
                                     <div class="col-md-3">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Department</label>
+                                        <select class="form-select form-select-sm" id="handlerFilterDept" onchange="loadHandlers()">
+                                            <option value="sales" selected>Sales &amp; Tele Sales</option>
+                                            <option value="all">All Departments</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
                                         <label class="form-label small fw-semibold text-secondary mb-1">Company</label>
-                                        <select class="form-select form-select-sm" id="handlerFilterCompany" onchange="filterHandlers()">
+                                        <select class="form-select form-select-sm" id="handlerFilterCompany" onchange="loadHandlers()">
                                             <option value="">All Companies</option>
                                         </select>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label small fw-semibold text-secondary mb-1">Department</label>
-                                        <select class="form-select form-select-sm" id="handlerFilterDept" onchange="filterHandlers()">
-                                            <option value="">All Departments</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label small fw-semibold text-secondary mb-1">Search</label>
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Search Staff</label>
                                         <div class="input-group input-group-sm">
                                             <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                            <input type="text" class="form-control" id="handlerSearchInput" placeholder="Category or member..." oninput="filterHandlers()">
+                                            <input type="text" class="form-control" id="handlerSearchInput" placeholder="Name or employee code..." oninput="filterEmployeeHandlers()">
                                         </div>
                                     </div>
                                     <div class="col-md-3 text-md-end pt-md-3">
-                                        <button class="btn btn-primary btn-sm w-100 w-md-auto" onclick="showAddHandlerModal()">
-                                            <i class="fas fa-user-plus me-1"></i>Add Handler Mapping
+                                        <button class="btn btn-primary btn-sm w-100 w-md-auto" onclick="showAssignCategoriesModal()">
+                                            <i class="fas fa-user-tag me-1"></i>Assign Categories
                                         </button>
                                     </div>
                                 </div>
@@ -324,19 +325,19 @@
                                 </div>
                                 <div id="handlersEmpty" class="empty-state d-none">
                                     <i class="fas fa-user-friends"></i>
-                                    <h5>No Handler Mappings Found</h5>
-                                    <p>Create a handler mapping to configure which team members receive new leads for a specific Company + Department + Category combination.</p>
+                                    <h5>No Staff Members Found</h5>
+                                    <p>No active staff members match the selected department or search criteria.</p>
                                 </div>
                                 <div class="table-responsive d-none" id="handlersTableContainer">
                                     <table class="table table-hover align-middle">
                                         <thead>
                                             <tr>
-                                                <th style="width: 160px;">Company</th>
-                                                <th style="width: 150px;">Department</th>
-                                                <th style="width: 170px;">Segment / Category</th>
-                                                <th>Associated Active Team</th>
-                                                <th style="width: 100px;">Status</th>
-                                                <th style="width: 120px;" class="text-end">Actions</th>
+                                                <th style="min-width: 220px;">Employee</th>
+                                                <th style="width: 140px;">Department</th>
+                                                <th>Assigned Categories</th>
+                                                <th style="width: 170px;">Leads Count</th>
+                                                <th style="width: 90px;">Status</th>
+                                                <th style="width: 130px;" class="text-end">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="handlersTableBody"></tbody>
@@ -411,72 +412,70 @@
         </div>
     </div>
 
-    <!-- Handler Modal -->
-    <div class="modal fade" id="handlerModal" tabindex="-1">
+    <!-- Employee Categories Assignment Modal -->
+    <div class="modal fade" id="assignModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="handlerModalTitle">Add Handler Mapping</h5>
+                    <h5 class="modal-title fw-bold" id="assignModalTitle">Assign Categories to Employee</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="handlerForm">
-                        <input type="hidden" id="handlerId">
+                    <form id="assignForm" onsubmit="event.preventDefault(); saveEmployeeCategories();">
+                        <input type="hidden" id="assignEmployeeId">
+                        
                         <div class="row g-3 mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Company <span class="text-danger">*</span></label>
-                                <select class="form-select" id="modalHandlerCompany" required onchange="onModalCompanyChange()">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Employee <span class="text-danger">*</span></label>
+                                <select class="form-select" id="assignEmployeeSelect" required onchange="onAssignEmployeeChange()">
+                                    <option value="">Select Employee</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Target Company <span class="text-danger">*</span></label>
+                                <select class="form-select" id="assignCompanySelect" required onchange="onAssignCompanyChange()">
                                     <option value="">Select Company</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Department <span class="text-danger">*</span></label>
-                                <select class="form-select" id="modalHandlerDept" required onchange="onModalDeptChange()">
-                                    <option value="">Select Department</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Segment / Category <span class="text-danger">*</span></label>
-                                <select class="form-select" id="modalHandlerCategory" required>
-                                    <option value="">Select Category</option>
-                                </select>
+                        </div>
+
+                        <div class="mb-3" id="employeeDetailsBanner" style="display:none;">
+                            <div class="p-2 bg-light rounded border d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong id="bannerEmpName" class="text-dark"></strong>
+                                    <span class="badge bg-secondary ms-2" id="bannerEmpDept"></span>
+                                </div>
+                                <div class="small" id="bannerEmpCounts"></div>
                             </div>
                         </div>
 
                         <div class="mb-3">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <label class="form-label fw-semibold mb-0">
-                                    Associated Team Members <span class="text-danger">*</span>
-                                    <span class="badge bg-primary ms-2" id="selectedStaffCount">0 selected</span>
+                                    Categories for Selected Company
+                                    <span class="badge bg-primary ms-2" id="selectedCatCount">0 selected</span>
                                 </label>
                                 <div class="btn-group btn-group-sm">
-                                    <button type="button" class="btn btn-outline-secondary" onclick="selectAllFilteredStaff()">Select Filtered</button>
-                                    <button type="button" class="btn btn-outline-secondary" onclick="clearSelectedStaff()">Clear</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="selectAllCompanyCats()">Select All</button>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="clearSelectedCompanyCats()">Clear</button>
                                 </div>
                             </div>
-                            <div class="input-group input-group-sm mb-2">
-                                <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                <input type="text" class="form-control" id="staffSearchFilter" placeholder="Filter staff by name or code..." oninput="renderStaffPickerList()">
-                            </div>
-                            <div class="staff-picker-box" id="staffPickerContainer">
-                                <!-- Rendered dynamically -->
+
+                            <div class="category-checkbox-container p-3 border rounded" id="categoryCheckboxes" style="max-height: 260px; overflow-y: auto; background-color: #fafbfc;">
+                                <!-- Checkboxes populated dynamically -->
                             </div>
                         </div>
 
-                        <div class="row align-items-center">
-                            <div class="col-md-6">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="modalHandlerActive" checked>
-                                    <label class="form-check-label fw-semibold" for="modalHandlerActive">Active Handler Routing</label>
-                                </div>
-                            </div>
+                        <div class="alert alert-info py-2 small mb-0">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Changes take effect in real time. Fresh CRM leads in selected categories will become immediately accessible to this employee. Existing claimed leads remain untouched.
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveHandler()">
-                        <i class="fas fa-save me-1"></i>Save Handler
+                    <button type="button" class="btn btn-primary" onclick="saveEmployeeCategories()">
+                        <i class="fas fa-save me-1"></i>Save Assignments
                     </button>
                 </div>
             </div>
@@ -512,13 +511,12 @@
         let optionsData = { companies: [], departments: [], categories: [], active_staff: [] };
         let currentCompanyId = null;
         let categories = [];
-        let handlers = [];
-        let selectedMemberIds = new Set();
+        let employeeHandlers = [];
         let deleteTarget = { type: null, id: null };
         
         // Modals
         let categoryModal = null;
-        let handlerModal = null;
+        let assignModal = null;
         let deleteModal = null;
 
         document.addEventListener('DOMContentLoaded', async function() {
@@ -526,7 +524,7 @@
             StaffHeader.inject('CRM Settings', 'fas fa-sliders-h');
             
             categoryModal = new bootstrap.Modal(document.getElementById('categoryModal'));
-            handlerModal = new bootstrap.Modal(document.getElementById('handlerModal'));
+            assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
             deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
 
             document.getElementById('confirmDeleteBtn').addEventListener('click', executeDelete);
@@ -570,7 +568,6 @@
                 if (res && res.success) {
                     optionsData = res.data || optionsData;
                     populateFilterDropdowns();
-                    populateModalDropdowns();
                 }
             } catch (err) {
                 console.error('Failed to load CRM Settings options:', err);
@@ -582,7 +579,7 @@
             // Company selector in Categories Tab
             const coSel = document.getElementById('companySelector');
             coSel.innerHTML = optionsData.companies.map(c => 
-                `<option value="${c.id}">${escapeHtml(c.name)}</option>`
+                `<option value="${c.id}">${escapeHtml(c.company_name || c.name)}</option>`
             ).join('');
             if (optionsData.companies.length > 0) {
                 currentCompanyId = optionsData.companies[0].id;
@@ -592,28 +589,34 @@
                 loadCategories();
             });
 
-            // Filters in Handlers Tab
+            // Filters in Employee Handlers Tab
             const hCoFilter = document.getElementById('handlerFilterCompany');
             hCoFilter.innerHTML = `<option value="">All Companies</option>` + optionsData.companies.map(c =>
-                `<option value="${c.id}">${escapeHtml(c.name)}</option>`
+                `<option value="${c.id}">${escapeHtml(c.company_name || c.name)}</option>`
             ).join('');
 
             const hDeptFilter = document.getElementById('handlerFilterDept');
-            hDeptFilter.innerHTML = `<option value="">All Departments</option>` + optionsData.departments.map(d =>
-                `<option value="${d.id}">${escapeHtml(d.name)}</option>`
-            ).join('');
-        }
+            let deptHtml = `<option value="sales" selected>Sales &amp; Tele Sales</option><option value="all">All Departments</option>`;
+            optionsData.departments.forEach(d => {
+                deptHtml += `<option value="${d.id}">${escapeHtml(d.name)}</option>`;
+            });
+            hDeptFilter.innerHTML = deptHtml;
 
-        function populateModalDropdowns() {
-            const mCo = document.getElementById('modalHandlerCompany');
-            mCo.innerHTML = `<option value="">Select Company</option>` + optionsData.companies.map(c =>
-                `<option value="${c.id}">${escapeHtml(c.name)}</option>`
-            ).join('');
+            // Modal Company select
+            const mAssignCo = document.getElementById('assignCompanySelect');
+            if (mAssignCo) {
+                mAssignCo.innerHTML = `<option value="">Select Company</option>` + optionsData.companies.map(c =>
+                    `<option value="${c.id}">${escapeHtml(c.company_name || c.name)}</option>`
+                ).join('');
+            }
 
-            const mDept = document.getElementById('modalHandlerDept');
-            mDept.innerHTML = `<option value="">Select Department</option>` + optionsData.departments.map(d =>
-                `<option value="${d.id}">${escapeHtml(d.name)}</option>`
-            ).join('');
+            // Modal Employee select
+            const mAssignEmp = document.getElementById('assignEmployeeSelect');
+            if (mAssignEmp) {
+                mAssignEmp.innerHTML = `<option value="">Select Employee</option>` + optionsData.active_staff.map(e =>
+                    `<option value="${e.id}">${escapeHtml(e.emp_code)} — ${escapeHtml(e.full_name)} (${escapeHtml(e.department_name || 'Staff')})</option>`
+                ).join('');
+            }
         }
 
         function onModalCompanyChange() {
@@ -830,278 +833,352 @@
         }
 
         // ==========================================
-        // HANDLERS (TAB 2)
+        // EMPLOYEE LEAD ROUTING & HANDLERS (TAB 2)
+        // Flow: Employee --- Assigned Categories
         // ==========================================
         async function loadHandlers() {
-            document.getElementById('handlersLoading').classList.remove('d-none');
-            document.getElementById('handlersTableContainer').classList.add('d-none');
-            document.getElementById('handlersEmpty').classList.add('d-none');
+            const loadingEl = document.getElementById('handlersLoading');
+            const tableContainer = document.getElementById('handlersTableContainer');
+            const emptyEl = document.getElementById('handlersEmpty');
+
+            loadingEl.classList.remove('d-none');
+            tableContainer.classList.add('d-none');
+            emptyEl.classList.add('d-none');
+
+            const deptFilter = document.getElementById('handlerFilterDept')?.value || 'sales';
+            const coFilter = document.getElementById('handlerFilterCompany')?.value || '';
+            const searchVal = (document.getElementById('handlerSearchInput')?.value || '').trim();
+
+            let url = `/api/v1/crm/settings/employee-handlers?department_filter=${encodeURIComponent(deptFilter)}`;
+            if (coFilter) url += `&company_id=${encodeURIComponent(coFilter)}`;
+            if (searchVal) url += `&search=${encodeURIComponent(searchVal)}`;
 
             try {
-                const res = await staffFetchJson('/api/v1/crm/settings/handlers');
+                const res = await staffFetchJson(url);
                 if (res && res.success) {
-                    handlers = res.data || [];
-                    filterHandlers();
+                    employeeHandlers = res.data || [];
+                    renderEmployeeHandlers(employeeHandlers);
+                } else {
+                    showToast(res?.detail || 'Failed to load employee handlers', 'error');
                 }
             } catch (err) {
-                console.error('Error loading handlers:', err);
-                showToast('Failed to load handlers', 'error');
+                console.error('Error loading employee handlers:', err);
+                showToast('Failed to load employee handlers', 'error');
             }
-            document.getElementById('handlersLoading').classList.add('d-none');
+            loadingEl.classList.add('d-none');
         }
 
-        function filterHandlers() {
-            const coId = document.getElementById('handlerFilterCompany').value;
-            const deptId = document.getElementById('handlerFilterDept').value;
-            const search = (document.getElementById('handlerSearchInput').value || '').trim().toLowerCase();
-
-            const filtered = handlers.filter(h => {
-                if (coId && h.company_id !== parseInt(coId)) return false;
-                if (deptId && h.department_id !== parseInt(deptId)) return false;
-                if (search) {
-                    const matchCat = (h.category_name || '').toLowerCase().includes(search);
-                    const matchCo = (h.company_name || '').toLowerCase().includes(search);
-                    const matchDept = (h.department_name || '').toLowerCase().includes(search);
-                    const matchMembers = (h.members || []).some(m => 
-                        (m.full_name || '').toLowerCase().includes(search) || 
-                        (m.emp_code || '').toLowerCase().includes(search)
-                    );
-                    if (!matchCat && !matchCo && !matchDept && !matchMembers) return false;
-                }
-                return true;
-            });
-
-            renderHandlers(filtered);
-        }
-
-        function renderHandlers(list) {
-            const tbody = document.getElementById('handlersTableBody');
-            if (list.length === 0) {
-                document.getElementById('handlersEmpty').classList.remove('d-none');
-                document.getElementById('handlersTableContainer').classList.add('d-none');
+        function filterEmployeeHandlers() {
+            const search = (document.getElementById('handlerSearchInput')?.value || '').trim().toLowerCase();
+            if (!search) {
+                renderEmployeeHandlers(employeeHandlers);
                 return;
             }
-            document.getElementById('handlersEmpty').classList.add('d-none');
-            document.getElementById('handlersTableContainer').classList.remove('d-none');
 
-            tbody.innerHTML = list.map(h => {
-                const memberBadges = (h.members || []).map(m => `
-                    <span class="member-chip" title="${escapeHtml(m.department_name || '')}">
-                        <span class="emp-code">${escapeHtml(m.emp_code)}</span> ${escapeHtml(m.full_name)}
-                    </span>
-                `).join('');
+            const filtered = employeeHandlers.filter(emp => {
+                const name = (emp.full_name || '').toLowerCase();
+                const code = (emp.emp_code || '').toLowerCase();
+                const dept = (emp.department_name || '').toLowerCase();
+                const hasCat = (emp.assigned_categories || []).some(c => 
+                    (c.category_name || '').toLowerCase().includes(search) || 
+                    (c.company_name || '').toLowerCase().includes(search)
+                );
+                return name.includes(search) || code.includes(search) || dept.includes(search) || hasCat;
+            });
+
+            renderEmployeeHandlers(filtered);
+        }
+
+        function renderEmployeeHandlers(list) {
+            const tbody = document.getElementById('handlersTableBody');
+            const tableContainer = document.getElementById('handlersTableContainer');
+            const emptyEl = document.getElementById('handlersEmpty');
+
+            if (!list || list.length === 0) {
+                emptyEl.classList.remove('d-none');
+                tableContainer.classList.add('d-none');
+                return;
+            }
+
+            emptyEl.classList.add('d-none');
+            tableContainer.classList.remove('d-none');
+
+            tbody.innerHTML = list.map(emp => {
+                // Category badges
+                let catBadges = '';
+                if (emp.assigned_categories && emp.assigned_categories.length > 0) {
+                    catBadges = emp.assigned_categories.map(c => `
+                        <span class="badge bg-light text-dark border me-1 mb-1 p-1 ps-2 pe-2 d-inline-flex align-items-center gap-1 shadow-xs" title="${escapeHtml(c.department_name || '')}">
+                            <i class="fas fa-tag text-primary small"></i>
+                            <span class="fw-semibold">${escapeHtml(c.category_name)}</span>
+                            <span class="text-secondary small">(${escapeHtml(c.company_name)})</span>
+                            <button type="button" class="btn btn-link p-0 ms-1 text-danger text-decoration-none" style="font-size: 10px; line-height: 1;" title="Remove this category" onclick="removeSingleCategory(${emp.id}, ${c.handler_id})">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </span>
+                    `).join('');
+                } else {
+                    catBadges = '<span class="text-muted small fst-italic">No categories assigned</span>';
+                }
 
                 return `
                     <tr>
-                        <td><strong class="text-dark">${escapeHtml(h.company_name || 'Company #' + h.company_id)}</strong></td>
-                        <td><span class="text-secondary fw-semibold">${escapeHtml(h.department_name || 'Dept #' + h.department_id)}</span></td>
                         <td>
-                            <span class="badge bg-light text-primary border border-primary-subtle">
-                                <i class="fas fa-tag me-1"></i>${escapeHtml(h.category_name || 'Category #' + h.category_id)}
-                            </span>
-                        </td>
-                        <td>
-                            <div class="d-flex flex-wrap align-items-center">
-                                ${memberBadges || '<span class="text-muted small">No active members</span>'}
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="avatar-circle bg-primary-subtle text-primary fw-bold" style="width: 36px; height: 36px; min-width: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; border: 1px solid rgba(13,110,253,0.2);">
+                                    ${escapeHtml((emp.emp_code || 'EMP').slice(-3))}
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark">${escapeHtml(emp.full_name)}</div>
+                                    <div class="text-muted small d-flex align-items-center gap-1">
+                                        <span class="badge bg-light text-secondary border py-0">${escapeHtml(emp.emp_code)}</span>
+                                        <span>${escapeHtml(emp.designation || emp.role_name || '')}</span>
+                                    </div>
+                                </div>
                             </div>
                         </td>
                         <td>
-                            <span class="badge ${h.is_active ? 'status-active' : 'status-inactive'}">
-                                ${h.is_active ? 'Active' : 'Inactive'}
+                            <span class="badge bg-secondary-subtle text-dark border fw-medium">${escapeHtml(emp.department_name)}</span>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-wrap align-items-center">
+                                ${catBadges}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column gap-1" style="min-width: 140px;">
+                                <div class="d-flex justify-content-between align-items-center small">
+                                    <span class="text-secondary">Fresh Pool:</span>
+                                    <span class="badge ${emp.fresh_leads_count > 0 ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-light text-muted border'} fw-bold">
+                                        ${emp.fresh_leads_count}
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center small">
+                                    <span class="text-secondary">Claimed:</span>
+                                    <span class="badge ${emp.claimed_leads_count > 0 ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-light text-muted border'} fw-bold">
+                                        ${emp.claimed_leads_count}
+                                    </span>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge ${emp.status === 'active' ? 'status-active' : 'status-inactive'}">
+                                ${emp.status === 'active' ? 'Active' : 'Inactive'}
                             </span>
                         </td>
                         <td class="text-end">
-                            <button class="btn btn-outline-primary btn-action me-1" onclick="editHandler(${h.id})" title="Edit">
-                                <i class="fas fa-edit"></i>
+                            <button class="btn btn-outline-primary btn-sm me-1" onclick="openAssignModalForEmployee(${emp.id})" title="Edit Categories">
+                                <i class="fas fa-edit me-1"></i>Edit
                             </button>
-                            <button class="btn btn-outline-${h.is_active ? 'warning' : 'success'} btn-action me-1" 
-                                    onclick="toggleHandlerActive(${h.id})" 
-                                    title="${h.is_active ? 'Deactivate' : 'Activate'}">
-                                <i class="fas fa-${h.is_active ? 'toggle-on' : 'toggle-off'}"></i>
-                            </button>
-                            <button class="btn btn-outline-danger btn-action" onclick="askDeleteHandler(${h.id})" title="Delete">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            ${emp.assigned_categories && emp.assigned_categories.length > 0 ? `
+                                <button class="btn btn-outline-danger btn-sm" onclick="askClearAllCategories(${emp.id}, '${escapeHtml(emp.full_name)}')" title="Clear all categories for this employee">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            ` : ''}
                         </td>
                     </tr>
                 `;
             }).join('');
         }
 
-        function showAddHandlerModal() {
-            document.getElementById('handlerModalTitle').textContent = 'Add Handler Mapping';
-            document.getElementById('handlerForm').reset();
-            document.getElementById('handlerId').value = '';
-            document.getElementById('modalHandlerActive').checked = true;
-            document.getElementById('staffSearchFilter').value = '';
-            selectedMemberIds.clear();
-            updateSelectedCount();
-            populateModalDropdowns();
-            document.getElementById('modalHandlerCategory').innerHTML = `<option value="">Select Category</option>`;
-            renderStaffPickerList();
-            handlerModal.show();
+        // ==========================================
+        // ASSIGN MODAL LOGIC
+        // ==========================================
+        function showAssignCategoriesModal() {
+            document.getElementById('assignForm').reset();
+            document.getElementById('assignEmployeeId').value = '';
+            const empSelect = document.getElementById('assignEmployeeSelect');
+            empSelect.disabled = false;
+            empSelect.value = '';
+            document.getElementById('assignCompanySelect').value = optionsData.companies.length > 0 ? optionsData.companies[0].id : '';
+            document.getElementById('employeeDetailsBanner').style.display = 'none';
+            document.getElementById('assignModalTitle').textContent = 'Assign Categories to Employee';
+            onAssignCompanyChange();
+            assignModal.show();
         }
 
-        function editHandler(id) {
-            const h = handlers.find(item => item.id === id);
-            if (!h) return;
-            document.getElementById('handlerModalTitle').textContent = 'Edit Handler Mapping';
-            document.getElementById('handlerId').value = h.id;
-            document.getElementById('modalHandlerCompany').value = h.company_id;
-            onModalCompanyChange();
-            document.getElementById('modalHandlerDept').value = h.department_id;
-            document.getElementById('modalHandlerCategory').value = h.category_id;
-            document.getElementById('modalHandlerActive').checked = h.is_active;
+        function openAssignModalForEmployee(empId) {
+            const emp = employeeHandlers.find(e => e.id === empId);
+            if (!emp) return;
 
-            selectedMemberIds = new Set((h.members || []).map(m => m.employee_id));
-            updateSelectedCount();
-            document.getElementById('staffSearchFilter').value = '';
-            renderStaffPickerList();
-            handlerModal.show();
+            document.getElementById('assignForm').reset();
+            document.getElementById('assignEmployeeId').value = emp.id;
+            const empSelect = document.getElementById('assignEmployeeSelect');
+            empSelect.value = emp.id;
+            empSelect.disabled = true;
+
+            // Details banner
+            document.getElementById('bannerEmpName').textContent = `${emp.emp_code} — ${emp.full_name}`;
+            document.getElementById('bannerEmpDept').textContent = emp.department_name;
+            document.getElementById('bannerEmpCounts').innerHTML = `
+                <span class="badge bg-success-subtle text-success border border-success-subtle me-1">Fresh Pool: ${emp.fresh_leads_count}</span>
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Claimed: ${emp.claimed_leads_count}</span>
+            `;
+            document.getElementById('employeeDetailsBanner').style.display = 'block';
+
+            // Select first company or company of existing assignments
+            let coId = optionsData.companies.length > 0 ? optionsData.companies[0].id : '';
+            if (emp.assigned_categories && emp.assigned_categories.length > 0) {
+                coId = emp.assigned_categories[0].company_id;
+            }
+            document.getElementById('assignCompanySelect').value = coId;
+            document.getElementById('assignModalTitle').textContent = `Manage Categories — ${emp.full_name}`;
+
+            onAssignCompanyChange();
+            assignModal.show();
         }
 
-        function renderStaffPickerList() {
-            const container = document.getElementById('staffPickerContainer');
-            const search = (document.getElementById('staffSearchFilter').value || '').trim().toLowerCase();
+        function onAssignEmployeeChange() {
+            const empId = parseInt(document.getElementById('assignEmployeeSelect').value);
+            if (!empId) {
+                document.getElementById('employeeDetailsBanner').style.display = 'none';
+                onAssignCompanyChange();
+                return;
+            }
+            const emp = (employeeHandlers.find(e => e.id === empId)) || 
+                        (optionsData.active_staff.find(e => e.id === empId));
+            if (emp) {
+                document.getElementById('assignEmployeeId').value = emp.id;
+                document.getElementById('bannerEmpName').textContent = `${emp.emp_code} — ${emp.full_name}`;
+                document.getElementById('bannerEmpDept').textContent = emp.department_name || 'Staff';
+                document.getElementById('bannerEmpCounts').textContent = '';
+                document.getElementById('employeeDetailsBanner').style.display = 'block';
+            }
+            onAssignCompanyChange();
+        }
 
-            const filteredStaff = optionsData.active_staff.filter(s => {
-                if (search) {
-                    const matchName = (s.full_name || '').toLowerCase().includes(search);
-                    const matchCode = (s.emp_code || '').toLowerCase().includes(search);
-                    const matchDept = (s.department_name || '').toLowerCase().includes(search);
-                    if (!matchName && !matchCode && !matchDept) return false;
-                }
-                return true;
-            });
+        function onAssignCompanyChange() {
+            const coId = parseInt(document.getElementById('assignCompanySelect').value);
+            const container = document.getElementById('categoryCheckboxes');
+            const empId = parseInt(document.getElementById('assignEmployeeId').value) || parseInt(document.getElementById('assignEmployeeSelect').value);
 
-            if (filteredStaff.length === 0) {
-                container.innerHTML = `<div class="text-center text-muted py-3 small">No matching active staff members found</div>`;
+            if (!coId) {
+                container.innerHTML = '<div class="text-muted small text-center py-3">Please select a company to view categories</div>';
+                updateSelectedCatCount();
                 return;
             }
 
-            container.innerHTML = filteredStaff.map(s => {
-                const isChecked = selectedMemberIds.has(s.id);
-                return `
-                    <div class="staff-picker-item ${isChecked ? 'selected' : ''}" onclick="toggleStaffMember(${s.id})">
-                        <input class="form-check-input me-2" type="checkbox" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation(); toggleStaffMember(${s.id});">
-                        <div class="d-flex justify-content-between align-items-center w-100">
-                            <div>
-                                <span class="fw-bold text-dark me-2">${escapeHtml(s.emp_code)}</span>
-                                <span class="text-secondary">${escapeHtml(s.full_name)}</span>
+            // Categories for this company
+            const companyCats = optionsData.categories.filter(c => c.company_id === coId);
+            if (companyCats.length === 0) {
+                container.innerHTML = '<div class="text-muted small text-center py-3">No categories found for this company</div>';
+                updateSelectedCatCount();
+                return;
+            }
+
+            // Determine which categories are currently assigned to this employee
+            const emp = employeeHandlers.find(e => e.id === empId);
+            const assignedCatIds = new Set();
+            if (emp && emp.assigned_categories) {
+                emp.assigned_categories.forEach(item => {
+                    if (item.company_id === coId && item.is_active) {
+                        assignedCatIds.add(item.category_id);
+                    }
+                });
+            }
+
+            container.innerHTML = `
+                <div class="row g-2">
+                    ${companyCats.map(cat => {
+                        const isChecked = assignedCatIds.has(cat.id);
+                        return `
+                            <div class="col-md-6">
+                                <div class="form-check p-2 bg-white rounded border d-flex align-items-center gap-2">
+                                    <input class="form-check-input ms-0 category-checkbox" type="checkbox" value="${cat.id}" id="cat_check_${cat.id}" ${isChecked ? 'checked' : ''} onchange="updateSelectedCatCount()">
+                                    <label class="form-check-label fw-semibold text-dark flex-grow-1 cursor-pointer" for="cat_check_${cat.id}">
+                                        <i class="${escapeHtml(cat.icon || 'fas fa-tag')} text-primary me-1"></i>
+                                        ${escapeHtml(cat.name)}
+                                    </label>
+                                </div>
                             </div>
-                            <span class="badge bg-light text-secondary border small">${escapeHtml(s.department_name || 'Staff')}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            updateSelectedCatCount();
         }
 
-        function toggleStaffMember(id) {
-            if (selectedMemberIds.has(id)) {
-                selectedMemberIds.delete(id);
-            } else {
-                selectedMemberIds.add(id);
-            }
-            updateSelectedCount();
-            renderStaffPickerList();
+        function updateSelectedCatCount() {
+            const checked = document.querySelectorAll('#categoryCheckboxes .category-checkbox:checked').length;
+            const badge = document.getElementById('selectedCatCount');
+            if (badge) badge.textContent = `${checked} selected`;
         }
 
-        function selectAllFilteredStaff() {
-            const search = (document.getElementById('staffSearchFilter').value || '').trim().toLowerCase();
-            optionsData.active_staff.forEach(s => {
-                if (!search || (s.full_name || '').toLowerCase().includes(search) || (s.emp_code || '').toLowerCase().includes(search)) {
-                    selectedMemberIds.add(s.id);
-                }
-            });
-            updateSelectedCount();
-            renderStaffPickerList();
+        function selectAllCompanyCats() {
+            document.querySelectorAll('#categoryCheckboxes .category-checkbox').forEach(cb => cb.checked = true);
+            updateSelectedCatCount();
         }
 
-        function clearSelectedStaff() {
-            selectedMemberIds.clear();
-            updateSelectedCount();
-            renderStaffPickerList();
+        function clearSelectedCompanyCats() {
+            document.querySelectorAll('#categoryCheckboxes .category-checkbox').forEach(cb => cb.checked = false);
+            updateSelectedCatCount();
         }
 
-        function updateSelectedCount() {
-            document.getElementById('selectedStaffCount').textContent = `${selectedMemberIds.size} selected`;
-        }
+        async function saveEmployeeCategories() {
+            const empId = parseInt(document.getElementById('assignEmployeeId').value) || parseInt(document.getElementById('assignEmployeeSelect').value);
+            const coId = parseInt(document.getElementById('assignCompanySelect').value);
 
-        async function saveHandler() {
-            const id = document.getElementById('handlerId').value;
-            const companyId = parseInt(document.getElementById('modalHandlerCompany').value);
-            const departmentId = parseInt(document.getElementById('modalHandlerDept').value);
-            const categoryId = parseInt(document.getElementById('modalHandlerCategory').value);
-            const isActive = document.getElementById('modalHandlerActive').checked;
-            const memberIds = Array.from(selectedMemberIds);
-
-            if (!companyId || !departmentId || !categoryId) {
-                showToast('Please select Company, Department, and Category', 'error');
+            if (!empId) {
+                showToast('Please select an employee', 'error');
                 return;
             }
-            if (memberIds.length === 0) {
-                showToast('Please select at least one active team member', 'error');
+            if (!coId) {
+                showToast('Please select a company', 'error');
                 return;
             }
+
+            const selectedCatIds = Array.from(document.querySelectorAll('#categoryCheckboxes .category-checkbox:checked')).map(cb => parseInt(cb.value));
 
             const payload = {
-                company_id: companyId,
-                department_id: departmentId,
-                category_id: categoryId,
-                member_ids: memberIds,
-                is_active: isActive
+                employee_id: empId,
+                company_id: coId,
+                category_ids: selectedCatIds
             };
 
             try {
-                let res;
-                if (id) {
-                    res = await staffFetchJson(`/api/v1/crm/settings/handlers/${id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                } else {
-                    res = await staffFetchJson('/api/v1/crm/settings/handlers', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-                }
-
-                if (res && res.success) {
-                    showToast(id ? 'Handler mapping updated' : 'Handler mapping created', 'success');
-                    handlerModal.hide();
-                    loadHandlers();
-                } else {
-                    showToast(res?.detail || res?.message || 'Failed to save handler mapping', 'error');
-                }
-            } catch (err) {
-                console.error('Error saving handler:', err);
-                showToast('Failed to save handler mapping', 'error');
-            }
-        }
-
-        async function toggleHandlerActive(id) {
-            try {
-                const res = await staffFetchJson(`/api/v1/crm/settings/handlers/${id}/toggle-status`, {
-                    method: 'POST'
+                const res = await staffFetchJson('/api/v1/crm/settings/employee-handlers/assign', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
+
                 if (res && res.success) {
-                    showToast(res.message || 'Status updated', 'success');
-                    loadHandlers();
+                    showToast(res.message || 'Category assignments updated successfully', 'success');
+                    assignModal.hide();
+                    await loadHandlers();
                 } else {
-                    showToast(res?.detail || 'Status toggle failed', 'error');
+                    showToast(res?.detail || res?.message || 'Failed to update category assignments', 'error');
                 }
             } catch (err) {
-                console.error('Error toggling handler status:', err);
-                showToast('Failed to toggle status', 'error');
+                console.error('Error saving employee categories:', err);
+                showToast('Failed to save category assignments', 'error');
             }
         }
 
-        function askDeleteHandler(id) {
-            deleteTarget = { type: 'handler', id: id };
-            document.getElementById('deleteModalTitle').textContent = 'Delete Handler Mapping';
-            document.getElementById('deleteModalText').textContent = 'Are you sure you want to delete this handler mapping?';
+        async function removeSingleCategory(employeeId, handlerId) {
+            if (!confirm('Remove this category assignment from this employee?')) return;
+
+            try {
+                const res = await staffFetchJson(`/api/v1/crm/settings/employee-handlers/${employeeId}/categories/${handlerId}`, {
+                    method: 'DELETE'
+                });
+
+                if (res && res.success) {
+                    showToast(res.message || 'Category assignment removed', 'success');
+                    await loadHandlers();
+                } else {
+                    showToast(res?.detail || 'Failed to remove category assignment', 'error');
+                }
+            } catch (err) {
+                console.error('Error removing category assignment:', err);
+                showToast('Failed to remove category assignment', 'error');
+            }
+        }
+
+        function askClearAllCategories(employeeId, empName) {
+            deleteTarget = { type: 'clear_all_categories', id: employeeId, name: empName };
+            document.getElementById('deleteModalTitle').textContent = 'Clear All Categories';
+            document.getElementById('deleteModalText').textContent = `Are you sure you want to remove ALL category assignments for ${empName}? They will no longer receive fresh leads in any category.`;
             deleteModal.show();
         }
 
@@ -1134,6 +1211,16 @@
                         loadHandlers();
                     } else {
                         showToast(res?.detail || 'Delete failed', 'error');
+                    }
+                } else if (type === 'clear_all_categories') {
+                    const res = await staffFetchJson(`/api/v1/crm/settings/employee-handlers/${id}/categories`, {
+                        method: 'DELETE'
+                    });
+                    if (res && res.success) {
+                        showToast(res.message || 'All category assignments cleared', 'success');
+                        await loadHandlers();
+                    } else {
+                        showToast(res?.detail || 'Failed to clear category assignments', 'error');
                     }
                 }
             } catch (err) {

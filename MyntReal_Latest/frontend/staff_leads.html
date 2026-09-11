@@ -145,6 +145,19 @@
 
         /* ── Mobile PWA & Modal Responsiveness ── */
         @media (max-width: 768px) {
+            html, body { overflow-x: hidden !important; width: 100% !important; max-width: 100vw !important; }
+            .content-area { padding: 12px 10px !important; width: 100% !important; max-width: 100vw !important; overflow-x: hidden !important; }
+            #kpiCardsContainer { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; width: 100% !important; }
+            #kpiCardsContainer > div { min-width: 0 !important; flex: none !important; width: 100% !important; }
+            .stat-card { padding: 8px 4px !important; border-radius: 8px !important; }
+            .stat-card .icon { width: 28px !important; height: 28px !important; font-size: 13px !important; margin-bottom: 3px !important; }
+            .stat-card .value { font-size: 16px !important; }
+            .stat-card .label { font-size: 10px !important; }
+            .card-body .d-flex.align-items-center.gap-2.flex-wrap { flex-direction: column !important; align-items: stretch !important; }
+            .card-body .d-flex.align-items-center.gap-2.flex-wrap > * { width: 100% !important; margin-bottom: 4px !important; }
+            .card-body .d-flex.align-items-center.gap-2.flex-wrap .vr { display: none !important; }
+            .table-responsive { width: 100% !important; max-width: 100% !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+            .table { min-width: 650px !important; }
             .modal-dialog { margin: 0; max-width: 100%; }
             .modal-content { border-radius: 0; min-height: 100vh; }
             .modal-body { padding: 16px; max-height: calc(100vh - 125px); overflow-y: auto; -webkit-overflow-scrolling: touch; }
@@ -479,58 +492,6 @@
             </div>
         </div>
         
-        <!-- REVENUE PERFORMANCE (Interactive Won Deals) -->
-        <div class="row mb-4" id="revenueContainer">
-            <div class="col-12 mb-2 d-flex justify-content-between align-items-center">
-                <h6 class="text-muted mb-0"><i class="fas fa-chart-bar me-2"></i>Revenue Performance (Won Deals)</h6>
-                <small class="text-muted"><i class="fas fa-hand-pointer me-1"></i>Click card to filter matching leads</small>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" id="revCardTotal" style="border-left: 4px solid #059669;" onclick="filterByRevenue('total')" title="Click to filter Won Deals">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <div class="label text-muted mb-1">Total Value</div>
-                            <div class="value text-success" id="revenueTotalAll">₹0</div>
-                        </div>
-                        <div class="icon" style="background: #d1fae5; color: #059669; width: 40px; height: 40px; font-size: 16px;"><i class="fas fa-rupee-sign"></i></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" id="revCardReceived" style="border-left: 4px solid #2563eb;" onclick="filterByRevenue('received')" title="Click to filter Won Deals">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <div class="label text-muted mb-1">Amount Received</div>
-                            <div class="value text-primary" id="revenueReceivedAll">₹0</div>
-                        </div>
-                        <div class="icon" style="background: #dbeafe; color: #2563eb; width: 40px; height: 40px; font-size: 16px;"><i class="fas fa-check-circle"></i></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" id="revCardBalance" style="border-left: 4px solid #d97706;" onclick="filterByRevenue('balance')" title="Click to filter Won Deals">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <div class="label text-muted mb-1">Pending Balance</div>
-                            <div class="value text-warning" id="revenueBalanceAll">₹0</div>
-                        </div>
-                        <div class="icon" style="background: #fef3c7; color: #d97706; width: 40px; height: 40px; font-size: 16px;"><i class="fas fa-clock"></i></div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" id="revCardThisMonth" style="border-left: 4px solid #7c3aed;" onclick="filterByRevenue('this_month')" title="Click to filter This Month's Won Deals">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <div class="label text-muted mb-1">This Month</div>
-                            <div class="value text-info" id="revenueThisMonth">₹0</div>
-                        </div>
-                        <div class="icon" style="background: #ede9fe; color: #7c3aed; width: 40px; height: 40px; font-size: 16px;"><i class="fas fa-calendar-alt"></i></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
         <!-- LEADS TABLE CARD -->
         <div class="card shadow-sm border-0" id="leadsTableCard" style="border-radius: 12px;">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom">
@@ -538,7 +499,7 @@
                 <span class="badge bg-light text-muted border px-2 py-1" id="tableHeaderCount">0 Leads</span>
             </div>
             <div class="card-body p-0">
-                <div id="leadsTableContainer">
+                <div id="leadsTableContainer" class="table-responsive" style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
                     <table class="table table-hover">
                         <thead>
                             <tr>
@@ -1667,13 +1628,13 @@
             console.log(`[STAFF-LEADS] Triggering Softphone Call to: ${cleanPhone} (${safeName}, Lead ID: ${leadId})`);
 
             if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
-                window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+                window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName, 'plivo');
             } else if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
-                window.PlivoSoftphone.dial(cleanPhone, leadId, safeName);
+                window.PlivoSoftphone.dial(cleanPhone, leadId, safeName, 'plivo');
             } else {
                 setTimeout(() => {
                     if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
-                        window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+                        window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName, 'plivo');
                     }
                 }, 300);
             }
@@ -1737,53 +1698,18 @@
             if (!companyId) return;
             
             try {
-                if (companyId === 'all' && companiesList.length > 0) {
-                    const fetchPromises = companiesList.map(async (company) => {
-                        const url = `${API_BASE}/staff-handler-dashboard?company_id=${company.id}`;
-                        try {
-                            const response = await staffFetch(url);
-                            if (!response.ok) return null;
-                            const result = await response.json();
-                            return result.success ? result.data : null;
-                        } catch (err) {
-                            return null;
-                        }
-                    });
-                    
-                    const results = await Promise.all(fetchPromises);
-                    const aggregated = { total_leads: 0, as_telecaller: 0, as_field_staff: 0, as_mnr_handler: 0, unassigned: 0, self_leads: 0 };
-                    
-                    results.forEach(stats => {
-                        if (!stats) return;
-                        aggregated.total_leads += stats.total_leads || 0;
-                        aggregated.self_leads += stats.self_leads_count || 0;
-                        if (stats.handler_breakdown) {
-                            aggregated.as_telecaller += stats.handler_breakdown.as_telecaller || 0;
-                            aggregated.as_field_staff += stats.handler_breakdown.as_field_staff || 0;
-                            aggregated.as_mnr_handler += stats.handler_breakdown.as_mnr_handler || 0;
-                        }
-                        aggregated.unassigned += stats.unassigned_count || 0;
-                    });
-                    
-                    document.getElementById('countAny').textContent = aggregated.total_leads;
-                    document.getElementById('countTelecaller').textContent = aggregated.as_telecaller;
-                    document.getElementById('countFieldStaff').textContent = aggregated.as_field_staff;
-                    document.getElementById('countMnrHandler').textContent = aggregated.as_mnr_handler;
-                    document.getElementById('countUnassigned').textContent = aggregated.unassigned;
-                    document.getElementById('countSelfLeads').textContent = aggregated.self_leads || 0;
-                } else {
-                    const data = await apiCall('/staff-handler-dashboard');
-                    if (data && data.success && data.data) {
-                        const stats = data.data;
-                        document.getElementById('countAny').textContent = stats.total_leads || 0;
-                        if (stats.handler_breakdown) {
-                            document.getElementById('countTelecaller').textContent = stats.handler_breakdown.as_telecaller || 0;
-                            document.getElementById('countFieldStaff').textContent = stats.handler_breakdown.as_field_staff || 0;
-                            document.getElementById('countMnrHandler').textContent = stats.handler_breakdown.as_mnr_handler || 0;
-                        }
-                        document.getElementById('countUnassigned').textContent = stats.unassigned_count || 0;
-                        document.getElementById('countSelfLeads').textContent = stats.self_leads_count || 0;
+                const targetCompany = companyId === 'all' ? 'all' : parseInt(companyId);
+                const data = await staffFetchJson(`${API_BASE}/staff-handler-dashboard?company_id=${targetCompany}`);
+                if (data && data.success && data.data) {
+                    const stats = data.data;
+                    document.getElementById('countAny').textContent = stats.total_leads || 0;
+                    if (stats.handler_breakdown) {
+                        document.getElementById('countTelecaller').textContent = stats.handler_breakdown.as_telecaller || 0;
+                        document.getElementById('countFieldStaff').textContent = stats.handler_breakdown.as_field_staff || 0;
+                        document.getElementById('countMnrHandler').textContent = stats.handler_breakdown.as_mnr_handler || 0;
                     }
+                    document.getElementById('countUnassigned').textContent = stats.unassigned_count || 0;
+                    document.getElementById('countSelfLeads').textContent = stats.self_leads_count || 0;
                 }
             } catch (error) {
                 console.error('[STAFF_LEADS] Failed to load handler counts:', error);
@@ -1791,29 +1717,10 @@
         }
         
         async function apiCall(endpoint, method = 'GET', body = null, overrideCompanyId = null) {
-            // DC Protocol (Dec 31, 2025): Allow company_id override for form submissions
             const effectiveCompanyId = overrideCompanyId || companyId;
-            
-            // For "all" companies mode or no company, skip company_id param for GET requests
-            // But require specific company for POST/PUT
-            if (!effectiveCompanyId || effectiveCompanyId === 'all') {
-                if (method === 'GET') {
-                    // Allow GET without company filter for "All Companies" mode
-                    const url = `${API_BASE}${endpoint}`;
-                    const options = { method };
-                    try {
-                        return await staffFetchJson(url, options);
-                    } catch (error) {
-                        if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return null;
-                        throw error;
-                    }
-                } else {
-                    console.warn('No company selected for write operation');
-                    return null;
-                }
-            }
             const separator = endpoint.includes('?') ? '&' : '?';
-            const url = `${API_BASE}${endpoint}${separator}company_id=${effectiveCompanyId}`;
+            const companyParam = (effectiveCompanyId && effectiveCompanyId !== 'all') ? `company_id=${effectiveCompanyId}` : `company_id=all`;
+            const url = `${API_BASE}${endpoint}${separator}${companyParam}`;
             const options = { method };
             if (body) options.body = JSON.stringify(body);
             
@@ -2179,116 +2086,37 @@
             if (daysSince) filterParams += `&days_since_interaction=${daysSince}`;
             
             try {
-                // DC Protocol (Dec 31, 2025): "All Companies" dashboard aggregation
-                if (companyId === 'all' && companiesList.length > 0) {
-                    // Fetch dashboard stats from all companies in parallel
-                    const fetchPromises = companiesList.map(async (company) => {
-                        const url = `${API_BASE}/dashboard?company_id=${company.id}${filterParams}`;
-                        try {
-                            const response = await staffFetch(url);
-                            if (!response.ok) return null;
-                            const result = await response.json();
-                            return result.success ? result.data : null;
-                        } catch (err) {
-                            console.warn(`[ALL-CRM] Failed to fetch dashboard for company ${company.id}:`, err);
-                            return null;
-                        }
-                    });
-                    
-                    const results = await Promise.all(fetchPromises);
-                    
-                    // Aggregate dashboard stats
-                    const aggregated = {
-                        total_leads: 0,
-                        self_leads: 0,
-                        today_followups: 0,
-                        overdue_followups: 0,
-                        status_breakdown: { new: 0, contacted: 0, interested: 0, qualified: 0, proposal: 0, loan_process: 0, won: 0, completed: 0, lost: 0, on_hold: 0 },
-                        revenue: { total: 0, received: 0, balance: 0 },
-                        revenue_this_month: { total: 0 }
-                    };
-                    
-                    results.forEach(stats => {
-                        if (!stats) return;
-                        aggregated.total_leads += stats.total_leads || 0;
-                        aggregated.self_leads += stats.self_leads_count || 0;
-                        aggregated.today_followups += stats.today_followups || 0;
-                        aggregated.overdue_followups += stats.overdue_followups || 0;
-                        if (stats.status_breakdown) {
-                            aggregated.status_breakdown.new += stats.status_breakdown.new || 0;
-                            aggregated.status_breakdown.contacted += stats.status_breakdown.contacted || 0;
-                            aggregated.status_breakdown.qualified += stats.status_breakdown.qualified || 0;
-                            aggregated.status_breakdown.proposal += stats.status_breakdown.proposal || 0;
-                            aggregated.status_breakdown.loan_process += stats.status_breakdown.loan_process || 0;
-                            aggregated.status_breakdown.interested += stats.status_breakdown.interested || 0;
-                            aggregated.status_breakdown.won += stats.status_breakdown.won || 0;
-                            aggregated.status_breakdown.completed += stats.status_breakdown.completed || 0;
-                            aggregated.status_breakdown.lost += stats.status_breakdown.lost || 0;
-                            aggregated.status_breakdown.on_hold += stats.status_breakdown.on_hold || 0;
-                        }
-                        if (stats.revenue) {
-                            aggregated.revenue.total += stats.revenue.total || 0;
-                            aggregated.revenue.received += stats.revenue.received || 0;
-                            aggregated.revenue.balance += stats.revenue.balance || 0;
-                        }
-                        if (stats.revenue_this_month) {
-                            aggregated.revenue_this_month.total += stats.revenue_this_month.total || 0;
-                        }
-                    });
-                    
-                    // Render aggregated stats
-                    document.getElementById('totalLeads').textContent = aggregated.total_leads;
-                    document.getElementById('selfLeadsStat').textContent = aggregated.self_leads || 0;
-                    document.getElementById('newLeads').textContent = aggregated.status_breakdown.new;
+                let endpoint = '/dashboard';
+                if (filterParams) endpoint += '?' + filterParams.substring(1);
+                const data = await apiCall(endpoint);
+                if (data && data.success && data.data) {
+                    const stats = data.data;
+                    document.getElementById('totalLeads').textContent = stats.total_leads || 0;
+                    document.getElementById('selfLeadsStat').textContent = stats.self_leads_count || stats.self_leads || 0;
+                    document.getElementById('newLeads').textContent = stats.status_breakdown?.new || 0;
                     document.getElementById('inProgressLeads').textContent = 
-                        aggregated.status_breakdown.contacted + aggregated.status_breakdown.interested +
-                        aggregated.status_breakdown.qualified + aggregated.status_breakdown.proposal + aggregated.status_breakdown.loan_process;
-                    document.getElementById('wonLeads').textContent = aggregated.status_breakdown.won;
-                    document.getElementById('loanProcessLeads').textContent = aggregated.status_breakdown.loan_process || 0;
-                    document.getElementById('completedLeads').textContent = aggregated.status_breakdown.completed || 0;
-                    document.getElementById('lostLeads').textContent = aggregated.status_breakdown.lost;
-                    document.getElementById('onHoldLeads').textContent = aggregated.status_breakdown.on_hold;
-                    document.getElementById('todayFollowups').textContent = aggregated.today_followups;
-                    document.getElementById('overdueFollowups').textContent = aggregated.overdue_followups;
+                        (stats.status_breakdown?.contacted || 0) + (stats.status_breakdown?.interested || 0) +
+                        (stats.status_breakdown?.qualified || 0) + (stats.status_breakdown?.proposal || 0) + (stats.status_breakdown?.loan_process || 0);
+                    document.getElementById('wonLeads').textContent = stats.status_breakdown?.won || 0;
+                    document.getElementById('loanProcessLeads').textContent = stats.status_breakdown?.loan_process || 0;
+                    document.getElementById('completedLeads').textContent = stats.status_breakdown?.completed || 0;
+                    document.getElementById('lostLeads').textContent = stats.status_breakdown?.lost || 0;
+                    document.getElementById('onHoldLeads').textContent = stats.status_breakdown?.on_hold || 0;
+                    document.getElementById('todayFollowups').textContent = stats.today_followups || 0;
+                    document.getElementById('overdueFollowups').textContent = stats.overdue_followups || 0;
                     
-                    document.getElementById('revenueTotalAll').textContent = formatCurrency(aggregated.revenue.total);
-                    document.getElementById('revenueReceivedAll').textContent = formatCurrency(aggregated.revenue.received);
-                    document.getElementById('revenueBalanceAll').textContent = formatCurrency(aggregated.revenue.balance);
-                    document.getElementById('revenueThisMonth').textContent = formatCurrency(aggregated.revenue_this_month.total);
-                } else {
-                    // Single company mode with all active filters
-                    let endpoint = '/dashboard';
-                    if (filterParams) endpoint += '?' + filterParams.substring(1);
-                    const data = await apiCall(endpoint);
-                    if (data && data.success) {
-                        const stats = data.data;
-                        document.getElementById('totalLeads').textContent = stats.total_leads;
-                        document.getElementById('selfLeadsStat').textContent = stats.self_leads_count || 0;
-                        document.getElementById('newLeads').textContent = stats.status_breakdown.new;
-                        document.getElementById('inProgressLeads').textContent = 
-                            (stats.status_breakdown.contacted || 0) + (stats.status_breakdown.interested || 0) +
-                            (stats.status_breakdown.qualified || 0) + (stats.status_breakdown.proposal || 0) + (stats.status_breakdown.loan_process || 0);
-                        document.getElementById('wonLeads').textContent = stats.status_breakdown.won;
-                        document.getElementById('loanProcessLeads').textContent = stats.status_breakdown.loan_process || 0;
-                        document.getElementById('completedLeads').textContent = stats.status_breakdown.completed || 0;
-                        document.getElementById('lostLeads').textContent = stats.status_breakdown.lost || 0;
-                        document.getElementById('onHoldLeads').textContent = stats.status_breakdown.on_hold || 0;
-                        document.getElementById('todayFollowups').textContent = stats.today_followups;
-                        document.getElementById('overdueFollowups').textContent = stats.overdue_followups;
-                        
-                        // Revenue Analytics
-                        if (stats.revenue) {
-                            document.getElementById('revenueTotalAll').textContent = formatCurrency(stats.revenue.total);
-                            document.getElementById('revenueReceivedAll').textContent = formatCurrency(stats.revenue.received);
-                            document.getElementById('revenueBalanceAll').textContent = formatCurrency(stats.revenue.balance);
-                        }
-                        if (stats.revenue_this_month) {
-                            document.getElementById('revenueThisMonth').textContent = formatCurrency(stats.revenue_this_month.total);
-                        }
+                    if (stats.revenue) {
+                        document.getElementById('revenueTotalAll').textContent = formatCurrency(stats.revenue.total || 0);
+                        document.getElementById('revenueReceivedAll').textContent = formatCurrency(stats.revenue.received || 0);
+                        document.getElementById('revenueBalanceAll').textContent = formatCurrency(stats.revenue.balance || 0);
+                    }
+                    if (stats.revenue_this_month) {
+                        document.getElementById('revenueThisMonth').textContent = formatCurrency(stats.revenue_this_month.total || 0);
                     }
                 }
                 highlightActiveCards();
             } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
                 console.error('Failed to load dashboard:', error);
             }
         }
@@ -2307,38 +2135,11 @@
             if (!companyId) return;
             
             try {
-                // DC Protocol (Dec 31, 2025): "All Companies" mode - aggregate categories
-                if (companyId === 'all' && companiesList.length > 0) {
-                    const fetchPromises = companiesList.map(async (company) => {
-                        try {
-                            const data = await staffFetchJson(`/api/v1/signup-categories/list?company_id=${company.id}`);
-                            return data && data.success ? data.categories : [];
-                        } catch (err) {
-                            return [];
-                        }
-                    });
-                    
-                    const results = await Promise.all(fetchPromises);
-                    
-                    // Aggregate unique categories by name (or id if preferred)
-                    const categoryMap = new Map();
-                    results.forEach(cats => {
-                        if (cats) {
-                            cats.forEach(cat => {
-                                if (!categoryMap.has(cat.name)) {
-                                    categoryMap.set(cat.name, cat);
-                                }
-                            });
-                        }
-                    });
-                    categories = Array.from(categoryMap.values());
+                const targetCompany = companyId === 'all' ? 'all' : parseInt(companyId);
+                const data = await staffFetchJson(`/api/v1/signup-categories/list?company_id=${targetCompany}`);
+                if (data && data.success && data.categories) {
+                    categories = data.categories;
                     populateCategoryDropdowns();
-                } else {
-                    const data = await staffFetchJson(`/api/v1/signup-categories/list?company_id=${parseInt(companyId)}`);
-                    if (data && data.success && data.categories) {
-                        categories = data.categories;
-                        populateCategoryDropdowns();
-                    }
                 }
             } catch (error) {
                 if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
@@ -2390,20 +2191,28 @@
             if (filterSelect) {
                 const currentFilterVal = filterSelect.value;
                 filterSelect.innerHTML = '<option value="">All Sources</option>';
+                const seenFilter = new Set();
                 (leadSources || []).forEach(src => {
-                    if (src && src.name) {
-                        filterSelect.innerHTML += `<option value="${src.name}">${src.name}</option>`;
+                    const sName = src && src.name ? src.name.trim() : '';
+                    if (sName && !seenFilter.has(sName.toLowerCase())) {
+                        seenFilter.add(sName.toLowerCase());
+                        filterSelect.innerHTML += `<option value="${sName}">${sName}</option>`;
                     }
                 });
                 if (currentFilterVal) filterSelect.value = currentFilterVal;
             }
             if (formSelect) {
+                const currentFormVal = formSelect.value;
                 formSelect.innerHTML = '<option value="">Select Source</option>';
+                const seenForm = new Set();
                 (leadSources || []).forEach(src => {
-                    if (src && src.name) {
-                        formSelect.innerHTML += `<option value="${src.name}">${src.name}</option>`;
+                    const sName = src && src.name ? src.name.trim() : '';
+                    if (sName && !seenForm.has(sName.toLowerCase())) {
+                        seenForm.add(sName.toLowerCase());
+                        formSelect.innerHTML += `<option value="${sName}">${sName}</option>`;
                     }
                 });
+                if (currentFormVal) formSelect.value = currentFormVal;
             }
         }
 
@@ -2412,38 +2221,11 @@
             if (!companyId) return;
             
             try {
-                // DC Protocol (Dec 31, 2025): "All Companies" mode - aggregate sources
-                if (companyId === 'all' && companiesList.length > 0) {
-                    const fetchPromises = companiesList.map(async (company) => {
-                        const url = `${API_BASE}/sources?company_id=${company.id}`;
-                        try {
-                            const response = await staffFetch(url);
-                            if (!response.ok) return [];
-                            const data = await response.json();
-                            return data && data.success ? data.data : [];
-                        } catch (err) {
-                            return [];
-                        }
-                    });
-                    
-                    const results = await Promise.all(fetchPromises);
-                    
-                    // Aggregate unique sources by name
-                    const sourceMap = new Map();
-                    results.forEach(sources => {
-                        if (sources) {
-                            sources.forEach(src => {
-                                if (src && src.name && !sourceMap.has(src.name)) {
-                                    sourceMap.set(src.name, src);
-                                }
-                            });
-                        }
-                    });
-                    leadSources = Array.from(sourceMap.values());
-                    populateSourceDropdowns();
-                } else {
-                    const data = await apiCall('/sources');
-                    if (data && data.success) {
+                const targetCompany = companyId === 'all' ? 'all' : parseInt(companyId);
+                const res = await staffFetch(`${API_BASE}/sources?company_id=${targetCompany}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.success && data.data) {
                         leadSources = data.data;
                         populateSourceDropdowns();
                     }
@@ -2810,119 +2592,30 @@
                 baseEndpoint += '&no_followup=true&exclude_closed=true';
             }
             
+            if (search) baseEndpoint += `&search=${encodeURIComponent(search)}`;
+            
             try {
-                // DC Protocol (Dec 31, 2025): "All Companies" aggregation
-                // LIMITATION: Frontend aggregation caps at 500 leads per company.
-                // For companies with >500 leads, results may be incomplete.
-                // Full solution requires backend aggregation endpoint (future enhancement).
-                if (companyId === 'all' && companiesList.length > 0) {
-                    // Build endpoint without pagination params for fetching leads from each company
-                    let allCompanyEndpoint = `/leads?per_page=500`; // Max 500 per company (frontend limit)
-                    
-                    // Staff Leads: Apply handler role filter
-                    // DC Protocol (Jan 28, 2026): Fixed visibility dropdown to handler role mapping
-                    if (currentHandlerRole === 'unassigned') {
-                        allCompanyEndpoint += `&handler_type=unassigned`;
-                    } else if (currentHandlerRole === 'self') {
-                        allCompanyEndpoint += `&primary_owner=true`;
-                    } else if (currentHandlerRole && currentHandlerRole !== '') {
-                        allCompanyEndpoint += `&as_handler_role=${currentHandlerRole}`;
-                    }
-                    // If currentHandlerRole is empty, no filter applied (show all leads for privileged users)
-                    
-                    if (status) allCompanyEndpoint += `&status=${status}`;
-                    if (priority) allCompanyEndpoint += `&priority=${priority}`;
-                    if (source) allCompanyEndpoint += `&source=${encodeURIComponent(source)}`;
-                    if (categoryId) allCompanyEndpoint += `&category=${encodeURIComponent(categoryId)}`;
-                    if (search) allCompanyEndpoint += `&search=${encodeURIComponent(search)}`;
-                    if (filterPartnerId) allCompanyEndpoint += `&associated_partner_id=${filterPartnerId}`;
-                    if (filterTelecallerId) allCompanyEndpoint += `&filter_telecaller_id=${filterTelecallerId}`;
-                    if (filterFieldStaffId) allCompanyEndpoint += `&filter_field_staff_id=${filterFieldStaffId}`;
-                    if (dateFrom) allCompanyEndpoint += `&next_followup_from=${dateFrom}T00:00:00`;
-                    if (dateTo) allCompanyEndpoint += `&next_followup_to=${dateTo}T23:59:59`;
-                    if (lastInteractedFrom) allCompanyEndpoint += `&last_interacted_from=${lastInteractedFrom}T00:00:00`;
-                    if (lastInteractedTo) allCompanyEndpoint += `&last_interacted_to=${lastInteractedTo}T23:59:59`;
-                    if (daysSinceFilter) allCompanyEndpoint += `&days_since_interaction=${daysSinceFilter}`;
-                    if (involvedEmpId) {
-                        allCompanyEndpoint += `&involved_employee_id=${involvedEmpId}`;
-                        if (involvedEmpRole) allCompanyEndpoint += `&involved_role=${involvedEmpRole}`;
-                    }
-                    
-                    if (currentQuickFilter === 'overdue') {
-                        allCompanyEndpoint += '&exclude_closed=true';
-                    }
-                    
-                    // No Followup filter: Active leads without next followup date
-                    if (currentQuickFilter === 'no_followup') {
-                        allCompanyEndpoint += '&no_followup=true&exclude_closed=true';
-                    }
-                    
-                    // DC Protocol (Feb 2026): Sequential fetch to prevent backend overload (was Promise.all causing 502s)
-                    const results = [];
-                    for (const company of companiesList) {
-                        const url = `${API_BASE}${allCompanyEndpoint}&company_id=${company.id}`;
-                        try {
-                            const response = await staffFetch(url);
-                            if (!response.ok) {
-                                results.push({ success: false, data: [], company_id: company.id });
-                            } else {
-                                results.push(await response.json());
-                            }
-                        } catch (err) {
-                            console.warn(`[ALL-CRM] Failed to fetch leads for company ${company.id}:`, err);
-                            results.push({ success: false, data: [], company_id: company.id });
-                        }
-                    }
-                    
-                    // Aggregate all leads and deduplicate by lead.id
-                    let rawLeads = [];
-                    results.forEach(result => {
-                        if (result.success && result.data) {
-                            rawLeads = rawLeads.concat(result.data);
-                        }
-                    });
-                    
-                    // Map by lead ID to eliminate duplicate objects
-                    const leadMap = new Map();
-                    rawLeads.forEach(l => { if (l && l.id && !leadMap.has(l.id)) leadMap.set(l.id, l); });
-                    let allLeads = Array.from(leadMap.values());
-                    
-                    // Sort by created_at descending
-                    allLeads.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
-                    
-                    // Client-side pagination for aggregated results
-                    const perPage = 20;
-                    const startIdx = (page - 1) * perPage;
-                    const paginatedLeads = allLeads.slice(startIdx, startIdx + perPage);
-                    const totalPages = Math.ceil(allLeads.length / perPage);
-                    
+                const data = await apiCall(baseEndpoint);
+                if (data && data.success) {
                     const headerCountEl = document.getElementById('tableHeaderCount');
-                    if (headerCountEl) headerCountEl.textContent = `${allLeads.length} Leads`;
+                    if (headerCountEl) headerCountEl.textContent = `${data.pagination?.total ?? (data.data ? data.data.length : 0)} Leads`;
                     
-                    // DC Protocol (Jan 22, 2026): Pass pageOffset for S.No. calculation
-                    renderLeadsTable(paginatedLeads, startIdx);
-                    renderPagination({
-                        page: page,
-                        pages: totalPages,
-                        total: allLeads.length,
-                        per_page: perPage
-                    });
+                    const pageOffset = (page - 1) * (data.pagination?.per_page || 20);
+                    renderLeadsTable(data.data || [], pageOffset);
+                    renderPagination(data.pagination || { page: page, pages: 1, total: (data.data || []).length, per_page: 20 });
                 } else {
-                    // Single company mode
-                    const data = await apiCall(baseEndpoint);
-                    if (data.success) {
-                        const headerCountEl = document.getElementById('tableHeaderCount');
-                        if (headerCountEl) headerCountEl.textContent = `${data.pagination?.total || data.data.length} Leads`;
-                        
-                        // DC Protocol (Jan 22, 2026): Pass pageOffset for S.No. calculation
-                        const pageOffset = (page - 1) * (data.pagination?.per_page || 20);
-                        renderLeadsTable(data.data, pageOffset);
-                        renderPagination(data.pagination);
-                    }
+                    const headerCountEl = document.getElementById('tableHeaderCount');
+                    if (headerCountEl) headerCountEl.textContent = '0 Leads';
+                    renderLeadsTable([], 0);
+                    renderPagination({ page: 1, pages: 1, total: 0, per_page: 20 });
                 }
             } catch (error) {
+                if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
                 console.error('Failed to load leads:', error);
-                showToast('Failed to load leads', 'error');
+                const headerCountEl = document.getElementById('tableHeaderCount');
+                if (headerCountEl) headerCountEl.textContent = '0 Leads';
+                renderLeadsTable([], 0);
+                renderPagination({ page: 1, pages: 1, total: 0, per_page: 20 });
             }
         }
         

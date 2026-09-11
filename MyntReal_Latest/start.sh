@@ -15,6 +15,9 @@ echo "Backend port: 8000 (internal)"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export PYTHONPATH="$SCRIPT_DIR/backend:$SCRIPT_DIR:${PYTHONPATH}"
+export ENVIRONMENT="${ENVIRONMENT:-production}"
+export NODE_ENV="${NODE_ENV:-production}"
+export ALLOW_PROD_DB_ACCESS="1"
 
 # Verify critical environment variables
 echo ""

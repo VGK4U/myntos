@@ -2247,28 +2247,53 @@
         let progressData = null;
         let currentTab = 'day_progress';
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            if (typeof window.StaffSidebar !== 'undefined') await window.StaffSidebar.init();
-            if (typeof window.StaffHeader !== 'undefined') {
-                window.StaffHeader.inject('Progress', 'fas fa-chart-line');
-                window.StaffHeader.init();
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. Populate date filters & pickers immediately (Synchronous, zero-delay)
+            try {
+                const today = getISTToday();
+                const mtdStart = today.slice(0,7) + '-01';
+                const dateFilter = document.getElementById('dateFilter');
+                if (dateFilter) dateFilter.value = today;
+                const dateFrom = document.getElementById('dateFrom');
+                if (dateFrom) dateFrom.value = mtdStart;
+                const dateTo = document.getElementById('dateTo');
+                if (dateTo) dateTo.value = today;
+                const progressDatePicker = document.getElementById('progressDatePicker');
+                if (progressDatePicker) progressDatePicker.value = today;
+                const _edf = document.getElementById('execDateFrom');
+                const _edt = document.getElementById('execDateTo');
+                if (_edf && !_edf.value) _edf.value = mtdStart;
+                if (_edt && !_edt.value) _edt.value = today;
+            } catch (err) {
+                console.error('[DC-PROGRESS] Date initialization error:', err);
             }
-            if (typeof window.StaffBackButton !== 'undefined') window.StaffBackButton.init();
-            
-            const today = getISTToday();
-            const mtdStart = today.slice(0,7) + '-01';
-            document.getElementById('dateFilter').value = today;
-            document.getElementById('dateFrom').value = mtdStart;
-            document.getElementById('dateTo').value = today;
-            document.getElementById('progressDatePicker').value = today;
-            const _edf = document.getElementById('execDateFrom');
-            const _edt = document.getElementById('execDateTo');
-            if (_edf && !_edf.value) _edf.value = mtdStart;
-            if (_edt && !_edt.value) _edt.value = today;
 
-            await loadUserInfo();
-            await loadDayProgress();
-            loadMtdRank();
+            // 2. Load progress data concurrently & immediately without blocking on sidebar
+            Promise.allSettled([
+                loadUserInfo(),
+                loadDayProgress(),
+                loadMtdRank()
+            ]).catch(err => console.error('[DC-PROGRESS] Data load error:', err));
+
+            // 3. Initialize header and back button safely
+            try {
+                if (typeof window.StaffHeader !== 'undefined') {
+                    window.StaffHeader.inject('Progress', 'fas fa-chart-line');
+                    window.StaffHeader.init();
+                }
+                if (typeof window.StaffBackButton !== 'undefined') {
+                    window.StaffBackButton.init();
+                }
+            } catch (err) {
+                console.error('[DC-PROGRESS] Header/back button init error:', err);
+            }
+
+            // 4. Initialize sidebar asynchronously and non-blocking
+            if (typeof window.StaffSidebar !== 'undefined') {
+                window.StaffSidebar.init().catch(err => {
+                    console.warn('[DC-PROGRESS] Non-fatal sidebar init error:', err);
+                });
+            }
         });
 
         async function loadUserInfo() {
@@ -6288,38 +6313,42 @@
         }
 
         async function loadDayProgress() {
-            const rawVal = document.getElementById('progressDatePicker').value;
-            const dateVal = normalizeProgressDate(rawVal);
+            const rawVal = document.getElementById('progressDatePicker')?.value;
+            const dateVal = normalizeProgressDate(rawVal || getISTToday());
             const selfBody = document.getElementById('selfProgressBody');
             const teamBody = document.getElementById('teamProgressBody');
-            selfBody.innerHTML = '<tr><td colspan="8" class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
-            teamBody.innerHTML = '<tr><td colspan="8" class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+            if (selfBody) selfBody.innerHTML = '<tr><td colspan="8" class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+            if (teamBody) teamBody.innerHTML = '<tr><td colspan="8" class="text-center py-3"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
             try {
                 const resp = await staffFetch('/api/v1/staff/day-plans/day-progress?plan_date=' + dateVal);
                 if (!resp.ok) throw new Error('Failed to load');
                 dayProgressData = await resp.json();
-                renderSelfProgress(dayProgressData.self);
+                if (selfBody) renderSelfProgress(dayProgressData.self);
                 var allTeam = (dayProgressData.team || []);
                 var teamOnLeave = (dayProgressData.team_on_leave || []);
-                if (allTeam.length > 0) {
-                    document.getElementById('teamProgressFilterWrap').style.cssText = '';
-                    buildProgressFilterCheckboxes(allTeam);
-                    renderTeamProgress(allTeam);
-                } else if (!dayProgressData.has_team) {
-                    document.getElementById('teamProgressFilterWrap').style.cssText = 'display:none!important;';
-                    teamBody.innerHTML = '<tr><td colspan="8" class="text-center py-3 text-muted">No Team</td></tr>';
-                } else {
-                    document.getElementById('teamProgressFilterWrap').style.cssText = 'display:none!important;';
-                    teamBody.innerHTML = '<tr><td colspan="8" class="text-center py-3 text-muted">All team members are on leave</td></tr>';
+                if (teamBody) {
+                    if (allTeam.length > 0) {
+                        const wrap = document.getElementById('teamProgressFilterWrap');
+                        if (wrap) wrap.style.cssText = '';
+                        buildProgressFilterCheckboxes(allTeam);
+                        renderTeamProgress(allTeam);
+                    } else if (!dayProgressData.has_team) {
+                        const wrap = document.getElementById('teamProgressFilterWrap');
+                        if (wrap) wrap.style.cssText = 'display:none!important;';
+                        teamBody.innerHTML = '<tr><td colspan="8" class="text-center py-3 text-muted">No Team</td></tr>';
+                    } else {
+                        const wrap = document.getElementById('teamProgressFilterWrap');
+                        if (wrap) wrap.style.cssText = 'display:none!important;';
+                        teamBody.innerHTML = '<tr><td colspan="8" class="text-center py-3 text-muted">All team members are on leave</td></tr>';
+                    }
                 }
                 renderOnLeaveSection(teamOnLeave);
-                // DC: Load team compliance panel for key leadership/EA (dynamic — reflects live DB)
                 if (window._userIsKeyLeader) loadTeamDailyCompliance();
             } catch(e) {
                 if (e.message === 'AUTH_EXPIRED' || e.message === 'NO_TOKEN') return;
                 console.error('Day progress error:', e);
-                selfBody.innerHTML = '<tr><td colspan="8" class="text-center py-3 text-danger">Failed to load progress</td></tr>';
-                teamBody.innerHTML = '<tr><td colspan="8" class="text-center py-3 text-danger">Failed to load progress</td></tr>';
+                if (selfBody) selfBody.innerHTML = '<tr><td colspan="8" class="text-center py-3 text-danger">Failed to load progress</td></tr>';
+                if (teamBody) teamBody.innerHTML = '<tr><td colspan="8" class="text-center py-3 text-danger">Failed to load progress</td></tr>';
             }
         }
 

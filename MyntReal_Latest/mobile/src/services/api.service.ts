@@ -281,7 +281,10 @@ class ApiService {
       return {
         success: true,
         data: extractedData,
-        status: response.status
+        status: response.status,
+        ...(data && typeof data === 'object' && data.pagination ? { pagination: data.pagination } : {}),
+        ...(data && typeof data === 'object' && data.companies ? { companies: data.companies } : {}),
+        ...(data && typeof data === 'object' && data.permissions ? { permissions: data.permissions } : {})
       };
     };
 

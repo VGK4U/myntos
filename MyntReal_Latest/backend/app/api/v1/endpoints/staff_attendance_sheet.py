@@ -81,17 +81,14 @@ def get_indian_date():
 
 def build_employee_status_filters(emp_status: str = "active", start_date: date = None, end_date: date = None):
     """
-    DC Protocol: Build employee status filter for attendance endpoints.
-    - emp_status == 'active': Only active employees (joined on or before end_date, not exited before start_date)
+    DC Protocol: Build employee status filter for attendance endpoints with authoritative eligibility.
+    - emp_status == 'active': Only eligible employees (joined on or before end_date, not exited before start_date)
     - emp_status == 'inactive': Only inactive/resigned/deactivated employees
     - emp_status == 'all': All employees regardless of status
     """
+    from app.utils.staff_hierarchy import get_employee_eligibility_filter
     filters = []
     
-    # Date of joining filter: employee must have joined on or before target range end_date
-    if end_date:
-        filters.append(StaffEmployee.date_of_joining <= end_date)
-        
     status_lower = func.lower(func.coalesce(StaffEmployee.status, 'active'))
     inactive_statuses = ['inactive', 'terminated', 'resigned', 'exited', 'deactivated', 'paused']
     
@@ -107,14 +104,11 @@ def build_employee_status_filters(emp_status: str = "active", start_date: date =
         else:
             filters.append(status_lower.in_(inactive_statuses))
     elif emp_status == 'all':
-        pass
-    else:  # 'active' (default)
-        filters.append(status_lower.not_in(inactive_statuses))
-        if start_date:
-            filters.append(or_(
-                StaffEmployee.last_working_date.is_(None),
-                StaffEmployee.last_working_date >= start_date
-            ))
+        filters.append(StaffEmployee.is_deleted == False)
+    else:  # 'active' (default) - authoritative effective-date eligibility
+        filters.append(get_employee_eligibility_filter(
+            StaffEmployee, start_date=start_date, end_date=end_date
+        ))
         
     return filters
 

@@ -124,7 +124,8 @@ export class CallHistoryPage {
             <div class="ch-name">${displayName.replace(/</g, '&lt;')}</div>
             <div class="ch-meta">
               <span style="color:${cfg.color};font-weight:600">${cfg.label}</span>
-              ${e.source === 'dialer' ? `<span class="ch-crm-badge">CRM</span>` : ''}
+              ${(e.source === 'dialer' || e.source === 'softphone') ? `<span class="ch-crm-badge">CRM</span>` : ''}
+              ${e.call_outcome ? `· <span style="background:#e0e7ff;color:#3730a3;font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;text-transform:capitalize">${e.call_outcome.replace(/_/g, ' ')}</span>` : ''}
               ${dur ? `· ${dur}` : ''}
               · ${fmtTime(e.dialed_at)}
             </div>

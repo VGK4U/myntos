@@ -24,23 +24,30 @@ import { permissionsRuntime } from './permissions';
 // DC_RUNTIME_THROW_001: Also catches thrown errors (not just hangs) so a
 // single failing plugin cannot break the entire init chain via Promise.all.
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T | void> {
-  const safePromise = promise.catch((err: unknown) => {
-    console.warn(`[DC_RUNTIME] ${label} threw (non-fatal):`, err);
-  });
+  let timerId: any = null;
   const timeout = new Promise<void>((resolve) => {
-    setTimeout(() => {
+    timerId = setTimeout(() => {
       console.warn(`[DC_RUNTIME] ${label} timed out after ${ms}ms — proceeding without it`);
       resolve();
     }, ms);
   });
-  return Promise.race([safePromise, timeout]);
+  return Promise.race([
+    promise.then((val) => {
+      if (timerId) clearTimeout(timerId);
+      return val;
+    }).catch((err: unknown) => {
+      if (timerId) clearTimeout(timerId);
+      console.warn(`[DC_RUNTIME] ${label} threw (non-fatal):`, err);
+    }),
+    timeout
+  ]);
 }
 
 export async function initMobileRuntime(): Promise<void> {
   console.log('[DC_RUNTIME] Initializing Mobile Runtime Compatibility Layer...');
 
   const isWeb = typeof window !== 'undefined' && (!(window as any).Capacitor?.isNativePlatform?.() || (window as any).Capacitor?.getPlatform?.() === 'web');
-  const timeoutMs = isWeb ? 300 : 5000;
+  const timeoutMs = isWeb ? 1500 : 5000;
 
   // DC_RUNTIME_TIMEOUT_001: Each init is individually time-boxed.
   // A hung Capacitor bridge call on any one of these must NEVER block the login page.

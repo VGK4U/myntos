@@ -76,14 +76,21 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
     """
     Formats and dispatches instant New Lead notification into Sales WhatsApp Group.
     DC Protocol Apr 2026: Uses Meta lead generation date/time (IST) and captures all form fields (Electricity Bill, Property Type, Pincode, etc.)
+    DC-SELF-LEAD-001: Staff Self Leads are private workflows and MUST NOT trigger shared Sales Group notifications.
     """
     import json
     import pytz
-    from app.models.crm import CRMLead
+    from app.models.crm import CRMLead, SELF_LEAD_SOURCE_NAME
 
     lead = db.query(CRMLead).get(lead_id)
     if not lead:
         return {"success": False, "reason": "lead_not_found"}
+
+    # DC-SELF-LEAD-001: Suppress group alert for self-generated / private staff leads
+    lead_source = (getattr(lead, 'source', '') or '').strip()
+    if lead_source.lower() == 'self lead' or lead_source == SELF_LEAD_SOURCE_NAME or getattr(lead, 'source_ref_type', '') == 'self':
+        logger.info(f"[SCOUT-ALERT] Suppressing Sales Group notification for Self Lead #{lead.id} (Private Workflow)")
+        return {"success": True, "skipped": True, "reason": "self_lead_private"}
 
     lead_name = (getattr(lead, 'first_name', '') or getattr(lead, 'name', '') or 'Valued Prospect').strip()
     phone = getattr(lead, 'phone', 'N/A') or 'N/A'

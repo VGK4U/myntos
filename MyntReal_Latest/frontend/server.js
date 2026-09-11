@@ -2,6 +2,7 @@
  * MyntReal - Frontend Server
  * All Copyrights Reserved to Mynt Real LLP
  * https://mnrteam.com
+ * Supervisor Live Reload Verified: 2026-09-06
  */
 
 const http = require('http');
@@ -26,7 +27,12 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 
 process.on('SIGTERM', () => {
-  console.log('✅ [DC-SIGTERM] Received SIGTERM from AWS EB. Shutting down gracefully...');
+  console.log('✅ [DC-SIGTERM] Received SIGTERM. Shutting down gracefully...');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('✅ [DC-SIGINT] Received SIGINT. Shutting down gracefully...');
   process.exit(0);
 });
 
@@ -7876,7 +7882,11 @@ const server = http.createServer(async (req, res) => {
     const contentType = req.headers['content-type'] || '';
     const isMultipart = contentType.includes('multipart/form-data');
     const isLoginCall = url.endsWith('/auth/login') || url.includes('/auth/login?');
-    const maxRetries = isMultipart ? 0 : (isLoginCall ? 1 : 2);
+    // DC Protocol: Telephony state mutations (dialer, calls, webhooks) must NEVER be auto-retried to avoid duplicate concurrent calls
+    const isTelephonyCall = url.includes('/telephony/') || url.includes('/crm/dialer/') || url.includes('/voip/');
+    const isStateMutation = req.method !== 'GET' && req.method !== 'HEAD';
+    const isTelephonyMutation = isTelephonyCall && isStateMutation;
+    const maxRetries = (isMultipart || isTelephonyMutation) ? 0 : (isLoginCall ? 1 : 2);
     let clientAborted = false;
     res.on('close', () => { 
       if (!res.writableFinished) {
@@ -9590,27 +9600,15 @@ const server = http.createServer(async (req, res) => {
 
   if (url === '/hub' || url === '/hub/' || url.startsWith('/hub?')) {
     const filePath = path.join(__dirname, 'public', 'hub', 'index.html');
-    fs.readFile(filePath, 'utf8', async (err, data) => {
+    fs.readFile(filePath, 'utf8', (err, data) => {
       if (err) { res.writeHead(500); res.end('Hub not found'); return; }
-      // SSR-inject associated partners to avoid cold-start race condition
-      try {
-        const _http = require('http');
-        const _partners = await new Promise((resolve) => {
-          const _r = _http.get('http://localhost:8000/api/v1/hub/partners', (resp) => {
-            let body = '';
-            resp.on('data', c => body += c);
-            resp.on('end', () => { try { resolve(JSON.parse(body)); } catch { resolve([]); } });
-          });
-          _r.on('error', () => resolve([]));
-          _r.setTimeout(1500, () => { _r.destroy(); resolve([]); });
-        });
-        if (Array.isArray(_partners) && _partners.length) {
-          const _injected = `<script>window.__HUB_PARTNERS__=${JSON.stringify(_partners)};</script>`;
-          data = data.replace('</head>', _injected + '</head>');
-        }
-      } catch (_) {}
       const _hubIndexHost = req.headers.host || 'mnrteam.com';
-      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'public, max-age=3600', 'X-Robots-Tag': 'index, follow', 'Surrogate-Control': 'max-age=3600' });
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600',
+        'X-Robots-Tag': 'index, follow',
+        'Surrogate-Control': 'max-age=3600'
+      });
       res.end(_hubSeoTransform(data, _hubIndexHost));
     });
     return;
@@ -18694,13 +18692,6 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     });
     return;
   } else if (url.startsWith('/staff/my-leads')) {
-    // Staff Portal My Leads - CRM Lead Management
-    // DC Protocol: Require staff authentication
-    if (!isStaffLoggedIn) {
-      res.writeHead(302, { 'Location': `/login?v=${BUILD_ID}` });
-      res.end();
-      return;
-    }
     const filePath = path.join(__dirname, 'staff_my_leads.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) {
@@ -18723,13 +18714,6 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     res.end();
     return;
   } else if (url.startsWith('/staff/leads')) {
-    // Staff Portal Leads - View leads where user is assigned as handler
-    // DC Protocol: Require staff authentication
-    if (!isStaffLoggedIn) {
-      res.writeHead(302, { 'Location': `/login?v=${BUILD_ID}` });
-      res.end();
-      return;
-    }
     const filePath = path.join(__dirname, 'staff_leads.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) {
@@ -19946,7 +19930,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(html);
     });
     return;
-  } else if (url.startsWith('/staff/dialer')) {
+  } else if (url.startsWith('/staff/dialer') || url.startsWith('/staff/auto-dialer') || url === '/auto-dialer') {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
     // DC Protocol: Client-side LocalStorage token authentication handles user validation
     const filePath = path.join(__dirname, 'staff_dialer.html');
@@ -20404,6 +20388,15 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     return;
   } else if (url.startsWith('/staff/accounts/community-services')) {
     const filePath = path.join(__dirname, 'staff_accounts_community_services.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
+    return;
+  } else if (url.startsWith('/staff/configuration/scope') || url.startsWith('/staff/configuration/portal-scope')) {
+    const filePath = path.join(__dirname, 'staff_configuration_scope.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);

@@ -6,8 +6,7 @@ import shutil
 from pathlib import Path
 
 SOURCE_DIR = Path(__file__).resolve().parent.parent
-OUTPUT_ZIP = SOURCE_DIR / "MyntReal_AWS_Deploy.zip"
-ALIAS_ZIP = SOURCE_DIR / "deployment.zip"
+OUTPUT_ZIP = SOURCE_DIR / "deployment.zip"
 
 EXCLUDE_DIRS = {
     ".git",
@@ -66,7 +65,7 @@ EXCLUDE_FILES = {
 }
 
 def should_exclude(rel_path: Path, abs_file: Path) -> bool:
-    if abs_file == OUTPUT_ZIP or abs_file == ALIAS_ZIP:
+    if abs_file == OUTPUT_ZIP:
         return True
 
     rel_str = str(rel_path).replace("\\", "/")
@@ -159,10 +158,6 @@ def build_zip():
             zf.writestr('.ebextensions/01_env.config', env_config_content)
             print(f"✅ Successfully injected secure environment variables from {env_path.name} into the ZIP as .ebextensions/01_env.config")
 
-    # Copy to deployment.zip and MyntReal_AWS_Deploy_Full.zip
-    shutil.copyfile(OUTPUT_ZIP, ALIAS_ZIP)
-    shutil.copyfile(OUTPUT_ZIP, SOURCE_DIR / "MyntReal_AWS_Deploy_Full.zip")
-
     compressed_size = OUTPUT_ZIP.stat().st_size
     
     # Calculate SHA256
@@ -172,9 +167,15 @@ def build_zip():
             hasher.update(chunk)
     sha256_checksum = hasher.hexdigest()
 
+    root_zip = SOURCE_DIR.parent / "deployment.zip"
+    try:
+        shutil.copyfile(OUTPUT_ZIP, root_zip)
+        print(f"✅ Synchronized {root_zip}")
+    except Exception as e:
+        print(f"Notice: Root copy: {e}")
+
     print(f"\n✅ SLIM ZIP CREATION SUCCESSFUL (< 50MB)!")
     print(f"📍 Location: {OUTPUT_ZIP}")
-    print(f"📍 Deployment Alias: {ALIAS_ZIP}")
     print(f"📊 Total Files Included: {file_count}")
     print(f"📦 Compressed Size: {compressed_size / (1024*1024):.2f} MB ({compressed_size:,} bytes)")
     print(f"📂 Uncompressed Size: {total_uncompressed / (1024*1024):.2f} MB ({total_uncompressed:,} bytes)")

@@ -9,6 +9,7 @@
     <script src="/public/js/staff-token-manager.js"></script>
     <script src="/public/js/staff-fetch.js"></script>
     <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/public/js/plivo-softphone.js?v=20260906_fix"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
@@ -43,6 +44,36 @@
         .dash-tab:hover { background: #f0f4ff; color: #4f46e5; }
         .dash-tab.active { background: #4f46e5; color: white; }
         .dash-tab.hidden { display: none; }
+
+        .clickable-count {
+            cursor: pointer;
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-underline-offset: 3px;
+            font-weight: 600;
+            transition: all 0.15s ease-in-out;
+            color: inherit;
+        }
+        .clickable-count:hover {
+            color: #4f46e5 !important;
+            text-decoration-style: solid;
+            transform: scale(1.12);
+            display: inline-block;
+        }
+        .special-row-unassigned {
+            background-color: #f8fafc !important;
+            border-left: 4px solid #3b82f6;
+        }
+        .special-row-unassigned td {
+            background-color: #f8fafc !important;
+        }
+        .special-row-inactive {
+            background-color: #fffbeb !important;
+            border-left: 4px solid #f59e0b;
+        }
+        .special-row-inactive td {
+            background-color: #fffbeb !important;
+        }
         .tab-main { display: flex; align-items: center; gap: 6px; }
         .tab-sub { font-size: 10px; font-weight: 400; opacity: 0.75; white-space: nowrap; }
         .dash-tab.active .tab-sub { opacity: 0.9; }
@@ -238,6 +269,12 @@
                         <label>Category</label>
                         <select class="form-select" id="filterCategory">
                             <option value="">All Categories</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Source</label>
+                        <select class="form-select" id="filterSource">
+                            <option value="">All Sources</option>
                         </select>
                     </div>
                     <div class="filter-group" style="align-self:flex-end;">
@@ -685,6 +722,155 @@
         </div>
     </div>
 
+    <!-- Modal: Count Drilldown -->
+    <div class="modal fade" id="countDrilldownModal" tabindex="-1" aria-labelledby="countDrilldownModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen-lg-down modal-xl modal-dialog-scrollable" style="max-width:94%;">
+            <div class="modal-content" style="border-radius:12px;border:none;box-shadow:0 10px 25px rgba(0,0,0,0.15);">
+                <div class="modal-header bg-light py-3 px-4" style="border-bottom:1px solid #e5e7eb;">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-list-ol text-primary fs-5"></i>
+                        <div>
+                            <h5 class="modal-title mb-0 fw-bold" id="countDrilldownModalLabel">Leads Drilldown</h5>
+                            <small class="text-muted" id="countDrilldownSubtitle">Loading leads...</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <!-- Controls / Search & Telecaller Filter -->
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <div class="d-flex align-items-center gap-2 flex-wrap" style="flex:1;min-width:280px;">
+                            <div class="input-group input-group-sm" style="max-width:280px;flex:1;">
+                                <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                                <input type="text" class="form-control" id="drilldownSearchInput" placeholder="Search customer or phone..." onkeyup="if(event.key==='Enter') executeDrilldownSearch()">
+                                <button class="btn btn-outline-secondary" type="button" onclick="executeDrilldownSearch()">Search</button>
+                            </div>
+                            <div class="d-flex align-items-center gap-1">
+                                <label for="drilldownTelecallerSelect" class="text-muted small fw-semibold text-nowrap mb-0"><i class="fas fa-headset text-primary me-1"></i>Telecaller:</label>
+                                <select class="form-select form-select-sm" id="drilldownTelecallerSelect" style="min-width:160px;width:auto;" onchange="executeDrilldownSearch()">
+                                    <option value="">All Telecallers</option>
+                                    <option value="unassigned">Unassigned</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-secondary" id="drilldownTotalBadge">0 Leads</span>
+                            <button class="btn btn-sm btn-outline-primary" onclick="refreshCurrentDrilldown()"><i class="fas fa-sync-alt"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Leads Table -->
+                    <div class="table-responsive" style="max-height:60vh;overflow-y:auto;">
+                        <table class="table table-hover table-striped align-middle mb-0" style="font-size:12px;" id="drilldownTable">
+                            <thead class="table-light sticky-top" style="z-index:2;">
+                                <tr>
+                                    <th style="width:35px;">#</th>
+                                    <th>Lead Date</th>
+                                    <th>Category</th>
+                                    <th>Source</th>
+                                    <th>Customer Name</th>
+                                    <th>Mobile &amp; Call</th>
+                                    <th>Tele Caller</th>
+                                    <th>Supporting Staff</th>
+                                    <th>Ground Source (L1)</th>
+                                    <th>Support (L5)</th>
+                                    <th>Status</th>
+                                    <th>Last Call</th>
+                                    <th style="width:75px;" class="text-center">History</th>
+                                </tr>
+                            </thead>
+                            <tbody id="drilldownTableBody">
+                                <tr><td colspan="13" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading leads...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-between py-2 px-4 bg-light">
+                    <div class="text-muted small" id="drilldownPaginationInfo">Page 1 of 1</div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-secondary" id="btnDrilldownPrev" onclick="drilldownChangePage(-1)" disabled><i class="fas fa-chevron-left me-1"></i>Prev</button>
+                        <button class="btn btn-sm btn-outline-secondary" id="btnDrilldownNext" onclick="drilldownChangePage(1)" disabled>Next<i class="fas fa-chevron-right ms-1"></i></button>
+                        <button type="button" class="btn btn-sm btn-secondary ms-2" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Lead Call Details & WhatsApp History -->
+    <div class="modal fade" id="leadHistoryModal" tabindex="-1" aria-labelledby="leadHistoryModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content" style="border-radius:12px;border:none;box-shadow:0 10px 25px rgba(0,0,0,0.15);">
+                <div class="modal-header bg-light py-3 px-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fas fa-history text-primary fs-5"></i>
+                        <div>
+                            <h5 class="modal-title mb-0 fw-bold" id="leadHistoryModalLabel">Lead Communication History</h5>
+                            <small class="text-muted" id="leadHistorySubtitle">-</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <!-- Call Recording Player for Modal -->
+                    <div id="histAudioPlayerContainer" style="display:none;padding:8px 14px;background:#f0f9ff;border:1px solid #bfdbfe;border-radius:8px;margin-bottom:12px;">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-volume-up text-primary"></i>
+                            <span class="small fw-semibold text-primary" style="font-size:12px;">Recording:</span>
+                            <audio controls id="histCallAudioPlayer" style="flex:1;height:32px;"></audio>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="closeHistAudioPlayer()"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+
+                    <ul class="nav nav-pills mb-3" id="historyTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active py-1 px-3" id="calls-tab" data-bs-toggle="pill" data-bs-target="#tabHistCalls" type="button" role="tab"><i class="fas fa-phone-alt me-1"></i>Call Logs &amp; Recordings (<span id="histCallCount">0</span>)</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-1 px-3" id="wa-tab" data-bs-toggle="pill" data-bs-target="#tabHistWa" type="button" role="tab"><i class="fab fa-whatsapp me-1"></i>WhatsApp Timeline (<span id="histWaCount">0</span>)</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-1 px-3" id="notes-tab" data-bs-toggle="pill" data-bs-target="#tabHistNotes" type="button" role="tab"><i class="fas fa-sticky-note me-1"></i>Notes &amp; Comments (<span id="histNotesCount">0</span>)</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content" id="historyTabContent">
+                        <div class="tab-pane fade show active" id="tabHistCalls" role="tabpanel">
+                            <div class="table-responsive" style="max-height:50vh;overflow-y:auto;">
+                                <table class="table table-sm table-hover align-middle mb-0" style="font-size:12px;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Date &amp; Time</th>
+                                            <th>Type</th>
+                                            <th>Duration</th>
+                                            <th>Staff Member</th>
+                                            <th>Recording</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="histCallsBody">
+                                        <tr><td colspan="5" class="text-center py-3 text-muted">No call records found.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tabHistWa" role="tabpanel">
+                            <div id="histWaTimeline" style="max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:10px;background:#f9fafb;border-radius:8px;">
+                                <div class="text-center text-muted py-3">No WhatsApp messages found.</div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="tabHistNotes" role="tabpanel">
+                            <div id="histNotesTimeline" style="max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:10px;background:#f9fafb;border-radius:8px;">
+                                <div class="text-center text-muted py-3">No notes or comments found.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer py-2 px-4 bg-light">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let companyId = '';
@@ -773,6 +959,7 @@
             } catch(e) {}
 
             loadCategories();
+            loadSources();
 
             // Read URL params for active tab pre-selection
             const p = new URLSearchParams(window.location.search);
@@ -791,6 +978,7 @@
         function onCompanyChange() {
             companyId = document.getElementById('companySelector').value;
             loadCategories();
+            loadSources();
             loadDashboard();
         }
 
@@ -815,6 +1003,33 @@
             } catch(e) {}
         }
 
+        async function loadSources() {
+            try {
+                const sel = document.getElementById('filterSource');
+                if (!sel) return;
+                const prevVal = sel.value;
+                sel.innerHTML = '<option value="">All Sources</option>';
+                const url = companyId ? `/api/v1/crm/sources?company_id=${companyId}` : `/api/v1/crm/sources`;
+                const res = await safeStaffFetch(url);
+                const list = (res && res.data) ? res.data : (Array.isArray(res) ? res : []);
+                const seen = new Set();
+                list.forEach(s => {
+                    const sname = (s.name || '').trim();
+                    if (!sname || seen.has(sname.toLowerCase())) return;
+                    seen.add(sname.toLowerCase());
+                    const opt = document.createElement('option');
+                    opt.value = sname;
+                    opt.textContent = sname;
+                    sel.appendChild(opt);
+                });
+                if (prevVal && seen.has(prevVal.toLowerCase())) {
+                    sel.value = prevVal;
+                }
+            } catch(e) {
+                console.error('Failed to load sources', e);
+            }
+        }
+
         function resetFilters() {
             document.getElementById('companySelector').value = '';
             companyId = '';
@@ -823,6 +1038,8 @@
             document.getElementById('filterStatus').value = '';
             document.getElementById('filterDepartment').value = '';
             document.getElementById('filterCategory').value = '';
+            const srcSel = document.getElementById('filterSource');
+            if (srcSel) srcSel.value = '';
             loadDashboard();
         }
 
@@ -834,11 +1051,13 @@
             const st = document.getElementById('filterStatus').value;
             const dept = document.getElementById('filterDepartment').value;
             const cat = document.getElementById('filterCategory').value;
+            const src = document.getElementById('filterSource')?.value;
             if (sd) params.set('start_date', sd);
             if (ed) params.set('end_date', ed);
             if (st) params.set('status', st);
             if (dept) params.set('department_id', dept);
             if (cat) params.set('category_id', cat);
+            if (src) params.set('source', src);
             return params.toString();
         }
 
@@ -948,8 +1167,26 @@
             const my = dashData.my_performance;
             setBadge('tabBadgeMy', my?.summary?.total_leads || 0, my?.deal_value || 0);
 
+            const teamTotals = dashData.team_performance?.totals;
             const teamRows = dashData.team_performance?.employees || [];
-            setBadge('tabBadgeTeam', teamRows.reduce((s,r) => s + (r.total||0), 0), teamRows.reduce((s,r) => s + (r.deal_value||0), 0));
+            const teamTotalCount = teamTotals ? teamTotals.total : teamRows.reduce((s,r) => s + (r.total||0), 0);
+            const teamTotalVal = teamTotals ? teamTotals.deal_value : teamRows.reduce((s,r) => s + (r.deal_value||0), 0);
+            setBadge('tabBadgeTeam', teamTotalCount, teamTotalVal);
+
+            const statusTotals = dashData.status_wise?.totals;
+            if (statusTotals) {
+                setBadge('tabBadgeStatus', statusTotals.total, statusTotals.deal_value);
+            }
+
+            const catRows = dashData.category_wise || [];
+            const catTotal = catRows.reduce((s,r) => s + (r.total||0), 0);
+            const catVal = catRows.reduce((s,r) => s + (r.deal_value||0), 0);
+            setBadge('tabBadgeCategory', catTotal, catVal);
+
+            const compRows = dashData.company_wise || [];
+            const compTotal = compRows.reduce((s,r) => s + (r.total||0), 0);
+            const compVal = compRows.reduce((s,r) => s + (r.deal_value||0), 0);
+            setBadge('tabBadgeCompany', compTotal, compVal);
         }
 
         function fmtNum(n) { return (n || 0).toLocaleString('en-IN'); }
@@ -1071,26 +1308,74 @@
             return `<span class="${m >= 30 ? 'val-positive' : ''}">${m}m</span>`;
         }
 
-        function buildStandardRow(row) {
+        function buildStandardRow(row, extra) {
             let html = '';
             const dc = row.daily_contacted || {};
+            const empId = (extra && extra.emp_id != null) ? String(extra.emp_id) : (row.emp_id != null ? String(row.emp_id) : 'all');
+            let empName = (extra && extra.emp_name) ? extra.emp_name : (row.name || 'All');
+            if (extra && extra.category_name) {
+                empName = extra.emp_name ? `${extra.emp_name} (${extra.category_name})` : extra.category_name;
+            } else if (extra && extra.company_name) {
+                empName = extra.company_name;
+            }
+            const extraArg = extra ? JSON.stringify(extra).replace(/"/g, '&quot;') : 'null';
+
             getDailyDates().forEach(ds => {
                 const v = dc[ds] || 0;
-                html += `<td class="${v > 0 ? 'val-positive' : 'val-zero'}">${fmtNum(v)}</td>`;
+                if (v > 0) {
+                    html += `<td class="val-positive"><span class="clickable-count" onclick="openCountDrilldown('${empId}', '${encodeURIComponent(empName)}', 'daily_contacted', '${ds}', '${encodeURIComponent(empName + ' - Contacted on ' + ds)}', ${extraArg})">${fmtNum(v)}</span></td>`;
+                } else {
+                    html += `<td class="val-zero">0</td>`;
+                }
             });
             const ct = row.contacted_today || 0;
             const avg = row.avg_daily_leads || 0;
             const od = row.overdue || 0;
-            html += `<td class="${ct > 0 ? 'val-positive' : 'val-zero'}">${fmtNum(ct)}</td>`;
+
+            if (ct > 0) {
+                html += `<td class="val-positive"><span class="clickable-count" onclick="openCountDrilldown('${empId}', '${encodeURIComponent(empName)}', 'contacted_today', '', '${encodeURIComponent(empName + ' - Contacted Today')}', ${extraArg})">${fmtNum(ct)}</span></td>`;
+            } else {
+                html += `<td class="val-zero">0</td>`;
+            }
+
             html += `<td class="${avg > 0 ? 'val-positive' : 'val-zero'}" style="font-weight:600;">${avg % 1 === 0 ? fmtNum(avg) : avg.toFixed(1)}</td>`;
-            html += `<td class="${od > 0 ? 'val-alert' : 'val-zero'}">${fmtNum(od)}</td>`;
+
+            if (od > 0) {
+                html += `<td class="val-alert"><span class="clickable-count" onclick="openCountDrilldown('${empId}', '${encodeURIComponent(empName)}', 'overdue', '', '${encodeURIComponent(empName + ' - Overdue Leads')}', ${extraArg})">${fmtNum(od)}</span></td>`;
+            } else {
+                html += `<td class="val-zero">0</td>`;
+            }
+
             STATUS_COLS.forEach(s => {
                 const v = row[s] || 0;
-                html += `<td class="${cellClass(v)}">${fmtNum(v)}</td>`;
+                if (v > 0) {
+                    html += `<td class="${cellClass(v)}"><span class="clickable-count" onclick="openCountDrilldown('${empId}', '${encodeURIComponent(empName)}', 'status', '${s}', '${encodeURIComponent(empName + ' - Status: ' + s)}', ${extraArg})">${fmtNum(v)}</span></td>`;
+                } else {
+                    html += `<td class="val-zero">0</td>`;
+                }
             });
-            html += `<td><strong>${fmtNum(row.total || 0)}</strong></td>`;
-            html += `<td class="${cellClass(row.self_leads)}">${fmtNum(row.self_leads || 0)}</td>`;
-            html += `<td class="${cellClass(row.company_leads)}">${fmtNum(row.company_leads || 0)}</td>`;
+
+            const total = row.total || 0;
+            if (total > 0) {
+                html += `<td><strong><span class="clickable-count" onclick="openCountDrilldown('${empId}', '${encodeURIComponent(empName)}', 'total', '', '${encodeURIComponent(empName + ' - Total Leads')}', ${extraArg})">${fmtNum(total)}</span></strong></td>`;
+            } else {
+                html += `<td><strong>0</strong></td>`;
+            }
+
+            const selfLeads = row.self_leads || 0;
+            if (selfLeads > 0) {
+                html += `<td class="${cellClass(selfLeads)}"><span class="clickable-count" onclick="openCountDrilldown('${empId}', '${encodeURIComponent(empName)}', 'self_leads', '', '${encodeURIComponent(empName + ' - Self Leads')}', ${extraArg})">${fmtNum(selfLeads)}</span></td>`;
+            } else {
+                html += `<td class="val-zero">0</td>`;
+            }
+
+            const compLeads = row.company_leads || 0;
+            if (compLeads > 0) {
+                html += `<td class="${cellClass(compLeads)}"><span class="clickable-count" onclick="openCountDrilldown('${empId}', '${encodeURIComponent(empName)}', 'company_leads', '', '${encodeURIComponent(empName + ' - Company Leads')}', ${extraArg})">${fmtNum(compLeads)}</span></td>`;
+            } else {
+                html += `<td class="val-zero">0</td>`;
+            }
+
             html += `<td class="val-positive">${fmtCur(row.actual_revenue || 0)}</td>`;
             html += `<td class="val-positive">${fmtCur(row.deal_value || 0)}</td>`;
             html += `<td>${fmtTalkTime(row.avg_daily_talk_time || 0)}</td>`;
@@ -1123,15 +1408,17 @@
             const s = my.summary;
             const winRate = s.total_leads > 0 ? ((s.won || 0) / s.total_leads * 100).toFixed(1) + '%' : '0%';
             const contactRate = s.total_leads > 0 ? (((s.contacted || 0) + (s.contacted_today || 0)) / s.total_leads * 100).toFixed(1) + '%' : '0%';
+            const myEmpId = dashData?.current_employee?.id ? String(dashData.current_employee.id) : 'all';
+            const myEmpName = dashData?.current_employee?.name || 'My';
             const cards = document.getElementById('myStatCards');
             cards.innerHTML = `
-                <div class="stat-card highlight"><div class="val">${fmtNum(s.total_leads)}</div><div class="lbl">Total Leads</div></div>
-                <div class="stat-card blue"><div class="val">${fmtNum(s.contacted_today)}</div><div class="lbl">Contacted Today</div></div>
+                <div class="stat-card highlight" onclick="openCountDrilldown('${myEmpId}', '${encodeURIComponent(myEmpName)}', 'total', '', 'My Performance - Total Leads')" style="cursor:pointer;"><div class="val">${fmtNum(s.total_leads)}</div><div class="lbl">Total Leads</div></div>
+                <div class="stat-card blue" onclick="openCountDrilldown('${myEmpId}', '${encodeURIComponent(myEmpName)}', 'contacted_today', '', 'My Performance - Contacted Today')" style="cursor:pointer;"><div class="val">${fmtNum(s.contacted_today)}</div><div class="lbl">Contacted Today</div></div>
                 <div class="stat-card"><div class="val">${s.avg_daily_leads || 0}</div><div class="lbl">Avg Daily Leads</div></div>
-                <div class="stat-card red"><div class="val">${fmtNum(s.overdue)}</div><div class="lbl">Overdue</div></div>
-                <div class="stat-card"><div class="val">${fmtNum(s.new)}</div><div class="lbl">New</div></div>
-                <div class="stat-card"><div class="val">${fmtNum(s.interested)}</div><div class="lbl">Interested</div></div>
-                <div class="stat-card green"><div class="val">${fmtNum(s.won)}</div><div class="lbl">Won (${winRate})</div></div>
+                <div class="stat-card red" onclick="openCountDrilldown('${myEmpId}', '${encodeURIComponent(myEmpName)}', 'overdue', '', 'My Performance - Overdue Leads')" style="cursor:pointer;"><div class="val">${fmtNum(s.overdue)}</div><div class="lbl">Overdue</div></div>
+                <div class="stat-card" onclick="openCountDrilldown('${myEmpId}', '${encodeURIComponent(myEmpName)}', 'status', 'new', 'My Performance - New Leads')" style="cursor:pointer;"><div class="val">${fmtNum(s.new)}</div><div class="lbl">New</div></div>
+                <div class="stat-card" onclick="openCountDrilldown('${myEmpId}', '${encodeURIComponent(myEmpName)}', 'status', 'interested', 'My Performance - Interested Leads')" style="cursor:pointer;"><div class="val">${fmtNum(s.interested)}</div><div class="lbl">Interested</div></div>
+                <div class="stat-card green" onclick="openCountDrilldown('${myEmpId}', '${encodeURIComponent(myEmpName)}', 'status', 'won', 'My Performance - Won Leads')" style="cursor:pointer;"><div class="val">${fmtNum(s.won)}</div><div class="lbl">Won (${winRate})</div></div>
                 <div class="stat-card green"><div class="val">${fmtCur(my.actual_revenue)}</div><div class="lbl">Actual Revenue</div></div>
                 <div class="stat-card teal"><div class="val">${fmtCur(my.deal_value)}</div><div class="lbl">Pipeline Value</div></div>
             `;
@@ -1143,12 +1430,16 @@
             if (!cats.length) { headEl.innerHTML = ''; bodyEl.innerHTML = ''; footEl.innerHTML = ''; emptyEl.style.display = 'block'; return; }
             emptyEl.style.display = 'none';
             headEl.innerHTML = buildSortableHead('myCat', [{label:'Category', width:180}]);
-            bodyEl.innerHTML = cats.map(c => `<tr><td class="text-start sticky-col sticky-col-last" style="left:0;background:#fff;min-width:180px;"><strong>${c.category_name||'General'}</strong></td>${buildStandardRow(c)}</tr>`).join('');
-            footEl.innerHTML = `<tr><td class="text-start sticky-col sticky-col-last" style="left:0;min-width:180px;"><strong>TOTAL</strong></td>${buildStandardRow(calcTotals(cats))}</tr>`;
+            bodyEl.innerHTML = cats.map(c => {
+                const extra = { category_name: c.category_name, emp_id: myEmpId, emp_name: myEmpName, category_ids: c.category_ids || (c.category_id ? String(c.category_id) : 'none') };
+                return `<tr><td class="text-start sticky-col sticky-col-last" style="left:0;background:#fff;min-width:180px;"><strong>${c.category_name||'General'}</strong></td>${buildStandardRow(c, extra)}</tr>`;
+            }).join('');
+            footEl.innerHTML = `<tr><td class="text-start sticky-col sticky-col-last" style="left:0;min-width:180px;"><strong>TOTAL</strong></td>${buildStandardRow(calcTotals(cats), { emp_id: myEmpId, emp_name: myEmpName })}</tr>`;
         }
 
         function renderTeamPerformance() {
             const employees = getFilteredTeamEmployees();
+            const specialRows = (dashData && dashData.team_performance && dashData.team_performance.special_rows) || [];
             const headEl = document.getElementById('teamHead');
             const bodyEl = document.getElementById('teamBody');
             const footEl = document.getElementById('teamFoot');
@@ -1156,7 +1447,7 @@
             const ce = document.getElementById('teamCount');
             if (ce) ce.textContent = `${employees.length} team members`;
 
-            if (!employees.length) { headEl.innerHTML = ''; bodyEl.innerHTML = ''; footEl.innerHTML = ''; emptyEl.style.display = 'block'; return; }
+            if (!employees.length && !specialRows.length) { headEl.innerHTML = ''; bodyEl.innerHTML = ''; footEl.innerHTML = ''; emptyEl.style.display = 'block'; return; }
             emptyEl.style.display = 'none';
 
             // Find top converter
@@ -1167,7 +1458,33 @@
             });
 
             headEl.innerHTML = buildSortableHead('team', [{label:'#', width:40}, {label:'Staff Member', width:200}]);
-            bodyEl.innerHTML = employees.map((emp, idx) => {
+
+            // Render special rows at the top (Company Unassigned and Inactive Employees)
+            let specialHtml = '';
+            specialRows.forEach(spRow => {
+                const isUnassigned = spRow.special_type === 'unassigned';
+                const rowClass = isUnassigned ? 'special-row-unassigned' : 'special-row-inactive';
+                const icon = isUnassigned ? 'fa-building text-primary' : 'fa-user-slash text-warning';
+                const badgeText = isUnassigned ? 'Company Pool' : 'Inactive / Past';
+                const badgeClass = isUnassigned ? 'bg-primary' : 'bg-warning text-dark';
+                specialHtml += `<tr class="${rowClass}">
+                    <td class="text-center sticky-col" style="left:0;min-width:40px;"><i class="fas ${icon}"></i></td>
+                    <td class="text-start sticky-col sticky-col-last" style="left:40px;min-width:200px;">
+                        <div class="emp-info">
+                            <div>
+                                <div class="emp-name" style="font-weight:700;">
+                                    ${spRow.name}
+                                    <span class="badge ${badgeClass} ms-1" style="font-size:9px;">${badgeText}</span>
+                                </div>
+                                <div class="emp-id">${spRow.emp_code||''} · Leads Pool</div>
+                            </div>
+                        </div>
+                    </td>
+                    ${buildStandardRow(spRow)}
+                </tr>`;
+            });
+
+            const empHtml = employees.map((emp, idx) => {
                 const isTop = (emp.emp_id === topEmpId && maxWon > 0);
                 const winRate = emp.total > 0 ? ((emp.won || 0) / emp.total * 100).toFixed(1) + '%' : '0%';
                 return `<tr>
@@ -1187,7 +1504,13 @@
                     ${buildStandardRow(emp)}
                 </tr>`;
             }).join('');
-            footEl.innerHTML = `<tr><td class="sticky-col" style="left:0;"></td><td class="text-start sticky-col sticky-col-last" style="left:40px;"><strong>TOTAL</strong></td>${buildStandardRow(calcTotals(employees))}</tr>`;
+
+            bodyEl.innerHTML = specialHtml + empHtml;
+
+            const totalsData = (dashData && dashData.team_performance && dashData.team_performance.totals) 
+                ? { ...dashData.team_performance.totals, emp_id: 'all', name: 'TOTAL' } 
+                : { ...calcTotals(employees), emp_id: 'all', name: 'TOTAL' };
+            footEl.innerHTML = `<tr><td class="sticky-col" style="left:0;"></td><td class="text-start sticky-col sticky-col-last" style="left:40px;"><strong>TOTAL</strong></td>${buildStandardRow(totalsData)}</tr>`;
         }
 
         function renderStatusWise() { renderGenericEmpTable('statusTable', dashData.status_wise, 'statusCount'); }
@@ -1196,19 +1519,40 @@
 
         function renderGenericEmpTable(tableId, data, countId) {
             const emps = (data && data.employees) || [];
+            const specialRows = (data && data.special_rows) || [];
             const prefix = tableId.replace('Table','');
             const headEl = document.getElementById(prefix + 'Head');
             const bodyEl = document.getElementById(prefix + 'Body');
             const footEl = document.getElementById(prefix + 'Foot');
             if (countId) document.getElementById(countId).textContent = `${emps.length} employees`;
-            if (!emps.length) return;
+            if (!emps.length && !specialRows.length) return;
             headEl.innerHTML = buildSortableHead(prefix, [{label:'#', width:40}, {label:'Employee', width:200}]);
-            bodyEl.innerHTML = emps.map((emp, idx) => `<tr>
+
+            let specialHtml = '';
+            specialRows.forEach(spRow => {
+                const isUnassigned = spRow.special_type === 'unassigned';
+                const rowClass = isUnassigned ? 'special-row-unassigned' : 'special-row-inactive';
+                const icon = isUnassigned ? 'fa-building text-primary' : 'fa-user-slash text-warning';
+                const badgeText = isUnassigned ? 'Company Pool' : 'Inactive';
+                const badgeClass = isUnassigned ? 'bg-primary' : 'bg-warning text-dark';
+                specialHtml += `<tr class="${rowClass}">
+                    <td class="text-center sticky-col" style="left:0;min-width:40px;"><i class="fas ${icon}"></i></td>
+                    <td class="text-start sticky-col sticky-col-last" style="left:40px;min-width:200px;">
+                        <strong style="font-weight:700;">${spRow.name}</strong> <span class="badge ${badgeClass} ms-1" style="font-size:9px;">${badgeText}</span><br>
+                        <small class="text-muted">${spRow.emp_code||''}</small>
+                    </td>
+                    ${buildStandardRow(spRow)}
+                </tr>`;
+            });
+
+            bodyEl.innerHTML = specialHtml + emps.map((emp, idx) => `<tr>
                 <td class="text-start sticky-col" style="left:0;background:#fff;min-width:40px;">${idx + 1}</td>
                 <td class="text-start sticky-col sticky-col-last" style="left:40px;background:#fff;min-width:200px;"><strong>${emp.name}</strong><br><small class="text-muted">${emp.emp_code||''}</small></td>
                 ${buildStandardRow(emp)}
             </tr>`).join('');
-            footEl.innerHTML = `<tr><td class="sticky-col" style="left:0;"></td><td class="text-start sticky-col sticky-col-last" style="left:40px;"><strong>TOTAL</strong></td>${buildStandardRow(calcTotals(emps))}</tr>`;
+
+            const totalsData = (data && data.totals) ? { ...data.totals, emp_id: 'all', name: 'TOTAL' } : { ...calcTotals(emps), emp_id: 'all', name: 'TOTAL' };
+            footEl.innerHTML = `<tr><td class="sticky-col" style="left:0;"></td><td class="text-start sticky-col sticky-col-last" style="left:40px;"><strong>TOTAL</strong></td>${buildStandardRow(totalsData)}</tr>`;
         }
 
         function renderGenericGroupTable(tableId, rows, field) {
@@ -1217,11 +1561,17 @@
             const bodyEl = document.getElementById(prefix + 'Body');
             const footEl = document.getElementById(prefix + 'Foot');
             if (!rows || !rows.length) return;
-            headEl.innerHTML = buildSortableHead(prefix, [{label: field === 'category_name' ? 'Category' : 'Company', width:200}]);
-            bodyEl.innerHTML = rows.map(r => `<tr>
-                <td class="text-start sticky-col sticky-col-last" style="left:0;background:#fff;min-width:200px;"><strong>${r[field]||'General'}</strong></td>
-                ${buildStandardRow(r)}
-            </tr>`).join('');
+            const isCat = field === 'category_name';
+            headEl.innerHTML = buildSortableHead(prefix, [{label: isCat ? 'Category' : 'Company', width:200}]);
+            bodyEl.innerHTML = rows.map(r => {
+                const extra = isCat 
+                    ? { category_name: r.category_name, category_ids: r.category_ids || (r.category_id ? String(r.category_id) : 'none') }
+                    : { company_id: r.company_id, company_name: r.company_name };
+                return `<tr>
+                    <td class="text-start sticky-col sticky-col-last" style="left:0;background:#fff;min-width:200px;"><strong>${r[field]||'General'}</strong></td>
+                    ${buildStandardRow(r, extra)}
+                </tr>`;
+            }).join('');
             footEl.innerHTML = `<tr><td class="text-start sticky-col sticky-col-last" style="left:0;"><strong>TOTAL</strong></td>${buildStandardRow(calcTotals(rows))}</tr>`;
         }
 
@@ -1448,11 +1798,46 @@
             }).join('');
         }
 
-        function playAudioStream(recordingId) {
-            const container = document.getElementById('audioPlayerContainer');
-            const player = document.getElementById('callAudioPlayer');
-            player.src = `/api/v1/call-tracking/recordings/${recordingId}/stream`;
+        let currentAudioBlobUrl = null;
+        async function playAudioStream(recordingId) {
+            const histModal = document.getElementById('leadHistoryModal');
+            const isHistOpen = histModal && (histModal.classList.contains('show') || histModal.style.display === 'block');
+            const player = isHistOpen ? document.getElementById('histCallAudioPlayer') : document.getElementById('callAudioPlayer');
+            const container = isHistOpen ? document.getElementById('histAudioPlayerContainer') : document.getElementById('audioPlayerContainer');
+            if (!player || !container) return;
+
             container.style.display = 'block';
+
+            if (currentAudioBlobUrl) {
+                try { URL.revokeObjectURL(currentAudioBlobUrl); } catch(e) {}
+                currentAudioBlobUrl = null;
+            }
+
+            const token = localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token') || '';
+            const streamUrl = `/api/v1/call-tracking/recordings/${recordingId}/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+
+            try {
+                const resp = await fetch(streamUrl, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
+                if (resp.ok) {
+                    const blob = await resp.blob();
+                    currentAudioBlobUrl = URL.createObjectURL(blob);
+                    player.src = currentAudioBlobUrl;
+                    player.onended = () => {
+                        if (currentAudioBlobUrl) {
+                            try { URL.revokeObjectURL(currentAudioBlobUrl); } catch(e) {}
+                            currentAudioBlobUrl = null;
+                        }
+                    };
+                    player.play().catch(() => {});
+                    return;
+                }
+            } catch (e) {
+                console.warn('Fetch audio blob error, falling back to direct src', e);
+            }
+
+            player.src = streamUrl;
             player.play().catch(() => {});
         }
         function closeAudioPlayer() {
@@ -1460,6 +1845,20 @@
             const player = document.getElementById('callAudioPlayer');
             if (player) { player.pause(); player.src = ''; }
             if (container) container.style.display = 'none';
+            if (currentAudioBlobUrl) {
+                try { URL.revokeObjectURL(currentAudioBlobUrl); } catch(e) {}
+                currentAudioBlobUrl = null;
+            }
+        }
+        function closeHistAudioPlayer() {
+            const container = document.getElementById('histAudioPlayerContainer');
+            const player = document.getElementById('histCallAudioPlayer');
+            if (player) { player.pause(); player.src = ''; }
+            if (container) container.style.display = 'none';
+            if (currentAudioBlobUrl) {
+                try { URL.revokeObjectURL(currentAudioBlobUrl); } catch(e) {}
+                currentAudioBlobUrl = null;
+            }
         }
         function closeCallDrilldown() { document.getElementById('ctDrilldownSection').style.display = 'none'; closeAudioPlayer(); }
 
@@ -1805,6 +2204,322 @@
                 navigator.clipboard.writeText(url).then(() => alert('Dashboard link copied to clipboard!'));
             } else {
                 window.prompt('Copy this link:', url);
+            }
+        }
+
+        /* ══════════════════════ DRILLDOWN & LEAD HISTORY MODALS ══════════════════ */
+        let currentDrilldownParams = null;
+        let drilldownCurrentPage = 1;
+        let drilldownTotalPages = 1;
+        let drilldownModalInstance = null;
+        let leadHistoryModalInstance = null;
+
+        function updateDrilldownTelecallerOptions(telecallers) {
+            const sel = document.getElementById('drilldownTelecallerSelect');
+            if (!sel || !telecallers || !telecallers.length) return;
+            const currentVal = sel.value;
+            if (sel.options.length <= 2) {
+                let html = '<option value="">All Telecallers</option><option value="unassigned">Unassigned</option>';
+                telecallers.forEach(tc => {
+                    const label = tc.emp_code ? `${tc.name} (${tc.emp_code})` : tc.name;
+                    html += `<option value="${tc.id}">${escapeHtml(label)}</option>`;
+                });
+                sel.innerHTML = html;
+                if (currentVal) sel.value = currentVal;
+            }
+        }
+
+        function openCountDrilldown(empId, empNameEnc, metricType, metricVal, titleEnc, extraOpts) {
+            const empName = decodeURIComponent(empNameEnc);
+            const title = decodeURIComponent(titleEnc);
+            currentDrilldownParams = {
+                emp_id: empId,
+                emp_name: empName,
+                metric_type: metricType,
+                metric_val: metricVal || '',
+                title: title,
+                ...(extraOpts || {})
+            };
+            drilldownCurrentPage = 1;
+            const sInput = document.getElementById('drilldownSearchInput');
+            if (sInput) sInput.value = '';
+            const tcSelect = document.getElementById('drilldownTelecallerSelect');
+            if (tcSelect) tcSelect.value = '';
+
+            // Pre-fill telecallers from team performance if available
+            if (dashData && dashData.team_performance && dashData.team_performance.employees) {
+                updateDrilldownTelecallerOptions(dashData.team_performance.employees.map(e => ({
+                    id: e.emp_id,
+                    name: e.name,
+                    emp_code: e.emp_code
+                })));
+            }
+
+            document.getElementById('countDrilldownModalLabel').textContent = title;
+            let subText = `Staff: ${empName}`;
+            if (extraOpts && extraOpts.category_name) {
+                subText = `Category: ${extraOpts.category_name}`;
+            } else if (extraOpts && extraOpts.company_name) {
+                subText = `Company: ${extraOpts.company_name}`;
+            }
+            document.getElementById('countDrilldownSubtitle').textContent = `${subText} | Filter: ${metricType} ${metricVal ? '(' + metricVal + ')' : ''}`;
+
+            if (!drilldownModalInstance) {
+                drilldownModalInstance = new bootstrap.Modal(document.getElementById('countDrilldownModal'));
+            }
+            drilldownModalInstance.show();
+            loadDrilldownPage(1);
+        }
+
+        async function loadDrilldownPage(page) {
+            if (!currentDrilldownParams) return;
+            drilldownCurrentPage = page;
+            const tbody = document.getElementById('drilldownTableBody');
+            tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading leads...</td></tr>';
+
+            const params = new URLSearchParams();
+            params.set('emp_id', currentDrilldownParams.emp_id);
+            params.set('metric_type', currentDrilldownParams.metric_type);
+            if (currentDrilldownParams.metric_val) params.set('metric_val', currentDrilldownParams.metric_val);
+            params.set('page', page);
+            params.set('per_page', 20);
+
+            // Forward active category / company drilldown filters
+            if (currentDrilldownParams.category_ids) {
+                params.set('category_id', currentDrilldownParams.category_ids);
+            } else if (currentDrilldownParams.category_name) {
+                params.set('category_name', currentDrilldownParams.category_name);
+            }
+            if (currentDrilldownParams.company_id) {
+                params.set('company_id', currentDrilldownParams.company_id);
+            }
+
+            // Forward active global filters
+            if (companyId && !params.has('company_id')) params.set('company_id', companyId);
+            const src = document.getElementById('filterSource')?.value;
+            if (src) params.set('source', src);
+            const cat = document.getElementById('filterCategory')?.value;
+            if (cat && !params.has('category_id') && !params.has('category_name')) params.set('category_id', cat);
+            const sd = document.getElementById('filterStartDate')?.value;
+            if (sd) params.set('start_date', sd);
+            const ed = document.getElementById('filterEndDate')?.value;
+            if (ed) params.set('end_date', ed);
+            const sTerm = document.getElementById('drilldownSearchInput')?.value?.trim();
+            if (sTerm) params.set('search', sTerm);
+            const tcVal = document.getElementById('drilldownTelecallerSelect')?.value;
+            if (tcVal) params.set('telecaller_id', tcVal);
+
+            try {
+                const res = await safeStaffFetch(`${API_BASE}/dashboard-v2/drilldown?${params.toString()}`);
+                if (!res || !res.success) {
+                    tbody.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-danger">${(res && res.detail) || 'Failed to load leads'}</td></tr>`;
+                    return;
+                }
+                const data = res.data;
+                const items = data.items || [];
+                if (data.telecallers) {
+                    updateDrilldownTelecallerOptions(data.telecallers);
+                }
+                drilldownTotalPages = data.total_pages || 1;
+                document.getElementById('drilldownTotalBadge').textContent = `${data.total} Leads`;
+                document.getElementById('drilldownPaginationInfo').textContent = `Page ${data.page} of ${drilldownTotalPages} (${data.total} total)`;
+                document.getElementById('btnDrilldownPrev').disabled = data.page <= 1;
+                document.getElementById('btnDrilldownNext').disabled = data.page >= drilldownTotalPages;
+
+                if (!items.length) {
+                    tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-muted"><i class="fas fa-inbox me-2"></i>No leads found for this criteria.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = items.map((l, idx) => {
+                    const rowIdx = (data.page - 1) * data.per_page + idx + 1;
+                    let lastCallHtml = '-';
+                    if (l.last_call && l.last_call.call_datetime) {
+                        const recBadge = l.last_call.has_recording ? ' <span class="badge bg-success text-white" style="font-size:8px;"><i class="fas fa-microphone"></i></span>' : '';
+                        lastCallHtml = `<div>
+                            <strong>${l.last_call.call_datetime}</strong>${recBadge}<br>
+                            <small class="text-muted">${l.last_call.call_type || 'CALL'} · ${l.last_call.duration_str || '-'} ${l.last_call.caller_name ? '· ' + l.last_call.caller_name : ''}</small>
+                        </div>`;
+                    }
+                    const callBtn = l.phone && l.phone !== '-' ? `<button class="btn btn-sm btn-success py-0 px-2 fw-semibold text-nowrap" style="font-size:11px;" onclick="triggerLeadCall('${l.phone}', ${l.id}, '${escapeJs(l.customer_name)}')"><i class="fas fa-phone-alt me-1"></i>${l.phone}</button>` : '-';
+
+                    return `<tr>
+                        <td class="text-muted">${rowIdx}</td>
+                        <td class="text-nowrap"><small>${l.lead_date || '-'}</small></td>
+                        <td><span class="badge bg-secondary-subtle text-secondary-emphasis border fw-semibold">${escapeHtml(l.category || '-')}</span></td>
+                        <td><span class="badge bg-light text-dark border">${escapeHtml(l.source || '-')}</span></td>
+                        <td><strong>${escapeHtml(l.customer_name || '-')}</strong></td>
+                        <td>${callBtn}</td>
+                        <td>${escapeHtml(l.telecaller_name || '-')}</td>
+                        <td>${escapeHtml(l.supporting_staff_name || '-')}</td>
+                        <td><span class="badge bg-info-subtle text-info-emphasis border">${escapeHtml(l.ground_source_name || '-')}</span></td>
+                        <td><span class="badge bg-secondary-subtle text-secondary-emphasis border">${escapeHtml(l.support_staff_l5 || '-')}</span></td>
+                        <td><span class="badge bg-primary-subtle text-primary border">${escapeHtml(l.latest_status || '-')}</span></td>
+                        <td class="text-nowrap">${lastCallHtml}</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-primary py-0 px-2 text-nowrap" style="font-size:11px;" onclick="openLeadHistoryModal(${l.id}, '${escapeJs(l.customer_name)}')">
+                                <i class="fas fa-history me-1"></i>History
+                            </button>
+                        </td>
+                    </tr>`;
+                }).join('');
+            } catch(e) {
+                console.error('Drilldown error', e);
+                tbody.innerHTML = '<tr><td colspan="13" class="text-center py-4 text-danger">Error loading drilldown leads</td></tr>';
+            }
+        }
+
+        function drilldownChangePage(delta) {
+            const nextP = drilldownCurrentPage + delta;
+            if (nextP >= 1 && nextP <= drilldownTotalPages) {
+                loadDrilldownPage(nextP);
+            }
+        }
+
+        function executeDrilldownSearch() {
+            loadDrilldownPage(1);
+        }
+
+        function refreshCurrentDrilldown() {
+            loadDrilldownPage(drilldownCurrentPage);
+        }
+
+        function escapeJs(str) {
+            return (str || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        async function openLeadHistoryModal(leadId, leadName) {
+            if (!leadHistoryModalInstance) {
+                const modalEl = document.getElementById('leadHistoryModal');
+                leadHistoryModalInstance = new bootstrap.Modal(modalEl);
+                if (modalEl) {
+                    modalEl.addEventListener('hidden.bs.modal', function() {
+                        closeHistAudioPlayer();
+                    });
+                }
+            }
+            closeHistAudioPlayer();
+            // Reset active tab to Calls tab on open
+            const callsTabBtn = document.getElementById('calls-tab');
+            if (callsTabBtn && typeof bootstrap !== 'undefined') {
+                const tabTrigger = bootstrap.Tab.getOrCreateInstance(callsTabBtn);
+                tabTrigger.show();
+            }
+            document.getElementById('leadHistoryModalLabel').textContent = `Communication History — ${leadName}`;
+            document.getElementById('leadHistorySubtitle').textContent = `Lead ID: #${leadId}`;
+            const callsBody = document.getElementById('histCallsBody');
+            const waTimeline = document.getElementById('histWaTimeline');
+            const notesTimeline = document.getElementById('histNotesTimeline');
+            callsBody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading call logs...</td></tr>';
+            waTimeline.innerHTML = '<div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading WhatsApp messages...</div>';
+            if (notesTimeline) notesTimeline.innerHTML = '<div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin me-2"></i>Loading notes...</div>';
+
+            leadHistoryModalInstance.show();
+
+            try {
+                const res = await safeStaffFetch(`${API_BASE}/dashboard-v2/lead-history/${leadId}`);
+                if (!res || !res.success) {
+                    callsBody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-danger">${(res && res.detail) || 'Failed to load history'}</td></tr>`;
+                    waTimeline.innerHTML = `<div class="text-center text-danger py-3">${(res && res.detail) || 'Failed to load messages'}</div>`;
+                    if (notesTimeline) notesTimeline.innerHTML = `<div class="text-center text-danger py-3">${(res && res.detail) || 'Failed to load notes'}</div>`;
+                    return;
+                }
+                const logs = res.call_logs || [];
+                const msgs = res.whatsapp_messages || [];
+                const notes = res.notes || [];
+                document.getElementById('histCallCount').textContent = logs.length;
+                document.getElementById('histWaCount').textContent = msgs.length;
+                if (document.getElementById('histNotesCount')) {
+                    document.getElementById('histNotesCount').textContent = notes.length;
+                }
+
+                // Render calls
+                if (!logs.length) {
+                    callsBody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">No call records found for this lead.</td></tr>';
+                } else {
+                    callsBody.innerHTML = logs.map(c => {
+                        let audioPlayer = '<span class="text-muted" style="font-size:11px;">No recording</span>';
+                        if (c.has_recording && c.recording_id) {
+                            audioPlayer = `<button class="btn btn-sm btn-outline-info py-0 px-2" onclick="playAudioStream(${c.recording_id})" title="Play recording">
+                                <i class="fas fa-play me-1"></i>Play
+                            </button>`;
+                        } else if (c.stream_url) {
+                            audioPlayer = `<audio controls preload="none" style="height:26px;max-width:180px;">
+                                <source src="${c.stream_url}" type="audio/mpeg">
+                            </audio>`;
+                        }
+                        const typeBadge = c.call_type === 'MISSED' ? 'bg-danger' : (c.call_type === 'INCOMING' ? 'bg-info text-dark' : (c.is_milestone ? 'bg-warning text-dark' : 'bg-success'));
+                        return `<tr>
+                            <td><small>${c.call_datetime || '-'}</small></td>
+                            <td><span class="badge ${typeBadge}" style="font-size:10px;">${c.call_type}</span></td>
+                            <td>${c.duration_str || '-'}</td>
+                            <td>${escapeHtml(c.staff_name || 'Staff')}</td>
+                            <td>${audioPlayer}</td>
+                        </tr>`;
+                    }).join('');
+                }
+
+                // Render WhatsApp
+                if (!msgs.length) {
+                    waTimeline.innerHTML = '<div class="text-center text-muted py-3">No WhatsApp messages recorded for this lead.</div>';
+                } else {
+                    waTimeline.innerHTML = msgs.map(m => {
+                        const isOut = m.direction === 'outbound';
+                        const isSys = m.sender_type === 'system';
+                        const align = isOut ? 'align-self: flex-end; background:#dcf8c6;' : 'align-self: flex-start; background:#fff; border:1px solid #e5e7eb;';
+                        const badgeClass = isOut ? (isSys ? 'bg-secondary' : 'bg-success') : 'bg-primary';
+                        const senderLabel = m.sender_name || (isOut ? (isSys ? 'System Auto-WhatsApp' : 'Staff') : 'Customer');
+                        const statusBadge = isOut && m.delivery_status ? `<span class="badge bg-light text-dark border ms-1" style="font-size:8px;">${escapeHtml(m.delivery_status)}</span>` : '';
+                        return `<div style="${align} max-width:85%; padding:8px 12px; border-radius:10px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                            <div class="d-flex justify-content-between align-items-center gap-2 mb-1">
+                                <div>
+                                    <span class="badge ${badgeClass}" style="font-size:9px;">${escapeHtml(senderLabel)}</span>
+                                    ${statusBadge}
+                                </div>
+                                <small class="text-muted" style="font-size:10px;">${m.sent_at || ''}</small>
+                            </div>
+                            <div style="font-size:12px; white-space:pre-wrap; word-break:break-word;">${escapeHtml(m.body_text || '')}</div>
+                        </div>`;
+                    }).join('');
+                }
+
+                // Render Notes & Comments
+                if (notesTimeline) {
+                    if (!notes.length) {
+                        notesTimeline.innerHTML = '<div class="text-center text-muted py-3">No notes or comments recorded for this lead.</div>';
+                    } else {
+                        notesTimeline.innerHTML = notes.map(n => {
+                            return `<div style="background:#fff; border:1px solid #e5e7eb; border-left:4px solid #3b82f6; border-radius:6px; padding:10px 14px; box-shadow:0 1px 2px rgba(0,0,0,0.03);">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-semibold text-primary" style="font-size:12px;"><i class="fas fa-user-edit me-1"></i>${escapeHtml(n.author || 'Staff')}</span>
+                                    <small class="text-muted" style="font-size:10px;">${n.created_at || '-'}</small>
+                                </div>
+                                <div style="font-size:12px; color:#374151; white-space:pre-wrap; word-break:break-word;">${escapeHtml(n.note || '')}</div>
+                            </div>`;
+                        }).join('');
+                    }
+                }
+            } catch(e) {
+                console.error('Error fetching lead history', e);
+                callsBody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-danger">Error loading call history</td></tr>';
+                waTimeline.innerHTML = '<div class="text-center text-danger py-3">Error loading WhatsApp history</div>';
+                if (notesTimeline) notesTimeline.innerHTML = '<div class="text-center text-danger py-3">Error loading notes</div>';
+            }
+        }
+
+        function triggerLeadCall(phone, leadId, name) {
+            if (!phone) {
+                alert('No phone number available for this lead');
+                return;
+            }
+            const cleanPhone = phone.replace(/[^0-9+]/g, '');
+            const safeName = name || 'Lead';
+            if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+                window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName, 'plivo');
+            } else if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+                window.PlivoSoftphone.dial(cleanPhone, leadId, safeName, 'plivo');
+            } else {
+                window.location.href = 'tel:' + cleanPhone;
             }
         }
     </script>

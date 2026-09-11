@@ -112,8 +112,13 @@ def initiate_browser_outbound_call(
 
     company_id = getattr(current_user, 'base_company_id', 1) or 1
 
-    is_webrtc = payload.get("is_webrtc", False)
-    dispatch_provider_call = payload.get("dispatch_provider_call", not is_webrtc)
+    # ARCHITECTURAL CONTRACT:
+    # /browser/call/initiate is EXCLUSIVELY for interactive Web/Mobile softphones.
+    # The client establishes the audio leg directly via WebRTC SIP (client.call()).
+    # The PSTN destination leg is originated exclusively via Plivo Answer URL XML (<Dial><Number>).
+    # Therefore, backend REST PSTN dispatch is strictly disabled (dispatch_provider_call=False)
+    # to guarantee ZERO duplicate PSTN call originations.
+    dispatch_provider_call = False
 
     # Use VoIPCallService to coordinate session creation, validation, and CRM audit log
     try:
@@ -125,20 +130,15 @@ def initiate_browser_outbound_call(
             provider_name="plivo",
             dispatch_provider_call=dispatch_provider_call
         )
+    except HTTPException:
+        # Surface legitimate authorization, validation, or provider HTTP exceptions directly
+        raise
     except Exception as e:
-        logger.warning(f"[VOIP-SOFTPHONE] initiate_in_app_call error: {e}")
-        import uuid
-        call_session_id = f"vcs_sim_{uuid.uuid4().hex[:12]}"
-        return {
-            "success": True,
-            "call_session_id": call_session_id,
-            "provider_call_id": None,
-            "destination_phone": destination_phone,
-            "customer_phone_masked": destination_phone,
-            "caller_id": "+912269470537",
-            "status": "dialing",
-            "lead_context": None
-        }
+        logger.error(f"[VOIP-SOFTPHONE] initiate_in_app_call failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to initiate call session: {str(e)}"
+        )
 
     # Fetch CRM lead context to return to softphone
     crm_lead = None
@@ -558,6 +558,7 @@ def add_conference_participant(
 async def handle_plivo_ivr_gather(
     request: Request,
     menu: str = Query("main"),
+    lang: Optional[str] = Query("en"),
     db: Session = Depends(get_db)
 ):
     """
@@ -575,6 +576,8 @@ async def handle_plivo_ivr_gather(
             digits = form_data.get("Digits", "")
             caller_phone = form_data.get("From", "")
             called_did = form_data.get("To", "")
+            if not lang or lang == "en":
+                lang = form_data.get("lang") or lang
         except Exception:
             pass
 
@@ -584,13 +587,16 @@ async def handle_plivo_ivr_gather(
         caller_phone = request.query_params.get("From", "")
     if not called_did:
         called_did = request.query_params.get("To", "")
+    if not lang:
+        lang = request.query_params.get("lang", "en")
 
     xml_response = CallFlowInterpreter.handle_ivr_gather(
         db=db,
         caller_phone=caller_phone,
         called_did=called_did,
         digits=digits,
-        menu_type=menu
+        menu_type=menu,
+        lang=lang or "en"
     )
     return Response(content=xml_response, media_type="application/xml")
 

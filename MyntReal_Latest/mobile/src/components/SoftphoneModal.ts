@@ -740,6 +740,9 @@ class SoftphoneModal {
   }
 
   private async startCall(): Promise<void> {
+    // MANDATE 1: TRUE USER-GESTURE AUDIO UNLOCK BEFORE ANY ASYNC OPERATION
+    telephonyService.prepareAudioOnUserGesture();
+
     this.hideError();
     if (!this.enteredNumber) {
       this.showError('Please enter a destination phone number.');

@@ -3883,6 +3883,11 @@ async def get_my_menus(
                 'VGK_TEAM_MEMBERS'
             ])
 
+        # DC Protocol: Auto-grant VGK_TEAM_MEMBERS to Sales & Tele Sales departments
+        _dept_name_lower = (getattr(current_user.department, 'name', '') or '').lower()
+        if current_user.department_id in (13, 14) or 'sale' in _dept_name_lower or 'sale' in _role_lower:
+            _dept_auto_codes.update(['VGK_TEAM_MEMBERS', 'staff_vgk_members', 'vgk_members'])
+
         # DC Protocol Aug 2026: Explicit menu grants for MN10009 and MN10008
         if _emp_code_upper == 'MN10009':
             _dept_auto_codes.update(['VGK_TEAM_MEMBERS', 'staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS'])
@@ -3979,7 +3984,7 @@ async def get_my_menus(
         'staff_my_reimbursements', 'MY_REIMBURSEMENT_CLAIMS', 'staff_reimbursements',
         'staff_reimbursement_approvals', 'REIMBURSEMENT_APPROVALS', 'reimbursement_approvals',
         'staff_accounts_expense_entries', 'sfms_expense_entries',
-        'staff_my_leads', 'staff_leads',
+        'staff_my_leads',
         'staff_my_attendance', 'staff_attendance_sheet', 'staff_attendance_reports'
     }
     granted_menu_codes.update(_STAFF_DASHBOARD_AUTO_CODES)
@@ -4095,7 +4100,6 @@ async def get_my_menus(
         '/staff/accounts/reimbursement-approvals',
         '/staff/accounts/expense-entries',
         '/staff/my-leads',
-        '/staff/leads',
         '/staff/my-attendance',
         '/staff/attendance-sheet',
         '/staff/attendance-reports'
@@ -4188,6 +4192,16 @@ async def get_my_menus(
             all_menus = filtered_tenant_menus
             logger.info(f"[DC-SAAS-ENTITLEMENT] Filtered menus for tenant company {tenant_company.id} ({tenant_company.company_code}) to {len(all_menus)} items matching {licensed_mods}")
 
+    # DC Protocol: Remove access to Staff Leads page (/staff/leads) for Anusha, Anushka, Hema, Nandana, Poojitha
+    _restricted_staff_leads_codes = {'MN10009', 'MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'}
+    _curr_emp_code = (current_user.emp_code or '').upper()
+    if _curr_emp_code in _restricted_staff_leads_codes:
+        all_menus = [
+            m for m in all_menus 
+            if m.route_path != '/staff/leads' and (m.menu_code or '').lower() not in ('staff_leads', 'leads_master', 'staff_leads_master')
+        ]
+        logger.info(f"[DC-RESTRICT-STAFF-LEADS] Stripped staff_leads page from menu response for {_curr_emp_code}")
+
     categorized = {}
     menu_list = []
     all_route_paths = set()
@@ -4238,6 +4252,14 @@ async def get_my_menus(
     for m in menu_list[:5]:
         logger.info(f"[DC-MY-MENUS] Resolved: {m['menu_code']} -> {m['route_path']} (view={m['can_view']}, cascade={m.get('cascade_granted', False)})")
     
+    # DC Protocol (ARCHITECTURAL FIX - Sep 2026):
+    # Deterministically end read transaction before returning personalized menu tree.
+    # Releasing session releases locks immediately without holding them during JSON network transfer.
+    try:
+        db.rollback()
+    except Exception:
+        pass
+
     return {
         "success": True,
         "company_id": company_id,

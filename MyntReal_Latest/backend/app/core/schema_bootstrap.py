@@ -7,11 +7,39 @@ This file ensures production-safe deployments by creating schema columns
 if they don't exist, without requiring manual ALTER TABLE execution.
 """
 
+import os
+import functools
 import logging
 from sqlalchemy import text
 from app.core.database import SessionLocal
 
 logger = logging.getLogger(__name__)
+
+
+def is_explicit_migration_enabled() -> bool:
+    """
+    DC Protocol (ARCHITECTURAL FIX - Sep 2026):
+    Schema mutations are strictly forbidden during runtime application startup,
+    request processing, schedulers, and workers.
+    DDL can only be executed when RUN_EXPLICIT_MIGRATIONS=1 is explicitly set
+    via scripts/run_schema_migrations.py.
+    """
+    return os.getenv("RUN_EXPLICIT_MIGRATIONS") == "1"
+
+
+def migration_only(fn):
+    """
+    Decorator that strictly prevents execution of schema mutation functions
+    unless RUN_EXPLICIT_MIGRATIONS=1 is explicitly set in the environment.
+    """
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not is_explicit_migration_enabled():
+            logger.info(f"[SCHEMA BOOTSTRAP] ⏩ Skipped runtime schema mutation '{fn.__name__}' (requires RUN_EXPLICIT_MIGRATIONS=1)")
+            return None
+        return fn(*args, **kwargs)
+    return wrapper
+
 
 
 def bootstrap_background_jobs_schema():
@@ -1358,23 +1386,41 @@ def bootstrap_partner_contacts_modules():
     """
     db = SessionLocal()
     try:
-        db.execute(text("""
-            ALTER TABLE official_partners
-            ADD COLUMN IF NOT EXISTS sales_contact_number VARCHAR(20),
-            ADD COLUMN IF NOT EXISTS sales_contact_name VARCHAR(200),
-            ADD COLUMN IF NOT EXISTS service_contact_number VARCHAR(20),
-            ADD COLUMN IF NOT EXISTS service_contact_name VARCHAR(200),
-            ADD COLUMN IF NOT EXISTS module_settings JSONB DEFAULT '{}'
-        """))
-        db.execute(text("""
-            ALTER TABLE staff_employees
-            ADD COLUMN IF NOT EXISTS linked_partner_id INTEGER REFERENCES official_partners(id) ON DELETE SET NULL
-        """))
-        db.execute(text("""
-            ALTER TABLE service_ticket
-            ADD COLUMN IF NOT EXISTS company_support_requested BOOLEAN DEFAULT FALSE,
-            ADD COLUMN IF NOT EXISTS service_dept_staff_id INTEGER REFERENCES staff_employees(id) ON DELETE SET NULL
-        """))
+        # Lock safety guards: fail fast rather than blocking other sessions
+        db.execute(text("SET LOCAL lock_timeout = '2s'"))
+        db.execute(text("SET LOCAL statement_timeout = '10s'"))
+        
+        # Preflight check on official_partners
+        op_cols = {row[0] for row in db.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='official_partners'")).fetchall()}
+        op_adds = []
+        if 'sales_contact_number' not in op_cols:
+            op_adds.append("ADD COLUMN sales_contact_number VARCHAR(20)")
+        if 'sales_contact_name' not in op_cols:
+            op_adds.append("ADD COLUMN sales_contact_name VARCHAR(200)")
+        if 'service_contact_number' not in op_cols:
+            op_adds.append("ADD COLUMN service_contact_number VARCHAR(20)")
+        if 'service_contact_name' not in op_cols:
+            op_adds.append("ADD COLUMN service_contact_name VARCHAR(200)")
+        if 'module_settings' not in op_cols:
+            op_adds.append("ADD COLUMN module_settings JSONB DEFAULT '{}'")
+        if op_adds:
+            db.execute(text(f"ALTER TABLE official_partners {', '.join(op_adds)}"))
+
+        # Preflight check on staff_employees
+        staff_cols = {row[0] for row in db.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='staff_employees'")).fetchall()}
+        if 'linked_partner_id' not in staff_cols:
+            db.execute(text("ALTER TABLE staff_employees ADD COLUMN linked_partner_id INTEGER REFERENCES official_partners(id) ON DELETE SET NULL"))
+
+        # Preflight check on service_ticket
+        st_cols = {row[0] for row in db.execute(text("SELECT column_name FROM information_schema.columns WHERE table_name='service_ticket'")).fetchall()}
+        st_adds = []
+        if 'company_support_requested' not in st_cols:
+            st_adds.append("ADD COLUMN company_support_requested BOOLEAN DEFAULT FALSE")
+        if 'service_dept_staff_id' not in st_cols:
+            st_adds.append("ADD COLUMN service_dept_staff_id INTEGER REFERENCES staff_employees(id) ON DELETE SET NULL")
+        if st_adds:
+            db.execute(text(f"ALTER TABLE service_ticket {', '.join(st_adds)}"))
+
         db.commit()
         logger.info("[DC-PARTNER-CONTACTS-001] ✅ Partner contacts + module_settings + staff link + ticket escalation columns ensured")
     except Exception as e:
@@ -2474,3 +2520,18 @@ def bootstrap_community_association_name():
             _db.close()
     except Exception as e:
         logger.warning(f"[DC-COMMUNITY-ASSOCIATION-NAME-001] Non-fatal: {e}")
+
+
+# DC Protocol (ARCHITECTURAL FIX - Sep 2026):
+# Automatically guard every bootstrap/migration function in this module so no runtime caller
+# can ever execute schema mutations unless RUN_EXPLICIT_MIGRATIONS=1.
+for _name, _obj in list(globals().items()):
+    if callable(_obj) and (
+        _name.startswith("bootstrap_") or
+        _name.startswith("run_schema_bootstrap") or
+        _name.startswith("drop_") or
+        _name.startswith("add_") or
+        _name.startswith("backfill_")
+    ):
+        globals()[_name] = migration_only(_obj)
+

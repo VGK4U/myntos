@@ -289,7 +289,27 @@ class TestCallFlowEngine(unittest.TestCase):
 
     def test_10_simulator_open_business_hours_trace(self):
         """Test simulator executes Open branch during working hours (e.g. Wednesday 11:30 AM)"""
-        flow = CallFlowService.create_flow(db=self.db, company_id=self.company_id_1, name="Sim Open Flow")
+        group = CallFlowService.create_ring_group(
+            db=self.db,
+            company_id=self.company_id_1,
+            name="General Inbound Team",
+            strategy="simultaneous",
+            member_staff_ids=[101, 102]
+        )
+        self.test_group_ids.append(group['id'])
+
+        sim_graph = {
+            "nodes": [
+                {"id": "node_trigger_did_1", "type": "trigger_did", "name": "DID", "config": {"did_number": "+918031728899"}},
+                {"id": "node_time_check_1", "type": "time_router", "name": "Time", "config": {"start_time": "09:00", "end_time": "20:00"}},
+                {"id": "node_rg_1", "type": "dial_ring_group", "name": "General Inbound Team", "config": {"ring_group_id": group['id'], "timeout_seconds": 20}}
+            ],
+            "edges": [
+                {"from": "node_trigger_did_1", "to": "node_time_check_1", "condition": "always"},
+                {"from": "node_time_check_1", "to": "node_rg_1", "condition": "open"}
+            ]
+        }
+        flow = CallFlowService.create_flow(db=self.db, company_id=self.company_id_1, name="Sim Open Flow", initial_graph=sim_graph)
         self.test_flow_ids.append(flow['id'])
 
         sim_wed_11am = datetime(2026, 9, 2, 11, 30, 0)  # Wednesday 11:30 AM
@@ -407,7 +427,8 @@ class TestCallFlowEngine(unittest.TestCase):
             caller_phone="+919703118501",
             called_did="+918031728899",
             provider_call_id="plivo_uuid_rg_001",
-            base_api_url="https://api.myntreal.com"
+            base_api_url="https://api.myntreal.com",
+            now_dt=datetime(2026, 9, 2, 11, 30, 0, tzinfo=IST)
         )
 
         self.assertIn("<Dial timeout=\"20\"", xml_output)

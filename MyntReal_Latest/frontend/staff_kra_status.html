@@ -152,36 +152,84 @@
         .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .form-label { font-weight: 500; color: #374151; font-size: 13px; }
-        .form-control:focus, .form-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        #kraMainTabs {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            gap: 6px !important;
+            padding: 4px !important;
+            background: #ffffff !important;
+            border-radius: 10px !important;
+            border: 1px solid #e2e8f0 !important;
+            margin-bottom: 16px !important;
+        }
+        #kraMainTabs .nav-item { flex-shrink: 0 !important; }
+        #kraMainTabs .nav-link {
+            border-radius: 8px !important;
+            padding: 8px 14px !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            color: #64748b !important;
+            border: 1px solid transparent !important;
+            white-space: nowrap !important;
+            display: flex !important;
+            align-items: center !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        #kraMainTabs .nav-link:hover { color: #0f172a !important; background: #f8fafc !important; }
+        #kraMainTabs .nav-link.active {
+            background: #0f172a !important;
+            color: #ffffff !important;
+            border-color: #0f172a !important;
+            box-shadow: 0 1px 3px rgba(15,23,42,0.12) !important;
+        }
 
-        #reviewsPane .card-header { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); }
-        #teamSummaryPane .card-header { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); }
-        #kraDetailModal .modal-header, #editApproveModal .modal-header { background: linear-gradient(135deg, #10b981 0%, #34d399 100%); }
+        #reviewsPane .card-header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important; color: white !important; }
+        #teamSummaryPane .card-header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important; color: white !important; }
+        #kraDetailModal .modal-header, #editApproveModal .modal-header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important; color: white !important; }
 
-        #reviewsPane .kra-table th.sorted-asc .sort-icon, #reviewsPane .kra-table th.sorted-desc .sort-icon { color: #10b981; }
-        #reviewsPane .form-control:focus, #reviewsPane .form-select:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+        #reviewsPane .kra-table th.sorted-asc .sort-icon, #reviewsPane .kra-table th.sorted-desc .sort-icon { color: #2563eb; }
+        #reviewsPane .form-control:focus, #reviewsPane .form-select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
 
-        #matrixPane .card-header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
-        .matrix-table-wrap { overflow-x: auto; }
-        .matrix-table { border-collapse: collapse; width: max-content; min-width: 100%; }
-        .matrix-table th { background: #f8fafc; font-size: 12px; font-weight: 600; color: #374151; padding: 10px 14px; border-bottom: 2px solid #e5e7eb; white-space: nowrap; text-align: center; }
-        .matrix-table th.kra-col { text-align: left; }
-        .matrix-table td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; font-size: 13px; vertical-align: middle; white-space: nowrap; text-align: center; }
-        .matrix-table td.kra-col { text-align: left; }
-        .matrix-table tr:hover td { background: #f9fafb; }
-        .matrix-table .sticky-col-1 { position: sticky; left: 0; z-index: 2; min-width: 44px; max-width: 44px; width: 44px; }
-        .matrix-table .sticky-col-2 { position: sticky; left: 44px; z-index: 2; min-width: 190px; max-width: 190px; border-right: 2px solid #e5e7eb; }
-        .matrix-table thead .sticky-col-1, .matrix-table thead .sticky-col-2 { background: #f8fafc; z-index: 3; }
-        .matrix-table tbody .sticky-col-1, .matrix-table tbody .sticky-col-2 { background: white; }
-        .matrix-table tbody tr:hover .sticky-col-1, .matrix-table tbody tr:hover .sticky-col-2 { background: #f9fafb; }
-        .matrix-status { display: inline-block; padding: 3px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; }
-        .matrix-status.completed { background: #d1fae5; color: #059669; }
-        .matrix-status.in_progress { background: #dbeafe; color: #1e40af; }
-        .matrix-status.pending { background: #fef9c3; color: #92400e; }
-        .matrix-status.delayed { background: #fee2e2; color: #dc2626; }
-        .matrix-status.partial { background: #fce7f3; color: #9d174d; }
-        .matrix-status.na, .matrix-status.skipped { background: #f3f4f6; color: #6b7280; }
-        .matrix-emp-header { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+        #matrixPane .card-header { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important; color: white !important; padding: 14px 16px !important; }
+        .matrix-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; width: 100% !important; }
+        .matrix-table { border-collapse: separate !important; border-spacing: 0 !important; width: max-content; min-width: 100%; }
+        .matrix-table th { background: #f8fafc !important; font-size: 11px !important; font-weight: 700 !important; color: #334155 !important; padding: 10px 12px !important; border-bottom: 2px solid #e2e8f0 !important; white-space: nowrap !important; text-align: center !important; }
+        .matrix-table th.kra-col { text-align: left !important; }
+        .matrix-table td { padding: 8px 10px !important; border-bottom: 1px solid #f1f5f9 !important; font-size: 12px !important; vertical-align: middle !important; white-space: nowrap !important; text-align: center !important; }
+        .matrix-table td.kra-col { text-align: left !important; }
+        .matrix-table tr:hover td { background: #f8fafc !important; }
+        
+        /* Sticky Column 1 (#) and Column 2 (KRA Details) with Guaranteed Isolation */
+        .matrix-table .sticky-col-1 { position: sticky !important; left: 0 !important; z-index: 10 !important; min-width: 36px !important; max-width: 36px !important; width: 36px !important; background: #ffffff !important; text-align: center !important; }
+        .matrix-table .sticky-col-2 {
+            position: sticky !important;
+            left: 36px !important;
+            z-index: 10 !important;
+            min-width: 150px !important;
+            max-width: 180px !important;
+            width: 160px !important;
+            background: #ffffff !important;
+            border-right: 2px solid #e2e8f0 !important;
+            box-shadow: 3px 0 6px -2px rgba(15,23,42,0.08) !important;
+            text-align: left !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            line-height: 1.3 !important;
+        }
+        .matrix-table thead .sticky-col-1, .matrix-table thead .sticky-col-2 { background: #f1f5f9 !important; z-index: 20 !important; }
+        .matrix-table tbody tr:hover .sticky-col-1, .matrix-table tbody tr:hover .sticky-col-2 { background: #f8fafc !important; }
+        
+        .matrix-status { display: inline-flex !important; align-items: center !important; justify-content: center !important; padding: 3px 8px !important; border-radius: 9999px !important; font-size: 10.5px !important; font-weight: 700 !important; white-space: nowrap !important; letter-spacing: 0.2px !important; }
+        .matrix-status.completed { background: #ecfdf5 !important; color: #059669 !important; border: 1px solid #a7f3d0 !important; }
+        .matrix-status.in_progress { background: #eff6ff !important; color: #2563eb !important; border: 1px solid #bfdbfe !important; }
+        .matrix-status.pending { background: #fffbeb !important; color: #d97706 !important; border: 1px solid #fde68a !important; }
+        .matrix-status.delayed { background: #fef2f2 !important; color: #dc2626 !important; border: 1px solid #fecaca !important; }
+        .matrix-status.partial { background: #fdf4ff !important; color: #a21caf !important; border: 1px solid #f5d0fe !important; }
+        .matrix-status.na, .matrix-status.skipped { background: #f1f5f9 !important; color: #64748b !important; border: 1px solid #e2e8f0 !important; }
+        .matrix-emp-header { max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: #1e293b; }
         .matrix-emp-header.search-highlight { background: #fef9c3; border-radius: 4px; padding: 1px 3px; }
 
         /* Toast notifications */
@@ -207,13 +255,6 @@
     <div id="headerContainer"></div>
 
     <div class="content-area">
-        <div class="info-banner">
-            <i class="fas fa-chart-bar"></i>
-            <div class="info-banner-text">
-                KRA Status Dashboard shows aggregated completion metrics for all KRAs. Use filters to narrow by date range, department, or reporting manager. Click "View" to see individual staff details.
-            </div>
-        </div>
-
         <ul class="nav nav-tabs mb-3" id="kraMainTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="matrix-tab" data-bs-toggle="tab" data-bs-target="#matrixPane" type="button" role="tab">
@@ -241,26 +282,39 @@
 
             <div class="tab-pane fade show active" id="matrixPane" role="tabpanel">
                 <div class="card">
-                    <div class="card-header" style="flex-wrap: wrap; gap: 10px;">
-                        <h5><i class="fas fa-th me-2"></i>KRA Matrix View</h5>
-                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                            <input type="date" id="matrixDateFrom" class="form-control form-control-sm" style="max-width: 140px; background: rgba(255,255,255,0.9);">
-                            <span style="color: rgba(255,255,255,0.8); font-size: 13px;">to</span>
-                            <input type="date" id="matrixDateTo" class="form-control form-control-sm" style="max-width: 140px; background: rgba(255,255,255,0.9);">
-                            <select id="matrixStaffType" class="form-select form-select-sm" style="max-width: 150px; background: rgba(255,255,255,0.9);" onchange="loadMatrixView()">
-                                <option value="">All Staff Types</option>
-                                <option value="MN_STAFF">MN Staff</option>
-                                <option value="MN_EMPLOYEE">MN Employee</option>
-                                <option value="FREELANCER">Freelancer</option>
-                                <option value="MYNT_REAL">Mynt Real</option>
-                            </select>
-                            <input type="text" id="matrixEmpSearch" class="form-control form-control-sm" style="max-width: 160px; background: rgba(255,255,255,0.9);" placeholder="Highlight employee..." oninput="applyMatrixHighlight()">
-                            <button class="btn btn-sm btn-light" onclick="loadMatrixView()" style="border-radius: 6px; font-weight: 600;">
+                    <div class="card-header" style="display: flex; flex-direction: column; gap: 12px; align-items: stretch;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h5 style="color: #ffffff !important; margin: 0;"><i class="fas fa-th me-2"></i>KRA Matrix View</h5>
+                            <button class="btn btn-sm btn-primary" onclick="loadMatrixView()" style="border-radius: 6px; font-weight: 600; padding: 6px 14px; background: #2563eb; border: none;">
                                 <i class="fas fa-sync-alt me-1"></i>Apply
                             </button>
                         </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; width: 100%;">
+                            <div>
+                                <label style="font-size: 10.5px; color: rgba(255,255,255,0.8); font-weight: 600; display: block; margin-bottom: 2px;">FROM DATE</label>
+                                <input type="date" id="matrixDateFrom" class="form-control form-control-sm" style="background: #ffffff; width: 100%;">
+                            </div>
+                            <div>
+                                <label style="font-size: 10.5px; color: rgba(255,255,255,0.8); font-weight: 600; display: block; margin-bottom: 2px;">TO DATE</label>
+                                <input type="date" id="matrixDateTo" class="form-control form-control-sm" style="background: #ffffff; width: 100%;">
+                            </div>
+                            <div>
+                                <label style="font-size: 10.5px; color: rgba(255,255,255,0.8); font-weight: 600; display: block; margin-bottom: 2px;">STAFF TYPE</label>
+                                <select id="matrixStaffType" class="form-select form-select-sm" style="background: #ffffff; width: 100%;" onchange="loadMatrixView()">
+                                    <option value="">All Staff Types</option>
+                                    <option value="MN_STAFF">MN Staff</option>
+                                    <option value="MN_EMPLOYEE">MN Employee</option>
+                                    <option value="FREELANCER">Freelancer</option>
+                                    <option value="MYNT_REAL">Mynt Real</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size: 10.5px; color: rgba(255,255,255,0.8); font-weight: 600; display: block; margin-bottom: 2px;">HIGHLIGHT</label>
+                                <input type="text" id="matrixEmpSearch" class="form-control form-control-sm" style="background: #ffffff; width: 100%;" placeholder="Search employee..." oninput="applyMatrixHighlight()">
+                            </div>
+                        </div>
                     </div>
-                    <div id="matrixTableContainer" style="overflow-x: auto; min-height: 120px;">
+                    <div id="matrixTableContainer" class="table-responsive" style="overflow-x: auto; min-height: 120px;">
                         <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><p>Loading matrix...</p></div>
                     </div>
                 </div>

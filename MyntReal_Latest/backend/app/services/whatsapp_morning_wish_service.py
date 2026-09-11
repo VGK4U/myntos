@@ -369,65 +369,48 @@ def dispatch_daily_morning_wishes(
         sent_success = False
         error_msg = None
 
-        if access_token and phone_id:
-            try:
-                url = f"https://graph.facebook.com/v21.0/{phone_id}/messages"
-                payload = {
-                    "messaging_product": "whatsapp",
-                    "to": phone_formatted,
-                    "type": "template",
-                    "template": {
-                        "name": meta_template_name,
-                        "language": {"code": "en"},
-                        "components": [
-                            {
-                                "type": "body",
-                                "parameters": [
-                                    {"type": "text", "text": lead_name}
-                                ]
-                            }
-                        ]
-                    }
-                }
-                resp = requests.post(url, json=payload, headers={"Authorization": f"Bearer {access_token}"}, timeout=8)
-                if resp.status_code in (200, 201):
-                    sent_success = True
-                else:
-                    error_msg = f"HTTP {resp.status_code}: {resp.text}"
-            except Exception as exc:
-                error_msg = str(exc)
-        else:
-            # Local simulation mode when credentials not configured
-            sent_success = True
-            error_msg = "Simulated (Meta WABA credentials pending configuration)"
+        # Dispatch via Canonical Outbound Service
+        from app.services.whatsapp_canonical_service import WhatsAppCanonicalService
+
+        safe_lead_name = lead_name if lead_name and lead_name != '0' else f"Customer ({clean_10})"
+        wish_body = tdef.get("body_text", "🌅 Good Morning! Wishing you a productive and successful day ahead.").replace("{{1}}", safe_lead_name)
+
+        components = [
+            {
+                "type": "body",
+                "parameters": [
+                    {"type": "text", "text": safe_lead_name}
+                ]
+            }
+        ]
+
+        res = WhatsAppCanonicalService.send_meta_template_message(
+            db=db,
+            phone=phone_formatted,
+            template_name=meta_template_name,
+            language_code="en",
+            components=components,
+            message_type="template",
+            user_name=safe_lead_name,
+            sender_type="bot",
+            idempotency_key=f"morning_wish:{phone_formatted}:{get_indian_time().strftime('%Y%m%d')}",
+            raw_body_fallback=wish_body
+        )
+
+        sent_success = res.get("success", False)
+        error_msg = res.get("reason") if not sent_success else None
 
         if sent_success:
             sent_count += 1
         else:
             failed_count += 1
 
-        # Record history entry
-        safe_lead_name = lead_name if lead_name and lead_name != '0' else f"Customer ({clean_10})"
-        wish_body = tdef.get("body_text", "🌅 Good Morning! Wishing you a productive and successful day ahead.").replace("{{1}}", safe_lead_name)
-        history_item = MessageLog(
-            message_sid=f"wamid.sim.{uuid.uuid4().hex[:12]}",
-            mobile_number=phone_formatted,
-            user_name=safe_lead_name,
-            message_type="template",
-            message_body=wish_body,
-            initial_status="sent" if sent_success else "failed",
-            current_status="sent" if sent_success else "failed",
-            sent_at=get_indian_time(),
-            sender_type="bot"
-        )
-        db.add(history_item)
-        db.commit()
-
         details.append({
             "lead_id": lead.id,
             "lead_name": lead_name,
             "phone": phone_formatted,
             "status": "sent" if sent_success else "failed",
+            "wamid": res.get("wamid"),
             "error": error_msg
         })
 

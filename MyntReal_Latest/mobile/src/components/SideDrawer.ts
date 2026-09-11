@@ -34,6 +34,8 @@ const ROUTE_PATH_MAP: Record<string, string> = {
   '/staff/team-journeys': 'team-journeys',
   '/staff/all-journeys': 'staff-all-journeys',
   '/staff/vgk4u-journeys': 'staff-vgk4u-journeys',
+  '/staff/vgk/members': 'staff-vgk-members',
+  '/staff_vgk_members.html': 'staff-vgk-members',
   
   '/staff/my-reimbursement-claims': 'reimbursements',
   '/staff/reimbursement-approvals': 'staff-reimbursement-approvals',
@@ -242,7 +244,8 @@ const MENU_MASTER: MenuSection[] = [
       { menu_code: "LEADS_MASTER", label: "Staff Leads", route: "staff-leads" },
       { menu_code: "BANK_WISE_LEADS", label: "Field staff leads", route: "staff-bank-wise-leads" },
       { menu_code: "TEAM_LEADS", label: "Team Leads", route: "staff-team-leads" },
-      { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "auto-dialer" }
+      { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "auto-dialer" },
+      { menu_code: "VGK_TEAM_MEMBERS", label: "VGK Channel Partners", route: "staff-vgk-members" }
     ]
   },
   {
@@ -325,9 +328,9 @@ export class SideDrawer {
       const style = document.createElement('style');
       style.id = 'myntos-drawer-styles';
       style.textContent = `
-        .side-drawer { position: fixed; top: 0; left: 0; width: 290px; height: 100vh; background: #0f172a; color: #fff; z-index: 9999; transform: translateX(-100%); transition: transform 0.25s ease-in-out; overflow-y: auto; box-shadow: 2px 0 16px rgba(0,0,0,0.5); }
+        .side-drawer { position: fixed; top: 0; left: 0; width: 290px; height: 100vh; background: #0f172a; color: #fff; z-index: 9999; transform: translateX(-100%); transition: transform 0.25s ease-in-out; will-change: transform; overflow-y: auto; box-shadow: 2px 0 16px rgba(0,0,0,0.5); }
         .side-drawer.open { transform: translateX(0); }
-        .drawer-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9998; opacity: 0; pointer-events: none; transition: opacity 0.25s ease-in-out; }
+        .drawer-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.6); z-index: 9998; opacity: 0; pointer-events: none; transition: opacity 0.25s ease-in-out; will-change: opacity; }
         .drawer-overlay.visible { opacity: 1; pointer-events: auto; }
         .drawer-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
         .drawer-logo .logo-text { font-size: 1.1rem; font-weight: 700; color: #38bdf8; }
@@ -573,7 +576,12 @@ export class SideDrawer {
   }
 
   private filterMenusForRole(sections: MenuSection[], isManagerOrEa: boolean, isAllowedAccounts: boolean = false): MenuSection[] {
-    if (isManagerOrEa) {
+    const authState = authService.getAuthState();
+    const user = (authState.user || {}) as any;
+    const empCode = (user.emp_code || user.employee_code || '').toString().toUpperCase().trim();
+    const isRestrictedSales = ['MN10009', 'MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'].includes(empCode);
+
+    if (isManagerOrEa && !isRestrictedSales) {
       return sections; // Managers & EAs see ALL management, system, and accounts menus
     }
 
@@ -620,6 +628,13 @@ export class SideDrawer {
       'SAAS_CONFIG',
       'SYSTEM_CONFIG'
     ]);
+
+    // DC Protocol: Remove access to Staff Leads page for Anusha, Anushka, Hema, Nandana, Poojitha & regular sales staff
+    if (!isManagerOrEa || isRestrictedSales) {
+      RESTRICTED_ITEM_CODES.add('LEADS_MASTER');
+      RESTRICTED_ITEM_CODES.add('STAFF_LEADS');
+      RESTRICTED_ITEM_CODES.add('staff_leads');
+    }
 
     if (!isAllowedAccounts) {
       RESTRICTED_ITEM_CODES.add('PAYROLL_PROFILE');
@@ -734,6 +749,16 @@ export class SideDrawer {
       const route = ROUTE_PATH_MAP[rawRoutePath] || ROUTE_PATH_MAP[rawRoutePath?.replace(/\/$/, '')] || (rawRoutePath ? rawRoutePath.replace(/^\/staff\//, '').replace(/\//g, '-') : null);
       if (!route) return null;
 
+      // DC Protocol: Remove access to Staff Leads page (/staff/leads) for Anusha, Anushka, Hema, Nandana, Poojitha
+      const authState = authService.getAuthState();
+      const user = (authState.user || {}) as any;
+      const empCode = (user.emp_code || user.employee_code || '').toString().toUpperCase().trim();
+      if (['MN10009', 'MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'].includes(empCode)) {
+        if (route === 'staff-leads' || (rawRoutePath && rawRoutePath.toLowerCase() === '/staff/leads') || (rawCode && ['staff_leads', 'STAFF_LEADS', 'LEADS_MASTER', 'staff_leads_master'].includes(rawCode))) {
+          return null;
+        }
+      }
+
       let label = rawName;
       if (!label || label === 'None' || label.trim() === '') {
         label = (rawCode || '').replace(/^staff_|^_staff_|^mnr_/i, '').replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
@@ -755,10 +780,12 @@ export class SideDrawer {
         label = 'WhatsApp Center';
       } else if (codeUpper.includes('SOFTPHONE') || codeUpper === 'PHONE_DIALPAD' || routeLower.includes('softphone') || routeLower.includes('calling') || routeLower.includes('phone-dialpad')) {
         label = 'Calling & Softphone';
+      } else if (codeUpper.includes('VGK_TEAM_MEMBERS') || codeUpper === 'STAFF_VGK_MEMBERS' || routeLower.includes('vgk/members')) {
+        label = 'VGK Channel Partners';
       }
 
-      const iconClass = rawIcon || (label.includes('WhatsApp') ? 'fab fa-whatsapp' : label.includes('Auto Dialer') ? 'fas fa-phone-volume' : label.includes('Softphone') || label.includes('Calling') ? 'fas fa-headset' : label.includes('Field') ? 'fas fa-users-gear' : 'fas fa-file-alt');
-      const iconColor = label.includes('WhatsApp') ? 'color: #25d366;' : (label.includes('Auto Dialer') || label.includes('Softphone') || label.includes('Calling')) ? 'color: #38bdf8;' : '';
+      const iconClass = rawIcon || (label.includes('WhatsApp') ? 'fab fa-whatsapp' : label.includes('Auto Dialer') ? 'fas fa-phone-volume' : label.includes('Softphone') || label.includes('Calling') ? 'fas fa-headset' : label.includes('VGK') || label.includes('Channel') ? 'fas fa-users' : label.includes('Field') ? 'fas fa-users-gear' : 'fas fa-file-alt');
+      const iconColor = label.includes('WhatsApp') ? 'color: #25d366;' : (label.includes('Auto Dialer') || label.includes('Softphone') || label.includes('Calling')) ? 'color: #38bdf8;' : (label.includes('VGK') || label.includes('Channel')) ? 'color: #7c3aed;' : '';
       const iconHtml = `<i class="${iconClass}" style="margin-right: 8px; width: 18px; text-align: center; ${iconColor}"></i>`;
 
       return {
@@ -879,14 +906,16 @@ export class SideDrawer {
 
   open(): void {
     if (this.isOpen) return;
-    this.updateUI();
+    if (!this.container || !this.container.hasChildNodes()) {
+      this.updateUI();
+    }
     this.isOpen = true;
     this.container?.classList.add('open');
     this.overlay?.classList.add('visible');
     document.body.style.overflow = 'hidden';
 
     const portal = portalService.getPortal();
-    if (portal === 'staff') {
+    if (portal === 'staff' && !this.isStaffMenuLoaded) {
       this.loadStaffMenus();
     }
   }

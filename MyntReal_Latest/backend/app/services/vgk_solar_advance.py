@@ -28,15 +28,15 @@ from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
 
-# DC-SOLAR-SPEC-20260710: Stage 1 Advance (Application Submitted + CIBIL >= 650)
+# DC-SOLAR-SPEC-20260911: Stage 1 Advance (With Bank + CIBIL >= 700 + Ground Source set)
 # L1 (Ground Source): 1000, L2 (Senior): 500 — per VGK Commission & Advance Payment Logic.
 ADVANCE_AMOUNT    = Decimal('1000.00')
 L2_ADVANCE_AMOUNT = Decimal('500.00')
-CIBIL_MIN_SCORE   = 650
+CIBIL_MIN_SCORE   = 700
 
-# Solar pipeline stages that are eligible (application_submitted and above, excluding terminal failure stages)
+# Solar pipeline stages that are eligible for Stage 1 advance (Strictly 'with bank' and onwards)
 ELIGIBLE_STAGES = {
-    'application_submitted', 'pending_with_bank', 'documents_issue',
+    'pending_with_bank', 'with_bank',
     'load_extension', 'electricity_bill_change', 'installation_pending',
     'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending', 'completed',
 }
@@ -68,12 +68,15 @@ def _next_advance_number(db: Session) -> str:
     return f'{prefix}-{seq:04d}'
 
 
-def check_and_create_advance(db: Session, lead_id: int) -> dict:
+def check_and_create_advance(db: Session, lead_id: int, bypass_cibil: bool = False, notes: str = None) -> dict:
     """
     Called whenever solar_pipeline_status or CIBIL fields change on a lead.
     Creates PENDING advance records for L1 (₹1,000) and L2 (₹500, if senior
     partner set) if ALL eligibility criteria are met and no advance record
     already exists for that (lead_id, level, kind='ADVANCE').
+
+    If bypass_cibil=True, called from Stage 2 (DVR advance) to release deferred
+    Stage 1 advance for files whose CIBIL was < 700 at the 'with_bank' stage.
 
     Returns: {'created': bool, 'entry_numbers': list|None, 'reason': str}
     """
@@ -88,20 +91,6 @@ def check_and_create_advance(db: Session, lead_id: int) -> dict:
         if not lead.associated_partner_id:
             return {'created': False, 'reason': 'No associated VGK partner'}
 
-        pipeline = (lead.solar_pipeline_status or '').strip()
-
-        if pipeline not in ELIGIBLE_STAGES:
-            return {'created': False, 'reason': f'Stage {pipeline!r} not eligible'}
-
-        # Require CIBIL verification (confirmed or score >= 650) before calculating/releasing advances
-        score = getattr(lead, 'cibil_score', None)
-        is_cibil_valid = bool(lead.cibil_confirmed) or ((score or 0) >= CIBIL_MIN_SCORE)
-        if not is_cibil_valid:
-            return {'created': False, 'reason': f'CIBIL not confirmed/verified (minimum score {CIBIL_MIN_SCORE} or cibil_confirmed required)'}
-
-        now = _get_ist()
-        created_numbers = []
-
         # DC-L1-GROUND-SOURCE-001: L1 advance should credit the Ground Source instead of the Showroom partner
         l1_partner_id = None
         if lead.source_ref_type in ('partner', 'vgk_partner') and lead.source_ref_id and lead.source_ref_id.isdigit():
@@ -110,6 +99,24 @@ def check_and_create_advance(db: Session, lead_id: int) -> dict:
             l1_partner_id = lead.mnr_handler_id
         else:
             l1_partner_id = lead.associated_partner_id
+
+        if not l1_partner_id:
+            return {'created': False, 'reason': 'No Ground Source (L1) partner set'}
+
+        pipeline = (lead.solar_pipeline_status or '').strip()
+
+        if not bypass_cibil and pipeline not in ELIGIBLE_STAGES:
+            return {'created': False, 'reason': f'Stage {pipeline!r} not eligible (must be with_bank or subsequent)'}
+
+        # Require CIBIL verification (score >= 700) before calculating/releasing advances at with_bank stage
+        score = getattr(lead, 'cibil_score', None)
+        if not bypass_cibil:
+            is_cibil_valid = ((score or 0) >= CIBIL_MIN_SCORE)
+            if not is_cibil_valid:
+                return {'created': False, 'reason': f'CIBIL score below {CIBIL_MIN_SCORE} (got {score}) — Stage 1 advance deferred until Stage 2 DVR'}
+
+        now = _get_ist()
+        created_numbers = []
 
         # Advance tiers: (level, partner_id, amount)
         tiers = []
@@ -133,25 +140,27 @@ def check_and_create_advance(db: Session, lead_id: int) -> dict:
                 continue
 
             entry_number = _next_advance_number(db)
+            adv_notes = notes or ('Auto-created on with_bank' if not bypass_cibil else 'Deferred Stage 1 catch-up at Stage 2 DVR')
 
             db.execute(text("""
                 INSERT INTO vgk_solar_cibil_advances
                     (company_id, lead_id, partner_id, entry_number, advance_amount,
                      status, stage_at_eligibility, cibil_score_at_check,
-                     level, kind, created_at, updated_at)
+                     level, kind, notes, created_at, updated_at)
                 VALUES
                     (:cid, :lid, :pid, :en, :amt,
                      'PENDING', :stage, :score,
-                     :lv, 'ADVANCE', :now, :now)
+                     :lv, 'ADVANCE', :notes, :now, :now)
             """), {
                 'cid': lead.company_id,
                 'lid': lead_id,
                 'pid': partner_id,
                 'en': entry_number,
                 'amt': float(amount),
-                'stage': pipeline,
+                'stage': pipeline or 'dvr_catchup',
                 'score': score,
                 'lv': level,
+                'notes': adv_notes,
                 'now': now.replace(tzinfo=None),
             })
             db.commit()
@@ -307,6 +316,23 @@ def check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
                 logger.warning(f'[DVR-ADV] Auto-mirror PENDING DVR L{level} failed: {_mr_e}')
 
             created_numbers.append(entry_number)
+
+        # DC-STAGE1-DEFERRED-CATCHUP: If Stage 1 advance was held back due to low CIBIL (<700),
+        # trigger it now along with Stage 2 advance!
+        try:
+            s1_exists = db.execute(text(
+                "SELECT id FROM vgk_solar_cibil_advances WHERE lead_id = :lid AND kind = 'ADVANCE' LIMIT 1"
+            ), {'lid': lead_id}).fetchone()
+            if not s1_exists:
+                logger.info(f'[DVR-ADV] Triggering deferred Stage 1 advance catch-up for lead {lead_id}')
+                _s1_res = check_and_create_advance(
+                    db, lead_id, bypass_cibil=True,
+                    notes="Stage 1 advance auto-triggered at Stage 2 DVR (deferred low CIBIL catch-up)"
+                )
+                if _s1_res.get('created') and _s1_res.get('entry_numbers'):
+                    created_numbers.extend(_s1_res['entry_numbers'])
+        except Exception as _s1_err:
+            logger.warning(f'[DVR-ADV] Stage 1 deferred catch-up failed for lead {lead_id}: {_s1_err}')
 
         if created_numbers:
             return {'created': True, 'entry_numbers': created_numbers}
@@ -466,6 +492,18 @@ def release_dvr_advance(
                     _cb_first_pay(db, _lead_dvr_ec, 'first_payment')
             except Exception as _cb_dvr_e:
                 logger.warning(f'[DC-CB-TRIGGER-001] first_payment (DVR) non-fatal: {_cb_dvr_e}')
+
+            # DC-STAGE1-DEFERRED-RELEASE: If any PENDING Stage 1 advances exist for this lead, auto-release them now
+            try:
+                _p_advs = db.execute(text(
+                    "SELECT id, level FROM vgk_solar_cibil_advances "
+                    "WHERE lead_id = :lid AND kind = 'ADVANCE' AND status = 'PENDING'"
+                ), {'lid': lead_id}).fetchall()
+                for _pa in _p_advs:
+                    release_advance(db, lead_id=lead_id, released_by_id=released_by_id,
+                                    notes="Stage 1 advance auto-released at Stage 2 DVR", _level=int(_pa.level))
+            except Exception as _s1_rel_e:
+                logger.warning(f'[DVR-ADV] Stage 1 deferred release failed for lead {lead_id}: {_s1_rel_e}')
 
         # DC-DVR-VCI-MIRROR-001 (Jul 2026): Mirror released DVR advance into
         # vgk_cash_income_entries so it appears in the Channel Partners income

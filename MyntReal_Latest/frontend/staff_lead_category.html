@@ -3260,22 +3260,58 @@ async function submitMissingFields(){
   }
   if(!Object.keys(updates).length&&!vendorFields.length){showToast('Please fill at least one field','error');return;}
   // Route by source prefix
-  const techUpdates={},payloadUpdates={};
+  const leadUpdates={},techUpdates={},payloadUpdates={};
   for(const [k,v] of Object.entries(updates)){
     if(k.startsWith('tech.'))techUpdates[k.replace('tech.','')]=v;
-    else if(k.startsWith('lead.'))payloadUpdates[k.replace('lead.','')]=v;
+    else if(k.startsWith('lead.'))leadUpdates[k.replace('lead.','')]=v;
     else if(k.startsWith('params.'))payloadUpdates[k.replace('params.','')]=v;
-    else payloadUpdates[k]=v;
+    else leadUpdates[k]=v;
   }
-  if(Object.keys(techUpdates).length){
-    await staffFetch('/api/v1/crm/leads/'+_sdocLeadId+'/solar-tech',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(techUpdates)});
+
+  // Persist canonical lead and tech data
+  try {
+    const fetches=[];
+    if(Object.keys(leadUpdates).length){
+      fetches.push(staffFetch('/api/v1/crm/leads/'+_sdocLeadId+'/solar-fields',{
+        method:'PATCH',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(leadUpdates)
+      }).then(async res=>{
+        if(!res.ok){
+          const err=await res.json().catch(()=>({}));
+          throw new Error(err.detail||'Failed to save lead information');
+        }
+        return res.json();
+      }));
+    }
+    if(Object.keys(techUpdates).length){
+      fetches.push(staffFetch('/api/v1/crm/leads/'+_sdocLeadId+'/solar-tech',{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(techUpdates)
+      }).then(async res=>{
+        if(!res.ok){
+          const err=await res.json().catch(()=>({}));
+          throw new Error(err.detail||'Failed to save technical specifications');
+        }
+        return res.json();
+      }));
+    }
+    if(fetches.length){
+      await Promise.all(fetches);
+    }
+  } catch(err){
+    showToast('❌ Error saving data: '+err.message,'error');
+    return;
   }
+
   closeMissingFieldsModal();
   if(vendorFields.length){
     showToast('Vendor fields still missing: please update the vendor in Solar Vendors page first, then retry.','error');
     return;
   }
-  // Merge lead/params overrides into the retry payload
+
+  // Merge document-specific parameters into retry payload and retry generation
   const retryPayload={..._mfPayload,...payloadUpdates};
   showToast('Data saved, retrying generation...','info');
   await doGenerateDoc(retryPayload);

@@ -142,7 +142,8 @@ async def get_assignable_employees(
     Note: Default limit is 500 employees. For orgs with >500 staff, use the search
     parameter to filter results. Frontend autocomplete requires min 2 chars to search.
     """
-    query = db.query(StaffEmployee).filter(StaffEmployee.status == 'active')
+    from app.utils.staff_hierarchy import get_employee_eligibility_filter
+    query = db.query(StaffEmployee).filter(get_employee_eligibility_filter(StaffEmployee))
     
     if search:
         search_term = f"%{search.lower()}%"

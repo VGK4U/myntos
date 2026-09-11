@@ -147,6 +147,7 @@ export class StaffCRMPage {
       await this.loadPerformanceData();
     } catch (error) {
       console.error('[StaffCRM] Initialization failed:', error);
+    } finally {
       this.loading = false;
       this.updateContent();
     }
@@ -226,6 +227,7 @@ export class StaffCRMPage {
         if (this.endDate) params.append('end_date', this.endDate);
         if (this.selectedManagerId) params.append('manager_id', this.selectedManagerId.toString());
         if (this.selectedDepartmentId) params.append('department_id', this.selectedDepartmentId.toString());
+        if (this.selectedSourceId) params.append('source_id', this.selectedSourceId.toString());
         if (this.employeeSearch) params.append('employee_search', this.employeeSearch);
         
         const response = await apiService.get<any>(`/crm/team-performance-breakdown?${params.toString()}`);
@@ -267,10 +269,10 @@ export class StaffCRMPage {
       }
     } catch (error) {
       console.error('[StaffCRM] Failed to load performance:', error);
+    } finally {
+      this.loading = false;
+      this.updateContent();
     }
-
-    this.loading = false;
-    this.updateContent();
   }
 
   private render(): void {
@@ -316,105 +318,120 @@ export class StaffCRMPage {
       return;
     }
 
-    content.innerHTML = `
-      <div class="crm-dashboard">
-        <!-- Company Selector -->
-        <div class="company-selector card-sm">
-          <label>Company:</label>
-          <select id="companyFilter" class="form-select">
-            ${this.companies.map(c => 
-              `<option value="${c.id}" ${c.id === this.selectedCompanyId ? 'selected' : ''}>${c.company_name}</option>`
-            ).join('')}
-          </select>
-        </div>
-
-        <!-- Tab Navigation - DC Protocol (Feb 2026): Only 'my' and 'breakdown' tabs to match web -->
-        <div class="crm-tabs">
-          <button class="tab-btn ${this.activeTab === 'my' ? 'active' : ''}" data-tab="my">
-            <span class="tab-icon">👤</span> My Performance
-          </button>
-          ${this.isLeader ? `
-          <button class="tab-btn ${this.activeTab === 'breakdown' ? 'active' : ''}" data-tab="breakdown">
-            <span class="tab-icon">📊</span> Team Breakdown
-          </button>
-          ` : ''}
-        </div>
-
-        <!-- Filters Section -->
-        <div class="filter-section card">
-          <div class="filter-header">
-            <span class="filter-icon">🔍</span> Filter Performance
-            <button class="reset-btn" id="resetFilters">↺ Reset</button>
+    try {
+      content.innerHTML = `
+        <div class="crm-dashboard">
+          <!-- Company Selector -->
+          <div class="company-selector card-sm">
+            <label>Company:</label>
+            <select id="companyFilter" class="form-select">
+              ${this.companies.map(c => 
+                `<option value="${c.id}" ${c.id === this.selectedCompanyId ? 'selected' : ''}>${c.company_name}</option>`
+              ).join('')}
+            </select>
           </div>
-          <div class="filter-grid">
-            <div class="filter-item">
-              <label>From Date</label>
-              <input type="date" id="startDate" class="form-input" value="${this.startDate}">
-            </div>
-            <div class="filter-item">
-              <label>To Date</label>
-              <input type="date" id="endDate" class="form-input" value="${this.endDate}">
-            </div>
-            <div class="filter-item">
-              <label>Source</label>
-              <select id="sourceFilter" class="form-select">
-                <option value="">All Sources</option>
-                ${this.sources.map(s => `<option value="${s.id}" ${s.id === this.selectedSourceId ? 'selected' : ''}>${s.name}</option>`).join('')}
-              </select>
-            </div>
-            <div class="filter-item">
-              <label>Category</label>
-              <select id="categoryFilter" class="form-select">
-                <option value="">All Categories</option>
-                ${this.categories.map(c => `<option value="${c.id}" ${c.id === this.selectedCategoryId ? 'selected' : ''}>${c.name}</option>`).join('')}
-              </select>
-            </div>
-            ${this.activeTab === 'breakdown' ? `
-              <div class="filter-item">
-                <label>Department</label>
-                <select id="departmentFilter" class="form-select">
-                  <option value="">All Departments</option>
-                  ${this.departments.map(d => `<option value="${d.id}" ${d.id === this.selectedDepartmentId ? 'selected' : ''}>${d.name}</option>`).join('')}
-                </select>
-              </div>
-            ` : ''}
-            ${this.activeTab !== 'my' && this.managers.length > 0 ? `
-              <div class="filter-item">
-                <label>Team Manager</label>
-                <select id="managerFilter" class="form-select">
-                  <option value="">All Managers</option>
-                  ${this.managers.map(m => `<option value="${m.id}" ${m.id === this.selectedManagerId ? 'selected' : ''}>${m.name}</option>`).join('')}
-                </select>
-              </div>
+
+          <!-- Tab Navigation - DC Protocol (Feb 2026): Only 'my' and 'breakdown' tabs to match web -->
+          <div class="crm-tabs">
+            <button class="tab-btn ${this.activeTab === 'my' ? 'active' : ''}" data-tab="my">
+              <span class="tab-icon">👤</span> My Performance
+            </button>
+            ${this.isLeader ? `
+            <button class="tab-btn ${this.activeTab === 'breakdown' ? 'active' : ''}" data-tab="breakdown">
+              <span class="tab-icon">📊</span> Team Breakdown
+            </button>
             ` : ''}
           </div>
-          <button class="btn btn-primary apply-btn" id="applyFilters">
-            🔍 Apply Filters
-          </button>
+
+          <!-- Filters Section -->
+          <div class="filter-section card">
+            <div class="filter-header">
+              <span class="filter-icon">🔍</span> Filter Performance
+              <button class="reset-btn" id="resetFilters">↺ Reset</button>
+            </div>
+            <div class="filter-grid">
+              <div class="filter-item">
+                <label>From Date</label>
+                <input type="date" id="startDate" class="form-input" value="${this.startDate}">
+              </div>
+              <div class="filter-item">
+                <label>To Date</label>
+                <input type="date" id="endDate" class="form-input" value="${this.endDate}">
+              </div>
+              <div class="filter-item">
+                <label>Source</label>
+                <select id="sourceFilter" class="form-select">
+                  <option value="">All Sources</option>
+                  ${this.sources.map(s => `<option value="${s.id}" ${s.id === this.selectedSourceId ? 'selected' : ''}>${s.name}</option>`).join('')}
+                </select>
+              </div>
+              <div class="filter-item">
+                <label>Category</label>
+                <select id="categoryFilter" class="form-select">
+                  <option value="">All Categories</option>
+                  ${this.categories.map(c => `<option value="${c.id}" ${c.id === this.selectedCategoryId ? 'selected' : ''}>${c.name}</option>`).join('')}
+                </select>
+              </div>
+              ${this.activeTab === 'breakdown' ? `
+                <div class="filter-item">
+                  <label>Department</label>
+                  <select id="departmentFilter" class="form-select">
+                    <option value="">All Departments</option>
+                    ${this.departments.map(d => `<option value="${d.id}" ${d.id === this.selectedDepartmentId ? 'selected' : ''}>${d.name}</option>`).join('')}
+                  </select>
+                </div>
+              ` : ''}
+              ${this.activeTab !== 'my' && this.managers.length > 0 ? `
+                <div class="filter-item">
+                  <label>Team Manager</label>
+                  <select id="managerFilter" class="form-select">
+                    <option value="">All Managers</option>
+                    ${this.managers.map(m => `<option value="${m.id}" ${m.id === this.selectedManagerId ? 'selected' : ''}>${m.name}</option>`).join('')}
+                  </select>
+                </div>
+              ` : ''}
+            </div>
+            <button class="btn btn-primary apply-btn" id="applyFilters">
+              🔍 Apply Filters
+            </button>
+          </div>
+
+          <!-- Performance Table Section -->
+          ${this.activeTab === 'breakdown' ? this.renderBreakdownTable() : this.renderPerformanceTable()}
+
+          <!-- Quick Stats Cards -->
+          ${this.renderQuickStats()}
+
+          <!-- Quick Actions -->
+          <h4 class="section-title">Quick Actions</h4>
+          <div class="crm-actions">
+            <button class="action-card card" data-page="staff-leads">
+              <span class="action-icon">👥</span>
+              <span>My Leads</span>
+            </button>
+            <button class="action-card card" data-page="staff-team-leads">
+              <span class="action-icon">📊</span>
+              <span>Team Leads</span>
+            </button>
+          </div>
         </div>
+      `;
 
-        <!-- Performance Table Section -->
-        ${this.activeTab === 'breakdown' ? this.renderBreakdownTable() : this.renderPerformanceTable()}
-
-        <!-- Quick Stats Cards -->
-        ${this.renderQuickStats()}
-
-        <!-- Quick Actions -->
-        <h4 class="section-title">Quick Actions</h4>
-        <div class="crm-actions">
-          <button class="action-card card" data-page="staff-leads">
-            <span class="action-icon">👥</span>
-            <span>My Leads</span>
-          </button>
-          <button class="action-card card" data-page="staff-team-leads">
-            <span class="action-icon">📊</span>
-            <span>Team Leads</span>
-          </button>
+      this.attachEventListeners();
+    } catch (err: any) {
+      console.error('[StaffCRM] Render error:', err);
+      content.innerHTML = `
+        <div class="empty-state" style="padding: 32px 16px; text-align: center;">
+          <div style="font-size: 36px; margin-bottom: 12px;">📊</div>
+          <h4 style="margin-bottom: 8px; color: #fff;">Dashboard View</h4>
+          <p style="color: rgba(255,255,255,0.6); font-size: 14px; margin-bottom: 16px;">Unable to display performance metrics at this moment.</p>
+          <button id="retryCrmBtn" class="btn btn-primary" style="padding: 8px 20px; border-radius: 8px; cursor: pointer;">↺ Reload Dashboard</button>
         </div>
-      </div>
-    `;
-
-    this.attachEventListeners();
+      `;
+      document.getElementById('retryCrmBtn')?.addEventListener('click', () => {
+        this.loadPerformanceData();
+      });
+    }
   }
 
   private renderPerformanceTable(): string {
@@ -453,22 +470,22 @@ export class StaffCRMPage {
               <tbody>
                 ${data.map(row => `
                   <tr>
-                    <td class="sticky-col">${row.sno}</td>
+                    <td class="sticky-col">${row.sno || 1}</td>
                     <td class="sticky-col-2">
                       <div class="employee-cell">
-                        <span class="emp-name">${row.employee_name}</span>
-                        <span class="emp-code">${row.employee_id}</span>
+                        <span class="emp-name">${row.employee_name || '—'}</span>
+                        <span class="emp-code">${row.employee_id || '—'}</span>
                       </div>
                     </td>
-                    <td class="num-cell">${row.overall.new_leads}</td>
-                    <td class="num-cell">${row.overall.overall_leads}</td>
-                    <td class="num-cell">${row.overall.self_generated_leads}</td>
-                    <td class="num-cell">${row.status_wise.in_progress}</td>
-                    <td class="num-cell success">${row.status_wise.deal_closed}</td>
-                    <td class="num-cell warning">${row.status_wise.on_hold}</td>
-                    <td class="num-cell danger">${row.status_wise.lost_leads}</td>
-                    <td class="num-cell currency success">₹${this.formatCurrency(row.revenue.generated)}</td>
-                    <td class="num-cell currency danger">₹${this.formatCurrency(row.revenue.lost)}</td>
+                    <td class="num-cell">${row.overall?.new_leads ?? 0}</td>
+                    <td class="num-cell">${row.overall?.overall_leads ?? 0}</td>
+                    <td class="num-cell">${row.overall?.self_generated_leads ?? 0}</td>
+                    <td class="num-cell">${row.status_wise?.in_progress ?? 0}</td>
+                    <td class="num-cell success">${row.status_wise?.deal_closed ?? 0}</td>
+                    <td class="num-cell warning">${row.status_wise?.on_hold ?? 0}</td>
+                    <td class="num-cell danger">${row.status_wise?.lost_leads ?? 0}</td>
+                    <td class="num-cell currency success">₹${this.formatCurrency(row.revenue?.generated)}</td>
+                    <td class="num-cell currency danger">₹${this.formatCurrency(row.revenue?.lost)}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -476,13 +493,13 @@ export class StaffCRMPage {
                 <tfoot>
                   <tr class="totals-row">
                     <td colspan="2" class="sticky-col">TOTAL</td>
-                    <td class="num-cell">${this.totals.new_leads}</td>
-                    <td class="num-cell">${this.totals.overall_leads}</td>
-                    <td class="num-cell">${this.totals.self_generated_leads}</td>
-                    <td class="num-cell">${this.totals.in_progress}</td>
-                    <td class="num-cell success">${this.totals.deal_closed}</td>
-                    <td class="num-cell warning">${this.totals.on_hold}</td>
-                    <td class="num-cell danger">${this.totals.lost_leads}</td>
+                    <td class="num-cell">${this.totals.new_leads ?? 0}</td>
+                    <td class="num-cell">${this.totals.overall_leads ?? 0}</td>
+                    <td class="num-cell">${this.totals.self_generated_leads ?? 0}</td>
+                    <td class="num-cell">${this.totals.in_progress ?? 0}</td>
+                    <td class="num-cell success">${this.totals.deal_closed ?? 0}</td>
+                    <td class="num-cell warning">${this.totals.on_hold ?? 0}</td>
+                    <td class="num-cell danger">${this.totals.lost_leads ?? 0}</td>
                     <td class="num-cell currency success">₹${this.formatCurrency(this.totals.revenue_generated)}</td>
                     <td class="num-cell currency danger">₹${this.formatCurrency(this.totals.revenue_lost)}</td>
                   </tr>
@@ -502,7 +519,7 @@ export class StaffCRMPage {
   }
 
   private renderBreakdownTable(): string {
-    const data = this.breakdownData;
+    const data = this.breakdownData || [];
     
     return `
       <div class="performance-section card">
@@ -548,34 +565,34 @@ export class StaffCRMPage {
               <tbody>
                 ${data.map(row => `
                   <tr>
-                    <td class="sticky-col">${row.sno}</td>
+                    <td class="sticky-col">${row.sno || 1}</td>
                     <td class="sticky-col-2">
                       <div class="employee-cell">
-                        <span class="emp-name">${row.employee_name}</span>
-                        <span class="emp-code">${row.emp_code || row.employee_id}</span>
+                        <span class="emp-name">${row.employee_name || '—'}</span>
+                        <span class="emp-code">${row.emp_code || row.employee_id || '—'}</span>
                         ${row.reporting_manager ? `<span class="emp-manager">RM: ${row.reporting_manager}</span>` : ''}
                       </div>
                     </td>
                     <!-- Primary Owner -->
-                    <td class="num-cell">${row.as_primary_owner.total}</td>
-                    <td class="num-cell">${row.as_primary_owner.new}</td>
-                    <td class="num-cell">${row.as_primary_owner.contacted + row.as_primary_owner.qualified}</td>
-                    <td class="num-cell success">${row.as_primary_owner.won}</td>
-                    <td class="num-cell danger">${row.as_primary_owner.lost}</td>
-                    <td class="num-cell warning">${row.as_primary_owner.on_hold}</td>
-                    <td class="num-cell currency">&#8377;${this.formatCurrency(row.as_primary_owner.revenue_total)}</td>
-                    <td class="num-cell currency success">&#8377;${this.formatCurrency(row.as_primary_owner.revenue_received)}</td>
-                    <td class="num-cell currency warning">&#8377;${this.formatCurrency(row.as_primary_owner.revenue_balance)}</td>
+                    <td class="num-cell">${row.as_primary_owner?.total ?? 0}</td>
+                    <td class="num-cell">${row.as_primary_owner?.new ?? 0}</td>
+                    <td class="num-cell">${(row.as_primary_owner?.contacted ?? 0) + (row.as_primary_owner?.qualified ?? 0)}</td>
+                    <td class="num-cell success">${row.as_primary_owner?.won ?? 0}</td>
+                    <td class="num-cell danger">${row.as_primary_owner?.lost ?? 0}</td>
+                    <td class="num-cell warning">${row.as_primary_owner?.on_hold ?? 0}</td>
+                    <td class="num-cell currency">&#8377;${this.formatCurrency(row.as_primary_owner?.revenue_total)}</td>
+                    <td class="num-cell currency success">&#8377;${this.formatCurrency(row.as_primary_owner?.revenue_received)}</td>
+                    <td class="num-cell currency warning">&#8377;${this.formatCurrency(row.as_primary_owner?.revenue_balance)}</td>
                     <!-- Handler -->
-                    <td class="num-cell">${row.as_handler.total}</td>
-                    <td class="num-cell">${row.as_handler.new}</td>
-                    <td class="num-cell">${row.as_handler.contacted + row.as_handler.qualified}</td>
-                    <td class="num-cell success">${row.as_handler.won}</td>
-                    <td class="num-cell danger">${row.as_handler.lost}</td>
-                    <td class="num-cell warning">${row.as_handler.on_hold}</td>
-                    <td class="num-cell currency">&#8377;${this.formatCurrency(row.as_handler.revenue_total)}</td>
-                    <td class="num-cell currency success">&#8377;${this.formatCurrency(row.as_handler.revenue_received)}</td>
-                    <td class="num-cell currency warning">&#8377;${this.formatCurrency(row.as_handler.revenue_balance)}</td>
+                    <td class="num-cell">${row.as_handler?.total ?? 0}</td>
+                    <td class="num-cell">${row.as_handler?.new ?? 0}</td>
+                    <td class="num-cell">${(row.as_handler?.contacted ?? 0) + (row.as_handler?.qualified ?? 0)}</td>
+                    <td class="num-cell success">${row.as_handler?.won ?? 0}</td>
+                    <td class="num-cell danger">${row.as_handler?.lost ?? 0}</td>
+                    <td class="num-cell warning">${row.as_handler?.on_hold ?? 0}</td>
+                    <td class="num-cell currency">&#8377;${this.formatCurrency(row.as_handler?.revenue_total)}</td>
+                    <td class="num-cell currency success">&#8377;${this.formatCurrency(row.as_handler?.revenue_received)}</td>
+                    <td class="num-cell currency warning">&#8377;${this.formatCurrency(row.as_handler?.revenue_balance)}</td>
                     <!-- Talk Time -->
                     <td class="num-cell talk-time">${this.fmtTalkTime(row.avg_daily_talk_time || 0)}</td>
                   </tr>
@@ -644,15 +661,16 @@ export class StaffCRMPage {
     }
   }
 
-  private formatCurrency(value: number): string {
-    if (value >= 10000000) {
-      return (value / 10000000).toFixed(1) + 'Cr';
-    } else if (value >= 100000) {
-      return (value / 100000).toFixed(1) + 'L';
-    } else if (value >= 1000) {
-      return (value / 1000).toFixed(1) + 'K';
+  private formatCurrency(value: any): string {
+    const num = Number(value) || 0;
+    if (num >= 10000000) {
+      return (num / 10000000).toFixed(1) + 'Cr';
+    } else if (num >= 100000) {
+      return (num / 100000).toFixed(1) + 'L';
+    } else if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'K';
     }
-    return value.toFixed(0);
+    return num.toFixed(0);
   }
 
   private fmtTalkTime(seconds: number): string {

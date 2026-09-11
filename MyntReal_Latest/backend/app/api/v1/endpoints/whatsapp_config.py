@@ -233,19 +233,47 @@ class CampaignCreateSchema(BaseModel):
 
 @router.get("/templates")
 async def list_templates(
+    mode: Optional[str] = None,
     segment: Optional[str] = None,
+    category: Optional[str] = None,
     is_active: Optional[bool] = None,
+    company_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user=Depends(require_wa_send)
 ):
     from app.models.whatsapp import WhatsAppTemplate
     q = db.query(WhatsAppTemplate)
-    if segment:
-        q = q.filter_by(segment=segment)
     if is_active is not None:
         q = q.filter_by(is_active=is_active)
+    else:
+        q = q.filter_by(is_active=True)
+
+    if segment:
+        q = q.filter_by(segment=segment)
+
+    if category:
+        q = q.filter(WhatsAppTemplate.meta_category == category.upper())
+
+    if mode in ("company", "meta", "official"):
+        # Meta Cloud API mode: ONLY Meta-approved templates and NOT internal-only
+        q = q.filter(
+            WhatsAppTemplate.is_meta_approved == True,
+            WhatsAppTemplate.meta_approval_status == 'APPROVED',
+            WhatsAppTemplate.usage_scope != 'internal'
+        )
+    elif mode == "scanned":
+        # Scanned Bot mode: active templates suitable for scanned/bot dispatch (not meta_only)
+        q = q.filter(WhatsAppTemplate.usage_scope != 'meta_only')
+
     templates = q.order_by(WhatsAppTemplate.segment, WhatsAppTemplate.name).all()
-    return {"success": True, "templates": [t.to_dict() for t in templates]}
+    tpl_list = []
+    for t in templates:
+        d = t.to_dict()
+        d['category'] = t.meta_category or 'MARKETING'
+        d['template_name'] = t.name
+        tpl_list.append(d)
+
+    return {"success": True, "templates": tpl_list, "total": len(tpl_list)}
 
 
 @router.get("/templates/approved")
@@ -1277,7 +1305,7 @@ def test_send(
     db: Session = Depends(get_db),
     current_user=Depends(require_wa_send)
 ):
-    from app.services.whatsapp_auto_service import send_direct_whatsapp, _render_body
+    from app.services.whatsapp_auto_service import send_direct_whatsapp, _render_body, format_staff_whatsapp_message
     from app.models.whatsapp import WhatsAppTemplate
     context_vars = data.context_vars or {}
     send_type = (data.send_type or "meta").lower()
@@ -1291,6 +1319,19 @@ def test_send(
 
     if not message:
         raise HTTPException(400, "Provide a template or custom message")
+
+    if not data.template_id:
+        staff_id = _get_staff_id(current_user)
+        staff_full_name = "Staff"
+        if staff_id:
+            try:
+                from sqlalchemy import text as _tn
+                _srow = db.execute(_tn("SELECT full_name FROM staff_employees WHERE id = :sid"), {"sid": staff_id}).fetchone()
+                if _srow and _srow[0]:
+                    staff_full_name = _srow[0]
+            except Exception:
+                pass
+        message = format_staff_whatsapp_message(message, staff_full_name)
 
     # send_type="text" → force plain text path even if template is Meta-approved
     effective_template_id = data.template_id if send_type != "text" else None
@@ -1328,7 +1369,7 @@ def test_send(
     }
 
 
-# ── CRM LEAD DIRECT SEND ───────────────────────────────────────────────────────
+# ── DIRECT CRM LEAD SEND ──────────────────────────────────────────────────────
 
 @router.post("/crm-lead-send/{lead_id}")
 def crm_lead_send(
@@ -1341,7 +1382,7 @@ def crm_lead_send(
     Send WhatsApp to a CRM lead directly from the CRM view.
     Logs the message in crm_lead_notes (lead history).
     """
-    from app.services.whatsapp_auto_service import send_direct_whatsapp, _render_body
+    from app.services.whatsapp_auto_service import send_direct_whatsapp, _render_body, format_staff_whatsapp_message
     from app.models.crm import CRMLead
     from app.models.whatsapp import WhatsAppTemplate
 
@@ -1392,6 +1433,9 @@ def crm_lead_send(
 
     if not message:
         raise HTTPException(400, "Provide a template or custom message")
+
+    if not data.template_id:
+        message = format_staff_whatsapp_message(message, staff_full_name)
 
     effective_lead_id = lead_id if (lead_id and lead_id > 0) else None
 

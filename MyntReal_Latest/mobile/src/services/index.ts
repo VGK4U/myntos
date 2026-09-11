@@ -9,5 +9,6 @@ export { gpsService } from './gps.service';
 export { cameraService } from './camera.service';
 export { callSyncService } from './call-sync.service';
 export { telephonyService } from './telephony.service';
+export { platformAudioAdapter } from './platform-audio.adapter';
 export { callController } from './call-controller';
 

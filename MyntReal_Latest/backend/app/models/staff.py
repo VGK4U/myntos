@@ -300,7 +300,8 @@ class StaffEmployee(Base):
             "role_name": self.role.role_name if self.role else None,
             "role": role_data,  # DC_RBAC_API_STRUCTURE_001: Complete role object for frontend RBAC
             "status": self.status,
-            "is_active": self.status == 'active',  # Convenience field
+            "is_active": self.status == 'active' and not getattr(self, 'is_deleted', False),  # Convenience field
+            "is_deleted": getattr(self, 'is_deleted', False),
             "is_deactivated": self.status == 'deactivated',  # Dec 2025
             "is_resigned": self.status == 'resigned',  # Dec 2025
             "status_changed_at": self.status_changed_at.isoformat() if self.status_changed_at else None,
@@ -1366,9 +1367,12 @@ def check_nda_acceptance(db, employee_id, staff_type: str = None, document_type:
     Check if employee has accepted the latest active agreement of a given type.
     DC Protocol: Staff type-based NDA acceptance check (Dec 04, 2025)
     DC-AGREEMENT-TYPE-001 (Jun 2026): document_type param added
+    DC Protocol (ARCHITECTURAL FIX - Sep 2026):
+    Executes in a dedicated, isolated bounded session with deterministic rollback and close.
+    Leaves ZERO locks on staff_employees, staff_nda_versions, or staff_nda_acceptances.
     
     Args:
-        db: Database session
+        db: Database session (preserved for signature compatibility)
         employee_id: Employee ID to check
         staff_type: Optional staff type override. If None, fetches from employee record.
         document_type: 'NDA' or 'EMPLOYMENT' (default 'NDA')
@@ -1376,131 +1380,131 @@ def check_nda_acceptance(db, employee_id, staff_type: str = None, document_type:
     Returns:
         tuple (needs_acceptance: bool, version: StaffNdaVersion or None)
     """
-    if staff_type is None:
-        employee = db.query(StaffEmployee).filter(
-            StaffEmployee.id == employee_id
+    from app.core.database import SessionLocal
+    read_session = SessionLocal()
+    try:
+        if staff_type is None:
+            emp = read_session.query(StaffEmployee.staff_type).filter(
+                StaffEmployee.id == employee_id
+            ).first()
+            staff_type = (emp[0] or 'MN_STAFF') if emp else 'MN_STAFF'
+        
+        active_version = get_active_nda_for_staff_type(read_session, staff_type, document_type)
+        if not active_version:
+            return (False, None)
+        
+        acceptance = read_session.query(StaffNdaAcceptance.id).filter(
+            StaffNdaAcceptance.employee_id == employee_id,
+            StaffNdaAcceptance.nda_version_id == active_version.id
         ).first()
-        if employee:
-            staff_type = employee.staff_type or 'MN_STAFF'
+        
+        read_session.expunge(active_version)
+        if acceptance:
+            return (False, active_version)
         else:
-            staff_type = 'MN_STAFF'
-    
-    active_version = get_active_nda_for_staff_type(db, staff_type, document_type)
-    
-    if not active_version:
-        return (False, None)
-    
-    acceptance = db.query(StaffNdaAcceptance.id).filter(
-        StaffNdaAcceptance.employee_id == employee_id,
-        StaffNdaAcceptance.nda_version_id == active_version.id
-    ).first()
-    
-    if acceptance:
-        return (False, active_version)
-    else:
-        return (True, active_version)
+            return (True, active_version)
+    finally:
+        try:
+            read_session.rollback()
+        except Exception:
+            pass
+        try:
+            read_session.close()
+        except Exception:
+            pass
 
 
 def check_all_pending_agreements(db, employee_id: int, staff_type: str = None):
     """
     Check all pending agreement types in priority order: NDA first, then Employment Agreement.
     DC-AGREEMENT-TYPE-001 (Jun 2026): Sequential multi-agreement gate.
+    DC Protocol (ARCHITECTURAL FIX - Sep 2026):
+    Executes in a dedicated, isolated bounded session with deterministic rollback and close.
+    Leaves ZERO locks on staff_employees, staff_nda_versions, or staff_nda_acceptances.
     
     Returns first pending agreement so the gate can show them one at a time.
     
     Args:
-        db: Database session
+        db: Database session (preserved for signature compatibility)
         employee_id: Employee ID to check
         staff_type: Optional staff type override
     
     Returns:
         tuple (needs_acceptance: bool, agreement_type: str or None, version: StaffNdaVersion or None)
     """
-    if staff_type is None:
-        employee = db.query(StaffEmployee).filter(StaffEmployee.id == employee_id).first()
-        staff_type = (employee.staff_type or 'MN_STAFF') if employee else 'MN_STAFF'
-    
-    # External SaaS client tenants are independent organizations and not subject to internal staff agreements
-    if (staff_type or '').upper() in ['TENANT_ADMIN', 'SAAS_CLIENT', 'CLIENT_USER']:
-        return (False, None, None)
-        
-    VALID_STAFF_TYPES = [
-        'MN_STAFF', 'FREELANCER', 'MYNT_REAL', 'MN_EMPLOYEE',
-        'VGK4U', 'EA', 'RVZ', 'ACCOUNTS', 'HR', 'SALES'
-    ]
-    if staff_type not in VALID_STAFF_TYPES:
-        staff_type = 'MN_STAFF'
-        
     from sqlalchemy import desc
     from app.core.database import SessionLocal
+
+    read_session = SessionLocal()
     try:
-        active_versions = db.query(StaffNdaVersion).filter(
+        if staff_type is None:
+            emp = read_session.query(StaffEmployee.staff_type).filter(StaffEmployee.id == employee_id).first()
+            staff_type = (emp[0] or 'MN_STAFF') if emp else 'MN_STAFF'
+        
+        # External SaaS client tenants are independent organizations and not subject to internal staff agreements
+        if (staff_type or '').upper() in ['TENANT_ADMIN', 'SAAS_CLIENT', 'CLIENT_USER']:
+            return (False, None, None)
+            
+        VALID_STAFF_TYPES = [
+            'MN_STAFF', 'FREELANCER', 'MYNT_REAL', 'MN_EMPLOYEE',
+            'VGK4U', 'EA', 'RVZ', 'ACCOUNTS', 'HR', 'SALES'
+        ]
+        if staff_type not in VALID_STAFF_TYPES:
+            staff_type = 'MN_STAFF'
+            
+        active_versions = read_session.query(StaffNdaVersion).filter(
             StaffNdaVersion.status == 'active'
         ).order_by(desc(StaffNdaVersion.id)).all()
-    except Exception:
-        try:
-            db.rollback()
-            fresh = SessionLocal()
-            active_versions = fresh.query(StaffNdaVersion).filter(
-                StaffNdaVersion.status == 'active'
-            ).order_by(desc(StaffNdaVersion.id)).all()
-            fresh.close()
-        except Exception:
-            return (False, None, None)
-    
-    if not active_versions:
-        return (False, None, None)
         
-    active_by_type = {}
-    for doc_type in ['NDA', 'EMPLOYMENT']:
-        # Priority 1: explicit staff type match
-        match = next(
-            (v for v in active_versions if v.document_type == doc_type and v.applicable_staff_types and staff_type in v.applicable_staff_types),
-            None
-        )
-        if not match:
-            # Priority 2: global version (empty/NULL = applies to all)
+        if not active_versions:
+            return (False, None, None)
+            
+        active_by_type = {}
+        for doc_type in ['NDA', 'EMPLOYMENT']:
+            # Priority 1: explicit staff type match
             match = next(
-                (v for v in active_versions if v.document_type == doc_type and not v.applicable_staff_types),
+                (v for v in active_versions if v.document_type == doc_type and v.applicable_staff_types and staff_type in v.applicable_staff_types),
                 None
             )
-        if match:
-            active_by_type[doc_type] = match
+            if not match:
+                # Priority 2: global version (empty/NULL = applies to all)
+                match = next(
+                    (v for v in active_versions if v.document_type == doc_type and not v.applicable_staff_types),
+                    None
+                )
+            if match:
+                active_by_type[doc_type] = match
+                
+        if not active_by_type:
+            return (False, None, None)
             
-    if not active_by_type:
-        return (False, None, None)
-        
-    # Single batch query to check user's acceptances for all relevant active version IDs
-    target_version_ids = [v.id for v in active_by_type.values()]
-    try:
+        # Single batch query to check user's acceptances for all relevant active version IDs
+        target_version_ids = [v.id for v in active_by_type.values()]
         accepted_version_ids = set(
-            row[0] for row in db.query(StaffNdaAcceptance.nda_version_id).filter(
+            row[0] for row in read_session.query(StaffNdaAcceptance.nda_version_id).filter(
                 StaffNdaAcceptance.employee_id == employee_id,
                 StaffNdaAcceptance.nda_version_id.in_(target_version_ids)
             ).all()
         )
-    except Exception:
+        
+        # Check in priority order: NDA first, then EMPLOYMENT
+        for doc_type in ['NDA', 'EMPLOYMENT']:
+            if doc_type in active_by_type:
+                version = active_by_type[doc_type]
+                if version.id not in accepted_version_ids:
+                    read_session.expunge(version)
+                    return (True, doc_type, version)
+        
+        return (False, None, None)
+    finally:
         try:
-            db.rollback()
-            fresh = SessionLocal()
-            accepted_version_ids = set(
-                row[0] for row in fresh.query(StaffNdaAcceptance.nda_version_id).filter(
-                    StaffNdaAcceptance.employee_id == employee_id,
-                    StaffNdaAcceptance.nda_version_id.in_(target_version_ids)
-                ).all()
-            )
-            fresh.close()
+            read_session.rollback()
         except Exception:
-            accepted_version_ids = set()
-    
-    # Check in priority order: NDA first, then EMPLOYMENT
-    for doc_type in ['NDA', 'EMPLOYMENT']:
-        if doc_type in active_by_type:
-            version = active_by_type[doc_type]
-            if version.id not in accepted_version_ids:
-                return (True, doc_type, version)
-    
-    return (False, None, None)
+            pass
+        try:
+            read_session.close()
+        except Exception:
+            pass
 
 
 def is_nda_applicable_to_staff_type(nda_version: StaffNdaVersion, staff_type: str) -> bool:

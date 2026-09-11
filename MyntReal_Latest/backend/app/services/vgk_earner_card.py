@@ -1166,7 +1166,7 @@ def get_bulk_partner_potential_earning(db, partner_ids: list[int], exclude_l1: b
                 elif _kw == "10":
                     lead_val = 566000.0
                 else:
-                    lead_val = 190000.0 if (r.lead_category_id == 19 or r.category_id == 19) else commission_base
+                    lead_val = 190000.0 if (r.lead_category_id in (6, 19) or r.category_id in (6, 19)) else commission_base
                 
             cat_id = r.lead_category_id or r.category_id
             config = config_map.get(cat_id)

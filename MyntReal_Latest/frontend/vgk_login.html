@@ -624,18 +624,22 @@
                             <input type="tel" class="form-control" id="suPhone" placeholder="10-digit mobile number" required oninput="suOtpReset()">
                             <button type="button" class="btn btn-sm" id="suSendOtpBtn" onclick="suSendOTP()" style="background:#7c3aed;color:#fff;border:none;padding:0 14px;border-radius:0 8px 8px 0;font-size:13px;font-weight:600;white-space:nowrap">Send OTP</button>
                         </div>
-                        <div style="font-size:11.5px;color:#f87171;margin-top:5px"><i class="fas fa-shield-alt me-1"></i>WhatsApp OTP verification is <b>required</b> to register.</div>
+                        <div style="font-size:11.5px;color:#9ca3af;margin-top:5px"><i class="fab fa-whatsapp me-1" style="color:#10b981"></i>WhatsApp OTP verification is <b>optional</b>. You can verify now or verify later.</div>
                         <!-- [DC-PHONE-OTP-001] WhatsApp OTP verification block -->
                         <div id="suOtpBlock" style="display:none;margin-top:10px;background:rgba(16,185,129,.1);border:1.5px solid rgba(16,185,129,.4);border-radius:10px;padding:12px 14px;">
                             <div style="font-size:12.5px;color:#6ee7b7;margin-bottom:8px"><i class="fab fa-whatsapp me-1"></i> OTP sent to your WhatsApp. Check and enter below:</div>
-                            <div style="display:flex;gap:8px;align-items:center">
-                                <input type="text" id="suOtpInput" maxlength="6" placeholder="6-digit OTP" style="flex:1;padding:8px 12px;border-radius:8px;border:1.5px solid #6ee7b7;background:rgba(255,255,255,.08);color:#fff;font-size:15px;font-weight:700;letter-spacing:4px;text-align:center">
+                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                                <input type="text" id="suOtpInput" maxlength="6" placeholder="6-digit OTP" style="flex:1;min-width:120px;padding:8px 12px;border-radius:8px;border:1.5px solid #6ee7b7;background:rgba(255,255,255,.08);color:#fff;font-size:15px;font-weight:700;letter-spacing:4px;text-align:center">
                                 <button type="button" onclick="suVerifyOTP()" id="suVerifyBtn" style="background:#10b981;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;white-space:nowrap">Verify</button>
+                                <button type="button" onclick="suSkipOTP()" id="suSkipBtn" style="background:transparent;color:#9ca3af;border:1px solid #4b5563;padding:8px 12px;border-radius:8px;font-size:12px;cursor:pointer">Skip for now</button>
                             </div>
-                            <div style="margin-top:6px;font-size:11.5px;color:rgba(255,255,255,.5)">Didn't receive? <a href="#" onclick="suSendOTP();return false" style="color:#a78bfa">Resend OTP</a></div>
+                            <div style="margin-top:6px;font-size:11.5px;color:rgba(255,255,255,.5)">Didn't receive? <a href="#" onclick="suSendOTP();return false" style="color:#a78bfa">Resend OTP</a> | <a href="#" onclick="suSkipOTP();return false" style="color:#fbbf24">Skip verification</a></div>
                         </div>
                         <div id="suOtpVerifiedBadge" style="display:none;margin-top:8px;background:rgba(16,185,129,.15);border:1.5px solid #10b981;border-radius:8px;padding:8px 12px;color:#6ee7b7;font-size:12.5px;font-weight:600">
                             <i class="fas fa-check-circle me-1"></i> WhatsApp number verified
+                        </div>
+                        <div id="suOtpPendingBadge" style="display:none;margin-top:8px;background:rgba(245,158,11,.1);border:1.5px solid #f59e0b;border-radius:8px;padding:8px 12px;color:#fbbf24;font-size:12.5px;font-weight:600">
+                            <i class="fas fa-clock me-1"></i> WhatsApp verification pending (optional — you can verify later)
                         </div>
                         <input type="hidden" id="suPhoneVerifiedToken" value="">
                     </div>
@@ -916,8 +920,16 @@
     function suOtpReset() {
         document.getElementById('suOtpBlock').style.display = 'none';
         document.getElementById('suOtpVerifiedBadge').style.display = 'none';
+        document.getElementById('suOtpPendingBadge').style.display = 'none';
         document.getElementById('suPhoneVerifiedToken').value = '';
         document.getElementById('suOtpInput').value = '';
+    }
+    function suSkipOTP() {
+        document.getElementById('suOtpBlock').style.display = 'none';
+        document.getElementById('suOtpVerifiedBadge').style.display = 'none';
+        document.getElementById('suOtpPendingBadge').style.display = 'block';
+        document.getElementById('suPhoneVerifiedToken').value = '';
+        document.getElementById('signupError').style.display = 'none';
     }
     async function suSendOTP() {
         const phone = document.getElementById('suPhone').value.trim();
@@ -934,15 +946,24 @@
             });
             const d = await r.json();
             if (r.ok && d.success) {
-                document.getElementById('suOtpBlock').style.display = 'block';
-                document.getElementById('suOtpVerifiedBadge').style.display = 'none';
-                document.getElementById('suPhoneVerifiedToken').value = '';
-                document.getElementById('suOtpInput').value = '';
-                document.getElementById('suOtpInput').focus();
+                if (d.otp_sent === false) {
+                    // Non-blocking WhatsApp unavailable state
+                    document.getElementById('suOtpBlock').style.display = 'none';
+                    document.getElementById('suOtpVerifiedBadge').style.display = 'none';
+                    document.getElementById('suOtpPendingBadge').style.display = 'block';
+                    document.getElementById('suPhoneVerifiedToken').value = '';
+                } else {
+                    document.getElementById('suOtpBlock').style.display = 'block';
+                    document.getElementById('suOtpVerifiedBadge').style.display = 'none';
+                    document.getElementById('suOtpPendingBadge').style.display = 'none';
+                    document.getElementById('suPhoneVerifiedToken').value = '';
+                    document.getElementById('suOtpInput').value = '';
+                    document.getElementById('suOtpInput').focus();
+                }
             } else {
-                showError('signupError', d.detail || d.message || 'Failed to send OTP. Please try again.');
+                showError('signupError', d.detail || d.message || 'Failed to send OTP. You can skip and verify later.');
             }
-        } catch { showError('signupError', 'Network error. Please try again.'); }
+        } catch { showError('signupError', 'Network error. You can continue and verify WhatsApp later.'); }
         finally { btn.disabled = false; btn.textContent = 'Send OTP'; }
     }
     async function suVerifyOTP() {
@@ -963,6 +984,7 @@
             if (r.ok && d.success) {
                 document.getElementById('suPhoneVerifiedToken').value = d.phone_verified_token;
                 document.getElementById('suOtpBlock').style.display = 'none';
+                document.getElementById('suOtpPendingBadge').style.display = 'none';
                 document.getElementById('suOtpVerifiedBadge').style.display = 'block';
             } else {
                 showError('signupError', d.detail || d.message || 'Invalid OTP. Please try again.');
@@ -994,13 +1016,7 @@
         if (!suLastName)  { showError('signupError', 'Please enter your last name.'); return; }
         if (!suGender)    { showError('signupError', 'Please select your gender.'); return; }
         if (!phone || phone.length < 10) { showError('signupError', 'Please enter a valid 10-digit phone number.'); return; }
-        // [DC-PHONE-OTP-001] OTP is REQUIRED — block submission if not verified
-        const _pvt = document.getElementById('suPhoneVerifiedToken').value;
-        if (!_pvt) {
-            showError('signupError', 'Phone verification required. Please click "Send OTP", enter the code from your WhatsApp, and click "Verify" before registering.');
-            document.getElementById('suPhone').scrollIntoView({ behavior: 'smooth', block: 'center' });
-            return;
-        }
+        // [DC-PHONE-OTP-001] OTP is OPTIONAL for registration — no blocking check here
         if (!password || password.length < 6) { showError('signupError', 'Password must be at least 6 characters.'); return; }
         if (password !== confirm) { showError('signupError', 'Passwords do not match.'); return; }
         const tcBlock = document.getElementById('suTcBlock');

@@ -1499,6 +1499,7 @@ async def create_manual_purchase_invoice(
             is_igst=data.get('is_igst'),
             document_type=data.get('document_type', 'invoice'),
             return_reference=data.get('return_reference'),
+            round_off=data.get('round_off')
         )
         
         return JSONResponse(content={
@@ -1716,6 +1717,16 @@ async def confirm_purchase_upload(
         upload = db.query(PurchaseInvoiceUpload).filter(PurchaseInvoiceUpload.id == upload_id).first()
         if not upload:
             raise AccountsValidationError("Invoice upload not found")
+
+        if data and 'round_off' in data and data['round_off'] is not None:
+            from decimal import Decimal
+            upload.round_off = Decimal(str(data['round_off'])).quantize(Decimal('0.01'))
+            _gross = Decimal(str(upload.taxable_amount or 0)) + Decimal(str(upload.total_tax or 0)) + \
+                     Decimal(str(upload.courier_amount or 0)) + Decimal(str(upload.transport_amount or 0)) + \
+                     Decimal(str(upload.courier_cgst_amount or 0)) + Decimal(str(upload.courier_sgst_amount or 0)) + Decimal(str(upload.courier_igst_amount or 0)) + \
+                     Decimal(str(upload.transport_cgst_amount or 0)) + Decimal(str(upload.transport_sgst_amount or 0)) + Decimal(str(upload.transport_igst_amount or 0))
+            upload.grand_total = (_gross + upload.round_off).quantize(Decimal('0.01'))
+            db.flush()
         
         if upload.extracted_data and 'matching_status' in upload.extracted_data:
             from app.services.staff_accounts_service import recalculate_matching_status
@@ -4716,6 +4727,9 @@ async def record_solar_vendor_return(
             return JSONResponse(status_code=400, content={"success": False, "detail": "transaction_date required"})
         from datetime import date as _date
         txn_date = _date.fromisoformat(txn_date_str)
+        direction = str(payload.get("direction", "RETURNED") or "RETURNED").upper()
+        if direction not in ("RECEIVED", "RETURNED"):
+            direction = "RETURNED"
         row = SolarVendorLedger(
             solar_vendor_id=int(vendor_id),
             income_entry_id=None,
@@ -4724,7 +4738,7 @@ async def record_solar_vendor_return(
             customer_name=payload.get("customer_name"),
             amount=amount,
             company_id=payload.get("company_id"),
-            direction='RETURNED',
+            direction=direction,
             utr_reference=payload.get("utr_reference"),
             payment_mode=payload.get("payment_mode"),
             notes=payload.get("notes"),
@@ -4734,7 +4748,8 @@ async def record_solar_vendor_return(
         db.add(row)
         db.commit()
         db.refresh(row)
-        return JSONResponse(content={"success": True, "message": "Vendor return recorded", "id": row.id})
+        msg = "Payment recorded" if direction == "RECEIVED" else "Vendor return recorded"
+        return JSONResponse(content={"success": True, "message": msg, "id": row.id})
     except Exception as e:
         return handle_accounts_error(e)
 
@@ -4779,8 +4794,8 @@ async def delete_solar_vendor_ledger_entry(
         row = db.query(SolarVendorLedger).filter(SolarVendorLedger.id == entry_id).first()
         if not row:
             return JSONResponse(status_code=404, content={"success": False, "detail": "Entry not found"})
-        if row.direction != 'RETURNED':
-            return JSONResponse(status_code=400, content={"success": False, "detail": "Only RETURNED entries can be deleted"})
+        if row.direction != 'RETURNED' and row.income_entry_id is not None:
+            return JSONResponse(status_code=400, content={"success": False, "detail": "Auto-synced income entries cannot be deleted here"})
         db.delete(row)
         db.commit()
         return JSONResponse(content={"success": True, "message": "Entry deleted"})
@@ -8377,6 +8392,7 @@ async def upload_expense_receipt_endpoint(
             uploaded_by_type='staff',
             storage_dir='expense_receipts',
             db=db,
+            emp_code=current_user.emp_code or f"S{current_user.id}",
             segment_key='expense_bill',
             entity_type='staff',
             uploader_code=current_user.emp_code or f"S{current_user.id}"
