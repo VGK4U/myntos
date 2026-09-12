@@ -6246,13 +6246,43 @@ async function addVerifyOTP() {
   finally { btn.disabled = false; btn.textContent = 'Verify'; }
 }
 
+function formatProperName(name) {
+  if (!name) return '';
+  let s = String(name).trim();
+  s = s.replace(/(?<=[A-Za-z])[;,:_#]+(?=[A-Za-z])/g, '');
+  s = s.replace(/[;,:_#]+/g, ' ');
+  s = s.replace(/([A-Za-z]{2,})\.([A-Za-z])/g, '$1 $2');
+  s = s.replace(/(^|[\s])([A-Za-z])\.([A-Za-z])/g, '$1$2. $3');
+  const tokens = s.trim().split(/\s+/);
+  if (!tokens.length) return '';
+  const TITLES = { mr: 'Mr.', 'mr.': 'Mr.', mrs: 'Mrs.', 'mrs.': 'Mrs.', ms: 'Ms.', 'ms.': 'Ms.', dr: 'Dr.', 'dr.': 'Dr.', shri: 'Shri', smt: 'Smt' };
+  const ACRONYMS = new Set(['VGK', 'MNR', 'EV', 'ZR', 'ZC', 'PO', 'ETC', 'MD', 'CEO', 'LLP', 'PVT', 'LTD']);
+  return tokens.map((tok) => {
+    const cleanLower = tok.replace(/[^A-Za-z.]/g, '').toLowerCase();
+    if (TITLES[cleanLower]) return TITLES[cleanLower];
+    if (ACRONYMS.has(tok.toUpperCase())) return tok.toUpperCase();
+    if (/^[A-Za-z]\.?$/.test(tok)) return tok[0].toUpperCase() + '.';
+    if (tok.toUpperCase() === 'CH') return 'Ch';
+    if (tok.toUpperCase() === 'KV' || tok.toUpperCase() === 'SK') return tok.toUpperCase();
+    if (tok.includes('-')) return tok.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join('-');
+    if (tok.endsWith('.')) return tok.slice(0, -1).charAt(0).toUpperCase() + tok.slice(0, -1).slice(1).toLowerCase() + '.';
+    return tok.charAt(0).toUpperCase() + tok.slice(1).toLowerCase();
+  }).join(' ');
+}
+
 async function submitAddMember() {
-  const firstName = (document.getElementById('addFirstName')?.value||'').trim();
-  const lastName  = (document.getElementById('addLastName')?.value||'').trim();
+  const firstNameEl = document.getElementById('addFirstName');
+  const lastNameEl  = document.getElementById('addLastName');
+  const rawFirst = (firstNameEl?.value || '').trim();
+  const rawLast  = (lastNameEl?.value || '').trim();
+  const firstName = formatProperName(rawFirst);
+  const lastName  = formatProperName(rawLast);
+  if (firstNameEl && firstName) firstNameEl.value = firstName;
+  if (lastNameEl && lastName) lastNameEl.value = lastName;
   const title     = (document.getElementById('addTitle')?.value||'').trim();
   const gender    = (document.getElementById('addGender')?.value||'').trim();
   const nameParts = [title, firstName, lastName].filter(Boolean);
-  const name = nameParts.join(' ');
+  const name = formatProperName(nameParts.join(' '));
   const phone = document.getElementById('addPhone').value.trim();
   const email = document.getElementById('addEmail').value.trim();
   const password = document.getElementById('addPassword').value;
@@ -6314,6 +6344,13 @@ function _initApp() {
         generateMemberPoster(openPosterPartnerId);
       }, 800);
     }
+  } catch(e){}
+
+  try {
+    const fnEl = document.getElementById('addFirstName');
+    const lnEl = document.getElementById('addLastName');
+    if (fnEl) fnEl.addEventListener('blur', () => { fnEl.value = formatProperName(fnEl.value); });
+    if (lnEl) lnEl.addEventListener('blur', () => { lnEl.value = formatProperName(lnEl.value); });
   } catch(e){}
 
   try { StaffHeader.inject('VGK Channel Partners', 'fas fa-users'); } catch(e){}
@@ -8729,7 +8766,7 @@ async function shareDefaultChannel() {
     // 2. Member Direct Send via Scanned Bot
     if (mPhone) {
       try {
-        const res = await fetchWithTimeout('http://localhost:5002/api/send-message', {
+        const res = await fetchWithTimeout('/api/send-message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: mPhone, imageUrl: dataUrl, message: shareText })
@@ -8741,7 +8778,7 @@ async function shareDefaultChannel() {
           updateDispatchStatus('member', 'error', json.error || 'Bot Error');
         }
       } catch (mErr) {
-        updateDispatchStatus('member', 'error', 'WhatsApp Bot Offline (port 5002)');
+        updateDispatchStatus('member', 'error', 'WhatsApp Bot Offline');
       }
     } else {
       updateDispatchStatus('member', 'skipped', 'No Phone Number');
@@ -8750,7 +8787,7 @@ async function shareDefaultChannel() {
     // 3. Senior Direct Send via Scanned Bot
     if (isSeniorVisible && sPhone) {
       try {
-        const res = await fetchWithTimeout('http://localhost:5002/api/send-message', {
+        const res = await fetchWithTimeout('/api/send-message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: sPhone, imageUrl: dataUrl, message: shareText })
@@ -8770,7 +8807,7 @@ async function shareDefaultChannel() {
 
     // 4. VGK4U Official Channel Send
     try {
-      const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+      const res = await fetchWithTimeout('/api/send-group-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageUrl: dataUrl, message: shareText, inviteCode: '0029Vb7Vb5f9cDDXf3zWtf0m' })
@@ -8787,7 +8824,7 @@ async function shareDefaultChannel() {
 
     // 5. VGK Community Group Send
     try {
-      const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+      const res = await fetchWithTimeout('/api/send-group-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageUrl: dataUrl, message: shareText, inviteCode: 'HNQQoKXFfCm5PQngGdrlcY' })
@@ -8804,7 +8841,7 @@ async function shareDefaultChannel() {
 
     // 6. Executive Announcements Send
     try {
-      const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+      const res = await fetchWithTimeout('/api/send-group-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageUrl: dataUrl, message: shareText, inviteCode: 'LfX8mGootXa7SpwNIz7P5C' })
@@ -8821,7 +8858,7 @@ async function shareDefaultChannel() {
 
     // 7. EV Scooty Stars
     try {
-      const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+      const res = await fetchWithTimeout('/api/send-group-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupName: 'Ev scooty. MNR (royal ev ) stars' })
@@ -8838,7 +8875,7 @@ async function shareDefaultChannel() {
 
     // 8. MNR General Group
     try {
-      const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+      const res = await fetchWithTimeout('/api/send-group-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupName: 'MNR General Group' })
@@ -8855,7 +8892,7 @@ async function shareDefaultChannel() {
 
     // 9. VGK4U - Vijayawada
     try {
-      const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+      const res = await fetchWithTimeout('/api/send-group-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupName: 'VGK4U - Vijayawada' })
@@ -8905,7 +8942,7 @@ async function testShareToNumber() {
   if (spinner) spinner.style.display = 'none';
 
   try {
-    const res = await fetch('http://localhost:5002/api/send-message', {
+    const res = await fetch('/api/send-message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone: cleanPhone, imageUrl: dataUrl, message: shareText })
@@ -8922,7 +8959,7 @@ async function testShareToNumber() {
       }
     }
   } catch (err) {
-    const useFallback = confirm(`⚠️ Background Bot Unavailable on port 5002.\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
+    const useFallback = confirm(`⚠️ Background Bot Unavailable.\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
     if (useFallback) {
       const directUrl = `https://api.whatsapp.com/send?phone=91${cleanPhone.slice(-10)}&text=${encodeURIComponent(shareText)}`;
       window.open(directUrl, '_blank');

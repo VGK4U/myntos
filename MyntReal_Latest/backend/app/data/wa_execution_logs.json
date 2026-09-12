@@ -1,5 +1,209 @@
 [
   {
+    "id": "log_6a958ad0",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "12 Sep 2026, 09:02:31 AM IST",
+    "iso_timestamp": "2026-09-12T09:02:31.342429",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 824,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 824,
+      "created": 0,
+      "updated": 824,
+      "skipped": 0,
+      "followups_created": 317
+    }
+  },
+  {
+    "id": "log_2829fbea",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "12 Sep 2026, 09:00:00 AM IST",
+    "iso_timestamp": "2026-09-12T09:00:00.419399",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_099d1294",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "12 Sep 2026, 08:30:00 AM IST",
+    "iso_timestamp": "2026-09-12T08:30:00.577979",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_3d766962",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "12 Sep 2026, 08:00:00 AM IST",
+    "iso_timestamp": "2026-09-12T08:00:00.317768",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_97fd0cc5",
+    "job_id": "vgk4u_morning_wish",
+    "job_name": "VGK4U Elite Community Morning Wish",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "12 Sep 2026, 08:00:00 AM IST",
+    "iso_timestamp": "2026-09-12T08:00:00.145120",
+    "target_summary": "VGK4u Official Channel, VGK4u Community Group, VGK4U - Vijayawada",
+    "targets": [
+      {
+        "id": "t_vgk_channel",
+        "type": "channel",
+        "name": "VGK4u Official Channel",
+        "identifier": "https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m"
+      },
+      {
+        "id": "t_vgk_group",
+        "type": "group",
+        "name": "VGK4u Community Group",
+        "identifier": "https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY?s=cl&p=i&mlu=0"
+      },
+      {
+        "id": "t_vgk_vijayawada",
+        "type": "group",
+        "name": "VGK4U - Vijayawada",
+        "identifier": "VGK4U - Vijayawada"
+      }
+    ],
+    "sent_count": 3,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "dispatched_groups": 3,
+      "failed_groups": 0,
+      "results": [
+        {
+          "success": true,
+          "data": {
+            "success": true,
+            "mocked": true,
+            "sent_count": 1,
+            "failed_count": 0,
+            "results": [
+              {
+                "success": true,
+                "message_id": "mock_dev_1789180200067"
+              }
+            ],
+            "message": "Dev mode: Simulated group broadcast (live socket disabled in dev)"
+          }
+        },
+        {
+          "success": true,
+          "data": {
+            "success": true,
+            "mocked": true,
+            "sent_count": 1,
+            "failed_count": 0,
+            "results": [
+              {
+                "success": true,
+                "message_id": "mock_dev_1789180200084"
+              }
+            ],
+            "message": "Dev mode: Simulated group broadcast (live socket disabled in dev)"
+          }
+        },
+        {
+          "success": true,
+          "data": {
+            "success": true,
+            "mocked": true,
+            "sent_count": 1,
+            "failed_count": 0,
+            "results": [
+              {
+                "success": true,
+                "message_id": "mock_dev_1789180200085"
+              }
+            ],
+            "message": "Dev mode: Simulated group broadcast (live socket disabled in dev)"
+          }
+        }
+      ]
+    }
+  },
+  {
     "id": "log_20260912073000_vgk_member_morning_statement",
     "job_id": "vgk_member_morning_statement",
     "job_name": "VGK Members Daily 8 AM Revenue Statement",

@@ -1073,7 +1073,7 @@ app.post('/api/send-group-message', async (req, res) => {
             if (!clusterState.can_send_now) {
                 return res.status(503).json({
                     success: false,
-                    error: "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+                    error: "WhatsApp bot not connected. Scan QR code at /qr",
                     status: clusterState.status,
                     can_send_now: false
                 });
@@ -1130,7 +1130,7 @@ app.post('/api/send-group-message', async (req, res) => {
         if (connectionStatus !== 'connected' || !sock) {
             const err_msg = connectionStatus === 'reconnecting'
                 ? "WhatsApp bot is currently reconnecting. Saved credentials are valid — please retry in 5 seconds."
-                : "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr";
+                : "WhatsApp bot not connected. Scan QR code at /qr";
             return res.status(503).json({
                 success: false,
                 error: err_msg,
@@ -1368,7 +1368,7 @@ app.post('/api/send-message', async (req, res) => {
             if (!clusterState.can_send_now) {
                 return res.status(503).json({
                     success: false,
-                    error: "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+                    error: "WhatsApp bot not connected. Scan QR code at /qr",
                     status: clusterState.status,
                     can_send_now: false
                 });
@@ -1430,7 +1430,7 @@ app.post('/api/send-message', async (req, res) => {
                 success: false,
                 error: connectionStatus === 'reconnecting' 
                     ? "WhatsApp bot is reconnecting. Please retry in a moment."
-                    : "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
+                    : "WhatsApp bot not connected. Scan QR code at /qr",
                 status: connectionStatus,
                 can_send_now: false
             });

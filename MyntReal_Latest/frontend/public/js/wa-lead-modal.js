@@ -28,7 +28,7 @@
 
     /* mode toggle */
     '<div style="display:flex;gap:8px;margin-bottom:16px;background:#f3f4f6;border-radius:10px;padding:4px">',
-    '<button id="_lwaBtnScanned" onclick="window._lwaMode(\'scanned\')" style="flex:1;padding:8px 6px;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s"><i class="fas fa-qrcode text-success"></i> 📱 Scanned WhatsApp<small style="display:block;font-weight:400;font-size:10px;margin-top:1px">Employee Account · Port 5002</small></button>',
+    '<button id="_lwaBtnScanned" onclick="window._lwaMode(\'scanned\')" style="flex:1;padding:8px 6px;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s"><i class="fas fa-qrcode text-success"></i> 📱 Scanned WhatsApp<small style="display:block;font-weight:400;font-size:10px;margin-top:1px">Employee Account · Scanned</small></button>',
     '<button id="_lwaBtnComp"    onclick="window._lwaMode(\'company\')" style="flex:1;padding:8px 6px;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s"><i class="fas fa-building text-primary"></i> 🏢 Official WhatsApp<small style="display:block;font-weight:400;font-size:10px;margin-top:1px">Meta Cloud API · Verified</small></button>',
     '</div>',
 

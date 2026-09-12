@@ -7651,16 +7651,24 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-  // WhatsApp QR Code & Group Bot Gateway Proxy Route (/scan, /qr, /whatsapp-qr, /qr-data, /logout, /status)
+  // WhatsApp QR Code & Group Bot Gateway Proxy Route (/scan, /qr, /whatsapp-qr, /qr-data, /logout, /status, /api/send-message, /api/send-group-message, etc.)
   if (
     reqPathLower === '/scan' || reqPathLower === '/scan/' ||
     reqPathLower === '/qr' || reqPathLower === '/qr/' ||
     reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/' ||
     reqPathLower === '/qr-data' || reqPathLower === '/qr-data/' ||
     reqPathLower === '/logout' || reqPathLower === '/api/logout' ||
-    reqPathLower === '/status'
+    reqPathLower === '/status' ||
+    reqPathLower === '/api/send-message' ||
+    reqPathLower === '/api/send-group-message' ||
+    reqPathLower === '/api/send-custom' ||
+    reqPathLower === '/api/groups' ||
+    reqPathLower === '/api/list-groups' ||
+    reqPathLower === '/reconnect' || reqPathLower === '/api/reconnect' ||
+    reqPathLower === '/reclaim' || reqPathLower === '/api/reclaim'
   ) {
-    const targetPath = (reqPathLower === '/scan' || reqPathLower === '/scan/' || reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/') ? '/qr' : req.url;    const proxyOptions = {
+    const targetPath = (reqPathLower === '/scan' || reqPathLower === '/scan/' || reqPathLower === '/whatsapp-qr' || reqPathLower === '/whatsapp-qr/') ? '/qr' : req.url;
+    const proxyOptions = {
       hostname: '127.0.0.1',
       port: 5002,
       path: targetPath,
@@ -7673,6 +7681,16 @@ const server = http.createServer(async (req, res) => {
     });
     proxyReq.on('error', (err) => {
       console.warn('[DC-PROXY-QR] WhatsApp bot service on port 5002 error:', err.message);
+      if (reqPathLower.startsWith('/api/') || (req.headers['accept'] && req.headers['accept'].includes('application/json'))) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: false,
+          error: 'WhatsApp bot service is starting up or temporarily unavailable on port 5002. Please retry in a moment.',
+          status: 'unavailable',
+          can_send_now: false
+        }));
+        return;
+      }
       res.writeHead(503, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(`
         <!DOCTYPE html>

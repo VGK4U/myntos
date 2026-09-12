@@ -165,7 +165,7 @@
                     <button class="btn btn-light btn-sm fw-bold text-success" onclick="openNewMsgModal()">
                         <i class="fas fa-paper-plane me-1"></i> Write New Message
                     </button>
-                    <div class="bot-status-pill" id="botStatusPill" onclick="window.open('http://localhost:5002/qr', '_blank')" style="cursor: pointer;" title="Click to view QR Code / Status">
+                    <div class="bot-status-pill" id="botStatusPill" onclick="window.open('/qr', '_blank')" style="cursor: pointer;" title="Click to view QR Code / Status">
                         <span class="bot-status-dot"></span> <span id="botStatusText">BOT CONNECTED</span>
                     </div>
                     <button class="btn btn-danger btn-sm fw-bold text-white shadow-sm" onclick="logoutWhatsAppBot()" title="Logout and Disconnect WhatsApp Web Bot Session">
@@ -1917,7 +1917,7 @@
         }
 
         function checkBotStatus() {
-            fetch('http://localhost:5002/status')
+            fetch('/status')
                 .then(res => res.json())
                 .then(data => {
                     const pill = document.getElementById('botStatusPill');
@@ -2996,17 +2996,17 @@
         async function logoutWhatsAppBot() {
             if (!confirm("Are you sure you want to log out and disconnect the WhatsApp Web Bot session? You will need to scan the QR code again.")) return;
             try {
-                const res = await fetch('http://localhost:5002/api/logout', { method: 'POST' });
+                const res = await fetch('/api/logout', { method: 'POST' });
                 const data = await res.json();
                 if (data.success) {
                     alert("✅ WhatsApp Bot Logged Out successfully! Opening QR scanner page...");
-                    window.open('http://localhost:5002/qr', '_blank');
+                    window.open('/qr', '_blank');
                     if (typeof checkBotStatus === 'function') checkBotStatus();
                 } else {
                     alert("❌ Logout error: " + (data.error || 'Failed to logout'));
                 }
             } catch (err) {
-                alert("❌ Error connecting to WhatsApp Bot Service (port 5002): " + err.message);
+                alert("❌ Error connecting to WhatsApp Bot Service: " + err.message);
             }
         }
 

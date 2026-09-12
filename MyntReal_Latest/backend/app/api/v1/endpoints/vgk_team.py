@@ -24,6 +24,7 @@ from app.api.v1.endpoints.staff_auth import get_current_staff_user
 from app.core.security import get_current_user_hybrid_with_partner
 from app.models.staff import StaffEmployee
 from app.services.universal_incentive_engine import get_partner_current_position_v18
+from app.utils.name_formatter import format_proper_name
 
 router = APIRouter()
 
@@ -1558,14 +1559,15 @@ def create_vgk_member(
         from app.core.security import SecurityManager
         password_hash = SecurityManager.get_password_hash(payload.password)
 
-    # [DC-NAME-GENDER] Build display name from split fields if provided
-    _fn = (payload.first_name or '').strip()
-    _ln = (payload.last_name  or '').strip()
-    _t  = (payload.name_title or '').strip()
+    # [DC-NAME-GENDER] Build display name from split fields if provided with proper casing
+    _fn = format_proper_name(payload.first_name) or ''
+    _ln = format_proper_name(payload.last_name) or ''
+    _t  = format_proper_name(payload.name_title) or ''
     if _fn and _ln:
         _display_name = ' '.join(p for p in [_t, _fn, _ln] if p)
     else:
-        _display_name = (payload.partner_name or '').strip() or f"{_fn} {_ln}".strip() or 'VGK Member'
+        _raw_name = format_proper_name(payload.partner_name) or f"{_fn} {_ln}".strip()
+        _display_name = _raw_name or 'VGK Member'
 
     member = OfficialPartner(
         company_id=company_id,
@@ -1853,7 +1855,7 @@ def update_vgk_member(
         raise HTTPException(status_code=404, detail="VGK member not found")
 
     if payload.partner_name is not None:
-        member.partner_name = payload.partner_name
+        member.partner_name = format_proper_name(payload.partner_name)
     if payload.phone is not None:
         member.phone = payload.phone.strip()  # [DC-PHONE-LEN-001] always strip whitespace
     if payload.email is not None:

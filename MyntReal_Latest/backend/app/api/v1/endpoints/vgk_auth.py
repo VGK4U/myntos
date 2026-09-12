@@ -25,6 +25,7 @@ from app.models.ticket import ServiceTicket
 from app.models.kyc_document import KYCDocument
 from app.services.universal_upload_service import UniversalUploadService
 from sqlalchemy import func, text as sa_text
+from app.utils.name_formatter import format_proper_name
 
 router = APIRouter()
 
@@ -1649,13 +1650,15 @@ def vgk_signup(request: VGKSignupRequest, db: Session = Depends(get_db)):
 
     password_hash = SecurityManager.get_password_hash(request.password)
     now = get_indian_time()
-    # [DC-NAME-GENDER] Build display name from split fields if provided
-    _title     = (request.name_title  or '').strip()
-    _first     = (request.first_name  or '').strip()
-    _last      = (request.last_name   or '').strip()
-    _full_name = request.partner_name.strip()
+    # [DC-NAME-GENDER] Build display name from split fields if provided with proper casing
+    _title     = format_proper_name(request.name_title) or ''
+    _first     = format_proper_name(request.first_name) or ''
+    _last      = format_proper_name(request.last_name) or ''
+    _full_name = format_proper_name(request.partner_name) or ''
     if _first and _last:
         _full_name = ' '.join(p for p in [_title, _first, _last] if p)
+    if not _full_name:
+        _full_name = 'VGK Member'
     member = OfficialPartner(
         company_id=company_id,
         partner_code=partner_code,
@@ -2043,12 +2046,12 @@ def vgk_update_profile(
     if body.contact_person_2_designation is not None: _setattr_safe(current_member, 'contact_person_2_designation', body.contact_person_2_designation.strip() or None)
     if body.map_link_1 is not None: _setattr_safe(current_member, 'map_link_1', body.map_link_1.strip() or None)
 
-    # Rebuild partner_name from split fields if both first+last are now present
-    _t  = getattr(current_member, 'name_title', None) or ''
-    _fn = getattr(current_member, 'first_name', None) or ''
-    _ln = getattr(current_member, 'last_name',  None) or ''
+    # Rebuild partner_name from split fields if both first+last are now present with proper casing
+    _t  = format_proper_name(getattr(current_member, 'name_title', None)) or ''
+    _fn = format_proper_name(getattr(current_member, 'first_name', None)) or ''
+    _ln = format_proper_name(getattr(current_member, 'last_name',  None)) or ''
     if _fn and _ln:
-        current_member.partner_name = ' '.join(p for p in [_t, _fn, _ln] if p)
+        current_member.partner_name = format_proper_name(' '.join(p for p in [_t, _fn, _ln] if p))
     current_member.updated_at = get_indian_time()
     db.commit()
     db.refresh(current_member)

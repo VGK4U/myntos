@@ -105,7 +105,7 @@ class UnifiedWAModal {
             <i class="fas fa-qrcode"></i>
             <div>
               <strong>📱 Scanned WhatsApp</strong>
-              <small>Employee Account · Port 5002</small>
+              <small>Employee Account · Scanned</small>
             </div>
           </button>
           <button class="uwa-mode-btn ${this.activeMode === 'meta_api' ? 'active' : ''}" id="uwaModeMetaBtn">

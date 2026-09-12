@@ -44,7 +44,7 @@ from sqlalchemy import (
     ForeignKey, CheckConstraint, Index, Numeric, Float, UniqueConstraint, text
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, validates
 from datetime import datetime
 from decimal import Decimal
 import pytz
@@ -3124,6 +3124,14 @@ class OfficialPartner(BaseModel):
     
     def __repr__(self):
         return f'<OfficialPartner {self.partner_code}: {self.partner_name} ({self.category})>'
+    
+    @validates('first_name', 'last_name', 'partner_name')
+    def validate_names_casing(self, key, value):
+        """Auto proper-case names upon assignment (VGK Member Casing Enforcement)"""
+        if value:
+            from app.utils.name_formatter import format_proper_name
+            return format_proper_name(value)
+        return value
     
     def to_dict(self):
         return {

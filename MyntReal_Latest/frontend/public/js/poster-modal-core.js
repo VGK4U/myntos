@@ -1430,7 +1430,7 @@
     if (spinner) spinner.style.display = 'none';
 
     try {
-      const res = await fetch('http://localhost:5002/api/send-message', {
+      const res = await fetch('/api/send-message', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: cleanPhone, imageUrl: dataUrl, message: shareText })
@@ -1447,7 +1447,7 @@
         }
       }
     } catch (err) {
-      const useFallback = confirm(`⚠️ Background Bot Unavailable on port 5002.\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
+      const useFallback = confirm(`⚠️ Background Bot Unavailable.\n\nWould you like to send directly via WhatsApp Web/App to +91 ${cleanPhone.slice(-10)} instead?`);
       if (useFallback) {
         const directUrl = `https://api.whatsapp.com/send?phone=91${cleanPhone.slice(-10)}&text=${encodeURIComponent(shareText)}`;
         window.open(directUrl, '_blank');
@@ -1666,7 +1666,7 @@
       // 2. Member Direct Send via Scanned Bot
       if (mPhone) {
         try {
-          const res = await fetchWithTimeout('http://localhost:5002/api/send-message', {
+          const res = await fetchWithTimeout('/api/send-message', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone: mPhone, imageUrl: dataUrl, message: shareText })
@@ -1678,7 +1678,7 @@
             updateDispatchStatus('member', 'error', json.error || 'Bot Error');
           }
         } catch (mErr) {
-          updateDispatchStatus('member', 'error', 'WhatsApp Bot Offline (port 5002)');
+          updateDispatchStatus('member', 'error', 'WhatsApp Bot Offline');
         }
       } else {
         updateDispatchStatus('member', 'skipped', 'No Phone Number');
@@ -1687,7 +1687,7 @@
       // 3. Senior Direct Send via Scanned Bot
       if (isSeniorVisible && sPhone) {
         try {
-          const res = await fetchWithTimeout('http://localhost:5002/api/send-message', {
+          const res = await fetchWithTimeout('/api/send-message', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone: sPhone, imageUrl: dataUrl, message: shareText })
@@ -1707,7 +1707,7 @@
 
       // 4. VGK4U Official Channel Send
       try {
-        const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+        const res = await fetchWithTimeout('/api/send-group-message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageUrl: dataUrl, message: shareText, inviteCode: '0029Vb7Vb5f9cDDXf3zWtf0m' })
@@ -1724,7 +1724,7 @@
 
       // 5. Main Community Group Send
       try {
-        const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+        const res = await fetchWithTimeout('/api/send-group-message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageUrl: dataUrl, message: shareText, inviteCode: 'HNQQoKXFfCm5PQngGdrlcY' })
@@ -1741,7 +1741,7 @@
 
       // 6. Exec Group Send
       try {
-        const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+        const res = await fetchWithTimeout('/api/send-group-message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageUrl: dataUrl, message: shareText, inviteCode: 'LfX8mGootXa7SpwNIz7P5C' })
@@ -1758,7 +1758,7 @@
 
       // 7. EV Scooty MNR Stars Group Send
       try {
-        const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+        const res = await fetchWithTimeout('/api/send-group-message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupId: '120363405554009428@g.us', groupName: 'Ev scooty. MNR (royal ev ) stars' })
@@ -1775,7 +1775,7 @@
 
       // 8. MNR General Group Send
       try {
-        const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+        const res = await fetchWithTimeout('/api/send-group-message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupId: '120363423048458227@g.us', groupName: 'MNR General Group' })
@@ -1792,7 +1792,7 @@
 
       // 9. VGK4U - Vijayawada Group Send
       try {
-        const res = await fetchWithTimeout('http://localhost:5002/api/send-group-message', {
+        const res = await fetchWithTimeout('/api/send-group-message', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupName: 'VGK4U - Vijayawada' })
