@@ -581,10 +581,14 @@ export class StaffWhatsAppInboxPage {
   }
 
   private renderMediaPreview(m: any): string {
-    const url = m.media_url || m.url || '';
+    let url = m.media_url || m.url || '';
     if (!url) return '';
+    url = String(url).trim();
+    if (/^\d+$/.test(url)) {
+      url = `/api/v1/whatsapp/media/${url}`;
+    }
     
-    const isImage = (m.media_type === 'image') || (/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url));
+    const isImage = (m.media_type === 'image') || (m.media_mime_type && m.media_mime_type.startsWith('image/')) || (/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url)) || url.includes('/media/');
     if (isImage) {
       return `
         <div style="margin-bottom: 6px; border-radius: 8px; overflow: hidden; max-height: 220px; background: rgba(0,0,0,0.2);">

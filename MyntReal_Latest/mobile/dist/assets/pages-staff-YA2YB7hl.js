@@ -11393,7 +11393,7 @@ Open the web app to view and reassign this lead to an active staff member.`);ret
           <span>Location</span>
         </button>
       </div>
-    `}renderMediaPreview(e){const t=e.media_url||e.url||"";if(!t)return"";if(e.media_type==="image"||/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(t))return`
+    `}renderMediaPreview(e){let t=e.media_url||e.url||"";if(!t)return"";if(t=String(t).trim(),/^\d+$/.test(t)&&(t=`/api/v1/whatsapp/media/${t}`),e.media_type==="image"||e.media_mime_type&&e.media_mime_type.startsWith("image/")||/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(t)||t.includes("/media/"))return`
         <div style="margin-bottom: 6px; border-radius: 8px; overflow: hidden; max-height: 220px; background: rgba(0,0,0,0.2);">
           <a href="${t}" target="_blank" rel="noopener noreferrer" style="display: block;">
             <img src="${t}" alt="Attachment" style="width: 100%; max-height: 220px; object-fit: cover; display: block;" onerror="this.style.display='none'" />

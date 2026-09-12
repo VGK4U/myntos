@@ -2475,6 +2475,12 @@
 
             const posterMatch = text.match(/(https?:\/\/[^\s<]+(?:poster[^\s<]*|poster-fresh-test\.html|\.(?:html|png|jpg|jpeg|webp|gif|pdf)))/i);
             let targetUrl = mediaUrl || (posterMatch ? posterMatch[1] : null);
+            if (targetUrl) {
+                targetUrl = String(targetUrl).trim();
+                if (/^\d+$/.test(targetUrl)) {
+                    targetUrl = `/api/v1/whatsapp/media/${targetUrl}`;
+                }
+            }
 
             if (targetUrl) {
                 const lowerTarget = targetUrl.toLowerCase();

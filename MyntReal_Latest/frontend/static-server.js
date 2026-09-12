@@ -25543,6 +25543,11 @@ const server = http.createServer(async (req, res) => {
       res.end(data);
     });
 
+  } else if (/^\/staff\/\d+$/.test(url.split('?')[0])) {
+    // WhatsApp media attachment redirect guard - prevents 404 on relative attachment clicks
+    const mediaId = url.split('?')[0].replace('/staff/', '');
+    res.writeHead(302, { 'Location': `/api/v1/whatsapp/media/${mediaId}` });
+    res.end();
   } else {
     // 404 page
     const content = `

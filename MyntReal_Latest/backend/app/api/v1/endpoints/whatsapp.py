@@ -572,6 +572,72 @@ async def get_whatsapp_delivery_diagnostics(db: Session = Depends(get_db)):
     }
 
 
+
+async def _prefetch_meta_media_background(media_id: str, company_id: Optional[int] = None):
+    """
+    Background worker: downloads incoming WhatsApp media from Meta Graph API
+    and persists to local storage / object storage so attachments are immediately
+    available without latency or risk of Meta link expiration.
+    """
+    if not media_id or not str(media_id).strip().isdigit():
+        return
+    media_id = str(media_id).strip()
+    try:
+        import httpx
+        from pathlib import Path
+        import mimetypes
+        from app.services.wa_credentials import get_wa_credentials
+        from app.core.database import SessionLocal
+
+        # Resolve storage directory relative to this file (Rule 1: No absolute paths)
+        storage_dir = Path(__file__).resolve().parents[5] / "frontend" / "storage" / "wa_media"
+        storage_dir.mkdir(parents=True, exist_ok=True)
+
+        # Check if already cached
+        if list(storage_dir.glob(f"meta_{media_id}.*")):
+            return
+
+        with SessionLocal() as db:
+            creds = get_wa_credentials(db, company_id) if company_id else {}
+            token = creds.get("access_token")
+            if not token:
+                creds = get_wa_credentials(db, None)
+                token = creds.get("access_token")
+            if not token:
+                token = os.environ.get("META_WHATSAPP_ACCESS_TOKEN")
+
+            if not token:
+                logger.warning("[WA-MEDIA] No Meta API token available for background media prefetch %s", media_id)
+                return
+
+            graph_url = f"https://graph.facebook.com/v21.0/{media_id}"
+            headers = {"Authorization": f"Bearer {token}"}
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.get(graph_url, headers=headers)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    dl_url = data.get("url")
+                    mime = (data.get("mime_type") or "image/jpeg").lower()
+                    if dl_url:
+                        dl_resp = await client.get(dl_url, headers=headers)
+                        if dl_resp.status_code == 200:
+                            file_bytes = dl_resp.content
+                            ext = mimetypes.guess_extension(mime) or ".jpg"
+                            if ext == ".jpe":
+                                ext = ".jpg"
+                            cache_file = storage_dir / f"meta_{media_id}{ext}"
+                            cache_file.write_bytes(file_bytes)
+                            logger.info("[WA-MEDIA] Successfully prefetched & cached WhatsApp media %s (%d bytes)", media_id, len(file_bytes))
+                            try:
+                                from app.services.object_storage import storage_service
+                                storage_service.upload_file(f"wa_media/meta_{media_id}{ext}", file_bytes, mime)
+                            except Exception as _s3_err:
+                                logger.debug("[WA-MEDIA] S3 upload skipped/failed: %s", _s3_err)
+    except Exception as e:
+        logger.warning("[WA-MEDIA] Exception in background media prefetch for %s: %s", media_id, e)
+
+
 # ── META CANONICAL WEBHOOK (path Meta actually calls) ──────────────────────────
 
 @router.get("/webhook")
@@ -602,7 +668,7 @@ async def meta_webhook_verify_canonical(request: Request, db: Session = Depends(
 
 
 @router.post("/webhook")
-async def meta_webhook_status_canonical(request: Request, db: Session = Depends(get_db)):
+async def meta_webhook_status_canonical(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """
     Meta canonical webhook — POST /api/v1/whatsapp/webhook
     Handles BOTH delivery status updates AND incoming messages.
@@ -765,9 +831,17 @@ async def meta_webhook_status_canonical(request: Request, db: Session = Depends(
                         body_text = msg.get("text", {}).get("body", "")
                     elif msg_type in ("image", "video", "audio", "document", "sticker"):
                         media_info = msg.get(msg_type, {})
-                        media_url  = media_info.get("id")   # Media ID (fetch separately if needed)
+                        raw_media_id = str(media_info.get("id") or "").strip()
                         media_mime = media_info.get("mime_type")
                         body_text  = media_info.get("caption", "")
+                        if raw_media_id and raw_media_id.isdigit():
+                            media_url = f"/api/v1/whatsapp/media/{raw_media_id}"
+                            try:
+                                background_tasks.add_task(_prefetch_meta_media_background, raw_media_id, resolved_company_id)
+                            except Exception as _pfe:
+                                logger.warning("[WA-MEDIA] Could not schedule background prefetch: %s", _pfe)
+                        else:
+                            media_url = media_info.get("url") or (f"/api/v1/whatsapp/media/{raw_media_id}" if raw_media_id else None)
                     elif msg_type == "interactive":
                         reply = msg.get("interactive", {})
                         body_text = (reply.get("button_reply") or reply.get("list_reply") or {}).get("title", "")
@@ -3395,7 +3469,7 @@ def get_whatsapp_chat_history(
                 "sender": "bot" if is_outbound else "user",
                 "sender_name": "Mynt Bot" if is_outbound else (m.from_name or ("WhatsApp Group" if is_grp else "Customer")),
                 "body": m.body_text or "—",
-                "media_url": m.media_url,
+                "media_url": (f"/api/v1/whatsapp/media/{str(m.media_url).strip()}" if (m.media_url and str(m.media_url).strip().isdigit()) else m.media_url),
                 "sent_at": _to_ist_str(m.received_at),
                 "timestamp": m.received_at or datetime.min,
                 "status": m.status or 'delivered',
@@ -3416,6 +3490,243 @@ def get_whatsapp_chat_history(
     except Exception as e:
         logger.error("[WA-CHAT-HISTORY] Error: %s", str(e))
         return {"success": False, "messages": [], "error": str(e)}
+
+
+
+@router.api_route("/media/{media_id}", methods=["GET", "HEAD"])
+async def stream_whatsapp_media(
+    media_id: str,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Universal WhatsApp Media Proxy & Streamer.
+    1. Prevents 404 relative routing errors by serving media attachments directly.
+    2. Serves from local cache / S3 object storage if previously downloaded.
+    3. Fetches from Meta Graph API on-demand with Bearer token if not cached.
+    4. Automatically caches binaries in storage/wa_media and S3 to survive Meta link expiration (14 days).
+    5. Returns inline content disposition with proper MIME headers for images, videos, audio, and documents.
+    6. Provides graceful HTML/SVG fallbacks if media expired on Meta servers.
+    """
+    from pathlib import Path
+    import mimetypes
+    import httpx
+    from app.services.wa_credentials import get_wa_credentials
+    from app.models.whatsapp import WAInbox
+    from sqlalchemy import or_
+
+    clean_id = str(media_id).strip()
+    # Anti-traversal guard
+    if ".." in clean_id or "/" in clean_id or "\\" in clean_id:
+        raise HTTPException(status_code=400, detail="Invalid media identifier")
+
+    # Storage paths (Rule 1: dynamically resolved relative to __file__)
+    storage_dir = Path(__file__).resolve().parents[5] / "frontend" / "storage" / "wa_media"
+    backend_storage_dir = Path(__file__).resolve().parents[4] / "storage" / "wa_media"
+    storage_dir.mkdir(parents=True, exist_ok=True)
+
+    # 1. Check exact local file match
+    exact_file = storage_dir / clean_id
+    if exact_file.is_file():
+        mime = mimetypes.guess_type(str(exact_file))[0] or "application/octet-stream"
+        if request.method == "HEAD":
+            return Response(status_code=200, media_type=mime, headers={"Content-Length": str(exact_file.stat().st_size)})
+        return Response(
+            content=exact_file.read_bytes(),
+            media_type=mime,
+            headers={
+                "Cache-Control": "public, max-age=86400, immutable",
+                "Content-Disposition": f'inline; filename="{clean_id}"'
+            }
+        )
+
+    # 2. Check cached file pattern (meta_{clean_id}.* or {clean_id}.*)
+    cached_matches = list(storage_dir.glob(f"meta_{clean_id}.*")) + list(storage_dir.glob(f"{clean_id}.*"))
+    if not cached_matches and backend_storage_dir.exists():
+        cached_matches = list(backend_storage_dir.glob(f"meta_{clean_id}.*")) + list(backend_storage_dir.glob(f"{clean_id}.*"))
+
+    if cached_matches:
+        target_file = cached_matches[0]
+        mime = mimetypes.guess_type(str(target_file))[0] or "application/octet-stream"
+        if request.method == "HEAD":
+            return Response(status_code=200, media_type=mime, headers={"Content-Length": str(target_file.stat().st_size)})
+        return Response(
+            content=target_file.read_bytes(),
+            media_type=mime,
+            headers={
+                "Cache-Control": "public, max-age=86400, immutable",
+                "Content-Disposition": f'inline; filename="{target_file.name}"'
+            }
+        )
+
+    # 3. Check S3 / Object Storage
+    try:
+        from app.services.object_storage import storage_service
+        s3_data = storage_service.download_file(f"wa_media/meta_{clean_id}") or storage_service.download_file(f"wa_media/{clean_id}")
+        if s3_data:
+            mime = "image/jpeg"
+            ext = ".jpg"
+            if s3_data.startswith(b"%PDF"):
+                mime = "application/pdf"
+                ext = ".pdf"
+            elif s3_data.startswith(b"\x89PNG"):
+                mime = "image/png"
+                ext = ".png"
+            elif s3_data.startswith(b"RIFF") and b"WEBP" in s3_data[:16]:
+                mime = "image/webp"
+                ext = ".webp"
+            
+            # Cache locally
+            cache_file = storage_dir / f"meta_{clean_id}{ext}"
+            try:
+                cache_file.write_bytes(s3_data)
+            except Exception:
+                pass
+
+            if request.method == "HEAD":
+                return Response(status_code=200, media_type=mime, headers={"Content-Length": str(len(s3_data))})
+            return Response(
+                content=s3_data,
+                media_type=mime,
+                headers={
+                    "Cache-Control": "public, max-age=86400, immutable",
+                    "Content-Disposition": f'inline; filename="attachment_{clean_id}{ext}"'
+                }
+            )
+    except Exception as _s3_err:
+        logger.debug("[WA-MEDIA] S3 check skipped: %s", _s3_err)
+
+    # 4. If numeric, fetch from Meta Graph API
+    if clean_id.isdigit():
+        # Resolve company_id from WAInbox
+        inbox_entry = db.query(WAInbox).filter(
+            or_(
+                WAInbox.media_url == clean_id,
+                WAInbox.media_url == f"/api/v1/whatsapp/media/{clean_id}",
+                WAInbox.media_url.like(f"%{clean_id}%")
+            )
+        ).first()
+        company_id = inbox_entry.company_id if inbox_entry else None
+
+        creds = get_wa_credentials(db, company_id) if company_id else {}
+        token = creds.get("access_token")
+        if not token:
+            creds = get_wa_credentials(db, None)
+            token = creds.get("access_token")
+        if not token:
+            token = os.environ.get("META_WHATSAPP_ACCESS_TOKEN")
+
+        if token:
+            graph_url = f"https://graph.facebook.com/v21.0/{clean_id}"
+            headers = {"Authorization": f"Bearer {token}"}
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    meta_res = await client.get(graph_url, headers=headers)
+                    if meta_res.status_code == 200:
+                        meta_info = meta_res.json()
+                        dl_url = meta_info.get("url")
+                        mime = (meta_info.get("mime_type") or (inbox_entry.media_mime_type if inbox_entry else None) or "image/jpeg").lower()
+                        if dl_url:
+                            dl_res = await client.get(dl_url, headers=headers)
+                            if dl_res.status_code == 200:
+                                file_bytes = dl_res.content
+                                ext = mimetypes.guess_extension(mime) or ".jpg"
+                                if ext == ".jpe":
+                                    ext = ".jpg"
+                                
+                                cache_file = storage_dir / f"meta_{clean_id}{ext}"
+                                try:
+                                    cache_file.write_bytes(file_bytes)
+                                except Exception as _cw_err:
+                                    logger.warning("[WA-MEDIA] Local write error: %s", _cw_err)
+
+                                try:
+                                    from app.services.object_storage import storage_service
+                                    storage_service.upload_file(f"wa_media/meta_{clean_id}{ext}", file_bytes, mime)
+                                except Exception:
+                                    pass
+
+                                if request.method == "HEAD":
+                                    return Response(status_code=200, media_type=mime, headers={"Content-Length": str(len(file_bytes))})
+                                return Response(
+                                    content=file_bytes,
+                                    media_type=mime,
+                                    headers={
+                                        "Cache-Control": "public, max-age=86400, immutable",
+                                        "Content-Disposition": f'inline; filename="attachment_{clean_id}{ext}"'
+                                    }
+                                )
+                    else:
+                        logger.warning("[WA-MEDIA] Meta Graph API returned %s: %s", meta_res.status_code, meta_res.text[:200])
+            except Exception as _fetch_err:
+                logger.error("[WA-MEDIA] Error fetching media from Meta Graph API: %s", _fetch_err)
+
+    # 5. Media unavailable or expired on Meta servers -> Return graceful visual fallback
+    accept_hdr = (request.headers.get("accept") or "").lower()
+    if "image/" in accept_hdr:
+        svg_placeholder = f"""<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">
+          <rect width="300" height="200" fill="#1e293b" rx="12"/>
+          <text x="150" y="90" font-size="32" text-anchor="middle" fill="#94a3b8">📎</text>
+          <text x="150" y="125" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#f8fafc">WhatsApp Attachment</text>
+          <text x="150" y="145" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle" fill="#94a3b8">Media ID: {clean_id}</text>
+        </svg>"""
+        return Response(content=svg_placeholder, media_type="image/svg+xml", status_code=200)
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Media Attachment</title>
+  <style>
+    body {{
+      margin: 0;
+      padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #090d16;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 90vh;
+    }}
+    .card {{
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 32px 28px;
+      max-width: 440px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    }}
+    .icon {{ font-size: 48px; margin-bottom: 16px; }}
+    h2 {{ margin: 0 0 10px 0; font-size: 20px; font-weight: 700; color: #f8fafc; }}
+    p {{ margin: 0 0 20px 0; font-size: 13.5px; color: #94a3b8; line-height: 1.6; }}
+    code {{ background: #0f172a; padding: 2px 6px; border-radius: 4px; font-size: 12px; color: #38bdf8; }}
+    .btn {{
+      display: inline-block;
+      padding: 10px 24px;
+      background: #059669;
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 13px;
+      border-radius: 8px;
+      cursor: pointer;
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">📎</div>
+    <h2>WhatsApp Media Attachment</h2>
+    <p>Media identifier: <code>{clean_id}</code></p>
+    <p>This attachment is no longer available on Meta's servers (temporary WhatsApp links expire after 14 days) or was received before media caching was enabled.</p>
+    <button class="btn" onclick="window.close()">Close Window</button>
+  </div>
+</body>
+</html>"""
+    return Response(content=html_content, media_type="text/html", status_code=200)
 
 
 @router.post("/media-upload")
@@ -3479,7 +3790,7 @@ async def upload_staff_whatsapp_media(
         )
 
     filename = f"{uuid.uuid4().hex}.{norm_ext}"
-    storage_dir = Path(__file__).parent.parent.parent.parent.parent / "frontend" / "storage" / "wa_media"
+    storage_dir = Path(__file__).resolve().parents[5] / "frontend" / "storage" / "wa_media"
     storage_dir.mkdir(parents=True, exist_ok=True)
 
     local_file = storage_dir / filename

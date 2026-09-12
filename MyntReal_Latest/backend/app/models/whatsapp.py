@@ -401,6 +401,10 @@ class WAInbox(Base):
         return f'<WAInbox from={self.from_phone} type={self.message_type} read={self.is_read}>'
 
     def to_dict(self):
+        norm_media = self.media_url
+        if norm_media and str(norm_media).strip().isdigit():
+            norm_media = f"/api/v1/whatsapp/media/{str(norm_media).strip()}"
+
         return {
             'id':                  self.id,
             'company_id':          self.company_id,
@@ -409,7 +413,7 @@ class WAInbox(Base):
             'from_name':           self.from_name,
             'message_type':        self.message_type,
             'body_text':           self.body_text,
-            'media_url':           self.media_url,
+            'media_url':           norm_media,
             'media_mime_type':     self.media_mime_type,
             'lead_id':             self.lead_id,
             'is_read':             self.is_read,
