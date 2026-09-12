@@ -27,11 +27,27 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 const PORT = process.env.PORT || 5002;
 const AUTH_DIR = path.join(__dirname, 'auth_info');
 const DEFAULT_INVITE_CODE = "120363410784518818@g.us";
-const SESSION_ID = process.env.WA_SESSION_ID || (process.env.ENVIRONMENT === 'production' ? 'prod_baileys' : 'dev_baileys');
+
+const IS_PRODUCTION = (process.env.ENVIRONMENT === 'production' || process.env.NODE_ENV === 'production');
+
+// Security Boundary: Non-production environments MUST NEVER use prod_baileys!
+let effectiveSessionId = process.env.WA_SESSION_ID;
+if (!IS_PRODUCTION) {
+    if (!effectiveSessionId || effectiveSessionId === 'prod_baileys') {
+        effectiveSessionId = 'dev_baileys';
+    }
+} else {
+    effectiveSessionId = effectiveSessionId || 'prod_baileys';
+}
+const SESSION_ID = effectiveSessionId;
+
+// Local Dev Guard: Local development runs in safe standby mode by default.
+// Only connects a live socket if explicitly permitted via ALLOW_LOCAL_WHATSAPP_SOCKET='true'.
+const ALLOW_LOCAL_SOCKET = IS_PRODUCTION || (process.env.ALLOW_LOCAL_WHATSAPP_SOCKET === 'true');
 
 let sock = null;
 let currentQr = null;
-let connectionStatus = 'disconnected';
+let connectionStatus = ALLOW_LOCAL_SOCKET ? 'disconnected' : 'dev_standby';
 let targetJid = null;
 let clientGen = 0;
 let skipRestoreOnce = false;
@@ -96,6 +112,8 @@ async function processOutboundQueue() {
         const data = await resp.json();
         const items = data.items || [];
         for (const item of items) {
+            const target = item.target_jid || item.phone;
+            if (!target) continue;
             try {
                 let contentPayload = { text: item.message || '' };
                 if (item.media_url) {
@@ -104,18 +122,31 @@ async function processOutboundQueue() {
                         caption: item.message || ''
                     };
                 }
-                await sock.sendMessage(item.phone, contentPayload);
-                await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-ack`, {
+                const sentMsg = await sock.sendMessage(target, contentPayload);
+                const wamid = sentMsg?.key?.id || null;
+                await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-complete`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ item_id: item.id, status: 'sent' })
+                    body: JSON.stringify({
+                        queue_id: item.id,
+                        status: 'sent',
+                        result_payload: {
+                            wamid: wamid,
+                            target_jid: target,
+                            timestamp: Date.now()
+                        }
+                    })
                 });
             } catch (sendErr) {
-                console.error(`❌ [OUTBOUND-QUEUE] Failed to send message to ${item.phone}:`, sendErr.message);
-                await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-ack`, {
+                console.error(`❌ [OUTBOUND-QUEUE] Failed to send message to ${target}:`, sendErr.message);
+                await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-complete`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ item_id: item.id, status: 'failed', error: sendErr.message })
+                    body: JSON.stringify({
+                        queue_id: item.id,
+                        status: 'failed',
+                        error_message: sendErr.message
+                    })
                 });
             }
         }
@@ -127,6 +158,10 @@ async function processOutboundQueue() {
 }
 
 async function syncClusterCoordinator() {
+    if (!ALLOW_LOCAL_SOCKET) {
+        // Local dev does not compete for cluster leadership or live sockets
+        return;
+    }
     if (isHeartbeatRunning) return;
     isHeartbeatRunning = true;
     try {
@@ -231,6 +266,14 @@ function isSessionRegistered() {
 }
 
 async function restoreSessionFromDatabase() {
+    if (!ALLOW_LOCAL_SOCKET) {
+        console.log(`[S3-SESSION-SYNC] 🛡️ Local development socket disabled. Skipping S3 session restore.`);
+        return false;
+    }
+    if (!IS_PRODUCTION && SESSION_ID === 'prod_baileys') {
+        console.warn(`[S3-SESSION-SYNC] 🛑 Security violation: Non-production instance attempted to restore prod_baileys. Aborted.`);
+        return false;
+    }
     if (skipRestoreOnce) {
         console.log(`[S3-SESSION-SYNC] ℹ️ Skipping session restore (flagged fresh start after terminal logout).`);
         skipRestoreOnce = false;
@@ -241,14 +284,19 @@ async function restoreSessionFromDatabase() {
         if (resp.ok) {
             const data = await resp.json();
             if (data.success && data.files && Object.keys(data.files).length > 0) {
-                // Guard: If restored payload contains unauthenticated credentials (registered: false), do not restore
+                // Guard: If restored payload has no authenticated identity (no creds.me.id), do not restore
                 const rawCreds = data.files['creds.json'];
                 if (rawCreds) {
                     try {
                         const parsed = JSON.parse(rawCreds);
-                        if (parsed && parsed.registered === false) {
-                            console.log(`[S3-SESSION-SYNC] ℹ️ Session payload for '${SESSION_ID}' is unregistered (registered: false). Skipping unauthenticated restore.`);
+                        const hasIdentity = Boolean(parsed && parsed.me && parsed.me.id);
+                        if (!hasIdentity && parsed && parsed.registered === false) {
+                            console.log(`[S3-SESSION-SYNC] ℹ️ Session payload for '${SESSION_ID}' has no authenticated identity. Skipping unauthenticated restore.`);
                             return false;
+                        }
+                        if (hasIdentity && parsed.registered !== true) {
+                            parsed.registered = true;
+                            data.files['creds.json'] = JSON.stringify(parsed);
                         }
                     } catch (_) {}
                 }
@@ -356,6 +404,12 @@ function scheduleDebouncedBackup() {
 let backupIntervalStarted = false;
 
 async function startWhatsAppBot() {
+    if (!ALLOW_LOCAL_SOCKET) {
+        console.log(`[WA-LIFECYCLE] 🛡️ Local development socket disabled (ALLOW_LOCAL_WHATSAPP_SOCKET !== 'true'). Running in safe 'dev_standby' mode to protect production authoritative socket.`);
+        connectionStatus = 'dev_standby';
+        currentQr = null;
+        return;
+    }
     clientGen += 1;
     const thisGen = clientGen;
     console.log(`[WA-LIFECYCLE] 🚀 Initializing WhatsApp Socket (Generation ID: ${thisGen})...`);
@@ -496,7 +550,13 @@ async function processConnectionUpdate(thisGen, update) {
         } else if (isConflict) {
             connectionStatus = 'session_conflict';
             currentQr = null;
-            console.warn(`🛑 [WA-LIFECYCLE] WhatsApp session conflict detected (Status 440: Connection Replaced / Conflict, Gen: ${thisGen}). Another instance or device is active with session '${SESSION_ID}'. Halting automatic reconnect loop. Call POST /api/reconnect or visit /qr to reclaim.`);
+            console.warn(`🛑 [WA-LIFECYCLE] WhatsApp session conflict detected (Status 440: Connection Replaced / Conflict, Gen: ${thisGen}). Another instance or device is active with session '${SESSION_ID}'. Halting automatic reconnect loop. Call POST /api/reconnect, POST /api/reclaim, or visit /qr to reclaim.`);
+            // Safely reconcile in-flight queue items without blind resends
+            fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-reconcile-inflight`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: 'session_conflict', instance_id: INSTANCE_ID })
+            }).catch(() => {});
         } else if (isRestartRequired) {
             connectionStatus = 'reconnecting';
             console.log(`[WA-LIFECYCLE] 🔄 Restart required by WhatsApp server (Status: 515, Gen: ${thisGen}). Reconnecting in 1s to finalize device pairing handshake...`);
@@ -603,8 +663,8 @@ app.all(['/logout', '/api/logout'], async (req, res) => {
     return res.json(result);
 });
 
-app.all(['/reconnect', '/api/reconnect'], async (req, res) => {
-    console.log(`[WA-LIFECYCLE] 🔄 Manual reconnect requested for session '${SESSION_ID}' (Current Status: ${isLeader ? connectionStatus : clusterState.status})...`);
+app.all(['/reconnect', '/api/reconnect', '/reclaim', '/api/reclaim'], async (req, res) => {
+    console.log(`[WA-LIFECYCLE] 🔄 Manual reconnect/reclaim requested for session '${SESSION_ID}' (Current Status: ${isLeader ? connectionStatus : clusterState.status})...`);
     if (isLeader) {
         connectionStatus = 'reconnecting';
         currentQr = null;
@@ -632,6 +692,25 @@ app.all(['/reconnect', '/api/reconnect'], async (req, res) => {
 });
 
 app.get('/status', (req, res) => {
+    if (!ALLOW_LOCAL_SOCKET) {
+        return res.json({
+            status: 'dev_standby',
+            connection_state: 'dev_standby',
+            can_send_now: false,
+            qr_available: false,
+            session_id: SESSION_ID,
+            is_conflict: false,
+            generation_id: 0,
+            target_jid: DEFAULT_INVITE_CODE,
+            invite_code: DEFAULT_INVITE_CODE,
+            is_leader: false,
+            leader_host: null,
+            instance_id: INSTANCE_ID,
+            message: 'Local WhatsApp socket is in standby mode. Production is the sole authoritative WhatsApp gateway.',
+            timestamp: Date.now()
+        });
+    }
+
     const effectiveStatus = isLeader ? connectionStatus : (clusterState.status || 'disconnected');
     const effectiveQr = isLeader ? currentQr : clusterState.qr;
     const effectiveCanSend = isLeader ? (connectionStatus === 'connected') : clusterState.can_send_now;
@@ -656,6 +735,24 @@ app.get('/status', (req, res) => {
 });
 
 app.get('/qr-data', (req, res) => {
+    if (!ALLOW_LOCAL_SOCKET) {
+        return res.json({
+            status: 'dev_standby',
+            connection_state: 'dev_standby',
+            can_send_now: false,
+            qr: null,
+            qr_url: null,
+            qr_available: false,
+            session_id: SESSION_ID,
+            is_conflict: false,
+            generation_id: 0,
+            is_leader: false,
+            instance_id: INSTANCE_ID,
+            message: 'Local WhatsApp socket is in standby mode.',
+            timestamp: Date.now()
+        });
+    }
+
     const effectiveStatus = isLeader ? connectionStatus : (clusterState.status || 'disconnected');
     const effectiveQr = isLeader ? currentQr : clusterState.qr;
     const effectiveCanSend = isLeader ? (connectionStatus === 'connected') : clusterState.can_send_now;
@@ -716,6 +813,32 @@ app.get('/api/list-groups', async (req, res) => {
 });
 
 app.get('/qr', (req, res) => {
+    if (!ALLOW_LOCAL_SOCKET) {
+        return res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>WhatsApp Gateway - Standby Mode</title>
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            </head>
+            <body style="font-family: system-ui, -apple-system, sans-serif; text-align: center; padding: 50px 15px; background: #f8fafc; color: #1e293b;">
+                <div style="background: white; max-width: 500px; margin: 0 auto; padding: 36px 24px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+                    <div style="font-size: 48px; margin-bottom: 12px;">🛡️</div>
+                    <h2 style="color: #0f172a; margin: 0 0 10px 0; font-size: 20px; font-weight: 800;">Local WhatsApp Gateway — Standby Mode</h2>
+                    <p style="color: #64748b; font-size: 13.5px; line-height: 1.6; margin-bottom: 20px;">
+                        The production server on AWS is the <strong>sole authoritative owner</strong> of the company WhatsApp Web socket.
+                    </p>
+                    <div style="background: #f1f5f9; padding: 14px; border-radius: 10px; font-size: 12.5px; color: #334155; text-align: left; margin-bottom: 20px; line-height: 1.5;">
+                        <strong>Architectural Safeguard:</strong><br>
+                        • Live WebSocket disabled locally to prevent <code>connectionReplaced (440)</code> kicks on production.<br>
+                        • Local direct and group message API dispatches are safely simulated.
+                    </div>
+                </div>
+            </body>
+            </html>
+        `);
+    }
+
     const effectiveStatus = isLeader ? connectionStatus : (clusterState.status || 'disconnected');
     const effectiveQr = isLeader ? currentQr : clusterState.qr;
     const effectiveQrUrl = effectiveQr
@@ -932,6 +1055,18 @@ app.post('/api/send-group-message', async (req, res) => {
         const mediaSource = imageUrl || imagePath || media_url || mediaUrl || null;
         if (!message && !mediaSource) {
             return res.status(400).json({ success: false, error: "message or media parameter required" });
+        }
+
+        if (!ALLOW_LOCAL_SOCKET) {
+            console.log(`[WA-BOT] 🛡️ [DEV-STANDBY] Mocked group message dispatch: ${message || '[Media]'}`);
+            return res.json({
+                success: true,
+                mocked: true,
+                sent_count: 1,
+                failed_count: 0,
+                results: [{ success: true, message_id: 'mock_dev_' + Date.now() }],
+                message: 'Dev mode: Simulated group broadcast (live socket disabled in dev)'
+            });
         }
 
         if (!isLeader) {
@@ -1218,6 +1353,17 @@ app.post('/api/send-message', async (req, res) => {
         if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
         const recipientJid = cleanPhone.includes('@s.whatsapp.net') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
 
+        if (!ALLOW_LOCAL_SOCKET) {
+            console.log(`[WA-BOT] 🛡️ [DEV-STANDBY] Mocked direct message dispatch to ${cleanPhone}: ${message || '[Media]'}`);
+            return res.json({
+                success: true,
+                mocked: true,
+                recipient_jid: recipientJid,
+                message_id: 'mock_dev_' + Date.now(),
+                message: 'Dev mode: Simulated direct message (live socket disabled in dev)'
+            });
+        }
+
         if (!isLeader) {
             if (!clusterState.can_send_now) {
                 return res.status(503).json({
@@ -1354,5 +1500,8 @@ module.exports = {
     setIsLeader: (l) => { isLeader = l; },
     getClusterState: () => clusterState,
     setClusterState: (s) => { clusterState = s; },
-    AUTH_DIR
+    AUTH_DIR,
+    ALLOW_LOCAL_SOCKET,
+    IS_PRODUCTION,
+    SESSION_ID
 };

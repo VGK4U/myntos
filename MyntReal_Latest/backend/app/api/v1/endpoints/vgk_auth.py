@@ -1595,7 +1595,9 @@ def vgk_signup(request: VGKSignupRequest, db: Session = Depends(get_db)):
     """Public self-registration for new VGK members. Account created as inactive — activation via CRM flow."""
     import random as _rnd
 
-    phone = request.phone.strip()
+    from app.utils.phone_otp import normalize_phone_10
+    raw_phone = request.phone.strip()
+    phone = normalize_phone_10(raw_phone) or raw_phone
 
     # [DC-PHONE-OTP-001] Phone verification token is OPTIONAL for self-signup
     phone_verified = False
@@ -1605,11 +1607,14 @@ def vgk_signup(request: VGKSignupRequest, db: Session = Depends(get_db)):
         phone_verified = True
 
     existing = db.query(OfficialPartner).filter(
-        OfficialPartner.phone == phone,
-        OfficialPartner.category == 'VGK_TEAM'
+        OfficialPartner.category == 'VGK_TEAM',
+        or_(
+            OfficialPartner.phone == phone,
+            OfficialPartner.phone == raw_phone
+        )
     ).first()
     if existing:
-        raise HTTPException(status_code=400, detail="A VGK member with this phone number is already registered.")
+        raise HTTPException(status_code=400, detail="A VGK member with this mobile number is already registered.")
 
     _referrer_explicitly_provided = bool((request.referrer_code or '').strip())
     referrer_code = (request.referrer_code or '').strip().upper() or VGK_DEFAULT_ROOT
@@ -1672,9 +1677,9 @@ def vgk_signup(request: VGKSignupRequest, db: Session = Depends(get_db)):
     if _first: _setattr_safe(member, 'first_name', _first)
     if _last:  _setattr_safe(member, 'last_name',  _last)
     if request.gender: _setattr_safe(member, 'gender', request.gender.strip())
-    # [DC-VGK-STAFF-REG-001] Staff who referred/registered this member
-    if request.registered_by_emp_code:
-        _setattr_safe(member, 'registered_by_emp_code', request.registered_by_emp_code.strip().upper() or None)
+    # [DC-VGK-STAFF-REG-001] Staff who referred/registered this member, or default to VGK_DEFAULT_ROOT on self-signup
+    _reg_by = (request.registered_by_emp_code or '').strip().upper() or VGK_DEFAULT_ROOT
+    _setattr_safe(member, 'registered_by_emp_code', _reg_by)
     db.add(member)
     db.commit()
     db.refresh(member)

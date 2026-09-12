@@ -883,11 +883,19 @@ async function checkGatewayConnectionStatus() {
     // 2. Update 📱 Scanned WhatsApp Status Badge
     const isConn = scanned.is_connected === true || scanned.status === 'connected';
     const isReconn = scanned.is_reconnecting === true || scanned.status === 'reconnecting';
+    const isConflict = scanned.is_conflict === true || scanned.status === 'session_conflict';
+    const isStandby = scanned.is_standby === true || scanned.status === 'dev_standby';
 
     if (scState) {
       if (isConn) {
         scState.innerHTML = '<span style="color:#059669">Connected</span>';
         if (scBadge) scBadge.style.background = 'rgba(37,211,102,0.12)';
+      } else if (isConflict) {
+        scState.innerHTML = '<span style="color:#d97706;font-weight:700">⚠️ Conflict</span>';
+        if (scBadge) scBadge.style.background = 'rgba(217,119,6,0.15)';
+      } else if (isStandby) {
+        scState.innerHTML = '<span style="color:#64748b;font-weight:600">Dev Standby</span>';
+        if (scBadge) scBadge.style.background = 'rgba(100,116,139,0.12)';
       } else if (isReconn) {
         scState.innerHTML = '<span style="color:#d97706">Reconnecting...</span>';
         if (scBadge) scBadge.style.background = 'rgba(217,119,6,0.12)';
@@ -904,8 +912,40 @@ async function checkGatewayConnectionStatus() {
     if (banner) {
       if (isConn || isReconn) {
         banner.style.display = 'none';
+      } else if (isConflict) {
+        banner.style.display = 'flex';
+        banner.style.background = '#fffbeb';
+        banner.style.borderColor = '#fde68a';
+        banner.style.color = '#92400e';
+        banner.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px;flex:1">
+            <i class="fas fa-exclamation-triangle" style="font-size:18px;color:#d97706"></i>
+            <div>
+              <strong style="font-size:13px">WhatsApp Session Conflict Detected (Status 440)</strong>
+              <div style="font-size:12px;color:#b45309">An active WhatsApp session already exists on another instance/device. Auto-reconnect was paused to avoid a disconnect loop.</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn-custom" onclick="reclaimWhatsAppSession()" style="background:#d97706;color:#fff;font-weight:700;padding:6px 14px;border:none;border-radius:6px;cursor:pointer">
+              <i class="fas fa-sync-alt me-1"></i> Reclaim Session
+            </button>
+          </div>
+        `;
       } else {
         banner.style.display = 'flex';
+        banner.style.background = '#f0fdf4';
+        banner.style.borderColor = '#bbf7d0';
+        banner.style.color = '#166534';
+        banner.innerHTML = `
+          <div style="display:flex;align-items:center;gap:10px;flex:1">
+            <i class="fab fa-whatsapp" style="font-size:18px;color:#16a34a"></i>
+            <div>
+              <strong style="font-size:13px">Personal WhatsApp Gateway Not Linked</strong>
+              <div style="font-size:12px;color:#15803d">Link your WhatsApp Web account to enable direct staff messaging and customer replies.</div>
+            </div>
+          </div>
+          <button class="btn-custom btn-green" onclick="openScanQrModal()"><i class="fas fa-qrcode me-1"></i> Scan QR Code</button>
+        `;
       }
     }
 
@@ -1097,6 +1137,24 @@ async function refreshGatewayQr() {
       return;
     }
 
+    if (res.is_conflict || res.status === 'session_conflict') {
+      if (spinner) {
+        spinner.style.display = 'flex';
+        spinner.innerHTML = `
+          <div style="padding:15px;color:#b45309;background:#fffbeb;border-radius:10px;border:1px solid #fde68a;text-align:center">
+            <i class="fas fa-exclamation-triangle fa-2x" style="color:#d97706;margin-bottom:8px"></i>
+            <div style="font-weight:700;font-size:13px;margin-bottom:6px">Session Conflict Detected (440)</div>
+            <div style="font-size:12px;margin-bottom:12px">An active WhatsApp session exists on another machine. Do NOT scan a new QR code.</div>
+            <button class="btn-custom" onclick="reclaimWhatsAppSession()" style="background:#d97706;color:#fff;font-weight:700;padding:6px 14px;border:none;border-radius:6px;cursor:pointer">
+              <i class="fas fa-sync-alt me-1"></i> Reclaim Session
+            </button>
+          </div>
+        `;
+      }
+      if (img) img.style.display = 'none';
+      return;
+    }
+
     if (res.qr) {
       lastRenderedWebQr = res.qr;
       if (res.qr.startsWith('http://') || res.qr.startsWith('https://') || res.qr.startsWith('data:')) {
@@ -1111,6 +1169,22 @@ async function refreshGatewayQr() {
     }
   } catch(e) {
     if (spinner) spinner.innerHTML = `<span style="font-size:12px;color:#dc2626">Error: ${e.message}</span>`;
+  }
+}
+
+async function reclaimWhatsAppSession() {
+  showToast('Initiating session reclaim...', 'info');
+  try {
+    const res = await apiFetch(`${API}/whatsapp/reclaim-session`, { method: 'POST' });
+    if (res.success) {
+      showToast('Reclaim initiated. Reconnecting WhatsApp socket...', 'success');
+      setTimeout(checkGatewayConnectionStatus, 2000);
+      setTimeout(checkGatewayConnectionStatus, 5000);
+    } else {
+      showToast(res.error || 'Failed to reclaim session', 'error');
+    }
+  } catch (e) {
+    showToast('Reclaim error: ' + e.message, 'error');
   }
 }
 

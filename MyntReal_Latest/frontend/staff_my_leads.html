@@ -265,7 +265,7 @@
                         <i class="fas fa-users me-1"></i>As Ground Source <span class="badge bg-warning ms-1" id="countMnrHandler">0</span>
                     </button>
                     <button type="button" class="btn btn-light btn-sm handler-filter-btn" data-role="unassigned" onclick="setHandlerRole('unassigned')">
-                        <i class="fas fa-seedling me-1"></i>Fresh Leads <span class="badge bg-secondary ms-1" id="countUnassigned">0</span>
+                        <i class="fas fa-user-slash me-1"></i>Unassigned <span class="badge bg-secondary ms-1" id="countUnassigned">0</span>
                     </button>
                     <button type="button" class="btn btn-light btn-sm handler-filter-btn" data-role="self" onclick="setHandlerRole('self')">
                         <i class="fas fa-user-check me-1"></i>Self Leads <span class="badge bg-dark ms-1" id="countSelfLeads">0</span>
@@ -301,7 +301,7 @@
                         <option value="all">All Leads</option>
                         <option value="my">My Leads</option>
                         <option value="assigned">Assigned to Me</option>
-                        <option value="fresh">Fresh Leads</option>
+                        <option value="unassigned">Unassigned Leads</option>
                     </select>
                     <select class="form-select form-select-sm" id="quickFilterDropdown" onchange="setQuickFilter(this.value)" style="width: auto; min-width: 140px;">
                         <option value="all">Quick Filter: All</option>
@@ -2234,7 +2234,7 @@
         }
         
         let currentQuickFilter = 'all';
-        let currentVisibility = 'all';  // 'all', 'my', 'assigned', 'fresh'
+        let currentVisibility = 'all';  // 'all', 'my', 'assigned', 'unassigned'
         
         // Role-based permissions: VGK/EA can edit handlers, others view only
         function canEditHandlers() {
@@ -2264,7 +2264,7 @@
                 currentHandlerRole = 'self';  // primary_owner=true
             } else if (visibilityType === 'assigned') {
                 currentHandlerRole = 'any';   // as_handler_role=any (assigned as any handler)
-            } else if (visibilityType === 'fresh') {
+            } else if (visibilityType === 'unassigned' || visibilityType === 'fresh') {
                 currentHandlerRole = 'unassigned';  // handler_type=unassigned
             } else {
                 // 'all' - show all leads (for privileged users)
@@ -2509,7 +2509,7 @@
             if (typeof currentVisibility !== 'undefined') {
                 if (currentVisibility === 'my') currentHandlerRole = 'self';
                 else if (currentVisibility === 'assigned') currentHandlerRole = 'any';
-                else if (currentVisibility === 'fresh') currentHandlerRole = 'unassigned';
+                else if (currentVisibility === 'unassigned' || currentVisibility === 'fresh') currentHandlerRole = 'unassigned';
                 else currentHandlerRole = '';
             }
             
@@ -2537,7 +2537,7 @@
             
             // My Leads: Enforce Personal Scope / Handler Role filter
             if (currentHandlerRole === 'unassigned') {
-                baseEndpoint += `&scope=fresh`;
+                baseEndpoint += `&scope=unassigned`;
             } else if (currentHandlerRole === 'self') {
                 baseEndpoint += `&primary_owner=true`;
             } else if (currentHandlerRole && currentHandlerRole !== '' && currentHandlerRole !== 'any') {

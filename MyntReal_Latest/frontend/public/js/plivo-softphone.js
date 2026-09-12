@@ -859,10 +859,11 @@
             this.isCallActive = true;
             this.activeDestination = cleanDest;
             this.activeLeadName = leadName;
+            this.activeLeadId = leadId;
 
             console.log(`[PLIVO-SOFTPHONE] Dialing ${cleanDest} (Lead: ${leadName || leadId})`);
             this.openSoftphoneDock();
-            this.showCallInProgressUI(cleanDest, leadName || 'Customer Lead');
+            this.showCallInProgressUI(cleanDest, leadName || 'Customer Lead', leadId);
 
             // Ensure remote audio playback element is ready and at full volume
             this.ensureRemoteAudioElement();
@@ -1861,6 +1862,29 @@
                                     </div>
                                 </div>
 
+                                <!-- Comprehensive In-Call Lead Context Card (17 Canonical Fields) -->
+                                <div id="softphoneLeadContextCard" style="display: none; width: 100%; max-height: 180px; overflow-y: auto; background: rgba(15, 23, 42, 0.75); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 12px; padding: 10px 12px; margin: 6px 0; font-size: 11px; box-sizing: border-box; text-align: left; -webkit-overflow-scrolling: touch;">
+                                    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; margin-bottom: 6px;">
+                                        <span style="font-size: 10px; font-weight: 800; letter-spacing: 0.5px; color: #38bdf8; text-transform: uppercase;"><i class="fa-solid fa-address-card"></i> Lead Details</span>
+                                        <span id="spLeadCategoryBadge" class="badge bg-primary" style="font-size: 9px; font-weight: 600; padding: 2px 6px;">General</span>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; font-size: 10.5px;">
+                                        <div><span style="color: #94a3b8;">Source:</span> <span id="spLeadSource" style="color: #f1f5f9; font-weight: 600;">—</span></div>
+                                        <div><span style="color: #94a3b8;">Company:</span> <span id="spLeadCompany" style="color: #f1f5f9; font-weight: 600;">—</span></div>
+                                        <div><span style="color: #94a3b8;">Status:</span> <span id="spLeadStatus" class="badge bg-secondary" style="font-size: 9px;">—</span></div>
+                                        <div><span style="color: #94a3b8;">Status Updated:</span> <span id="spLeadStatusUpdated" style="color: #cbd5e1;">—</span></div>
+                                        <div><span style="color: #94a3b8;">Budget:</span> <span id="spLeadBudget" style="color: #34d399; font-weight: 600;">—</span></div>
+                                        <div><span style="color: #94a3b8;">Last Interaction:</span> <span id="spLeadLastInteraction" style="color: #cbd5e1;">—</span></div>
+                                        <div style="grid-column: span 2;"><span style="color: #94a3b8;">Interacted By:</span> <span id="spLeadInteractedBy" style="color: #cbd5e1;">—</span></div>
+                                        <div style="grid-column: span 2;"><span style="color: #94a3b8;">Last Dialed:</span> <span id="spLeadLastDialed" style="color: #cbd5e1;">—</span></div>
+                                        <div id="spLeadReqRow" style="grid-column: span 2; display: none;"><span style="color: #94a3b8;">Requirement:</span> <span id="spLeadRequirements" style="color: #f8fafc;">—</span></div>
+                                    </div>
+                                    <div id="spLeadNotesSection" style="margin-top: 6px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 4px; display: none;">
+                                        <div style="font-size: 9.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Recent Notes / History</div>
+                                        <div id="spLeadRecentNotes" style="font-size: 10px; color: #cbd5e1; margin-top: 2px;"></div>
+                                    </div>
+                                </div>
+
                                 <!-- Quick Call Disposition & Note (In-Call Log) -->
                                 <div id="plivoQuickDispositionWrap" style="width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 8px 10px; margin: 6px 0; font-size: 11px; box-sizing: border-box;">
                                     <div style="font-size: 10px; font-weight: 700; color: #94a3b8; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between;">
@@ -2340,7 +2364,7 @@
             }
         }
 
-        showCallInProgressUI(phone, name) {
+        showCallInProgressUI(phone, name, leadId = null) {
             this.openSoftphoneDock();
             const backdrop = document.getElementById('myntosSoftphoneBackdrop');
             if (backdrop) backdrop.style.display = 'none'; // Unblock underlying page
@@ -2376,6 +2400,15 @@
             if (dispWrap) {
                 const isDialer = typeof window !== 'undefined' && window.location && window.location.pathname && window.location.pathname.includes('dialer');
                 dispWrap.style.display = isDialer ? 'none' : 'block';
+            }
+
+            const targetLeadId = leadId || this.activeLeadId;
+            const contextCard = document.getElementById('softphoneLeadContextCard');
+            if (targetLeadId && contextCard) {
+                contextCard.style.display = 'block';
+                this.loadLeadContextForCall(targetLeadId);
+            } else if (contextCard) {
+                contextCard.style.display = 'none';
             }
 
             // Reset control states and button styles to default OFF
@@ -2415,6 +2448,81 @@
             if (dtmfPad) dtmfPad.style.display = 'none';
 
             this.addRecentCall(phone, name, 'outbound');
+        }
+
+        async loadLeadContextForCall(leadId) {
+            try {
+                const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
+                if (!token) return;
+                const resp = await fetch(`/api/v1/crm/dialer/lead/${leadId}/detail`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                if (!data || !data.lead) return;
+                const lead = data.lead;
+
+                const catBadge = document.getElementById('spLeadCategoryBadge');
+                if (catBadge) catBadge.textContent = lead.category_name || 'General';
+
+                const srcEl = document.getElementById('spLeadSource');
+                if (srcEl) srcEl.textContent = lead.source || '—';
+
+                const coEl = document.getElementById('spLeadCompany');
+                if (coEl) coEl.textContent = lead.company_name || '—';
+
+                const statusEl = document.getElementById('spLeadStatus');
+                if (statusEl) {
+                    statusEl.textContent = (lead.status || '—').toUpperCase();
+                    statusEl.className = `badge ${lead.status === 'won' ? 'bg-success' : lead.status === 'lost' ? 'bg-danger' : 'bg-info text-dark'}`;
+                }
+
+                const statusUpEl = document.getElementById('spLeadStatusUpdated');
+                if (statusUpEl) {
+                    statusUpEl.textContent = lead.status_updated_at ? new Date(lead.status_updated_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+                }
+
+                const budgetEl = document.getElementById('spLeadBudget');
+                if (budgetEl) budgetEl.textContent = lead.budget_display || '—';
+
+                const lastIntEl = document.getElementById('spLeadLastInteraction');
+                if (lastIntEl) {
+                    lastIntEl.textContent = lead.last_interaction_date ? new Date(lead.last_interaction_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Never';
+                }
+
+                const intByEl = document.getElementById('spLeadInteractedBy');
+                if (intByEl) intByEl.textContent = lead.last_interacted_by || '—';
+
+                const lastDialEl = document.getElementById('spLeadLastDialed');
+                if (lastDialEl) {
+                    lastDialEl.textContent = lead.last_dialed_at ? new Date(lead.last_dialed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Never';
+                }
+
+                const reqRow = document.getElementById('spLeadReqRow');
+                const reqEl = document.getElementById('spLeadRequirements');
+                if (reqRow && reqEl) {
+                    if (lead.requirements) {
+                        reqEl.textContent = lead.requirements;
+                        reqRow.style.display = 'block';
+                    } else {
+                        reqRow.style.display = 'none';
+                    }
+                }
+
+                const notesSec = document.getElementById('spLeadNotesSection');
+                const notesEl = document.getElementById('spLeadRecentNotes');
+                if (notesSec && notesEl) {
+                    const notesList = (data.notes || []).slice(0, 2);
+                    if (notesList.length > 0) {
+                        notesEl.innerHTML = notesList.map(n => `<div style="margin-bottom: 2px;">• ${n.note} <span style="color:#64748b;font-size:9px;">(${n.created_at ? new Date(n.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''})</span></div>`).join('');
+                        notesSec.style.display = 'block';
+                    } else {
+                        notesSec.style.display = 'none';
+                    }
+                }
+            } catch (err) {
+                console.warn('[PLIVO-SOFTPHONE] Could not load lead context:', err);
+            }
         }
 
         initDraggables() {
@@ -2513,6 +2621,13 @@
             if (pad) pad.style.display = 'none';
             const tabBar = document.getElementById('softphoneTabBar');
             if (tabBar) tabBar.style.display = 'flex';
+            const contextCard = document.getElementById('softphoneLeadContextCard');
+            if (contextCard) {
+                contextCard.style.display = 'none';
+                const notesEl = document.getElementById('spLeadRecentNotes');
+                if (notesEl) notesEl.innerHTML = '';
+            }
+            this.activeLeadId = null;
         }
 
         updateUIStatus(status, label) {

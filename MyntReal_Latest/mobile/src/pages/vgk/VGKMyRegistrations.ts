@@ -407,7 +407,8 @@ export class VGKMyRegistrations {
     const name      = [title, firstName, lastName].filter(Boolean).join(' ');
 
     if (!firstName || !lastName) { errEl.textContent = 'Please enter both first name and last name.'; errEl.style.display = 'block'; return; }
-    if (!phone || phone.length < 10) { errEl.textContent = 'Please enter a valid 10-digit phone number.'; errEl.style.display = 'block'; return; }
+    const cleanPhone = (phone || '').replace(/\D/g, '').slice(-10);
+    if (!cleanPhone || cleanPhone.length !== 10) { errEl.textContent = 'Please enter a valid 10-digit mobile number.'; errEl.style.display = 'block'; return; }
     if (!password || password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; errEl.style.display = 'block'; return; }
 
     const submitBtn = this.container.querySelector('#regSubmitBtn') as HTMLButtonElement;
@@ -419,7 +420,7 @@ export class VGKMyRegistrations {
 
     try {
       const payload: any = {
-        partner_name: name, phone, password,
+        partner_name: name, phone: cleanPhone, password,
         name_title: title || null,
         first_name: firstName || null,
         last_name:  lastName  || null,

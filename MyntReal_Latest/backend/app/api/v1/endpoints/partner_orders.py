@@ -553,10 +553,15 @@ def create_vgk_login_for_partner(
     if not partner.phone:
         raise HTTPException(status_code=400, detail="Partner has no phone number — cannot create VGK login")
 
-    _clean_phone = partner.phone.replace(' ', '').replace('-', '')
+    from sqlalchemy import or_
+    from app.utils.phone_otp import normalize_phone_10
+    _clean_phone = normalize_phone_10(partner.phone) or partner.phone.replace(' ', '').replace('-', '')
     _existing_vgk = db.query(OfficialPartner).filter(
-        OfficialPartner.phone == _clean_phone,
-        OfficialPartner.category == 'VGK_TEAM'
+        OfficialPartner.category == 'VGK_TEAM',
+        or_(
+            OfficialPartner.phone == _clean_phone,
+            OfficialPartner.phone == (partner.phone or '').strip()
+        )
     ).first()
     if _existing_vgk:
         return {
@@ -583,19 +588,20 @@ def create_vgk_login_for_partner(
     if not _code:
         raise HTTPException(status_code=500, detail="Could not generate unique VGK code — try again")
 
-    _auto_pwd = partner.phone.replace(' ', '')
+    _auto_pwd = _clean_phone
     _new_vgk = OfficialPartner(
         company_id=partner.company_id or 4,
         partner_code=_code,
         partner_name=partner.partner_name,
         contact_person=partner.contact_person,
-        phone=partner.phone,
+        phone=_clean_phone,
         whatsapp_number=partner.whatsapp_number,
         email=partner.email,
         category='VGK_TEAM',
         is_active=False,
         login_status='active',
         parent_partner_id=_root_vgk_id,
+        registered_by_emp_code='VGK07102207',
         vgk_role='VGK_ASSOCIATE',
         vgk_points_balance=Decimal('0'),
         password_hash=SecurityManager.get_password_hash(_auto_pwd),

@@ -13,6 +13,7 @@
  */
 
 import { telephonyService, TelephonyCallSession } from '../services/telephony.service';
+import { apiService } from '../services/api.service';
 
 export interface SoftphoneModalOptions {
   phoneNumber: string;
@@ -94,6 +95,7 @@ class SoftphoneModal {
     this.uiState = isAlreadyActive ? 'ACTIVE_FLOATING' : 'DIALER';
 
     this.render();
+    void this.loadLeadContext(options.entityId);
 
     // If autoStart is requested, check readiness and initiate call via telephonyService
     if (options.autoStart && this.enteredNumber) {
@@ -115,8 +117,8 @@ class SoftphoneModal {
   }
 
   public close(): void {
-    // If call is actively in-flight, X minimizes the window instead of hanging up
-    if (this.currentSession && telephonyService.isCallActive()) {
+    // Rule 12: If call is actively in-flight or establishing, minimize the window instead of hanging up/tearing down
+    if (this.currentSession && (telephonyService.isCallActive() || ['connecting', 'ringing', 'connected', 'held'].includes(this.currentSession.state))) {
       this.minimize();
       return;
     }
@@ -378,6 +380,29 @@ class SoftphoneModal {
               <div style="margin-top: 8px !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 8px !important;">
                 <span id="spCallStateBadge" style="background: #f59e0b !important; color: #000000 !important; font-size: 11px !important; font-weight: 700 !important; padding: 2px 8px !important; border-radius: 12px !important;">Connecting...</span>
                 <span id="spCallTimerDisplay" style="font-size: 14px !important; font-weight: 700 !important; color: #38bdf8 !important;">00:00</span>
+              </div>
+            </div>
+
+            <!-- Comprehensive In-Call Lead Context Card (17 Canonical Fields) -->
+            <div id="spLeadContextBox" style="display: none; width: 100% !important; max-height: 150px !important; overflow-y: auto !important; background: rgba(15, 23, 42, 0.75) !important; border: 1px solid rgba(56, 189, 248, 0.25) !important; border-radius: 12px !important; padding: 8px 10px !important; margin: 6px 0 !important; font-size: 11px !important; box-sizing: border-box !important; text-align: left !important; -webkit-overflow-scrolling: touch !important;">
+              <div style="display: flex !important; align-items: center !important; justify-content: space-between !important; border-bottom: 1px solid rgba(255,255,255,0.1) !important; padding-bottom: 4px !important; margin-bottom: 6px !important;">
+                <span style="font-size: 10px !important; font-weight: 800 !important; letter-spacing: 0.5px !important; color: #38bdf8 !important; text-transform: uppercase !important;">📋 Lead Context</span>
+                <span id="spMobileCatBadge" style="background: #0284c7 !important; color: white !important; font-size: 9px !important; font-weight: 700 !important; padding: 1px 6px !important; border-radius: 4px !important;">General</span>
+              </div>
+              <div style="display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 4px 8px !important; font-size: 10px !important;">
+                <div><span style="color: #94a3b8 !important;">Source:</span> <span id="spMobileSource" style="color: #f1f5f9 !important; font-weight: 600 !important;">—</span></div>
+                <div><span style="color: #94a3b8 !important;">Company:</span> <span id="spMobileCompany" style="color: #f1f5f9 !important; font-weight: 600 !important;">—</span></div>
+                <div><span style="color: #94a3b8 !important;">Status:</span> <span id="spMobileStatus" style="color: #38bdf8 !important; font-weight: 600 !important;">—</span></div>
+                <div><span style="color: #94a3b8 !important;">Updated:</span> <span id="spMobileStatusUpdated" style="color: #cbd5e1 !important;">—</span></div>
+                <div><span style="color: #94a3b8 !important;">Budget:</span> <span id="spMobileBudget" style="color: #34d399 !important; font-weight: 600 !important;">—</span></div>
+                <div><span style="color: #94a3b8 !important;">Last Contact:</span> <span id="spMobileLastInteraction" style="color: #cbd5e1 !important;">—</span></div>
+                <div style="grid-column: span 2 !important;"><span style="color: #94a3b8 !important;">Called By:</span> <span id="spMobileInteractedBy" style="color: #cbd5e1 !important;">—</span></div>
+                <div style="grid-column: span 2 !important;"><span style="color: #94a3b8 !important;">Last Dialed:</span> <span id="spMobileLastDialed" style="color: #cbd5e1 !important;">—</span></div>
+                <div id="spMobileReqRow" style="grid-column: span 2 !important; display: none !important;"><span style="color: #94a3b8 !important;">Requirements:</span> <span id="spMobileRequirements" style="color: #f8fafc !important;">—</span></div>
+              </div>
+              <div id="spMobileNotesSection" style="margin-top: 6px !important; border-top: 1px dashed rgba(255,255,255,0.1) !important; padding-top: 4px !important; display: none !important;">
+                <div style="font-size: 9px !important; font-weight: 700 !important; color: #94a3b8 !important; text-transform: uppercase !important;">Recent Notes</div>
+                <div id="spMobileRecentNotes" style="font-size: 10px !important; color: #cbd5e1 !important; margin-top: 2px !important;"></div>
               </div>
             </div>
 
@@ -832,6 +857,98 @@ class SoftphoneModal {
         ? 'rgba(245,158,11,0.6)'
         : 'rgba(255,255,255,0.1)';
       holdBtn.style.borderColor = this.currentSession.isHeld ? '#f59e0b' : 'rgba(255,255,255,0.2)';
+    }
+  }
+
+  private async loadLeadContext(entityId: string | number | null | undefined): Promise<void> {
+    const box = this.modalEl?.querySelector('#spLeadContextBox') as HTMLElement;
+    if (!box) return;
+
+    if (!entityId) {
+      box.style.display = 'none';
+      return;
+    }
+
+    try {
+      const resp = await apiService.get<{
+        success: boolean;
+        lead?: any;
+        attempts?: any[];
+        notes?: any[];
+      }>(`/crm/dialer/lead/${entityId}/detail`);
+
+      const data = resp.data ?? (resp as any);
+      if (!data || !data.lead) return;
+
+      const lead = data.lead;
+      box.style.display = 'block';
+
+      const catBadge = this.modalEl?.querySelector('#spMobileCatBadge');
+      if (catBadge) catBadge.textContent = lead.category_name || 'General';
+
+      const srcEl = this.modalEl?.querySelector('#spMobileSource');
+      if (srcEl) srcEl.textContent = lead.source || '—';
+
+      const coEl = this.modalEl?.querySelector('#spMobileCompany');
+      if (coEl) coEl.textContent = lead.company_name || '—';
+
+      const statusEl = this.modalEl?.querySelector('#spMobileStatus') as HTMLElement;
+      if (statusEl) {
+        statusEl.textContent = (lead.status || '—').toUpperCase();
+        statusEl.style.color = lead.status === 'won' ? '#22c55e' : lead.status === 'lost' ? '#ef4444' : '#38bdf8';
+      }
+
+      const statusUpEl = this.modalEl?.querySelector('#spMobileStatusUpdated');
+      if (statusUpEl) {
+        statusUpEl.textContent = lead.status_updated_at
+          ? new Date(lead.status_updated_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+          : '—';
+      }
+
+      const budgetEl = this.modalEl?.querySelector('#spMobileBudget');
+      if (budgetEl) budgetEl.textContent = lead.budget_display || '—';
+
+      const lastIntEl = this.modalEl?.querySelector('#spMobileLastInteraction');
+      if (lastIntEl) {
+        lastIntEl.textContent = lead.last_interaction_date
+          ? new Date(lead.last_interaction_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+          : 'Never';
+      }
+
+      const intByEl = this.modalEl?.querySelector('#spMobileInteractedBy');
+      if (intByEl) intByEl.textContent = lead.last_interacted_by || '—';
+
+      const lastDialEl = this.modalEl?.querySelector('#spMobileLastDialed');
+      if (lastDialEl) {
+        lastDialEl.textContent = lead.last_dialed_at
+          ? new Date(lead.last_dialed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+          : 'Never';
+      }
+
+      const reqRow = this.modalEl?.querySelector('#spMobileReqRow') as HTMLElement;
+      const reqEl = this.modalEl?.querySelector('#spMobileRequirements');
+      if (reqRow && reqEl) {
+        if (lead.requirements) {
+          reqEl.textContent = lead.requirements;
+          reqRow.style.display = 'block';
+        } else {
+          reqRow.style.display = 'none';
+        }
+      }
+
+      const notesSec = this.modalEl?.querySelector('#spMobileNotesSection') as HTMLElement;
+      const notesEl = this.modalEl?.querySelector('#spMobileRecentNotes');
+      if (notesSec && notesEl) {
+        const notesList = (data.notes || []).slice(0, 2);
+        if (notesList.length > 0) {
+          notesEl.innerHTML = notesList.map((n: any) => `<div>• ${n.note}</div>`).join('');
+          notesSec.style.display = 'block';
+        } else {
+          notesSec.style.display = 'none';
+        }
+      }
+    } catch (err) {
+      console.warn('[SoftphoneModal] Could not fetch lead context:', err);
     }
   }
 }

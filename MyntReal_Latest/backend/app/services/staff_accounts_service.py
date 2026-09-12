@@ -3712,6 +3712,9 @@ class IncomeEntryService:
                             _cfv_lock = float(_sv) if (_sv is not None and float(_sv) > 0) else _dvr_now
                             if _cfv_lock > 0:
                                 lead.confirmed_final_value = _cfv_lock
+                        # DC-DVR-FLUSH-001 (Sep 2026): Flush in-memory lead updates so subsequent raw SQL queries
+                        # (including check_and_create_dvr_advance) see the updated deal_value_received and first_payment_received_date.
+                        db.flush()
                 elif new_status == 'PENDING' and crm_txn.validation_status == 'validated':
                     lead = db.query(CRMLead).filter(CRMLead.id == crm_txn.lead_id).first()
                     if lead:
@@ -3932,6 +3935,7 @@ class IncomeEntryService:
                     if _dvr_link:
                         _dvr_lead_id = _dvr_link[0]
                 if _dvr_lead_id:
+                    db.flush()
                     _dvr_lead_chk = db.execute(
                         _text(
                             "SELECT id, deal_value_received, associated_partner_id "
@@ -3943,12 +3947,17 @@ class IncomeEntryService:
                             _dvr_lead_chk.associated_partner_id and
                             float(_dvr_lead_chk.deal_value_received or 0) > 0):
                         from app.services.vgk_solar_advance import check_and_create_dvr_advance as _dvr_ie_fn
-                        _dvr_ie_fn(db, _dvr_lead_id)
+                        _dvr_res = _dvr_ie_fn(db, _dvr_lead_id)
                         import logging as _dvr_lg
-                        _dvr_lg.getLogger(__name__).info(
-                            f'[DC-DVR-ADV-IE-001] DVR advance hook fired for lead {_dvr_lead_id} '
-                            f'via income entry {entry.id}'
-                        )
+                        if _dvr_res.get('created'):
+                            _dvr_lg.getLogger(__name__).info(
+                                f'[DC-DVR-ADV-IE-001] DVR advance hook fired for lead {_dvr_lead_id} '
+                                f'via income entry {entry.id}: advances {_dvr_res.get("entry_numbers")} created'
+                            )
+                        else:
+                            _dvr_lg.getLogger(__name__).debug(
+                                f'[DC-DVR-ADV-IE-001] DVR advance hook lead {_dvr_lead_id}: {_dvr_res.get("reason")}'
+                            )
             except Exception as _dvr_ie_e:
                 import logging as _dvr_lg2
                 _dvr_lg2.getLogger(__name__).warning(
@@ -24837,7 +24846,7 @@ def get_consolidated_balance_sheet_report(db, employee, company_id: int, as_on_d
         # 3. Sundry Creditors — canonical grouping + OB formula, matches AP payables-summary.
         # closing = OB_credit_net + activity_deb - activity_crd; payable = closing > 0.
         # All party_types included (mirrors Party Ledger "All Types" ILIKE search used in AP).
-        sundry_creditors = db.execute(text("""
+        sundry_creditors = db.execute(text(r"""
             SELECT COALESCE(SUM(closing), 0)
             FROM (
                 SELECT

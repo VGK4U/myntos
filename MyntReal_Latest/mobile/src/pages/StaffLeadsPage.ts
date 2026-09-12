@@ -155,11 +155,11 @@ const QUICK_FILTERS = [
 
 const ROLE_TABS = [
   { id: 'my_leads', label: 'My Leads', icon: '👤' },
+  { id: 'unassigned', label: 'Unassigned', icon: '📋' },
   { id: 'as_primary', label: 'As Primary Holder', icon: '📋' },
   { id: 'as_telecaller', label: 'As Telecaller', icon: '📞' },
   { id: 'as_field', label: 'As Field Staff', icon: '🚗' },
   { id: 'as_handler', label: 'As Handler', icon: '🤝' },
-  { id: 'fresh', label: 'Fresh Leads', icon: '✨' },
   { id: 'self', label: 'Self Leads', icon: '🎯' }
 ];
 
@@ -275,6 +275,7 @@ export class StaffLeadsPage {
     const hb = this.handlerStats.handler_breakdown || {};
     const badgeMap: Record<string, number> = {
       my_leads: this.handlerStats.all_my_leads_count ?? this.handlerStats.total_leads ?? 0,
+      unassigned: this.handlerStats.unassigned_count ?? 0,
       as_primary: hb.as_primary ?? 0,
       as_telecaller: hb.as_telecaller ?? 0,
       as_field: hb.as_field_staff ?? 0,
@@ -1754,7 +1755,7 @@ export class StaffLeadsPage {
     const cleanPhone = phone.replace(/[^\d+]/g, '');
     const whatsappNumber = phone.replace(/\D/g, '');
     const maskedPhone = this.maskPhone(phone);
-    const isFresh = this.activeRoleTab === 'fresh' || (lead as any).claim_eligible;
+    const isFresh = this.activeRoleTab === 'unassigned' || this.activeRoleTab === 'fresh' || (lead as any).claim_eligible;
     const leadCompId = lead.company_id || this.selectedCompanyId || '';
 
     return `

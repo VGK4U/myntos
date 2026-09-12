@@ -101,6 +101,8 @@ export class AutoDialerPage {
   private isDialingInProgress = false;
   private isPrewarmingTelephony = false;
   private unsubscribeTelephony: (() => void) | null = null;
+  private _callingDurationTimer: ReturnType<typeof setInterval> | null = null;
+  private _selectedInCallOutcome: string = '';
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -159,6 +161,10 @@ export class AutoDialerPage {
   }
 
   cleanup(): void {
+    if (this._callingDurationTimer) {
+      clearInterval(this._callingDurationTimer);
+      this._callingDurationTimer = null;
+    }
     if (this.unsubscribeTelephony) {
       this.unsubscribeTelephony();
       this.unsubscribeTelephony = null;
@@ -166,7 +172,7 @@ export class AutoDialerPage {
     dialerService.stopCallPoll();
     dialerService.stopAppListener();
     dialerService.stopSyncPoll();
-    document.getElementById('dc-calling-screen')?.remove();
+    this._removeCallingScreen();
     document.getElementById('dc-method-modal')?.remove();
   }
 
@@ -320,9 +326,19 @@ export class AutoDialerPage {
         ? session.durationSeconds
         : Math.round((Date.now() - this.callStartTime) / 1000);
 
+      // Capture any live notes, status, or outcome chosen during call
+      const inCallNotes = (document.getElementById('dc-incall-notes') as HTMLTextAreaElement)?.value;
+      const inCallStatus = (document.getElementById('dc-incall-status') as HTMLSelectElement)?.value;
+      const inCallOutcome = this._selectedInCallOutcome;
+
       this.activeSoftphoneDial = false;
+      this._removeCallingScreen();
       if (lead && !this.popupOpen) {
-        void this._openPopup(lead.lead_id, duration);
+        void this._openPopup(lead.lead_id, duration, {
+          notes: inCallNotes,
+          status: inCallStatus,
+          outcome: inCallOutcome,
+        });
       }
     }
   }
@@ -393,6 +409,9 @@ export class AutoDialerPage {
 
       // Notify backend & desktop web of active call
       await dialerService.notifyCallActive(canonicalId);
+
+      // Show active-call workspace in background so telecaller has full context when minimized
+      this._showCallingScreen(lead, phone, 'softphone');
 
       // Launch centralized Plivo WebRTC softphone modal
       callController.openCallDialer({
@@ -637,58 +656,353 @@ export class AutoDialerPage {
   }
 
   private _showCallingScreen(lead: QueueItem | any, phone: string, method: string = 'normal'): void {
-    document.getElementById('dc-calling-screen')?.remove();
-    const initial = (lead.name || 'L').charAt(0).toUpperCase();
+    this._removeCallingScreen();
+    this._selectedInCallOutcome = '';
+
+    const canonicalId = (lead as any).id || lead.lead_id;
     const isMyOp = method === 'myoperator';
-    const statusText = isMyOp
-      ? 'Connecting via MyOperator…'
-      : 'Calling via your phone app…';
+    const isSoftphone = method === 'softphone';
+    const methodBadge = isSoftphone ? '🎧 Softphone' : isMyOp ? '📞 MyOperator' : '📱 Direct SIM';
     const agentPhone = this.myopAgent?.contact_number || '';
-    const agentName = this.myopAgent?.name || '';
-    const hintText = isMyOp
-      ? `Your phone ${agentPhone ? `(<b>${agentPhone}</b>)` : ''} will ring shortly from <b>+918065184781</b>.<br>Answer it — the customer will be bridged automatically.<br>Tap "Call Ended" below when done.`
-      : 'Come back to this app after the call<br>and the outcome form will open automatically.';
+    const initial = (lead.name || 'L').charAt(0).toUpperCase();
+
+    const priorityLabel = PRIORITY_LABELS[lead.queue_priority] || lead.priority || 'Normal';
+    const catName = lead.category_name || (lead.category_id ? `Category #${lead.category_id}` : 'General');
+    const budgetStr = lead.budget_min || lead.budget_max
+      ? `₹${(lead.budget_min || 0).toLocaleString('en-IN')} – ₹${(lead.budget_max || 0).toLocaleString('en-IN')}`
+      : (lead.budget_min ? `₹${(lead.budget_min).toLocaleString('en-IN')}+` : null);
+
+    const statusOptions = LEAD_STATUSES.map(s =>
+      `<option value="${s.value}" ${lead?.status === s.value ? 'selected' : ''}>${s.label}</option>`
+    ).join('');
+
+    const lastContactStr = _fmtLastContact(lead.last_contact_date, lead.last_contact_days);
+
     const screen = document.createElement('div');
     screen.id = 'dc-calling-screen';
+    screen.className = 'dc-active-call-workspace';
     screen.innerHTML = `
-      <div class="dc-calling-overlay">
-        <div class="dc-calling-inner">
-          <div class="dc-calling-avatar">${initial}</div>
-          <div class="dc-calling-name">${this._maskLeadName(lead.name || 'Unknown Lead')}</div>
-          <div class="dc-calling-phone">${this._maskPhone(phone)}</div>
-          ${isMyOp ? `<div class="dc-method-badge">📞 MyOperator Agent: ${agentName || 'Connected'}</div>` : ''}
-          <div class="dc-calling-status">
-            <span class="dc-calling-dot"></span>
-            <span class="dc-calling-dot"></span>
-            <span class="dc-calling-dot"></span>
-            ${statusText}
+      <!-- Sticky Active-Call Header -->
+      <div class="dc-call-workspace-header">
+        <div class="dc-cwh-left">
+          <div class="dc-cwh-avatar">${initial}</div>
+          <div class="dc-cwh-info">
+            <div class="dc-cwh-name">${this._maskLeadName(lead.name || 'Lead Contact')}</div>
+            <div class="dc-cwh-phone">${this._maskPhone(phone)}</div>
           </div>
-          <p class="dc-calling-hint">${hintText}</p>
-          <button id="dc-call-ended-btn" class="dc-call-ended-btn">
-            📵 Call Ended — Log Outcome
-          </button>
-          <button id="dc-calling-cancel-btn" class="dc-calling-cancel-btn">Cancel</button>
         </div>
-      </div>`;
+        <div class="dc-cwh-center">
+          <div class="dc-cwh-status-badge">
+            <span class="dc-cwh-pulse-dot"></span>
+            <span id="dc-cwh-timer">00:00</span>
+          </div>
+          <div class="dc-cwh-method-tag">${methodBadge}</div>
+        </div>
+        <div class="dc-cwh-actions">
+          <button id="dc-cwh-end-btn" class="dc-cwh-end-btn" title="End call and log outcome">
+            📵 End Call
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable Call Content & Context -->
+      <div class="dc-call-workspace-body">
+        ${isMyOp ? `
+          <div class="dc-cwh-notice myop">
+            📞 MyOperator: Your phone ${agentPhone ? `(<b>${agentPhone}</b>)` : ''} will ring from <b>+918065184781</b>. Customer is bridged automatically.
+          </div>
+        ` : ''}
+
+        <!-- Card 1: Lead Context & Overview -->
+        <div class="dc-call-card">
+          <div class="dc-call-card-header">
+            <span class="dc-call-card-title">👤 Lead Overview</span>
+            <span class="dc-call-cat-badge">${this._escapeHtml(catName)}</span>
+          </div>
+          <div class="dc-call-grid">
+            <div class="dc-call-grid-item">
+              <span class="dc-call-label">Category</span>
+              <span class="dc-call-val font-semibold text-sky-700">${this._escapeHtml(catName)}</span>
+            </div>
+            <div class="dc-call-grid-item">
+              <span class="dc-call-label">Queue Priority</span>
+              <span class="dc-call-val">${priorityLabel}</span>
+            </div>
+            ${budgetStr ? `
+              <div class="dc-call-grid-item">
+                <span class="dc-call-label">Budget</span>
+                <span class="dc-call-val font-semibold text-emerald-700">${budgetStr}</span>
+              </div>
+            ` : ''}
+            ${(lead.city || lead.area) ? `
+              <div class="dc-call-grid-item">
+                <span class="dc-call-label">Location</span>
+                <span class="dc-call-val">📍 ${[lead.area, lead.city].filter(Boolean).join(', ')}</span>
+              </div>
+            ` : ''}
+            ${lead.source ? `
+              <div class="dc-call-grid-item">
+                <span class="dc-call-label">Source</span>
+                <span class="dc-call-val">${this._escapeHtml(lead.source)}</span>
+              </div>
+            ` : ''}
+            ${(lead.company_name || lead.company) ? `
+              <div class="dc-call-grid-item">
+                <span class="dc-call-label">Company</span>
+                <span class="dc-call-val">${this._escapeHtml(lead.company_name || lead.company)}</span>
+              </div>
+            ` : ''}
+            <div class="dc-call-grid-item">
+              <span class="dc-call-label">Last Interaction</span>
+              <span class="dc-call-val text-xs text-gray-500" id="dc-cwh-last-interaction">${lastContactStr}</span>
+            </div>
+            <div class="dc-call-grid-item" id="dc-cwh-interacted-by-wrap" style="${lead.last_interacted_by ? '' : 'display:none;'}">
+              <span class="dc-call-label">Called By</span>
+              <span class="dc-call-val text-xs text-gray-700" id="dc-cwh-interacted-by">${this._escapeHtml(lead.last_interacted_by || '—')}</span>
+            </div>
+            <div class="dc-call-grid-item" id="dc-cwh-last-dialed-wrap" style="${lead.last_dialed_at ? '' : 'display:none;'}">
+              <span class="dc-call-label">Last Dialed</span>
+              <span class="dc-call-val text-xs text-gray-500" id="dc-cwh-last-dialed">${lead.last_dialed_at ? new Date(lead.last_dialed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '—'}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Requirements & Comments -->
+        ${(lead.requirements || lead.description || lead.looking_for || lead.recent_comments) ? `
+          <div class="dc-call-card">
+            <div class="dc-call-card-header">
+              <span class="dc-call-card-title">🎯 Customer Requirements</span>
+            </div>
+            ${lead.looking_for ? `
+              <div class="dc-call-field">
+                <span class="dc-call-label">Looking For:</span>
+                <div class="dc-call-desc">${this._escapeHtml(lead.looking_for)}</div>
+              </div>
+            ` : ''}
+            ${lead.requirements ? `
+              <div class="dc-call-field">
+                <span class="dc-call-label">Requirements:</span>
+                <div class="dc-call-desc">${this._escapeHtml(lead.requirements)}</div>
+              </div>
+            ` : ''}
+            ${lead.description ? `
+              <div class="dc-call-field">
+                <span class="dc-call-label">Description:</span>
+                <div class="dc-call-desc">${this._escapeHtml(lead.description)}</div>
+              </div>
+            ` : ''}
+            ${lead.recent_comments ? `
+              <div class="dc-call-field">
+                <span class="dc-call-label">Recent Comments:</span>
+                <div class="dc-call-desc text-amber-800 bg-amber-50 p-2 rounded">${this._escapeHtml(lead.recent_comments)}</div>
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
+
+        <!-- Card 3: In-Call Live Notes & Status -->
+        <div class="dc-call-card highlight">
+          <div class="dc-call-card-header">
+            <span class="dc-call-card-title">📝 Live In-Call Notes & Status</span>
+            <span class="dc-live-tag">LIVE SYNC</span>
+          </div>
+          <div style="margin-bottom:10px;">
+            <label class="dc-call-input-label">Update Lead Status:</label>
+            <select id="dc-incall-status" class="dc-incall-select">
+              ${statusOptions}
+            </select>
+          </div>
+          <div style="margin-bottom:10px;">
+            <label class="dc-call-input-label">Quick Call Outcome:</label>
+            <div class="dc-incall-outcome-row">
+              <button type="button" class="dc-incall-outcome-btn" data-outcome="answered">✅ Answered</button>
+              <button type="button" class="dc-incall-outcome-btn" data-outcome="no_answer">📵 No Answer</button>
+              <button type="button" class="dc-incall-outcome-btn" data-outcome="busy">📳 Busy</button>
+              <button type="button" class="dc-incall-outcome-btn" data-outcome="callback">🔁 Callback</button>
+            </div>
+          </div>
+          <div>
+            <label class="dc-call-input-label">Notes while talking:</label>
+            <textarea id="dc-incall-notes" class="dc-incall-textarea" rows="3" placeholder="Type customer objections, key discussion points, or next action items here...">${this._escapeHtml(lead.recent_comments || '')}</textarea>
+          </div>
+        </div>
+
+        <!-- Card 4: Previous Call History & Notes (Async loaded) -->
+        <div class="dc-call-card" id="dc-incall-history-card">
+          <div class="dc-call-card-header">
+            <span class="dc-call-card-title">📜 Interaction History</span>
+            <span id="dc-incall-history-badge" class="text-xs text-gray-400">Loading…</span>
+          </div>
+          <div id="dc-incall-history-content" class="dc-incall-history-list">
+            <div class="dc-lds-spinner" style="padding:12px 0;font-size:13px;color:#9ca3af;">⏳ Loading previous interaction history…</div>
+          </div>
+        </div>
+
+        <!-- Card 5: Actions -->
+        <div class="dc-call-actions-card">
+          <button id="dc-incall-finish-btn" class="dc-call-ended-btn">
+            📵 Call Ended — Log Full Outcome
+          </button>
+          <button id="dc-calling-cancel-btn" class="dc-calling-cancel-btn">
+            Cancel Call Tracking
+          </button>
+        </div>
+      </div>
+    `;
+
     document.body.appendChild(screen);
-    document.getElementById('dc-call-ended-btn')?.addEventListener('click', () => {
-      this._removeCallingScreen();
-      this._openPopup(lead.lead_id);
+
+    // Start live duration counter
+    const startTs = this.callStartTime || Date.now();
+    const timerEl = document.getElementById('dc-cwh-timer');
+    this._callingDurationTimer = setInterval(() => {
+      const elapsedSec = Math.max(0, Math.floor((Date.now() - startTs) / 1000));
+      const m = Math.floor(elapsedSec / 60).toString().padStart(2, '0');
+      const s = (elapsedSec % 60).toString().padStart(2, '0');
+      if (timerEl) timerEl.textContent = `${m}:${s}`;
+    }, 1000);
+
+    // Quick outcome button handlers
+    screen.querySelectorAll('.dc-incall-outcome-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        screen.querySelectorAll('.dc-incall-outcome-btn').forEach(b => (b as HTMLElement).classList.remove('selected'));
+        btn.classList.add('selected');
+        this._selectedInCallOutcome = (btn as HTMLElement).dataset.outcome || '';
+      });
     });
+
+    // Helper to finish call and open popup
+    const _handleFinishCall = () => {
+      const elapsedSec = Math.max(0, Math.floor((Date.now() - startTs) / 1000));
+      const inCallNotes = (document.getElementById('dc-incall-notes') as HTMLTextAreaElement)?.value || '';
+      const inCallStatus = (document.getElementById('dc-incall-status') as HTMLSelectElement)?.value || '';
+      const inCallOutcome = this._selectedInCallOutcome;
+
+      this._removeCallingScreen();
+
+      if (this.activeSoftphoneDial && telephonyService.isCallActive()) {
+        telephonyService.endCall();
+      }
+
+      void this._openPopup(canonicalId, elapsedSec, {
+        notes: inCallNotes,
+        status: inCallStatus,
+        outcome: inCallOutcome,
+      });
+    };
+
+    document.getElementById('dc-cwh-end-btn')?.addEventListener('click', _handleFinishCall);
+    document.getElementById('dc-incall-finish-btn')?.addEventListener('click', _handleFinishCall);
     document.getElementById('dc-calling-cancel-btn')?.addEventListener('click', () => {
       this._removeCallingScreen();
+      if (this.activeSoftphoneDial && telephonyService.isCallActive()) {
+        telephonyService.endCall();
+      }
+      this.activeSoftphoneDial = false;
       void dialerService.clearCallActive();
     });
+
+    // Asynchronously fetch and populate interaction history
+    void this._loadInCallHistory(canonicalId);
+  }
+
+  private async _loadInCallHistory(leadId: number): Promise<void> {
+    const badgeEl = document.getElementById('dc-incall-history-badge');
+    const contentEl = document.getElementById('dc-incall-history-content');
+    if (!contentEl) return;
+
+    try {
+      const resp = await apiService.get<{
+        success: boolean;
+        lead?: any;
+        attempts: { outcome: string; note: string; dialed_at: string | null; duration_seconds: number }[];
+        notes: { note: string; created_at: string | null }[];
+      }>(`/crm/dialer/lead/${leadId}/detail`);
+      const data = resp.data ?? (resp as any);
+      const attempts = data.attempts || [];
+      const notes = data.notes || [];
+
+      if (data.lead) {
+        if (data.lead.last_interacted_by) {
+          const wrap = document.getElementById('dc-cwh-interacted-by-wrap');
+          const el = document.getElementById('dc-cwh-interacted-by');
+          if (wrap && el) {
+            el.textContent = data.lead.last_interacted_by;
+            wrap.style.display = 'block';
+          }
+        }
+        if (data.lead.last_dialed_at) {
+          const wrap = document.getElementById('dc-cwh-last-dialed-wrap');
+          const el = document.getElementById('dc-cwh-last-dialed');
+          if (wrap && el) {
+            el.textContent = new Date(data.lead.last_dialed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+            wrap.style.display = 'block';
+          }
+        }
+      }
+
+      if (badgeEl) badgeEl.textContent = `${attempts.length} calls · ${notes.length} notes`;
+
+      if (attempts.length === 0 && notes.length === 0) {
+        contentEl.innerHTML = '<div class="text-xs text-gray-400 py-2">No previous call history or notes recorded for this lead.</div>';
+        return;
+      }
+
+      let html = '';
+      if (attempts.length > 0) {
+        html += '<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:6px;">Past Attempts</div>';
+        html += attempts.map((a: any) => {
+          const color = OUTCOME_COLORS[a.outcome] || '#6b7280';
+          const dateStr = a.dialed_at
+            ? new Date(a.dialed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) + ' ' +
+              new Date(a.dialed_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+            : '—';
+          return `
+            <div class="dc-incall-history-row">
+              <span class="dc-incall-pill" style="background:${color}20;color:${color};border:1px solid ${color}40;">${a.outcome.replace(/_/g, ' ')}</span>
+              <span class="dc-incall-date">${dateStr}</span>
+              ${a.duration_seconds > 0 ? `<span class="dc-incall-dur">${a.duration_seconds}s</span>` : ''}
+              ${a.note ? `<div class="dc-incall-note-text">${this._escapeHtml(a.note)}</div>` : ''}
+            </div>`;
+        }).join('');
+      }
+
+      if (notes.length > 0) {
+        html += '<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;margin:10px 0 6px;">Past Notes</div>';
+        html += notes.map((n: any) => {
+          const dateStr = n.created_at
+            ? new Date(n.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+            : '';
+          return `
+            <div class="dc-incall-note-row">
+              <span class="dc-incall-date">${dateStr}</span>
+              <span class="dc-incall-note-val">${this._escapeHtml(n.note)}</span>
+            </div>`;
+        }).join('');
+      }
+
+      contentEl.innerHTML = html;
+    } catch {
+      if (contentEl) contentEl.innerHTML = '<div class="text-xs text-gray-400 py-2">Could not load previous history.</div>';
+    }
   }
 
   private _removeCallingScreen(): void {
+    if (this._callingDurationTimer) {
+      clearInterval(this._callingDurationTimer);
+      this._callingDurationTimer = null;
+    }
     document.getElementById('dc-calling-screen')?.remove();
     document.getElementById('dc-manual-done-btn')?.remove();
   }
 
   // ── After-Call Popup ─────────────────────────────────────────────────────────
 
-  private async _openPopup(leadId: number, durationSecOverride?: number): Promise<void> {
+  private async _openPopup(
+    leadId: number,
+    durationSecOverride?: number,
+    inCallData?: { notes?: string; status?: string; outcome?: string }
+  ): Promise<void> {
     if (this.popupOpen) return;
     this.popupOpen = true;
     this._removeCallingScreen();
@@ -736,9 +1050,9 @@ export class AutoDialerPage {
 
     const overlay = document.createElement('div');
     overlay.id = 'dc-dialer-popup';
-    overlay.innerHTML = this._popupHTML(fullLead, durationSec, categories);
+    overlay.innerHTML = this._popupHTML(fullLead, durationSec, categories, inCallData);
     document.body.appendChild(overlay);
-    this._attachPopupListeners(overlay, leadId, durationSec);
+    this._attachPopupListeners(overlay, leadId, durationSec, inCallData);
 
     // DC Protocol N001: lazy-load VGK banner (non-blocking, 200ms after popup renders)
     const vgkCid = fullLead?.company_id;
@@ -747,7 +1061,12 @@ export class AutoDialerPage {
     }
   }
 
-  private _popupHTML(lead: any, durationSec: number, categories: Array<{id: number; name: string}> = []): string {
+  private _popupHTML(
+    lead: any,
+    durationSec: number,
+    categories: Array<{id: number; name: string}> = [],
+    inCallData?: { notes?: string; status?: string; outcome?: string }
+  ): string {
     const durationStr = durationSec > 5
       ? `${Math.floor(durationSec / 60)}m ${durationSec % 60}s`
       : 'Just dialed';
@@ -758,8 +1077,9 @@ export class AutoDialerPage {
     const tomorrowLocal = new Date(now.getTime() + 24 * 60 * 60 * 1000);
     const _pad = (n: number) => n.toString().padStart(2, '0');
     const defaultFollowup = `${tomorrowLocal.getFullYear()}-${_pad(tomorrowLocal.getMonth()+1)}-${_pad(tomorrowLocal.getDate())}T${_pad(tomorrowLocal.getHours())}:${_pad(tomorrowLocal.getMinutes())}`;
+    const activeStatus = inCallData?.status || lead?.status;
     const statusOptions = LEAD_STATUSES.map(s =>
-      `<option value="${s.value}" ${lead?.status === s.value ? 'selected' : ''}>${s.label}</option>`
+      `<option value="${s.value}" ${activeStatus === s.value ? 'selected' : ''}>${s.label}</option>`
     ).join('');
     const priorityOptions = ['normal', 'medium', 'high'].map(p =>
       `<option value="${p}" ${lead?.priority === p ? 'selected' : ''}>${p.charAt(0).toUpperCase() + p.slice(1)}</option>`
@@ -865,7 +1185,7 @@ export class AutoDialerPage {
             <div class="dc-form-group-label">Call Note</div>
             <div class="dc-form-row">
               <label>Note for this call</label>
-              <textarea id="dc-edit-note" rows="3" placeholder="What happened on this call — next steps, objections, promises...">${lead?.recent_comments || ''}</textarea>
+              <textarea id="dc-edit-note" rows="3" placeholder="What happened on this call — next steps, objections, promises...">${this._escapeHtml(inCallData?.notes !== undefined ? inCallData.notes : (lead?.recent_comments || ''))}</textarea>
             </div>
 
             <!-- ─── Contact Details ───────────────────────────── -->
@@ -1033,7 +1353,12 @@ export class AutoDialerPage {
     </div>`;
   }
 
-  private _attachPopupListeners(overlay: HTMLElement, leadId: number, durationSec: number): void {
+  private _attachPopupListeners(
+    overlay: HTMLElement,
+    leadId: number,
+    durationSec: number,
+    inCallData?: { notes?: string; status?: string; outcome?: string }
+  ): void {
     let selectedOutcome: CallOutcome | null = null;
     let selectedActivity: string | null = null;
     let extensionsLeft = 2;
@@ -1141,6 +1466,14 @@ export class AutoDialerPage {
         _startCountdown();
       });
     });
+
+    // Pre-select outcome if selected during call
+    if (inCallData?.outcome) {
+      const targetBtn = overlay.querySelector<HTMLButtonElement>(`.dc-outcome-btn[data-outcome="${inCallData.outcome}"]`);
+      if (targetBtn) {
+        targetBtn.click();
+      }
+    }
 
     // ── Auto-countdown ───────────────────────────────────────────────────────
     const _fmtCountdown = (sec: number) => {
@@ -3246,24 +3579,56 @@ export class AutoDialerPage {
       .dc-method-cancel { width: 100%; background: none; border: none; color: #9ca3af; font-size: 14px; padding: 10px; cursor: pointer; margin-top: 4px; }
       .dc-method-badge { background: rgba(124,58,237,0.18); color: #7c3aed; font-size: 12px; font-weight: 700; border-radius: 20px; padding: 4px 14px; margin-bottom: 10px; display: inline-block; }
 
-      /* ── Calling Screen ───────────────────────────────────────────────────── */
-      #dc-calling-screen { position: fixed; inset: 0; z-index: 10000; }
-      .dc-calling-overlay { position: absolute; inset: 0; background: linear-gradient(160deg, #0f2942 0%, #0c4a6e 60%, #0369a1 100%); display: flex; align-items: center; justify-content: center; }
-      .dc-calling-inner { display: flex; flex-direction: column; align-items: center; padding: 40px 32px; text-align: center; }
-      .dc-calling-avatar { width: 96px; height: 96px; border-radius: 50%; background: rgba(255,255,255,0.15); border: 3px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 800; color: white; margin-bottom: 20px; box-shadow: 0 0 0 0 rgba(255,255,255,0.4); animation: dc-avatar-pulse 2s infinite; }
-      @keyframes dc-avatar-pulse { 0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.35); } 70% { box-shadow: 0 0 0 20px rgba(255,255,255,0); } 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); } }
-      .dc-calling-name { font-size: 26px; font-weight: 800; color: white; margin-bottom: 6px; }
-      .dc-calling-phone { font-size: 15px; color: rgba(255,255,255,0.7); margin-bottom: 24px; letter-spacing: 0.5px; }
-      .dc-calling-status { display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.85); font-size: 14px; font-weight: 600; margin-bottom: 16px; }
-      .dc-calling-dot { width: 7px; height: 7px; border-radius: 50%; background: #6ee7b7; display: inline-block; animation: dc-dot-bounce 1.2s infinite ease-in-out; }
-      .dc-calling-dot:nth-child(2) { animation-delay: 0.2s; }
-      .dc-calling-dot:nth-child(3) { animation-delay: 0.4s; }
-      @keyframes dc-dot-bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
-      .dc-calling-hint { font-size: 13px; color: rgba(255,255,255,0.55); margin-bottom: 36px; line-height: 1.6; }
-      .dc-call-ended-btn { background: #059669; color: white; border: none; border-radius: 50px; padding: 18px 36px; font-size: 17px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 24px rgba(5,150,105,0.45); transition: transform .15s, box-shadow .15s; width: 100%; max-width: 320px; margin-bottom: 14px; }
-      .dc-call-ended-btn:active { transform: scale(0.97); box-shadow: 0 3px 12px rgba(5,150,105,0.3); }
-      .dc-calling-cancel-btn { background: transparent; color: rgba(255,255,255,0.45); border: 1px solid rgba(255,255,255,0.2); border-radius: 30px; padding: 10px 28px; font-size: 13px; font-weight: 600; cursor: pointer; transition: color .15s; }
-      .dc-calling-cancel-btn:active { color: rgba(255,255,255,0.8); }
+      /* ── Active-Call Workspace (Non-blocking rich context) ────────────────── */
+      #dc-calling-screen { position: fixed; inset: 0; z-index: 10000; background: #f8fafc; display: flex; flex-direction: column; overflow: hidden; }
+      .dc-active-call-workspace { width: 100%; height: 100%; display: flex; flex-direction: column; background: #f1f5f9; }
+      .dc-call-workspace-header { position: sticky; top: 0; left: 0; right: 0; height: 68px; background: #0f172a; color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.2); z-index: 10; flex-shrink: 0; }
+      .dc-cwh-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+      .dc-cwh-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #0284c7, #0369a1); display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; color: white; flex-shrink: 0; box-shadow: 0 2px 6px rgba(2,132,199,0.4); }
+      .dc-cwh-info { min-width: 0; }
+      .dc-cwh-name { font-size: 14px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+      .dc-cwh-phone { font-size: 11px; color: rgba(255,255,255,0.7); letter-spacing: 0.3px; margin-top: 2px; }
+      .dc-cwh-center { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 0 8px; flex-shrink: 0; }
+      .dc-cwh-status-badge { display: flex; align-items: center; gap: 5px; background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.4); border-radius: 20px; padding: 2px 8px; font-size: 11px; font-weight: 700; color: #34d399; font-variant-numeric: tabular-nums; }
+      .dc-cwh-pulse-dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; animation: dc-dot-bounce 1.2s infinite ease-in-out; }
+      .dc-cwh-method-tag { font-size: 10px; color: rgba(255,255,255,0.6); font-weight: 600; }
+      .dc-cwh-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+      .dc-cwh-end-btn { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; border-radius: 10px; padding: 8px 12px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(239,68,68,0.4); }
+      .dc-cwh-end-btn:active { transform: scale(0.96); }
+      .dc-cwh-notice { padding: 8px 12px; border-radius: 10px; font-size: 12px; line-height: 1.4; margin-bottom: 2px; }
+      .dc-cwh-notice.myop { background: #faf5ff; border: 1px solid #e9d5ff; color: #6b21a8; }
+      .dc-call-workspace-body { flex: 1; overflow-y: auto; padding: 14px 16px 80px; display: flex; flex-direction: column; gap: 12px; }
+      .dc-call-card { background: white; border-radius: 14px; padding: 14px 16px; border: 1px solid #e2e8f0; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
+      .dc-call-card.highlight { border-color: #38bdf8; background: #f0f9ff; box-shadow: 0 2px 10px rgba(14,165,233,0.12); }
+      .dc-call-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+      .dc-call-card-title { font-size: 13px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px; }
+      .dc-call-cat-badge { background: #e0f2fe; color: #0369a1; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 8px; }
+      .dc-live-tag { background: #0284c7; color: white; font-size: 9px; font-weight: 800; border-radius: 4px; padding: 2px 6px; letter-spacing: 0.5px; }
+      .dc-call-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+      .dc-call-grid-item { display: flex; flex-direction: column; gap: 2px; }
+      .dc-call-label { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+      .dc-call-val { font-size: 13px; color: #1e293b; }
+      .dc-call-field { margin-top: 8px; }
+      .dc-call-desc { font-size: 13px; color: #334155; line-height: 1.4; background: #f8fafc; border-radius: 8px; padding: 8px 10px; border: 1px solid #f1f5f9; }
+      .dc-call-input-label { display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 4px; }
+      .dc-incall-select { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: white; font-size: 13px; font-weight: 600; color: #1e293b; box-sizing: border-box; }
+      .dc-incall-outcome-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 6px; }
+      .dc-incall-outcome-btn { padding: 7px 4px; border: 1px solid #cbd5e1; border-radius: 8px; background: white; font-size: 11px; font-weight: 600; color: #475569; cursor: pointer; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .dc-incall-outcome-btn.selected { background: #0ea5e9; color: white; border-color: #0ea5e9; font-weight: 700; }
+      .dc-incall-textarea { width: 100%; border-radius: 8px; border: 1.5px solid #cbd5e1; background: white; padding: 8px 10px; font-size: 13px; color: #1e293b; box-sizing: border-box; resize: none; font-family: inherit; }
+      .dc-incall-history-list { display: flex; flex-direction: column; gap: 8px; }
+      .dc-incall-history-row { padding: 6px 0; border-bottom: 1px solid #f1f5f9; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+      .dc-incall-pill { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 6px; text-transform: capitalize; }
+      .dc-incall-date { font-size: 11px; color: #64748b; }
+      .dc-incall-dur { font-size: 11px; color: #94a3b8; margin-left: auto; }
+      .dc-incall-note-text { width: 100%; font-size: 12px; color: #475569; font-style: italic; margin-top: 2px; }
+      .dc-incall-note-row { padding: 4px 0; border-bottom: 1px solid #f8fafc; font-size: 12px; color: #334155; }
+      .dc-incall-note-val { margin-left: 6px; }
+      .dc-call-actions-card { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+      .dc-call-ended-btn { background: #059669; color: white; border: none; border-radius: 12px; padding: 14px 24px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 14px rgba(5,150,105,0.35); transition: transform .15s, box-shadow .15s; width: 100%; text-align: center; }
+      .dc-call-ended-btn:active { transform: scale(0.98); box-shadow: 0 2px 8px rgba(5,150,105,0.25); }
+      .dc-calling-cancel-btn { background: transparent; color: #64748b; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; }
+      .dc-calling-cancel-btn:active { background: #f8fafc; color: #1e293b; }
 
       /* ── Lead Detail Bottom-Sheet ────────────────────────────────────────────── */
       #dc-lead-detail-sheet { position: fixed; inset: 0; z-index: 20000; display: flex; flex-direction: column; justify-content: flex-end; }

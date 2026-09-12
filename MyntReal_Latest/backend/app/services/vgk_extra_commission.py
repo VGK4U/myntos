@@ -101,11 +101,11 @@ def apply_extra_commission_if_active(
                 submit_dt = getattr(lead, 'submit_date', None)
                 first_pmt_dt = getattr(lead, 'first_payment_received_date', None)
                 
-                # Check date based on trigger type
+                # Check date based on trigger type: strictly event-aligned dates only
                 if trig == 'first_payment':
-                    check_dt = first_pmt_dt
+                    check_dt = first_pmt_dt or getattr(lead, 'first_dvr_confirmed_at', None)
                 else:
-                    check_dt = submit_dt
+                    check_dt = submit_dt or getattr(lead, 'solar_pipeline_status_updated_at', None)
 
                 if not check_dt:
                     return False

@@ -4,6 +4,7 @@ Reusable OTP generation, WhatsApp delivery, and token lifecycle for pre-registra
 Purposes: 'vgk_signup', 'vgk_staff_add', 'mnr_register', 'vgk_walkin'
 """
 import random
+import re
 import string
 import uuid
 import logging
@@ -19,6 +20,24 @@ logger = logging.getLogger(__name__)
 OTP_EXPIRE_MINUTES = 10
 TOKEN_EXPIRE_MINUTES = 15
 VGK_MENTOR_BYPASS_CODE = 'MR10001'
+
+
+def normalize_phone_10(phone: Optional[str]) -> str:
+    """
+    Standardize Indian mobile phone numbers to a clean 10-digit format.
+    Strips non-digit characters, leading +91, 91 (if length 12), and leading 0 (if length 11).
+    Returns a 10-digit string if valid, otherwise empty string.
+    """
+    if not phone:
+        return ""
+    digits = re.sub(r'\D', '', str(phone).strip())
+    if len(digits) == 12 and digits.startswith('91'):
+        digits = digits[2:]
+    elif len(digits) == 11 and digits.startswith('0'):
+        digits = digits[1:]
+    elif len(digits) > 10:
+        digits = digits[-10:]
+    return digits if len(digits) == 10 else ""
 
 
 def _get_indian_time():

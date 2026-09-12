@@ -215,32 +215,63 @@ async def register_community(
     from decimal import Decimal
     from app.core.security import SecurityManager
     from app.api.v1.endpoints.vgk_team import _next_vgk_partner_code
+    from app.utils.phone_otp import normalize_phone_10
     
-    raw_password = "".join(random.choices(string.ascii_letters + string.digits, k=8))
-    password_hash = SecurityManager.get_password_hash(raw_password)
-    
-    company_id = 1
-    partner_code = _next_vgk_partner_code(db, company_id)
-    
-    partner = OfficialPartner(
-        company_id=company_id,
-        partner_code=partner_code,
-        partner_name=primary_name,
-        phone=primary_phone_1,
-        email=None,
-        category='VGK_TEAM',
-        is_active=False, # Inactive upon initial signup
-        vgk_role='COMMUNITY',
-        parent_partner_id=ref1_member_id if referral_type == 'vgk_member' else None,
-        registered_by_emp_code=referral_code if referral_type == 'staff' else None,
-        vgk_points_balance=Decimal('0'),
-        password_hash=password_hash,
-        created_at=get_indian_time(),
-        updated_at=get_indian_time()
-    )
-    db.add(partner)
-    db.commit()
-    db.refresh(partner)
+    clean_phone = normalize_phone_10(primary_phone_1) or primary_phone_1.strip()
+
+    # Check if a VGK member with this phone already exists
+    existing_partner = db.query(OfficialPartner).filter(
+        OfficialPartner.category == 'VGK_TEAM',
+        or_(
+            OfficialPartner.phone == clean_phone,
+            OfficialPartner.phone == primary_phone_1.strip()
+        )
+    ).first()
+
+    if existing_partner:
+        partner = existing_partner
+        partner_code = existing_partner.partner_code
+        # Ensure clean phone is updated if it had whitespace
+        if clean_phone and existing_partner.phone != clean_phone:
+            existing_partner.phone = clean_phone
+            db.commit()
+    else:
+        raw_password = "".join(random.choices(string.ascii_letters + string.digits, k=8))
+        password_hash = SecurityManager.get_password_hash(raw_password)
+        
+        company_id = 1
+        partner_code = _next_vgk_partner_code(db, company_id)
+
+        # Resolve default root upline and reg_by
+        VGK_DEFAULT_ROOT = 'VGK07102207'
+        default_root = db.query(OfficialPartner).filter(
+            OfficialPartner.partner_code == VGK_DEFAULT_ROOT,
+            OfficialPartner.category == 'VGK_TEAM'
+        ).first()
+        default_root_id = default_root.id if default_root else None
+
+        parent_id = ref1_member_id if referral_type == 'vgk_member' and ref1_member_id else default_root_id
+        reg_by = referral_code.strip().upper() if referral_type == 'staff' and referral_code else VGK_DEFAULT_ROOT
+
+        partner = OfficialPartner(
+            company_id=company_id,
+            partner_code=partner_code,
+            partner_name=primary_name,
+            phone=clean_phone,
+            email=None,
+            category='VGK_TEAM',
+            is_active=False, # Inactive upon initial signup
+            vgk_role='COMMUNITY',
+            parent_partner_id=parent_id,
+            registered_by_emp_code=reg_by,
+            vgk_points_balance=Decimal('0'),
+            password_hash=password_hash,
+            created_at=get_indian_time(),
+            updated_at=get_indian_time()
+        )
+        db.add(partner)
+        db.commit()
+        db.refresh(partner)
     
     reg.user_id = partner.id
     db.commit()
@@ -1277,17 +1308,45 @@ def approve_registration_endpoint(reg_id: int, db: Session = Depends(get_db), cu
     partner = None
     if reg.user_id:
         partner = db.query(OfficialPartner).filter(OfficialPartner.id == reg.user_id).first()
-        
+
+    from app.utils.phone_otp import normalize_phone_10
+    clean_phone = normalize_phone_10(reg.primary_phone_1) or (reg.primary_phone_1 or '').strip()
+
+    if not partner and clean_phone:
+        partner = db.query(OfficialPartner).filter(
+            OfficialPartner.category == 'VGK_TEAM',
+            or_(
+                OfficialPartner.phone == clean_phone,
+                OfficialPartner.phone == (reg.primary_phone_1 or '').strip()
+            )
+        ).first()
+        if partner:
+            reg.user_id = partner.id
+
     raw_password = "".join(random.choices(string.ascii_letters + string.digits, k=8))
     password_hash = SecurityManager.get_password_hash(raw_password)
-    
+
+    VGK_DEFAULT_ROOT = 'VGK07102207'
+    default_root = db.query(OfficialPartner).filter(
+        OfficialPartner.partner_code == VGK_DEFAULT_ROOT,
+        OfficialPartner.category == 'VGK_TEAM'
+    ).first()
+    default_root_id = default_root.id if default_root else None
+
+    parent_id = reg.ref1_member_id if reg.referral_type == 'vgk_member' and reg.ref1_member_id else default_root_id
+    reg_by = reg.referral_code.strip().upper() if reg.referral_type == 'staff' and reg.referral_code else VGK_DEFAULT_ROOT
+
     if partner:
         # Activate and refresh password
         partner.is_active = True
         partner.password_hash = password_hash
         partner_code = partner.partner_code
-        partner.parent_partner_id = reg.ref1_member_id if reg.referral_type == 'vgk_member' else None
-        partner.registered_by_emp_code = reg.referral_code if reg.referral_type == 'staff' else None
+        if not partner.parent_partner_id:
+            partner.parent_partner_id = parent_id
+        if not partner.registered_by_emp_code:
+            partner.registered_by_emp_code = reg_by
+        if clean_phone and partner.phone != clean_phone:
+            partner.phone = clean_phone
         db.commit()
     else:
         # Create new partner (fallback)
@@ -1298,13 +1357,13 @@ def approve_registration_endpoint(reg_id: int, db: Session = Depends(get_db), cu
             company_id=company_id,
             partner_code=partner_code,
             partner_name=reg.primary_name,
-            phone=reg.primary_phone_1,
+            phone=clean_phone,
             email=None,
             category='VGK_TEAM',
             is_active=True,
             vgk_role='COMMUNITY',
-            parent_partner_id=reg.ref1_member_id if reg.referral_type == 'vgk_member' else None,
-            registered_by_emp_code=reg.referral_code if reg.referral_type == 'staff' else None,
+            parent_partner_id=parent_id,
+            registered_by_emp_code=reg_by,
             vgk_points_balance=Decimal('0'),
             password_hash=password_hash,
             created_at=get_indian_time(),

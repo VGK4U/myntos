@@ -16771,6 +16771,39 @@ async def serve_whatsapp_qr_data():
     return JSONResponse(content={"status": "disconnected", "qr": None, "qr_url": None, "message": "WhatsApp Bot gateway offline"}, status_code=200)
 
 
+@app.post("/api/reconnect", include_in_schema=False)
+@app.post("/api/reclaim", include_in_schema=False)
+async def proxy_whatsapp_reconnect():
+    from fastapi.responses import JSONResponse
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.post("http://127.0.0.1:5002/api/reconnect")
+            try:
+                data = resp.json()
+            except Exception:
+                data = {"success": resp.status_code == 200, "status": resp.status_code}
+            return JSONResponse(content=data, status_code=resp.status_code)
+    except Exception as e:
+        return JSONResponse(content={"success": False, "error": f"Gateway unreachable: {str(e)}"}, status_code=502)
+
+
+@app.post("/api/logout", include_in_schema=False)
+async def proxy_whatsapp_logout():
+    from fastapi.responses import JSONResponse
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.post("http://127.0.0.1:5002/api/logout")
+            try:
+                data = resp.json()
+            except Exception:
+                data = {"success": resp.status_code == 200, "status": resp.status_code}
+            return JSONResponse(content=data, status_code=resp.status_code)
+    except Exception as e:
+        return JSONResponse(content={"success": False, "error": f"Gateway unreachable: {str(e)}"}, status_code=502)
+
+
 
 @app.get("/mobile.apk", include_in_schema=False)
 @app.get("/mobile.app", include_in_schema=False)
@@ -17182,9 +17215,13 @@ async def serve_storage_file(request: Request, file_path: str):
         while clean_file_path.startswith('storage/'):
             clean_file_path = clean_file_path[len('storage/'):]
         local_storage_root = Path(__file__).parent.parent.parent / "frontend" / "storage"
+        backend_storage_root = Path(__file__).parent.parent / "storage"
         rel_upload_path = clean_file_path[len("uploads/"):] if clean_file_path.startswith("uploads/") else clean_file_path
         
         local_candidates = [
+            backend_storage_root / clean_file_path,
+            backend_storage_root / "private" / clean_file_path,
+            backend_storage_root / "public" / clean_file_path,
             local_storage_root / clean_file_path,
             local_storage_root / "private" / clean_file_path,
             local_storage_root / "public" / clean_file_path,
@@ -17197,6 +17234,7 @@ async def serve_storage_file(request: Request, file_path: str):
         if clean_file_path.startswith("private/"):
             unpref = clean_file_path[len("private/"):]
             local_candidates.extend([
+                backend_storage_root / unpref,
                 local_storage_root / unpref,
                 Path(UPLOADS_DIR) / unpref,
                 Path(__file__).parent.parent / unpref,
@@ -17204,6 +17242,7 @@ async def serve_storage_file(request: Request, file_path: str):
         elif clean_file_path.startswith("public/"):
             unpref = clean_file_path[len("public/"):]
             local_candidates.extend([
+                backend_storage_root / unpref,
                 local_storage_root / unpref,
                 Path(UPLOADS_DIR) / unpref,
                 Path(__file__).parent.parent / unpref,

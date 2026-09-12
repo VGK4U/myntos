@@ -118,12 +118,24 @@ def check_and_create_advance(db: Session, lead_id: int, bypass_cibil: bool = Fal
         now = _get_ist()
         created_numbers = []
 
+        # Resolve L2 Senior Upliner: lead.team_senior_partner_id with fallback to official_partners.parent_partner_id
+        l2_partner_id = getattr(lead, 'team_senior_partner_id', None)
+        if not l2_partner_id and l1_partner_id:
+            try:
+                _p_row = db.execute(text(
+                    "SELECT parent_partner_id FROM official_partners WHERE id = :pid"
+                ), {'pid': l1_partner_id}).fetchone()
+                if _p_row and _p_row.parent_partner_id:
+                    l2_partner_id = _p_row.parent_partner_id
+            except Exception as _p_err:
+                logger.debug(f"[VGK-SOLAR-ADV] L2 parent lookup failed: {_p_err}")
+
         # Advance tiers: (level, partner_id, amount)
         tiers = []
         if l1_partner_id:
             tiers.append((1, l1_partner_id, ADVANCE_AMOUNT))
-        if lead.team_senior_partner_id:
-            tiers.append((2, lead.team_senior_partner_id, L2_ADVANCE_AMOUNT))
+        if l2_partner_id:
+            tiers.append((2, l2_partner_id, L2_ADVANCE_AMOUNT))
 
         for (level, partner_id, amount) in tiers:
             # Idempotency: one advance per (lead, level, kind='ADVANCE')
@@ -188,6 +200,26 @@ def check_and_create_advance(db: Session, lead_id: int, bypass_cibil: bool = Fal
             created_numbers.append(entry_number)
 
         if created_numbers:
+            # DC-BONANZA-STAGE1-HOOK-001 (Sep 2026): Fire file_submitted extra commission & award triggers
+            # on Stage 1 CIBIL advance creation. Runs once per qualified file. Idempotency guarded.
+            try:
+                from app.services.vgk_extra_commission import apply_extra_commission_if_active as _ec_stage1
+                _ec_stage1(db, lead, 'file_submitted')
+            except Exception as _ec_err:
+                logger.warning(f'[VGK-SOLAR-ADV] Bonanza extra commission hook failed for lead {lead_id}: {_ec_err}')
+
+            try:
+                from app.services.vgk_award_trigger import apply_award_gift_trigger_if_active as _at_stage1
+                _at_stage1(db, lead, 'file_submitted')
+            except Exception as _at_err:
+                logger.warning(f'[VGK-SOLAR-ADV] Bonanza award trigger hook failed for lead {lead_id}: {_at_err}')
+
+            try:
+                from app.services.vgk_cash_bonus_trigger import apply_cash_bonus_trigger_if_active as _cb_stage1
+                _cb_stage1(db, lead, 'file_submitted')
+            except Exception as _cb_err:
+                logger.warning(f'[VGK-SOLAR-ADV] Bonanza cash bonus hook failed for lead {lead_id}: {_cb_err}')
+
             return {'created': True, 'entry_numbers': created_numbers}
         return {'created': False, 'reason': 'All advances already existed'}
 
@@ -257,9 +289,22 @@ def check_and_create_dvr_advance(db: Session, lead_id: int) -> dict:
         if hasattr(first_dvr_at, 'tzinfo') and first_dvr_at.tzinfo is not None:
             first_dvr_at = first_dvr_at.replace(tzinfo=None)
 
-        tiers = [(1, lead.associated_partner_id, DVR_L1_AMOUNT)]
-        if lead.team_senior_partner_id:
-            tiers.append((2, lead.team_senior_partner_id, DVR_L2_AMOUNT))
+        l1_partner_id = lead.associated_partner_id
+        # Resolve L2 Senior Upliner: lead.team_senior_partner_id with fallback to official_partners.parent_partner_id
+        l2_partner_id = lead.team_senior_partner_id
+        if not l2_partner_id and l1_partner_id:
+            try:
+                _p_row = db.execute(text(
+                    "SELECT parent_partner_id FROM official_partners WHERE id = :pid"
+                ), {'pid': l1_partner_id}).fetchone()
+                if _p_row and _p_row.parent_partner_id:
+                    l2_partner_id = _p_row.parent_partner_id
+            except Exception as _p_err:
+                logger.debug(f"[DVR-ADV] L2 parent lookup failed: {_p_err}")
+
+        tiers = [(1, l1_partner_id, DVR_L1_AMOUNT)]
+        if l2_partner_id:
+            tiers.append((2, l2_partner_id, DVR_L2_AMOUNT))
         if lead.vgk_field_support_id:
             tiers.append((5, lead.vgk_field_support_id, DVR_L5_AMOUNT))
 

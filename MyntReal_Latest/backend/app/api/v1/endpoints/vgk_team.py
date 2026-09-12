@@ -59,16 +59,13 @@ def _is_vgk_admin(user: StaffEmployee) -> bool:
     """Check if user has administrative authority over VGK partner assignments & configurations."""
     if not user:
         return False
-    emp = (getattr(user, 'emp_code', '') or '').upper()
-    if emp in ('MR10001', 'MR10016'):
-        return True
     st = (getattr(user, 'staff_type', '') or '').upper()
-    if 'VGK' in st or st == 'EA':
+    if 'VGK' in st or st in ('EA', 'SUPER_ADMIN', 'ADMIN', 'TENANT_ADMIN', 'MANAGEMENT'):
         return True
     role = getattr(user, 'role', None)
     if role:
         rcode = (getattr(role, 'role_code', '') or '').lower()
-        if rcode in ('vgk4u', 'ea', 'super_admin', 'key_leadership', 'director', 'tenant_admin'):
+        if rcode in ('vgk4u', 'ea', 'super_admin', 'key_leadership', 'director', 'tenant_admin', 'leadership_role'):
             return True
         if getattr(role, 'hierarchy_level', 0) >= 85:
             return True
@@ -78,14 +75,11 @@ def _is_vgk_admin(user: StaffEmployee) -> bool:
 def _has_full_vgk_visibility(user: StaffEmployee) -> bool:
     """
     Check if user is permitted to see all VGK members across the platform.
-    MR10001, Yashwant (MR10016), Poojitha (MN10016), and VGK Leadership have full visibility.
-    Ordinary staff are restricted to their assigned members.
+    VGK Leadership / Admin / EA have full visibility.
+    Ordinary staff are restricted to their assigned members (or unassigned members they registered).
     """
     if not user:
         return False
-    emp = (getattr(user, 'emp_code', '') or '').upper()
-    if emp in ('MR10001', 'MR10016', 'MN10016'):
-        return True
     return _is_vgk_admin(user)
 
 
@@ -370,7 +364,7 @@ def list_vgk_members(
     reg_period: Optional[str] = Query(None, description="today|yesterday|week|mtd"),
     reg_from: Optional[str] = Query(None, description="YYYY-MM-DD registered from"),
     reg_to: Optional[str] = Query(None, description="YYYY-MM-DD registered to"),
-    sort_by: Optional[str] = Query(None, description="registered|last_login|login_count|name|code|downline_count|src_revenue|leads_total|leads_won|leads_lost|registered_by"),
+    sort_by: Optional[str] = Query(None, description="registered|last_login|login_count|name|code|downline_count|src_revenue|leads_total|leads_won|leads_lost|registered_by|last_contact_at"),
     sort_dir: Optional[str] = Query("desc", description="asc|desc"),
     designation_tier: Optional[str] = Query(None, description="none|channel_partner|sr_channel_partner|official_partner"),
     # [DC-VGK-STAFF-REG-001] Filter by registering staff emp code
@@ -385,6 +379,8 @@ def list_vgk_members(
     db: Session = Depends(get_db)
 ):
     from datetime import date, timedelta
+    page = int(page) if isinstance(page, (int, str)) and str(page).isdigit() else 1
+    page_size = int(page_size) if isinstance(page_size, (int, str)) and str(page_size).isdigit() else 25
     query = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
 
     # [DC-VGK-RBAC-001] Role-based member visibility: Ordinary staff are restricted to assigned members
@@ -395,8 +391,10 @@ def list_vgk_members(
         ))
 
     # [DC-VGK-ASSIGN-001] Filter by assigned staff ID
-    if assigned_staff_id is not None:
+    if isinstance(assigned_staff_id, int):
         query = query.filter(OfficialPartner.assigned_staff_id == assigned_staff_id)
+    elif isinstance(assigned_staff_id, str) and assigned_staff_id.isdigit():
+        query = query.filter(OfficialPartner.assigned_staff_id == int(assigned_staff_id))
 
     # [DC-VGK-CONTACT-DAYS-001] Filter by contacted calendar days
     if isinstance(contacted_days, str) and contacted_days.strip():
@@ -476,12 +474,14 @@ def list_vgk_members(
             query = query.filter(OfficialPartner.parent_partner_id.in_(_ref_ids))
         else:
             query = query.filter(OfficialPartner.parent_partner_id == -1)
-    # [DC-VGK-STAFF-REG-001] Filter by registering staff emp_code OR full_name
+    # [DC-VGK-STAFF-REG-001] Filter by registering staff emp_code OR full_name / partner_code OR partner_name
     if isinstance(registered_by_emp_code, str) and registered_by_emp_code.strip():
         _rbq = registered_by_emp_code.strip()
         try:
             _matched = db.execute(text(
-                "SELECT emp_code FROM staff_employees WHERE UPPER(emp_code) = :code OR full_name ILIKE :name"
+                "SELECT emp_code FROM staff_employees WHERE UPPER(emp_code) = :code OR full_name ILIKE :name "
+                "UNION "
+                "SELECT partner_code FROM official_partners WHERE UPPER(partner_code) = :code OR partner_name ILIKE :name"
             ), {"code": _rbq.upper(), "name": f"%{_rbq}%"}).fetchall()
             _matched_codes = [r[0] for r in _matched]
         except Exception:
@@ -538,8 +538,10 @@ def list_vgk_members(
         _sort_col = OfficialPartner.partner_name
     elif _sb_str == 'code':
         _sort_col = OfficialPartner.partner_code
-    elif sort_by == 'registered_by':   # [DC-VGK-STAFF-REG-001]
+    elif _sb_str == 'registered_by':   # [DC-VGK-STAFF-REG-001]
         _sort_col = OfficialPartner.registered_by_emp_code
+    elif _sb_str in ('last_contact_at', 'contacted', 'contacted_days'):
+        _sort_col = OfficialPartner.last_contact_at
     _order = _sort_col.asc() if sort_dir == 'asc' else _sort_col.desc()
     total = query.count()
     if _needs_full_fetch:
@@ -904,7 +906,6 @@ def list_vgk_members(
             pass
 
     is_admin = _is_vgk_admin(current_user)
-    is_poojitha = (getattr(current_user, 'emp_code', '') or '').upper() == 'MN10016'
     today_ist = get_indian_time().date()
 
     for d in items:
@@ -952,9 +953,9 @@ def list_vgk_members(
             d['member_status'] = 'INACTIVE'
             d['status_label'] = 'Inactive'
 
-        # Authoritative UI capability flags
-        d['can_edit_assignment'] = is_admin and not is_poojitha
-        d['can_edit_status'] = (is_admin or (as_id == current_user.id)) and not is_poojitha
+        # Authoritative UI capability flags (pure role & assignment based)
+        d['can_edit_assignment'] = is_admin
+        d['can_edit_status'] = is_admin or (as_id == current_user.id)
 
     return {"success": True, "total": total, "page": page, "page_size": page_size, "data": items, "members": items}
 
@@ -1001,14 +1002,13 @@ def assign_vgk_member(
 ):
     """
     Manually assign a VGK Channel Partner to a staff employee.
-    Authorization: MR10001, Yashwant (MR10016), or VGK Admin/Leadership only.
-    Poojitha (MN10016) and Ordinary Staff are strictly forbidden (HTTP 403).
+    Authorization: VGK Mentors, EA, and Leadership only.
+    Ordinary staff are strictly forbidden (HTTP 403).
     """
-    emp = (getattr(current_user, 'emp_code', '') or '').upper()
-    if emp == 'MN10016' or not _is_vgk_admin(current_user):
+    if not _is_vgk_admin(current_user):
         raise HTTPException(
             status_code=403,
-            detail="Forbidden: Only MR10001 and Yashwant (VGK Mentors/EA) have permission to assign members."
+            detail="Forbidden: Only VGK Mentors, Executive Assistants, and Leadership have permission to assign members."
         )
 
     member = db.query(OfficialPartner).filter(
@@ -1077,14 +1077,9 @@ def update_vgk_member_status(
     """
     Update Active/Inactive/Blocked status of a VGK Channel Partner.
     Authorization:
-    - MR10001, Yashwant (MR10016), VGK Leadership: Can toggle any member.
+    - VGK Admin / EA / Leadership: Can toggle any member.
     - Ordinary staff: Can toggle only for their assigned members.
-    - Poojitha (MN10016): Strictly read-only (HTTP 403).
     """
-    emp = (getattr(current_user, 'emp_code', '') or '').upper()
-    if emp == 'MN10016':
-        raise HTTPException(status_code=403, detail="Forbidden: Poojitha account is read-only for status changes.")
-
     member = db.query(OfficialPartner).filter(
         OfficialPartner.id == member_id,
         OfficialPartner.category == 'VGK_TEAM'
@@ -1329,9 +1324,12 @@ def get_vgk_communication_history(
                 "id": f"scl_{r[0]}",
                 "type": "call",
                 "channel": "Mobile / Staff Phone",
+                "source": "Mobile Call Log",
                 "timestamp": dt.isoformat() if dt else None,
                 "direction": direction,
                 "staff_name": r[6] or r[7] or 'Staff',
+                "staff_emp_code": r[7] or '',
+                "duration": dur,
                 "duration_seconds": dur,
                 "status": status,
                 "has_recording": has_rec,
@@ -1367,9 +1365,12 @@ def get_vgk_communication_history(
                 "id": f"vcs_{r[0]}",
                 "type": "call",
                 "channel": "Web Softphone",
+                "source": "Web Softphone",
                 "timestamp": dt.isoformat() if dt else None,
                 "direction": direction,
                 "staff_name": r[6] or r[7] or 'Staff',
+                "staff_emp_code": r[7] or '',
+                "duration": dur,
                 "duration_seconds": dur,
                 "status": c_status,
                 "has_recording": has_rec,
@@ -1521,16 +1522,20 @@ def create_vgk_member(
     current_user: StaffEmployee = Depends(require_vgk_admin),
     db: Session = Depends(get_db)
 ):
-    from app.utils.phone_otp import VGK_MENTOR_BYPASS_CODE
+    from app.utils.phone_otp import VGK_MENTOR_BYPASS_CODE, normalize_phone_10
     company_id = _get_staff_company_id(current_user)
-    phone = payload.phone.strip()
+    raw_phone = payload.phone.strip()
+    phone = normalize_phone_10(raw_phone) or raw_phone
 
     existing = db.query(OfficialPartner).filter(
-        OfficialPartner.phone == phone,
-        OfficialPartner.category == 'VGK_TEAM'
+        OfficialPartner.category == 'VGK_TEAM',
+        or_(
+            OfficialPartner.phone == phone,
+            OfficialPartner.phone == raw_phone
+        )
     ).first()
     if existing:
-        raise HTTPException(status_code=400, detail="VGK member with this phone already exists")
+        raise HTTPException(status_code=400, detail=f"VGK member with this mobile number already exists: {existing.partner_code}")
 
     # [DC-PHONE-OTP-001] OTP verification is OPTIONAL
     phone_verified = False
@@ -1583,11 +1588,12 @@ def create_vgk_member(
     if _ln: member.last_name  = _ln
     if _t:  member.name_title = _t
     if payload.gender: member.gender = payload.gender.strip()
-    # [DC-VGK-STAFF-REG-001] Auto-fill registering staff emp_code (payload overrides, else use current_user)
+    # [DC-VGK-STAFF-REG-001] Auto-fill registering staff emp_code (payload overrides, else use current_user, else default root)
+    VGK_DEFAULT_ROOT = 'VGK07102207'
     _reg_emp = ((payload.registered_by_emp_code or '').strip().upper() or
-                (getattr(current_user, 'emp_code', '') or '').strip().upper())
-    if _reg_emp:
-        member.registered_by_emp_code = _reg_emp
+                (getattr(current_user, 'emp_code', '') or '').strip().upper() or
+                VGK_DEFAULT_ROOT)
+    member.registered_by_emp_code = _reg_emp
     db.add(member)
     db.commit()
     db.refresh(member)
@@ -4968,30 +4974,32 @@ def vgk_executive_dashboard(
         if is_filtered:
             emp_reg_rows = db.execute(text("""
                 SELECT op.registered_by_emp_code,
-                       se.full_name,
+                       COALESCE(se.full_name, op_ref.partner_name, op.registered_by_emp_code) AS full_name,
                        COUNT(*) AS total,
                        COUNT(*) FILTER (WHERE op.is_active = true) AS active_count,
                        COUNT(*) FILTER (WHERE op.is_active = false) AS inactive_count
                 FROM official_partners op
                 LEFT JOIN staff_employees se ON se.emp_code = op.registered_by_emp_code
+                LEFT JOIN official_partners op_ref ON op_ref.partner_code = op.registered_by_emp_code
                 WHERE op.category = 'VGK_TEAM'
                   AND op.registered_by_emp_code IS NOT NULL
                   AND op.created_at >= :from_d AND op.created_at <= :to_d
-                GROUP BY op.registered_by_emp_code, se.full_name
+                GROUP BY op.registered_by_emp_code, se.full_name, op_ref.partner_name
                 ORDER BY total DESC
             """), {"from_d": from_d, "to_d": to_d}).fetchall()
         else:
             emp_reg_rows = db.execute(text("""
                 SELECT op.registered_by_emp_code,
-                       se.full_name,
+                       COALESCE(se.full_name, op_ref.partner_name, op.registered_by_emp_code) AS full_name,
                        COUNT(*) AS total,
                        COUNT(*) FILTER (WHERE op.is_active = true) AS active_count,
                        COUNT(*) FILTER (WHERE op.is_active = false) AS inactive_count
                 FROM official_partners op
                 LEFT JOIN staff_employees se ON se.emp_code = op.registered_by_emp_code
+                LEFT JOIN official_partners op_ref ON op_ref.partner_code = op.registered_by_emp_code
                 WHERE op.category = 'VGK_TEAM'
                   AND op.registered_by_emp_code IS NOT NULL
-                GROUP BY op.registered_by_emp_code, se.full_name
+                GROUP BY op.registered_by_emp_code, se.full_name, op_ref.partner_name
                 ORDER BY total DESC
             """)).fetchall()
         employee_registrations = [
@@ -5248,7 +5256,7 @@ def member_earnings_dashboard(
 
                 # 2. Non-cancelled metrics
                 if st != 'CANCELLED':
-                    lv = int(lv_raw or 1)
+                    lv = int(lv_raw) if lv_raw is not None else 1
                     if pid not in lvl_map:
                         lvl_map[pid] = {}
                     lv_entry = lvl_map[pid].setdefault(lv, {"count": 0, "amount": 0.0, "net_amount": 0.0})
@@ -5277,7 +5285,7 @@ def member_earnings_dashboard(
         except Exception as e:
             print("[MEMBER_EARN_AGG_ERR]", e)
 
-    # Bulk: registered_by names
+    # Bulk: registered_by names (checks staff_employees and official_partners)
     emp_codes = list({m.registered_by_emp_code for m in members if m.registered_by_emp_code})
     emp_name_map: dict = {}
     if emp_codes:
@@ -5288,58 +5296,64 @@ def member_earnings_dashboard(
             emp_name_map = {r[0]: r[1] for r in rows}
         except Exception:
             pass
+        try:
+            op_rows = db.execute(text(
+                "SELECT partner_code, partner_name FROM official_partners WHERE partner_code = ANY(:codes)"
+            ), {"codes": emp_codes}).fetchall()
+            for r in op_rows:
+                if r[0] not in emp_name_map or not emp_name_map[r[0]]:
+                    emp_name_map[r[0]] = r[1]
+        except Exception:
+            pass
 
     # Bulk: Parent partner IDs
     parent_ids = list({m.parent_partner_id for m in members if m.parent_partner_id})
     
-    # Bulk: passport_photo from vgk_kyc_documents, kyc_document table, and official_partners logo_path for member & senior photos
+    # Bulk: passport_photo from kyc_document table, vgk_kyc_documents, and fallback to official_partners logo_path
     passport_photo_map: dict = {}
     all_photo_ids = list(set(member_ids + parent_ids))
     if all_photo_ids:
         try:
-            op_rows = db.execute(text(
-                "SELECT id, logo_path FROM official_partners WHERE id = ANY(:ids)"
+            # 1. Check kyc_document table by partner_id (document_type in passport_photo, profile_photo, photo, avatar, logo)
+            photo_rows = db.execute(text(
+                "SELECT DISTINCT ON (partner_id) partner_id, file_path, file_name "
+                "FROM kyc_document "
+                "WHERE partner_id = ANY(:ids) "
+                "AND document_type IN ('passport_photo', 'profile_photo', 'photo', 'avatar', 'logo') "
+                "AND ((file_path IS NOT NULL AND file_path != '') OR (file_name IS NOT NULL AND file_name != '')) "
+                "ORDER BY partner_id, "
+                "CASE WHEN status ILIKE 'approved' THEN 0 ELSE 1 END, "
+                "CASE WHEN document_type IN ('passport_photo', 'profile_photo', 'photo', 'avatar') THEN 0 ELSE 1 END, "
+                "uploaded_at DESC NULLS LAST"
             ), {"ids": all_photo_ids}).fetchall()
-            for opr in op_rows:
-                p_photo = opr[1]
-                if p_photo and str(p_photo).strip() not in ('', 'None', 'null'):
-                    passport_photo_map[int(opr[0])] = p_photo
-            # 1. Check vgk_kyc_documents table (profile_photo / passport_photo)
-            vgk_rows = db.execute(text(
-                "SELECT DISTINCT ON (partner_id) partner_id, file_path "
-                "FROM vgk_kyc_documents "
-                "WHERE partner_id = ANY(:ids) AND file_path IS NOT NULL AND file_path != '' "
-                "ORDER BY partner_id, uploaded_at DESC NULLS LAST"
-            ), {"ids": all_photo_ids}).fetchall()
-            for r in vgk_rows:
-                if r[0] and r[1]:
-                    passport_photo_map[int(r[0])] = r[1]
-            
-            # 2. Check kyc_document table by partner_id (document_type in passport_photo, profile_photo, photo, avatar, logo)
-            missing_ids = [pid for pid in all_photo_ids if pid not in passport_photo_map]
-            if missing_ids:
-                photo_rows = db.execute(text(
-                    "SELECT DISTINCT ON (partner_id) partner_id, file_path, file_name "
-                    "FROM kyc_document "
-                    "WHERE partner_id = ANY(:ids) "
-                    "AND document_type IN ('passport_photo', 'profile_photo', 'photo', 'avatar', 'logo') "
-                    "AND ((file_path IS NOT NULL AND file_path != '') OR (file_name IS NOT NULL AND file_name != '')) "
-                    "ORDER BY partner_id, CASE WHEN status ILIKE 'approved' THEN 0 ELSE 1 END, uploaded_at DESC NULLS LAST"
-                ), {"ids": missing_ids}).fetchall()
-                for r in photo_rows:
-                    if r[0]:
-                        pid_val = int(r[0])
-                        fp = r[1]
-                        fn = r[2]
-                        chosen = (f"kyc_documents/{fn}" if (fn and fn != 'pending' and '.' in fn and (not fp or not fp.endswith(fn))) else fp) or (f"kyc_documents/{fn}" if fn else None)
-                        if chosen:
-                            passport_photo_map[pid_val] = chosen
+            for r in photo_rows:
+                if r[0]:
+                    pid_val = int(r[0])
+                    fp = r[1]
+                    fn = r[2]
+                    chosen = (f"kyc_documents/{fn}" if (fn and fn != 'pending' and '.' in fn and (not fp or not fp.endswith(fn))) else fp) or (f"kyc_documents/{fn}" if fn else None)
+                    if chosen:
+                        passport_photo_map[pid_val] = chosen
+
+            # 2. Check vgk_kyc_documents table (profile_photo / passport_photo) for any still missing
+            missing_vgk_ids = [pid for pid in all_photo_ids if pid not in passport_photo_map]
+            if missing_vgk_ids:
+                vgk_rows = db.execute(text(
+                    "SELECT DISTINCT ON (partner_id) partner_id, file_path "
+                    "FROM vgk_kyc_documents "
+                    "WHERE partner_id = ANY(:ids) AND file_path IS NOT NULL AND file_path != '' "
+                    "ORDER BY partner_id, uploaded_at DESC NULLS LAST"
+                ), {"ids": missing_vgk_ids}).fetchall()
+                for r in vgk_rows:
+                    if r[0] and r[1]:
+                        passport_photo_map[int(r[0])] = r[1]
+
             # 3. Check kyc_document table by owner_id (matching partner_code or user ID)
-            remaining_missing = [pid for pid in all_photo_ids if pid not in passport_photo_map]
-            if remaining_missing:
+            missing_owner_ids = [pid for pid in all_photo_ids if pid not in passport_photo_map]
+            if missing_owner_ids:
                 code_rows = db.execute(text(
                     "SELECT id, partner_code FROM official_partners WHERE id = ANY(:ids)"
-                ), {"ids": remaining_missing}).fetchall()
+                ), {"ids": missing_owner_ids}).fetchall()
                 code_to_pid = {str(r[1]).strip(): int(r[0]) for r in code_rows if r[1]}
                 pcodes = list(code_to_pid.keys())
                 if pcodes:
@@ -5349,7 +5363,10 @@ def member_earnings_dashboard(
                         "WHERE owner_id = ANY(:codes) "
                         "AND document_type IN ('passport_photo', 'profile_photo', 'photo', 'avatar', 'logo') "
                         "AND ((file_path IS NOT NULL AND file_path != '') OR (file_name IS NOT NULL AND file_name != '')) "
-                        "ORDER BY owner_id, CASE WHEN status ILIKE 'approved' THEN 0 ELSE 1 END, uploaded_at DESC NULLS LAST"
+                        "ORDER BY owner_id, "
+                        "CASE WHEN status ILIKE 'approved' THEN 0 ELSE 1 END, "
+                        "CASE WHEN document_type IN ('passport_photo', 'profile_photo', 'photo', 'avatar') THEN 0 ELSE 1 END, "
+                        "uploaded_at DESC NULLS LAST"
                     ), {"codes": pcodes}).fetchall()
                     for r in owner_photo_rows:
                         pid_val = code_to_pid.get(str(r[0]).strip())
@@ -5359,7 +5376,19 @@ def member_earnings_dashboard(
                             chosen = (f"kyc_documents/{fn}" if (fn and fn != 'pending' and '.' in fn and (not fp or not fp.endswith(fn))) else fp) or (f"kyc_documents/{fn}" if fn else None)
                             if chosen:
                                 passport_photo_map[pid_val] = chosen
-        except Exception as e:            pass
+
+            # 4. Fallback to official_partners.logo_path ONLY for partners who still have no KYC photo
+            remaining_missing = [pid for pid in all_photo_ids if pid not in passport_photo_map]
+            if remaining_missing:
+                op_rows = db.execute(text(
+                    "SELECT id, logo_path FROM official_partners WHERE id = ANY(:ids)"
+                ), {"ids": remaining_missing}).fetchall()
+                for opr in op_rows:
+                    p_photo = opr[1]
+                    if p_photo and str(p_photo).strip() not in ('', 'None', 'null'):
+                        passport_photo_map[int(opr[0])] = p_photo
+        except Exception as e:
+            pass
 
     # Bulk: Parent partner info (Senior name and earnings) (DC-VGK-SENIOR-INFO-001)
     parent_map: dict = {}

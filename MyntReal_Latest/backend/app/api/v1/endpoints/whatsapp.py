@@ -4596,16 +4596,19 @@ def get_whatsapp_bot_status():
             local_qr_uri = _generate_qr_data_uri(raw_qr) if raw_qr else ""
             qr_url = local_qr_uri or qdata.get("qr_url") or ""
             qr_avail = bool(qr_url and st in ("qr_ready", "disconnected"))
+            is_conflict = (st == "session_conflict" or bool(qdata.get("is_conflict", False)))
             return {
                 "success": True,
                 "connected": is_conn,
                 "status": st,
                 "connection_state": st,
+                "is_conflict": is_conflict,
                 "can_send_now": can_send,
                 "qr": qr_url,
                 "raw_qr": raw_qr,
                 "qr_available": qr_avail,
                 "generation_id": gen_id,
+                "message": qdata.get("message"),
                 "timestamp": qdata.get("timestamp", now_ts)
             }
         r = requests.get("http://localhost:5002/status", timeout=3)
@@ -4616,16 +4619,19 @@ def get_whatsapp_bot_status():
             can_send = bool(data.get("can_send_now", is_conn))
             raw_qr = data.get("qr") or ""
             local_qr_uri = _generate_qr_data_uri(raw_qr) if raw_qr else ""
+            is_conflict = (st == "session_conflict" or bool(data.get("is_conflict", False)))
             return {
                 "success": True,
                 "connected": is_conn,
                 "status": st,
                 "connection_state": st,
+                "is_conflict": is_conflict,
                 "can_send_now": can_send,
                 "qr": local_qr_uri,
                 "raw_qr": raw_qr,
                 "qr_available": bool(local_qr_uri and st in ("qr_ready", "disconnected")),
                 "generation_id": data.get("generation_id", 0),
+                "message": data.get("message"),
                 "timestamp": data.get("timestamp", now_ts)
             }
     except Exception as e:
@@ -4697,8 +4703,26 @@ def get_whatsapp_unified_status(db: Session = Depends(get_db)):
     b_can_send = bool(b_status.get("can_send_now", False))
     raw_st = b_status.get("status", "disconnected")
     is_reconn = (raw_st in ("connecting", "reconnecting"))
-    qr_needed = bool(b_status.get("qr_available", False) and not b_connected and not is_reconn)
-    scanned_st = "connected" if b_connected else ("reconnecting" if is_reconn else ("qr_required" if qr_needed else "logged_out"))
+    is_conflict = (raw_st == "session_conflict" or bool(b_status.get("is_conflict", False)))
+    is_standby = (raw_st == "dev_standby")
+    qr_needed = bool(b_status.get("qr_available", False) and not b_connected and not is_reconn and not is_conflict and not is_standby)
+
+    if b_connected:
+        scanned_st = "connected"
+    elif is_conflict:
+        scanned_st = "session_conflict"
+    elif is_reconn:
+        scanned_st = "reconnecting"
+    elif is_standby:
+        scanned_st = "dev_standby"
+    elif qr_needed:
+        scanned_st = "qr_required"
+    else:
+        scanned_st = "logged_out"
+
+    conflict_err = "Session conflict detected (Status 440: Connection Replaced). An active WhatsApp session is running on another instance. Click 'Reclaim Session' to switch the socket back to this server."
+    standby_msg = "Local WhatsApp socket is in standby mode. Production is the sole authoritative WhatsApp gateway."
+    scanned_err = conflict_err if is_conflict else (standby_msg if is_standby else (b_status.get("message") if not b_connected and not is_reconn else None))
 
     scanned_channel = {
         "name": "Scanned WhatsApp",
@@ -4706,6 +4730,8 @@ def get_whatsapp_unified_status(db: Session = Depends(get_db)):
         "status": scanned_st,
         "is_connected": b_connected,
         "is_reconnecting": is_reconn,
+        "is_conflict": is_conflict,
+        "is_standby": is_standby,
         "qr_required": qr_needed,
         "can_send_now": b_can_send,
         "generation_id": b_status.get("generation_id", 0),
@@ -4714,7 +4740,7 @@ def get_whatsapp_unified_status(db: Session = Depends(get_db)):
             "send_group_broadcast": b_can_send,
             "read_incoming_chats": b_connected
         },
-        "error_message": b_status.get("message") if not b_connected and not is_reconn else None
+        "error_message": scanned_err
     }
 
     return {
@@ -4818,10 +4844,17 @@ _SESSION_LOCKS_GUARD = threading.Lock()
 
 def _resolve_baileys_session_id(session_id: Optional[str] = None) -> str:
     """Isolate Baileys session ID across environments so Dev and Prod never clash."""
+    env = (os.getenv("ENVIRONMENT") or "").lower()
+    is_prod = (env == "production")
+    if not is_prod:
+        # Non-production environments MUST NEVER access or use prod_baileys!
+        if session_id and session_id not in ("prod_baileys", "default_baileys", ""):
+            return session_id
+        return "dev_baileys"
+    # Production environment
     if session_id and session_id not in ("default_baileys", ""):
         return session_id
-    env = (os.getenv("ENVIRONMENT") or "").lower()
-    return "prod_baileys" if env == "production" else "dev_baileys"
+    return "prod_baileys"
 
 
 def _get_session_backup_lock(session_id: str) -> threading.Lock:
@@ -4839,7 +4872,15 @@ def backup_bot_session_files(
     Saves/Upserts Baileys WhatsApp authentication credentials into AWS S3 durable vault.
     Zero PostgreSQL connections, zero DB locks, zero contention on Staff Authentication.
     """
+    env = (os.getenv("ENVIRONMENT") or "").lower()
+    is_prod = (env == "production")
     raw_session_id = payload.get("session_id", "default_baileys")
+    
+    # Security Boundary: Non-production environments MUST NEVER overwrite prod_baileys!
+    if not is_prod and raw_session_id in ("prod_baileys", "production"):
+        logger.warning(f"[WHATSAPP-S3-SYNC] 🛑 Security violation: Non-production environment attempted to overwrite prod_baileys. Blocked.")
+        return {"success": False, "error": "Access denied: Non-production environment cannot overwrite production credentials."}
+
     session_id = _resolve_baileys_session_id(raw_session_id)
     files = payload.get("files", {})
     if not files:
@@ -4882,6 +4923,14 @@ def restore_bot_session_files(
     Restores Baileys WhatsApp authentication credentials from AWS S3 durable vault.
     Falls back to legacy PostgreSQL data if S3 snapshot is not yet created.
     """
+    env = (os.getenv("ENVIRONMENT") or "").lower()
+    is_prod = (env == "production")
+    
+    # Security Boundary: Non-production environments MUST NEVER load prod_baileys!
+    if not is_prod and session_id in ("prod_baileys", "production"):
+        logger.warning(f"[WHATSAPP-S3-RESTORE] 🛑 Security violation: Non-production environment attempted to load prod_baileys. Blocked.")
+        return {"success": False, "error": "Access denied: Production credentials cannot be restored in a non-production environment.", "files": {}}
+
     resolved_id = _resolve_baileys_session_id(session_id)
     try:
         from app.services.s3_storage import S3StorageService
@@ -5206,17 +5255,18 @@ def poll_bot_queue(limit: int = 5, db: Session = Depends(get_db)):
 
 
 @router.post("/bot-queue-complete")
+@router.post("/bot-queue-ack")
 def complete_bot_queue(payload: dict = Body(...), db: Session = Depends(get_db)):
-    """Leader reports completion status for queued messages."""
+    """Leader reports completion status for queued messages (supports both /bot-queue-complete and /bot-queue-ack)."""
     from sqlalchemy import text
     import json
-    queue_id = payload.get("queue_id")
+    queue_id = payload.get("queue_id") or payload.get("item_id")
     status = payload.get("status", "sent")
-    error_message = payload.get("error_message")
+    error_message = payload.get("error_message") or payload.get("error")
     result_payload = payload.get("result_payload")
 
     if not queue_id:
-        raise HTTPException(status_code=400, detail="queue_id is required")
+        raise HTTPException(status_code=400, detail="queue_id or item_id is required")
 
     try:
         db.execute(
@@ -5240,6 +5290,147 @@ def complete_bot_queue(payload: dict = Body(...), db: Session = Depends(get_db))
     except Exception as e:
         db.rollback()
         return {"success": False, "error": str(e)}
+
+
+@router.post("/bot-queue-reconcile-inflight")
+def reconcile_inflight_queue(payload: dict = Body(...), db: Session = Depends(get_db)):
+    """
+    Safe outbound queue reconciliation during gateway disconnect, crash, or session_conflict (440).
+    CRITICAL INVARIANT: NEVER blindly flip 'processing' back to 'pending'!
+    - Checks MessageLog for verified delivery -> marks 'sent' with wamid
+    - Checks for time-sensitive / expired broadcasts -> marks 'expired'
+    - For indeterminate in-flight messages -> marks 'dispatch_uncertain' with detailed audit reason
+    Prevents both silent message loss and duplicate message delivery.
+    """
+    from sqlalchemy import text
+    reason = payload.get("reason", "unknown_disconnect")
+
+    try:
+        rows = db.execute(text("""
+            SELECT id, target_jid, message, created_at, result_payload 
+            FROM whatsapp_bot_queue 
+            WHERE status = 'processing'
+        """)).fetchall()
+
+        reconciled_count = 0
+        for r in rows:
+            q_id = r[0]
+            target = r[1] or ""
+            msg_body = r[2] or ""
+            c_at = r[3]
+            res_payload = r[4] or {}
+
+            # Case 1: Result payload already has wamid (WhatsApp accepted, but ack failed to commit)
+            if isinstance(res_payload, dict) and res_payload.get("wamid"):
+                db.execute(text("""
+                    UPDATE whatsapp_bot_queue 
+                    SET status = 'sent', sent_at = NOW() 
+                    WHERE id = :qid
+                """), {"qid": q_id})
+                reconciled_count += 1
+                continue
+
+            # Case 2: Check MessageLog for recent identical dispatch to target
+            clean_phone = ''.join(filter(str.isdigit, target))[-10:] if target else ""
+            log_match = None
+            if clean_phone:
+                log_match = db.execute(text("""
+                    SELECT message_sid FROM message_logs 
+                    WHERE mobile_number LIKE :p 
+                      AND message_body = :body 
+                      AND sent_at >= :since 
+                    LIMIT 1
+                """), {
+                    "p": f"%{clean_phone}",
+                    "body": msg_body,
+                    "since": c_at - timedelta(minutes=5) if c_at else datetime.utcnow() - timedelta(minutes=10)
+                }).fetchone()
+
+            if log_match:
+                db.execute(text("""
+                    UPDATE whatsapp_bot_queue 
+                    SET status = 'sent', 
+                        sent_at = NOW(), 
+                        result_payload = json_build_object('wamid', :sid, 'reconciled_from_log', true) 
+                    WHERE id = :qid
+                """), {"qid": q_id, "sid": log_match[0]})
+                reconciled_count += 1
+                continue
+
+            # Case 3: Time-sensitive / expired broadcast (> 2 hours old or update/leaderboard)
+            age_seconds = (datetime.utcnow() - c_at).total_seconds() if c_at else 99999
+            if age_seconds > 7200 or "UPDATE" in msg_body or "LEADERBOARD" in msg_body:
+                db.execute(text("""
+                    UPDATE whatsapp_bot_queue 
+                    SET status = 'expired', 
+                        error_message = 'Dispatch expired: Time-sensitive broadcast superseded by newer schedule.' 
+                    WHERE id = :qid
+                """), {"qid": q_id})
+                reconciled_count += 1
+                continue
+
+            # Case 4: Indeterminate state -> dispatch_uncertain (REQUIRES AUDIT; NO BLIND RESEND)
+            db.execute(text("""
+                UPDATE whatsapp_bot_queue 
+                SET status = 'dispatch_uncertain', 
+                    error_message = :err 
+                WHERE id = :qid
+            """), {
+                "qid": q_id, 
+                "err": f"Socket disconnected ({reason}) while dispatch in flight. Marked dispatch_uncertain to prevent duplicate send."
+            })
+            reconciled_count += 1
+
+        db.commit()
+        return {"success": True, "reconciled_count": reconciled_count}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"[WA-QUEUE-RECONCILE] Error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/reclaim-session")
+def reclaim_whatsapp_session(
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(_require_staff)
+):
+    """
+    Explicit operator action to reclaim the WhatsApp socket from a session_conflict (440).
+    Directly triggers reconnect on the authoritative Baileys gateway and updates the cluster lease.
+    Zero credential purging, zero QR regeneration.
+    """
+    from sqlalchemy import text
+    import requests
+
+    # 1. Update lease command to 'reconnect'
+    try:
+        db.execute(text("""
+            UPDATE whatsapp_bot_lease 
+            SET command = 'reconnect', 
+                status = 'reconnecting', 
+                can_send_now = FALSE 
+            WHERE id = 1
+        """))
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"[WA-RECLAIM] Lease command note: {e}")
+
+    # 2. Try triggering local gateway port 5002 directly if reachable
+    gateway_triggered = False
+    try:
+        r = requests.post("http://localhost:5002/api/reconnect", timeout=3)
+        if r.status_code == 200:
+            gateway_triggered = True
+    except Exception as gw_err:
+        logger.info(f"[WA-RECLAIM] Direct gateway reconnect note: {gw_err}")
+
+    return {
+        "success": True,
+        "message": "Session reclaim sequence initiated. Authoritative instance is re-acquiring socket.",
+        "cluster_command_dispatched": True,
+        "gateway_notified": gateway_triggered
+    }
 
 
 @router.get("/bot-queue-check")

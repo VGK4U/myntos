@@ -4059,10 +4059,16 @@ def _get_or_create_vgk_member(db: Session, phone: str, name: str, company_id: in
     import random
     from decimal import Decimal as _Dec
     from app.core.security import SecurityManager as _SM
+    from app.utils.phone_otp import normalize_phone_10
+
+    clean_phone = normalize_phone_10(phone) or (phone or '').strip()
 
     existing = db.query(OfficialPartner).filter(
-        OfficialPartner.phone == phone,
-        OfficialPartner.category == 'VGK_TEAM'
+        OfficialPartner.category == 'VGK_TEAM',
+        or_(
+            OfficialPartner.phone == clean_phone,
+            OfficialPartner.phone == (phone or '').strip()
+        )
     ).first()
     if existing:
         return existing.id, False, f"Linked to existing VGK member {existing.partner_code}"
@@ -4072,17 +4078,25 @@ def _get_or_create_vgk_member(db: Session, phone: str, name: str, company_id: in
         if not db.query(OfficialPartner).filter(OfficialPartner.partner_code == code).first():
             break
 
+    VGK_DEFAULT_ROOT = 'VGK07102207'
+    default_root = db.query(OfficialPartner).filter(
+        OfficialPartner.partner_code == VGK_DEFAULT_ROOT,
+        OfficialPartner.category == 'VGK_TEAM'
+    ).first()
+    default_root_id = default_root.id if default_root else None
+
     member = OfficialPartner(
         company_id=company_id,
         partner_code=code,
         partner_name=name,
-        phone=phone,
+        phone=clean_phone,
         category='VGK_TEAM',
         is_active=False,
-        parent_partner_id=parent_partner_id,
+        parent_partner_id=parent_partner_id or default_root_id,
+        registered_by_emp_code=VGK_DEFAULT_ROOT,
         vgk_role='VGK_ASSOCIATE',
         vgk_points_balance=_Dec('0'),
-        password_hash=_SM.get_password_hash(phone),
+        password_hash=_SM.get_password_hash(clean_phone),
         created_at=datetime.now(),
         updated_at=datetime.now()
     )

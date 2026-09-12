@@ -4721,7 +4721,7 @@ async function loadMembers(page = 1) {
           <td class="mb-sticky-2"><strong style="color:#7c3aed">${m.partner_code}</strong></td>
           <td class="mb-sticky-3"><div style="display:flex;align-items:center;gap:6px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m.partner_name}</span><button onclick="event.stopPropagation(); generateMemberPoster('${m.id}')" style="width:22px;height:22px;border-radius:5px;border:1px solid #d1fae5;background:#ecfdf5;cursor:pointer;font-size:10px;color:#059669;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0" title="Generate Achievement Poster"><i class="fas fa-image"></i></button></div></td>
           <td style="font-size:11px;color:#374151;white-space:nowrap;font-weight:600">${fmtDate(m.created_at)}</td>
-          <td style="font-size:11px;color:#6b7280;white-space:nowrap" title="${m.registered_by_emp_code||''}">${m.registered_by_name ? '<span style="font-size:11px">' + m.registered_by_name + '</span>' : (m.registered_by_emp_code ? '<span style="font-family:monospace;font-size:10.5px;color:#7c3aed">' + m.registered_by_emp_code + '</span>' : '<span style="color:#d1d5db">—</span>')}</td>
+          <td style="font-size:11px;color:#6b7280;white-space:nowrap" title="${m.registered_by_emp_code||''}">${(m.registered_by_emp_code === 'VGK07102207' || m.registered_by_name === 'VGK Support') ? '<span style="font-weight:600;color:#059669">VGK Support <span style="font-family:monospace;font-size:10px;color:#7c3aed">(VGK07102207)</span></span>' : (m.registered_by_name ? '<span style="font-size:11px">' + m.registered_by_name + '</span>' + (m.registered_by_emp_code ? ' <span style="font-family:monospace;font-size:10px;color:#7c3aed">(' + m.registered_by_emp_code + ')</span>' : '') : (m.registered_by_emp_code ? '<span style="font-family:monospace;font-size:10.5px;color:#7c3aed">' + m.registered_by_emp_code + '</span>' : '<span style="color:#d1d5db">—</span>'))}</td>
           <td>${assignedStaffHtml}</td>
           <td>${m.phone || '—'}</td>
           <td style="text-align:center">${statusBadgeHtml}</td>
@@ -5658,7 +5658,7 @@ function renderVhTimeline() {
     const timeStr = fmtDateTime(it.timestamp);
 
     if (isCall) {
-      const durSec = it.duration || 0;
+      const durSec = it.duration_seconds !== undefined ? it.duration_seconds : (it.duration || 0);
       const durLabel = durSec >= 60 ? `${Math.floor(durSec/60)}m ${durSec%60}s` : `${durSec}s`;
       const isAnswered = ['answered','completed','connected'].includes((it.status||'').toLowerCase());
       const stColor = isAnswered ? '#059669' : '#dc2626';
@@ -5679,7 +5679,7 @@ function renderVhTimeline() {
             </div>
             <div style="font-size:12px;color:#4b5563;margin-top:4px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
               <span><i class="fas fa-stopwatch me-1" style="color:#9ca3af"></i>Duration: <strong>${durLabel}</strong></span>
-              ${it.staff_emp_code ? `<span><i class="fas fa-user-tie me-1" style="color:#9ca3af"></i>Staff: <strong>${it.staff_name || it.staff_emp_code}</strong></span>` : ''}
+              ${(it.staff_name || it.staff_emp_code) ? `<span><i class="fas fa-user-tie me-1" style="color:#9ca3af"></i>Staff: <strong>${it.staff_name || it.staff_emp_code}</strong></span>` : ''}
               ${it.source ? `<span style="font-size:10.5px;color:#9ca3af;font-family:monospace">${it.source}</span>` : ''}
             </div>
             ${it.recording_url ? `
@@ -7130,6 +7130,15 @@ function updateAdvSearchBadge() {
 }
 
 // ══════════════ POSTER GENERATION SYSTEM ══════════════
+function getCleanInitials(name) {
+  if (!name || typeof name !== 'string') return '—';
+  let clean = name.trim().replace(/^(mr|mrs|ms|dr|prof|shri|smt|er)\.?\s+/i, '').trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (!parts.length) return '—';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+}
+
 function resolvePosterMediaUrl(rawPath) {
   if (!rawPath || typeof rawPath !== 'string' || rawPath.trim() === '' || rawPath === 'null' || rawPath === 'undefined') {
     return null;
@@ -7388,7 +7397,7 @@ async function generateMemberPoster(partnerId) {
     console.log("[Poster Debug] Selected member object:", m);
     
     document.getElementById('prevName').textContent = (m.partner_name || '').toUpperCase();
-    const initials = (m.partner_name || '').trim().split(/\s+/).map(p=>p[0]).join('').slice(0,2).toUpperCase();
+    const initials = getCleanInitials(m.partner_name || '');
     const avatar = document.getElementById('prevAvatar');
     avatar.textContent = initials;
     
@@ -7404,10 +7413,19 @@ async function generateMemberPoster(partnerId) {
     const nameBadge = document.getElementById('postMemberNameBadge');
     if (nameBadge) nameBadge.textContent = m.partner_name || 'Member';
     if (thumbAvatar) thumbAvatar.textContent = initials;
+    if (thumbImg) {
+      thumbImg.onload = () => {
+        thumbImg.style.display = 'block';
+        if (thumbAvatar) thumbAvatar.style.display = 'none';
+      };
+      thumbImg.onerror = () => {
+        thumbImg.style.display = 'none';
+        if (thumbAvatar) thumbAvatar.style.display = 'flex';
+      };
+    }
 
     if (resolvedUrl) {
-      if (thumbImg) { thumbImg.src = resolvedUrl; thumbImg.style.display = 'block'; }
-      if (thumbAvatar) thumbAvatar.style.display = 'none';
+      if (thumbImg) { thumbImg.src = resolvedUrl; }
 
       const img = document.getElementById('prevImg');
       let triedWithoutCors = false;
@@ -7694,6 +7712,9 @@ async function generateMemberPoster(partnerId) {
     
     const seniorImg = document.getElementById('prevSeniorImg');
     const seniorAvatar = document.getElementById('prevSeniorAvatar');
+    if (seniorAvatar) {
+      seniorAvatar.textContent = getCleanInitials(seniorName || m.senior_name || '');
+    }
     if (seniorImg) {
       const seniorPhotoPath = m.senior_photo || m.senior_photo_url || m.senior_passport_photo || m.senior_logo_path || m.senior_profile_image;
       const resolvedSeniorUrl = resolvePosterMediaUrl(seniorPhotoPath);
@@ -8122,6 +8143,11 @@ function updatePoster() {
     rawSeniorName = 'Senior : ' + rawSeniorName;
   }
   setTxt('prevSeniorName', rawSeniorName || 'SENIOR : —');
+  const seniorAvatar = document.getElementById('prevSeniorAvatar');
+  if (seniorAvatar) {
+    const sCleanName = (getVal('postSeniorName') || '').replace(/^Senior\s*:\s*/i, '').trim();
+    seniorAvatar.textContent = getCleanInitials(sCleanName);
+  }
   setTxt('prevSeniorToday', getVal('postSeniorToday'));
   setTxt('prevSeniorEarning', getVal('postSeniorEarning'));
   setTxt('prevSeniorPotential', getVal('postSeniorPotential'));
@@ -10067,7 +10093,7 @@ function _renderCommDetailTable(partnerId) {
               <!-- Pop-Out 110px Extra Large Senior Photo / Avatar Circle -->
               <div style="position:absolute;top:-10px;left:10px;width:110px;height:110px;border-radius:50%;background:#1e3a8a;border:4.5px solid #fde047;box-shadow:0 6px 25px rgba(251,191,36,0.9);display:flex;align-items:center;justify-content:center;z-index:10;overflow:hidden">
                 <img id="prevSeniorImg" src="" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;display:none">
-                <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:36px;font-weight:900">NE</div>
+                <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:36px;font-weight:900">SR</div>
               </div>
 
               <!-- Senior Name in single top line -->

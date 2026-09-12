@@ -1095,13 +1095,15 @@ def get_staff_handler_dashboard(
         m_rev_q = m_rev_q.filter(CRMLead.company_id == parsed_company_id)
     monthly_revenue = m_rev_q.first()
     
-    # DC Protocol (Jan 7, 2026 / Updated Mar 2026): Fresh Leads - truly unassigned leads matching staff handler eligibility
+    # DC Protocol (Jan 7, 2026 / Updated Mar 2026): Fresh / Unassigned Leads - truly unassigned leads matching staff handler eligibility
     u_conds = [
         ~CRMLead.status.in_(['won', 'lost']),
         CRMLead.handler_type == 'unassigned',
         CRMLead.telecaller_id.is_(None),
         CRMLead.field_staff_id.is_(None),
-        CRMLead.primary_owner_id.is_(None)
+        CRMLead.primary_owner_id.is_(None),
+        or_(CRMLead.handler_id.is_(None), CRMLead.handler_id == ''),
+        or_(CRMLead.mnr_handler_id.is_(None), CRMLead.mnr_handler_id == '')
     ]
     is_test_lead_cond = or_(CRMLead.phone.ilike('%8143450736%'), CRMLead.alternate_phone.ilike('%8143450736%'), CRMLead.id == 8850)
     target_staff_type = (target_employee.staff_type or '').upper()
@@ -3737,14 +3739,16 @@ def get_my_leads(
                     CRMLead.mnr_handler_id == emp_code if emp_code else False
                 )
             )
-        elif role_filter == 'fresh':
-            # Authoritative Fresh Leads — unassigned, active, and handler eligibility checked
+        elif role_filter in ('fresh', 'unassigned'):
+            # Authoritative Unassigned / Fresh Leads — unassigned, active, and handler eligibility checked
             u_conds = [
                 ~CRMLead.status.in_(['won', 'lost']),
                 CRMLead.handler_type == 'unassigned',
                 CRMLead.telecaller_id.is_(None),
                 CRMLead.field_staff_id.is_(None),
-                CRMLead.primary_owner_id.is_(None)
+                CRMLead.primary_owner_id.is_(None),
+                or_(CRMLead.handler_id.is_(None), CRMLead.handler_id == ''),
+                or_(CRMLead.mnr_handler_id.is_(None), CRMLead.mnr_handler_id == '')
             ]
             if not is_admin:
                 all_downline = get_recursive_downline(current_employee.id, db, StaffEmployee, max_depth=10, include_manager=True)
@@ -3775,6 +3779,17 @@ def get_my_leads(
                     and_(CRMLead.created_by_type == 'staff', or_(CRMLead.created_by_id == str(uid), CRMLead.created_by_id == emp_code)),
                 )
             )
+        if role_filter not in ('fresh', 'unassigned'):
+            # Canonical unassigned guard: unassigned leads MUST NEVER appear in personal scopes
+            _is_canon_unassigned = and_(
+                CRMLead.telecaller_id.is_(None),
+                CRMLead.primary_owner_id.is_(None),
+                CRMLead.field_staff_id.is_(None),
+                CRMLead.handler_type == 'unassigned',
+                or_(CRMLead.handler_id.is_(None), CRMLead.handler_id == ''),
+                or_(CRMLead.mnr_handler_id.is_(None), CRMLead.mnr_handler_id == '')
+            )
+            query = query.filter(~_is_canon_unassigned)
     elif handler_ids or team_employee_ids:
         # Original filter for team/all scopes (no role_filter)
         query = query.filter(
@@ -4735,7 +4750,7 @@ def list_leads(
     filter_telecaller_id: Optional[int] = Query(None, description="Filter by specific telecaller staff ID"),
     filter_field_staff_id: Optional[int] = Query(None, description="Filter by specific field staff ID"),
     team_member_id: Optional[int] = Query(None, description="Filter leads by specific team member in authorized downline"),
-    scope: Optional[str] = Query(None, description="Scope filter: 'my', 'downline', 'fresh', 'all'"),
+    scope: Optional[str] = Query(None, description="Scope filter: 'my', 'downline', 'fresh', 'unassigned', 'all'"),
     source: Optional[str] = Query(None, description="Filter by lead source"),
     page: int = 1,
     per_page: int = 20,
@@ -4768,8 +4783,8 @@ def list_leads(
             as_handler_role = 'field_staff'
         elif rf in ('as_handler', 'handler'):
             as_handler_role = 'mnr_handler'
-        elif rf == 'fresh':
-            scope = 'fresh'
+        elif rf in ('fresh', 'unassigned'):
+            scope = 'unassigned'
         elif rf == 'self':
             scope = 'my'
             source = source or 'Self Lead'
@@ -4891,9 +4906,19 @@ def list_leads(
                 CRMLead.handler_id == current_employee.emp_code
             )
         if company_filter_clause is not None:
-            query = query.filter(or_(self_created_clause, and_(company_filter_clause, normal_scope)))
+            query = query.filter(and_(company_filter_clause, or_(self_created_clause, normal_scope)))
         else:
             query = query.filter(or_(self_created_clause, normal_scope))
+        # Canonical unassigned guard: unassigned leads MUST NEVER appear in My Leads (even if creator or admin)
+        _is_canon_unassigned = and_(
+            CRMLead.telecaller_id.is_(None),
+            CRMLead.primary_owner_id.is_(None),
+            CRMLead.field_staff_id.is_(None),
+            CRMLead.handler_type == 'unassigned',
+            or_(CRMLead.handler_id.is_(None), CRMLead.handler_id == ''),
+            or_(CRMLead.mnr_handler_id.is_(None), CRMLead.mnr_handler_id == '')
+        )
+        query = query.filter(~_is_canon_unassigned)
     elif assigned_to_me:
         # "Assigned Leads" - filter to leads assigned to current user
         normal_scope = or_(
@@ -4902,17 +4927,28 @@ def list_leads(
             CRMLead.handler_id == current_employee.emp_code  # Legacy fallback
         )
         if company_filter_clause is not None:
-            query = query.filter(or_(self_created_clause, and_(company_filter_clause, normal_scope)))
+            query = query.filter(and_(company_filter_clause, or_(self_created_clause, normal_scope)))
         else:
             query = query.filter(or_(self_created_clause, normal_scope))
-    elif scope == 'fresh':
+        _is_canon_unassigned = and_(
+            CRMLead.telecaller_id.is_(None),
+            CRMLead.primary_owner_id.is_(None),
+            CRMLead.field_staff_id.is_(None),
+            CRMLead.handler_type == 'unassigned',
+            or_(CRMLead.handler_id.is_(None), CRMLead.handler_id == ''),
+            or_(CRMLead.mnr_handler_id.is_(None), CRMLead.mnr_handler_id == '')
+        )
+        query = query.filter(~_is_canon_unassigned)
+    elif scope in ('fresh', 'unassigned'):
         # Unassigned / fresh leads available for claiming
         u_conds = [
             ~CRMLead.status.in_(['won', 'lost']),
             CRMLead.handler_type == 'unassigned',
             CRMLead.telecaller_id.is_(None),
             CRMLead.field_staff_id.is_(None),
-            CRMLead.primary_owner_id.is_(None)
+            CRMLead.primary_owner_id.is_(None),
+            or_(CRMLead.handler_id.is_(None), CRMLead.handler_id == ''),
+            or_(CRMLead.mnr_handler_id.is_(None), CRMLead.mnr_handler_id == '')
         ]
         if not is_admin:
             target_ids = all_downline_ids if is_leader else [current_employee.id]
@@ -5533,7 +5569,8 @@ def get_my_downline(
 def list_team_leads(
     company_id: Optional[int] = Query(None, description="Company ID for DC Protocol (optional for VGK4U - all companies)"),
     team_member_id: Optional[int] = Query(None, description="Filter by specific team member ID"),
-    filter_by: Optional[str] = Query(None, description="Filter mode: 'owner', 'handler', 'fresh' (unassigned)"),
+    filter_by: Optional[str] = Query(None, description="Filter mode: 'owner', 'handler', 'fresh', 'unassigned'"),
+    role_filter: Optional[str] = Query(None, description="Unified role filter parameter"),
     status: Optional[str] = None,
     priority: Optional[str] = None,
     category_id: Optional[int] = None,
@@ -5648,13 +5685,23 @@ def list_team_leads(
         query = query.filter(CRMLead.company_id == company_id)
     
     # Build visibility filter based on filter_by mode
-    if filter_by == 'owner':
+    effective_filter = (filter_by or '').strip().lower()
+    if not effective_filter and role_filter:
+        rf = str(role_filter).strip().lower()
+        if rf in ('fresh', 'unassigned'):
+            effective_filter = 'unassigned'
+        elif rf in ('as_handler', 'handler'):
+            effective_filter = 'handler'
+        elif rf in ('as_primary', 'owner'):
+            effective_filter = 'owner'
+
+    if effective_filter == 'owner':
         # Only leads where team member is primary owner
         query = query.filter(
             CRMLead.primary_owner_type == 'staff',
             CRMLead.primary_owner_id.in_(target_ids)
         )
-    elif filter_by == 'handler':
+    elif effective_filter == 'handler':
         # Leads where team member is any handler (telecaller/field_staff/mnr_handler/partner)
         handler_conditions = [
             CRMLead.telecaller_id.in_(target_ids),
@@ -5664,14 +5711,16 @@ def list_team_leads(
             handler_conditions.append(CRMLead.mnr_handler_id.in_(downline_emp_codes))
         # Note: Partner handler uses associated_partner_id which maps to OfficialPartner.id, not staff id
         query = query.filter(or_(*handler_conditions))
-    elif filter_by == 'fresh':
+    elif effective_filter in ('fresh', 'unassigned'):
         # Fresh/Unassigned leads available for claiming (no owner, no handlers)
         query = query.filter(
-            CRMLead.status == 'new',
+            ~CRMLead.status.in_(['won', 'lost']),
             CRMLead.handler_type == 'unassigned',
             CRMLead.telecaller_id.is_(None),
             CRMLead.field_staff_id.is_(None),
-            CRMLead.primary_owner_id.is_(None)
+            CRMLead.primary_owner_id.is_(None),
+            or_(CRMLead.handler_id.is_(None), CRMLead.handler_id == ''),
+            or_(CRMLead.mnr_handler_id.is_(None), CRMLead.mnr_handler_id == '')
         )
     elif is_admin and not team_member_id:
         # DC Protocol (Jan 1, 2026): VGK4U Supreme bypass ONLY when no team member filter
@@ -11495,7 +11544,7 @@ def update_lead(
     # solar_pipeline_status → installation_pending AND deal_value_received > 0.
     # DC-CFV only covers balance_received / subsidy_pending (CFV-lock stages).
     # installation_pending precedes balance receipt — no CFV lock, only DVR advance.
-    _DVR_EXTRA_STAGES = {'installation_pending'}
+    _DVR_EXTRA_STAGES = {'installation_pending', 'installed', 'net_meter_pending'}
     if _new_sps in _DVR_EXTRA_STAGES and lead.associated_partner_id and (lead.deal_value_received or 0) > 0:
         try:
             from app.services.vgk_solar_advance import check_and_create_dvr_advance as _dvr_fn_ip
@@ -13315,6 +13364,17 @@ def approve_or_reject_revenue(
         if lead:
             lead.deal_value_received = (lead.deal_value_received or 0) + entry.amount_received
             lead.deal_value_balance = max(0, (lead.deal_value_total or 0) - lead.deal_value_received)
+            lead.updated_at = now
+            db.flush()
+
+            # DC-REV-DVR-001: Trigger Stage 2 / DVR advance if solar lead has confirmed payment
+            if float(lead.deal_value_received or 0) > 0 and lead.associated_partner_id:
+                try:
+                    from app.services.vgk_solar_advance import check_and_create_dvr_advance as _dvr_rev_fn
+                    _dvr_rev_res = _dvr_rev_fn(db, lead.id)
+                    logger.info(f"[CRM-REV-DVR-001] check_and_create_dvr_advance for lead {lead.id}: {_dvr_rev_res}")
+                except Exception as _dvr_err:
+                    logger.warning(f"[CRM-REV-DVR-001] DVR check failed for lead {lead.id}: {_dvr_err}")
 
             # DC_CFV_001 (Apr 2026): Lock confirmed_final_value on revenue approval
             # Trigger condition: lead solar stage is balance_received
@@ -13757,6 +13817,16 @@ def _update_lead_aggregate_deal_values(db, lead_id):
             ).scalar() or 0
             d.deal_value_received = _deal_recv
             d.deal_value_balance = max(0, (d.deal_value_total or 0) - _deal_recv)
+
+        db.flush()
+        # DC-DEAL-AGG-DVR-001: Trigger Stage 2 / DVR advance if solar lead has validated payment
+        if float(lead.deal_value_received or 0) > 0 and lead.associated_partner_id:
+            try:
+                from app.services.vgk_solar_advance import check_and_create_dvr_advance as _dvr_agg_fn
+                _dvr_agg_res = _dvr_agg_fn(db, lead.id)
+                logger.info(f"[CRM-DEAL-AGG-DVR-001] check_and_create_dvr_advance for lead {lead.id}: {_dvr_agg_res}")
+            except Exception as _dvr_err:
+                logger.warning(f"[CRM-DEAL-AGG-DVR-001] DVR check failed for lead {lead.id}: {_dvr_err}")
 
 
 # ============= MY-DEALS (member/partner portal) =============
@@ -14825,6 +14895,18 @@ def finance_review_transaction(
             result['income_entry_id'] = income_entry.id
             result['income_entry_number'] = income_entry.entry_number
 
+        # DC-DVR-ADV-FR-HOOK-001 (Sep 2026): Trigger DVR advance when payment is validated via finance review
+        if lead and (lead.deal_value_received or 0) > 0:
+            try:
+                from app.services.vgk_solar_advance import check_and_create_dvr_advance as _dvr_fr_fn
+                _dvr_fr_res = _dvr_fr_fn(db, lead.id)
+                if _dvr_fr_res.get('created'):
+                    logger.info(f'[DC-DVR-ADV-FR] Lead {lead.id}: DVR advances {_dvr_fr_res.get("entry_numbers")} created via finance review')
+                else:
+                    logger.debug(f'[DC-DVR-ADV-FR] Lead {lead.id}: {_dvr_fr_res.get("reason")}')
+            except Exception as _dvr_fr_e:
+                logger.warning(f'[DC-DVR-ADV-FR] Hook failed for lead {lead.id}: {_dvr_fr_e}')
+
         # VGK Commission Hook (DC Protocol Mar 2026)
         if lead and getattr(lead, 'is_vgk_program', False):
             from app.services.vgk_commission import calculate_vgk_commissions
@@ -14966,6 +15048,18 @@ def finance_review_transaction(
         
         db.commit()
         db.refresh(txn)
+
+        # DC-DVR-ADV-PL-HOOK-001 (Sep 2026): Trigger DVR advance when payment is posted to ledger
+        if lead and (lead.deal_value_received or 0) > 0:
+            try:
+                from app.services.vgk_solar_advance import check_and_create_dvr_advance as _dvr_pl_fn
+                _dvr_pl_res = _dvr_pl_fn(db, lead.id)
+                if _dvr_pl_res.get('created'):
+                    logger.info(f'[DC-DVR-ADV-PL] Lead {lead.id}: DVR advances {_dvr_pl_res.get("entry_numbers")} created via ledger post')
+                else:
+                    logger.debug(f'[DC-DVR-ADV-PL] Lead {lead.id}: {_dvr_pl_res.get("reason")}')
+            except Exception as _dvr_pl_e:
+                logger.warning(f'[DC-DVR-ADV-PL] Hook failed for lead {lead.id}: {_dvr_pl_e}')
         
         return {
             'success': True,
@@ -16937,6 +17031,17 @@ async def update_lead_full(
         lead.deal_value_balance = deal_value_balance
     
     lead.updated_at = get_indian_time()
+    db.flush()
+
+    # DC-FULL-DVR-001: Trigger Stage 2 / DVR advance if solar lead has deal_value_received
+    if float(lead.deal_value_received or 0) > 0 and lead.associated_partner_id:
+        try:
+            from app.services.vgk_solar_advance import check_and_create_dvr_advance as _dvr_full_fn
+            _dvr_full_res = _dvr_full_fn(db, lead.id)
+            logger.info(f"[CRM-FULL-DVR-001] check_and_create_dvr_advance for lead {lead.id}: {_dvr_full_res}")
+        except Exception as _dvr_err:
+            logger.warning(f"[CRM-FULL-DVR-001] DVR check failed for lead {lead.id}: {_dvr_err}")
+
     db.commit()
     db.refresh(lead)
 
@@ -19260,13 +19365,15 @@ def register_lead_as_vgk(
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
 
+    from app.utils.phone_otp import normalize_phone_10
     phone_raw = (lead.phone or '').replace(' ', '').replace('-', '').replace('+', '')
     if not phone_raw:
         raise HTTPException(status_code=400, detail="Lead has no phone number")
+    clean_phone = normalize_phone_10(lead.phone) or (phone_raw[-10:] if len(phone_raw) >= 10 else phone_raw)
 
     from app.models.staff_accounts import OfficialPartner as _OP
     existing = db.query(_OP).filter(_OP.category == 'VGK_TEAM',
-        or_(_OP.phone == phone_raw, _OP.phone == phone_raw[-10:] if len(phone_raw) >= 10 else _OP.phone == phone_raw)
+        or_(_OP.phone == clean_phone, _OP.phone == phone_raw, _OP.phone == (lead.phone or '').strip())
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail="This phone is already a VGK member: " + existing.partner_code)
@@ -19294,15 +19401,18 @@ def register_lead_as_vgk(
     from pytz import timezone as _tz
     _now = datetime.now(_tz('Asia/Kolkata')).replace(tzinfo=None)
 
+    reg_by = (getattr(current_employee, 'emp_code', '') or '').strip().upper() or VGK_DEFAULT_ROOT
+
     member = _OP(
         company_id=company_id,
         partner_code=code,
         partner_name=partner_name,
-        phone=phone_raw[-10:] if len(phone_raw) >= 10 else phone_raw,
+        phone=clean_phone,
         email=lead.email,
         category='VGK_TEAM',
         is_active=False,
         parent_partner_id=parent_id,
+        registered_by_emp_code=reg_by,
         vgk_role='VGK_ASSOCIATE',
         vgk_points_balance=_Dec('0'),
         password_hash=pwd_hash,

@@ -334,22 +334,15 @@ class DialerService {
     void normalizedPhone; // referenced for potential future use
     const dialedAt = this.lastDialedAt;
 
-    // DC_DIALER_FIX3: Fire popup immediately when app returns to foreground after a dial
-    // Handles no-answer / short calls where call-sync hasn't updated yet
+    // Rule 12: App resumed != Call ended. Returning to MyntOS after using phone app
+    // must NOT terminate active-call tracking, clear call state, or invoke outcome form.
+    // The telecaller returns to MyntOS specifically to view lead details while conversing.
     import('@capacitor/app').then(({ App }) => {
       App.addListener('appStateChange', (state) => {
-        if (state.isActive && this.isDialing) {
-          this.stopCallPoll();
-          this.stopAppListener();
-          this.isDialing = false;
-          const lead = this.getCurrentLead();
-          if (lead && this.onPopupCallback) {
-            this.onPopupCallback(lead.lead_id, undefined);
-          }
-        }
+        console.log('[DC_DIALER] App state changed:', state.isActive ? 'resumed/active' : 'backgrounded');
       }).then(handle => {
         this._appStateHandle = handle;
-      }).catch(() => { /* silent — fall back to poll timeout */ });
+      }).catch(() => { /* silent */ });
     }).catch(() => { /* silent */ });
 
     this.callPollTimer = setInterval(async () => {
