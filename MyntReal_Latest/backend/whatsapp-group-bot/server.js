@@ -1275,8 +1275,23 @@ app.post('/api/send-group-message', async (req, res) => {
                 }
             }
 
+            const sendOptions = {};
+            const replyWamid = req.body.quoted_message_id || req.body.reply_to_wamid || req.body.reply_to_id;
+            if (replyWamid) {
+                sendOptions.quoted = {
+                    key: {
+                        id: replyWamid,
+                        remoteJid: destinationJid,
+                        fromMe: false
+                    },
+                    message: {
+                        conversation: req.body.quoted_text || req.body.reply_to_text || ''
+                    }
+                };
+            }
+
             try {
-                const sendRes = await sock.sendMessage(destinationJid, contentPayload);
+                const sendRes = await sock.sendMessage(destinationJid, contentPayload, sendOptions);
                 sentCount++;
                 logDispatchToBackend(destinationJid, message || '[Media Attachment]', req.body.groupName || 'Sales Team Group');
                 results.push({
@@ -1453,7 +1468,22 @@ app.post('/api/send-message', async (req, res) => {
             }
         }
 
-        const sentMsg = await sock.sendMessage(recipientJid, contentPayload);
+        const sendOptions = {};
+        const replyWamid = req.body.quoted_message_id || req.body.reply_to_wamid || req.body.reply_to_id;
+        if (replyWamid) {
+            sendOptions.quoted = {
+                key: {
+                    id: replyWamid,
+                    remoteJid: recipientJid,
+                    fromMe: false
+                },
+                message: {
+                    conversation: req.body.quoted_text || req.body.reply_to_text || ''
+                }
+            };
+        }
+
+        const sentMsg = await sock.sendMessage(recipientJid, contentPayload, sendOptions);
         if (!req.body.skip_backend_log && !req.body.skipBackendLog) {
             logDispatchToBackend(cleanPhone, message || '[Media Attachment]', req.body.recipientName || 'Staff Lead Dispatch');
         }

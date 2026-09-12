@@ -53,6 +53,7 @@ export class StaffWhatsAppInboxPage {
   private activeEmojiCat: 'smileys' | 'hands' | 'realestate' | 'reactions' | 'travel' = 'smileys';
   private showAttachMenu: boolean = false;
   private activeAttachment: { type: string; name: string; url?: string } | null = null;
+  private activeReplyContext: { wamid: string; text: string; sender: string } | null = null;
 
   // ── Templates & Automations & Audit State ───────────────────────────────────
   private templatesList: any[] = [];
@@ -462,8 +463,24 @@ export class StaffWhatsAppInboxPage {
             </div>
           ` : ''}
 
-          ${this.chatHistory.map(m => this.renderMessageBubble(m)).join('')}
+          ${this.chatHistory.map((m, idx) => this.renderMessageBubble(m, idx)).join('')}
         </div>
+
+        <!-- Quoted Reply Banner (if active) -->
+        ${this.activeReplyContext ? `
+          <div style="padding: 6px 12px; background: #064e3b; border-top: 1px solid #059669; border-left: 4px solid #10b981; display: flex; justify-content: space-between; align-items: center;">
+            <div style="flex: 1; min-width: 0; margin-right: 8px;">
+              <div style="font-size: 11px; font-weight: 700; color: #34d399; display: flex; align-items: center; gap: 4px;">
+                <i class="fas fa-reply" style="font-size: 10px;"></i>
+                <span>Replying to ${this.escapeHtml(this.activeReplyContext.sender || 'Contact')}</span>
+              </div>
+              <div style="font-size: 11.5px; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px;">
+                ${this.escapeHtml(this.activeReplyContext.text || '[Attachment]')}
+              </div>
+            </div>
+            <button id="waRemoveReplyBtn" style="background: none; border: none; color: #a7f3d0; font-size: 14px; cursor: pointer; padding: 2px 6px;">✕</button>
+          </div>
+        ` : ''}
 
         <!-- Attachment Preview Bar (if selected) -->
         ${this.activeAttachment ? `
@@ -598,34 +615,45 @@ export class StaffWhatsAppInboxPage {
     if (/^\d+$/.test(url)) {
       url = `/api/v1/whatsapp/media/${url}`;
     }
-    
-    const isImage = (m.media_type === 'image') || (m.media_mime_type && m.media_mime_type.startsWith('image/')) || (/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url)) || url.includes('/media/');
+    const dlUrl = url.includes('?') ? `${url}&download=1` : `${url}?download=1`;
+    const mime = (m.media_mime_type || '').toLowerCase();
+    const type = (m.media_type || '').toLowerCase();
+    const isPdf = (type === 'document') || mime.includes('pdf') || /\.pdf(\?.*)?$/i.test(url);
+    const isImage = !isPdf && ((type === 'image') || mime.startsWith('image/') || (/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url)));
+    const filename = m.media_name || m.filename || (url.split('/').pop()?.split('?')[0]) || (isImage ? 'image.jpg' : 'Document.pdf');
+
     if (isImage) {
       return `
-        <div style="margin-bottom: 6px; border-radius: 8px; overflow: hidden; max-height: 220px; background: rgba(0,0,0,0.2);">
+        <div style="margin-bottom: 6px; border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08);">
           <a href="${url}" target="_blank" rel="noopener noreferrer" style="display: block;">
             <img src="${url}" alt="Attachment" style="width: 100%; max-height: 220px; object-fit: cover; display: block;" onerror="this.style.display='none'" />
           </a>
+          <div style="padding: 4px 8px; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 10px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px;">${this.escapeHtml(filename)}</span>
+            <a href="${dlUrl}" download="${this.escapeAttr(filename)}" style="display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; color: #34d399; font-weight: 700; text-decoration: none;">
+              <i class="fas fa-download"></i> Download
+            </a>
+          </div>
         </div>
       `;
     }
 
-    const filename = m.media_name || m.filename || (url.split('/').pop()?.split('?')[0]) || 'Document.pdf';
     return `
       <div style="margin-bottom: 6px;">
-        <a href="${url}" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: rgba(0,0,0,0.25); border-radius: 8px; text-decoration: none; color: #38bdf8; border: 1px solid rgba(255,255,255,0.1);">
+        <div style="display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: rgba(0,0,0,0.25); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
           <i class="fas fa-file-pdf" style="font-size: 20px; color: #ef4444; flex-shrink: 0;"></i>
           <div style="flex: 1; min-width: 0;">
             <div style="font-size: 11.5px; font-weight: 600; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.escapeHtml(filename)}</div>
-            <div style="font-size: 9.5px; color: #94a3b8;">Document Attachment · Click to view</div>
+            <div style="font-size: 9.5px; color: #94a3b8;">Document Attachment</div>
           </div>
-          <i class="fas fa-download" style="font-size: 11px; color: #94a3b8; flex-shrink: 0;"></i>
-        </a>
+          <a href="${url}" target="_blank" rel="noopener noreferrer" style="padding: 4px 8px; background: #0284c7; color: #fff; border-radius: 4px; font-size: 10px; text-decoration: none; font-weight: 600; margin-right: 4px;">View</a>
+          <a href="${dlUrl}" download="${this.escapeAttr(filename)}" style="padding: 4px 8px; background: #059669; color: #fff; border-radius: 4px; font-size: 10px; text-decoration: none; font-weight: 600;">Download</a>
+        </div>
       </div>
     `;
   }
 
-  private renderMessageBubble(m: any): string {
+  private renderMessageBubble(m: any, idx: number = 0): string {
     const isOutbound = m.message_type === 'outbound' || m.message_type === 'bot' || m.message_type === 'manual_staff' || m.sender === 'bot' || m.sender_type === 'bot' || m.is_from_me;
     const isBot = m.message_type === 'bot' || m.sender_type === 'bot';
     
@@ -643,13 +671,29 @@ export class StaffWhatsAppInboxPage {
     const ticks = m.status_ticks || '✓✓';
     const mediaHtml = this.renderMediaPreview(m);
 
+    let quotedHtml = '';
+    if (m.reply_to && (m.reply_to.text || m.reply_to.wamid)) {
+      const qSender = m.reply_to.sender || 'Replied Message';
+      const qText = m.reply_to.text || 'Attachment / Original Message';
+      quotedHtml = `
+        <div style="margin-bottom: 6px; padding: 5px 8px; border-left: 3px solid ${isOutbound ? '#a7f3d0' : '#10b981'}; background: rgba(0,0,0,0.2); border-radius: 4px; font-size: 11px;">
+          <div style="font-weight: 700; color: ${isOutbound ? '#a7f3d0' : '#34d399'}; margin-bottom: 2px;">${this.escapeHtml(qSender)}</div>
+          <div style="color: ${isOutbound ? '#e2e8f0' : '#cbd5e1'}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.escapeHtml(qText)}</div>
+        </div>
+      `;
+    }
+
     if (isOutbound) {
       return `
         <div style="align-self: flex-end; max-width: 82%; background: ${isBot ? '#065f46' : '#059669'}; color: #fff; padding: 8px 12px; border-radius: 12px 12px 2px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
           ${isBot ? '<div style="font-size: 9.5px; font-weight: 700; color: #a7f3d0; margin-bottom: 2px;"><i class="fas fa-robot"></i> Bot Automated</div>' : ''}
+          ${quotedHtml}
           ${mediaHtml}
           ${text ? `<div style="font-size: 13px; line-height: 1.35; word-break: break-word; white-space: pre-wrap;">${this.escapeHtml(text)}</div>` : ''}
           <div style="font-size: 9.5px; color: #a7f3d0; text-align: right; margin-top: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+            <button class="wa-bubble-reply-btn" data-idx="${idx}" style="background: none; border: none; color: #a7f3d0; cursor: pointer; font-size: 10px; padding: 2px 4px; display: inline-flex; align-items: center;" title="Reply to message">
+              <i class="fas fa-reply"></i>
+            </button>
             <button class="wa-bubble-fwd-btn" data-msg="${this.escapeAttr(text)}" style="background: none; border: none; color: #a7f3d0; cursor: pointer; font-size: 10px; padding: 2px 4px; display: inline-flex; align-items: center;" title="Forward message">
               <i class="fas fa-share" style="transform: scaleX(-1);"></i>
             </button>
@@ -662,9 +706,13 @@ export class StaffWhatsAppInboxPage {
 
     return `
       <div style="align-self: flex-start; max-width: 82%; background: #1e293b; color: #f8fafc; padding: 8px 12px; border-radius: 12px 12px 12px 2px; border: 1px solid #334155; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+        ${quotedHtml}
         ${mediaHtml}
         ${text ? `<div style="font-size: 13px; line-height: 1.35; word-break: break-word; white-space: pre-wrap;">${this.escapeHtml(text)}</div>` : ''}
         <div style="font-size: 9.5px; color: #94a3b8; text-align: right; margin-top: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+          <button class="wa-bubble-reply-btn" data-idx="${idx}" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 10px; padding: 2px 4px; display: inline-flex; align-items: center;" title="Reply to message">
+            <i class="fas fa-reply"></i>
+          </button>
           <button class="wa-bubble-fwd-btn" data-msg="${this.escapeAttr(text)}" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 10px; padding: 2px 4px; display: inline-flex; align-items: center;" title="Forward message">
             <i class="fas fa-share" style="transform: scaleX(-1);"></i>
           </button>
@@ -1427,6 +1475,41 @@ export class StaffWhatsAppInboxPage {
       this.render();
     });
 
+    // Remove Reply Context
+    document.getElementById('waRemoveReplyBtn')?.addEventListener('click', () => {
+      this.activeReplyContext = null;
+      this.render();
+    });
+
+    // Bubble Reply Button
+    document.querySelectorAll('.wa-bubble-reply-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idxStr = (btn as HTMLElement).getAttribute('data-idx');
+        if (idxStr !== null) {
+          const idx = parseInt(idxStr, 10);
+          const m = this.chatHistory[idx];
+          if (m) {
+            const isOut = m.message_type === 'outbound' || m.message_type === 'bot' || m.message_type === 'manual_staff' || m.sender === 'bot' || m.sender_type === 'bot';
+            const sender = isOut ? 'You' : (this.activeChatName || 'Customer');
+            let text = m.body_text || m.body || m.message || '';
+            if (!text || text === '—') {
+              text = m.media_url ? '[Attachment]' : '';
+            }
+            const wamid = m.wamid || (m.id ? String(m.id).replace('ml_', '').replace('wa_', '') : null);
+            this.activeReplyContext = {
+              wamid: wamid || `msg_${idx}`,
+              text: text.length > 80 ? text.substring(0, 80) + '...' : text,
+              sender: sender
+            };
+            this.render();
+            const input = document.getElementById('waLiveMsgInput') as HTMLInputElement;
+            if (input) input.focus();
+          }
+        }
+      });
+    });
+
     // Live Message Send
     const sendBtn = document.getElementById('waLiveSendBtn');
     const msgInput = document.getElementById('waLiveMsgInput') as HTMLInputElement;
@@ -1442,6 +1525,9 @@ export class StaffWhatsAppInboxPage {
       this.activeAttachment = null;
       this.showEmojiTray = false;
       this.showAttachMenu = false;
+
+      const replyCtx = this.activeReplyContext;
+      this.activeReplyContext = null;
 
       const user: any = authService.getAuthState().user || {};
       const staffName = user.full_name || user.name || 'Staff';
@@ -1460,6 +1546,7 @@ export class StaffWhatsAppInboxPage {
         media_url: currentAttach?.url || null,
         media_name: currentAttach?.name || null,
         media_type: currentAttach?.type || 'text',
+        reply_to: replyCtx ? { wamid: replyCtx.wamid, text: replyCtx.text, sender: replyCtx.sender } : undefined,
         received_at: new Date().toISOString(),
         status_ticks: '✓✓'
       });
@@ -1475,7 +1562,10 @@ export class StaffWhatsAppInboxPage {
           message: finalMsg,
           media_url: currentAttach?.url || null,
           message_type: currentAttach ? currentAttach.type : 'text',
-          recipient_type: 'individual'
+          recipient_type: 'individual',
+          reply_to_wamid: replyCtx?.wamid || null,
+          reply_to_text: replyCtx?.text || null,
+          reply_to_sender: replyCtx?.sender || null
         });
       } catch (err) {
         console.error('[StaffWhatsAppCenter] Send failed:', err);

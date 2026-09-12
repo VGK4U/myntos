@@ -308,6 +308,41 @@ class AuthService {
     }
   }
 
+  /**
+   * DC_QUICK_LEAD_DIAL: Instantly stores authenticated staff identity from quick lead verification
+   * Supports 'always' (persistent Preferences + localStorage) vs 'one_time' (session-only).
+   */
+  async quickStaffLogin(accessToken: string, employee: any, persistence: string = 'always'): Promise<void> {
+    await apiService.setToken(accessToken);
+    const companyId = employee?.base_company_id || employee?.company_id || 1;
+    await apiService.setCompanyId(companyId);
+    const normalizedUser = { ...employee, portal: 'staff', company_id: companyId };
+    const sessionHours = persistence === 'always' ? 8760 : 12;
+    const tokenExpiresAt = Date.now() + (sessionHours * 3600 * 1000);
+    this.authState = {
+      isLoggedIn: true,
+      isClockedIn: false,
+      hasActiveJourney: false,
+      user: normalizedUser,
+      lastActivity: Date.now(),
+      tokenExpiresAt
+    };
+    if (persistence === 'always') {
+      await this.saveAuthState();
+      localStorage.setItem('staff_token', accessToken);
+      localStorage.setItem('token', accessToken);
+      localStorage.setItem('staff_user', JSON.stringify(employee));
+    } else {
+      sessionStorage.setItem('mnr_auth_state', JSON.stringify(this.authState));
+      sessionStorage.setItem('staff_token', accessToken);
+      sessionStorage.setItem('token', accessToken);
+      sessionStorage.setItem('staff_user', JSON.stringify(employee));
+    }
+    apiService.resetSessionExpiredFlag();
+    window.dispatchEvent(new CustomEvent('auth-changed'));
+    window.dispatchEvent(new CustomEvent('login-success'));
+  }
+
   async logout(): Promise<void> {
     await apiService.clearToken();
     await apiService.clearCompanyId();

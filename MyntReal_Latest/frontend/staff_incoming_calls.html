@@ -1133,6 +1133,89 @@
         </div>
     </div>
 
+    <!-- Quick Staff Lead Call Verification Modal (WhatsApp Lead Link Tagging & Recording) -->
+    <div class="modal fade" id="quickStaffVerificationModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark text-light border-primary shadow-lg" style="border-radius: 16px; border-width: 2px;">
+                <div class="modal-header border-secondary py-3">
+                    <h5 class="modal-title fw-bold text-white d-flex align-items-center">
+                        <span class="badge bg-primary me-2"><i class="fa-solid fa-headset"></i></span>
+                        Staff Verification for Lead Call
+                    </h5>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Customer Lead Preview Card -->
+                    <div class="card bg-black border-secondary mb-3 p-3" style="border-radius: 12px;">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="text-secondary small text-uppercase fw-bold">Connecting Customer Lead</span>
+                                <h4 class="text-info fw-bold mb-0" id="qsvCustomerName">Loading Lead...</h4>
+                            </div>
+                            <span class="badge bg-success" id="qsvCompanyBadge">MyntReal</span>
+                        </div>
+                        <div class="row g-2 mt-1 small">
+                            <div class="col-6">
+                                <div class="text-muted"><i class="fa-solid fa-phone me-1"></i> Phone:</div>
+                                <div class="fw-bold font-monospace text-warning" id="qsvMaskedPhone">+91 ***** *****</div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-muted"><i class="fa-solid fa-location-dot me-1"></i> Location:</div>
+                                <div class="fw-bold text-light" id="qsvLocation">—</div>
+                            </div>
+                            <div class="col-12" id="qsvServiceRow">
+                                <div class="text-muted"><i class="fa-solid fa-tag me-1"></i> Category / Service:</div>
+                                <div class="fw-bold text-light" id="qsvService">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Staff Employee ID Input -->
+                    <div class="mb-3">
+                        <label class="form-label text-light fw-bold small">
+                            <i class="fa-solid fa-id-badge text-primary me-1"></i> Enter Your Employee ID <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" id="qsvEmpCodeInput" class="form-control form-control-lg bg-dark text-light border-primary font-monospace fw-bold" placeholder="e.g. MR10012 or MN10017" autocomplete="off" style="letter-spacing: 1px;">
+                        <div class="form-text text-muted small">Required to tag call recording, CDR, and CRM logs to your employee record.</div>
+                    </div>
+
+                    <!-- Browser Login Persistence Choice (Always vs One-time) -->
+                    <div class="mb-3 p-3 bg-secondary bg-opacity-25 rounded border border-secondary">
+                        <label class="form-label text-secondary small fw-bold text-uppercase mb-2">Device Login Preference</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="qsvPersistence" id="qsvPersistAlways" value="always" checked>
+                            <label class="form-check-label text-light small fw-bold" for="qsvPersistAlways">
+                                🔒 Remember this device always <span class="badge bg-primary ms-1">Recommended</span>
+                            </label>
+                            <div class="text-muted" style="font-size: 11px; padding-left: 2px;">Keep you logged in so future WhatsApp lead alerts connect calls immediately with 1 tap.</div>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="qsvPersistence" id="qsvPersistOneTime" value="one_time">
+                            <label class="form-check-label text-light small" for="qsvPersistOneTime">
+                                ⏱️ One-time (This call session only)
+                            </label>
+                            <div class="text-muted" style="font-size: 11px; padding-left: 2px;">Tag this call to your Employee ID without storing permanent login on this device.</div>
+                        </div>
+                    </div>
+
+                    <!-- Error Alert -->
+                    <div id="qsvErrorBanner" class="alert alert-danger py-2 px-3 small" style="display: none;"></div>
+
+                    <!-- Primary Action Button -->
+                    <button type="button" class="btn btn-success btn-lg w-100 fw-bold py-2 shadow" id="qsvSubmitBtn" onclick="submitQuickStaffVerification()">
+                        <i class="fa-solid fa-phone-volume me-2"></i> Verify & Connect Call Now
+                    </button>
+
+                    <!-- Alternative Login Link -->
+                    <div class="text-center mt-3">
+                        <a href="#" id="qsvFullLoginLink" class="text-secondary small text-decoration-none hover-white">
+                            <i class="fa-solid fa-right-to-bracket me-1"></i> Or log in with full password account
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let currentScope = 'dialer';
@@ -1142,6 +1225,9 @@
         let currentUserInfo = null;
         let actionModalInstance = null;
         let quickDialModalInstance = null;
+        let quickStaffModalInstance = null;
+        let pendingLeadId = null;
+        let pendingAutoDial = false;
 
         // Shared In-Call & Softphone Telephony State
         let isCallInProgress = false;
@@ -1182,6 +1268,9 @@
             if (document.getElementById('quickDialModal')) {
                 quickDialModalInstance = new bootstrap.Modal(document.getElementById('quickDialModal'));
             }
+            if (document.getElementById('quickStaffVerificationModal')) {
+                quickStaffModalInstance = new bootstrap.Modal(document.getElementById('quickStaffVerificationModal'));
+            }
 
             // Set default 7-day date range for history tabs
             setDatePreset(7);
@@ -1198,10 +1287,237 @@
             const targetScope = validScopes.includes(initialScope) ? initialScope : 'dialer';
             switchScope(targetScope);
 
-            // Load initial recent 20 calls & metrics for Dialer
-            loadRecentCallsDialer();
-            loadTodayDialerMetrics();
+            // DC_QUICK_LEAD_DIAL: Parse URL query parameters (from WhatsApp group / direct call links)
+            const urlParams = new URLSearchParams(window.location.search);
+            const leadIdParam = urlParams.get('lead_id') || urlParams.get('leadId') || urlParams.get('lead');
+            const dialPhoneParam = urlParams.get('dial') || urlParams.get('phone') || urlParams.get('number');
+            const autoDialParam = urlParams.get('auto_dial') === '1' || urlParams.get('autodial') === '1' || urlParams.get('auto_start') === 'true' || urlParams.get('autocall') === '1';
+
+            const token = localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token') || (document.cookie.match(/staff_token=([^;]+)/) || [])[1] || '';
+
+            if (!token && leadIdParam) {
+                // Unauthenticated staff member accessing lead call link: Show Quick Verification Modal!
+                pendingLeadId = leadIdParam;
+                pendingAutoDial = autoDialParam;
+                showQuickStaffVerificationModal(leadIdParam, autoDialParam);
+            } else if (token && leadIdParam) {
+                // Authenticated staff member: auto-load lead details and auto-dial
+                handleAuthenticatedLeadCall(leadIdParam, dialPhoneParam, autoDialParam);
+                loadRecentCallsDialer();
+                loadTodayDialerMetrics();
+            } else if (!token) {
+                // Regular unauthenticated visit without lead param: redirect to login
+                window.location.href = '/staff/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
+                return;
+            } else {
+                loadRecentCallsDialer();
+                loadTodayDialerMetrics();
+            }
         });
+
+        // ── DC_QUICK_LEAD_DIAL: Quick Staff Verification & Lead Call Handlers ──
+
+        async function showQuickStaffVerificationModal(leadId, autoDial = false) {
+            pendingLeadId = leadId;
+            pendingAutoDial = autoDial;
+
+            const modalEl = document.getElementById('quickStaffVerificationModal');
+            if (!modalEl) return;
+
+            // Set login fallback link with preserved return URL
+            const loginLink = document.getElementById('qsvFullLoginLink');
+            if (loginLink) {
+                loginLink.href = '/staff/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
+            }
+
+            // Bind Enter key on Employee ID input to submit
+            const empInput = document.getElementById('qsvEmpCodeInput');
+            if (empInput && !empInput.dataset.boundEnter) {
+                empInput.dataset.boundEnter = 'true';
+                empInput.addEventListener('keydown', (ev) => {
+                    if (ev.key === 'Enter') {
+                        ev.preventDefault();
+                        submitQuickStaffVerification();
+                    }
+                });
+            }
+
+            // Clear previous errors
+            const errBanner = document.getElementById('qsvErrorBanner');
+            if (errBanner) {
+                errBanner.style.display = 'none';
+                errBanner.textContent = '';
+            }
+
+            // Fetch public lead preview to display customer info on the modal
+            try {
+                const resp = await fetch(`/api/v1/telephony/plivo/public-lead-preview?lead_id=${leadId}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data && data.success) {
+                        const nameEl = document.getElementById('qsvCustomerName');
+                        const phoneEl = document.getElementById('qsvMaskedPhone');
+                        const locEl = document.getElementById('qsvLocation');
+                        const srvEl = document.getElementById('qsvService');
+                        const compBadge = document.getElementById('qsvCompanyBadge');
+
+                        if (nameEl) nameEl.textContent = data.name || 'Valued Customer';
+                        if (phoneEl) phoneEl.textContent = data.masked_phone || '+91 ***** *****';
+                        if (locEl) locEl.textContent = data.location || '—';
+                        if (srvEl) srvEl.textContent = data.service || '—';
+                        if (compBadge) compBadge.textContent = data.company_name || 'MyntReal';
+                    }
+                }
+            } catch (err) {
+                console.warn('[QUICK-DIAL] Could not fetch public lead preview:', err);
+            }
+
+            if (quickStaffModalInstance) {
+                quickStaffModalInstance.show();
+                setTimeout(() => {
+                    if (empInput) empInput.focus();
+                }, 300);
+            }
+        }
+
+        async function submitQuickStaffVerification() {
+            const empInput = document.getElementById('qsvEmpCodeInput');
+            const submitBtn = document.getElementById('qsvSubmitBtn');
+            const errBanner = document.getElementById('qsvErrorBanner');
+
+            const empCode = (empInput?.value || '').trim().toUpperCase();
+            if (!empCode) {
+                if (errBanner) {
+                    errBanner.textContent = 'Please enter your Employee ID (e.g. MR10012 or MN10017).';
+                    errBanner.style.display = 'block';
+                }
+                if (empInput) empInput.focus();
+                return;
+            }
+
+            const persistenceRadio = document.querySelector('input[name="qsvPersistence"]:checked');
+            const persistence = persistenceRadio ? persistenceRadio.value : 'always';
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verifying & Connecting...';
+            }
+            if (errBanner) errBanner.style.display = 'none';
+
+            try {
+                const resp = await fetch('/api/v1/telephony/plivo/quick-dial/verify-staff', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        emp_code: empCode,
+                        lead_id: pendingLeadId,
+                        persistence: persistence
+                    })
+                });
+
+                const data = await resp.json();
+                if (!resp.ok || !data.success) {
+                    throw new Error(data.detail || data.error || 'Employee verification failed. Please check Employee ID.');
+                }
+
+                // 1. Store credentials based on chosen persistence preference
+                if (persistence === 'always') {
+                    localStorage.setItem('staff_token', data.access_token);
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('staff_user', JSON.stringify(data.employee));
+                    try {
+                        document.cookie = `staff_token=${data.access_token}; path=/; max-age=31536000; SameSite=Lax`;
+                        document.cookie = `session_token=${data.access_token}; path=/; max-age=31536000; SameSite=Lax`;
+                    } catch (_) {}
+                } else {
+                    sessionStorage.setItem('staff_token', data.access_token);
+                    sessionStorage.setItem('token', data.access_token);
+                    sessionStorage.setItem('staff_user', JSON.stringify(data.employee));
+                    try {
+                        document.cookie = `staff_token=${data.access_token}; path=/; SameSite=Lax`;
+                    } catch (_) {}
+                }
+
+                currentUserInfo = data.employee;
+
+                // 2. Hide verification modal
+                if (quickStaffModalInstance) {
+                    quickStaffModalInstance.hide();
+                }
+
+                // 3. Update permissions and sidebar/header user info
+                await checkUserPermissions();
+                if (typeof window.StaffHeader !== 'undefined' && typeof window.StaffHeader.init === 'function') {
+                    window.StaffHeader.init();
+                }
+
+                // 4. Background refresh recent calls & metrics
+                loadRecentCallsDialer();
+                loadTodayDialerMetrics();
+
+                // 5. Populate dialer input and initiate softphone call
+                const targetPhone = data.lead?.phone || '';
+                const targetName = data.lead?.name || 'Contact Lead';
+                const targetLeadId = data.lead?.id || pendingLeadId;
+
+                const cleanDigits = String(targetPhone).replace(/\D/g, '').slice(-10);
+                const dialerInp = document.getElementById('hubDialerInput');
+                if (dialerInp && cleanDigits) dialerInp.value = cleanDigits;
+
+                // 6. Connect the call
+                if (cleanDigits) {
+                    // Pre-warm Plivo Softphone with the freshly issued token
+                    if (window.PlivoSoftphone && typeof window.PlivoSoftphone.refreshAndLogin === 'function') {
+                        window.PlivoSoftphone.refreshAndLogin().catch(() => {});
+                    }
+
+                    setTimeout(() => {
+                        dialFromHub(cleanDigits, targetName, targetLeadId);
+                    }, 800);
+                }
+
+            } catch (err) {
+                console.error('[QUICK-DIAL-ERROR]', err);
+                if (errBanner) {
+                    errBanner.textContent = err.message || 'Verification failed. Please check Employee ID.';
+                    errBanner.style.display = 'block';
+                }
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="fa-solid fa-phone-volume me-2"></i> Verify & Connect Call Now';
+                }
+            }
+        }
+
+        async function handleAuthenticatedLeadCall(leadId, dialPhone = null, autoDial = false) {
+            let targetPhone = dialPhone;
+            let targetName = 'Contact Lead';
+            let maskedPhone = '';
+
+            try {
+                const res = await staffFetch(`/api/v1/telephony/plivo/lead-call-detail/${leadId}`);
+                if (res && res.success && res.lead) {
+                    targetPhone = res.lead.phone || targetPhone;
+                    targetName = res.lead.name || targetName;
+                    maskedPhone = res.lead.masked_phone || '';
+                }
+            } catch (e) {
+                console.warn('[SOFTPHONE] Could not fetch lead call details:', e);
+            }
+
+            const cleanDigits = String(targetPhone || '').replace(/\D/g, '').slice(-10);
+            const dialerInp = document.getElementById('hubDialerInput');
+            if (dialerInp && cleanDigits) dialerInp.value = cleanDigits;
+
+            if (autoDial && cleanDigits) {
+                console.log(`[SOFTPHONE] Auto-dialing lead ${targetName} (${cleanDigits})...`);
+                // Give Plivo WebRTC singleton 1.2 seconds to finish registration
+                setTimeout(() => {
+                    dialFromHub(cleanDigits, targetName, leadId);
+                }, 1200);
+            }
+        }
 
         function setupTelephonyEventListeners() {
             // 1. Dialing initiated
@@ -1288,6 +1604,19 @@
                     if (teamCol) teamCol.style.display = 'none';
                     const sel = document.getElementById('filter-team-member');
                     if (sel) sel.value = '';
+                }
+
+                // Show clean loading spinner immediately when switching tabs
+                const tbody = document.getElementById('calls-table-body');
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="10" class="text-center py-5 text-muted">
+                                <div class="spinner-border spinner-border-sm text-primary mb-2"></div>
+                                <div>Loading calls...</div>
+                            </td>
+                        </tr>
+                    `;
                 }
 
                 loadCalls(1);
@@ -1897,7 +2226,13 @@
             };
             const res = await fetch(url, options);
             if (res.status === 401) {
-                window.location.href = '/staff/login';
+                const urlParams = new URLSearchParams(window.location.search);
+                const leadIdParam = urlParams.get('lead_id') || urlParams.get('leadId');
+                if (leadIdParam && typeof showQuickStaffVerificationModal === 'function') {
+                    showQuickStaffVerificationModal(leadIdParam, true);
+                    throw new Error('Unauthorized - Staff Verification Required');
+                }
+                window.location.href = '/staff/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.search);
                 throw new Error('Unauthorized');
             }
             if (res.status === 403) {
@@ -1911,7 +2246,10 @@
             return res.json();
         }
 
+        let currentLoadCallsSeq = 0;
+
         async function loadCalls(page = 1) {
+            const fetchSeq = ++currentLoadCallsSeq;
             currentPage = page;
             const search = document.getElementById('filter-search').value.trim();
             const callType = document.getElementById('filter-type').value;
@@ -1933,12 +2271,17 @@
 
             try {
                 const data = await staffFetch(query);
+                if (fetchSeq !== currentLoadCallsSeq) {
+                    console.log(`[SOFTPHONE] Discarding stale response for seq #${fetchSeq} (latest is #${currentLoadCallsSeq})`);
+                    return;
+                }
                 if (data && data.current_user_can_view_overall) {
                     const wrap = document.getElementById('tab-overall-wrapper');
                     if (wrap) wrap.style.display = 'block';
                 }
                 renderCalls(data);
             } catch (err) {
+                if (fetchSeq !== currentLoadCallsSeq) return;
                 document.getElementById('calls-table-body').innerHTML = `
                     <tr><td colspan="10" class="text-center py-4 text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>${escapeHtml(err.message)}</td></tr>
                 `;
@@ -2146,19 +2489,24 @@
                             ${c.latest_selection ? `<div class="small text-warning mt-0.5" style="font-size:11px;" title="Selected during IVR"><i class="fa-solid fa-sitemap me-1 text-info"></i>${escapeHtml(c.latest_selection)}</div>` : ''}
                         </td>
                         <td>
-                            <div class="d-flex flex-column align-items-start" style="cursor:pointer;" 
-                                 data-phone="${escapeHtml(cleanPhoneNum)}" 
-                                 data-name="${escapeHtml(safeCustName)}" 
-                                 onclick="triggerHistoryFromEl(this)" 
-                                 title="Click to view history for ${escapeHtml(safeCustName)} (${count} calls)">
-                                <div class="d-flex align-items-center">
-                                    ${(c.caller_identity_source === 'unresolved_forwarded' || c.customer_phone_masked === 'Unknown / Not provided') ? `
-                                        <span class="text-muted fst-italic" style="font-size:12px;"><i class="fa-solid fa-user-secret me-1 text-muted" style="font-size:11px;"></i>Unknown / Not provided</span>
-                                    ` : `
-                                        <span class="phone-masked"><i class="fa-solid fa-phone me-1 text-muted" style="font-size:11px;"></i>${escapeHtml(c.customer_phone_masked)}</span>
-                                    `}
-                                    ${countBadge}
-                                </div>
+                            <div class="d-flex flex-column align-items-start">
+                                ${(c.caller_identity_source === 'unresolved_forwarded' || c.customer_phone_masked === 'Unknown / Not provided' || !cleanPhoneNum) ? `
+                                    <span class="text-muted fst-italic" style="font-size:12px;"><i class="fa-solid fa-user-secret me-1 text-muted" style="font-size:11px;"></i>Unknown / Not provided</span>
+                                ` : `
+                                    <div class="d-flex align-items-center gap-1">
+                                        <button class="btn btn-link text-decoration-none p-0 text-start d-inline-flex align-items-center" 
+                                                style="color: #60a5fa; cursor: pointer;"
+                                                data-phone="${escapeHtml(cleanPhoneNum)}" 
+                                                data-name="${escapeHtml(safeCustName)}" 
+                                                data-lead-id="${escapeHtml(safeLeadId)}" 
+                                                onclick="triggerDialFromBtn(this)" 
+                                                title="Click to call back ${escapeHtml(c.customer_phone_masked)}">
+                                            <i class="fa-solid fa-phone text-success me-1.5" style="font-size:11px;"></i>
+                                            <span class="phone-masked" style="border-bottom: 1px dashed rgba(96,165,250,0.5);">${escapeHtml(c.customer_phone_masked)}</span>
+                                        </button>
+                                        ${countBadge}
+                                    </div>
+                                `}
                                 ${(c.forwarded_from_masked || c.forwarded_from_display || c.forwarded_from_number) ? `
                                     <div class="small mt-0.5" title="Call forwarded from operator number">
                                         <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-50 px-1 py-0.5 font-monospace" style="font-size:9.5px;">

@@ -100,9 +100,6 @@ def initiate_browser_outbound_call(
     and returns session ID and caller metadata to the client softphone.
     """
     destination_phone = payload.get("destination_phone")
-    if not destination_phone:
-        raise HTTPException(status_code=400, detail="destination_phone is required")
-
     raw_lead_id = payload.get("lead_id")
     lead_id = None
     if raw_lead_id is not None and str(raw_lead_id).strip() != "":
@@ -110,6 +107,14 @@ def initiate_browser_outbound_call(
             lead_id = int(raw_lead_id)
         except (ValueError, TypeError):
             lead_id = None
+
+    if not destination_phone and lead_id:
+        lead_obj = db.query(CRMLead).get(lead_id)
+        if lead_obj and lead_obj.phone:
+            destination_phone = lead_obj.phone
+
+    if not destination_phone:
+        raise HTTPException(status_code=400, detail="destination_phone is required")
 
     company_id = getattr(current_user, 'base_company_id', 1) or 1
 
@@ -697,13 +702,27 @@ async def handle_plivo_voicemail_callback(
 
     if voip_session:
         voip_session.status = "voicemail"
+        if not voip_session.operator_id:
+            try:
+                from app.services.telephony.flow_interpreter import CallFlowInterpreter
+                assigned_staff, reason = CallFlowInterpreter._resolve_caller_assigned_staff(
+                    db, from_phone or voip_session.customer_phone, voip_session.company_id
+                )
+                if assigned_staff:
+                    voip_session.operator_id = assigned_staff.id
+                    voip_session.operator_user_ref = assigned_staff.emp_code
+                    logger.info(f"[PLIVO-VOICEMAIL] Attributed voicemail #{voip_session.id} to staff {assigned_staff.full_name} ({reason})")
+            except Exception as attr_err:
+                logger.warning(f"[PLIVO-VOICEMAIL] Could not attribute voicemail staff: {attr_err}")
+
         if rec_url:
             voip_session.recording_storage_key = rec_url
             voip_session.recording_status = "AVAILABLE"
             voip_session.recording_duration_seconds = duration
         if duration > (voip_session.duration_seconds or 0):
             voip_session.duration_seconds = duration
-        voip_session.ended_at = datetime.utcnow()
+        now_ist = get_indian_time()
+        voip_session.ended_at = now_ist
 
         meta = {}
         if voip_session.metadata_json:
@@ -716,7 +735,7 @@ async def handle_plivo_voicemail_callback(
             meta["recording_id"] = rec_id or call_uuid
             meta["recording_duration_seconds"] = duration
         meta["is_voicemail"] = True
-        meta["voicemail_received_at"] = datetime.utcnow().isoformat()
+        meta["voicemail_received_at"] = now_ist.isoformat()
         voip_session.metadata_json = json.dumps(meta)
 
         try:
@@ -1144,6 +1163,169 @@ def get_public_lead_preview_for_call(
     }
 
 
+@router.get("/lead-call-detail/{lead_id}")
+def get_lead_call_detail(
+    lead_id: int,
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Returns verified customer details for direct softphone dialing by authenticated staff.
+    Ensures the calling agent has full dialer context (customer phone, name, category, location).
+    """
+    lead = db.query(CRMLead).get(lead_id)
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    clean_digits = ''.join(c for c in str(lead.phone or '') if c.isdigit())[-10:]
+    masked_phone = f"+91 {clean_digits[:5]} *****" if len(clean_digits) == 10 else "+91 ***** *****"
+
+    service_name = getattr(lead, 'looking_for', '') or 'General Enquiry'
+    if getattr(lead, 'category_id', None):
+        try:
+            from app.models.crm import CRMCategory
+            cat = db.query(CRMCategory).get(lead.category_id)
+            if cat:
+                service_name = cat.name
+        except Exception:
+            pass
+
+    city = getattr(lead, 'city', '') or getattr(lead, 'location', '') or 'Not Specified'
+    pincode = getattr(lead, 'pincode', '') or ''
+    company_name = "MyntReal"
+    if lead.company_id == 2:
+        company_name = "Zynova Mobility"
+    elif lead.company_id == 1:
+        company_name = "Real Dreams"
+
+    return {
+        "success": True,
+        "lead": {
+            "id": lead.id,
+            "name": getattr(lead, 'first_name', '') or getattr(lead, 'name', '') or "Customer Lead",
+            "phone": lead.phone,
+            "masked_phone": masked_phone,
+            "location": f"{city} (PIN: {pincode})" if pincode else city,
+            "company_name": company_name,
+            "company_id": lead.company_id,
+            "category_name": service_name
+        }
+    }
+
+
+@router.post("/quick-dial/verify-staff")
+def quick_dial_verify_staff(
+    payload: Dict[str, Any] = Body(...),
+    db: Session = Depends(get_db)
+):
+    """
+    DC_QUICK_LEAD_DIAL: Validates staff Employee ID (emp_code) for instant lead calling.
+    Supports persistent ('always') vs session-only ('one_time') token issuance.
+    Attributes call session, recording, and CRM audit log to this verified employee.
+    """
+    from sqlalchemy import func
+    from datetime import timedelta
+    from app.core.security import SecurityManager
+
+    emp_code = str(payload.get("emp_code") or "").strip().upper()
+    lead_id = payload.get("lead_id")
+    persistence = str(payload.get("persistence") or "always").strip().lower()
+
+    if not emp_code:
+        raise HTTPException(status_code=400, detail="Please enter your Employee ID (e.g. MR10012 or MN10017)")
+    if not lead_id:
+        raise HTTPException(status_code=400, detail="lead_id is required")
+
+    # 1. Resolve active employee by emp_code
+    employee = db.query(StaffEmployee).filter(
+        func.upper(StaffEmployee.emp_code) == emp_code,
+        StaffEmployee.status == 'active'
+    ).first()
+
+    # Fallback: support numeric portion if prefix omitted (e.g. '10017' -> 'MN10017')
+    if not employee and emp_code.isdigit():
+        employee = db.query(StaffEmployee).filter(
+            StaffEmployee.emp_code.ilike(f"%{emp_code}%"),
+            StaffEmployee.status == 'active'
+        ).first()
+
+    if not employee:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Active staff employee with ID '{emp_code}' not found. Please check your Employee ID or contact Admin."
+        )
+
+    # 2. Resolve lead
+    lead = db.query(CRMLead).get(int(lead_id))
+    if not lead:
+        raise HTTPException(status_code=404, detail=f"Lead #{lead_id} not found.")
+
+    # 3. Issue staff access token with requested persistence ('always' = 365 days, 'one_time' = 12 hours)
+    session_hours = 8760 if persistence == "always" else 12
+    token = SecurityManager.create_access_token(
+        data={
+            "sub": str(employee.id),
+            "emp_code": employee.emp_code,
+            "email": employee.email,
+            "role": employee.role.role_code if employee.role else "junior_executive",
+            "staff_type": getattr(employee, "staff_type", "MN_STAFF"),
+            "admin_scope": getattr(employee, "admin_scope", "CLIENT_SPECIFIC"),
+            "base_company_id": employee.base_company_id,
+            "team_tag": employee.team_tag,
+            "user_type": "staff"
+        },
+        expires_delta=timedelta(hours=session_hours)
+    )
+
+    # 4. Generate Plivo WebRTC browser token
+    company_id = employee.base_company_id or lead.company_id or 1
+    webrtc_data = PlivoJWTService.generate_browser_token(
+        db=db,
+        company_id=company_id,
+        staff=employee
+    )
+
+    clean_digits = ''.join(c for c in str(lead.phone or '') if c.isdigit())[-10:]
+    masked_phone = f"+91 {clean_digits[:5]} *****" if len(clean_digits) == 10 else "+91 ***** *****"
+
+    service_name = getattr(lead, 'looking_for', '') or 'General Enquiry'
+    if getattr(lead, 'category_id', None):
+        try:
+            from app.models.crm import CRMCategory
+            cat = db.query(CRMCategory).get(lead.category_id)
+            if cat:
+                service_name = cat.name
+        except Exception:
+            pass
+
+    city = getattr(lead, 'city', '') or getattr(lead, 'location', '') or 'Not Specified'
+    pincode = getattr(lead, 'pincode', '') or ''
+    company_name = "MyntReal"
+    if lead.company_id == 2:
+        company_name = "Zynova Mobility"
+    elif lead.company_id == 1:
+        company_name = "Real Dreams"
+
+    return {
+        "success": True,
+        "access_token": token,
+        "token_type": "bearer",
+        "persistence": persistence,
+        "employee": employee.to_dict(),
+        "webrtc": webrtc_data,
+        "lead": {
+            "id": lead.id,
+            "name": getattr(lead, 'first_name', '') or getattr(lead, 'name', '') or "Customer Lead",
+            "phone": lead.phone,
+            "masked_phone": masked_phone,
+            "location": f"{city} (PIN: {pincode})" if pincode else city,
+            "company_name": company_name,
+            "company_id": lead.company_id,
+            "category_name": service_name
+        }
+    }
+
+
 @router.post("/public-browser-token")
 def issue_public_browser_token_for_call(
     payload: Dict[str, Any] = Body(...),
@@ -1151,10 +1333,11 @@ def issue_public_browser_token_for_call(
 ):
     """
     Issues a secure, limited-scope Plivo browser WebRTC token for external partners/guests
-    calling a specific lead_id. Number masking is strictly preserved on the backend.
+    calling a specific lead_id. Accepts emp_code for staff attribution.
     """
     lead_id = payload.get("lead_id")
-    caller_name = payload.get("caller_name", "External Partner")
+    emp_code = payload.get("emp_code")
+    caller_name = payload.get("caller_name", "Staff Member")
     
     if not lead_id:
         raise HTTPException(status_code=400, detail="lead_id is required")
@@ -1165,19 +1348,34 @@ def issue_public_browser_token_for_call(
 
     company_id = lead.company_id or 1
     
-    # Generate WebRTC token for guest dialer
+    # Resolve staff if emp_code provided
+    staff = None
+    if emp_code:
+        from sqlalchemy import func
+        staff = db.query(StaffEmployee).filter(
+            func.upper(StaffEmployee.emp_code) == str(emp_code).strip().upper(),
+            StaffEmployee.status == 'active'
+        ).first()
+
+    if not staff:
+        return {
+            "success": False,
+            "error": "Employee ID is required to generate a secure softphone calling token.",
+            "requires_employee_id": True
+        }
+
     try:
         token_data = PlivoJWTService.generate_browser_token(
             db=db,
             company_id=company_id,
-            staff=None
+            staff=staff
         )
         return {
             "success": True,
-            "token": token_data.get("token"),
-            "username": token_data.get("username"),
+            "token": token_data.get("access_token"),
+            "username": token_data.get("endpoint", {}).get("username") if isinstance(token_data.get("endpoint"), dict) else None,
             "lead_id": lead.id,
-            "caller_name": caller_name,
+            "caller_name": staff.full_name or caller_name,
             "masked_phone": f"+91 {str(lead.phone)[-10:][:5]} *****" if lead.phone else "+91 ***** *****"
         }
     except Exception as e:

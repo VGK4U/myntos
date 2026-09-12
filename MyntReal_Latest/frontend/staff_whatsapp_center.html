@@ -415,6 +415,18 @@
               <div style="margin:auto;color:#9ca3af;text-align:center"><i class="fab fa-whatsapp" style="font-size:48px;margin-bottom:10px"></i><br>Select a chat to view messages</div>
             </div>
 
+            <!-- Quoted Reply Banner -->
+            <div class="reply-preview-card" id="replyPreviewCard" style="display:none;padding:8px 12px;background:#f0fdf4;border-top:1px solid #bbf7d0;border-left:4px solid #16a34a;align-items:center;gap:10px;">
+              <div style="flex:1;overflow:hidden;">
+                <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:#15803d;">
+                  <i class="fas fa-reply" style="font-size:11px;"></i>
+                  <span>Replying to <span id="replySenderName">Contact</span></span>
+                </div>
+                <div id="replySnippetText" style="font-size:12px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;">Message text preview...</div>
+              </div>
+              <button type="button" class="btn-custom btn-outline-custom" onclick="clearReplyContext()" style="padding:3px 7px;border-radius:4px;border:none;background:rgba(0,0,0,0.06);color:#475569;cursor:pointer;" title="Cancel Reply"><i class="fas fa-times"></i></button>
+            </div>
+
             <!-- Attachment Preview Bar -->
             <div class="attach-preview-card" id="attachPreviewCard" style="display:none;padding:6px 12px;background:#e2e8f0;border-top:1px solid #cbd5e1;align-items:center;gap:8px;">
               <i class="fas fa-paperclip" style="color:#059669;font-size:14px"></i>
@@ -1661,36 +1673,88 @@ function renderWhatsAppMediaAttachment(m) {
   const rawUrl = m.media_url || m.url || '';
   if (!rawUrl) return '';
   const finalUrl = resolveMediaUrl(rawUrl);
+  const dlUrl = finalUrl.includes('?') ? `${finalUrl}&download=1` : `${finalUrl}?download=1`;
   const mime = (m.media_mime_type || '').toLowerCase();
-  const isImage = (m.media_type === 'image') || mime.startsWith('image/') || (/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(finalUrl)) || finalUrl.includes('/media/');
+  const type = (m.media_type || '').toLowerCase();
+  const isPdf = (type === 'document') || mime.includes('pdf') || /\.pdf(\?.*)?$/i.test(finalUrl);
+  const isImage = !isPdf && ((type === 'image') || mime.startsWith('image/') || (/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(finalUrl)));
+  const fileName = m.media_name || m.filename || finalUrl.split('/').pop().split('?')[0] || (isImage ? 'image.jpg' : 'document.pdf');
 
   if (isImage) {
     return `
-      <div style="margin-top:6px;margin-bottom:4px;border-radius:8px;overflow:hidden;max-width:280px;background:#f8fafc;border:1px solid #e2e8f0;">
+      <div style="margin-top:6px;margin-bottom:4px;border-radius:8px;overflow:hidden;max-width:280px;background:#f8fafc;border:1px solid #e2e8f0;position:relative;">
         <a href="${finalUrl}" target="_blank" rel="noopener noreferrer" style="display:block;text-decoration:none;">
           <img src="${finalUrl}" alt="Media Attachment" style="width:100%;max-height:220px;object-fit:cover;display:block;" onerror="this.parentElement.parentElement.style.display='none';this.parentElement.parentElement.nextElementSibling.style.display='block';" />
         </a>
+        <div style="padding:4px 8px;background:rgba(255,255,255,0.95);display:flex;align-items:center;justify-content:space-between;border-top:1px solid #f1f5f9;">
+          <span style="font-size:10.5px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">${escapeHtml(fileName)}</span>
+          <a href="${dlUrl}" download="${escapeHtml(fileName)}" style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#059669;font-weight:700;text-decoration:none;" title="Download Image">
+            <i class="fas fa-download"></i> Download
+          </a>
+        </div>
       </div>
       <div class="wa-fallback-attach-btn" style="display:none;margin-top:4px;">
-        <a href="${finalUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;color:#059669;font-weight:700;font-size:12px;text-decoration:none;background:#ecfdf5;padding:6px 10px;border-radius:6px;border:1px solid #a7f3d0;">
-          <i class="fas fa-paperclip"></i> View Media Attachment
+        <a href="${dlUrl}" download="${escapeHtml(fileName)}" style="display:inline-flex;align-items:center;gap:6px;color:#059669;font-weight:700;font-size:12px;text-decoration:none;background:#ecfdf5;padding:6px 10px;border-radius:6px;border:1px solid #a7f3d0;">
+          <i class="fas fa-download"></i> Download Media Attachment
         </a>
       </div>
     `;
   }
 
   return `
-    <div style="margin-top:6px;margin-bottom:4px;">
-      <a href="${finalUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:8px;padding:8px 12px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:8px;color:#0f172a;text-decoration:none;font-weight:600;font-size:12px;">
+    <div style="margin-top:6px;margin-bottom:4px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+      <a href="${finalUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;color:#0f172a;text-decoration:none;font-weight:600;font-size:12px;" title="View Document">
         <i class="fas fa-file-pdf" style="color:#ef4444;font-size:16px;"></i>
-        <span>View Attachment</span>
-        <i class="fas fa-external-link-alt" style="color:#64748b;font-size:10px;margin-left:4px;"></i>
+        <span style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(fileName)}</span>
+        <i class="fas fa-external-link-alt" style="color:#64748b;font-size:10px;margin-left:2px;"></i>
+      </a>
+      <a href="${dlUrl}" download="${escapeHtml(fileName)}" style="display:inline-flex;align-items:center;gap:5px;padding:6px 10px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:6px;color:#059669;text-decoration:none;font-weight:700;font-size:12px;" title="Download Document">
+        <i class="fas fa-download"></i>
+        <span>Download</span>
       </a>
     </div>
   `;
 }
 
 let currentLoadedChatMessages = [];
+let activeReplyContext = null;
+
+function setReplyContextByIndex(idx) {
+  const m = currentLoadedChatMessages[idx];
+  if (!m) return;
+  const isOut = m.message_type === 'outbound' || m.sender === 'bot' || m.sender_type === 'bot' || m.message_type === 'manual_staff' || m.is_from_me;
+  const sender = isOut ? 'You' : (m.sender_name || 'Customer');
+  let text = m.body || m.body_text || m.message_body || m.message || '';
+  if (!text || text === '—') {
+    text = m.media_url ? '[Attachment]' : '';
+  }
+  const wamid = m.wamid || (m.id ? String(m.id).replace('ml_', '').replace('wa_', '') : null);
+
+  activeReplyContext = {
+    wamid: wamid,
+    text: text.length > 90 ? text.substring(0, 90) + '...' : text,
+    sender: sender
+  };
+
+  const banner = document.getElementById('replyPreviewCard');
+  if (banner) {
+    document.getElementById('replySenderName').textContent = sender;
+    document.getElementById('replySnippetText').textContent = activeReplyContext.text || '[Attachment]';
+    banner.style.display = 'flex';
+  }
+  const input = document.getElementById('msgInput');
+  if (input) {
+    input.focus();
+  }
+}
+
+function clearReplyContext() {
+  activeReplyContext = null;
+  const banner = document.getElementById('replyPreviewCard');
+  if (banner) {
+    banner.style.display = 'none';
+  }
+}
 
 function renderChatMessages(msgs) {
   currentLoadedChatMessages = msgs || [];
@@ -1711,11 +1775,25 @@ function renderChatMessages(msgs) {
 
     const chanTag = isOut ? (m.channel === 'official' ? '<span style="font-size:9.5px;color:#2563eb;font-weight:600"><i class="fas fa-building"></i> Official</span>' : '<span style="font-size:9.5px;color:#059669;font-weight:600"><i class="fas fa-qrcode"></i> Scanned</span>') : '';
 
+    let quotedHtml = '';
+    if (m.reply_to && (m.reply_to.text || m.reply_to.wamid)) {
+      const qSender = m.reply_to.sender || 'Replied Message';
+      const qText = m.reply_to.text || 'Attachment / Original Message';
+      quotedHtml = `
+        <div class="quoted-reply-box" style="margin-bottom:6px;padding:6px 10px;border-left:3px solid #059669;background:rgba(0,0,0,0.04);border-radius:4px;font-size:11.5px;">
+          <div style="font-weight:700;color:#059669;margin-bottom:2px;">${escapeHtml(qSender)}</div>
+          <div style="color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px;">${escapeHtml(qText)}</div>
+        </div>
+      `;
+    }
+
     html += `
       <div class="chat-bubble ${bubbleClass}">
+        ${quotedHtml}
         <div style="font-size:12.5px;color:#111827;white-space:pre-wrap">${msgText}</div>
         ${renderWhatsAppMediaAttachment(m)}
         <div class="bubble-meta" style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:4px">
+          <button type="button" class="btn-reply-bubble" onclick="setReplyContextByIndex(${idx})" title="Reply to message" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:11px;padding:2px 5px;border-radius:4px;display:inline-flex;align-items:center;transition:color .15s;" onmouseover="this.style.color='#059669'" onmouseout="this.style.color='#64748b'"><i class="fas fa-reply"></i></button>
           <button type="button" class="btn-fwd-bubble" onclick="openForwardModalByIndex(${idx})" title="Forward message" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:11px;padding:2px 5px;border-radius:4px;display:inline-flex;align-items:center;transition:color .15s;" onmouseover="this.style.color='#059669'" onmouseout="this.style.color='#64748b'"><i class="fas fa-share" style="transform:scaleX(-1);"></i></button>
           ${chanTag}
           <span style="font-size:10px;color:#6b7280;font-weight:500">${timeStr}</span>
@@ -1816,6 +1894,12 @@ async function sendChatMessage() {
       client_msg_id: `wa_center_${Date.now()}`
     };
 
+    if (activeReplyContext) {
+      payload.reply_to_wamid = activeReplyContext.wamid;
+      payload.reply_to_text = activeReplyContext.text;
+      payload.reply_to_sender = activeReplyContext.sender;
+    }
+
     const wasCompanyTab = (activeScope === 'company');
 
     try {
@@ -1827,6 +1911,7 @@ async function sendChatMessage() {
       if (res.success || res.status === 'sent') {
         textInput.value = '';
         clearAttachment();
+        clearReplyContext();
         
         if (wasCompanyTab) {
           showToast('Reply sent! Chat assigned to you & moved to My Messages.', 'green');

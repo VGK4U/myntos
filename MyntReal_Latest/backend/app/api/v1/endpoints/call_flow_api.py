@@ -1667,6 +1667,22 @@ def list_my_contacts(
     }
 
 
+def _resolve_ist_iso(dt_val: Optional[datetime], created_fallback: Optional[datetime] = None) -> Optional[str]:
+    """
+    Ensures call timestamp is returned as naive Indian Standard Time (IST) ISO string.
+    Defensively corrects historical UTC storage anomalies where started_at was saved 5.5 hours behind created_at.
+    """
+    if not dt_val and not created_fallback:
+        return None
+    dt = dt_val or created_fallback
+    if dt_val and created_fallback:
+        # Detect if dt_val is ~5.5 hours behind created_fallback (18000s to 21600s)
+        diff_sec = (created_fallback - dt_val).total_seconds()
+        if 18000 <= diff_sec <= 21600:
+            dt = created_fallback
+    return dt.isoformat() if dt else None
+
+
 @router.get("/incoming-calls")
 @router.get("/call-history")
 def list_incoming_calls(
@@ -1771,7 +1787,13 @@ def list_incoming_calls(
     if scope_clean in ("new_calls", "new"):
         query = db.query(VoIPCallSession)
         if not is_supreme and not is_overall_authorized:
-            query = query.filter(VoIPCallSession.company_id.in_(list(allowed_company_ids)))
+            query = query.filter(
+                or_(
+                    VoIPCallSession.company_id.in_(list(allowed_company_ids)),
+                    VoIPCallSession.operator_id == current_user.id,
+                    VoIPCallSession.operator_user_ref == emp_code
+                )
+            )
         query = query.filter(VoIPCallSession.direction == "inbound")
         query = query.filter(
             VoIPCallSession.created_at >= effective_start_dt,
@@ -1809,9 +1831,51 @@ def list_incoming_calls(
         # 1. Source 1: VoIPCallSession (Softphone calls + Inbound DID)
         voip_q = db.query(VoIPCallSession)
         if not is_supreme and scope_clean != "overall":
-            voip_q = voip_q.filter(VoIPCallSession.company_id.in_(list(allowed_company_ids)))
+            voip_q = voip_q.filter(
+                or_(
+                    VoIPCallSession.company_id.in_(list(allowed_company_ids)),
+                    VoIPCallSession.operator_id.in_(target_staff_ids or [current_user.id]),
+                    VoIPCallSession.operator_user_ref == emp_code
+                )
+            )
 
-        if target_staff_ids:
+        if target_staff_ids and scope_clean == "my":
+            # For 'my' scope, also include inbound calls from leads owned by the staff user
+            target_ids_str = [str(sid) for sid in target_staff_ids]
+            owned_leads_phones = db.query(CRMLead.phone, CRMLead.alternate_phone).filter(
+                or_(
+                    CRMLead.primary_owner_id.in_(target_staff_ids),
+                    CRMLead.telecaller_id.in_(target_staff_ids),
+                    CRMLead.field_staff_id.in_(target_staff_ids),
+                    CRMLead.handler_id.in_(target_ids_str)
+                )
+            ).limit(200).all()
+            owned_clean_phones = set()
+            for p1, p2 in owned_leads_phones:
+                if p1:
+                    d1 = re.sub(r'\D', '', str(p1))[-10:]
+                    if len(d1) >= 6:
+                        owned_clean_phones.add(d1)
+                if p2:
+                    d2 = re.sub(r'\D', '', str(p2))[-10:]
+                    if len(d2) >= 6:
+                        owned_clean_phones.add(d2)
+
+            or_clauses = [
+                VoIPCallSession.operator_id.in_(target_staff_ids),
+                VoIPCallSession.operator_user_ref == emp_code
+            ]
+            if owned_clean_phones:
+                for ph in list(owned_clean_phones)[:50]:
+                    or_clauses.append(
+                        and_(
+                            VoIPCallSession.operator_id.is_(None),
+                            VoIPCallSession.direction == "inbound",
+                            (VoIPCallSession.customer_phone.ilike(f"%{ph}%") | VoIPCallSession.destination_number.ilike(f"%{ph}%"))
+                        )
+                    )
+            voip_q = voip_q.filter(or_(*or_clauses))
+        elif target_staff_ids:
             voip_q = voip_q.filter(
                 or_(
                     VoIPCallSession.operator_id.in_(target_staff_ids),
@@ -1954,31 +2018,7 @@ def list_incoming_calls(
             except Exception as att_err:
                 logger.warning(f"[CALL-FLOW-UNIFIED] dialer attempts query error: {att_err}")
 
-    # ── Resolve Contact Names & Staff Information in Bulk ─────────────────────
-    all_staff_ids = set()
-    for c in voip_items:
-        if c.operator_id:
-            all_staff_ids.add(c.operator_id)
-    for s in scl_items:
-        if s.staff_id:
-            all_staff_ids.add(s.staff_id)
-    for r in att_rows:
-        if r[3] and str(r[3]).isdigit():
-            all_staff_ids.add(int(r[3]))
-
-    staff_dict = {}
-    if all_staff_ids:
-        staff_objs = db.query(StaffEmployee).filter(StaffEmployee.id.in_(all_staff_ids)).all()
-        for s in staff_objs:
-            s_name = s.full_name or f"{s.first_name or ''} {s.last_name or ''}".strip() or s.emp_code
-            d_name = s.department.name if hasattr(s.department, 'name') else (str(s.department) if s.department else "Staff")
-            staff_dict[s.id] = {
-                "id": s.id,
-                "name": s_name,
-                "emp_code": s.emp_code,
-                "department": d_name
-            }
-
+    # ── Resolve Contact Names First to Capture CRM Lead Owners ───────────────
     phone_clean_list = []
     for c in voip_items:
         p = c.customer_phone or c.destination_number or ""
@@ -1995,6 +2035,39 @@ def list_incoming_calls(
             phone_clean_list.append(digits)
 
     contact_dict = _resolve_contacts_batch(db, phone_clean_list, company_id=company_id)
+
+    # ── Resolve Staff Information in Bulk (including Lead Owners) ─────────────
+    all_staff_ids = set()
+    for c in voip_items:
+        if c.operator_id:
+            all_staff_ids.add(c.operator_id)
+    for s in scl_items:
+        if s.staff_id:
+            all_staff_ids.add(s.staff_id)
+    for r in att_rows:
+        if r[3] and str(r[3]).isdigit():
+            all_staff_ids.add(int(r[3]))
+
+    # Also resolve CRM lead owners for unassigned or incoming calls
+    for clean_key, c_info in contact_dict.items():
+        if c_info.get("source") == "CRM Lead":
+            for fld in ("primary_owner_id", "telecaller_id", "handler_id", "assigned_to"):
+                val = c_info.get(fld)
+                if val and str(val).isdigit():
+                    all_staff_ids.add(int(val))
+
+    staff_dict = {}
+    if all_staff_ids:
+        staff_objs = db.query(StaffEmployee).filter(StaffEmployee.id.in_(all_staff_ids)).all()
+        for s in staff_objs:
+            s_name = s.full_name or f"{s.first_name or ''} {s.last_name or ''}".strip() or s.emp_code
+            d_name = s.department.name if hasattr(s.department, 'name') else (str(s.department) if s.department else "Staff")
+            staff_dict[s.id] = {
+                "id": s.id,
+                "name": s_name,
+                "emp_code": s.emp_code,
+                "department": d_name
+            }
 
     # Pre-fetch OperatorCall recordings for linked items
     op_call_ids = [c.operator_call_id for c in voip_items if c.operator_call_id]
@@ -2015,7 +2088,9 @@ def list_incoming_calls(
         contact_match = contact_dict.get(clean_10)
 
         dur = c.duration_seconds or 0
-        started_iso = c.started_at.isoformat() if c.started_at else (c.created_at.isoformat() if c.created_at else None)
+        started_iso = _resolve_ist_iso(c.started_at, c.created_at)
+        answered_iso = _resolve_ist_iso(c.answered_at, c.created_at)
+        ended_iso = _resolve_ist_iso(c.ended_at, (c.created_at + timedelta(seconds=dur)) if c.created_at and dur else None)
 
         dir_lower = (c.direction or 'inbound').lower()
         st_lower = (c.status or 'ended').lower()
@@ -2066,6 +2141,17 @@ def list_incoming_calls(
         action_at = meta_dict.get("action_at", "")
 
         handled_staff = staff_dict.get(c.operator_id)
+        is_lead_owner_fallback = False
+        if not handled_staff and contact_match and contact_match.get("source") == "CRM Lead":
+            lead_owner_id = (
+                contact_match.get("primary_owner_id") or 
+                contact_match.get("telecaller_id") or 
+                contact_match.get("handler_id") or 
+                contact_match.get("assigned_to")
+            )
+            if lead_owner_id and lead_owner_id in staff_dict:
+                handled_staff = staff_dict.get(lead_owner_id)
+                is_lead_owner_fallback = True
 
         raw_rec = c.recording_storage_key or op_call_rec_map.get(c.operator_call_id) or meta_dict.get("recording_url")
         if raw_rec:
@@ -2230,12 +2316,15 @@ def list_incoming_calls(
             "caller_identity_confidence": caller_identity_confidence,
             "parent_call_identifier": parent_call_identifier,
             "started_at": started_iso,
-            "answered_at": c.answered_at.isoformat() if c.answered_at else None,
-            "ended_at": c.ended_at.isoformat() if c.ended_at else None,
+            "answered_at": answered_iso,
+            "ended_at": ended_iso,
             "duration_seconds": dur,
             "duration_formatted": f"{dur // 60:02d}m {dur % 60:02d}s",
-            "operator_id": c.operator_id,
-            "operator_name": handled_staff["name"] if handled_staff else "IVR / Unassigned",
+            "operator_id": c.operator_id or (handled_staff["id"] if handled_staff else None),
+            "operator_name": (
+                handled_staff["name"] if (handled_staff and not is_lead_owner_fallback)
+                else (f"{handled_staff['name']} (Lead Owner)" if handled_staff else "IVR / Unassigned")
+            ),
             "operator_emp_code": handled_staff["emp_code"] if handled_staff else "—",
             "operator_department": handled_staff["department"] if handled_staff else "—",
             "recording_url": rec_url,
@@ -2764,8 +2853,8 @@ def get_customer_call_history(
             "type": hist_type,
             "status": st,
             "created_at": s.created_at.isoformat() if s.created_at else None,
-            "started_at": s.started_at.isoformat() if s.started_at else None,
-            "ended_at": s.ended_at.isoformat() if s.ended_at else None,
+            "started_at": _resolve_ist_iso(s.started_at, s.created_at),
+            "ended_at": _resolve_ist_iso(s.ended_at, (s.created_at + timedelta(seconds=dur)) if s.created_at and dur else None),
             "duration_formatted": f"{dur // 60:02d}m {dur % 60:02d}s",
             "duration_seconds": dur,
             "operator_name": op_name,
@@ -3019,14 +3108,8 @@ def get_incoming_call_detail(
         TelephonyFlowExecutionLog.call_session_id == session.call_session_id
     ).first()
 
-    staff_name = "Unassigned / IVR"
-    if session.operator_id:
-        st = db.query(StaffEmployee).filter(StaffEmployee.id == session.operator_id).first()
-        if st:
-            staff_name = st.full_name or f"{st.first_name} {st.last_name}".strip() or st.emp_code
-
-    lead_info = None
     clean_p = (session.customer_phone or "").replace('+', '')[-10:]
+    lead_info = None
     if clean_p:
         c_map = _resolve_contacts_batch(db, [clean_p], company_id=session.company_id)
         c_info = c_map.get(clean_p)
@@ -3037,8 +3120,31 @@ def get_incoming_call_detail(
                 "email": c_info.get("email"),
                 "status": c_info.get("status"),
                 "city": c_info.get("city"),
-                "source": c_info.get("source")
+                "source": c_info.get("source"),
+                "primary_owner_id": c_info.get("primary_owner_id"),
+                "telecaller_id": c_info.get("telecaller_id"),
+                "handler_id": c_info.get("handler_id"),
+                "assigned_to": c_info.get("assigned_to")
             }
+
+    staff_name = "Unassigned / IVR"
+    effective_op_id = session.operator_id
+    if effective_op_id:
+        st = db.query(StaffEmployee).filter(StaffEmployee.id == effective_op_id).first()
+        if st:
+            staff_name = st.full_name or f"{st.first_name} {st.last_name}".strip() or st.emp_code
+    elif lead_info and lead_info.get("source") == "CRM Lead":
+        lead_owner_id = (
+            lead_info.get("primary_owner_id") or 
+            lead_info.get("telecaller_id") or 
+            lead_info.get("handler_id") or 
+            lead_info.get("assigned_to")
+        )
+        if lead_owner_id:
+            st = db.query(StaffEmployee).filter(StaffEmployee.id == lead_owner_id).first()
+            if st:
+                effective_op_id = st.id
+                staff_name = f"{st.full_name or st.emp_code} (Lead Owner)"
 
     meta = {}
     if session.metadata_json:
@@ -3052,15 +3158,15 @@ def get_incoming_call_detail(
         "call_session_id": session.call_session_id,
         "provider_call_id": session.provider_call_id,
         "caller_number_masked": _mask_phone(session.customer_phone or session.destination_number),
-        "customer_name": lead_info["name"] if lead_info else "Guest Caller",
+        "customer_name": (lead_info["name"] if lead_info else None) or meta.get("customer_name") or "Guest Caller",
         "called_did": session.caller_id,
         "direction": session.direction,
         "status": session.status,
-        "started_at": session.started_at.isoformat() if session.started_at else session.created_at.isoformat(),
-        "answered_at": session.answered_at.isoformat() if session.answered_at else None,
-        "ended_at": session.ended_at.isoformat() if session.ended_at else None,
+        "started_at": _resolve_ist_iso(session.started_at, session.created_at),
+        "answered_at": _resolve_ist_iso(session.answered_at, session.created_at),
+        "ended_at": _resolve_ist_iso(session.ended_at, session.created_at),
         "duration_seconds": session.duration_seconds or 0,
-        "operator_id": session.operator_id,
+        "operator_id": effective_op_id,
         "operator_name": staff_name,
         "recording_url": session.recording_storage_key,
         "termination_reason": session.termination_reason,

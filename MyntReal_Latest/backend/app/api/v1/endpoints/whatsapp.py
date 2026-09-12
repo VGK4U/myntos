@@ -3396,12 +3396,42 @@ def get_whatsapp_chat_history(
             chan_lbl = "🏢 Official WhatsApp" if is_meta else "📱 Scanned WhatsApp"
             prov_lbl = "Meta Cloud API" if is_meta else "Baileys"
 
+            reply_to = None
+            media_url = None
+            media_mime = None
+            media_name = None
+            if l.webhook_data:
+                try:
+                    wb_data = json.loads(l.webhook_data) if isinstance(l.webhook_data, str) else l.webhook_data
+                    if isinstance(wb_data, dict):
+                        reply_to = wb_data.get("reply_to")
+                        media_url = wb_data.get("media_url")
+                        media_mime = wb_data.get("media_mime_type")
+                        media_name = wb_data.get("media_name")
+                except Exception:
+                    pass
+
+            if not media_url and body_content and "[Media: " in body_content:
+                import re
+                m_match = re.search(r'\[Media:\s*([^\]]+)\]', body_content)
+                if m_match:
+                    media_url = m_match.group(1).strip()
+                    media_name = media_url.split("/")[-1].split("?")[0]
+
+            m_is_pdf = (media_name and media_name.lower().endswith('.pdf')) or (media_mime and 'pdf' in media_mime.lower())
+            m_is_img = (media_url and any(media_url.lower().endswith(e) or f"{e}?" in media_url.lower() for e in ('.jpg', '.jpeg', '.png', '.webp', '.gif')))
+
             log_messages.append({
                 "id": f"ml_{l.id}",
                 "wamid": l.message_sid,
                 "sender": "bot" if is_bot else "staff",
                 "sender_name": sender_label,
                 "body": body_content,
+                "media_url": media_url,
+                "media_type": "document" if m_is_pdf else ("image" if m_is_img else None),
+                "media_mime_type": media_mime,
+                "media_name": media_name,
+                "reply_to": reply_to,
                 "sent_at": _to_ist_str(l.sent_at),
                 "timestamp": l.sent_at or datetime.min,
                 "status": l.current_status or 'sent',
@@ -3469,13 +3499,49 @@ def get_whatsapp_chat_history(
             chan_lbl = "🏢 Official WhatsApp" if is_meta else "📱 Scanned WhatsApp"
             prov_lbl = "Meta Cloud API" if is_meta else "Baileys"
 
+            # Reply context extraction
+            reply_to = None
+            media_name = None
+            media_mime = m.media_mime_type
+            if m.raw_payload:
+                try:
+                    payload_data = json.loads(m.raw_payload) if isinstance(m.raw_payload, str) else m.raw_payload
+                    if isinstance(payload_data, dict):
+                        if "reply_to" in payload_data:
+                            reply_to = payload_data["reply_to"]
+                        elif "context" in payload_data:
+                            ctx = payload_data["context"]
+                            reply_to = {
+                                "wamid": ctx.get("id"),
+                                "sender": ctx.get("from"),
+                                "text": ctx.get("title") or ctx.get("body") or ""
+                            }
+                        if not media_name:
+                            media_name = payload_data.get("document", {}).get("filename") or payload_data.get("filename")
+                except Exception:
+                    pass
+
+            norm_media = m.media_url
+            if norm_media and str(norm_media).strip().isdigit():
+                norm_media = f"/api/v1/whatsapp/media/{str(norm_media).strip()}"
+
+            if norm_media and not media_name:
+                media_name = norm_media.split("/")[-1].split("?")[0]
+
+            inb_is_pdf = (m.message_type == 'document') or (media_name and media_name.lower().endswith('.pdf')) or (media_mime and 'pdf' in str(media_mime).lower())
+            inb_is_img = (m.message_type == 'image') or (norm_media and any(norm_media.lower().endswith(e) or f"{e}?" in norm_media.lower() for e in ('.jpg', '.jpeg', '.png', '.webp', '.gif')))
+
             inbox_messages.append({
                 "id": f"wa_{m.id}",
                 "wamid": m.wamid or f"wamid_{m.id}",
                 "sender": "bot" if is_outbound else "user",
                 "sender_name": "Mynt Bot" if is_outbound else (m.from_name or ("WhatsApp Group" if is_grp else "Customer")),
                 "body": m.body_text or "—",
-                "media_url": (f"/api/v1/whatsapp/media/{str(m.media_url).strip()}" if (m.media_url and str(m.media_url).strip().isdigit()) else m.media_url),
+                "media_url": norm_media,
+                "media_type": "document" if inb_is_pdf else ("image" if inb_is_img else (m.message_type if m.message_type not in ('text', None) else None)),
+                "media_mime_type": media_mime,
+                "media_name": media_name,
+                "reply_to": reply_to,
                 "sent_at": _to_ist_str(m.received_at),
                 "timestamp": m.received_at or datetime.min,
                 "status": m.status or 'delivered',
@@ -3490,6 +3556,27 @@ def get_whatsapp_chat_history(
             })
 
         combined = log_messages + inbox_messages
+
+        # Resolve any incomplete reply_to text/sender across conversation messages
+        msg_lookup = {}
+        for cm in combined:
+            if cm.get("wamid"):
+                msg_lookup[cm["wamid"]] = cm
+            if cm.get("id"):
+                msg_lookup[cm["id"]] = cm
+
+        for cm in combined:
+            r_ctx = cm.get("reply_to")
+            if r_ctx and isinstance(r_ctx, dict):
+                r_id = r_ctx.get("wamid")
+                if r_id and (not r_ctx.get("text") or not r_ctx.get("sender")):
+                    orig = msg_lookup.get(r_id)
+                    if orig:
+                        if not r_ctx.get("text"):
+                            r_ctx["text"] = orig.get("body") if (orig.get("body") and orig.get("body") != "—") else (f"[{orig.get('media_type') or 'Attachment'}]" if orig.get("media_url") else "")
+                        if not r_ctx.get("sender"):
+                            r_ctx["sender"] = orig.get("sender_name")
+
         sorted_messages = sorted(combined, key=lambda x: x["timestamp"] if isinstance(x["timestamp"], datetime) else datetime.min)
 
         return {"success": True, "phone": phone, "recipient_type": "group" if is_grp else "individual", "total": len(sorted_messages), "messages": sorted_messages}
@@ -3531,6 +3618,9 @@ async def stream_whatsapp_media(
     backend_storage_dir = Path(__file__).resolve().parents[4] / "storage" / "wa_media"
     storage_dir.mkdir(parents=True, exist_ok=True)
 
+    is_download = request.query_params.get("download") == "1" or request.query_params.get("dl") == "1"
+    disp_type = "attachment" if is_download else "inline"
+
     # 1. Check exact local file match
     exact_file = storage_dir / clean_id
     if exact_file.is_file():
@@ -3542,7 +3632,7 @@ async def stream_whatsapp_media(
             media_type=mime,
             headers={
                 "Cache-Control": "public, max-age=86400, immutable",
-                "Content-Disposition": f'inline; filename="{clean_id}"'
+                "Content-Disposition": f'{disp_type}; filename="{clean_id}"'
             }
         )
 
@@ -3561,17 +3651,41 @@ async def stream_whatsapp_media(
             media_type=mime,
             headers={
                 "Cache-Control": "public, max-age=86400, immutable",
-                "Content-Disposition": f'inline; filename="{target_file.name}"'
+                "Content-Disposition": f'{disp_type}; filename="{target_file.name}"'
             }
         )
 
-    # 3. Check S3 / Object Storage
+    # 3. Check S3 / Object Storage with candidate prefixes and extensions
     try:
         from app.services.object_storage import storage_service
-        s3_data = storage_service.download_file(f"wa_media/meta_{clean_id}") or storage_service.download_file(f"wa_media/{clean_id}")
+        s3_data = None
+        s3_target_key = None
+        s3_candidates = [
+            f"wa_media/meta_{clean_id}",
+            f"wa_media/{clean_id}",
+            f"wa_media/meta_{clean_id}.jpg",
+            f"wa_media/meta_{clean_id}.png",
+            f"wa_media/meta_{clean_id}.pdf",
+            f"wa_media/meta_{clean_id}.webp",
+            f"wa_media/{clean_id}.jpg",
+            f"wa_media/{clean_id}.png",
+            f"wa_media/{clean_id}.pdf",
+            f"wa_media/{clean_id}.webp",
+            f"meta_{clean_id}",
+            f"{clean_id}"
+        ]
+        for cand_key in s3_candidates:
+            s3_data = storage_service.download_file(cand_key)
+            if s3_data:
+                s3_target_key = cand_key
+                break
+
         if s3_data:
             mime = "image/jpeg"
             ext = ".jpg"
+            if s3_target_key and "." in s3_target_key:
+                ext = f".{s3_target_key.split('.')[-1]}"
+                mime = mimetypes.guess_type(s3_target_key)[0] or mime
             if s3_data.startswith(b"%PDF"):
                 mime = "application/pdf"
                 ext = ".pdf"
@@ -3582,7 +3696,7 @@ async def stream_whatsapp_media(
                 mime = "image/webp"
                 ext = ".webp"
             
-            # Cache locally
+            # Cache locally for future requests
             cache_file = storage_dir / f"meta_{clean_id}{ext}"
             try:
                 cache_file.write_bytes(s3_data)
@@ -3596,7 +3710,7 @@ async def stream_whatsapp_media(
                 media_type=mime,
                 headers={
                     "Cache-Control": "public, max-age=86400, immutable",
-                    "Content-Disposition": f'inline; filename="attachment_{clean_id}{ext}"'
+                    "Content-Disposition": f'{disp_type}; filename="attachment_{clean_id}{ext}"'
                 }
             )
     except Exception as _s3_err:
@@ -3648,7 +3762,7 @@ async def stream_whatsapp_media(
 
                                 try:
                                     from app.services.object_storage import storage_service
-                                    storage_service.upload_file(f"wa_media/meta_{clean_id}{ext}", file_bytes, mime)
+                                    storage_service.upload_file(f"wa_media/meta_{clean_id}{ext}", file_bytes, content_type=mime)
                                 except Exception:
                                     pass
 
@@ -3659,7 +3773,7 @@ async def stream_whatsapp_media(
                                     media_type=mime,
                                     headers={
                                         "Cache-Control": "public, max-age=86400, immutable",
-                                        "Content-Disposition": f'inline; filename="attachment_{clean_id}{ext}"'
+                                        "Content-Disposition": f'{disp_type}; filename="attachment_{clean_id}{ext}"'
                                     }
                                 )
                     else:
@@ -3802,6 +3916,12 @@ async def upload_staff_whatsapp_media(
     local_file = storage_dir / filename
     local_file.write_bytes(data)
 
+    try:
+        from app.services.object_storage import storage_service
+        storage_service.upload_file(f"wa_media/{filename}", data, content_type=ct)
+    except Exception as s3_err:
+        logger.warning("[WA-MEDIA-UPLOAD] S3 upload skipped/failed: %s", s3_err)
+
     media_url = f"/storage/wa_media/{filename}"
     return {
         "success": True,
@@ -3826,6 +3946,9 @@ class WASendMessagePayload(BaseModel):
     template_slug: Optional[str] = None
     variable_values: Optional[dict] = None
     lead_id: Optional[Any] = None
+    reply_to_wamid: Optional[str] = None
+    reply_to_text: Optional[str] = None
+    reply_to_sender: Optional[str] = None
 
 _processed_client_msg_ids = set()
 
@@ -3842,6 +3965,7 @@ def send_manual_whatsapp_message(
     dispatches via Baileys gateway (port 5002), and persists output to MessageLog and WAInbox.
     """
     import uuid
+    import json
     import requests
 
     rec = (payload.recipient or payload.to_phone or payload.phone or "").strip()
@@ -4010,8 +4134,6 @@ def send_manual_whatsapp_message(
             "message": "Duplicate dispatch prevented."
         }
 
-    import requests
-    import uuid
     gateway_url = "http://localhost:5002/api/send-message"
     if rec_type in ("group", "channel") or "@g.us" in rec or "@newsletter" in rec or "chat.whatsapp.com" in rec or "channel" in rec:
         gateway_url = "http://localhost:5002/api/send-group-message"
@@ -4023,6 +4145,10 @@ def send_manual_whatsapp_message(
         "media_url": payload.media_url or "",
         "imageUrl": payload.media_url or "",
         "imagePath": payload.media_url or "",
+        "quoted_message_id": payload.reply_to_wamid or None,
+        "quoted_text": payload.reply_to_text or None,
+        "reply_to_wamid": payload.reply_to_wamid or None,
+        "reply_to_text": payload.reply_to_text or None,
         "skip_backend_log": True
     }
 
@@ -4046,6 +4172,15 @@ def send_manual_whatsapp_message(
     now_utc = datetime.utcnow()
 
     # Ingest into MessageLog
+    reply_context_dict = None
+    if payload.reply_to_wamid or payload.reply_to_text:
+        reply_context_dict = {
+            "wamid": payload.reply_to_wamid,
+            "text": payload.reply_to_text,
+            "sender": payload.reply_to_sender
+        }
+    reply_raw_json = json.dumps({"reply_to": reply_context_dict, "media_url": payload.media_url, "media_type": payload.message_type}) if (reply_context_dict or payload.media_url) else None
+
     try:
         staff_display_name = f"{current_user.first_name} {current_user.last_name or ''}".strip()
         log_entry = MessageLog(
@@ -4060,7 +4195,8 @@ def send_manual_whatsapp_message(
             sent_at=now_utc,
             sent_by_staff_id=current_user.id,
             sent_by_name=f"{staff_display_name} ({current_user.emp_code})",
-            sender_type="staff"
+            sender_type="staff",
+            webhook_data=reply_raw_json
         )
         db.add(log_entry)
         db.commit()
@@ -4085,7 +4221,8 @@ def send_manual_whatsapp_message(
             replied_by_id=current_user.id,
             assigned_to_emp_id=current_user.id,
             received_at=now_utc,
-            status="sent" if sent_success else "failed"
+            status="sent" if sent_success else "failed",
+            raw_payload=reply_raw_json
         )
         db.add(outbound_inbox)
 

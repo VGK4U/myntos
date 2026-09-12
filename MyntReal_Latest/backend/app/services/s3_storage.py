@@ -95,7 +95,8 @@ class S3StorageService:
         for cat in [
             "solar_docs", "kyc_documents", "invoices", "quotations", 
             "receipts", "documents", "crm_documents", "ev_docs", 
-            "insurance_docs", "bank_docs", "staff_docs", "media", "announcements"
+            "insurance_docs", "bank_docs", "staff_docs", "media", "announcements",
+            "wa_media", "wa_media/meta", "wa_media/scanned"
         ]:
             _add(f"{cat}/{filename}")
             _add(f"private/{cat}/{filename}")
@@ -109,7 +110,7 @@ class S3StorageService:
                 continue
         return None
 
-    def upload_file(self, file_path: str, file_data: bytes) -> bool:
+    def upload_file(self, file_path: str, file_data: bytes, content_type: Optional[str] = None) -> bool:
         """Upload file to S3 bucket"""
         if not self.bucket_name:
             return False
@@ -119,11 +120,15 @@ class S3StorageService:
             # and guarantees cross-platform consistency (Linux/Windows).
             s3_key = file_path.replace('\\', '/').lstrip('/')
             
-            self.s3_client.put_object(
-                Bucket=self.bucket_name,
-                Key=s3_key,
-                Body=file_data
-            )
+            put_kwargs = {
+                "Bucket": self.bucket_name,
+                "Key": s3_key,
+                "Body": file_data
+            }
+            if content_type:
+                put_kwargs["ContentType"] = content_type
+
+            self.s3_client.put_object(**put_kwargs)
             logger.info(f"✅ Uploaded to S3: {s3_key}")
             return True
         except ClientError as e:

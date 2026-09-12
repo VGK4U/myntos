@@ -17270,6 +17270,9 @@ async def serve_storage_file(request: Request, file_path: str):
         else "public, max-age=86400"          if _is_video
         else "no-cache, no-store, must-revalidate"
     )
+    _is_download = request.query_params.get("download") == "1" or request.query_params.get("dl") == "1"
+    _disposition_type = "attachment" if _is_download else "inline"
+
     base_headers = {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
@@ -17277,7 +17280,7 @@ async def serve_storage_file(request: Request, file_path: str):
         "Accept-Ranges": "bytes",
         "Content-Type": content_type,
         "Cache-Control": _cache,
-        "Content-Disposition": f'inline; filename="{filename}"',
+        "Content-Disposition": f'{_disposition_type}; filename="{filename}"',
     }
     if not _is_img and not _is_video:
         base_headers["Pragma"] = "no-cache"

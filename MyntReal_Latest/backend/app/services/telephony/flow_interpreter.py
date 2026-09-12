@@ -28,6 +28,7 @@ from app.models.crm import CRMLead
 from app.models.staff import StaffEmployee, StaffDepartment
 from app.models.voip_call_session import VoIPCallSession
 from app.models.voip_enums import CallMethodEnum, CallStateEnum
+from app.models.base import get_indian_time
 
 logger = logging.getLogger(__name__)
 IST = pytz.timezone('Asia/Kolkata')
@@ -244,7 +245,7 @@ class CallFlowInterpreter:
                     session_obj = db.query(VoIPCallSession).filter(VoIPCallSession.call_session_id == call_session_id).first()
                 if not session_obj and clean_dest:
                     from datetime import timedelta
-                    cutoff = datetime.now(IST) - timedelta(minutes=3)
+                    cutoff = get_indian_time() - timedelta(minutes=3)
                     session_obj = db.query(VoIPCallSession).filter(
                         VoIPCallSession.destination_number.ilike(f"%{clean_dest[-10:]}%"),
                         VoIPCallSession.direction == 'outbound',
@@ -257,7 +258,7 @@ class CallFlowInterpreter:
                         session_obj.provider_call_id = provider_call_id
                     if session_obj.status in (CallStateEnum.CREATED.value, CallStateEnum.DIALING.value):
                         session_obj.status = CallStateEnum.RINGING.value
-                        session_obj.ringing_at = session_obj.ringing_at or datetime.now(IST)
+                        session_obj.ringing_at = session_obj.ringing_at or get_indian_time()
                     if session_obj.operator_call_id:
                         from app.models.operator_calls import OperatorCall
                         op_c = db.query(OperatorCall).filter(OperatorCall.id == session_obj.operator_call_id).first()
@@ -380,7 +381,7 @@ class CallFlowInterpreter:
 
         # 1. Resolve Company from DID
         company_id = cls._resolve_company_from_did(db, called_did) or 1
-        now_ist = now_dt or datetime.now(IST)
+        now_ist = now_dt or get_indian_time()
 
         # Build First-Class Inbound Caller Identity Model (Sections 21-23)
         caller_identity = cls.resolve_inbound_caller_identity(
@@ -418,19 +419,30 @@ class CallFlowInterpreter:
             "raw_form": dict(raw_payload or {})
         }
 
-        if not session_obj:
-            stored_cust_phone = (
-                caller_identity.get("original_caller_number")
-                or ("unresolved" if caller_identity.get("caller_identity_source") == "unresolved_forwarded" else (caller_phone or "unknown"))
-            )
+        stored_cust_phone = (
+            caller_identity.get("original_caller_number")
+            or ("unresolved" if caller_identity.get("caller_identity_source") == "unresolved_forwarded" else (caller_phone or "unknown"))
+        )
 
+        assigned_staff, assign_reason = cls._resolve_caller_assigned_staff(
+            db, stored_cust_phone or caller_phone, company_id
+        )
+
+        if not session_obj:
             initial_metadata = {
                 "caller_identity": caller_identity,
                 "raw_provider_payload": raw_prov_data
             }
+            if assigned_staff:
+                initial_metadata["assigned_reason"] = assign_reason
+                initial_metadata["sticky_agent_id"] = assigned_staff.id
+                initial_metadata["sticky_agent_name"] = assigned_staff.full_name
+                initial_metadata["sticky_agent_emp_code"] = assigned_staff.emp_code
+
+            effective_company_id = (getattr(assigned_staff, 'base_company_id', None) or company_id) if assigned_staff else company_id
 
             session_obj = VoIPCallSession(
-                company_id=company_id,
+                company_id=effective_company_id,
                 call_session_id=session_id,
                 provider='plivo',
                 provider_call_id=provider_call_id,
@@ -442,13 +454,21 @@ class CallFlowInterpreter:
                 status=CallStateEnum.RINGING.value,
                 started_at=now_ist,
                 answered_at=now_ist,
+                operator_id=assigned_staff.id if assigned_staff else None,
+                operator_user_ref=assigned_staff.emp_code if assigned_staff else None,
                 metadata_json=json.dumps(initial_metadata)
             )
             db.add(session_obj)
             db.commit()
             db.refresh(session_obj)
-            logger.info(f"[FLOW-INTERPRETER] Registered inbound VoIPCallSession #{session_obj.id} ({session_id}) source={caller_identity['caller_identity_source']}")
+            logger.info(
+                f"[FLOW-INTERPRETER] Registered inbound VoIPCallSession #{session_obj.id} ({session_id}) "
+                f"source={caller_identity['caller_identity_source']} assigned_to={getattr(assigned_staff, 'full_name', 'Unassigned')} ({assign_reason})"
+            )
         else:
+            if not session_obj.operator_id and assigned_staff:
+                session_obj.operator_id = assigned_staff.id
+                session_obj.operator_user_ref = assigned_staff.emp_code
             try:
                 v_meta = {}
                 if session_obj.metadata_json:
@@ -950,7 +970,7 @@ class CallFlowInterpreter:
 
         step_count = 0
         xml_elements: List[str] = []
-        now_ist = now_dt or datetime.now(IST)
+        now_ist = now_dt or get_indian_time()
 
         # Lookup CRM Lead
         clean_phone = re.sub(r'[^\d]', '', caller_phone)[-10:]
@@ -1395,6 +1415,81 @@ class CallFlowInterpreter:
         return False
 
     @classmethod
+    def _resolve_caller_assigned_staff(
+        cls,
+        db: Session,
+        caller_phone: str,
+        company_id: Optional[int] = None
+    ) -> Tuple[Optional[StaffEmployee], Optional[str]]:
+        """
+        Multi-tier deterministic staff resolver for inbound callers:
+        1. Recent VoIPCallSession (placed or answered call within 30 days)
+        2. CRM Lead Owner / Telecaller / Handler
+        Returns (StaffEmployee, match_reason)
+        """
+        if not caller_phone:
+            return None, None
+
+        clean_digits = re.sub(r'\D', '', str(caller_phone))[-10:]
+        if not clean_digits or len(clean_digits) < 6:
+            return None, None
+
+        recent_staff_id = None
+        match_reason = None
+
+        # 1. VoIPCallSession (last 30 days)
+        try:
+            recent_session = db.query(VoIPCallSession).filter(
+                (VoIPCallSession.destination_number.ilike(f"%{clean_digits}%") | VoIPCallSession.customer_phone.ilike(f"%{clean_digits}%")),
+                VoIPCallSession.operator_id.isnot(None)
+            ).order_by(VoIPCallSession.id.desc()).first()
+            if recent_session and recent_session.operator_id:
+                recent_staff_id = recent_session.operator_id
+                match_reason = "recent_voip_session"
+        except Exception as e:
+            logger.warning(f"[CALL-ATTRIBUTION] Error resolving recent VoIP session: {e}")
+
+        # 2. CRM Lead owner fallback
+        if not recent_staff_id:
+            try:
+                lead_q = db.query(CRMLead).filter(
+                    (CRMLead.phone.ilike(f"%{clean_digits}%") | CRMLead.alternate_phone.ilike(f"%{clean_digits}%"))
+                )
+                if company_id:
+                    lead_q = lead_q.filter(CRMLead.company_id == company_id)
+                crm_lead = lead_q.order_by(CRMLead.id.desc()).first()
+                if not crm_lead and company_id:
+                    crm_lead = db.query(CRMLead).filter(
+                        (CRMLead.phone.ilike(f"%{clean_digits}%") | CRMLead.alternate_phone.ilike(f"%{clean_digits}%"))
+                    ).order_by(CRMLead.id.desc()).first()
+
+                if crm_lead:
+                    recent_staff_id = (
+                        crm_lead.primary_owner_id or 
+                        crm_lead.telecaller_id or 
+                        crm_lead.handler_id or 
+                        crm_lead.assigned_to
+                    )
+                    if recent_staff_id:
+                        match_reason = "crm_lead_owner"
+            except Exception as e:
+                logger.warning(f"[CALL-ATTRIBUTION] Error resolving CRM lead owner: {e}")
+
+        # 3. Verify employee is active
+        if recent_staff_id:
+            try:
+                emp = db.query(StaffEmployee).filter(
+                    StaffEmployee.id == recent_staff_id,
+                    StaffEmployee.status.in_(['active', 'ACTIVE'])
+                ).first()
+                if emp:
+                    return emp, match_reason
+            except Exception as e:
+                logger.warning(f"[CALL-ATTRIBUTION] Error querying staff employee #{recent_staff_id}: {e}")
+
+        return None, None
+
+    @classmethod
     def _check_sticky_agent(
         cls,
         db: Session,
@@ -1406,70 +1501,39 @@ class CallFlowInterpreter:
         """
         Deterministic Recent-Caller Callback Routing:
         1. Guard: Check Business Hours & Holiday evaluation (MUST NEVER dial staff when closed).
-        2. Query recent VoIPCallSession (outbound/inbound answered).
-        3. Query CRMLead (telecaller_id or primary_owner_id).
-        4. Query OperatorCall (handled_by / operator_id).
-        5. Query TelephonyFlowExecutionLog.
-        6. Verify employee is ACTIVE and has a registered/live Plivo WebRTC softphone endpoint.
-        7. If available -> attempt direct dial. If no-answer/offline -> proceed to Sales IVR.
+        2. Resolve assigned employee via _resolve_caller_assigned_staff.
+        3. Verify employee has a registered/live Plivo WebRTC softphone endpoint.
+        4. If available -> attempt direct dial. If no-answer/offline -> proceed to Sales IVR.
         """
         if not caller_phone:
             return None
 
-        eval_dt = now_dt or datetime.now(IST)
+        eval_dt = now_dt or get_indian_time()
         is_open, reason = cls._evaluate_business_hours(db, company_id, {}, eval_dt)
         if not is_open:
-            logger.info(f"[STICKY-AGENT] Bypassing sticky agent lookup: Business is CLOSED ({reason}).")
+            logger.info(f"[STICKY-AGENT] Bypassing sticky agent direct dial: Business is CLOSED ({reason}).")
             return None
 
-        clean_digits = re.sub(r'\D', '', caller_phone)[-10:]
-        if not clean_digits:
-            return None
+        emp, match_reason = cls._resolve_caller_assigned_staff(db, caller_phone, company_id)
+        if emp:
+            # Check real Plivo endpoint registration state
+            endpoint = db.query(TelephonyPlivoEndpoint).filter(
+                TelephonyPlivoEndpoint.staff_id == emp.id
+            ).order_by(TelephonyPlivoEndpoint.is_registered.desc(), TelephonyPlivoEndpoint.id.desc()).first()
 
-        recent_staff_id = None
-
-        # 1. VoIPCallSession (last 30 days)
-        recent_session = db.query(VoIPCallSession).filter(
-            VoIPCallSession.destination_number.ilike(f"%{clean_digits}%") | VoIPCallSession.customer_phone.ilike(f"%{clean_digits}%"),
-            VoIPCallSession.operator_id.isnot(None)
-        ).order_by(VoIPCallSession.id.desc()).first()
-        if recent_session and recent_session.operator_id:
-            recent_staff_id = recent_session.operator_id
-
-        # 2. CRM Lead owner fallback
-        if not recent_staff_id:
-            crm_lead = db.query(CRMLead).filter(
-                CRMLead.company_id == company_id,
-                (CRMLead.phone.ilike(f"%{clean_digits}%") | CRMLead.alternate_phone.ilike(f"%{clean_digits}%"))
-            ).order_by(CRMLead.id.desc()).first()
-            if crm_lead:
-                recent_staff_id = crm_lead.telecaller_id or crm_lead.primary_owner_id
-
-        if recent_staff_id:
-            emp = db.query(StaffEmployee).filter(
-                StaffEmployee.id == recent_staff_id,
-                StaffEmployee.status.in_(['active', 'ACTIVE'])
-            ).first()
-
-            if emp:
-                # Check real Plivo endpoint registration state
-                endpoint = db.query(TelephonyPlivoEndpoint).filter(
-                    TelephonyPlivoEndpoint.staff_id == emp.id
-                ).order_by(TelephonyPlivoEndpoint.is_registered.desc(), TelephonyPlivoEndpoint.id.desc()).first()
-
-                if endpoint and endpoint.is_registered and endpoint.plivo_username:
-                    sip_uri = f"sip:{endpoint.plivo_username}@phone.plivo.com"
-                    logger.info(f"[STICKY-AGENT] Caller {caller_phone} routed to registered recent employee {emp.full_name} ({emp.id}) -> {sip_uri}")
-                    return cls._generate_xml_response([
-                        f'<Speak voice="Polly.Aditi" language="en-IN">Welcome back to Mynt Real. Connecting you directly to your executive, {emp.full_name}. Please hold.</Speak>',
-                        f'<Dial timeout="20" callerId="{called_did}" action="https://www.myntreal.com/api/v1/telephony/plivo/ivr/dial-complete">',
-                        f'  <User>{sip_uri}</User>',
-                        f'</Dial>',
-                        f'<Speak voice="Polly.Aditi" language="en-IN">Your executive is currently assisting another client. Connecting to our Sales desk.</Speak>',
-                        cls._build_telesales_simultaneous_dial(db, company_id, "Sales", called_did)
-                    ])
-                else:
-                    logger.info(f"[STICKY-AGENT] Recent staff {emp.full_name} is offline/unregistered. Continuing to Sales IVR.")
+            if endpoint and endpoint.is_registered and endpoint.plivo_username:
+                sip_uri = f"sip:{endpoint.plivo_username}@phone.plivo.com"
+                logger.info(f"[STICKY-AGENT] Caller {caller_phone} routed to registered recent employee {emp.full_name} ({emp.id}) via {match_reason} -> {sip_uri}")
+                return cls._generate_xml_response([
+                    f'<Speak voice="Polly.Aditi" language="en-IN">Welcome back to Mynt Real. Connecting you directly to your executive, {emp.full_name}. Please hold.</Speak>',
+                    f'<Dial timeout="20" callerId="{called_did}" action="https://www.myntreal.com/api/v1/telephony/plivo/ivr/dial-complete">',
+                    f'  <User>{sip_uri}</User>',
+                    f'</Dial>',
+                    f'<Speak voice="Polly.Aditi" language="en-IN">Your executive is currently assisting another client. Connecting to our Sales desk.</Speak>',
+                    cls._build_telesales_simultaneous_dial(db, company_id, "Sales", called_did)
+                ])
+            else:
+                logger.info(f"[STICKY-AGENT] Recent staff {emp.full_name} ({emp.id}) is offline/unregistered ({match_reason}). Continuing to Sales IVR.")
 
         return None
 
@@ -1742,7 +1806,7 @@ class CallFlowInterpreter:
                     "digit": d,
                     "label": selected_label,
                     "lang": selected_lang,
-                    "time": datetime.now(IST).strftime('%H:%M:%S')
+                    "time": get_indian_time().strftime('%H:%M:%S')
                 })
                 meta["ivr_selections"] = selections
                 meta["latest_selection"] = selected_label

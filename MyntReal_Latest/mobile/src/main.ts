@@ -356,8 +356,12 @@ class MNRApp {
 
       this.isLoggedIn = isLoggedIn;
 
+      // Check if this is an incoming lead call link via URL query/hash params
+      const initialRouteInfo = this.resolveHashRoute(window.location.hash);
+      const isDirectLeadCall = initialRouteInfo?.route === 'softphone' && !!(initialRouteInfo?.params?.lead_id || initialRouteInfo?.params?.leadId || initialRouteInfo?.params?.dial);
+
       // ─── PHASE 4: SHOW UI IMMEDIATELY ──────────────────────────────────────────
-      if (this.isLoggedIn) {
+      if (this.isLoggedIn || isDirectLeadCall) {
         this.showApp();
       } else {
         gpsService.cleanup().catch(() => {});
@@ -569,9 +573,30 @@ class MNRApp {
   }
 
   private resolveHashRoute(hash: string): { route: PageRoute; params: Record<string, string> } | null {
-    if (!hash || hash === '#') return null;
+    const searchParamsObj: Record<string, string> = {};
+    if (typeof window !== 'undefined' && window.location.search) {
+      try {
+        const sp = new URLSearchParams(window.location.search);
+        sp.forEach((v, k) => {
+          searchParamsObj[k] = v;
+        });
+      } catch (_) {}
+    }
+
+    if (!hash || hash === '#') {
+      if (searchParamsObj['lead_id'] || searchParamsObj['leadId'] || searchParamsObj['dial']) {
+        return { route: 'softphone', params: searchParamsObj };
+      }
+      return null;
+    }
+
     const cleanHash = hash.replace(/^#/, '');
-    if (!cleanHash) return null;
+    if (!cleanHash) {
+      if (searchParamsObj['lead_id'] || searchParamsObj['leadId'] || searchParamsObj['dial']) {
+        return { route: 'softphone', params: searchParamsObj };
+      }
+      return null;
+    }
 
     const [pathPart, queryPart] = cleanHash.split('?');
     const normalizedPath = pathPart.startsWith('/') ? pathPart : '/' + pathPart;
@@ -608,9 +633,14 @@ class MNRApp {
       }
     }
 
-    if (!targetRoute) return null;
+    if (!targetRoute) {
+      if (searchParamsObj['lead_id'] || searchParamsObj['leadId'] || searchParamsObj['dial']) {
+        return { route: 'softphone', params: searchParamsObj };
+      }
+      return null;
+    }
 
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = { ...searchParamsObj };
     if (queryPart) {
       const urlParams = new URLSearchParams(queryPart);
       urlParams.forEach((val, key) => {

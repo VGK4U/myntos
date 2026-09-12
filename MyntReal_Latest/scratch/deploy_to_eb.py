@@ -4,7 +4,10 @@ import time
 import boto3
 import dotenv
 
-dotenv.load_dotenv('backend/.env')
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', 'backend', '.env')
+if not os.path.exists(dotenv_path):
+    dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+dotenv.load_dotenv(dotenv_path)
 key = os.environ.get('AWS_ACCESS_KEY_ID')
 secret = os.environ.get('AWS_SECRET_ACCESS_KEY')
 region = os.environ.get('AWS_REGION', 'ap-south-2')
@@ -17,7 +20,7 @@ APP_NAME = 'vgk4u'
 ENV_NAME = 'Vgk4u-env'
 S3_BUCKET = 'elasticbeanstalk-ap-south-2-251714435676'
 TIMESTAMP = int(time.time() * 1000)
-VERSION_LABEL = f'v2.3.7-production-release-{TIMESTAMP}'
+VERSION_LABEL = f'v2.3.8-production-release-{TIMESTAMP}'
 S3_KEY = f'deployments/{VERSION_LABEL}.zip'
 ZIP_PATH = os.path.join(os.path.dirname(__file__), '..', 'deployment.zip')
 
@@ -37,7 +40,7 @@ eb.create_application_version(
         'S3Bucket': S3_BUCKET,
         'S3Key': S3_KEY
     },
-    Description='MyntOS v2.3.7: Voicemail Recording Webhook Persistence, Multi-Tenant Overall Call History & Audio Player Parity',
+    Description='MyntOS v2.3.8: WhatsApp Media Download & S3 Mirroring, Quoted Reply Engine, Lead Caller ID Resolution, Quick Staff Verification Modal with Direct Dial Parity',
     AutoCreateApplication=False
 )
 print("Application version created.")

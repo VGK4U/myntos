@@ -14,6 +14,7 @@
 import { apiService } from '../services/api.service';
 import { telephonyService } from '../services/telephony.service';
 import { authService } from '../services/auth.service';
+import { routerService } from '../services/router.service';
 import { PageHeader } from '../components/PageHeader';
 
 export type SoftphoneScope = 'dialer' | 'my' | 'new_calls' | 'team' | 'contacts' | 'overall';
@@ -209,7 +210,7 @@ export class SoftphonePage {
   private telephonyUnsub: (() => void) | null = null;
 
   // Bottom Sheet Drawer State
-  private activeBottomSheet: 'customer_history' | 'action_taken' | null = null;
+  private activeBottomSheet: 'customer_history' | 'action_taken' | 'quick_staff_verify' | null = null;
   private customerHistoryData: CustomerTimelineData | null = null;
   private customerHistoryLoading: boolean = false;
   private actionModalSessionId: string = '';
@@ -217,6 +218,14 @@ export class SoftphonePage {
   private actionModalPhone: string = '';
   private actionModalNotes: string = '';
   private isSubmittingAction: boolean = false;
+
+  // Quick Staff Verification State (Option A: Direct WhatsApp Call Link)
+  private quickStaffLeadPreview: any = null;
+  private quickStaffEmpCode: string = '';
+  private quickStaffPersistence: 'always' | 'one_time' = 'always';
+  private quickStaffError: string = '';
+  private isVerifyingStaff: boolean = false;
+  private pendingAutoDialAfterVerify: boolean = false;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -229,53 +238,81 @@ export class SoftphonePage {
 
     const hash = window.location.hash || '';
     const queryIndex = hash.indexOf('?');
-    if (queryIndex !== -1) {
-      const urlParams = new URLSearchParams(hash.substring(queryIndex));
-      const dial = urlParams.get('dial') || (params && params.dial);
-      const name = urlParams.get('name') || (params && params.name);
-      const leadId = urlParams.get('lead_id') || urlParams.get('leadId') || (params && (params.lead_id || params.leadId));
-      const returnParam = urlParams.get('return') || (params && params.return);
-      const scopeParam = urlParams.get('scope') as SoftphoneScope;
-      const autoStart = urlParams.get('auto_start') === 'true' || urlParams.get('autostart') === 'true' || (params && (params.auto_start || params.autostart));
-      if (returnParam) this.returnUrl = returnParam;
-      if (scopeParam) this.activeScope = scopeParam;
-      if (leadId) this.selectedLeadId = leadId;
-      if (dial) {
-        this.dialNumber = dial;
-        autoDialNum = dial;
-        if (name) {
-          this.selectedContactName = name;
-          autoDialName = name;
-        }
-        this.activeScope = 'dialer';
-        if (autoStart) shouldAutoStart = true;
+    const hashParams = queryIndex !== -1 ? new URLSearchParams(hash.substring(queryIndex)) : new URLSearchParams();
+    const searchParams = (typeof window !== 'undefined' && window.location.search) ? new URLSearchParams(window.location.search) : new URLSearchParams();
+
+    const dial = params?.dial || hashParams.get('dial') || searchParams.get('dial');
+    const name = params?.name || hashParams.get('name') || searchParams.get('name');
+    const leadId = params?.lead_id || params?.leadId || hashParams.get('lead_id') || hashParams.get('leadId') || searchParams.get('lead_id') || searchParams.get('leadId');
+    const returnParam = params?.return || hashParams.get('return') || searchParams.get('return');
+    const scopeParam = (params?.scope || hashParams.get('scope') || searchParams.get('scope')) as SoftphoneScope;
+    const autoStart = params?.auto_dial === '1' || params?.auto_dial === 'true' || params?.auto_start === 'true' || params?.autostart === 'true' ||
+      hashParams.get('auto_dial') === '1' || hashParams.get('auto_dial') === 'true' || hashParams.get('auto_start') === 'true' || hashParams.get('autostart') === 'true' ||
+      searchParams.get('auto_dial') === '1' || searchParams.get('auto_dial') === 'true' || searchParams.get('auto_start') === 'true' || searchParams.get('autostart') === 'true';
+
+    if (returnParam) this.returnUrl = returnParam;
+    if (scopeParam) this.activeScope = scopeParam;
+    if (leadId) this.selectedLeadId = leadId;
+
+    const isAuth = authService.getAuthState().isLoggedIn;
+
+    if (dial) {
+      this.dialNumber = dial;
+      autoDialNum = dial;
+      if (name) {
+        this.selectedContactName = name;
+        autoDialName = name;
       }
-    } else if (params && params.dial) {
-      this.dialNumber = params.dial;
-      autoDialNum = params.dial;
-      if (params.name) {
-        this.selectedContactName = params.name;
-        autoDialName = params.name;
-      }
-      if (params.lead_id || params.leadId) this.selectedLeadId = params.lead_id || params.leadId;
-      if (params.return) this.returnUrl = params.return;
       this.activeScope = 'dialer';
-      if (params.auto_start || params.autostart) shouldAutoStart = true;
+      if (autoStart) shouldAutoStart = true;
+    }
+
+    // If authenticated and leadId is provided without dial number, fetch verified lead detail
+    if (leadId && !dial && isAuth) {
+      try {
+        const res = await apiService.get<any>(`/telephony/plivo/lead-call-detail/${leadId}`);
+        const payload = res?.data || res;
+        if (payload && (payload.success || payload.lead)) {
+          const leadData = payload.lead || payload;
+          const targetPhone = leadData.phone || '';
+          const targetName = leadData.name || 'Contact Lead';
+          const cleanDigits = String(targetPhone).replace(/\D/g, '').slice(-10);
+          if (cleanDigits) {
+            this.dialNumber = cleanDigits;
+            this.selectedContactName = targetName;
+            autoDialNum = cleanDigits;
+            autoDialName = targetName;
+            this.activeScope = 'dialer';
+            if (autoStart) shouldAutoStart = true;
+          }
+        }
+      } catch (err) {
+        console.warn('[SoftphonePage] Could not load lead call details:', err);
+      }
     }
 
     this.render();
 
-    // Initial background data loads
-    this.loadTodayMetrics();
-    if (this.activeScope === 'dialer') {
-      this.loadRecent20Calls();
-    } else if (this.activeScope === 'contacts') {
-      this.loadContacts(1);
-    } else {
-      this.loadScopeCalls(1);
-      if (this.activeScope === 'team' || this.activeScope === 'overall') {
-        this.loadTeamMembers();
+    // If not authenticated and leadId is present: trigger Quick Staff Verification
+    if (!isAuth && leadId) {
+      this.openQuickStaffVerificationSheet(leadId, autoStart);
+    }
+
+    // Initial background data loads (authenticated staff only)
+    if (isAuth) {
+      this.loadTodayMetrics();
+      if (this.activeScope === 'dialer') {
+        this.loadRecent20Calls();
+      } else if (this.activeScope === 'contacts') {
+        this.loadContacts(1);
+      } else {
+        this.loadScopeCalls(1);
+        if (this.activeScope === 'team' || this.activeScope === 'overall') {
+          this.loadTeamMembers();
+        }
       }
+
+      await telephonyService.initPlivoWebRTC();
     }
 
     // Subscribe to telephony service
@@ -285,9 +322,7 @@ export class SoftphonePage {
       });
     }
 
-    await telephonyService.initPlivoWebRTC();
-
-    if (shouldAutoStart && autoDialNum) {
+    if (shouldAutoStart && autoDialNum && isAuth) {
       setTimeout(() => {
         this.startCall(autoDialNum, autoDialName);
       }, 400);
@@ -901,9 +936,15 @@ export class SoftphonePage {
   }
 
   private closeBottomSheet(): void {
+    const wasQuickStaff = this.activeBottomSheet === 'quick_staff_verify';
     this.activeBottomSheet = null;
     this.customerHistoryData = null;
+    this.quickStaffLeadPreview = null;
     this.renderBottomSheet();
+
+    if (wasQuickStaff && !authService.getAuthState().isLoggedIn) {
+      routerService.navigate('dashboard');
+    }
   }
 
   // ──────────────────────────── MAIN RENDER ────────────────────────────
@@ -1655,8 +1696,11 @@ export class SoftphonePage {
                 </span>
               </div>
 
-              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: #94a3b8;">
-                <span style="font-family: monospace;">${maskedPhone}</span>
+                ${(!isUnresolved && cleanPhone && cleanPhone.length >= 6 && cleanPhone !== 'unresolved') ? `
+                  <span class="call-action-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(name)}" style="font-family: monospace; cursor: pointer; color: #60a5fa; text-decoration: underline; text-decoration-style: dashed;" title="Click to call back">${maskedPhone}</span>
+                ` : `
+                  <span style="font-family: monospace;">${maskedPhone}</span>
+                `}
                 ${isForwarded && fwdMasked ? `
                   <span style="font-size: 9.5px; padding: 1px 5px; border-radius: 4px; background: rgba(234, 179, 8, 0.15); border: 1px solid rgba(234, 179, 8, 0.3); color: #facc15; font-family: monospace;" title="Forwarded From">
                     <i class="fas fa-share fa-xs" style="margin-right: 2px;"></i>Fwd: ${this.escapeHtml(fwdMasked)}
@@ -1810,6 +1854,8 @@ export class SoftphonePage {
       container.innerHTML = this.renderCustomerHistorySheetHtml();
     } else if (this.activeBottomSheet === 'action_taken') {
       container.innerHTML = this.renderActionTakenSheetHtml();
+    } else if (this.activeBottomSheet === 'quick_staff_verify') {
+      container.innerHTML = this.renderQuickStaffVerifySheetHtml();
     }
 
     this.attachBottomSheetListeners();
@@ -2255,9 +2301,238 @@ export class SoftphonePage {
     });
   }
 
+  private async openQuickStaffVerificationSheet(leadId: string, autoDial: boolean = false): Promise<void> {
+    this.selectedLeadId = leadId;
+    this.pendingAutoDialAfterVerify = autoDial;
+    this.activeBottomSheet = 'quick_staff_verify';
+    this.quickStaffEmpCode = '';
+    this.quickStaffPersistence = 'always';
+    this.quickStaffError = '';
+    this.isVerifyingStaff = false;
+    this.renderBottomSheet();
+
+    try {
+      const resp = await apiService.get<any>(`/telephony/plivo/public-lead-preview?lead_id=${leadId}`);
+      const payload = resp?.data || resp;
+      if (payload && (payload.success || payload.lead_id)) {
+        this.quickStaffLeadPreview = payload;
+        if (this.activeBottomSheet === 'quick_staff_verify') {
+          this.renderBottomSheet();
+        }
+      }
+    } catch (err) {
+      console.warn('[SoftphonePage] Could not load public lead preview:', err);
+    }
+  }
+
+  private renderQuickStaffVerifySheetHtml(): string {
+    const preview = this.quickStaffLeadPreview;
+    const custName = this.escapeHtml(preview?.name || 'Customer Lead');
+    const maskedPhone = this.escapeHtml(preview?.masked_phone || '+91 ***** *****');
+    const location = this.escapeHtml(preview?.location || '—');
+    const service = this.escapeHtml(preview?.service || 'CRM Lead');
+    const company = this.escapeHtml(preview?.company_name || 'MyntReal');
+
+    return `
+      <!-- Backdrop Overlay -->
+      <div id="bottomSheetBackdrop" style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 999; backdrop-filter: blur(4px);"></div>
+
+      <!-- Slide-Up Drawer -->
+      <div style="position: fixed; bottom: 0; left: 0; right: 0; max-height: 90vh; overflow-y: auto; background: #0f172a; border-top-left-radius: 24px; border-top-right-radius: 24px; z-index: 1000; box-shadow: 0 -10px 40px rgba(0,0,0,0.8); border-top: 1px solid rgba(255,255,255,0.15); padding: 20px 18px 28px;">
+        
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 18px;">
+              <i class="fas fa-id-badge"></i>
+            </div>
+            <div>
+              <div style="font-size: 16px; font-weight: 700; color: #f8fafc;">Staff Verification</div>
+              <div style="font-size: 11px; color: #94a3b8; margin-top: 1px;">Enter Employee ID to connect CRM lead call</div>
+            </div>
+          </div>
+          <button id="closeBottomSheetBtn" style="background: rgba(255,255,255,0.08); border: none; color: #94a3b8; width: 32px; height: 32px; border-radius: 50%; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+            ✕
+          </button>
+        </div>
+
+        <!-- Lead Preview Card -->
+        <div style="background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95)); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 12px 14px; margin-bottom: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #38bdf8;">Lead Call Details</span>
+            <span id="qsvCompBadge" style="font-size: 10px; padding: 2px 8px; border-radius: 6px; background: rgba(99, 102, 241, 0.2); color: #a5b4fc; font-weight: 600;">${company}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div id="qsvCustomerName" style="font-size: 14px; font-weight: 700; color: #fff;">${custName}</div>
+              <div id="qsvMaskedPhone" style="font-size: 12px; font-family: monospace; color: #cbd5e1; margin-top: 2px;">${maskedPhone}</div>
+            </div>
+            <div style="text-align: right;">
+              <div id="qsvService" style="font-size: 11px; color: #facc15; font-weight: 600;">${service}</div>
+              <div id="qsvLocation" style="font-size: 11px; color: #64748b; margin-top: 2px;">${location}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Employee ID Input -->
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 11.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">
+            Employee Code / Staff ID:
+          </label>
+          <div style="position: relative;">
+            <i class="fas fa-user-tag" style="position: absolute; left: 12px; top: 12px; color: #64748b; font-size: 13px;"></i>
+            <input 
+              type="text" 
+              id="quickStaffEmpInput" 
+              placeholder="e.g. MR10012 or MN10017" 
+              value="${this.escapeAttr(this.quickStaffEmpCode)}"
+              autocapitalize="characters"
+              style="width: 100%; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; color: #fff; padding: 10px 12px 10px 34px; font-size: 13px; font-weight: 600; letter-spacing: 0.5px; outline: none; box-sizing: border-box;"
+            />
+          </div>
+        </div>
+
+        <!-- Device Persistence Options (One Time vs Always) -->
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 11.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 8px;">
+            Login Persistence:
+          </label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <label style="display: flex; align-items: flex-start; gap: 8px; padding: 10px; border-radius: 10px; background: ${this.quickStaffPersistence === 'always' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(30, 41, 59, 0.6)'}; border: 1px solid ${this.quickStaffPersistence === 'always' ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255, 255, 255, 0.1)'}; cursor: pointer;">
+              <input type="radio" name="mobileQsvPersistence" value="always" ${this.quickStaffPersistence === 'always' ? 'checked' : ''} style="margin-top: 2px; accent-color: #10b981;" />
+              <div>
+                <div style="font-size: 12px; font-weight: 700; color: #fff;">Always</div>
+                <div style="font-size: 10px; color: #94a3b8; line-height: 1.2; margin-top: 2px;">Remember on device</div>
+              </div>
+            </label>
+            <label style="display: flex; align-items: flex-start; gap: 8px; padding: 10px; border-radius: 10px; background: ${this.quickStaffPersistence === 'one_time' ? 'rgba(16, 185, 129, 0.12)' : 'rgba(30, 41, 59, 0.6)'}; border: 1px solid ${this.quickStaffPersistence === 'one_time' ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255, 255, 255, 0.1)'}; cursor: pointer;">
+              <input type="radio" name="mobileQsvPersistence" value="one_time" ${this.quickStaffPersistence === 'one_time' ? 'checked' : ''} style="margin-top: 2px; accent-color: #10b981;" />
+              <div>
+                <div style="font-size: 12px; font-weight: 700; color: #fff;">One-Time</div>
+                <div style="font-size: 10px; color: #94a3b8; line-height: 1.2; margin-top: 2px;">Current session only</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Error Alert -->
+        <div id="quickStaffErrorAlert" style="display: ${this.quickStaffError ? 'block' : 'none'}; padding: 10px 12px; border-radius: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; font-size: 12px; margin-bottom: 14px;">
+          <i class="fas fa-exclamation-circle" style="margin-right: 4px;"></i>${this.escapeHtml(this.quickStaffError)}
+        </div>
+
+        <!-- Action Button -->
+        <button 
+          id="submitQuickStaffBtn" 
+          style="width: 100%; padding: 13px; border-radius: 12px; background: linear-gradient(135deg, #10b981, #059669); border: none; color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);"
+          ${this.isVerifyingStaff ? 'disabled' : ''}
+        >
+          ${this.isVerifyingStaff ? '<i class="fas fa-spinner fa-spin"></i> Verifying & Connecting...' : '<i class="fas fa-phone-volume"></i> Verify & Connect Call Now'}
+        </button>
+
+        <!-- Footer Notice -->
+        <div style="text-align: center; margin-top: 12px; font-size: 11px; color: #64748b;">
+          Calls are automatically tagged with your Staff ID and recorded.
+        </div>
+      </div>
+    `;
+  }
+
+  private async submitQuickStaffVerification(): Promise<void> {
+    const empCode = (this.quickStaffEmpCode || '').trim().toUpperCase();
+    if (!empCode) {
+      this.quickStaffError = 'Please enter your Employee ID (e.g. MR10012 or MN10017).';
+      this.renderBottomSheet();
+      return;
+    }
+
+    this.isVerifyingStaff = true;
+    this.quickStaffError = '';
+    this.renderBottomSheet();
+
+    try {
+      const resp = await apiService.post<any>('/telephony/plivo/quick-dial/verify-staff', {
+        emp_code: empCode,
+        lead_id: this.selectedLeadId,
+        persistence: this.quickStaffPersistence
+      });
+
+      const data = resp?.data || resp;
+      if (!data || !data.success) {
+        throw new Error(data?.detail || data?.error || 'Employee verification failed. Please check Employee ID.');
+      }
+
+      // 1. Store token & auth state via quickStaffLogin
+      await authService.quickStaffLogin(data.access_token, data.employee, this.quickStaffPersistence);
+
+      // 2. Pre-warm and register Plivo WebRTC singleton
+      await telephonyService.initPlivoWebRTC();
+
+      // 3. Extract lead details
+      const targetPhone = data.lead?.phone || '';
+      const targetName = data.lead?.name || 'Contact Lead';
+      const cleanDigits = String(targetPhone).replace(/\D/g, '').slice(-10);
+
+      this.activeBottomSheet = null;
+      this.customerHistoryData = null;
+      this.quickStaffLeadPreview = null;
+
+      // 4. Update dialer state
+      if (cleanDigits) {
+        this.dialNumber = cleanDigits;
+        this.selectedContactName = targetName;
+      }
+      this.activeScope = 'dialer';
+      this.render();
+
+      // 5. Background data loads
+      this.loadTodayMetrics();
+      this.loadRecent20Calls();
+
+      // 6. Connect call automatically if destination phone is ready
+      if (cleanDigits) {
+        setTimeout(() => {
+          this.startCall(cleanDigits, targetName);
+        }, 500);
+      }
+    } catch (err: any) {
+      console.error('[SoftphonePage] Quick verification error:', err);
+      this.isVerifyingStaff = false;
+      this.quickStaffError = err?.message || 'Verification failed. Please check Employee ID.';
+      this.renderBottomSheet();
+    }
+  }
+
   private attachBottomSheetListeners(): void {
     document.getElementById('bottomSheetBackdrop')?.addEventListener('click', () => this.closeBottomSheet());
     document.getElementById('closeBottomSheetBtn')?.addEventListener('click', () => this.closeBottomSheet());
+
+    if (this.activeBottomSheet === 'quick_staff_verify') {
+      const empInput = document.getElementById('quickStaffEmpInput') as HTMLInputElement;
+      if (empInput) {
+        empInput.addEventListener('input', () => {
+          this.quickStaffEmpCode = empInput.value;
+        });
+        empInput.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Enter') {
+            ev.preventDefault();
+            this.submitQuickStaffVerification();
+          }
+        });
+        setTimeout(() => empInput.focus(), 150);
+      }
+
+      const radios = document.querySelectorAll<HTMLInputElement>('input[name="mobileQsvPersistence"]');
+      radios.forEach(radio => {
+        radio.addEventListener('change', () => {
+          if (radio.checked) {
+            this.quickStaffPersistence = radio.value as 'always' | 'one_time';
+          }
+        });
+      });
+
+      document.getElementById('submitQuickStaffBtn')?.addEventListener('click', () => this.submitQuickStaffVerification());
+      return;
+    }
 
     const noteInput = document.getElementById('actionTakenNoteInput') as HTMLTextAreaElement;
     noteInput?.addEventListener('input', () => {

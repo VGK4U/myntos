@@ -22,8 +22,7 @@ router = APIRouter(prefix="/staff/offboarding", tags=["Staff Offboarding"])
 
 IST = pytz.timezone("Asia/Kolkata")
 
-def get_indian_time():
-    return datetime.now(IST)
+from app.models.base import get_indian_time
 
 OFFBOARDING_ACCESS_ROLES = ['hr', 'ea', 'vgk4u', 'ceo', 'md']
 
