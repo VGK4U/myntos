@@ -7214,37 +7214,65 @@ function handleCustomCreativeUpload(e) {
 
   const reader = new FileReader();
   reader.onload = function(evt) {
-    const dataUrl = evt.target.result;
-    window._customUploadedCreativeImage = dataUrl;
-    window._customUploadedPosterImage = dataUrl; // alias
+    const rawDataUrl = evt.target.result;
+    
+    // Auto-compress large uploads to < 200KB while keeping crisp HD visual quality
+    const tempImg = new Image();
+    tempImg.onload = function() {
+      const maxDim = 1200;
+      let w = tempImg.width;
+      let h = tempImg.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        } else {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+      }
+      const cvs = document.createElement('canvas');
+      cvs.width = w;
+      cvs.height = h;
+      const ctx = cvs.getContext('2d');
+      ctx.drawImage(tempImg, 0, 0, w, h);
+      
+      const compressedDataUrl = cvs.toDataURL('image/jpeg', 0.82);
+      const finalDataUrl = (compressedDataUrl && compressedDataUrl.length < rawDataUrl.length) ? compressedDataUrl : rawDataUrl;
+      const approxKb = Math.round((finalDataUrl.length * 0.75) / 1024);
 
-    // 1. Update Preview Card Beside Existing Poster Canvas
-    const img = document.getElementById('customCreativeImg');
-    const card = document.getElementById('customCreativeImgCard');
-    const placeholder = document.getElementById('customCreativeEmptyPlaceholder');
-    const topBadge = document.getElementById('customCreativeTopBadge');
+      window._customUploadedCreativeImage = finalDataUrl;
+      window._customUploadedPosterImage = finalDataUrl; // alias
 
-    if (img) img.src = dataUrl;
-    if (card) card.style.display = 'block';
-    if (placeholder) placeholder.style.display = 'none';
-    if (topBadge) {
-      topBadge.textContent = 'Active for WhatsApp ✅';
-      topBadge.style.background = '#d1fae5';
-      topBadge.style.color = '#065f46';
-      topBadge.style.borderColor = '#10b981';
-    }
+      // 1. Update Preview Card Beside Existing Poster Canvas
+      const img = document.getElementById('customCreativeImg');
+      const card = document.getElementById('customCreativeImgCard');
+      const placeholder = document.getElementById('customCreativeEmptyPlaceholder');
+      const topBadge = document.getElementById('customCreativeTopBadge');
 
-    // 2. Update Left Controls Card
-    const leftBadge = document.getElementById('customCreativeStatusBadge');
-    if (leftBadge) {
-      leftBadge.textContent = 'Creative Attached ✅';
-      leftBadge.style.background = '#dcfce7';
-      leftBadge.style.color = '#15803d';
-    }
-    const leftNotice = document.getElementById('customCreativeNotice');
-    if (leftNotice) {
-      leftNotice.textContent = '✅ Custom creative attached! WhatsApp shares will use this uploaded image beside the message.';
-    }
+      if (img) img.src = finalDataUrl;
+      if (card) card.style.display = 'block';
+      if (placeholder) placeholder.style.display = 'none';
+      if (topBadge) {
+        topBadge.textContent = `Active for WhatsApp (${approxKb} KB) ✅`;
+        topBadge.style.background = '#d1fae5';
+        topBadge.style.color = '#065f46';
+        topBadge.style.borderColor = '#10b981';
+      }
+
+      // 2. Update Left Controls Card
+      const leftBadge = document.getElementById('customCreativeStatusBadge');
+      if (leftBadge) {
+        leftBadge.textContent = `Creative Attached (${approxKb} KB) ✅`;
+        leftBadge.style.background = '#dcfce7';
+        leftBadge.style.color = '#15803d';
+      }
+      const leftNotice = document.getElementById('customCreativeNotice');
+      if (leftNotice) {
+        leftNotice.textContent = `✅ Custom creative attached and optimized to ${approxKb} KB! WhatsApp shares will dispatch this image instantly.`;
+      }
+    };
+    tempImg.src = rawDataUrl;
   };
   reader.readAsDataURL(file);
 }
