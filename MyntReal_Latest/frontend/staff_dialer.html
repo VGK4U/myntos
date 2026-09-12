@@ -445,7 +445,10 @@
       <div id="dc-lead-banner" class="dc-lead-banner" style="display:none">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
           <div>
-            <div class="dc-banner-name" id="banner-name">—</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <div class="dc-banner-name" id="banner-name">—</div>
+              <span id="banner-temp-badge" style="display:none;"></span>
+            </div>
             <div class="dc-banner-meta-row">
               <span class="dc-banner-chip" id="banner-category"><i class="fas fa-tag me-1"></i><span id="banner-category-txt">—</span></span>
               <span class="dc-banner-chip" id="banner-area"><i class="fas fa-map-marker-alt me-1"></i><span id="banner-area-txt">—</span></span>
@@ -1405,12 +1408,25 @@
     const location = [city, area].filter(Boolean).join(', ');
 
     cardEl.className = `dc-lead-card border-${lead.queue_priority || 'upcoming'}`;
+    const hotFreshBadge = lead.is_hot_lead
+      ? `<span class="badge bg-danger text-white ms-2 px-2 py-1" style="font-size:11px;font-weight:700;"><i class="fas fa-fire me-1"></i>HOT LEAD</span>`
+      : (lead.is_fresh_lead
+          ? `<span class="badge bg-success text-white ms-2 px-2 py-1" style="font-size:11px;font-weight:700;"><i class="fas fa-seedling me-1"></i>FRESH LEAD</span>`
+          : '');
+
     cardEl.innerHTML = `
-      <div class="dc-lead-header">
-        <h4 class="dc-lead-name">${escHtml(lead.name || '—')}</h4>
+      <div class="dc-lead-header d-flex align-items-center justify-content-between flex-wrap gap-1">
+        <div class="d-flex align-items-center flex-wrap">
+          <h4 class="dc-lead-name mb-0">${escHtml(lead.name || '—')}</h4>
+          ${hotFreshBadge}
+        </div>
         <span class="dc-priority-tag">${priorLabel}</span>
       </div>
-      <div class="dc-lead-meta">${location || '—'}</div>
+      <div class="dc-lead-meta d-flex align-items-center gap-2 flex-wrap mt-1">
+        <span class="badge bg-light text-primary border px-2 py-1"><i class="fas fa-tag me-1"></i>${escHtml(lead.category_name || (lead.category_id ? 'Cat #' + lead.category_id : 'General'))}</span>
+        <span class="badge bg-light text-dark border px-2 py-1"><i class="fas fa-info-circle me-1"></i>${STATUS_LABELS[lead.status] || lead.status || 'New'}</span>
+        <span>${location || '—'}</span>
+      </div>
       ${lead.description ? `<div class="dc-lead-desc">${escHtml(lead.description.substring(0, 120))}${lead.description.length > 120 ? '…' : ''}</div>` : ''}
       <div class="dc-detail-grid">
         <div class="dc-detail-item"><span>Status</span><b>${STATUS_LABELS[lead.status] || lead.status}</b></div>
@@ -1589,7 +1605,20 @@
     }
   };
 
+  let _dialerClickDebounce = false;
+
   window.doDialerRedial = function(which = 'auto') {
+    if (_dialerClickDebounce) {
+      console.warn('[DIALER] Redial click debounced');
+      return;
+    }
+    if (window.PlivoSoftphone && (window.PlivoSoftphone._isDialInProgress || window.PlivoSoftphone.isCallActive)) {
+      console.warn('[DIALER] Redial ignored: call already in progress or active');
+      return;
+    }
+    _dialerClickDebounce = true;
+    setTimeout(() => { _dialerClickDebounce = false; }, 2000);
+
     const pInput = document.getElementById('e-phone');
     const aInput = document.getElementById('e-alt-phone');
     const lead = currentLead || {};
@@ -1648,14 +1677,26 @@
     const leadId = currentLead.id || currentLead.lead_id;
     const name = currentLead.name || '';
     const companyId = currentLead.company_id || 4;
+    const catName = currentLead.category_name || (currentLead.category_id && dcCategories.length ? (dcCategories.find(c => c.id == currentLead.category_id)?.name || '') : '');
     if (typeof window.openLeadWAModal === 'function') {
-      window.openLeadWAModal(leadId, phone, name, companyId);
+      window.openLeadWAModal(leadId, phone, name, companyId, null, catName);
     } else {
       if (phone) window.open(`https://wa.me/91${phone}`, '_blank');
     }
   };
 
   async function doDial(phone, leadId, forceMethod = null) {
+    if (_dialerClickDebounce) {
+      console.warn('[DIALER] Dial click debounced');
+      return;
+    }
+    if (window.PlivoSoftphone && (window.PlivoSoftphone._isDialInProgress || window.PlivoSoftphone.isCallActive)) {
+      console.warn('[DIALER] Dial ignored: call already in progress or active');
+      return;
+    }
+    _dialerClickDebounce = true;
+    setTimeout(() => { _dialerClickDebounce = false; }, 2000);
+
     currentLeadId = leadId;
     lastDialedPhone = phone;
     callTimerStart = Date.now();
@@ -1729,6 +1770,21 @@
     const name = lead.name || '—';
     document.getElementById('banner-name').textContent = name;
     document.getElementById('banner-area-txt').textContent = [lead.city, lead.area].filter(Boolean).join(', ') || '—';
+
+    const tempBadge = document.getElementById('banner-temp-badge');
+    if (tempBadge) {
+      if (lead.is_hot_lead) {
+        tempBadge.className = 'badge bg-danger text-white px-2 py-1';
+        tempBadge.innerHTML = '<i class="fas fa-fire me-1"></i>HOT LEAD';
+        tempBadge.style.display = 'inline-flex';
+      } else if (lead.is_fresh_lead) {
+        tempBadge.className = 'badge bg-success text-white px-2 py-1';
+        tempBadge.innerHTML = '<i class="fas fa-seedling me-1"></i>FRESH LEAD';
+        tempBadge.style.display = 'inline-flex';
+      } else {
+        tempBadge.style.display = 'none';
+      }
+    }
 
     const pEl = document.getElementById('banner-priority-chip');
     const pri = lead.priority || 'normal';

@@ -982,7 +982,8 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
     if company_id:
         leads, assigned_ids = _fetch_leads_for_companies([company_id])
         cat_map = _build_category_map(leads, db)
-        raw_items = [_lead_to_queue_item(l, 'assigned' if l.id in assigned_ids else 'unassigned', cat_map)
+        stats_map = _build_lead_attempt_stats([l.id for l in leads], db)
+        raw_items = [_lead_to_queue_item(l, 'assigned' if l.id in assigned_ids else 'unassigned', cat_map, stats_map)
                      for l in leads]
     else:
         # ── No specific company: build tiered queue ──
@@ -993,7 +994,8 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
             all_ids = _get_staff_company_ids(staff)
             leads, assigned_ids = _fetch_leads_for_companies(all_ids)
             cat_map = _build_category_map(leads, db)
-            raw_items = [_lead_to_queue_item(l, 'assigned' if l.id in assigned_ids else 'unassigned', cat_map)
+            stats_map = _build_lead_attempt_stats([l.id for l in leads], db)
+            raw_items = [_lead_to_queue_item(l, 'assigned' if l.id in assigned_ids else 'unassigned', cat_map, stats_map)
                          for l in leads]
         else:
             # Tier 1 — base company leads (primary, highest priority)
@@ -1010,7 +1012,8 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
             all_assigned_ids = tier1_assigned_ids | tier2_assigned_ids
 
             cat_map = _build_category_map(all_leads, db)
-            raw_items = [_lead_to_queue_item(l, 'assigned' if l.id in all_assigned_ids else 'unassigned', cat_map)
+            stats_map = _build_lead_attempt_stats([l.id for l in all_leads], db)
+            raw_items = [_lead_to_queue_item(l, 'assigned' if l.id in all_assigned_ids else 'unassigned', cat_map, stats_map)
                          for l in all_leads]
 
     # Queue Deduplication by Normalized Phone (Rule 7)
@@ -1098,7 +1101,8 @@ def _build_queue_for_mnr(user: User, db: Session) -> List[dict]:
     ]
     all_leads = sorted(valid_leads, key=_queue_sort_key)
     cat_map = _build_category_map(all_leads, db)
-    raw_items = [_lead_to_queue_item(l, 'assigned' if l.id in assigned_ids else 'unassigned', cat_map) for l in all_leads]
+    stats_map = _build_lead_attempt_stats([l.id for l in all_leads], db)
+    raw_items = [_lead_to_queue_item(l, 'assigned' if l.id in assigned_ids else 'unassigned', cat_map, stats_map) for l in all_leads]
 
     # Queue Deduplication by Normalized Phone (Rule 7)
     seen_phones = set()
@@ -1126,13 +1130,44 @@ def _get_mnr_company_ids(user: User, db: Session) -> List[int]:
         return []
 
 
-def _lead_to_queue_item(lead: CRMLead, slot_type: str, cat_map: Optional[dict] = None) -> dict:
+def _build_lead_attempt_stats(lead_ids: List[int], db: Session) -> dict:
+    """
+    DC_DIALER_TEMP_001: Compute dial_count and has_connected for each lead from crm_dialer_attempts.
+    Returns {lead_id: {'dial_count': int, 'has_connected': bool}}
+    """
+    if not lead_ids:
+        return {}
+    valid_ids = [int(i) for i in lead_ids if i is not None]
+    if not valid_ids:
+        return {}
+    rows = db.execute(text("""
+        SELECT lead_id,
+               COUNT(*) AS dial_count,
+               BOOL_OR(
+                   LOWER(COALESCE(call_outcome, '')) IN ('answered', 'connected', 'completed', 'interested', 'callback', 'callback_scheduled', 'meeting_fixed', 'meeting_scheduled', 'site_visit_scheduled', 'proposal_sent', 'converted')
+                   OR (COALESCE(duration_seconds, 0) > 0 AND LOWER(COALESCE(call_outcome, '')) NOT IN ('no_answer', 'not_connected', 'busy', 'switched_off', 'failed', 'rejected', 'cancelled', 'canceled', 'ringing_timeout', 'timeout', 'zero_duration', 'unanswered', 'missed', 'wrong_number', 'call_failed', 'skip'))
+               ) AS has_connected
+        FROM crm_dialer_attempts
+        WHERE lead_id IN :lids
+        GROUP BY lead_id
+    """), {"lids": tuple(valid_ids)}).fetchall()
+    stats_map = {}
+    for r in rows:
+        stats_map[r[0]] = {
+            'dial_count': int(r[1] or 0),
+            'has_connected': bool(r[2] or False)
+        }
+    return stats_map
+
+
+def _lead_to_queue_item(lead: CRMLead, slot_type: str, cat_map: Optional[dict] = None, stats_map: Optional[dict] = None) -> dict:
     now = get_ist_now()
     last_contact_days = None
     if lead.last_contact_date:
         last_contact_days = (now - lead.last_contact_date).days
 
-    status_l = (lead.status or '').strip().lower()
+    status_str = (lead.status or '').strip()
+    status_l = status_str.lower()
     priority_label = 'new' if status_l in ('new', 'fresh') and not lead.last_contact_date else (
         'due_today' if _is_due_today(lead) else (
             'overdue' if _is_overdue(lead) else (
@@ -1145,6 +1180,16 @@ def _lead_to_queue_item(lead: CRMLead, slot_type: str, cat_map: Optional[dict] =
     category_name = None
     if lead.category_id and cat_map:
         category_name = cat_map.get(lead.category_id)
+
+    # DC_DIALER_TEMP_001: Exact Lead Temperature Classification
+    # 🔥 HOT LEAD: dial_count == 0 (The lead has never been dialed before)
+    # 🌱 FRESH LEAD: dial_count > 0, has_connected is False, and CRM lead status is exactly 'New' (case-insensitive)
+    stats = (stats_map or {}).get(lead.id, {'dial_count': 0, 'has_connected': False})
+    dial_count = stats['dial_count']
+    has_connected = stats['has_connected']
+    is_hot_lead = (dial_count == 0)
+    is_fresh_lead = (dial_count > 0 and not has_connected and status_l == 'new')
+    temperature = 'hot' if is_hot_lead else ('fresh' if is_fresh_lead else 'standard')
 
     return {
         'id': lead.id,
@@ -1173,6 +1218,11 @@ def _lead_to_queue_item(lead: CRMLead, slot_type: str, cat_map: Optional[dict] =
         'last_contact_days': last_contact_days,
         'queue_priority': priority_label,
         'slot_type': slot_type,
+        'is_hot_lead': is_hot_lead,
+        'is_fresh_lead': is_fresh_lead,
+        'temperature': temperature,
+        'dial_count': dial_count,
+        'has_connected': has_connected,
     }
 
 
@@ -1512,6 +1562,14 @@ async def get_dialer_lead_detail(
         lead.id, lead.phone, db, current_user_ref=user_ref, current_portal=portal
     )
 
+    lead_stats = _build_lead_attempt_stats([lead.id], db).get(lead.id, {'dial_count': 0, 'has_connected': False})
+    d_count = lead_stats['dial_count']
+    h_connected = lead_stats['has_connected']
+    st_lower = (lead.status or '').strip().lower()
+    is_hot = (d_count == 0)
+    is_fresh = (d_count > 0 and not h_connected and st_lower == 'new')
+    temp_val = 'hot' if is_hot else ('fresh' if is_fresh else 'standard')
+
     return {
         "success": True,
         "lead": {
@@ -1543,6 +1601,11 @@ async def get_dialer_lead_detail(
             "primary_owner_id": lead.primary_owner_id,
             "primary_owner_type": lead.primary_owner_type,
             "telecaller_id": lead.telecaller_id,
+            "is_hot_lead": is_hot,
+            "is_fresh_lead": is_fresh,
+            "temperature": temp_val,
+            "dial_count": d_count,
+            "has_connected": h_connected,
         },
         "attempts": attempts,
         "notes": notes,

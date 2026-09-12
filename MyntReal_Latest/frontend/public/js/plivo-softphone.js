@@ -34,6 +34,7 @@
             this.loginAttemptInProgress = false;
 
             // Active Call State Machine
+            this._isDialInProgress = false;
             this.isCallActive = false;
             this.isCallConnected = false;
             this.callConnectedTime = null;
@@ -649,8 +650,16 @@
             // MANDATE 1: TRUE USER-GESTURE AUDIO UNLOCK BEFORE THE FIRST AWAIT!
             this.unlockAudioOnUserGesture();
 
+            // Synchronous latch: prevent duplicate dialing before any async work begins
+            if (this._isDialInProgress || this.isCallActive) {
+                console.warn('[PLIVO-SOFTPHONE] A dial or active call is already in progress. Ignoring duplicate dial request.');
+                return;
+            }
+            this._isDialInProgress = true;
+
             const cleanDest = this.normalizeDestinationPhone(destinationPhone);
             if (!cleanDest) {
+                this._isDialInProgress = false;
                 alert('Please enter or select a valid 10-digit phone number to place a call.');
                 return;
             }
@@ -659,13 +668,16 @@
             const selectedMethod = forceMethod || savedPref || 'plivo';
 
             if (selectedMethod === 'modal' || selectedMethod === 'select') {
+                this._isDialInProgress = false;
                 this.showCallMethodModal(cleanDest, leadId, leadName);
                 return;
             }
 
             if (selectedMethod === 'mobile') {
+                this._isDialInProgress = false;
                 this.executeMobileDial(cleanDest);
             } else if (selectedMethod === 'myoperator') {
+                this._isDialInProgress = false;
                 this.executeMyOperatorDial(cleanDest, leadId, leadName);
             } else {
                 this.executePlivoDial(cleanDest, leadId, leadName);
@@ -835,11 +847,14 @@
 
             if (this.isCallActive) {
                 console.warn('[PLIVO-SOFTPHONE] A call is already active. Duplicate dial ignored.');
+                this._isDialInProgress = false;
                 return;
             }
+            this._isDialInProgress = true;
 
             const cleanDest = this.normalizeDestinationPhone(destinationPhone);
             if (!cleanDest) {
+                this._isDialInProgress = false;
                 alert('Please enter or select a valid 10-digit phone number to place a call.');
                 return;
             }
@@ -850,6 +865,7 @@
                 this.updateUIStatus('connecting', 'Connecting...');
                 const isReady = await this.ensureRegistered(12000);
                 if (!isReady || !this.isRegistered || !this.client || typeof this.client.call !== 'function') {
+                    this._isDialInProgress = false;
                     alert('Unable to connect to the telephony network. Please check your internet connection or reload the page.');
                     this.updateUIStatus('offline', 'Offline');
                     return;
@@ -1192,6 +1208,7 @@
             } catch (_) {}
 
             this.isCallActive = false;
+            this._isDialInProgress = false;
             this.isCallConnected = false;
             this.callConnectedTime = null;
 
@@ -1222,7 +1239,8 @@
                         body: JSON.stringify({ 
                             call_session_id: sid,
                             duration_seconds: durSecs
-                        })
+                        }),
+                        keepalive: true
                     }).catch(() => {});
 
                     fetch('/api/v1/telephony/plivo/browser/call-event', {
@@ -1232,7 +1250,8 @@
                             call_session_id: sid,
                             event_type: 'ended',
                             duration_seconds: durSecs
-                        })
+                        }),
+                        keepalive: true
                     }).catch(() => {});
                 } catch (_) {}
             }
@@ -1349,6 +1368,10 @@
                 this._micBoostCtx = new AudioCtxClass();
                 if (this._micBoostCtx.state === 'suspended') {
                     await this._micBoostCtx.resume();
+                }
+                if (this._micBoostCtx.state !== 'running') {
+                    console.warn('[PLIVO-MIC-BOOST] AudioContext is not running (state:', this._micBoostCtx.state, '). Skipping mic boost to preserve audio.');
+                    return;
                 }
 
                 const inputStream = new MediaStream([originalTrack]);

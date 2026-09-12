@@ -257,9 +257,9 @@
                     <div style="background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); border-radius: 16px; padding: 22px 28px; color: white; box-shadow: 0 4px 15px rgba(124,58,237,0.25);">
                         <div class="row align-items-center">
                             <div class="col-md-4 mb-3 mb-md-0">
-                                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; font-weight: 700;">CURRENT RANK & INCENTIVE SLAB</div>
+                                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; font-weight: 700;">CAREER DESIGNATION &amp; INCENTIVE SLAB</div>
                                 <div style="font-size: 22px; font-weight: 800; margin-top: 4px; display: flex; align-items: center; gap: 8px;">
-                                    <span id="rankBadgeDisplay"><i class="fas fa-star text-warning me-1"></i><span id="partnerCurrentRank">1★ Channel Partner</span></span>
+                                    <span id="rankBadgeDisplay"><i class="fas fa-user-tie me-1" style="color:#fde047"></i><span id="partnerCurrentRank">Channel Partner</span></span>
                                 </div>
                                 <div style="margin-top: 6px; display: flex; gap: 10px; align-items: center;">
                                     <span style="background: rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;">Rank Slab: <span id="partnerRankSlabPct">5.00%</span></span>
@@ -741,11 +741,11 @@
                 _partnerData = p;
 
                 // V26 Rank Achievement Binding
-                const elRank = document.getElementById('partnerCurrentRank'); if (elRank) elRank.textContent = p.rank_display || p.current_rank || '1★ Channel Partner';
+                const elRank = document.getElementById('partnerCurrentRank'); if (elRank) elRank.textContent = (p.career_designation || p.current_designation || p.rank_display || p.current_rank || 'Channel Partner').replace(/[★*]/g, '').trim();
                 const elSlab = document.getElementById('partnerRankSlabPct'); if (elSlab) elSlab.textContent = (p.rank_slab_pct || 5.0).toFixed(2) + '%';
                 const elAct  = document.getElementById('partnerActivatedTeam'); if (elAct) elAct.textContent = p.activated_team || 0;
                 const elActv = document.getElementById('partnerActiveTeam'); if (elActv) elActv.textContent = p.active_team || 0;
-                const elNext = document.getElementById('partnerNextRank'); if (elNext) elNext.textContent = p.next_rank || 'Director (Max Rank)';
+                const elNext = document.getElementById('partnerNextRank'); if (elNext) elNext.textContent = (p.next_career || p.next_rank || 'Regional Manager (Max Career)').replace(/[★*]/g, '').trim();
                 const elGap  = document.getElementById('partnerRankGap'); if (elGap) elGap.textContent = p.next_rank ? (p.rank_gap || 0) : '0';
                 const elProg = document.getElementById('partnerRankProgressPct'); if (elProg) elProg.textContent = (p.rank_progress_percent || 0).toFixed(1) + '%';
                 const elReq  = document.getElementById('partnerNextRankReq'); if (elReq) elReq.textContent = p.next_rank_requirement || '50';

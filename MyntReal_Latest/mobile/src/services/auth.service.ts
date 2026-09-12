@@ -298,6 +298,9 @@ class AuthService {
       const { gpsService } = await import('./gps.service');
       gpsService.resetSessionExpiredState();
 
+      // Notify components like SideDrawer that authentication has updated
+      window.dispatchEvent(new CustomEvent('auth-changed'));
+
       return { success: true };
     } catch (error: any) {
       console.error('[DC_AUTH] Password login failed:', error);
@@ -308,6 +311,7 @@ class AuthService {
   async logout(): Promise<void> {
     await apiService.clearToken();
     await apiService.clearCompanyId();
+    try { localStorage.removeItem('mnr_staff_menu_tree_cache'); } catch (e) {}
     
     try {
       const { Capacitor } = await import('@capacitor/core');

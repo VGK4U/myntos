@@ -22,6 +22,10 @@ export interface SoftphoneModalOptions {
   entityId?: string | number | null;
   source?: string;
   autoStart?: boolean;
+  categoryName?: string;
+  status?: string;
+  isHotLead?: boolean;
+  isFreshLead?: boolean;
 }
 
 export type SoftphoneUIState = 'CLOSED' | 'DIALER' | 'ACTIVE_FLOATING' | 'MINIMIZED' | 'ENDED_SUMMARY';
@@ -377,6 +381,12 @@ class SoftphoneModal {
               <div id="spActiveCallerName" style="font-weight: 700 !important; font-size: 16px !important; color: #ffffff !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;">${displayName}</div>
               <div id="spActiveCallerPhone" style="font-size: 12px !important; color: #94a3b8 !important; margin-top: 2px !important;">${this.maskPhone(this.enteredNumber)}</div>
               
+              <div id="spActiveLeadPills" style="margin-top: 6px !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 6px !important; flex-wrap: wrap !important;">
+                <span id="spHeaderCatBadge" style="${this.currentOptions?.categoryName ? '' : 'display:none;'} background: rgba(14, 165, 233, 0.2) !important; color: #38bdf8 !important; border: 1px solid rgba(56, 189, 248, 0.4) !important; font-size: 10px !important; font-weight: 600 !important; padding: 2px 7px !important; border-radius: 4px !important;">🏷️ ${this.currentOptions?.categoryName || ''}</span>
+                <span id="spHeaderStatusBadge" style="${this.currentOptions?.status ? '' : 'display:none;'} background: rgba(255, 255, 255, 0.1) !important; color: #f1f5f9 !important; border: 1px solid rgba(255, 255, 255, 0.2) !important; font-size: 10px !important; font-weight: 600 !important; padding: 2px 7px !important; border-radius: 4px !important;">📌 ${this.currentOptions?.status || ''}</span>
+                <span id="spHeaderTempBadge" style="${this.currentOptions?.isHotLead || this.currentOptions?.isFreshLead ? '' : 'display:none;'} ${this.currentOptions?.isHotLead ? 'background: rgba(239, 68, 68, 0.2) !important; color: #ef4444 !important; border: 1px solid rgba(239, 68, 68, 0.4) !important;' : 'background: rgba(16, 185, 129, 0.2) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.4) !important;'} font-size: 10px !important; font-weight: 700 !important; padding: 2px 7px !important; border-radius: 4px !important;">${this.currentOptions?.isHotLead ? '🔥 HOT LEAD' : (this.currentOptions?.isFreshLead ? '🌱 FRESH LEAD' : '')}</span>
+              </div>
+
               <div style="margin-top: 8px !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 8px !important;">
                 <span id="spCallStateBadge" style="background: #f59e0b !important; color: #000000 !important; font-size: 11px !important; font-weight: 700 !important; padding: 2px 8px !important; border-radius: 12px !important;">Connecting...</span>
                 <span id="spCallTimerDisplay" style="font-size: 14px !important; font-weight: 700 !important; color: #38bdf8 !important;">00:00</span>
@@ -782,7 +792,11 @@ class SoftphoneModal {
 
     const res = await telephonyService.startCall(this.enteredNumber, name, leadId);
     if (!res.success && res.error) {
-      this.showError(res.error);
+      if (res.error === 'A call is already in progress.') {
+        console.warn('[SoftphoneModal] Duplicate dial prevented; ignoring duplicate error toast');
+      } else {
+        this.showError(res.error);
+      }
     }
   }
 
@@ -886,6 +900,12 @@ class SoftphoneModal {
       const catBadge = this.modalEl?.querySelector('#spMobileCatBadge');
       if (catBadge) catBadge.textContent = lead.category_name || 'General';
 
+      const headerCat = this.modalEl?.querySelector('#spHeaderCatBadge') as HTMLElement;
+      if (headerCat) {
+        headerCat.textContent = `🏷️ ${lead.category_name || 'General'}`;
+        headerCat.style.display = 'inline-block';
+      }
+
       const srcEl = this.modalEl?.querySelector('#spMobileSource');
       if (srcEl) srcEl.textContent = lead.source || '—';
 
@@ -896,6 +916,31 @@ class SoftphoneModal {
       if (statusEl) {
         statusEl.textContent = (lead.status || '—').toUpperCase();
         statusEl.style.color = lead.status === 'won' ? '#22c55e' : lead.status === 'lost' ? '#ef4444' : '#38bdf8';
+      }
+
+      const headerStatus = this.modalEl?.querySelector('#spHeaderStatusBadge') as HTMLElement;
+      if (headerStatus) {
+        headerStatus.textContent = `📌 ${lead.status || 'New'}`;
+        headerStatus.style.display = 'inline-block';
+      }
+
+      const headerTemp = this.modalEl?.querySelector('#spHeaderTempBadge') as HTMLElement;
+      if (headerTemp) {
+        if (lead.is_hot_lead) {
+          headerTemp.textContent = '🔥 HOT LEAD';
+          headerTemp.style.background = 'rgba(239, 68, 68, 0.2)';
+          headerTemp.style.color = '#ef4444';
+          headerTemp.style.border = '1px solid rgba(239, 68, 68, 0.4)';
+          headerTemp.style.display = 'inline-block';
+        } else if (lead.is_fresh_lead) {
+          headerTemp.textContent = '🌱 FRESH LEAD';
+          headerTemp.style.background = 'rgba(16, 185, 129, 0.2)';
+          headerTemp.style.color = '#10b981';
+          headerTemp.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+          headerTemp.style.display = 'inline-block';
+        } else {
+          headerTemp.style.display = 'none';
+        }
       }
 
       const statusUpEl = this.modalEl?.querySelector('#spMobileStatusUpdated');

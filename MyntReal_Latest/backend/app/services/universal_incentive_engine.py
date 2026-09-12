@@ -23,11 +23,11 @@ from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 
 SOLAR_V2_RANKS = [
-    {"position": "Channel Partner", "stars": 1, "req_active_team": 0, "pct": 5.00, "amount": 10000.00},
-    {"position": "Manager", "stars": 2, "req_active_team": 2, "pct": 6.50, "amount": 13000.00},
-    {"position": "Zonal Manager", "stars": 3, "req_active_team": 10, "pct": 7.50, "amount": 15000.00},
-    {"position": "Regional Manager", "stars": 4, "req_active_team": 25, "pct": 8.25, "amount": 16500.00},
-    {"position": "Director", "stars": 5, "req_active_team": 50, "pct": 8.50, "amount": 17000.00},
+    {"position": "Member", "stars": 0, "req_active_team": 0, "pct": 0.00, "amount": 0.00},
+    {"position": "Channel Partner", "stars": 0, "req_active_team": 0, "pct": 6.00, "amount": 12000.00},
+    {"position": "Manager", "stars": 0, "req_active_team": 1, "pct": 7.50, "amount": 15000.00},
+    {"position": "General Manager", "stars": 0, "req_active_team": 5, "pct": 8.50, "amount": 17000.00},
+    {"position": "Regional Manager", "stars": 0, "req_active_team": 10, "pct": 9.00, "amount": 18000.00},
 ]
 
 
@@ -153,14 +153,22 @@ def get_partner_current_position_v18(db: Session, partner_id: int) -> Dict[str, 
             SELECT 1 FROM vgk_cash_income_entries WHERE partner_id = :pid AND status IN ('PAID', 'RELEASED', 'CONFIRMED') LIMIT 1
         """), {'pid': partner_id}).fetchone())
 
+    from app.services.vgk4u_career_service import VGK4UCareerService
+    cs = VGK4UCareerService.get_partner_career_status(db, partner_id) if partner_id else None
+    canonical_desig = cs.get('career_designation') if cs else None
+
     if not has_fp:
+        effective_desig = canonical_desig or "Member"
         return {
             "partner_id": partner_id,
             "rank_code": "RANK_0",
-            "position": "Member",
-            "current_rank": "Member",
-            "current_designation": "Member",
-            "rank_display": "Member",
+            "position": effective_desig,
+            "current_rank": effective_desig,
+            "current_designation": effective_desig,
+            "career_designation": effective_desig,
+            "rank_display": effective_desig,
+            "personal_prod_qualification": cs.get('personal_prod_qualification', 'None') if cs else 'None',
+            "effective_personal_producer_rate": cs.get('effective_personal_producer_rate', 0.0) if cs else 0.0,
             "stars": 0,
             "rate_pct": 5.00,
             "rank_slab_pct": 5.00,
@@ -168,44 +176,50 @@ def get_partner_current_position_v18(db: Session, partner_id: int) -> Dict[str, 
             "activated_team": 0,
             "active_team": active_team_cnt,
             "total_downline": total_downline,
-            "next_rank": "1★ Channel Partner",
+            "next_rank": "Channel Partner",
             "next_rank_requirement": 1,
             "rank_gap": 1,
             "rank_progress_percent": 0.0,
             "is_permanent": False
         }
 
-    if activated_team_cnt >= 50:
-        rank_code, pos_name, stars, pct, amt = 'RANK_5', 'Director', 5, 8.50, 17000.00
+    if activated_team_cnt >= 10:
+        rank_code, pos_name, stars, pct, amt = 'RANK_4', 'Regional Manager', 0, 9.00, 18000.00
         next_rank, next_req, gap, progress_pct = None, None, 0, 100.0
-    elif activated_team_cnt >= 25:
-        rank_code, pos_name, stars, pct, amt = 'RANK_4', 'Regional Manager', 4, 8.25, 16500.00
-        next_rank, next_req = 'Director', 50
-        gap = max(0, 50 - activated_team_cnt)
-        progress_pct = round(min(100.0, (activated_team_cnt / 50.0) * 100.0), 1)
-    elif activated_team_cnt >= 10:
-        rank_code, pos_name, stars, pct, amt = 'RANK_3', 'Zonal Manager', 3, 7.50, 15000.00
-        next_rank, next_req = 'Regional Manager', 25
-        gap = max(0, 25 - activated_team_cnt)
-        progress_pct = round(min(100.0, (activated_team_cnt / 25.0) * 100.0), 1)
-    elif activated_team_cnt >= 2:
-        rank_code, pos_name, stars, pct, amt = 'RANK_2', 'Manager', 2, 6.50, 13000.00
-        next_rank, next_req = 'Zonal Manager', 10
+    elif activated_team_cnt >= 5:
+        rank_code, pos_name, stars, pct, amt = 'RANK_3', 'General Manager', 0, 8.50, 17000.00
+        next_rank, next_req = 'Regional Manager', 10
         gap = max(0, 10 - activated_team_cnt)
         progress_pct = round(min(100.0, (activated_team_cnt / 10.0) * 100.0), 1)
+    elif activated_team_cnt >= 1:
+        rank_code, pos_name, stars, pct, amt = 'RANK_2', 'Manager', 0, 7.50, 15000.00
+        next_rank, next_req = 'General Manager', 5
+        gap = max(0, 5 - activated_team_cnt)
+        progress_pct = round(min(100.0, (activated_team_cnt / 5.0) * 100.0), 1)
     else:
-        rank_code, pos_name, stars, pct, amt = 'RANK_1', 'Channel Partner', 1, 5.00, 10000.00
-        next_rank, next_req = 'Manager', 2
-        gap = max(0, 2 - activated_team_cnt)
-        progress_pct = round(min(100.0, (activated_team_cnt / 2.0) * 100.0), 1)
+        rank_code, pos_name, stars, pct, amt = 'RANK_1', 'Channel Partner', 0, 6.00, 12000.00
+        next_rank, next_req = 'Manager', 1
+        gap = max(0, 1 - activated_team_cnt)
+        progress_pct = round(min(100.0, (activated_team_cnt / 1.0) * 100.0), 1)
 
+    effective_desig = canonical_desig or pos_name
+    effective_desig = (effective_desig or 'Channel Partner').replace('★', '').replace('*', '').replace('⭐', '').strip()
+    if any(legacy in effective_desig.upper() for legacy in ['SENIOR CHANNEL PARTNER', 'LEAD CHANNEL PARTNER', 'EXTENDED PARTNER', 'CORE PARTNER']):
+        effective_desig = 'Channel Partner'
+    elif 'ZONAL MANAGER' in effective_desig.upper():
+        effective_desig = 'Manager'
+    elif 'DIRECTOR' in effective_desig.upper():
+        effective_desig = 'Regional Manager'
     return {
         "partner_id": partner_id,
         "rank_code": rank_code,
-        "position": pos_name,
-        "current_rank": f"Rank {stars} — {pos_name}",
-        "current_designation": pos_name,
-        "rank_display": f"{stars}★ {pos_name}",
+        "position": effective_desig,
+        "current_rank": effective_desig,
+        "current_designation": effective_desig,
+        "career_designation": effective_desig,
+        "rank_display": effective_desig,
+        "personal_prod_qualification": cs.get('personal_prod_qualification', 'None') if cs else 'None',
+        "effective_personal_producer_rate": cs.get('effective_personal_producer_rate', float(pct)) if cs else float(pct),
         "stars": stars,
         "rate_pct": float(pct),
         "rank_slab_pct": float(pct),
@@ -296,6 +310,9 @@ def get_bulk_partner_current_positions_v26(db: Session, partner_ids: List[int]) 
                 has_fp_pids.add(r[0])
                 
     # 5. Evaluate all partner ranks in memory
+    from app.services.vgk4u_career_service import VGK4UCareerService
+    career_map = VGK4UCareerService.get_bulk_partner_career_status(db, partner_ids) if partner_ids else {}
+
     results = {}
     for partner_id in partner_ids:
         dids = downlines_map.get(partner_id, [])
@@ -314,15 +331,21 @@ def get_bulk_partner_current_positions_v26(db: Session, partner_ids: List[int]) 
         active_team_cnt = len(active_team_pids)
         activated_team_cnt = sum(1 for dpid, cnt in downline_paid_counts.items() if cnt >= 3)
         has_fp = (partner_id in has_fp_pids)
+        cs = career_map.get(partner_id, {})
+        canonical_desig = cs.get('career_designation')
         
         if not has_fp:
+            effective_desig = canonical_desig or "Member"
             results[partner_id] = {
                 "partner_id": partner_id,
                 "rank_code": "RANK_0",
-                "position": "Member",
-                "current_rank": "Member",
-                "current_designation": "Member",
-                "rank_display": "Member",
+                "position": effective_desig,
+                "current_rank": effective_desig,
+                "current_designation": effective_desig,
+                "career_designation": effective_desig,
+                "rank_display": effective_desig,
+                "personal_prod_qualification": cs.get('personal_prod_qualification', 'None'),
+                "effective_personal_producer_rate": cs.get('effective_personal_producer_rate', 0.0),
                 "stars": 0,
                 "rate_pct": 5.00,
                 "rank_slab_pct": 5.00,
@@ -330,7 +353,7 @@ def get_bulk_partner_current_positions_v26(db: Session, partner_ids: List[int]) 
                 "activated_team": 0,
                 "active_team": active_team_cnt,
                 "total_downline": total_downline,
-                "next_rank": "1★ Channel Partner",
+                "next_rank": "Channel Partner",
                 "next_rank_requirement": 1,
                 "rank_gap": 1,
                 "rank_progress_percent": 0.0,
@@ -338,37 +361,43 @@ def get_bulk_partner_current_positions_v26(db: Session, partner_ids: List[int]) 
             }
             continue
             
-        if activated_team_cnt >= 50:
-            rank_code, pos_name, stars, pct, amt = 'RANK_5', 'Director', 5, 8.50, 17000.00
+        if activated_team_cnt >= 10:
+            rank_code, pos_name, stars, pct, amt = 'RANK_4', 'Regional Manager', 0, 9.00, 18000.00
             next_rank, next_req, gap, progress_pct = None, None, 0, 100.0
-        elif activated_team_cnt >= 25:
-            rank_code, pos_name, stars, pct, amt = 'RANK_4', 'Regional Manager', 4, 8.25, 16500.00
-            next_rank, next_req = 'Director', 50
-            gap = max(0, 50 - activated_team_cnt)
-            progress_pct = round(min(100.0, (activated_team_cnt / 50.0) * 100.0), 1)
-        elif activated_team_cnt >= 10:
-            rank_code, pos_name, stars, pct, amt = 'RANK_3', 'Zonal Manager', 3, 7.50, 15000.00
-            next_rank, next_req = 'Regional Manager', 25
-            gap = max(0, 25 - activated_team_cnt)
-            progress_pct = round(min(100.0, (activated_team_cnt / 25.0) * 100.0), 1)
-        elif activated_team_cnt >= 2:
-            rank_code, pos_name, stars, pct, amt = 'RANK_2', 'Manager', 2, 6.50, 13000.00
-            next_rank, next_req = 'Zonal Manager', 10
+        elif activated_team_cnt >= 5:
+            rank_code, pos_name, stars, pct, amt = 'RANK_3', 'General Manager', 0, 8.50, 17000.00
+            next_rank, next_req = 'Regional Manager', 10
             gap = max(0, 10 - activated_team_cnt)
             progress_pct = round(min(100.0, (activated_team_cnt / 10.0) * 100.0), 1)
+        elif activated_team_cnt >= 1:
+            rank_code, pos_name, stars, pct, amt = 'RANK_2', 'Manager', 0, 7.50, 15000.00
+            next_rank, next_req = 'General Manager', 5
+            gap = max(0, 5 - activated_team_cnt)
+            progress_pct = round(min(100.0, (activated_team_cnt / 5.0) * 100.0), 1)
         else:
-            rank_code, pos_name, stars, pct, amt = 'RANK_1', 'Channel Partner', 1, 5.00, 10000.00
-            next_rank, next_req = 'Manager', 2
-            gap = max(0, 2 - activated_team_cnt)
-            progress_pct = round(min(100.0, (activated_team_cnt / 2.0) * 100.0), 1)
+            rank_code, pos_name, stars, pct, amt = 'RANK_1', 'Channel Partner', 0, 6.00, 12000.00
+            next_rank, next_req = 'Manager', 1
+            gap = max(0, 1 - activated_team_cnt)
+            progress_pct = round(min(100.0, (activated_team_cnt / 1.0) * 100.0), 1)
 
+        effective_desig = canonical_desig or pos_name
+        effective_desig = (effective_desig or 'Channel Partner').replace('★', '').replace('*', '').replace('⭐', '').strip()
+        if any(legacy in effective_desig.upper() for legacy in ['SENIOR CHANNEL PARTNER', 'LEAD CHANNEL PARTNER', 'EXTENDED PARTNER', 'CORE PARTNER']):
+            effective_desig = 'Channel Partner'
+        elif 'ZONAL MANAGER' in effective_desig.upper():
+            effective_desig = 'Manager'
+        elif 'DIRECTOR' in effective_desig.upper():
+            effective_desig = 'Regional Manager'
         results[partner_id] = {
             "partner_id": partner_id,
             "rank_code": rank_code,
-            "position": pos_name,
-            "current_rank": f"Rank {stars} — {pos_name}",
-            "current_designation": pos_name,
-            "rank_display": f"{stars}★ {pos_name}",
+            "position": effective_desig,
+            "current_rank": effective_desig,
+            "current_designation": effective_desig,
+            "career_designation": effective_desig,
+            "rank_display": effective_desig,
+            "personal_prod_qualification": cs.get('personal_prod_qualification', 'None'),
+            "effective_personal_producer_rate": cs.get('effective_personal_producer_rate', float(pct)),
             "stars": stars,
             "rate_pct": float(pct),
             "rank_slab_pct": float(pct),
@@ -528,17 +557,17 @@ def get_company_executive_summary_v18(db: Session) -> Dict[str, Any]:
     """Returns company executive summary."""
     partners = db.execute(text("SELECT id, partner_code, partner_name FROM official_partners WHERE category = 'VGK_TEAM'")).fetchall()
     
-    rank_dist = {"Rank 1 — Channel Partner": 0, "Rank 2 — Manager": 0, "Rank 3 — Zonal Manager": 0, "Rank 4 — Regional Manager": 0, "Rank 5 — Director": 0}
+    rank_dist = {"Member": 0, "Channel Partner": 0, "Manager": 0, "General Manager": 0, "Regional Manager": 0}
     promoted_members = []
     activated_members_count = 0
 
     for p in partners:
         pos_info = get_partner_current_position_v18(db, p.id)
         r_name = pos_info['position']
-        full_r = f"Rank {pos_info['stars']} — {r_name}"
+        full_r = r_name
         rank_dist[full_r] = rank_dist.get(full_r, 0) + 1
 
-        if pos_info['stars'] > 1:
+        if full_r in ('Manager', 'General Manager', 'Regional Manager'):
             promoted_members.append({
                 "partner_id": p.id,
                 "partner_code": p.partner_code,

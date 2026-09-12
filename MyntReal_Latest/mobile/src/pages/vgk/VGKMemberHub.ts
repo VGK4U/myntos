@@ -30,6 +30,7 @@ const NATIVE_ROUTES: Record<string, string> = {
   'my-submissions':     'vgk-my-submissions',
   'bonanza-rewards':    'vgk-bonanza-rewards',
   'points-balance':     'vgk-points-balance',
+  'career':             'vgk-career',
 };
 
 interface ParityModule {
@@ -40,15 +41,15 @@ interface ParityModule {
 }
 
 const MODULES: ParityModule[] = [
+  { slug: 'career',             label: 'Career & Milestones', icon: '🏆', color: '#7c3aed' },
   { slug: 'birthdays',          label: 'Birthdays',         icon: '🎂', color: '#0ea5e9' },
   { slug: 'top-earners',        label: 'Top Earners',       icon: '🏆', color: '#f59e0b' },
   { slug: 'awards',             label: 'My Awards',         icon: '🥇', color: '#a21caf' },
   { slug: 'daywise-income',     label: 'Daywise Income',    icon: '📅', color: '#059669' },
-  { slug: 'income-types',       label: 'Income Types',      icon: '📊', color: '#2563eb' },
-  { slug: 'direct-summary',     label: 'Direct (L1)',       icon: '①',  color: '#475569' },
-  { slug: 'matching-summary',   label: 'Matching (L2)',     icon: '②',  color: '#475569' },
-  { slug: 'guru-summary',       label: 'Senior (L3)',         icon: '③',  color: '#475569' },
-  { slug: 'ved-summary',        label: 'VED (L5)',          icon: '⑤',  color: '#475569' },
+  { slug: 'direct-summary',     label: 'Personal Production',       icon: '①',  color: '#475569' },
+  { slug: 'matching-summary',   label: 'Direct Sponsor Override',   icon: '②',  color: '#475569' },
+  { slug: 'guru-summary',       label: 'Leadership Differential',   icon: '③',  color: '#475569' },
+  { slug: 'ved-summary',        label: 'Operational Support',       icon: '⑤',  color: '#475569' },
   { slug: 'ev-benefits',        label: 'EV Benefits',       icon: '⚡', color: '#16a34a' },
   { slug: 'ev-discount',        label: 'EV Discount',       icon: '🏷️', color: '#16a34a' },
   { slug: 'franchise-earnings', label: 'Franchise',         icon: '🏪', color: '#ea580c' },
@@ -85,7 +86,8 @@ export class VGKMemberHubPage {
       bonanza: 'Bonanza Rewards',
       vendors: 'Vendor Shops',
       media: 'Media Hub',
-      orders: 'Orders'
+      orders: 'Orders',
+      career: 'Career & Milestones'
     };
     const title = tabTitles[activeTab] || 'VGK4U Member Hub';
 
@@ -138,7 +140,8 @@ export class VGKMemberHubPage {
       bonanza: 'Bonanza Rewards',
       vendors: 'Vendor Shops',
       media: 'Media Hub',
-      orders: 'Orders'
+      orders: 'Orders',
+      career: 'Career & Milestones'
     };
     const title = tabTitles[activeTab] || 'VGK4U Member Hub';
 
@@ -180,7 +183,8 @@ export class VGKMemberHubPage {
       bonanza: 'Bonanza Rewards',
       vendors: 'Vendor Shops',
       media: 'Media Hub',
-      orders: 'Orders'
+      orders: 'Orders',
+      career: 'Career & Milestones'
     };
     const title = tabTitles[activeTab] || 'VGK4U Member Hub';
 

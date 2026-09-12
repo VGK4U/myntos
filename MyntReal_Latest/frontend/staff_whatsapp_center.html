@@ -12,6 +12,7 @@
   <script src="/public/js/staff-token-manager.js"></script>
   <script src="/public/js/staff-fetch.js"></script>
   <script src="/public/js/nda-enforcement.js"></script>
+  <script src="/public/js/plivo-softphone.js?v=20260906_fix"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;color:#0f172a;min-height:100vh}
@@ -565,6 +566,48 @@
       <div style="display:flex;justify-content:flex-end;gap:8px">
         <button class="btn-custom btn-outline-custom" onclick="closeModal('assignModal')">Cancel</button>
         <button class="btn-custom btn-green" onclick="submitAssignment()"><i class="fas fa-check"></i> Save Assignment</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FORWARD MESSAGE MODAL ════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="waForwardModal">
+  <div class="modal-box" style="max-width: 480px;">
+    <div class="modal-head" style="background:#065f46;color:#fff;">
+      <h4 style="font-size:14px;font-weight:700;margin:0;"><i class="fas fa-share me-2" style="transform:scaleX(-1);"></i>Forward Message</h4>
+      <button type="button" onclick="closeForwardModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;">&times;</button>
+    </div>
+    <div style="padding:16px;">
+      <!-- Message Preview Box -->
+      <div style="font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px;">Message to Forward</div>
+      <div style="background:#f1f5f9;border-left:3px solid #059669;padding:8px 12px;border-radius:4px;font-size:12px;color:#334155;max-height:80px;overflow-y:auto;white-space:pre-wrap;margin-bottom:12px;" id="waForwardMsgPreview">
+      </div>
+
+      <!-- Recipient Search Input -->
+      <div style="margin-bottom:10px;position:relative;">
+        <label style="font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px;">Select from Recent Chats or Search Contacts</label>
+        <div style="position:relative;">
+          <input type="text" id="waForwardSearchInp" placeholder="Search by contact name or phone..." oninput="onForwardSearchInput(this.value)" style="width:100%;padding:8px 10px 8px 30px;font-size:12.5px;border:1px solid #cbd5e1;border-radius:8px;outline:none;" />
+          <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:11px;"></i>
+        </div>
+      </div>
+
+      <!-- Recipients List (Recent Chats / Search Results) -->
+      <div style="max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:12px;" id="waForwardRecipientsList">
+      </div>
+
+      <!-- Target Selection & Actions -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding-top:4px;">
+        <div id="waForwardSelectedTarget" style="font-size:11.5px;color:#059669;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px;">
+          Select a recipient above
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn-custom btn-gray" onclick="closeForwardModal()">Cancel</button>
+          <button type="button" id="waForwardConfirmBtn" class="btn-custom btn-green" disabled onclick="executeForwardMessage()">
+            <i class="fas fa-paper-plane me-1"></i> Forward
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -1302,8 +1345,9 @@ function renderInboxRows(items) {
         <div><span class="ei-chip ei-contacts">${item.category_name || '—'}</span></div>
         <div><span class="ei-chip" style="background:#e0e7ff;color:#3730a3">${status}</span></div>
         <div style="font-size:11px;color:#374151;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lastSentByName}</div>
-        <div>
+        <div style="display:flex;gap:4px;align-items:center;">
           <button class="btn-custom btn-outline-custom" style="padding:3px 7px" onclick="event.stopPropagation();openAssignModal('${phone}', '${name}')"><i class="fas fa-tag"></i> Assign</button>
+          <button class="btn-custom" style="padding:3px 7px;background:#e0f2fe;color:#0284c7;border:1px solid #bae6fd;" onclick="event.stopPropagation();callContactSoftphone('${phone}', '${name}')" title="Call via Softphone"><i class="fas fa-phone-alt"></i></button>
         </div>
       </div>
     `;
@@ -1415,6 +1459,11 @@ function renderConversationsList(convs) {
           </div>
           <div class="conv-snippet" style="${isArchived ? 'color:#94a3b8;' : ''}">${escapeHtmlText(c.last_message || '')}</div>
         </div>
+        ${(!isGroup && !isChannel && c.phone && !c.phone.includes('@g.us')) ? `
+          <button type="button" class="btn-card-call" onclick="event.stopPropagation(); callContactSoftphone('${c.phone}', '${escapeHtmlText(displayName)}');" title="Call via Softphone" style="border:none;background:#e0f2fe;color:#0284c7;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;flex-shrink:0;transition:all .15s;margin-left:6px;">
+            <i class="fas fa-headset"></i>
+          </button>
+        ` : ''}
       </div>
     `;
   });
@@ -1481,6 +1530,16 @@ async function selectChat(phone, recType, name, isUnassigned = false, channel = 
 
   const actionsContainer = document.getElementById('chatHeaderActions');
   let actionsHtml = `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">`;
+
+  // Softphone Call Button
+  if (recType === 'individual' && phone && !phone.includes('@g.us')) {
+    const safeEscapedName = (name || '').replace(/'/g, "\\'");
+    actionsHtml += `
+      <button type="button" class="btn-custom" onclick="callContactSoftphone('${phone}', '${safeEscapedName}')" title="Call via Softphone" style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;padding:5px 10px;font-size:11.5px;font-weight:700;">
+        <i class="fas fa-phone-alt me-1"></i> Call
+      </button>
+    `;
+  }
 
   // General Status Dropdown
   actionsHtml += `
@@ -1631,14 +1690,17 @@ function renderWhatsAppMediaAttachment(m) {
   `;
 }
 
+let currentLoadedChatMessages = [];
+
 function renderChatMessages(msgs) {
+  currentLoadedChatMessages = msgs || [];
   if (!msgs.length) {
     document.getElementById('chatHistoryBox').innerHTML = '<div style="margin:auto;color:#9ca3af">No messages in conversation.</div>';
     return;
   }
 
   let html = '';
-  msgs.forEach(m => {
+  msgs.forEach((m, idx) => {
     const isOut = m.message_type === 'outbound' || m.sender === 'bot' || m.sender_type === 'bot' || m.message_type === 'manual_staff' || m.is_from_me;
     const bubbleClass = isOut ? 'bubble-out' : 'bubble-in';
     const msgText = m.body || m.body_text || m.message_body || m.message || m.text || '';
@@ -1654,6 +1716,7 @@ function renderChatMessages(msgs) {
         <div style="font-size:12.5px;color:#111827;white-space:pre-wrap">${msgText}</div>
         ${renderWhatsAppMediaAttachment(m)}
         <div class="bubble-meta" style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:4px">
+          <button type="button" class="btn-fwd-bubble" onclick="openForwardModalByIndex(${idx})" title="Forward message" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:11px;padding:2px 5px;border-radius:4px;display:inline-flex;align-items:center;transition:color .15s;" onmouseover="this.style.color='#059669'" onmouseout="this.style.color='#64748b'"><i class="fas fa-share" style="transform:scaleX(-1);"></i></button>
           ${chanTag}
           <span style="font-size:10px;color:#6b7280;font-weight:500">${timeStr}</span>
           ${isOut ? `<span style="font-size:11px;font-weight:bold;color:${tickColor}" title="${statusLabel}">${ticks}</span>` : ''}
@@ -1699,14 +1762,19 @@ function clearAttachment() {
 
 function getStaffSignature() {
   try {
-    const raw = localStorage.getItem('staff_user') || localStorage.getItem('user');
+    const raw = localStorage.getItem('mnr_auth_state') || localStorage.getItem('staff_user') || localStorage.getItem('user');
     if (raw) {
-      const u = JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      const u = parsed.user || parsed.employee || parsed;
       const name = u.full_name || u.name || (u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : '') || 'Staff';
-      return `\n\nRegards,\n${name}`;
+      const ext = u.extension || u.ext || (typeof window !== 'undefined' ? window.__STAFF_EXTENSION__ : null);
+      if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
+        return `\n\nRegards,\n${name}\n8585852738\nExt: ${String(ext).trim()}`;
+      }
+      return `\n\nRegards,\n${name}\n8585852738`;
     }
   } catch(e) {}
-  return '\n\nRegards,\nStaff';
+  return '\n\nRegards,\nStaff\n8585852738';
 }
 
 async function sendChatMessage() {
@@ -2135,6 +2203,221 @@ function submitAssignment() {
   closeModal('assignModal');
   showToast('Assignment saved successfully');
   loadInbox(1);
+}
+
+// ── SOFTPHONE CALL INTEGRATION ─────────────────────────────────────────────
+function callContactSoftphone(phone, name, leadId = null) {
+  if (!phone) {
+    showToast('No phone number available for call.', 'warning');
+    return;
+  }
+  const cleanPhone = String(phone).replace(/[^\d+]/g, '');
+  if (!cleanPhone) {
+    showToast('Invalid phone number.', 'warning');
+    return;
+  }
+  const safeName = name || 'Customer';
+  if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dialOutboundCall === 'function') {
+    window.PlivoSoftphone.dialOutboundCall(cleanPhone, leadId, safeName);
+  } else if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+    window.PlivoSoftphone.dial(cleanPhone, leadId, safeName, 'plivo');
+  } else if (window.PlivoSoftphone && typeof window.PlivoSoftphone.init === 'function') {
+    window.PlivoSoftphone.init();
+    setTimeout(() => {
+      if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+        window.PlivoSoftphone.dial(cleanPhone, leadId, safeName, 'plivo');
+      } else {
+        showToast('Softphone is initializing, please try calling again.', 'info');
+      }
+    }, 600);
+  } else {
+    alert('Softphone module is not ready. Please verify softphone connection.');
+  }
+}
+
+// ── MESSAGE FORWARDING LOGIC ───────────────────────────────────────────────
+let activeForwardMessage = null;
+let selectedForwardTarget = null;
+let forwardSearchDebounceTimer = null;
+
+function openForwardModalByIndex(idx) {
+  const m = currentLoadedChatMessages[idx];
+  if (!m) return;
+  activeForwardMessage = m;
+  selectedForwardTarget = null;
+
+  const msgText = m.body || m.body_text || m.message_body || m.message || m.text || '';
+  const mediaUrl = m.media_url || m.url || '';
+  const previewText = msgText || (mediaUrl ? `[Media Attachment: ${mediaUrl.split('/').pop()}]` : '[Empty Message]');
+  
+  const previewEl = document.getElementById('waForwardMsgPreview');
+  if (previewEl) previewEl.textContent = previewText;
+
+  const searchInp = document.getElementById('waForwardSearchInp');
+  if (searchInp) searchInp.value = '';
+
+  const confirmBtn = document.getElementById('waForwardConfirmBtn');
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Forward';
+  }
+
+  const targetEl = document.getElementById('waForwardSelectedTarget');
+  if (targetEl) targetEl.innerHTML = '<span style="color:#64748b">Select a recipient above</span>';
+
+  // Render recent conversations as initial recipient options
+  renderForwardRecipientsList(currentRenderedConvs || []);
+
+  const modal = document.getElementById('waForwardModal');
+  if (modal) modal.classList.add('open');
+}
+
+function closeForwardModal() {
+  const modal = document.getElementById('waForwardModal');
+  if (modal) modal.classList.remove('open');
+  activeForwardMessage = null;
+  selectedForwardTarget = null;
+}
+
+function renderForwardRecipientsList(items) {
+  const listEl = document.getElementById('waForwardRecipientsList');
+  if (!listEl) return;
+
+  if (!items || !items.length) {
+    listEl.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:#94a3b8">No recent contacts found. Type in search to find contacts.</div>';
+    return;
+  }
+
+  let html = '';
+  items.forEach((c, idx) => {
+    const rawPhone = c.phone || c.mobile_number || '';
+    const name = c.name || c.contact_name || c.user_name || formatContactName(c.name, rawPhone);
+    const masked = maskPhone(rawPhone);
+    const badge = c.badge || (c.type === 'STAFF' ? '👔 Staff' : (c.recipient_type === 'group' || (rawPhone && rawPhone.includes('@g.us')) ? '👥 Group' : '👤 Contact'));
+    const isSelected = selectedForwardTarget && selectedForwardTarget.phone === rawPhone;
+    const safeName = (name || '').replace(/'/g, "\\'");
+    const rType = c.recipient_type || (rawPhone && rawPhone.includes('@g.us') ? 'group' : 'individual');
+
+    html += `
+      <div onclick="selectForwardTarget('${rawPhone}', '${safeName}', '${rType}')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;background:${isSelected ? '#ecfdf5' : '#fff'};transition:background .15s;" onmouseover="if(!${isSelected})this.style.background='#f8fafc'" onmouseout="if(!${isSelected})this.style.background='#fff'">
+        <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+          <div style="width:30px;height:30px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#475569;font-weight:700;flex-shrink:0;">
+            ${(name || 'C').charAt(0).toUpperCase()}
+          </div>
+          <div style="min-width:0;">
+            <div style="font-size:12px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${escapeHtmlText(name)}
+            </div>
+            <div style="font-size:10.5px;color:#64748b;">
+              ${masked}
+            </div>
+          </div>
+        </div>
+        <div style="flex-shrink:0;text-align:right;">
+          <span style="font-size:10px;background:#f1f5f9;color:#475569;padding:2px 6px;border-radius:4px;font-weight:600;">${badge}</span>
+        </div>
+      </div>
+    `;
+  });
+  listEl.innerHTML = html;
+}
+
+function selectForwardTarget(phone, name, recType = 'individual') {
+  selectedForwardTarget = { phone, name, recType };
+  const targetEl = document.getElementById('waForwardSelectedTarget');
+  if (targetEl) {
+    targetEl.innerHTML = `To: <strong>${escapeHtmlText(name)}</strong> (${maskPhone(phone)})`;
+  }
+  const confirmBtn = document.getElementById('waForwardConfirmBtn');
+  if (confirmBtn) confirmBtn.disabled = false;
+
+  // Update visual selection in recipient list
+  const listEl = document.getElementById('waForwardRecipientsList');
+  if (listEl) {
+    Array.from(listEl.children).forEach(child => {
+      if (child.textContent.includes(maskPhone(phone))) {
+        child.style.background = '#ecfdf5';
+      } else {
+        child.style.background = '#fff';
+      }
+    });
+  }
+}
+
+function onForwardSearchInput(val) {
+  clearTimeout(forwardSearchDebounceTimer);
+  const q = (val || '').trim();
+  if (!q) {
+    renderForwardRecipientsList(currentRenderedConvs || []);
+    return;
+  }
+
+  forwardSearchDebounceTimer = setTimeout(async () => {
+    try {
+      const listEl = document.getElementById('waForwardRecipientsList');
+      if (listEl) listEl.innerHTML = '<div style="padding:16px;text-align:center;font-size:11.5px;color:#94a3b8"><i class="fas fa-spinner fa-spin me-1"></i> Searching contacts...</div>';
+      
+      const res = await apiFetch(`${API}/whatsapp/contacts-search?query=${encodeURIComponent(q)}&scope=all`);
+      const results = res.results || [];
+      renderForwardRecipientsList(results);
+    } catch(err) {
+      const listEl = document.getElementById('waForwardRecipientsList');
+      if (listEl) listEl.innerHTML = `<div style="padding:16px;text-align:center;font-size:11.5px;color:#dc2626">Search error: ${err.message}</div>`;
+    }
+  }, 300);
+}
+
+async function executeForwardMessage() {
+  if (!selectedForwardTarget || !activeForwardMessage) {
+    showToast('Please select a recipient.', 'warning');
+    return;
+  }
+
+  const confirmBtn = document.getElementById('waForwardConfirmBtn');
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Forwarding...';
+  }
+
+  try {
+    const msgText = activeForwardMessage.body || activeForwardMessage.body_text || activeForwardMessage.message_body || activeForwardMessage.message || activeForwardMessage.text || '';
+    const mediaUrl = activeForwardMessage.media_url || activeForwardMessage.url || null;
+
+    const payload = {
+      recipient: selectedForwardTarget.phone,
+      recipient_type: selectedForwardTarget.recType || 'individual',
+      recipient_name: selectedForwardTarget.name,
+      message: msgText,
+      media_url: mediaUrl,
+      client_msg_id: `fwd_${Date.now()}`
+    };
+
+    const res = await apiFetch(`${API}/whatsapp/send-message`, {
+      method: 'POST',
+      body: payload
+    });
+
+    if (res.success || res.status === 'sent') {
+      showToast(`✅ Message forwarded to ${formatContactName(selectedForwardTarget.name, selectedForwardTarget.phone)}!`, 'green');
+      closeForwardModal();
+      // If the target is the active conversation, refresh the view
+      if (activeChatPhone && (activeChatPhone === selectedForwardTarget.phone || activeChatPhone.slice(-10) === selectedForwardTarget.phone.slice(-10))) {
+        loadChatHistory(activeChatPhone, activeChatType);
+      }
+    } else {
+      showToast(res.message || res.error || 'Failed to forward message.', 'red');
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Forward';
+      }
+    }
+  } catch(err) {
+    showToast(err.message || 'Error forwarding message', 'red');
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Forward';
+    }
+  }
 }
 
 // Page Initialization with Immediate Workspace Visibility

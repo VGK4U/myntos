@@ -150,25 +150,331 @@ input.edit-input { width: 80px; padding: 4px 8px; border: 1px solid #d1d5db; bor
 
 <!-- tab bar -->
 <div class="tab-bar">
-  <button class="tab-btn active" id="tabBtnRates"   onclick="switchTab('rates')">
-    <i class="fas fa-table"></i> Commission Rates
+  <button class="tab-btn active" id="tabBtnCareer"    onclick="switchTab('career')">
+    <i class="fas fa-sitemap"></i> 1. Career Targets
   </button>
-  <button class="tab-btn"        id="tabBtnUpline"  onclick="switchTab('upline')">
-    <i class="fas fa-sitemap"></i> Upline Manager
+  <button class="tab-btn"        id="tabBtnProd"      onclick="switchTab('prod')">
+    <i class="fas fa-bolt"></i> 2. Personal Production Tiers
   </button>
-  <button class="tab-btn"        id="tabBtnBrands"  onclick="switchTab('brands')">
+  <button class="tab-btn"        id="tabBtnEconomics" onclick="switchTab('economics')">
+    <i class="fas fa-coins"></i> 3. Category Economics
+  </button>
+  <button class="tab-btn"        id="tabBtnStreams"   onclick="switchTab('streams')">
+    <i class="fas fa-layer-group"></i> 4. 6 Earning Streams
+  </button>
+  <button class="tab-btn"        id="tabBtnRates"     onclick="switchTab('rates')">
+    <i class="fas fa-exclamation-triangle" style="color:#f59e0b"></i> 5. Legacy CRM Handlers
+  </button>
+  <button class="tab-btn"        id="tabBtnMargins"   onclick="switchTab('margins')">
+    <i class="fas fa-landmark"></i> Corporate Margins
+  </button>
+  <button class="tab-btn"        id="tabBtnUpline"    onclick="switchTab('upline')">
+    <i class="fas fa-network-wired"></i> Upline Manager
+  </button>
+  <button class="tab-btn"        id="tabBtnBrands"    onclick="switchTab('brands')">
     <i class="fas fa-tag"></i> Solar Brands
   </button>
 </div>
 
 <!-- ═══════════════════════════════════════════════════
-     TAB 1 — Commission Rates (unchanged)
+     TAB — Career Designation Targets (VGK4U Phase 4)
 ════════════════════════════════════════════════════ -->
-<div class="tab-panel active" id="panelRates">
+<div class="tab-panel active" id="panelCareer">
+  <div class="section-card mb-3">
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin:16px;color:#1e40af;font-size:12.5px;line-height:1.5">
+      <strong><i class="fas fa-info-circle me-1"></i>Organizational Career Hierarchy (Sequential Progression Option A):</strong>
+      Career designations govern team leadership differentials. Promotion requires personal qualifying files plus active direct legs. Career designations are decoupled from individual personal production tiers.
+    </div>
+    <div class="table-card" style="box-shadow:none;border-top:1px solid #f0f0f0">
+      <div class="table-card-header">
+        <h3><i class="fas fa-sitemap me-2" style="color:#2563eb"></i>Live Career Designation Targets</h3>
+        <button class="btn btn-sm btn-outline-primary" style="font-size:12px;font-weight:600" onclick="loadVGK4UStaffConfigs()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Designation</th>
+              <th>Code</th>
+              <th>Min Own Files</th>
+              <th>Min Active Legs</th>
+              <th>Self Earning % (Solar)</th>
+              <th>Team Diff %</th>
+              <th>Status</th>
+              <th>Last Updated</th>
+            </tr>
+          </thead>
+          <tbody id="careerConfigsTable">
+            <tr><td colspan="9" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading career targets…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     TAB — Personal Production Tiers (VGK4U Phase 4)
+════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="panelProd">
+  <div class="section-card mb-3">
+    <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:12px 16px;margin:16px;color:#065f46;font-size:12.5px;line-height:1.5">
+      <strong><i class="fas fa-bolt me-1 text-success"></i>Personal Production Qualification (Cumulative Lifetime Files):</strong>
+      Direct personal commission rates scale with lifetime personal qualifying files up to 9.00%. Producers qualifying at higher tiers absorb downline differentials per canonical absorption rules.
+    </div>
+    <div class="table-card" style="box-shadow:none;border-top:1px solid #f0f0f0">
+      <div class="table-card-header">
+        <h3><i class="fas fa-bolt me-2" style="color:#059669"></i>Live Personal Production Tiers</h3>
+        <button class="btn btn-sm btn-outline-success" style="font-size:12px;font-weight:600" onclick="loadVGK4UStaffConfigs()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Tier Code</th>
+              <th>Tier Name</th>
+              <th>Min Files</th>
+              <th>Direct Sales Rate %</th>
+              <th>Differential Absorption Rule</th>
+              <th>Status</th>
+              <th>Last Updated</th>
+            </tr>
+          </thead>
+          <tbody id="prodConfigsTable">
+            <tr><td colspan="7" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading production tiers…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     TAB 3 — Category Commission Economics (VGK4U Phase 4)
+════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="panelEconomics">
+  <div class="section-card mb-3">
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px 16px;margin:16px;color:#166534;font-size:12.5px;line-height:1.5">
+      <strong><i class="fas fa-coins me-1 text-success"></i>Authoritative Category Economics:</strong>
+      Every product category maintains a defined Network Commission Pool and differential waterfall percentages. Direct producer commission base, sponsor override, and management leadership differentials are calculated strictly from these parameters.
+    </div>
+    <div class="table-card" style="box-shadow:none;border-top:1px solid #f0f0f0">
+      <div class="table-card-header">
+        <h3><i class="fas fa-coins me-2" style="color:#059669"></i>Live Category Commission Economics</h3>
+        <button class="btn btn-sm btn-outline-success" style="font-size:12px;font-weight:600" onclick="loadVGK4UStaffConfigs()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Slug</th>
+              <th>Network Pool %</th>
+              <th>Producer Base %</th>
+              <th>Sponsor Override %</th>
+              <th>Manager Diff %</th>
+              <th>GM Diff %</th>
+              <th>RM Diff %</th>
+              <th>Field Support (Journey/E2E) %</th>
+              <th>Showroom %</th>
+              <th>Status</th>
+              <th>Last Updated</th>
+            </tr>
+          </thead>
+          <tbody id="categoryConfigsTable">
+            <tr><td colspan="12" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading category economics…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     TAB 4 — 6 Earning Streams Overview (VGK4U Architecture)
+════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="panelStreams">
+  <div class="section-card mb-3">
+    <div style="padding:16px 20px">
+      <div style="margin-bottom:16px">
+        <h3 style="font-size:16px;font-weight:900;color:#1e1b4b;margin-bottom:4px"><i class="fas fa-layer-group me-2" style="color:#7c3aed"></i>VGK4U 6 Earning Streams Canonical Framework</h3>
+        <p style="font-size:12.5px;color:#6b7280;margin:0">Authoritative architecture defining multi-channel income streams, qualification gates, and distribution rules for all VGK partners.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:14px">
+        <!-- Stream 1 -->
+        <div style="background:#fff;border:1.5px solid #e0e7ff;border-radius:12px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,0.04)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span style="background:#4338ca;color:#fff;font-size:11px;font-weight:900;padding:3px 9px;border-radius:6px">STREAM 1</span>
+            <h4 style="font-size:14px;font-weight:800;color:#1e1b4b;margin:0">Personal Producer Commission</h4>
+          </div>
+          <div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px">Earned directly on self-sourced installations. Scales with lifetime qualifying files from <strong>6.00%</strong> (Base) up to <strong>9.00%</strong> (RM Commission Qualified).</div>
+          <div style="font-size:11px;font-weight:700;color:#4338ca;background:#eef2ff;padding:4px 8px;border-radius:6px">Rate: 6.00% – 9.00% of deal value</div>
+        </div>
+        <!-- Stream 2 -->
+        <div style="background:#fff;border:1.5px solid #dcfce7;border-radius:12px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,0.04)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span style="background:#059669;color:#fff;font-size:11px;font-weight:900;padding:3px 9px;border-radius:6px">STREAM 2</span>
+            <h4 style="font-size:14px;font-weight:800;color:#065f46;margin:0">Direct Sponsor Override</h4>
+          </div>
+          <div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px">Commission paid to the immediate introducer / direct sponsor of the producer on deal completion. Requires sponsor to be an active qualified partner.</div>
+          <div style="font-size:11px;font-weight:700;color:#059669;background:#ecfdf5;padding:4px 8px;border-radius:6px">Solar Rate: 1.00% override (Subject to absorption)</div>
+        </div>
+        <!-- Stream 3 -->
+        <div style="background:#fff;border:1.5px solid #fef3c7;border-radius:12px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,0.04)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span style="background:#d97706;color:#fff;font-size:11px;font-weight:900;padding:3px 9px;border-radius:6px">STREAM 3</span>
+            <h4 style="font-size:14px;font-weight:800;color:#92400e;margin:0">Leadership Differentials</h4>
+          </div>
+          <div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px">Waterfall differentials distributed up the organizational tree to qualified Manager (1.50%), General Manager (1.00%), and Regional Manager (0.50%).</div>
+          <div style="font-size:11px;font-weight:700;color:#d97706;background:#fffbeb;padding:4px 8px;border-radius:6px">Manager: 1.50% | GM: 1.00% | RM: 0.50%</div>
+        </div>
+        <!-- Stream 4 -->
+        <div style="background:#fff;border:1.5px solid #fbcfe8;border-radius:12px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,0.04)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span style="background:#db2777;color:#fff;font-size:11px;font-weight:900;padding:3px 9px;border-radius:6px">STREAM 4</span>
+            <h4 style="font-size:14px;font-weight:800;color:#831843;margin:0">Operational Support Service</h4>
+          </div>
+          <div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px">Compensation allocated for ground technical assistance, lead nurturing, site feasibility inspection, and journey handholding.</div>
+          <div style="font-size:11px;font-weight:700;color:#db2777;background:#fdf2f8;padding:4px 8px;border-radius:6px">Journey: 0.50% | End-to-End: 1.00%</div>
+        </div>
+        <!-- Stream 5 -->
+        <div style="background:#fff;border:1.5px solid #e9d5ff;border-radius:12px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,0.04)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span style="background:#7c3aed;color:#fff;font-size:11px;font-weight:900;padding:3px 9px;border-radius:6px">STREAM 5</span>
+            <h4 style="font-size:14px;font-weight:800;color:#4c1d95;margin:0">Showroom / Partner Node</h4>
+          </div>
+          <div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px">Franchise and showroom commission allocated when a customer purchase originates from or is fulfilled by an authorized VGK showroom node.</div>
+          <div style="font-size:11px;font-weight:700;color:#7c3aed;background:#faf5ff;padding:4px 8px;border-radius:6px">Franchise / Node: 1.00% – 2.00%</div>
+        </div>
+        <!-- Stream 6 -->
+        <div style="background:#fff;border:1.5px solid #fed7aa;border-radius:12px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,0.04)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span style="background:#ea580c;color:#fff;font-size:11px;font-weight:900;padding:3px 9px;border-radius:6px">STREAM 6</span>
+            <h4 style="font-size:14px;font-weight:800;color:#7c2d12;margin:0">Milestone Bonanza & Awards</h4>
+          </div>
+          <div style="font-size:12px;color:#475569;line-height:1.5;margin-bottom:8px">Special periodic bonuses, target completion rewards, seasonal campaigns, and top producer recognition awards funded from promotional pool.</div>
+          <div style="font-size:11px;font-weight:700;color:#ea580c;background:#fff7ed;padding:4px 8px;border-radius:6px">Periodic Targets &amp; Performance Awards</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     TAB — Corporate Retained Margin Ledger (VGK4U Phase 4)
+════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="panelMargins">
+  <!-- Summary Cards -->
+  <div class="summary-row mb-3">
+    <div class="stat-card" style="border-left:4px solid #7c3aed">
+      <div class="val" id="sumMarginRetained" style="color:#7c3aed">₹0.00</div>
+      <div class="lbl">Total Retained Margin (Net)</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #2563eb">
+      <div class="val" id="sumMarginCount" style="color:#2563eb">0</div>
+      <div class="lbl">Retained Transactions</div>
+    </div>
+    <div class="stat-card" style="border-left:4px solid #059669">
+      <div class="val" id="sumMarginCorporateAccount">Company Ledger</div>
+      <div class="lbl">Authoritative Destination</div>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-header" style="justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="sec-icon" style="background:#ede9fe;color:#7c3aed"><i class="fas fa-landmark"></i></div>
+        <div>
+          <h3>Corporate Retained Margin Ledger (Staff / Accounting Only)</h3>
+          <div style="font-size:11.5px;color:#6b7280;margin-top:2px">Authoritative corporate retention from unallocated network pool (Apex Remainder, Inactive Producer Retention, Inactive Sponsor Retention). Strictly excluded from partner earnings.</div>
+        </div>
+      </div>
+      <button class="btn btn-sm btn-outline-primary" onclick="loadCorporateMargins()"><i class="fas fa-sync-alt me-1"></i>Refresh</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-row">
+      <div class="filter-group">
+        <label>Category</label>
+        <select id="marginFilterCategory">
+          <option value="">All Categories</option>
+          <option value="solar" selected>Solar Energy</option>
+          <option value="ev">Electric Vehicles</option>
+          <option value="insurance">Insurance</option>
+          <option value="etc-training">Training</option>
+          <option value="real-dreams">Real Dreams</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Lead ID</label>
+        <input type="number" id="marginFilterLeadId" placeholder="e.g. 101" />
+      </div>
+      <div class="filter-group">
+        <label>Per Page</label>
+        <select id="marginFilterPerPage">
+          <option value="25">25</option>
+          <option value="50" selected>50</option>
+          <option value="100">100</option>
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button class="btn-filter-apply" onclick="applyMarginFilters()"><i class="fas fa-filter me-1"></i>Filter</button>
+        <button class="btn-filter-clear" onclick="clearMarginFilters()">Clear</button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Date</th>
+            <th>Lead ID</th>
+            <th>Category</th>
+            <th>Deal Value</th>
+            <th>Retained %</th>
+            <th>Gross Retained</th>
+            <th>Admin (8%)</th>
+            <th>TDS (2%)</th>
+            <th>Net Retained</th>
+            <th>Retention Reason</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="corporateMarginsTableBody">
+          <tr><td colspan="12" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading corporate margins…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pager -->
+    <div class="pager" id="marginsPager" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     TAB 5 — Legacy CRM & Operational Handlers (Isolated)
+════════════════════════════════════════════════════ -->
+<div class="tab-panel" id="panelRates">
+  <div style="background:#fffbeb;border:2px solid #f59e0b;border-radius:12px;padding:14px 18px;margin-bottom:18px;box-shadow:0 2px 8px rgba(245,158,11,0.15)">
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <i class="fas fa-exclamation-triangle" style="color:#d97706;font-size:22px;margin-top:2px"></i>
+      <div>
+        <div style="font-size:13.5px;font-weight:900;color:#92400e;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:4px">
+          ⚠️ LEGACY CRM / OPERATIONAL HANDLER MAPPING ONLY
+        </div>
+        <div style="font-size:12.5px;color:#78350f;line-height:1.5">
+          The levels below (<strong>L1 Source, L2 Senior, L3 Extended, L4 Core, L5 Support, L6 Showroom</strong>) represent operational CRM lead dispatch handlers and legacy fallback values. They are <strong>strictly decoupled</strong> from the authoritative VGK4U Career Designations and Personal Production Qualifications shown in the tabs above.
+        </div>
+      </div>
+    </div>
+  </div>
 <div class="table-card">
   <div class="table-card-header">
-    <h3><i class="fas fa-table me-2" style="color:#7c3aed"></i>Category Commission Matrix</h3>
-    <span style="font-size:11px;color:#6b7280;"><i class="fas fa-info-circle me-1"></i>Commissions calculated on deal value <strong>excluding taxes</strong></span>
+    <h3><i class="fas fa-table me-2" style="color:#d97706"></i>Legacy CRM Operational Dispatch Matrix</h3>
+    <span style="font-size:11px;color:#6b7280;"><i class="fas fa-info-circle me-1"></i>Internal CRM operational routing matrix (L1–L6) for lead assignment and legacy fallback</span>
   </div>
   <div style="overflow-x:auto">
   <table>
@@ -468,12 +774,211 @@ function showToast(msg, type = 'success') {
 function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  const tabMap = { rates:'Rates', upline:'Upline', brands:'Brands' };
-  const key = tabMap[tab] || 'Rates';
-  document.getElementById('tabBtn' + key).classList.add('active');
-  document.getElementById('panel'  + key).classList.add('active');
+  const tabMap = {
+    career: 'Career',
+    prod: 'Prod',
+    economics: 'Economics',
+    streams: 'Streams',
+    rates: 'Rates',
+    legacy: 'Rates',
+    margins: 'Margins',
+    upline: 'Upline',
+    brands: 'Brands'
+  };
+  const key = tabMap[tab] || 'Career';
+  const btn = document.getElementById('tabBtn' + key);
+  const pnl = document.getElementById('panel'  + key);
+  if (btn) btn.classList.add('active');
+  if (pnl) pnl.classList.add('active');
+  if (tab === 'career' || tab === 'prod' || tab === 'economics') loadVGK4UStaffConfigs();
+  if (tab === 'rates' || tab === 'legacy') loadConfig();
+  if (tab === 'margins') loadCorporateMargins();
   if (tab === 'upline') loadAuditLog();
   if (tab === 'brands') loadBrands();
+}
+
+function escHtml(str) {
+  if (str == null) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+let _vgk4uStaffConfigs = null;
+
+async function loadVGK4UStaffConfigs() {
+  try {
+    const r = await staffFetch(API + '/vgk/staff/vgk4u/configs');
+    const d = await r.json();
+    if (!d.success) { showToast('Failed to load VGK4U configs', 'error'); return; }
+    _vgk4uStaffConfigs = d;
+    renderCareerConfigs(d.career_designations || []);
+    renderProdConfigs(d.personal_prod_tiers || []);
+    renderCategoryEconomicsConfigs(d.category_configs || []);
+  } catch(e) {
+    showToast('Error loading VGK4U configs: ' + e.message, 'error');
+  }
+}
+
+function renderCareerConfigs(list) {
+  const tb = document.getElementById('careerConfigsTable');
+  if (!tb) return;
+  if (!list.length) {
+    tb.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:#9ca3af">No career designations configured.</td></tr>';
+    return;
+  }
+  tb.innerHTML = list.map(c => `
+    <tr>
+      <td style="font-weight:700;color:#6b7280">#${c.hierarchy_order}</td>
+      <td style="font-weight:700;color:#1e1b4b">${escHtml(c.designation_name)}</td>
+      <td><code style="background:#ede9fe;color:#7c3aed;padding:2px 6px;border-radius:4px">${escHtml(c.designation_code)}</code></td>
+      <td style="text-align:center;font-weight:600">${c.required_own_qualifying_files}</td>
+      <td style="text-align:center;font-weight:600">${c.required_active_team_members}</td>
+      <td style="text-align:center;font-weight:700;color:#059669">${Number(c.self_earning_pct||0).toFixed(2)}%</td>
+      <td style="text-align:center;font-weight:700;color:#4338ca">${Number(c.team_differential_pct||0).toFixed(2)}%</td>
+      <td>${c.is_active ? '<span class="badge-active"><i class="fas fa-check-circle"></i> Active</span>' : '<span class="badge-paused"><i class="fas fa-pause"></i> Inactive</span>'}</td>
+      <td style="font-size:11px;color:#9ca3af">${fmtDt(c.updated_at)}</td>
+    </tr>
+  `).join('');
+}
+
+function renderProdConfigs(list) {
+  const tb = document.getElementById('prodConfigsTable');
+  if (!tb) return;
+  // Strictly filter out any Apex Master / Apex tier representations
+  const cleanList = (list || []).filter(p => !p.tier_code?.toLowerCase().includes('apex') && !p.tier_name?.toLowerCase().includes('apex'));
+  if (!cleanList.length) {
+    tb.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:24px;color:#9ca3af">No production tiers configured.</td></tr>';
+    return;
+  }
+  tb.innerHTML = cleanList.map(p => {
+    let absorbed = 'None (Full differentials pass upline)';
+    if (p.commission_rate_pct >= 9.0) {
+      absorbed = 'Absorbs All (Direct Sponsor, Mgr, GM, RM) — 9.00% retained by Producer';
+    } else if (p.commission_rate_pct >= 8.5) {
+      absorbed = 'Absorbs Manager (1.50%) + GM (1.00%) — Sponsor=0%';
+    } else if (p.commission_rate_pct >= 7.5) {
+      absorbed = 'Absorbs Manager (1.50%)';
+    }
+    return `
+      <tr>
+        <td><code style="background:#ecfdf5;color:#065f46;padding:2px 6px;border-radius:4px;font-weight:700">${escHtml(p.tier_code)}</code></td>
+        <td style="font-weight:700;color:#065f46">${escHtml(p.tier_name)}</td>
+        <td style="text-align:center;font-weight:700">${p.min_qualifying_files}+</td>
+        <td style="text-align:center;font-weight:800;color:#059669">${Number(p.commission_rate_pct||0).toFixed(2)}%</td>
+        <td style="font-size:11.5px;color:#475569">${absorbed}</td>
+        <td>${p.is_active ? '<span class="badge-active"><i class="fas fa-check-circle"></i> Active</span>' : '<span class="badge-paused"><i class="fas fa-pause"></i> Inactive</span>'}</td>
+        <td style="font-size:11px;color:#9ca3af">${fmtDt(p.updated_at)}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderCategoryEconomicsConfigs(list) {
+  const tb = document.getElementById('categoryConfigsTable');
+  if (!tb) return;
+  if (!list.length) {
+    tb.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:24px;color:#9ca3af">No category commission configs found.</td></tr>';
+    return;
+  }
+  tb.innerHTML = list.map(c => `
+    <tr>
+      <td style="font-weight:700;color:#1e1b4b">${escHtml(c.category_name)}</td>
+      <td><code style="background:#ede9fe;color:#7c3aed;padding:2px 6px;border-radius:4px">${escHtml(c.category_slug)}</code></td>
+      <td style="text-align:center;font-weight:800;color:#1e40af">${Number(c.max_network_pool_pct||0).toFixed(2)}%</td>
+      <td style="text-align:center;font-weight:700;color:#059669">${Number(c.producer_base_pct||0).toFixed(2)}%</td>
+      <td style="text-align:center;font-weight:700;color:#0d9488">${Number(c.sponsor_override_pct||0).toFixed(2)}%</td>
+      <td style="text-align:center;font-weight:700;color:#4338ca">${Number(c.manager_diff_pct||0).toFixed(2)}%</td>
+      <td style="text-align:center;font-weight:700;color:#6366f1">${Number(c.gm_diff_pct||0).toFixed(2)}%</td>
+      <td style="text-align:center;font-weight:700;color:#7c3aed">${Number(c.rm_diff_pct||0).toFixed(2)}%</td>
+      <td style="text-align:center;font-size:11.5px;color:#334155">${Number(c.support_journey_pct||0).toFixed(2)}% / ${Number(c.support_end_to_end_pct||0).toFixed(2)}%</td>
+      <td style="text-align:center;font-weight:700;color:#d97706">${Number(c.showroom_pct||0).toFixed(2)}%</td>
+      <td>${c.is_active ? '<span class="badge-active"><i class="fas fa-check-circle"></i> Active</span>' : '<span class="badge-paused"><i class="fas fa-pause"></i> Inactive</span>'}</td>
+      <td style="font-size:11px;color:#9ca3af">${fmtDt(c.updated_at)}</td>
+    </tr>
+  `).join('');
+}
+
+let marginPage = 1;
+async function loadCorporateMargins() {
+  const tb = document.getElementById('corporateMarginsTableBody');
+  if (!tb) return;
+  tb.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading corporate margins…</td></tr>';
+  
+  const cat = document.getElementById('marginFilterCategory')?.value || '';
+  const leadId = document.getElementById('marginFilterLeadId')?.value || '';
+  const perPage = parseInt(document.getElementById('marginFilterPerPage')?.value || '50');
+  const offset = (marginPage - 1) * perPage;
+
+  let url = `${API}/vgk/staff/vgk4u/corporate-margins?limit=${perPage}&offset=${offset}`;
+  if (cat) url += `&category_slug=${encodeURIComponent(cat)}`;
+  if (leadId) url += `&lead_id=${encodeURIComponent(leadId)}`;
+
+  try {
+    const r = await staffFetch(url);
+    const d = await r.json();
+    if (!d.success) { showToast('Failed to load corporate margins', 'error'); return; }
+
+    const fmtInr = n => '₹' + Number(n||0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const sRetained = document.getElementById('sumMarginRetained');
+    if (sRetained) sRetained.textContent = fmtInr(d.total_retained_amount || 0);
+    const sCount = document.getElementById('sumMarginCount');
+    if (sCount) sCount.textContent = d.total_count || 0;
+
+    const records = d.records || [];
+    if (!records.length) {
+      tb.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:30px;color:#9ca3af">No corporate margin records found.</td></tr>';
+      const p = document.getElementById('marginsPager');
+      if (p) p.style.display = 'none';
+      return;
+    }
+
+    tb.innerHTML = records.map(m => `
+      <tr>
+        <td>#${m.id}</td>
+        <td style="white-space:nowrap;font-size:11.5px">${fmtDt(m.created_at)}</td>
+        <td><a href="/deals?deal_id=${m.source_lead_id}" target="_blank" style="color:#2563eb;font-weight:700">Lead #${m.source_lead_id}</a></td>
+        <td><span class="badge bg-secondary" style="font-size:10px">${escHtml(m.category_slug)}</span></td>
+        <td style="text-align:right">${fmtInr(m.deal_value)}</td>
+        <td style="text-align:center;font-weight:700;color:#7c3aed">${Number(m.retained_pct||0).toFixed(2)}%</td>
+        <td style="text-align:right;font-weight:700">${fmtInr(m.retained_amount)}</td>
+        <td style="text-align:right;color:#6b7280">${fmtInr(m.admin_charges)}</td>
+        <td style="text-align:right;color:#dc2626">${fmtInr(m.tds_amount)}</td>
+        <td style="text-align:right;font-weight:800;color:#059669">${fmtInr(m.net_retained_amount)}</td>
+        <td><span class="badge" style="background:#ede9fe;color:#5b21b6;font-size:10.5px;font-weight:700">${escHtml(m.retained_reason||'APEX_REMAINDER')}</span></td>
+        <td><span class="badge bg-success" style="font-size:10px">${escHtml(m.status||'POSTED')}</span></td>
+      </tr>
+    `).join('');
+
+    const pages = Math.ceil(d.total_count / perPage);
+    renderMarginsPager(d.total_count, pages);
+  } catch(e) {
+    tb.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:24px;color:#dc2626">Error loading corporate margins</td></tr>';
+  }
+}
+
+function renderMarginsPager(total, pages) {
+  const pager = document.getElementById('marginsPager');
+  if (!pager) return;
+  if (pages <= 1) { pager.style.display = 'none'; return; }
+  pager.style.display = 'flex';
+  let html = `<span class="pager-info">Page ${marginPage} of ${pages} · ${total} records</span>`;
+  html += `<button onclick="marginGo(1)" ${marginPage===1?'disabled':''}>«</button>`;
+  html += `<button onclick="marginGo(${marginPage-1})" ${marginPage===1?'disabled':''}>‹</button>`;
+  for (let p = Math.max(1, marginPage-2); p <= Math.min(pages, marginPage+2); p++) {
+    html += `<button onclick="marginGo(${p})" class="${p===marginPage?'active-page':''}">${p}</button>`;
+  }
+  html += `<button onclick="marginGo(${marginPage+1})" ${marginPage===pages?'disabled':''}>›</button>`;
+  html += `<button onclick="marginGo(${pages})" ${marginPage===pages?'disabled':''}>»</button>`;
+  pager.innerHTML = html;
+}
+
+function marginGo(p) { marginPage = p; loadCorporateMargins(); }
+function applyMarginFilters() { marginPage = 1; loadCorporateMargins(); }
+function clearMarginFilters() {
+  const fL = document.getElementById('marginFilterLeadId'); if (fL) fL.value = '';
+  const fC = document.getElementById('marginFilterCategory'); if (fC) fC.value = 'solar';
+  const fP = document.getElementById('marginFilterPerPage'); if (fP) fP.value = '50';
+  marginPage = 1;
+  loadCorporateMargins();
 }
 
 // ─── Solar Brands tab (DC-VGK-BRAND-INCENTIVE-001) ─────────────────────────
@@ -1388,6 +1893,7 @@ function fmtDt(iso) {
 document.addEventListener('DOMContentLoaded', async () => {
   await StaffSidebar.init();
   StaffHeader.inject('VGK Commission Config', 'fas fa-sliders-h');
+  loadVGK4UStaffConfigs();
   loadConfig();
 });
 </script>

@@ -110,6 +110,12 @@ from app.models.staff_accounts import (
 from app.models.vgk_cash_income import VGKCashIncomeEntry
 from app.models.vgk_incentive_brands import VGKIncentiveBrand
 from app.models.vgk_wallet_transaction import VGKWalletTransaction
+from app.models.vgk4u_models import (
+    VGK4UCareerDesignationConfig,
+    VGK4UPersonalProdConfig,
+    VGK4UCategoryCommissionConfig,
+    VGK4UCorporateMarginLedger
+)
 from app.models.vgk_vendor import (
     VGKVendorCategory, VGKVendor, VGKVendorKYC, VGKVendorAgreement,
     VGKVendorProductCategory, VGKVendorLogin, VGKVendorTransaction,
@@ -483,6 +489,12 @@ __all__ = [
     "TelephonyHoliday",
     "TelephonyPlivoEndpoint",
     "TelephonyFlowExecutionLog",
+
+    # Universal VGK4U Models (Sep 2026)
+    "VGK4UCareerDesignationConfig",
+    "VGK4UPersonalProdConfig",
+    "VGK4UCategoryCommissionConfig",
+    "VGK4UCorporateMarginLedger",
 ]
 
 from app.models.voip_enums import CallMethodEnum, CallStateEnum, RecordingStatusEnum

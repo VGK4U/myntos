@@ -65,12 +65,395 @@ def _next_entry_number(db: Session, company_id: int) -> str:
     return f'{prefix}-{seq:04d}'
 
 
+def _resolve_category_slug(db: Session, lead) -> str:
+    """Resolve signup category ID or pipeline to standard category slug."""
+    if getattr(lead, 'solar_pipeline_status', None):
+        return 'solar'
+    cat_id = getattr(lead, 'category_id', None)
+    if not cat_id:
+        return 'solar'
+    if cat_id in (6, 19, 36, 48):
+        return 'solar'
+    if cat_id in (1, 2, 5, 14, 15, 16, 31, 32, 33, 43, 44, 45):
+        return 'ev'
+    if cat_id in (3, 13, 30, 42):
+        return 'training'
+    if cat_id in (4, 18, 35, 47):
+        return 'real_estate'
+    if cat_id in (7, 17, 34, 46):
+        return 'insurance'
+    try:
+        row = db.execute(text("SELECT name FROM signup_categories WHERE id = :cid"), {'cid': cat_id}).fetchone()
+        if row and row[0]:
+            cname = row[0].lower()
+            if 'solar' in cname:
+                return 'solar'
+            if 'ev' in cname:
+                return 'ev'
+            if 'training' in cname or 'etc' in cname:
+                return 'training'
+            if 'real' in cname or 'dream' in cname:
+                return 'real_estate'
+            if 'insur' in cname:
+                return 'insurance'
+    except Exception as _ce:
+        logger.warning(f'[VGK4U-CI] Category slug resolution warning: {_ce}')
+    return 'solar'
+
+
+def _generate_vgk4u_waterfall_income_drafts(db: Session, lead) -> int:
+    """
+    Generate VGK4U Universal Waterfall Commission DRAFT entries for leads created >= 2026-09-08.
+    Applies differential absorption, personal production escalation, field support, and showroom fees.
+    """
+    from app.models.vgk_cash_income import VGKCashIncomeEntry
+    from app.models.staff_accounts import OfficialPartner
+    from app.models.vgk4u_models import VGK4UCorporateMarginLedger
+    from app.services.vgk4u_waterfall_engine import VGK4UWaterfallEngine
+    from app.services.vgk4u_career_service import ROOT_APEX_PARTNER_ID
+
+    if not lead.associated_partner_id:
+        logger.info(f'[VGK4U-CI] Lead {lead.id} has no associated_partner_id — skipping cash income')
+        return 0
+
+    lead_st = (lead.status or '').strip().lower()
+    lead_sps = (getattr(lead, 'solar_pipeline_status', '') or '').strip().lower()
+    valid_statuses = ('subsidy_pending', 'completed', 'completed_paid', 'subsidy_received')
+    is_status_valid = (lead_st in valid_statuses) or (lead_sps in valid_statuses) or (getattr(lead, 'complete_date', None) is not None and lead_st != 'cancelled')
+
+    _dvr_val = float(lead.deal_value_received or 0)
+    _total_val = float(lead.deal_value_total or 0)
+    _bal_val = float(lead.deal_value_balance or 0) if lead.deal_value_balance is not None else (_total_val - _dvr_val)
+
+    is_payment_confirmed = (_bal_val <= 0) or (_dvr_val >= _total_val and _total_val > 0)
+    if not (is_status_valid and is_payment_confirmed):
+        logger.info(f'[VGK4U-CI] Lead {lead.id} (status="{lead_st}", sps="{lead_sps}", dvr={_dvr_val}, bal={_bal_val}) is NOT eligible for Final Commission drafts yet.')
+        return 0
+
+    company_id = lead.company_id
+    category_id = lead.category_id
+    deal_total  = Decimal(str(lead.deal_value_total or 0))
+    deal_ex_tax = Decimal(str(lead.deal_value_excl_tax or 0))
+
+    _dvr = Decimal(str(lead.deal_value_received or 0))
+    commission_base = _dvr if _dvr > 0 else deal_total
+
+    if commission_base <= 0:
+        logger.info(f'[VGK4U-CI] Lead {lead.id} has zero commission base — skipping')
+        return 0
+
+    category_slug = _resolve_category_slug(db, lead)
+    _is_solar = (category_slug == 'solar')
+
+    if _is_solar:
+        _SOLAR_COMM_STAGES = {
+            'subsidy_pending', 'completed', 'completed_paid', 'subsidy_received',
+            'net_meter_done', 'installed', 'net_meter_pending', 'balance_pending', 'balance_received'
+        }
+        if lead_sps and lead_sps not in _SOLAR_COMM_STAGES:
+            logger.info(f'[VGK4U-CI] Lead {lead.id} solar_pipeline_status={lead_sps!r} not in approved stages — skipping')
+            return 0
+
+    # Resolve Support Partner and Visits
+    support_id = getattr(lead, 'vgk_field_support_id', None)
+    tagged_visits_count = 0
+    if support_id:
+        try:
+            tagged_visits_count = db.execute(text("""
+                SELECT COUNT(DISTINCT j.id)
+                FROM staff_journeys j
+                WHERE (j.notes ILIKE :lead_tag OR j.purpose_description ILIKE :lead_tag)
+                   OR (:phone != '' AND (j.notes LIKE :phone_tag OR j.client_name LIKE :phone_tag))
+                   OR (:name != '' AND j.client_name ILIKE :name_tag)
+            """), {
+                'lead_tag': f'%lead:{lead.id}%',
+                'phone': (getattr(lead, 'phone', '') or '').strip(),
+                'phone_tag': f'%{(getattr(lead, "phone", "") or "").strip()}%' if (getattr(lead, 'phone', '') or '').strip() else '',
+                'name': (getattr(lead, 'name', '') or '').strip(),
+                'name_tag': f'%{(getattr(lead, "name", "") or "").strip()}%' if (getattr(lead, 'name', '') or '').strip() else ''
+            }).scalar() or 0
+        except Exception as _tve:
+            logger.warning(f'[VGK4U-CI] Journey visit count check failed: {_tve}')
+
+    # Resolve Showroom Partner
+    raw_showroom_id = getattr(lead, 'showroom_vgk_id', None)
+    showroom_id = raw_showroom_id if raw_showroom_id and raw_showroom_id not in (lead.associated_partner_id, support_id) else None
+
+    # Execute Waterfall Engine
+    is_e2e = bool(getattr(lead, 'vgk_field_support_id', None) and not getattr(l1, 'is_loyal_coupon', False))
+    result = VGK4UWaterfallEngine.calculate_commission_structure(
+        db=db,
+        producer_partner_id=lead.associated_partner_id,
+        deal_value=commission_base,
+        category_slug=category_slug,
+        direct_sponsor_id=getattr(lead, 'team_senior_partner_id', None),
+        support_partner_id=support_id,
+        support_journey_count=tagged_visits_count,
+        is_end_to_end_support=is_e2e,
+        showroom_partner_id=showroom_id,
+        version_label='v2_sep2026',
+    )
+
+    if not result or not result.get('success'):
+        logger.warning(f'[VGK4U-CI] Waterfall calculation failed for lead {lead.id}: {result.get("error") if result else "None"}')
+        return 0
+
+    role_to_level = {
+        'PRODUCER': 1,
+        'DIRECT_SPONSOR_OVERRIDE': 2,
+        'MANAGER_DIFFERENTIAL': 2,
+        'GM_DIFFERENTIAL': 3,
+        'RM_DIFFERENTIAL': 4,
+        'FIELD_SUPPORT': 5,
+        'SHOWROOM': 6,
+        'APEX_REMAINDER': 0,
+    }
+
+    _now_d = _get_ist()
+    _cfv = getattr(lead, 'confirmed_final_value', None)
+    _sv  = getattr(lead, 'solar_value', None)
+    created = 0
+
+    for alloc in result.get('allocations', []):
+        pid = alloc.get('partner_id')
+        role = alloc.get('role')
+        level = role_to_level.get(role, 1)
+
+        # Corporate Retained Margin Handling (VGK4U Phase 3E.2):
+        # Any allocation to Root Apex Node (Partner 31) or with role APEX_REMAINDER is corporate
+        # retained margin, NOT personal partner commission.
+        # It must NEVER create a VGKCashIncomeEntry, NEVER credit partner.vgk_cash_wallet,
+        # and NEVER increase Partner 31's personal earnings/TDS.
+        if role == 'APEX_REMAINDER' or pid == ROOT_APEX_PARTNER_ID:
+            rem_pct = alloc.get('commission_pct', Decimal('0.00'))
+            rem_amt = alloc.get('commission_amount', Decimal('0.00'))
+            if rem_amt > Decimal('0.00'):
+                ret_reason = role if role != 'APEX_REMAINDER' else (
+                    'INACTIVE_PRODUCER_RETENTION' if 'Inactive Producer' in (alloc.get('notes') or '') else 'APEX_REMAINDER'
+                )
+                # 1. Check idempotency in vgk4u_corporate_margin_ledger
+                cml_exists = db.query(VGK4UCorporateMarginLedger).filter(
+                    VGK4UCorporateMarginLedger.company_id == company_id,
+                    VGK4UCorporateMarginLedger.source_lead_id == lead.id,
+                    VGK4UCorporateMarginLedger.retained_reason == ret_reason,
+                ).first()
+                if not cml_exists:
+                    cml_entry = VGK4UCorporateMarginLedger(
+                        company_id=company_id,
+                        source_lead_id=lead.id,
+                        category_slug=category_slug,
+                        program_version='v2_sep2026',
+                        deal_value=commission_base,
+                        retained_pct=rem_pct,
+                        retained_amount=rem_amt,
+                        admin_charges=Decimal('0.00'),
+                        tds_amount=Decimal('0.00'),
+                        net_retained_amount=rem_amt,
+                        retained_reason=ret_reason,
+                        status='RECORDED',
+                        notes=alloc.get('notes') or f"Apex Corporate Remainder ({rem_pct}%)",
+                    )
+                    db.add(cml_entry)
+                    db.flush()
+                    logger.info(f'[VGK4U-CI] Corporate margin recorded: lead={lead.id} {ret_reason} {rem_pct}% (₹{rem_amt})')
+
+                    # 2. Record in company_account_ledger if not already present
+                    try:
+                        cal_exists = db.execute(text("""
+                            SELECT id FROM company_account_ledger
+                            WHERE company_id = :cid
+                              AND reference_type = 'VGK4U_CORP_MARGIN'
+                              AND reference_id = :cml_id
+                        """), {"cid": company_id, "cml_id": cml_entry.id}).fetchone()
+                        if not cal_exists:
+                            last_bal = db.execute(text("""
+                                SELECT balance FROM company_account_ledger
+                                WHERE company_id = :cid
+                                ORDER BY id DESC LIMIT 1
+                            """), {"cid": company_id}).scalar() or Decimal('0.00')
+                            new_bal = Decimal(str(last_bal)) + rem_amt
+                            db.execute(text("""
+                                INSERT INTO company_account_ledger
+                                (company_id, transaction_date, entry_type, reference_type, reference_id, reference_number,
+                                 credit_amount, debit_amount, balance, narration, created_at, updated_at)
+                                VALUES
+                                (:cid, :tdate, 'MARGIN_RETAINED', 'VGK4U_CORP_MARGIN', :cml_id, :ref_num,
+                                 :amt, 0, :bal, :narr, NOW(), NOW())
+                            """), {
+                                "cid": company_id,
+                                "tdate": getattr(lead, 'income_date', None) or _now_d.date(),
+                                "cml_id": cml_entry.id,
+                                "ref_num": f"CML-{cml_entry.id}",
+                                "amt": float(rem_amt),
+                                "bal": float(new_bal),
+                                "narr": f"VGK4U Corporate Margin Retained - Lead #{lead.id} ({rem_pct}% {ret_reason})",
+                            })
+                    except Exception as cal_err:
+                        logger.warning(f'[VGK4U-CI] company_account_ledger write warning: {cal_err}')
+            continue
+
+        comm_amt = alloc.get('commission_amount', Decimal('0'))
+        if comm_amt <= Decimal('0.00'):
+            # Do not create 0-amount entries or credit wallets for forfeited/inactive partners
+            continue
+
+        partner = db.query(OfficialPartner).filter(OfficialPartner.id == pid).first()
+        if not partner:
+            continue
+
+        # Idempotency check: skip if active entry already exists
+        exists = db.query(VGKCashIncomeEntry).filter(
+            VGKCashIncomeEntry.company_id     == company_id,
+            VGKCashIncomeEntry.source_lead_id == lead.id,
+            VGKCashIncomeEntry.partner_id     == partner.id,
+            VGKCashIncomeEntry.level          == level,
+            VGKCashIncomeEntry.status         != 'CANCELLED',
+            VGKCashIncomeEntry.kind.notin_(['ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'SLAB_BONUS']),
+        ).first()
+        if exists:
+            logger.info(f'[VGK4U-CI] Lead {lead.id} L{level} entry already exists (status={exists.status}) — skipping')
+            continue
+
+        admin_amt = alloc.get('admin_charges', Decimal('0'))
+        tds_amt = alloc.get('tds_amount', Decimal('0'))
+        net_amt = alloc.get('net_payout', Decimal('0'))
+
+        db.flush()
+        entry = VGKCashIncomeEntry(
+            company_id            = company_id,
+            entry_number          = _next_entry_number(db, company_id),
+            partner_id            = partner.id,
+            source_lead_id        = lead.id,
+            category_id           = category_id,
+            level                 = level,
+            income_date           = getattr(lead, 'income_date', None) or _now_d.date(),
+            deal_value_total      = deal_total,
+            deal_value_excl_tax   = deal_ex_tax,
+            confirmed_final_value = Decimal(str(_cfv)) if (_cfv is not None) else None,
+            solar_value           = Decimal(str(_sv)) if (_sv is not None and _sv > 0) else None,
+            commission_pct        = alloc.get('commission_pct', Decimal('0')),
+            commission_amount     = comm_amt,
+            admin_charges         = admin_amt,
+            tds_amount            = tds_amt,
+            net_payout            = net_amt,
+            points_debit_required = comm_amt,
+            points_actually_debited = Decimal('0'),
+            status                = 'DRAFT',
+            kind                  = 'COMMISSION',
+            program_version       = 'v2_sep2026',
+            notes                 = f"VGK4U {role} ({alloc.get('career_designation') or ''}/{alloc.get('personal_prod_qualification') or ''})",
+        )
+        db.add(entry)
+        db.flush()
+
+        # Credit wallet immediately per DC-VGK-FLOW-001
+        _wb_d = partner.vgk_cash_wallet or Decimal('0')
+        _wa_d = _wb_d + comm_amt
+        partner.vgk_cash_wallet = _wa_d
+        partner.updated_at = _now_d
+        _log_wallet_txn(
+            db, partner.id, company_id,
+            txn_type='INCOME_CREDIT', direction='CR', amount=comm_amt,
+            wallet_before=_wb_d, wallet_after=_wa_d,
+            ref_type='VGK_CASH_INCOME', ref_id=entry.id,
+            description=f'VGK4U Income credited (DRAFT) — {entry.entry_number}',
+            staff_id=None,
+        )
+        created += 1
+        logger.info(f'[VGK4U-CI] DRAFT created+credited: lead={lead.id} L{level} ({role}) partner={partner.partner_code} ₹{float(comm_amt)}')
+
+    # Brand Incentive (Level 11) for Solar
+    solar_brand_id = getattr(lead, 'solar_brand_id', None)
+    if _is_solar and solar_brand_id:
+        producer_p = db.query(OfficialPartner).filter(OfficialPartner.id == lead.associated_partner_id).first()
+        if producer_p:
+            try:
+                b_exists = db.query(VGKCashIncomeEntry).filter(
+                    VGKCashIncomeEntry.company_id == company_id,
+                    VGKCashIncomeEntry.source_lead_id == lead.id,
+                    VGKCashIncomeEntry.partner_id == producer_p.id,
+                    VGKCashIncomeEntry.level == 11,
+                    VGKCashIncomeEntry.kind == 'BRAND_COMMISSION',
+                    VGKCashIncomeEntry.status != 'CANCELLED'
+                ).first()
+                if not b_exists:
+                    brand_row = db.execute(text("SELECT l1_amount FROM vgk_incentive_brands WHERE id = :bid AND is_active = true"), {"bid": solar_brand_id}).fetchone()
+                    b_amt = Decimal(str(brand_row[0])) if (brand_row and brand_row[0]) else Decimal('2000.00')
+                    if b_amt > 0:
+                        b_entry = VGKCashIncomeEntry(
+                            company_id = company_id,
+                            entry_number = _next_entry_number(db, company_id),
+                            partner_id = producer_p.id,
+                            source_lead_id = lead.id,
+                            category_id = category_id,
+                            level = 11,
+                            kind = 'BRAND_COMMISSION',
+                            income_date = getattr(lead, 'income_date', None) or _get_ist().date(),
+                            deal_value_total = deal_total,
+                            deal_value_excl_tax = deal_ex_tax,
+                            confirmed_final_value = Decimal(str(_cfv)) if (_cfv is not None) else None,
+                            solar_value = Decimal(str(_sv)) if (_sv is not None and _sv > 0) else None,
+                            commission_pct = Decimal('0'),
+                            commission_amount = b_amt,
+                            net_payout = (b_amt * Decimal('0.90')).quantize(Decimal('0.01')),
+                            admin_charges = (b_amt * Decimal('0.08')).quantize(Decimal('0.01')),
+                            tds_amount = (b_amt * Decimal('0.02')).quantize(Decimal('0.01')),
+                            status = 'DRAFT',
+                            program_version = 'v2_sep2026',
+                        )
+                        db.add(b_entry)
+                        db.flush()
+                        created += 1
+            except Exception as _be:
+                logger.warning(f'[VGK4U-CI] Brand commission non-fatal lead={lead.id}: {_be}')
+
+    # Extra commission and bonus triggers
+    try:
+        from app.services.vgk_extra_commission import apply_extra_commission_if_active as _ec_completed
+        _ec_completed(db, lead, 'file_completed')
+    except Exception as _ec_e:
+        logger.warning(f'[DC-EXTRA-COMM-001] file_completed non-fatal lead={lead.id}: {_ec_e}')
+
+    try:
+        from app.services.vgk_award_trigger import apply_award_gift_trigger_if_active as _at_completed
+        _at_completed(db, lead, 'file_completed')
+    except Exception as _at_e:
+        logger.warning(f'[DC-AWARD-TRIGGER-001] file_completed non-fatal lead={lead.id}: {_at_e}')
+
+    try:
+        from app.services.vgk_cash_bonus_trigger import apply_cash_bonus_trigger_if_active as _cb_completed
+        _cb_completed(db, lead, 'file_completed')
+    except Exception as _cb_e:
+        logger.warning(f'[DC-CB-TRIGGER-001] file_completed non-fatal lead={lead.id}: {_cb_e}')
+
+    return created
+
+
 def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
     """
     Create DRAFT VGKCashIncomeEntry rows for all eligible levels on a completed lead.
     Idempotent — skips levels that already have an entry.
     Returns count of new DRAFT entries created.
+
+    VGK4U VERSION DISPATCHER:
+    - Leads created BEFORE 2026-09-08: Legacy cascade (L1..L6 configs)
+    - Leads created ON OR AFTER 2026-09-08: VGK4U Universal Waterfall Engine (Differential absorption)
     """
+    lead_created = getattr(lead, 'created_at', None)
+    is_vgk4u = False
+    if lead_created is not None:
+        l_date = lead_created.date() if hasattr(lead_created, 'date') else lead_created
+        from datetime import date
+        if l_date >= date(2026, 9, 8):
+            is_vgk4u = True
+
+    if is_vgk4u:
+        return _generate_vgk4u_waterfall_income_drafts(db, lead)
+    return _generate_legacy_cash_income_drafts(db, lead)
+
+
+def _generate_legacy_cash_income_drafts(db: Session, lead) -> int:
+    """Legacy VGK cash income generation for leads created prior to 2026-09-08."""
     from app.models.vgk_cash_income import VGKCashIncomeEntry
     from app.models.staff_accounts import OfficialPartner, VGKTeamCommissionConfig
 

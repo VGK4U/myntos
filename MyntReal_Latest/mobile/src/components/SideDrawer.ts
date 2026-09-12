@@ -237,14 +237,14 @@ const MENU_MASTER: MenuSection[] = [
   {
     section_code: "CRM_MODULE",
     section_label: "CRM & LEADS",
-    order: 9,
+    order: 4,
     items: [
       { menu_code: "MY_CRM_DASHBOARD", label: "CRM Dashboard", route: "staff-crm" },
       { menu_code: "MY_LEADS", label: "My Leads", route: "staff-my-leads" },
-      { menu_code: "LEADS_MASTER", label: "Staff Leads", route: "staff-leads" },
+      { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "auto-dialer" },
       { menu_code: "BANK_WISE_LEADS", label: "Field staff leads", route: "staff-bank-wise-leads" },
       { menu_code: "TEAM_LEADS", label: "Team Leads", route: "staff-team-leads" },
-      { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "auto-dialer" },
+      { menu_code: "LEADS_MASTER", label: "Staff Leads", route: "staff-leads" },
       { menu_code: "VGK_TEAM_MEMBERS", label: "VGK Channel Partners", route: "staff-vgk-members" }
     ]
   },
@@ -306,9 +306,11 @@ export class SideDrawer {
       this.staffMenuTree = null;
       this.isStaffMenuLoaded = false;
       try { localStorage.removeItem('mnr_staff_menu_tree_cache'); } catch (e) {}
+      this.updateUI();
     });
 
     window.addEventListener('auth-changed', () => {
+      this.isStaffMenuLoaded = false;
       this.loadStaffMenus();
     });
   }
@@ -397,7 +399,8 @@ export class SideDrawer {
           { menu_code: "KRA_STATUS", label: `<i class="fas fa-chart-bar" style="margin-right: 8px; width: 18px; text-align: center;"></i> KRA Status`, route: "kras" },
           { menu_code: "TIME_SHEET", label: `<i class="fas fa-clock" style="margin-right: 8px; width: 18px; text-align: center;"></i> Time Sheet`, route: "timesheet" },
           { menu_code: "WHATSAPP_CENTER", label: `<i class="fab fa-whatsapp" style="margin-right: 8px; width: 18px; text-align: center; color: #25d366;"></i> WhatsApp Center`, route: "staff-whatsapp" },
-          { menu_code: "CALLING_PAGE", label: `<i class="fas fa-phone-alt" style="margin-right: 8px; width: 18px; text-align: center; color: #3b82f6;"></i> Calling Page`, route: "softphone" }
+          { menu_code: "CALLING_PAGE", label: `<i class="fas fa-phone-alt" style="margin-right: 8px; width: 18px; text-align: center; color: #3b82f6;"></i> Calling Page`, route: "softphone" },
+          { menu_code: "AUTO_DIALER", label: `<i class="fas fa-phone-volume" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i> Auto Dialer`, route: "auto-dialer" }
         ];
       }
     }
@@ -455,35 +458,22 @@ export class SideDrawer {
     const hasSubSections = section.subSections && section.subSections.length > 0;
     const hasItems = section.items && section.items.length > 0;
 
-    if (hasSubSections) {
-      return `
-        <div class="drawer-section" data-section="${section.section_code}">
-          <div class="section-header" data-toggle="${section.section_code}">
-            <span class="section-title">${section.section_label}</span>
-            <svg class="section-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${isExpanded ? '<polyline points="6 9 12 15 18 9"/>' : '<polyline points="9 18 15 12 9 6"/>'}</svg>
-          </div>
-          <div class="section-items ${isExpanded ? 'expanded' : ''}" style="display: ${isExpanded ? 'block' : 'none'};">
-            ${section.subSections!.map(sub => this.renderSubSection(sub)).join('')}
-          </div>
-        </div>
-      `;
+    if (!hasSubSections && !hasItems) {
+      return '';
     }
 
-    if (hasItems) {
-      return `
-        <div class="drawer-section" data-section="${section.section_code}">
-          <div class="section-header" data-toggle="${section.section_code}">
-            <span class="section-title">${section.section_label}</span>
-            <svg class="section-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${isExpanded ? '<polyline points="6 9 12 15 18 9"/>' : '<polyline points="9 18 15 12 9 6"/>'}</svg>
-          </div>
-          <div class="section-items ${isExpanded ? 'expanded' : ''}" style="display: ${isExpanded ? 'block' : 'none'};">
-            ${section.items!.map(item => this.renderMenuItem(item)).join('')}
-          </div>
+    return `
+      <div class="drawer-section" data-section="${section.section_code}">
+        <div class="section-header" data-toggle="${section.section_code}">
+          <span class="section-title">${section.section_label}</span>
+          <svg class="section-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${isExpanded ? '<polyline points="6 9 12 15 18 9"/>' : '<polyline points="9 18 15 12 9 6"/>'}</svg>
         </div>
-      `;
-    }
-
-    return '';
+        <div class="section-items ${isExpanded ? 'expanded' : ''}" style="display: ${isExpanded ? 'block' : 'none'};">
+          ${hasItems ? section.items!.map(item => this.renderMenuItem(item)).join('') : ''}
+          ${hasSubSections ? section.subSections!.map(sub => this.renderSubSection(sub)).join('') : ''}
+        </div>
+      </div>
+    `;
   }
 
   private renderSubSection(sub: SubSection): string {
@@ -742,6 +732,49 @@ export class SideDrawer {
       'auto-dialer': 12
     };
 
+    const CRM_ORDER: Record<string, number> = {
+      'MY_CRM_DASHBOARD': 1,
+      'staff_crm_dashboard': 1,
+      'staff-crm': 1,
+
+      'MY_LEADS': 2,
+      'staff_my_leads': 2,
+      'staff-my-leads': 2,
+
+      'AUTO_DIALER': 3,
+      'staff_auto_dialer': 3,
+      'auto-dialer': 3,
+
+      'BANK_WISE_LEADS': 4,
+      'staff_bank_wise_leads': 4,
+      'staff-bank-wise-leads': 4,
+
+      'TEAM_LEADS': 5,
+      'staff_team_leads': 5,
+      'staff-team-leads': 5,
+
+      'WHATSAPP_CENTER': 6,
+      'staff_crm_whatsapp_inbox': 6,
+      'staff-whatsapp': 6,
+
+      'CALL_TRACKING': 7,
+      'call_tracking_dashboard': 7,
+      'staff-call-tracking': 7,
+
+      'OPERATOR_CALLS': 8,
+      'staff_operator_calls': 8,
+      'operator-calls': 8,
+
+      'VGK_TEAM_MEMBERS': 9,
+      'staff_vgk_members': 9,
+      'staff-vgk-members': 9,
+
+      'STAFF_LEADS': 10,
+      'staff_leads': 10,
+      'LEADS_MASTER': 10,
+      'leads_master': 10
+    };
+
     const sectionMap = new Map<string, MenuSection>();
     const sectionOrderList: string[] = [];
 
@@ -848,6 +881,11 @@ export class SideDrawer {
           secTitle = 'WORK FLOWS';
         }
 
+        if (secIdLower === 'crm' || secIdLower === 'crm_module' || secIdLower === 'crm_leads' || secIdLower === 'crm & leads' || secTitleUpper.includes('CRM')) {
+          secCode = 'CRM_MODULE';
+          secTitle = 'CRM & LEADS';
+        }
+
         if (sectionMap.has(secCode)) {
           const existing = sectionMap.get(secCode)!;
           if (items.length > 0) {
@@ -869,7 +907,7 @@ export class SideDrawer {
           sectionMap.set(secCode, {
             section_code: secCode,
             section_label: secTitle,
-            order: sec.order !== undefined ? sec.order : 999,
+            order: secCode === 'CRM_MODULE' ? 4 : (sec.order !== undefined ? sec.order : 999),
             items: items.length > 0 ? items : undefined,
             subSections: subSections.length > 0 ? subSections : undefined
           });
@@ -877,11 +915,22 @@ export class SideDrawer {
       }
     }
 
-    // Ensure Auto Dialer is guaranteed in CRM_MODULE or WORKFLOWS section
-    let crmSec = sectionMap.get('CRM_MODULE') || sectionMap.get('CRM_LEADS') || sectionMap.get('crm') || sectionMap.get('CRM') || sectionMap.get('WORKFLOWS');
+    // Ensure Auto Dialer is guaranteed in CRM_MODULE section as an independent page
+    let crmSec = sectionMap.get('CRM_MODULE') || sectionMap.get('CRM_LEADS') || sectionMap.get('crm') || sectionMap.get('CRM');
+    if (!crmSec) {
+      crmSec = {
+        section_code: 'CRM_MODULE',
+        section_label: 'CRM & LEADS',
+        order: 4,
+        items: []
+      };
+      sectionMap.set('CRM_MODULE', crmSec);
+      sectionOrderList.push('CRM_MODULE');
+    }
+
     if (crmSec) {
       crmSec.items = crmSec.items || [];
-      const hasAutoDialer = crmSec.items.some(i => i.route === 'auto-dialer' || i.menu_code === 'AUTO_DIALER' || i.menu_code === 'staff_auto_dialer');
+      const hasAutoDialer = crmSec.items.some(i => i.route === 'auto-dialer' || (i.menu_code && i.menu_code.toUpperCase().includes('AUTO_DIALER')));
       if (!hasAutoDialer) {
         crmSec.items.push({
           menu_code: "AUTO_DIALER",
@@ -894,10 +943,13 @@ export class SideDrawer {
     const result = sectionOrderList.map(code => sectionMap.get(code)!);
     result.sort((a, b) => a.order - b.order);
 
-    // Apply strict web ordering for WORKFLOWS items
+    // Apply strict web ordering for WORKFLOWS and CRM_MODULE items
     for (const section of result) {
       if (section.section_code === 'WORKFLOWS' && section.items) {
         section.items.sort((a, b) => (WORKFLOWS_ORDER[a.menu_code] || 99) - (WORKFLOWS_ORDER[b.menu_code] || 99));
+      }
+      if (section.section_code === 'CRM_MODULE' && section.items) {
+        section.items.sort((a, b) => (CRM_ORDER[a.menu_code] || CRM_ORDER[a.route] || 99) - (CRM_ORDER[b.menu_code] || CRM_ORDER[b.route] || 99));
       }
     }
 
@@ -906,18 +958,15 @@ export class SideDrawer {
 
   open(): void {
     if (this.isOpen) return;
-    if (!this.container || !this.container.hasChildNodes()) {
-      this.updateUI();
-    }
-    this.isOpen = true;
-    this.container?.classList.add('open');
-    this.overlay?.classList.add('visible');
-    document.body.style.overflow = 'hidden';
-
     const portal = portalService.getPortal();
     if (portal === 'staff' && !this.isStaffMenuLoaded) {
       this.loadStaffMenus();
     }
+    this.updateUI();
+    this.isOpen = true;
+    this.container?.classList.add('open');
+    this.overlay?.classList.add('visible');
+    document.body.style.overflow = 'hidden';
   }
 
   close(): void {

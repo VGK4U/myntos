@@ -25,7 +25,7 @@ from app.models.telephony_call_flow import (
 )
 from app.models.operator_calls import TelephonyDIDMapping
 from app.models.crm import CRMLead
-from app.models.staff import StaffEmployee
+from app.models.staff import StaffEmployee, StaffDepartment
 from app.models.voip_call_session import VoIPCallSession
 from app.models.voip_enums import CallMethodEnum, CallStateEnum
 
@@ -42,6 +42,126 @@ class CallFlowInterpreter:
     MAX_INTERPRETER_STEPS = 20
 
     @classmethod
+    def resolve_inbound_caller_identity(
+        cls,
+        raw_from: str,
+        raw_to: str,
+        call_uuid: str,
+        raw_forwarded_from: Optional[str] = None,
+        headers: Optional[Dict[str, str]] = None,
+        raw_payload: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Authoritative First-Class Caller Identity Model (Sections 21-23).
+        Preserves raw telecom evidence, separates logical normalization,
+        and enforces truthful distinction between caller CLI and forwarding subscriber.
+        """
+        raw_payload = raw_payload or {}
+        headers = headers or {}
+
+        # 1. raw_provider_from
+        raw_provider_from = str(raw_from or "").strip()
+
+        # 2. normalized_provider_from
+        digits_from = "".join(c for c in raw_provider_from if c.isdigit())
+        if len(digits_from) == 10:
+            normalized_provider_from = f"91{digits_from}"
+        elif len(digits_from) > 10:
+            normalized_provider_from = digits_from
+        else:
+            normalized_provider_from = digits_from or ""
+
+        # 4. forwarded_from_number
+        raw_fwd = str(
+            raw_forwarded_from
+            or raw_payload.get("ForwardedFrom")
+            or raw_payload.get("forwarded_from")
+            or headers.get("sip-h-diversion")
+            or headers.get("SIP-H-Diversion")
+            or headers.get("diversion")
+            or headers.get("Diversion")
+            or headers.get("x-ph-forwarded-from")
+            or headers.get("X-PH-Forwarded-From")
+            or ""
+        ).strip()
+
+        digits_fwd = "".join(c for c in raw_fwd if c.isdigit())
+        if len(digits_fwd) == 10:
+            normalized_fwd = f"91{digits_fwd}"
+        elif len(digits_fwd) > 10:
+            normalized_fwd = digits_fwd
+        else:
+            normalized_fwd = digits_fwd or ""
+
+        # 7. parent/original call identifier, if available
+        parent_call_identifier = (
+            raw_payload.get("ParentCallUUID")
+            or raw_payload.get("ALegUUID")
+            or raw_payload.get("ParentCallId")
+            or raw_payload.get("parent_call_uuid")
+            or raw_payload.get("session_id")
+            or None
+        )
+
+        # 8 & 9. caller_identity_source and caller_identity_confidence
+        # Allowed values for caller_identity_source:
+        # 'direct_provider_from', 'forwarded_original_cli', 'forwarded_from_metadata', 'unresolved_forwarded', 'unknown'
+        is_fwd_indicated = bool(raw_fwd) or bool(raw_payload.get("is_forwarded")) or bool(raw_payload.get("ForwardedFrom"))
+
+        from_10 = digits_from[-10:] if len(digits_from) >= 10 else digits_from
+        fwd_10 = digits_fwd[-10:] if len(digits_fwd) >= 10 else digits_fwd
+
+        if is_fwd_indicated:
+            forwarded_from_number = raw_fwd if raw_fwd else (normalized_fwd if normalized_fwd else None)
+
+            # Scenario A: Plivo receives distinct customer CLI in From and operator number in ForwardedFrom
+            if from_10 and from_10 != fwd_10 and len(from_10) == 10:
+                original_caller_number = normalized_provider_from
+                caller_identity_source = "forwarded_original_cli"
+                caller_identity_confidence = "high"
+
+            # Scenario B: Explicit metadata identifying original caller CLI
+            elif raw_payload.get("original_caller_cli") and str(raw_payload.get("original_caller_cli")) != raw_fwd:
+                orig_digits = "".join(c for c in str(raw_payload.get("original_caller_cli")) if c.isdigit())
+                original_caller_number = f"91{orig_digits[-10:]}" if len(orig_digits) >= 10 else orig_digits
+                caller_identity_source = "forwarded_from_metadata"
+                caller_identity_confidence = "high"
+
+            # Scenario C: Plivo receives ONLY the forwarding number as From, with no reliable customer metadata
+            else:
+                original_caller_number = None  # unresolved
+                caller_identity_source = "unresolved_forwarded"
+                caller_identity_confidence = "low"
+
+        else:
+            # Not a forwarded call
+            forwarded_from_number = None
+            if normalized_provider_from and len(digits_from) >= 10:
+                original_caller_number = normalized_provider_from
+                caller_identity_source = "direct_provider_from"
+                caller_identity_confidence = "high"
+            elif raw_provider_from:
+                original_caller_number = normalized_provider_from or raw_provider_from
+                caller_identity_source = "direct_provider_from"
+                caller_identity_confidence = "medium"
+            else:
+                original_caller_number = None
+                caller_identity_source = "unknown"
+                caller_identity_confidence = "low"
+
+        return {
+            "raw_provider_from": raw_provider_from,
+            "normalized_provider_from": normalized_provider_from,
+            "original_caller_number": original_caller_number,
+            "forwarded_from_number": forwarded_from_number,
+            "called_plivo_did": str(raw_to or "").strip(),
+            "provider_call_uuid": str(call_uuid or "").strip(),
+            "parent_call_identifier": parent_call_identifier,
+            "caller_identity_source": caller_identity_source,
+            "caller_identity_confidence": caller_identity_confidence
+        }
+
+    @classmethod
     def handle_inbound_call(
         cls,
         db: Session,
@@ -50,7 +170,10 @@ class CallFlowInterpreter:
         provider_call_id: str,
         base_api_url: str = "",
         call_session_id: str = "",
-        now_dt: Optional[datetime] = None
+        now_dt: Optional[datetime] = None,
+        raw_payload: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        forwarded_from: Optional[str] = None
     ) -> str:
         """
         Primary entry point when Plivo invokes Answer URL.
@@ -150,7 +273,7 @@ class CallFlowInterpreter:
             out_dial_cb = f"{dial_cb}?session_id={actual_session_id or ''}&amp;direction=outbound"
 
             return cls._generate_xml_response([
-                f'<Record recordSession="true" startOnDialAnswer="true" redirect="false" callbackUrl="{out_rec_cb}" callbackMethod="POST" fileFormat="mp3" />',
+                f'<Record recordSession="true" startOnDialAnswer="true" redirect="false" maxLength="28800" callbackUrl="{out_rec_cb}" callbackMethod="POST" fileFormat="mp3" />',
                 f'<Dial timeout="50" callerId="{outbound_caller_id}" action="{out_hangup_cb}" method="POST" callbackUrl="{out_dial_cb}" callbackMethod="POST">',
                 f'  <Number>{clean_dest}</Number>',
                 f'</Dial>'
@@ -259,33 +382,99 @@ class CallFlowInterpreter:
         company_id = cls._resolve_company_from_did(db, called_did) or 1
         now_ist = now_dt or datetime.now(IST)
 
-        # 2. Persist Inbound Call Session in VoIPCallSession immediately
+        # Build First-Class Inbound Caller Identity Model (Sections 21-23)
+        caller_identity = cls.resolve_inbound_caller_identity(
+            raw_from=caller_phone,
+            raw_to=called_did,
+            call_uuid=provider_call_id,
+            raw_forwarded_from=forwarded_from,
+            headers=headers or {},
+            raw_payload=raw_payload or {}
+        )
+
+        # 2. Persist or Correlate Inbound Call Session in VoIPCallSession (Section 27: Zero Duplicate Legs)
         session_id = call_session_id or (f"vcs_in_{provider_call_id[-12:]}" if provider_call_id else f"vcs_{int(now_ist.timestamp())}")
         session_obj = None
         if provider_call_id:
             session_obj = db.query(VoIPCallSession).filter(VoIPCallSession.provider_call_id == provider_call_id).first()
         if not session_obj and session_id:
             session_obj = db.query(VoIPCallSession).filter(VoIPCallSession.call_session_id == session_id).first()
+        if not session_obj and caller_identity.get("parent_call_identifier"):
+            parent_id = caller_identity["parent_call_identifier"]
+            session_obj = db.query(VoIPCallSession).filter(
+                or_(
+                    VoIPCallSession.provider_call_id == parent_id,
+                    VoIPCallSession.call_session_id == parent_id
+                )
+            ).first()
+
+        raw_prov_data = {
+            "From": caller_phone,
+            "To": called_did,
+            "CallUUID": provider_call_id,
+            "Direction": (raw_payload or {}).get("Direction", "inbound"),
+            "ForwardedFrom": forwarded_from or (raw_payload or {}).get("ForwardedFrom"),
+            "SIPHeaders": headers or {},
+            "raw_form": dict(raw_payload or {})
+        }
 
         if not session_obj:
+            stored_cust_phone = (
+                caller_identity.get("original_caller_number")
+                or ("unresolved" if caller_identity.get("caller_identity_source") == "unresolved_forwarded" else (caller_phone or "unknown"))
+            )
+
+            initial_metadata = {
+                "caller_identity": caller_identity,
+                "raw_provider_payload": raw_prov_data
+            }
+
             session_obj = VoIPCallSession(
                 company_id=company_id,
                 call_session_id=session_id,
                 provider='plivo',
                 provider_call_id=provider_call_id,
                 caller_id=called_did or '+918031728899',
-                customer_phone=caller_phone,
+                customer_phone=stored_cust_phone,
                 destination_number=called_did or '+918031728899',
                 direction='inbound',
                 call_method=CallMethodEnum.IN_APP_PSTN.value,
                 status=CallStateEnum.RINGING.value,
                 started_at=now_ist,
-                answered_at=now_ist
+                answered_at=now_ist,
+                metadata_json=json.dumps(initial_metadata)
             )
             db.add(session_obj)
             db.commit()
             db.refresh(session_obj)
-            logger.info(f"[FLOW-INTERPRETER] Registered inbound VoIPCallSession #{session_obj.id} ({session_id}) from {caller_phone}")
+            logger.info(f"[FLOW-INTERPRETER] Registered inbound VoIPCallSession #{session_obj.id} ({session_id}) source={caller_identity['caller_identity_source']}")
+        else:
+            try:
+                v_meta = {}
+                if session_obj.metadata_json:
+                    if isinstance(session_obj.metadata_json, str):
+                        try:
+                            v_meta = json.loads(session_obj.metadata_json)
+                        except Exception:
+                            v_meta = {}
+                    elif isinstance(session_obj.metadata_json, dict):
+                        v_meta = dict(session_obj.metadata_json)
+                if "caller_identity" not in v_meta:
+                    v_meta["caller_identity"] = caller_identity
+                if "raw_provider_payload" not in v_meta:
+                    v_meta["raw_provider_payload"] = raw_prov_data
+                if caller_identity.get("parent_call_identifier") and provider_call_id != session_obj.provider_call_id:
+                    legs = v_meta.setdefault("correlated_legs", [])
+                    legs.append({
+                        "child_call_uuid": provider_call_id,
+                        "parent_call_uuid": caller_identity.get("parent_call_identifier"),
+                        "timestamp": now_ist.isoformat(),
+                        "caller_identity": caller_identity
+                    })
+                session_obj.metadata_json = json.dumps(v_meta)
+                db.commit()
+            except Exception as leg_err:
+                logger.warning(f"[FLOW-INTERPRETER] Error updating session metadata #{getattr(session_obj, 'id', None)}: {leg_err}")
 
         # 3. PRIORITY 1: Check Dynamic Published Call Flow from DB (if configured and valid)
         clean_d = re.sub(r'\D', '', str(called_did))[-10:] if called_did else ""
@@ -299,9 +488,9 @@ class CallFlowInterpreter:
                 TelephonyCallFlowVersion.id == flow.current_published_version_id
             ).first()
             if flow_version and flow_version.flow_data and flow_version.flow_data.get('nodes'):
-                session_id = f"vcs_in_{provider_call_id[-12:]}" if provider_call_id else f"vcs_{int(datetime.now().timestamp())}"
+                exec_session_id = session_obj.call_session_id if session_obj else (f"vcs_in_{provider_call_id[-12:]}" if provider_call_id else f"vcs_{int(datetime.now().timestamp())}")
                 exec_log = TelephonyFlowExecutionLog(
-                    call_session_id=session_id,
+                    call_session_id=exec_session_id,
                     company_id=company_id,
                     flow_id=flow.id,
                     flow_version_id=flow_version.id,
@@ -325,7 +514,8 @@ class CallFlowInterpreter:
                     current_node_key=None,
                     dtmf_input=None,
                     exec_log=exec_log,
-                    base_api_url=base_api_url
+                    base_api_url=base_api_url,
+                    now_dt=now_ist
                 )
 
         # 4. DEFAULT FALLBACK PIPELINE (If no published custom DAG on DID)
@@ -342,29 +532,30 @@ class CallFlowInterpreter:
                 f'<Hangup />'
             ])
 
-        # Gate 4b: Sticky Agent (Recent-Caller Callback Routing)
-        sticky_agent_xml = cls._check_sticky_agent(db, caller_phone, called_did, company_id, now_ist)
-        if sticky_agent_xml:
-            logger.info(f"[FLOW-INTERPRETER] Sticky agent routed caller {caller_phone} during open hours ({bh_reason}).")
-            return sticky_agent_xml
+        # Gate 4b: Sticky Agent (Recent-Caller Callback Routing) - HARD PROTECTED INVARIANT
+        if cls._is_qualified_sticky_caller(db, caller_phone, company_id):
+            sticky_agent_xml = cls._check_sticky_agent(db, caller_phone, called_did, company_id, now_ist)
+            if sticky_agent_xml:
+                logger.info(f"[FLOW-INTERPRETER] Sticky agent routed caller {caller_phone} during open hours ({bh_reason}).")
+                return sticky_agent_xml
+            else:
+                # Qualified sticky caller, but assigned executive is offline/unregistered.
+                # HARD INVARIANT: MUST NOT enter the extension prompt.
+                # Seamlessly route to existing Main IVR / Sales desk.
+                logger.info(f"[FLOW-INTERPRETER] Qualified sticky caller {caller_phone} executive offline/unregistered. Bypassing extension prompt -> Main IVR.")
+                known_lang = cls._detect_crm_caller_language(db, caller_phone)
+                if known_lang in ('te', 'telugu'):
+                    return cls._get_department_menu_xml(db, company_id, called_did, lang="te")
+                return cls._get_department_menu_xml(db, company_id, called_did, lang="en")
 
-        # Gate 4c: CRM Lead Language Check
-        known_lang = None
-        clean_caller_digits = re.sub(r'\D', '', str(caller_phone or ''))[-10:]
-        if clean_caller_digits:
-            try:
-                crm_lead = db.query(CRMLead).filter(
-                    (CRMLead.phone.ilike(f"%{clean_caller_digits}%")) | (CRMLead.alternate_phone.ilike(f"%{clean_caller_digits}%"))
-                ).order_by(CRMLead.id.desc()).first()
-                if crm_lead:
-                    if getattr(crm_lead, 'preferred_language', None):
-                        known_lang = str(crm_lead.preferred_language).strip().lower()
-                    elif crm_lead.metadata_json:
-                        meta = json.loads(crm_lead.metadata_json) if isinstance(crm_lead.metadata_json, str) else dict(crm_lead.metadata_json)
-                        known_lang = (meta.get('preferred_language') or meta.get('language') or '').strip().lower()
-            except Exception as le:
-                logger.warning(f"[FLOW-INTERPRETER] Lead language lookup error: {le}")
+        # Gate 4c: Extension / Direct Agent Selection IVR (For non-sticky callers only)
+        direct_routing_options = cls._get_published_direct_routing_options(db, company_id, called_did)
+        if direct_routing_options:
+            logger.info(f"[FLOW-INTERPRETER] Presenting Direct Routing Extension Prompt ({len(direct_routing_options)} options) to non-sticky caller {caller_phone}")
+            return cls._get_direct_routing_menu_xml(db, company_id, called_did, direct_routing_options, lang="en")
 
+        # Gate 4d: CRM Lead Language Check
+        known_lang = cls._detect_crm_caller_language(db, caller_phone)
         if known_lang in ('te', 'telugu'):
             logger.info(f"[FLOW-INTERPRETER] Recognized Telugu caller {caller_phone} from CRM lead record.")
             return cls._get_department_menu_xml(db, company_id, called_did, lang="te")
@@ -372,7 +563,7 @@ class CallFlowInterpreter:
             logger.info(f"[FLOW-INTERPRETER] Recognized English caller {caller_phone} from CRM lead record.")
             return cls._get_department_menu_xml(db, company_id, called_did, lang="en")
 
-        # Gate 4d: Bilingual Language Selection Gate (Telugu / English)
+        # Gate 4e: Bilingual Language Selection Gate (Telugu / English)
         lang_gather_url = "https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=lang"
         lang_prompt = "Welcome to Mynt Real. తెలుగు కొరకు 1 నొక్కండి. For English, press 2."
         logger.info(f"[FLOW-INTERPRETER] Presenting Bilingual Language Selection Gate to {caller_phone}")
@@ -385,8 +576,253 @@ class CallFlowInterpreter:
         ])
 
     @classmethod
-    def _get_department_menu_xml(cls, db: Session, company_id: int, called_did: str, lang: str = "te") -> str:
-        """Generates full 8-option IVR menu XML in Telugu or English."""
+    def _get_published_direct_routing_options(cls, db: Session, company_id: int, called_did: str) -> List[Dict[str, Any]]:
+        """
+        Retrieves active Direct Routing options configured for the tenant / DID.
+        Looks first for a published flow assigned to the DID, then for a published flow
+        for the company_id. Reads `direct_routing` array from `flow_data`.
+        """
+        clean_d = re.sub(r'\D', '', str(called_did))[-10:] if called_did else ""
+        flow = None
+        if clean_d:
+            flow = db.query(TelephonyCallFlow).filter(
+                (TelephonyCallFlow.did_number == called_did) | (TelephonyCallFlow.did_number.ilike(f"%{clean_d}%")),
+                TelephonyCallFlow.status == 'published'
+            ).order_by(TelephonyCallFlow.id.desc()).first()
+
+        if not flow and company_id:
+            flow = db.query(TelephonyCallFlow).filter(
+                TelephonyCallFlow.company_id == company_id,
+                TelephonyCallFlow.status == 'published'
+            ).order_by(TelephonyCallFlow.id.desc()).first()
+
+        if flow and flow.current_published_version_id:
+            version = db.query(TelephonyCallFlowVersion).filter(
+                TelephonyCallFlowVersion.id == flow.current_published_version_id
+            ).first()
+            if version and version.flow_data and isinstance(version.flow_data, dict):
+                dr_list = version.flow_data.get('direct_routing', [])
+                if isinstance(dr_list, list) and dr_list:
+                    active_opts = [
+                        opt for opt in dr_list
+                        if isinstance(opt, dict) and opt.get('is_active', True) and opt.get('dtmf_key')
+                    ]
+                    return sorted(active_opts, key=lambda x: x.get('order', 0))
+
+        return []
+
+    @classmethod
+    def resolve_extension_destination(
+        cls,
+        db: Session,
+        company_id: int,
+        extension: str,
+        called_did: Optional[str] = None,
+        call_context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Canonical Dynamic IVR Extension Resolver.
+        Single authoritative runtime resolver for inbound extension / DTMF routing.
+
+        Runtime Resolution Flow:
+        company_id + called_did
+          -> active call flow
+          -> current_published_version_id
+          -> published flow_data['direct_routing']
+          -> DTMF extension match
+          -> configured target ID
+          -> current staff/dept record
+          -> availability check (online endpoint, not busy)
+          -> resolution status & target details
+        """
+        clean_ext = str(extension or "").strip()
+        if not clean_ext:
+            return {"status": "no_digits"}
+
+        options = cls._get_published_direct_routing_options(db, company_id, called_did)
+        matched_opt = None
+        for opt in options:
+            if str(opt.get("dtmf_key", "")).strip() == clean_ext:
+                matched_opt = opt
+                break
+
+        if not matched_opt:
+            return {"status": "invalid_extension", "extension": clean_ext}
+
+        if not matched_opt.get("is_active", True):
+            return {"status": "inactive_extension", "extension": clean_ext, "option": matched_opt}
+
+        dest_type = str(matched_opt.get("destination_type") or "staff").strip().lower()
+        dest_id = matched_opt.get("destination_id")
+        display_name = matched_opt.get("display_name") or f"Option {clean_ext}"
+        ring_timeout = int(matched_opt.get("ring_timeout") or 20)
+        fallback_action = matched_opt.get("fallback_action") or "main_ivr"
+
+        if dest_type == "staff":
+            emp = db.query(StaffEmployee).filter(
+                StaffEmployee.id == dest_id,
+                StaffEmployee.status.in_(["active", "ACTIVE"]),
+                StaffEmployee.is_deleted == False
+            ).first() if dest_id else None
+
+            if not emp:
+                return {
+                    "status": "invalid_destination",
+                    "reason": "staff_inactive_or_deleted",
+                    "destination_type": "staff",
+                    "destination_id": dest_id,
+                    "display_name": display_name,
+                    "fallback_action": fallback_action
+                }
+
+            allowed_comps = [emp.base_company_id]
+            if getattr(emp, "data_companies", None):
+                allowed_comps.extend(emp.data_companies if isinstance(emp.data_companies, list) else [])
+            if company_id not in allowed_comps and emp.base_company_id != company_id:
+                return {
+                    "status": "tenant_mismatch",
+                    "reason": "cross_company_access_denied",
+                    "destination_type": "staff",
+                    "destination_id": dest_id,
+                    "display_name": display_name,
+                    "fallback_action": fallback_action
+                }
+
+            ep = db.query(TelephonyPlivoEndpoint).filter(
+                TelephonyPlivoEndpoint.staff_id == emp.id,
+                TelephonyPlivoEndpoint.is_registered == True
+            ).order_by(TelephonyPlivoEndpoint.id.desc()).first()
+
+            if not ep or not ep.plivo_username:
+                return {
+                    "status": "offline",
+                    "reason": "no_registered_endpoint",
+                    "destination_type": "staff",
+                    "destination_id": emp.id,
+                    "staff": emp,
+                    "display_name": display_name,
+                    "fallback_action": fallback_action
+                }
+
+            active_call = db.query(VoIPCallSession).filter(
+                VoIPCallSession.operator_id == emp.id,
+                VoIPCallSession.status.in_(["created", "dialing", "ringing", "answered", "connected"]),
+                VoIPCallSession.ended_at.is_(None)
+            ).first()
+
+            if active_call:
+                return {
+                    "status": "busy",
+                    "reason": "staff_on_active_call",
+                    "destination_type": "staff",
+                    "destination_id": emp.id,
+                    "staff": emp,
+                    "active_call_id": active_call.id,
+                    "display_name": display_name,
+                    "fallback_action": fallback_action
+                }
+
+            sip_uri = f"sip:{ep.plivo_username}@phone.plivo.com"
+            return {
+                "status": "available",
+                "destination_type": "staff",
+                "destination_id": emp.id,
+                "staff": emp,
+                "endpoint": ep,
+                "sip_uri": sip_uri,
+                "ring_timeout": ring_timeout,
+                "display_name": display_name,
+                "fallback_action": fallback_action
+            }
+
+        elif dest_type == "department":
+            dept = db.query(StaffDepartment).filter(
+                StaffDepartment.id == dest_id,
+                StaffDepartment.is_active == True
+            ).first() if dest_id else None
+
+            if not dept:
+                return {
+                    "status": "invalid_destination",
+                    "reason": "department_not_found_or_inactive",
+                    "destination_type": "department",
+                    "destination_id": dest_id,
+                    "display_name": display_name,
+                    "fallback_action": fallback_action
+                }
+
+            return {
+                "status": "available",
+                "destination_type": "department",
+                "destination_id": dept.id,
+                "department": dept,
+                "ring_timeout": ring_timeout,
+                "display_name": display_name or dept.name,
+                "fallback_action": fallback_action
+            }
+
+        return {"status": "invalid_destination", "reason": f"unknown_type_{dest_type}"}
+
+    @classmethod
+    def get_staff_configured_extension(
+        cls,
+        db: Session,
+        company_id: int,
+        staff_id: int,
+        called_did: Optional[str] = None
+    ) -> Optional[str]:
+        """
+        Reverse lookup: Returns the active extension key (e.g. "1", "2", "7")
+        configured for a staff member in the company's published call flow version.
+        Returns None if the staff member has no active extension slot.
+        """
+        options = cls._get_published_direct_routing_options(db, company_id, called_did)
+        for opt in options:
+            if (
+                opt.get("is_active", True)
+                and opt.get("destination_type") == "staff"
+                and opt.get("destination_id") == staff_id
+            ):
+                return str(opt.get("dtmf_key", "")).strip() or None
+        return None
+
+    @classmethod
+    def _build_direct_routing_prompt(cls, options: Optional[List[Dict[str, Any]]] = None) -> str:
+        """
+        Customer-facing extension prompt without announcing employee names:
+        "Please press the extension number, or stay on the line for our main menu."
+        """
+        if options is not None and len(options) == 0:
+            return ""
+        return "Please press the extension number, or stay on the line for our main menu."
+
+    @classmethod
+    def _get_direct_routing_menu_xml(
+        cls,
+        db: Session,
+        company_id: int,
+        called_did: str,
+        options: List[Dict[str, Any]],
+        lang: str = "en"
+    ) -> str:
+        """
+        Generates initial Direct Routing Menu XML with 5-second timeout.
+        If no DTMF within 5 seconds, falls through directly to Main IVR without unavailable message.
+        """
+        gather_url = "https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=direct_routing"
+        prompt = cls._build_direct_routing_prompt(options)
+        dept_elements = cls._get_department_menu_elements(db, company_id, called_did, lang=lang)
+
+        return cls._generate_xml_response([
+            f'<GetDigits action="{gather_url}" method="POST" numDigits="1" timeout="5" retries="1">',
+            f'  <Speak voice="Polly.Aditi" language="en-IN">{prompt}</Speak>',
+            f'</GetDigits>',
+            *dept_elements
+        ])
+
+    @classmethod
+    def _get_department_menu_elements(cls, db: Session, company_id: int, called_did: str, lang: str = "te") -> List[str]:
+        """Generates full 8-option IVR menu elements in Telugu or English."""
         selected_lang = 'te' if lang in ('te', 'telugu') else 'en'
         gather_url = f"https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=dept&amp;lang={selected_lang}"
         if selected_lang == "te":
@@ -416,13 +852,18 @@ class CallFlowInterpreter:
             )
             no_input_prompt = "We did not receive your input. Connecting you to Customer Care. Please hold."
 
-        return cls._generate_xml_response([
+        return [
             f'<GetDigits action="{gather_url}" method="POST" numDigits="1" timeout="7" retries="2">',
             f'  <Speak voice="Polly.Aditi" language="en-IN">{dept_prompt}</Speak>',
             f'</GetDigits>',
             f'<Speak voice="Polly.Aditi" language="en-IN">{no_input_prompt}</Speak>',
             cls._build_telesales_simultaneous_dial(db, company_id, "Customer Care", called_did, lang=selected_lang)
-        ])
+        ]
+
+    @classmethod
+    def _get_department_menu_xml(cls, db: Session, company_id: int, called_did: str, lang: str = "te") -> str:
+        """Generates full 8-option IVR menu XML in Telugu or English."""
+        return cls._generate_xml_response(cls._get_department_menu_elements(db, company_id, called_did, lang=lang))
 
     @classmethod
     def handle_flow_step(
@@ -480,7 +921,8 @@ class CallFlowInterpreter:
         current_node_key: Optional[str],
         dtmf_input: Optional[str],
         exec_log: TelephonyFlowExecutionLog,
-        base_api_url: str
+        base_api_url: str,
+        now_dt: Optional[datetime] = None
     ) -> str:
         """
         Internal recursive/iterative node processor compiling to Plivo XML.
@@ -508,7 +950,7 @@ class CallFlowInterpreter:
 
         step_count = 0
         xml_elements: List[str] = []
-        now_ist = datetime.now(IST)
+        now_ist = now_dt or datetime.now(IST)
 
         # Lookup CRM Lead
         clean_phone = re.sub(r'[^\d]', '', caller_phone)[-10:]
@@ -888,6 +1330,71 @@ class CallFlowInterpreter:
         return False, f"Closed ({open_t}-{close_t})"
 
     @classmethod
+    def _detect_crm_caller_language(cls, db: Session, caller_phone: str) -> Optional[str]:
+        """Looks up lead preferred language in CRMLead record."""
+        clean_caller_digits = re.sub(r'\D', '', str(caller_phone or ''))[-10:]
+        if not clean_caller_digits:
+            return None
+        try:
+            crm_lead = db.query(CRMLead).filter(
+                (CRMLead.phone.ilike(f"%{clean_caller_digits}%")) | (CRMLead.alternate_phone.ilike(f"%{clean_caller_digits}%"))
+            ).order_by(CRMLead.id.desc()).first()
+            if crm_lead:
+                if getattr(crm_lead, 'preferred_language', None):
+                    return str(crm_lead.preferred_language).strip().lower()
+                meta_json = getattr(crm_lead, 'metadata_json', None)
+                if meta_json:
+                    meta = json.loads(meta_json) if isinstance(meta_json, str) else dict(meta_json)
+                    return (meta.get('preferred_language') or meta.get('language') or '').strip().lower()
+        except Exception as le:
+            logger.warning(f"[FLOW-INTERPRETER] Lead language lookup error: {le}")
+        return None
+
+    @classmethod
+    def _is_qualified_sticky_caller(
+        cls,
+        db: Session,
+        caller_phone: str,
+        company_id: int
+    ) -> bool:
+        """
+        Determines whether an inbound caller qualifies for Sticky/Recent Caller routing.
+        A caller qualifies if:
+        1. A recent VoIPCallSession exists with an active operator assigned, OR
+        2. A CRMLead exists with an active telecaller_id or primary_owner_id.
+        """
+        if not caller_phone:
+            return False
+        clean_digits = re.sub(r'\D', '', str(caller_phone))[-10:]
+        if not clean_digits:
+            return False
+
+        recent_staff_id = None
+        recent_session = db.query(VoIPCallSession).filter(
+            VoIPCallSession.destination_number.ilike(f"%{clean_digits}%") | VoIPCallSession.customer_phone.ilike(f"%{clean_digits}%"),
+            VoIPCallSession.operator_id.isnot(None)
+        ).order_by(VoIPCallSession.id.desc()).first()
+        if recent_session and recent_session.operator_id:
+            recent_staff_id = recent_session.operator_id
+
+        if not recent_staff_id:
+            crm_lead = db.query(CRMLead).filter(
+                CRMLead.company_id == company_id,
+                (CRMLead.phone.ilike(f"%{clean_digits}%") | CRMLead.alternate_phone.ilike(f"%{clean_digits}%"))
+            ).order_by(CRMLead.id.desc()).first()
+            if crm_lead:
+                recent_staff_id = crm_lead.telecaller_id or crm_lead.primary_owner_id
+
+        if recent_staff_id:
+            emp = db.query(StaffEmployee).filter(
+                StaffEmployee.id == recent_staff_id,
+                StaffEmployee.status.in_(['active', 'ACTIVE'])
+            ).first()
+            if emp:
+                return True
+        return False
+
+    @classmethod
     def _check_sticky_agent(
         cls,
         db: Session,
@@ -1098,6 +1605,93 @@ class CallFlowInterpreter:
 
         logger.info(f"[SALES-IVR-GATHER] Inbound call from {caller_phone} selected DTMF: '{d}' (Menu: {menu}, Lang: {selected_lang})")
 
+        # 0. Handle Direct Routing Menu (First-Stage Inbound IVR)
+        if menu in ("direct_routing", "agent"):
+            # Case A: If no digits entered within 5-second timeout -> directly transition to Main IVR without unavailable prompt
+            if not d:
+                logger.info(f"[DIRECT-ROUTING] 5-second timeout with no selection from {caller_phone}. Transitioning to Main IVR.")
+                return cls._get_department_menu_xml(db, company_id, called_did, lang=selected_lang)
+
+            resolution = cls.resolve_extension_destination(
+                db=db,
+                company_id=company_id,
+                extension=d,
+                called_did=called_did,
+                call_context={"caller_phone": caller_phone}
+            )
+
+            res_status = resolution.get("status")
+            unavailable_prompt = "The agent you selected is currently unavailable. We will now connect you to Customer Care."
+
+            # Invalid or inactive extension -> seamlessly route to Main IVR
+            if res_status in ("invalid_extension", "inactive_extension"):
+                logger.warning(f"[DIRECT-ROUTING] Extension '{d}' ({res_status}) entered by {caller_phone}. Seamlessly routing to Main IVR.")
+                return cls._get_department_menu_xml(db, company_id, called_did, lang=selected_lang)
+
+            # Invalid destination, tenant mismatch, offline, or busy -> unavailable prompt + Main IVR
+            if res_status in ("invalid_destination", "tenant_mismatch", "offline", "busy"):
+                reason = resolution.get("reason", res_status)
+                logger.info(f"[DIRECT-ROUTING] Extension '{d}' cannot be connected ({res_status}: {reason}). Routing to Customer Care.")
+                return cls._generate_xml_response([
+                    f'<Speak voice="Polly.Aditi" language="en-IN">{unavailable_prompt}</Speak>',
+                    *cls._get_department_menu_elements(db, company_id, called_did, lang=selected_lang)
+                ])
+
+            # Target is AVAILABLE
+            if res_status == "available":
+                dest_type = resolution.get("destination_type")
+                if dest_type == "staff":
+                    emp = resolution.get("staff")
+                    sip_uri = resolution.get("sip_uri")
+                    ring_timeout = resolution.get("ring_timeout", 20)
+                    display_name = resolution.get("display_name") or f"Option {d}"
+
+                    # Record operator_id to session
+                    clean_caller = re.sub(r'[^\d]', '', str(caller_phone or ''))[-10:]
+                    try:
+                        v_sess = db.query(VoIPCallSession).filter(
+                            VoIPCallSession.customer_phone.ilike(f"%{clean_caller}%"),
+                            VoIPCallSession.direction == 'inbound'
+                        ).order_by(VoIPCallSession.id.desc()).first()
+                        if v_sess:
+                            v_sess.operator_id = emp.id
+                            v_sess.operator_name = emp.full_name or f"{emp.first_name or ''} {emp.last_name or ''}".strip() or emp.emp_code
+                            v_sess.operator_user_ref = emp.emp_code
+                            v_meta = json.loads(v_sess.metadata_json) if v_sess.metadata_json else {}
+                            v_meta["direct_routing_selected"] = {
+                                "dtmf_key": d,
+                                "destination_type": "staff",
+                                "staff_id": emp.id,
+                                "staff_code": emp.emp_code,
+                                "display_name": display_name
+                            }
+                            v_sess.metadata_json = json.dumps(v_meta)
+                            db.commit()
+                    except Exception as e:
+                        logger.warning(f"[DIRECT-ROUTING] Error recording operator_id to session: {e}")
+
+                    dial_action_url = f"https://www.myntreal.com/api/v1/telephony/plivo/ivr/agent-dial-complete?staff_id={emp.id}&amp;called_did={called_did}&amp;caller_phone={caller_phone}"
+                    logger.info(f"[DIRECT-ROUTING] Ringing staff #{emp.id} ({emp.full_name}) at {sip_uri} for {ring_timeout}s.")
+                    return cls._generate_xml_response([
+                        f'<Dial timeout="{ring_timeout}" callerId="{called_did}" action="{dial_action_url}">',
+                        f'  <User>{sip_uri}</User>',
+                        f'</Dial>'
+                    ])
+
+                elif dest_type == "department":
+                    dept = resolution.get("department")
+                    dept_name = resolution.get("display_name") or (dept.name if dept else "Customer Care")
+                    logger.info(f"[DIRECT-ROUTING] Selected department #{dept.id if dept else 0} ({dept_name}) by caller {caller_phone}.")
+                    return cls._generate_xml_response([
+                        f'<Speak voice="Polly.Aditi" language="en-IN">Connecting your call to our {dept_name} department. Please hold the line.</Speak>',
+                        cls._build_telesales_simultaneous_dial(db, company_id, dept_name, called_did, lang=selected_lang)
+                    ])
+
+            return cls._generate_xml_response([
+                f'<Speak voice="Polly.Aditi" language="en-IN">{unavailable_prompt}</Speak>',
+                *cls._get_department_menu_elements(db, company_id, called_did, lang=selected_lang)
+            ])
+
         # 1. Handle Language Selection Gate
         if menu == "lang":
             if d == "1":
@@ -1210,3 +1804,33 @@ class CallFlowInterpreter:
                 f'<Speak voice="Polly.Aditi" language="en-IN">{reprompt}</Speak>',
                 cls._get_department_menu_xml(db, company_id, called_did, lang=selected_lang)
             ])
+
+    @classmethod
+    def handle_agent_dial_complete(
+        cls,
+        db: Session,
+        form_data: Dict[str, Any],
+        query_params: Dict[str, Any]
+    ) -> str:
+        """
+        Callback when direct staff <Dial> completes.
+        If answered -> Hangup.
+        If no-answer/busy/timeout/failed -> Unavailable TTS prompt + Customer Care / Main IVR on SAME call!
+        """
+        dial_status = str(form_data.get("DialStatus") or query_params.get("DialStatus") or "").strip().lower()
+        caller_phone = str(form_data.get("From") or query_params.get("caller_phone") or "").strip()
+        called_did = str(form_data.get("To") or query_params.get("called_did") or "").strip()
+        company_id = cls._resolve_company_from_did(db, called_did) or 1
+
+        logger.info(f"[DIRECT-ROUTING-DIAL-COMPLETE] Staff dial completed with DialStatus: '{dial_status}' (Caller: {caller_phone})")
+
+        if dial_status in ('answered', 'completed'):
+            return cls._generate_xml_response([f'<Hangup />'])
+
+        # Staff did not answer / busy / timeout / rejected -> Inform caller and seamlessly transition to Main IVR
+        unavailable_prompt = "The agent you selected is currently unavailable. We will now connect you to Customer Care."
+        return cls._generate_xml_response([
+            f'<Speak voice="Polly.Aditi" language="en-IN">{unavailable_prompt}</Speak>',
+            *cls._get_department_menu_elements(db, company_id, called_did, lang="en")
+        ])
+

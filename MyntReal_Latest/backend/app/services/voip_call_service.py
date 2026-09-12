@@ -300,10 +300,20 @@ class VoIPCallService:
         if not session:
             raise HTTPException(status_code=404, detail=f"Call session '{call_session_id}' not found")
 
-        # Tenant isolation
-        user_company_id = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None) or 1
+        # Tenant & Operator authorization
         is_supreme = getattr(current_user, 'is_supreme', False)
-        if not is_supreme and session.company_id and session.company_id != user_company_id:
+        user_company_id = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None) or 1
+        allowed_company_ids = {user_company_id}
+        if getattr(current_user, 'data_companies', None):
+            comps = current_user.data_companies if isinstance(current_user.data_companies, list) else []
+            allowed_company_ids.update(comps)
+
+        is_operator_owner = (
+            (session.operator_id is not None and getattr(current_user, 'id', None) == session.operator_id) or
+            (session.operator_user_ref is not None and getattr(current_user, 'emp_code', None) == session.operator_user_ref)
+        )
+
+        if not is_supreme and not is_operator_owner and session.company_id and session.company_id not in allowed_company_ids:
             raise HTTPException(status_code=403, detail="Unauthorized access to this call session")
 
         # If already terminal, return directly (idempotent)

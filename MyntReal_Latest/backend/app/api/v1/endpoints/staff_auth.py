@@ -589,6 +589,13 @@ def staff_login(
     
     # Extract employee data dictionary safely
     employee_data = employee.to_dict()
+    try:
+        from app.services.telephony.flow_interpreter import CallFlowInterpreter
+        employee_data["extension"] = CallFlowInterpreter.get_staff_configured_extension(
+            db, employee.base_company_id or 1, employee.id
+        )
+    except Exception:
+        employee_data["extension"] = None
     
     # P0 LOGIN REMEDIATION: Dynamic Menu Sync removed from authentication request path.
     # Menu provisioning is an administrative/seed event, not an authentication prerequisite.
@@ -665,6 +672,13 @@ async def get_staff_profile(
 
     employee_data = current_user.to_dict()
     employee_data["has_direct_reports"] = has_direct_reports(current_user.id, db, StaffEmployee)
+    try:
+        from app.services.telephony.flow_interpreter import CallFlowInterpreter
+        employee_data["extension"] = CallFlowInterpreter.get_staff_configured_extension(
+            db, current_user.base_company_id or 1, current_user.id
+        )
+    except Exception:
+        employee_data["extension"] = None
 
     # Resolve tenant & active entitlements
     cid = resolve_client_id_for_staff(db, current_user)

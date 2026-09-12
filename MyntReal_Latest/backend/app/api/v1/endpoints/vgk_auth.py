@@ -250,9 +250,12 @@ def vgk_login(request: VGKLoginRequest, response: Response, db: Session = Depend
             "company_id": partner.company_id,
             "rank_code": rpos.get('rank_code', 'RANK_1'),
             "rank_num": rpos.get('stars', 1),
-            "current_rank": rpos.get('current_rank', 'Rank 1 — Channel Partner'),
-            "current_designation": rpos.get('current_designation', 'Channel Partner'),
-            "rank_display": rpos.get('rank_display', '1★ Channel Partner'),
+            "current_rank": rpos.get('career_designation') or rpos.get('current_designation', 'Channel Partner'),
+            "current_designation": rpos.get('career_designation') or rpos.get('current_designation', 'Channel Partner'),
+            "career_designation": rpos.get('career_designation') or rpos.get('current_designation', 'Channel Partner'),
+            "rank_display": rpos.get('rank_display') or rpos.get('career_designation', 'Channel Partner'),
+            "personal_prod_qualification": rpos.get('personal_prod_qualification', 'None'),
+            "effective_personal_producer_rate": rpos.get('effective_personal_producer_rate', 0.0),
             "rank_slab_pct": rpos.get('rank_slab_pct', 5.00),
             "activated_team": rpos.get('activated_team', 0),
             "next_rank": rpos.get('next_rank'),
@@ -276,12 +279,16 @@ def vgk_me(current_member: OfficialPartner = Depends(get_current_vgk_member), db
     # Attach Authoritative V27 Rank Position & Sync Designation
     from app.services.universal_incentive_engine import get_partner_current_position_v18
     rpos = get_partner_current_position_v18(db, current_member.id)
+    c_desig = rpos.get('career_designation') or rpos.get('current_designation') or 'Channel Partner'
     d['rank_code']             = rpos.get('rank_code', 'RANK_1')
     d['rank_num']              = rpos.get('stars', 1)
-    d['current_rank']          = rpos.get('current_rank', 'Rank 1 — Channel Partner')
-    d['current_designation']   = rpos.get('current_designation', 'Channel Partner')
-    d['designation_label']     = rpos.get('rank_display', '1★ Channel Partner')
-    d['rank_display']          = rpos.get('rank_display', '1★ Channel Partner')
+    d['current_rank']          = c_desig
+    d['current_designation']   = c_desig
+    d['career_designation']    = c_desig
+    d['designation_label']     = c_desig
+    d['rank_display']          = c_desig
+    d['personal_prod_qualification'] = rpos.get('personal_prod_qualification', 'None')
+    d['effective_personal_producer_rate'] = rpos.get('effective_personal_producer_rate', 0.0)
     d['rank_slab_pct']         = rpos.get('rank_slab_pct', 5.00)
     d['activated_team_cnt']    = rpos.get('activated_team', 0)
     d['next_rank']             = rpos.get('next_rank')
@@ -878,8 +885,12 @@ def vgk_my_network(
             "created_at": p.created_at.isoformat() if p.created_at else None,
             "parent_partner_code": parent_code,
             "rank_code": rpos.get('rank_code', 'RANK_1'),
-            "current_rank": rpos.get('current_rank', 'Rank 1 — Channel Partner'),
-            "rank_display": rpos.get('rank_display', '1★ Channel Partner'),
+            "current_rank": rpos.get('career_designation') or rpos.get('current_designation', 'Channel Partner'),
+            "current_designation": rpos.get('career_designation') or rpos.get('current_designation', 'Channel Partner'),
+            "career_designation": rpos.get('career_designation') or rpos.get('current_designation', 'Channel Partner'),
+            "rank_display": rpos.get('rank_display') or rpos.get('career_designation', 'Channel Partner'),
+            "personal_prod_qualification": rpos.get('personal_prod_qualification', 'None'),
+            "effective_personal_producer_rate": rpos.get('effective_personal_producer_rate', 0.0),
             "rank_slab_pct": rpos.get('rank_slab_pct', 5.00),
             "activated_team": rpos.get('activated_team', 0),
             "level": f"L{4 - depth}",
@@ -2528,8 +2539,65 @@ def vgk_dashboard_summary(
 
     # V27 Authoritative Rank Position & Reconciled Earnings Summary
     from app.services.universal_incentive_engine import get_partner_current_position_v18, get_partner_earnings_summary_v27
+    from app.services.vgk4u_career_service import VGK4UCareerService
     rank_pos = get_partner_current_position_v18(db, pid)
     earn_breakdown = get_partner_earnings_summary_v27(db, pid)
+
+    # VGK4U Authoritative Career Status & Dynamic Progression Ladders (Phase 4)
+    vgk4u_status = VGK4UCareerService.get_partner_career_status(db, pid)
+    if vgk4u_status:
+        vgk4u_status["career_designation_label"] = vgk4u_status.get("career_designation", "Member")
+        vgk4u_status["personal_prod_tier"] = vgk4u_status.get("personal_prod_qualification", "Base")
+        vgk4u_status["personal_prod_tier_label"] = vgk4u_status.get("personal_prod_qualification", "Base")
+        vgk4u_status["active_legs"] = vgk4u_status.get("active_team_legs", 0)
+        vgk4u_status["effective_personal_rate"] = vgk4u_status.get("effective_personal_producer_rate", 6.0)
+
+    career_cfg_rows = db.execute(sa_text("""
+        SELECT designation_code, designation_name, hierarchy_order,
+               required_own_qualifying_files, required_active_team_members,
+               self_earning_pct, team_differential_pct
+        FROM vgk4u_career_designation_configs
+        WHERE is_active = TRUE
+        ORDER BY hierarchy_order ASC
+    """)).fetchall()
+    career_ladder = [
+        {
+            "code": r[0],
+            "name": r[1],
+            "label": r[1],
+            "order": r[2],
+            "rank_order": r[2],
+            "min_files": r[3],
+            "required_files": r[3],
+            "min_legs": r[4],
+            "required_active_legs": r[4],
+            "self_pct": float(r[5]),
+            "self_earning_pct": float(r[5]),
+            "diff_pct": float(r[6]),
+            "team_differential_pct": float(r[6]),
+        }
+        for r in career_cfg_rows
+    ]
+
+    prod_cfg_rows = db.execute(sa_text("""
+        SELECT tier_code, tier_name, min_qualifying_files, commission_rate_pct
+        FROM vgk4u_personal_prod_configs
+        WHERE is_active = TRUE
+        ORDER BY min_qualifying_files ASC
+    """)).fetchall()
+    prod_ladder = [
+        {
+            "code": r[0],
+            "tier_code": r[0],
+            "name": r[1],
+            "label": r[1],
+            "tier_name": r[1],
+            "min_files": r[2],
+            "commission_pct": float(r[3]),
+            "commission_rate_pct": float(r[3]),
+        }
+        for r in prod_cfg_rows
+    ]
 
     return {
         "success": True,
@@ -2545,6 +2613,9 @@ def vgk_dashboard_summary(
             "created_at": current_member.created_at.isoformat() if current_member.created_at else None,
         },
         "rank_position": rank_pos,
+        "vgk4u_career_status": vgk4u_status,
+        "career_ladder": career_ladder,
+        "personal_prod_ladder": prod_ladder,
         "earnings_breakdown": earn_breakdown,
         "earnings": {
             "total_confirmed": total_confirmed,
@@ -4214,22 +4285,18 @@ def member_solar_advances(
 # ════════════════════════════════════════════════════════════════════════════
 
 _CP_TIER_LABELS = {
-    'none':               '—',
+    'none':               'Member',
     'channel_partner':    'Channel Partner',
-    'sr_channel_partner': 'Sr. Channel Partner',
-    'official_partner':   'Lead Channel Partner',
+    'sr_channel_partner': 'Channel Partner',
+    'official_partner':   'Channel Partner',
 }
 
 _CP_TIER_ORDER = ['none', 'channel_partner', 'sr_channel_partner', 'official_partner']
 
 
 def _compute_cp_designation(partner, db) -> dict:
-    """DC_CP_CARD_001: Compute CP designation tier from coupon activations + people activated.
-    Source-only (direct), tiers only move up, never down.
-    Thresholds:
-      Channel Partner:      manually_activated OR is_paid_activation OR coupons_used >= 100 (₹5 L) OR activated_people >= 10
-      Sr. Channel Partner:  coupons_used >= 300 OR activated_people >= 15  (₹15 L)
-      Lead Channel Partner: coupons_used >= 600 OR activated_people >= 30  (₹30 L)
+    """DC_CP_CARD_001: Compute CP designation tier.
+    Authoritative canonical designation from VGK4UCareerService wins.
     """
     pid = partner.id
 
@@ -4246,14 +4313,10 @@ def _compute_cp_designation(partner, db) -> dict:
     activated_people = int(act_row[0]) if act_row else 0
 
     revenue = coupons_used * 5000
-    # DC-VCARD-FIX-001 (Apr 24 2026): treat vcard_enabled (staff "Show Visiting Card" toggle)
-    # as equivalent to card_manually_activated — both gates should unlock the card.
     manually = (bool(getattr(partner, 'card_manually_activated', False))
                 or bool(getattr(partner, 'vcard_enabled', False)))
-    # DC-CP-TIER-001 (Apr 25 2026): member who paid ₹5,000 and got activated qualifies for Channel Partner.
     paid_activated = bool(getattr(partner, 'is_paid_activation', False))
 
-    # Resolve tier (highest threshold wins)
     tier = 'none'
     if coupons_used >= 600 or activated_people >= 30:
         tier = 'official_partner'
@@ -4262,16 +4325,24 @@ def _compute_cp_designation(partner, db) -> dict:
     elif manually or paid_activated or coupons_used >= 100 or activated_people >= 10 or (partner.is_active and partner.vgk_activated_at):
         tier = 'channel_partner'
 
-    tier_label = _CP_TIER_LABELS.get(tier, 'Channel Partner')
+    tier_label = 'Channel Partner'
     is_card_visible = False
     try:
-        from app.services.universal_incentive_engine import get_partner_current_position_v18
-        pos = get_partner_current_position_v18(db, pid)
-        if pos and pos.get('position'):
-            tier_label = pos.get('position')
-            is_card_visible = (pos.get('stars', 0) >= 1) or bool(getattr(partner, 'vcard_enabled', False))
+        from app.services.vgk4u_career_service import VGK4UCareerService
+        cs = VGK4UCareerService.get_partner_career_status(db, pid)
+        if cs and cs.get('career_designation'):
+            tier_label = cs['career_designation']
+            is_card_visible = (tier_label != 'Member') or bool(getattr(partner, 'vcard_enabled', False))
     except Exception:
         pass
+
+    tier_label = (tier_label or 'Channel Partner').replace('★', '').replace('*', '').replace('⭐', '').strip()
+    if any(legacy in tier_label.upper() for legacy in ['SENIOR CHANNEL PARTNER', 'LEAD CHANNEL PARTNER', 'EXTENDED PARTNER', 'CORE PARTNER']):
+        tier_label = 'Channel Partner'
+    elif 'ZONAL MANAGER' in tier_label.upper():
+        tier_label = 'Manager'
+    elif 'DIRECTOR' in tier_label.upper():
+        tier_label = 'Regional Manager'
 
     return {
         "tier":               tier,
@@ -4293,7 +4364,7 @@ def _compute_cp_designation(partner, db) -> dict:
                 "unlocked":        tier in ('channel_partner', 'sr_channel_partner', 'official_partner') or manually or paid_activated,
             },
             "sr_channel_partner": {
-                "label":           "Sr. Channel Partner",
+                "label":           "Manager",
                 "coupons_needed":  300,
                 "coupons_done":    min(coupons_used, 300),
                 "revenue_needed":  1500000,
@@ -4303,7 +4374,7 @@ def _compute_cp_designation(partner, db) -> dict:
                 "unlocked":        tier in ('sr_channel_partner', 'official_partner'),
             },
             "official_partner": {
-                "label":           "Lead Channel Partner",
+                "label":           "General Manager",
                 "coupons_needed":  600,
                 "coupons_done":    min(coupons_used, 600),
                 "revenue_needed":  3000000,
@@ -4384,8 +4455,12 @@ def vgk_designation_progress(
         "referral_url":       referral_url,
         "qr_b64":             qr_b64,
         "blood_group":        safe_get2('blood_group'),
-        "designation_label":  rpos.get("rank_display", desig["tier_label"]),
-        "rank_display":       rpos.get("rank_display", "1★ Channel Partner"),
+        "designation_label":  rpos.get("career_designation") or rpos.get("rank_display", desig["tier_label"]),
+        "career_designation": rpos.get("career_designation") or rpos.get("current_designation", "Channel Partner"),
+        "current_designation": rpos.get("career_designation") or rpos.get("current_designation", "Channel Partner"),
+        "rank_display":       rpos.get("rank_display") or rpos.get("career_designation", "Channel Partner"),
+        "personal_prod_qualification": rpos.get("personal_prod_qualification", "None"),
+        "effective_personal_producer_rate": rpos.get("effective_personal_producer_rate", 0.0),
         "rank_slab_pct":      rpos.get("rank_slab_pct", 5.00),
         "passport_photo_url": passport_photo_url,
     }

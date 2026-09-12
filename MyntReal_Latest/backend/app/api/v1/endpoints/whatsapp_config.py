@@ -1323,15 +1323,20 @@ def test_send(
     if not data.template_id:
         staff_id = _get_staff_id(current_user)
         staff_full_name = "Staff"
+        staff_cid = getattr(current_user, 'base_company_id', 1) or 1
         if staff_id:
             try:
                 from sqlalchemy import text as _tn
-                _srow = db.execute(_tn("SELECT full_name FROM staff_employees WHERE id = :sid"), {"sid": staff_id}).fetchone()
+                _srow = db.execute(_tn("SELECT full_name, base_company_id FROM staff_employees WHERE id = :sid"), {"sid": staff_id}).fetchone()
                 if _srow and _srow[0]:
                     staff_full_name = _srow[0]
+                if _srow and len(_srow) > 1 and _srow[1]:
+                    staff_cid = _srow[1]
             except Exception:
                 pass
-        message = format_staff_whatsapp_message(message, staff_full_name)
+        from app.services.whatsapp_auto_service import resolve_staff_extension
+        ext = resolve_staff_extension(db, staff_id, company_id=staff_cid)
+        message = format_staff_whatsapp_message(message, staff_full_name, extension=ext)
 
     # send_type="text" → force plain text path even if template is Meta-approved
     effective_template_id = data.template_id if send_type != "text" else None
@@ -1435,7 +1440,10 @@ def crm_lead_send(
         raise HTTPException(400, "Provide a template or custom message")
 
     if not data.template_id:
-        message = format_staff_whatsapp_message(message, staff_full_name)
+        from app.services.whatsapp_auto_service import resolve_staff_extension
+        staff_cid = getattr(current_user, 'base_company_id', 1) or 1
+        ext = resolve_staff_extension(db, staff_id, company_id=staff_cid)
+        message = format_staff_whatsapp_message(message, staff_full_name, extension=ext)
 
     effective_lead_id = lead_id if (lead_id and lead_id > 0) else None
 

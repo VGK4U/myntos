@@ -420,6 +420,10 @@ export class AutoDialerPage {
         entityId: canonicalId,
         entityType: 'lead',
         autoStart: true,
+        categoryName: lead.category_name || (lead.category_id ? `Category #${lead.category_id}` : undefined),
+        status: lead.status,
+        isHotLead: lead.is_hot_lead,
+        isFreshLead: lead.is_fresh_lead
       });
     } catch (err: any) {
       console.error('[AutoDialer] Outbound softphone dial failed:', err);
@@ -689,6 +693,12 @@ export class AutoDialerPage {
           <div class="dc-cwh-info">
             <div class="dc-cwh-name">${this._maskLeadName(lead.name || 'Lead Contact')}</div>
             <div class="dc-cwh-phone">${this._maskPhone(phone)}</div>
+            <div style="display:flex;align-items:center;gap:4px;margin-top:3px;flex-wrap:wrap;">
+              <span style="font-size:10px;font-weight:600;padding:1px 6px;background:#e0f2fe;color:#0369a1;border-radius:4px;">🏷️ ${this._escapeHtml(catName)}</span>
+              <span style="font-size:10px;font-weight:600;padding:1px 6px;background:#f1f5f9;color:#475569;border-radius:4px;">📌 ${this._escapeHtml(lead.status || 'New')}</span>
+              ${lead.is_hot_lead ? `<span style="font-size:10px;font-weight:700;padding:1px 6px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:4px;">🔥 HOT LEAD</span>` : ''}
+              ${lead.is_fresh_lead ? `<span style="font-size:10px;font-weight:700;padding:1px 6px;background:#d1fae5;color:#059669;border:1px solid #86efac;border-radius:4px;">🌱 FRESH LEAD</span>` : ''}
+            </div>
           </div>
         </div>
         <div class="dc-cwh-center">
@@ -717,7 +727,11 @@ export class AutoDialerPage {
         <div class="dc-call-card">
           <div class="dc-call-card-header">
             <span class="dc-call-card-title">👤 Lead Overview</span>
-            <span class="dc-call-cat-badge">${this._escapeHtml(catName)}</span>
+            <div style="display:flex;align-items:center;gap:4px;">
+              ${lead.is_hot_lead ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;background:#fee2e2;color:#dc2626;border-radius:6px;">🔥 HOT LEAD</span>` : ''}
+              ${lead.is_fresh_lead ? `<span style="font-size:10px;font-weight:700;padding:2px 7px;background:#d1fae5;color:#059669;border-radius:6px;">🌱 FRESH LEAD</span>` : ''}
+              <span class="dc-call-cat-badge">${this._escapeHtml(catName)}</span>
+            </div>
           </div>
           <div class="dc-call-grid">
             <div class="dc-call-grid-item">
@@ -2058,13 +2072,26 @@ export class AutoDialerPage {
       'z-index:9000',
     ].join(';');
 
+    const catName = lead.category_name || (lead.category_id ? `Category #${lead.category_id}` : 'General');
+    const statusName = lead.status || 'New';
+    const tempBadge = lead.is_hot_lead
+      ? `<span style="font-size:11px;font-weight:700;padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:999px;">🔥 HOT LEAD</span>`
+      : (lead.is_fresh_lead
+          ? `<span style="font-size:11px;font-weight:700;padding:3px 8px;background:#d1fae5;color:#059669;border:1px solid #86efac;border-radius:999px;">🌱 FRESH LEAD</span>`
+          : '');
+
     const render = () => {
       overlay.innerHTML = `
-        <div style="background:#fff;border-radius:20px;padding:32px 40px;text-align:center;min-width:260px;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
+        <div style="background:#fff;border-radius:20px;padding:32px 40px;text-align:center;min-width:280px;box-shadow:0 8px 32px rgba(0,0,0,0.18);">
           <div style="font-size:72px;font-weight:800;color:#059669;line-height:1;font-variant-numeric:tabular-nums;">${count}</div>
           <div style="font-size:14px;color:#9ca3af;margin-top:6px;letter-spacing:.5px;">DIALING NEXT IN…</div>
-          <div style="font-size:16px;font-weight:700;color:#1f2937;margin-top:10px;">${lead.name}</div>
+          <div style="font-size:16px;font-weight:700;color:#1f2937;margin-top:10px;">${this._escapeHtml(lead.name)}</div>
           <div style="font-size:13px;color:#6b7280;margin-top:2px;">${this._maskPhone(lead.phone)}</div>
+          <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:10px;flex-wrap:wrap;">
+            <span style="font-size:11px;font-weight:600;padding:3px 8px;background:#e0f2fe;color:#0369a1;border-radius:6px;">🏷️ ${this._escapeHtml(catName)}</span>
+            <span style="font-size:11px;font-weight:600;padding:3px 8px;background:#f1f5f9;color:#475569;border-radius:6px;">📌 ${this._escapeHtml(statusName)}</span>
+            ${tempBadge}
+          </div>
           <button id="dc-next-dial-cancel" style="margin-top:20px;width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#f9fafb;font-size:14px;color:#6b7280;cursor:pointer;font-weight:600;">
             ✕ Cancel — I'll dial manually
           </button>
@@ -2351,14 +2378,19 @@ export class AutoDialerPage {
     return `
       <div class="dc-lead-card ${priorityClass}">
         <div class="dc-lead-card-top">
-          <div class="dc-priority-tag">${PRIORITY_LABELS[lead.queue_priority] || ''}</div>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <div class="dc-priority-tag">${PRIORITY_LABELS[lead.queue_priority] || ''}</div>
+            ${lead.is_hot_lead ? `<span class="dc-temp-badge hot" style="background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">🔥 HOT LEAD</span>` : ''}
+            ${lead.is_fresh_lead ? `<span class="dc-temp-badge fresh" style="background:#d1fae5;color:#059669;border:1px solid #86efac;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;">🌱 FRESH LEAD</span>` : ''}
+          </div>
           <div class="dc-queue-pos">${queueIdx + 1} / ${total}</div>
         </div>
         <div class="dc-lead-name">${this._maskLeadName(lead.name)}</div>
         <div class="dc-lead-meta">
-          ${lead.city ? `📍 ${lead.city}` : ''} 
-          ${lead.source ? `· ${lead.source}` : ''}
-          ${lead.status ? `· <span class="dc-status-chip">${lead.status}</span>` : ''}
+          ${lead.category_name ? `<span class="dc-category-chip" style="background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:6px;font-weight:600;">🏷️ ${this._escapeHtml(lead.category_name)}</span> · ` : ''}
+          ${lead.status ? `<span class="dc-status-chip" style="background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:6px;font-weight:600;">📌 ${lead.status}</span> · ` : ''}
+          ${lead.city ? `📍 ${lead.city} · ` : ''} 
+          ${lead.source ? `${lead.source}` : ''}
         </div>
         <div class="dc-last-contact">${lastContact}</div>
         ${lead.description ? `<div class="dc-lead-desc">${lead.description.slice(0, 100)}${lead.description.length > 100 ? '...' : ''}</div>` : ''}

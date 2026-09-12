@@ -5,6 +5,7 @@ All sends are non-blocking BackgroundTasks and respect VGK pause controls.
 """
 
 import os
+import re
 import requests
 import logging
 from datetime import datetime, timedelta
@@ -54,15 +55,83 @@ def _is_paused(db: Session) -> bool:
         return False
 
 
-def format_staff_whatsapp_message(message: str, staff_name: str) -> str:
+def strip_staff_whatsapp_signature(message: str) -> str:
+    """
+    Removes any existing staff signature block from the message body
+    (e.g., when forwarding, replying, or re-formatting to prevent stacked signatures).
+    Matches patterns like:
+    Regards,
+    <Name>
+    8585852738
+    Ext: <X>
+    or
+    Regards,
+    <Name>
+    """
+    if not message:
+        return ""
+    pattern = r'(?:\r?\n){1,4}Regards,\s*\n[^\n]+(?:\s*\n8585852738)?(?:\s*\nExt:\s*\S+)?\s*$'
+    cleaned = re.sub(pattern, '', message.strip(), flags=re.IGNORECASE)
+    return cleaned.strip()
+
+
+def resolve_staff_extension(
+    db: Session,
+    staff: Any,
+    company_id: Optional[int] = None,
+    called_did: Optional[str] = None
+) -> Optional[str]:
+    """
+    Dynamically resolves the active extension assigned to a staff employee
+    from the company's published call flow version.
+    Returns None if no active extension slot is assigned.
+    """
+    if not staff or db is None:
+        return None
+    staff_id = getattr(staff, "id", None) if not isinstance(staff, (int, str)) else int(staff)
+    if not staff_id:
+        return None
+
+    target_cid = company_id
+    if not target_cid and hasattr(staff, "base_company_id"):
+        target_cid = getattr(staff, "base_company_id", None)
+    if not target_cid:
+        target_cid = 1
+
+    try:
+        from app.services.telephony.flow_interpreter import CallFlowInterpreter
+        return CallFlowInterpreter.get_staff_configured_extension(
+            db=db,
+            company_id=int(target_cid),
+            staff_id=int(staff_id),
+            called_did=called_did
+        )
+    except Exception as e:
+        logger.warning(f"[WA-EXT] Failed to resolve dynamic extension for staff {staff_id}: {e}")
+        return None
+
+
+def format_staff_whatsapp_message(
+    message: str,
+    staff_name: str,
+    contact_number: str = "8585852738",
+    extension: Optional[str] = None
+) -> str:
     """
     Authoritative staff WhatsApp signature composer.
     Appends:
-    
+
     Regards,
-    <Staff Full Name>
-    
-    Guards against double signatures.
+    <Staff Name>
+    8585852738
+    Ext: <X>   (ONLY when extension is configured)
+
+    If employee does NOT have an extension:
+    - Include staff name
+    - Include contact_number (8585852738)
+    - Do NOT display empty extension, "Ext: N/A", or placeholder.
+
+    Guards against stacked or double signatures by stripping prior signature blocks.
     """
     if not message:
         return ""
@@ -70,11 +139,20 @@ def format_staff_whatsapp_message(message: str, staff_name: str) -> str:
     if not staff_name or not str(staff_name).strip():
         return clean_msg
 
-    # Guard: check if Regards, is already present in the message
-    if "regards," in clean_msg.lower():
-        return clean_msg
+    # Strip existing trailing signature if present to ensure idempotency
+    clean_msg = strip_staff_whatsapp_signature(clean_msg)
 
-    return f"{clean_msg}\n\nRegards,\n{str(staff_name).strip()}"
+    # Build signature block
+    sig_lines = ["Regards,", str(staff_name).strip()]
+    if contact_number and str(contact_number).strip():
+        sig_lines.append(str(contact_number).strip())
+
+    clean_ext = str(extension or "").strip()
+    if clean_ext and clean_ext.lower() not in ("none", "null", "undefined", "n/a"):
+        sig_lines.append(f"Ext: {clean_ext}")
+
+    signature = "\n".join(sig_lines)
+    return f"{clean_msg}\n\n{signature}"
 
 
 def _render_body(body_text: str, context: Dict[str, Any]) -> str:

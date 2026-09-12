@@ -32,7 +32,15 @@
     '<button id="_lwaBtnComp"    onclick="window._lwaMode(\'company\')" style="flex:1;padding:8px 6px;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s"><i class="fas fa-building text-primary"></i> 🏢 Official WhatsApp<small style="display:block;font-weight:400;font-size:10px;margin-top:1px">Meta Cloud API · Verified</small></button>',
     '</div>',
 
+    /* 1-tap quick responses */
+    '<div style="font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">⚡ 1-Tap Quick Responses</div>',
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">',
+    '<button type="button" onclick="window._lwaApplyQuick(\'thanks_connecting\')" style="background:#ecfdf5;border:1.5px solid #a7f3d0;color:#065f46;border-radius:9px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:6px"><span style="font-size:16px">🙏</span><div><div>Thanks for Connecting</div><small style="font-size:9.5px;font-weight:400;opacity:.8">Service tailored</small></div></button>',
+    '<button type="button" onclick="window._lwaApplyQuick(\'trying_to_reach\')" style="background:#fef3c7;border:1.5px solid #fde68a;color:#92400e;border-radius:9px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;text-align:left;display:flex;align-items:center;gap:6px"><span style="font-size:16px">📞</span><div><div>Trying to Reach</div><small style="font-size:9.5px;font-weight:400;opacity:.8">Call missed / inquiry</small></div></button>',
+    '</div>',
+
     /* filters */
+    '<div style="font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Official Template Filters</div>',
     '<div id="_lwaFilters" style="display:flex;gap:8px;margin-bottom:12px">',
     '<select id="_lwaSeg" onchange="window._lwaLoadTpls()" style="flex:1;font-size:12px;padding:6px 8px;border:1px solid #e5e7eb;border-radius:7px;background:#fff">',
     '<option value="">All Segments</option>',
@@ -391,12 +399,69 @@
       var raw = localStorage.getItem('mnr_auth_state') || localStorage.getItem('staff_user') || localStorage.getItem('user');
       if (raw) {
         var parsed = JSON.parse(raw);
-        var u = parsed.user || parsed;
+        var u = parsed.user || parsed.employee || parsed;
         var name = u.full_name || u.name || (u.first_name ? u.first_name + ' ' + (u.last_name || '') : '') || 'Staff';
-        return '\n\nRegards,\n' + name;
+        var ext = u.extension || u.ext || (typeof window !== 'undefined' ? window.__STAFF_EXTENSION__ : null);
+        if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
+          return '\n\nRegards,\n' + name + '\n8585852738\nExt: ' + String(ext).trim();
+        }
+        return '\n\nRegards,\n' + name + '\n8585852738';
       }
     } catch (e) {}
-    return '\n\nRegards,\nStaff';
+    return '\n\nRegards,\nStaff\n8585852738';
+  }
+
+  function _getVerticalQuickMessage(action, customerName, context) {
+    var cName = (customerName || 'Customer').trim();
+    var ctx = (context || '').toLowerCase();
+    var vertical = 'general';
+    if (ctx.indexOf('solar') !== -1) vertical = 'solar';
+    else if (ctx.indexOf('real') !== -1 || ctx.indexOf('property') !== -1 || ctx.indexOf('estate') !== -1) vertical = 'real_estate';
+    else if (ctx.indexOf('insur') !== -1 || ctx.indexOf('care') !== -1) vertical = 'insurance';
+    else if (ctx.indexOf('ev') !== -1 || ctx.indexOf('spare') !== -1 || ctx.indexOf('zynova') !== -1 || ctx.indexOf('vehicle') !== -1) vertical = 'ev';
+    else if (ctx.indexOf('etc') !== -1 || ctx.indexOf('train') !== -1 || ctx.indexOf('skill') !== -1) vertical = 'etc';
+
+    if (action === 'thanks_connecting') {
+      switch (vertical) {
+        case 'solar':
+          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal Solar Rooftop గురించి మాతో మాట్లాడినందుకు ధన్యవాదాలు. మీ ఇంటి లేదా కమర్షియల్ కరెంట్ బిల్లును 90% వరకు తగ్గించుకుంటూ, Government Subsidy పొందే పూర్తి వివరాలు & Customized Solar Quotation త్వరలోనే మా సోలార్ ఎక్స్‌పర్ట్ మీకు షేర్ చేస్తారు. ఏవైనా డౌట్స్ ఉంటే దయచేసి ఇక్కడ మెసేజ్ చేయండి.';
+        case 'real_estate':
+          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal Properties తో కనెక్ట్ అయినందుకు ధన్యవాదాలు. మీ బడ్జెట్ మరియు రిక్వైర్‌మెంట్‌కు తగినట్లుగా బెస్ట్ వెరిఫైడ్ ఓపెన్ ప్లాట్స్, గేటెడ్ కమ్యూనిటీ విల్లాస్ మరియు అపార్ట్‌మెంట్స్ వివరాలను మా ప్రాపర్టీ స్పెషలిస్ట్ త్వరలోనే మీకు షేర్ చేస్తారు. సైట్ విజిట్ కోసం ఎప్పుడైనా సంప్రదించవచ్చు.';
+        case 'insurance':
+          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal Insurance & Protection తో మాట్లాడినందుకు ధన్యవాదాలు. మీకు మరియు మీ కుటుంబానికి సరిపోయే బెస్ట్ Health, Life మరియు General Insurance పాలసీ కొటేషన్లను మా ఇన్సూరెన్స్ అడ్వైజర్ మీకు పంపిస్తారు. పూర్తి క్లెయిమ్ సపోర్ట్ మా బాధ్యత.';
+        case 'ev':
+          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal EV & Spares గురించి మాతో కనెక్ట్ అయినందుకు ధన్యవాదాలు. లేటెస్ట్ ఎలక్ట్రిక్ వెహికల్ మోడల్స్, రేంజ్, బ్యాటరీ వారంటీ, ఫైనాన్స్ ఆప్షన్స్ మరియు టెస్ట్ రైడ్ వివరాలను మా ఈవీ స్పెషలిస్ట్ మీకు త్వరలోనే అందిస్తారు.';
+        case 'etc':
+          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal ETC Skill Training ప్రోగ్రామ్స్ గురించి మాట్లాడినందుకు ధన్యవాదాలు. మీ కెరీర్ గ్రోత్‌కు అవసరమైన సర్టిఫైడ్ ట్రైనింగ్ కోర్సులు, బ్యాచ్ టైమింగ్స్ మరియు జాబ్ అసిస్టెన్స్ వివరాలు మా కోఆర్డినేటర్ మీకు పంపిస్తారు.';
+        default:
+          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal తో కనెక్ట్ అయినందుకు చాలా ధన్యవాదాలు. మా అన్ని ప్రీమియర్ సర్వీసెస్ మీ సేవలో అందుబాటులో ఉన్నాయి:\n☀️ Solar Rooftop & Renewable Energy (కరెంట్ బిల్లు 90% వరకు ఆదా & Govt సబ్సిడీ)\n🏡 Real Estate & Premier Properties (ఓపెన్ ప్లాట్స్, విల్లాస్ & అపార్ట్‌మెంట్స్)\n🛡️ Insurance & Protection Solutions (హెల్త్, లైఫ్ & జనరల్ పాలసీలు)\n🛵 EV Vehicles & Genuine Spares (ఎకో-ఫ్రెండ్లీ ఎలక్ట్రిక్ బైక్స్ & సర్వీస్)\n🎓 ETC Skill Training & Career Certifications (ఉద్యోగ నైపుణ్య శిక్షణ)\n\nమా Relationship Manager మీకు పూర్తి వివరాలు అందిస్తారు. మీకు ఏ సమాచారం కావాలన్నా దయచేసి ఇక్కడ మెసేజ్ చేయగలరు!';
+      }
+    } else {
+      switch (vertical) {
+        case 'solar':
+          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ Solar Rooftop ఎంక్వైరీ కోసం MyntReal నుండి ఇప్పుడే కాల్ చేశాము, కానీ కాల్ కలవలేదు. మీరు ఫ్రీగా ఉన్నప్పుడు దయచేసి ఈ మెసేజ్‌కి రిప్లై ఇవ్వండి లేదా కాల్ బ్యాక్ చేయండి. సోలార్ సబ్సిడీ మరియు సేవింగ్స్ వివరాలు తెలియజేస్తాము.';
+        case 'real_estate':
+          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ Real Estate ప్రాపర్టీ ఎంక్వైరీ గురించి MyntReal నుండి కాల్ చేశాము, మాట్లాడటం కుదరలేదు. మీకు అనుకూలమైన టైమ్‌లో దయచేసి రిప్లై ఇవ్వండి లేదా కాల్ చేయండి. మీ రిక్వైర్‌మెంట్‌కు సరిపడే బెస్ట్ ప్రాపర్టీ ఆప్షన్స్ మీకు పంపిస్తాము.';
+        case 'insurance':
+          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ Insurance ఎంక్వైరీ గురించి MyntReal నుండి కాల్ చేశాము, కాల్ కలవలేదు. మీకు ఫ్రీ టైమ్ ఉన్నప్పుడు దయచేసి ఇక్కడ రిప్లై ఇవ్వండి. మీకు అనువైన బెస్ట్ ఇన్సూరెన్స్ ప్లాన్స్ వివరాలు చర్చిద్దాం.';
+        case 'ev':
+          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ EV Vehicle & Spares ఎంక్వైరీ కోసం MyntReal నుండి కాల్ చేశాము, మాట్లాడటం వీలుపడలేదు. మీరు వీలైనప్పుడు రిప్లై ఇవ్వండి లేదా కాల్ చేయండి. టెస్ట్ రైడ్ మరియు మోడల్స్ వివరాలు మీకు తెలియజేస్తాము.';
+        case 'etc':
+          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ ETC Skill Training కోర్సు వివరాల కోసం MyntReal నుండి కాల్ చేశాము, కాల్ కనెక్ట్ అవ్వలేదు. మీరు ఫ్రీగా ఉన్నప్పుడు దయచేసి మెసేజ్ చేయండి. అప్‌కమింగ్ బ్యాచ్ టైమింగ్స్ మరియు ఫీజు వివరాలు చర్చిద్దాం.';
+        default:
+          return 'నమస్కారం ' + cName + ' గారు! 📞 MyntReal నుండి మీతో మాట్లాడటానికి ఇప్పుడే కాల్ చేశాము, కానీ కాల్ కలవలేదు / మీరు బిజీగా ఉన్నట్లున్నారు. మేము మీకు క్రింది సర్వీసెస్‌లో ఉత్తమ సేవలు అందిస్తున్నాము:\n☀️ Solar Energy (సోలార్ రూఫ్‌టాప్ & సబ్సిడీ)\n🏡 Real Estate (వెరిఫైడ్ ప్రాపర్టీస్ & సైట్ విజిట్స్)\n🛡️ Insurance (హెల్త్ & లైఫ్ ఇన్సూరెన్స్)\n🛵 EV Vehicles & Spares (ఎలక్ట్రిక్ స్కూటర్లు & స్పేర్స్)\n🎓 ETC Skill Training (నైపుణ్య శిక్షణ & కెరీర్)\n\nమీకు అనుకూలమైన సమయంలో దయచేసి ఇక్కడ మెసేజ్ చేయండి లేదా కాల్ బ్యాక్ చేయగలరు!';
+      }
+    }
+  }
+
+  function _applyQuick(action) {
+    var msg = _getVerticalQuickMessage(action, _s.name, _s.context || '');
+    var sig = _getStaffSignature();
+    var msgBox = document.getElementById('_lwaMsg');
+    if (msgBox) {
+      msgBox.value = msg + sig;
+      msgBox.focus();
+    }
   }
 
   /* ── Direct Web WhatsApp & Copy Actions ─────────────────────────────────── */
@@ -422,22 +487,23 @@
 
   /* ── Expose window functions (called from inline HTML) ───────────────────── */
   function _bindGlobals() {
-    window._lwaClose     = function() { document.getElementById('_lwaModal').style.display = 'none'; };
-    window._lwaMode      = function(m) { _s.mode = m; _applyModeStyle(); _loadTpls(); };
-    window._lwaLoadTpls  = function() { _loadTpls(); };
-    window._lwaTplChange = function() { _onTplChange(); };
-    window._lwaPreview   = function() { _buildPreview(); };
-    window._lwaDoSend    = function() { _doSend(); };
-    window._lwaDirectWeb = function() { _directWeb(); };
-    window._lwaCopyText  = function() { _copyText(); };
+    window._lwaClose      = function() { document.getElementById('_lwaModal').style.display = 'none'; };
+    window._lwaMode       = function(m) { _s.mode = m; _applyModeStyle(); _loadTpls(); };
+    window._lwaLoadTpls   = function() { _loadTpls(); };
+    window._lwaTplChange  = function() { _onTplChange(); };
+    window._lwaPreview    = function() { _buildPreview(); };
+    window._lwaDoSend     = function() { _doSend(); };
+    window._lwaDirectWeb  = function() { _directWeb(); };
+    window._lwaCopyText   = function() { _copyText(); };
+    window._lwaApplyQuick = function(a) { _applyQuick(a); };
   }
 
   /* ── Public entry point ──────────────────────────────────────────────────── */
-  window.openLeadWAModal = function(leadId, phone, name, companyId, initialMessage) {
+  window.openLeadWAModal = function(leadId, phone, name, companyId, initialMessage, context) {
     _ensure();
     _bindGlobals();
     var cleanP = phone ? String(phone).replace(/\D/g, '').slice(-10) : '';
-    _s = { leadId: leadId, phone: cleanP, name: name, companyId: companyId, mode: 'scanned', tpls: [], bodyTpl: '' };
+    _s = { leadId: leadId, phone: cleanP, name: name, companyId: companyId, mode: 'scanned', tpls: [], bodyTpl: '', context: context || '' };
 
     /* reset UI */
     document.getElementById('_lwaSub').textContent     = (name || 'Contact') + (cleanP ? (' · ' + cleanP) : '');

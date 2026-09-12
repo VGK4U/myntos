@@ -1713,6 +1713,12 @@ def reply_to_inbox(
         raise HTTPException(status_code=400, detail="Reply text is required")
     if not _is_valid_phone(msg.from_phone):
         raise HTTPException(status_code=400, detail="Invalid phone number")
+
+    from app.services.whatsapp_auto_service import format_staff_whatsapp_message, resolve_staff_extension
+    staff_full_name = getattr(current_user, 'full_name', None) or f"{getattr(current_user, 'first_name', '')} {getattr(current_user, 'last_name', '')}".strip() or "Staff"
+    ext = resolve_staff_extension(db, current_user, company_id=getattr(current_user, 'base_company_id', 1))
+    reply_text = format_staff_whatsapp_message(reply_text, staff_full_name, extension=ext)
+
     result = _send_meta(msg.from_phone, reply_text, db=db)
     if result.get("success"):
         now = datetime.utcnow()
@@ -3969,10 +3975,11 @@ def send_manual_whatsapp_message(
         msg_text = resolved_body
 
     # Authoritative staff signature formatting
-    from app.services.whatsapp_auto_service import format_staff_whatsapp_message
+    from app.services.whatsapp_auto_service import format_staff_whatsapp_message, resolve_staff_extension
     staff_full_name = getattr(current_user, 'full_name', None) or f"{getattr(current_user, 'first_name', '')} {getattr(current_user, 'last_name', '')}".strip() or "Staff"
+    ext = resolve_staff_extension(db, current_user, company_id=getattr(current_user, 'base_company_id', 1))
     if msg_text:
-        msg_text = format_staff_whatsapp_message(msg_text, staff_full_name)
+        msg_text = format_staff_whatsapp_message(msg_text, staff_full_name, extension=ext)
 
     if not msg_text and not payload.media_url:
         raise HTTPException(status_code=400, detail="Message text, template, or media URL is required")

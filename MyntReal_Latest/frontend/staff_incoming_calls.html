@@ -1588,9 +1588,12 @@
 
             container.innerHTML = calls.map(c => {
                 const name = escapeHtml(c.customer_name || 'Customer Lead');
-                const phoneMasked = escapeHtml(c.customer_phone_masked || '+91 ••••••••••');
+                const isUnresolved = c.caller_identity_source === 'unresolved_forwarded' || c.customer_phone_masked === 'Unknown / Not provided';
+                const phoneMasked = isUnresolved ? '<span class="text-muted fst-italic">Unknown / Not provided</span>' : escapeHtml(c.customer_phone_masked || '+91 ••••••••••');
                 const rawCustomerNum = c.raw_caller_number || c.customer_phone || c.customer_number || '';
                 const cleanPhone = (rawCustomerNum || '').replace(/\D/g, '').slice(-10);
+                const canDial = !isUnresolved && cleanPhone && cleanPhone.length >= 6 && cleanPhone !== 'unresolved';
+                const fwdNumber = c.forwarded_from_masked || c.forwarded_from_display || c.forwarded_from_number;
                 const sourceBadge = c.contact_source 
                     ? `<span class="badge bg-secondary bg-opacity-50 text-light px-1.5 py-0.5" style="font-size: 10px;">${escapeHtml(c.contact_source)}</span>`
                     : `<span class="badge bg-dark border border-secondary text-info px-1.5 py-0.5" style="font-size: 10px;">${escapeHtml(c.source || 'CALL')}</span>`;
@@ -1686,6 +1689,7 @@
                                 <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
                                     <div class="d-flex align-items-center gap-2 flex-wrap">
                                         <span class="phone-masked font-monospace"><i class="fa-solid fa-phone me-1 text-muted" style="font-size:10px;"></i>${phoneMasked}</span>
+                                        ${fwdNumber ? `<span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-50 px-1 py-0.5 font-monospace" style="font-size:9px;" title="Forwarded From"><i class="fa-solid fa-share me-1 text-warning"></i>Fwd: ${escapeHtml(fwdNumber)}</span>` : ''}
                                         ${timeHtml}
                                     </div>
                                     ${recHtml}
@@ -1696,9 +1700,15 @@
                             <button class="btn btn-outline-info btn-sm rounded-circle p-2" onclick="openCustomerHistory('${cleanPhone}', '${name.replace(/'/g, "\\'")}')" title="View Customer History" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;">
                                 <i class="fa-solid fa-clock-rotate-left"></i>
                             </button>
-                            <button class="btn btn-success btn-sm rounded-circle p-2 shadow-sm" onclick="dialFromHub('${cleanPhone}', '${name.replace(/'/g, "\\'")}')" title="Call ${name}" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
-                                <i class="fa-solid fa-phone"></i>
-                            </button>
+                            ${canDial ? `
+                                <button class="btn btn-success btn-sm rounded-circle p-2 shadow-sm" onclick="dialFromHub('${cleanPhone}', '${name.replace(/'/g, "\\'")}')" title="Call ${name}" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
+                                    <i class="fa-solid fa-phone"></i>
+                                </button>
+                            ` : `
+                                <button class="btn btn-secondary btn-sm rounded-circle p-2 shadow-sm disabled" title="Customer number not provided" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;opacity:0.4;" disabled>
+                                    <i class="fa-solid fa-phone-slash"></i>
+                                </button>
+                            `}
                         </div>
                     </div>
                 `;
@@ -2126,13 +2136,26 @@
                             ${c.latest_selection ? `<div class="small text-warning mt-0.5" style="font-size:11px;" title="Selected during IVR"><i class="fa-solid fa-sitemap me-1 text-info"></i>${escapeHtml(c.latest_selection)}</div>` : ''}
                         </td>
                         <td>
-                            <div class="d-flex align-items-center" style="cursor:pointer;" 
+                            <div class="d-flex flex-column align-items-start" style="cursor:pointer;" 
                                  data-phone="${escapeHtml(cleanPhoneNum)}" 
                                  data-name="${escapeHtml(safeCustName)}" 
                                  onclick="triggerHistoryFromEl(this)" 
                                  title="Click to view history for ${escapeHtml(safeCustName)} (${count} calls)">
-                                <span class="phone-masked"><i class="fa-solid fa-phone me-1 text-muted" style="font-size:11px;"></i>${escapeHtml(c.customer_phone_masked)}</span>
-                                ${countBadge}
+                                <div class="d-flex align-items-center">
+                                    ${(c.caller_identity_source === 'unresolved_forwarded' || c.customer_phone_masked === 'Unknown / Not provided') ? `
+                                        <span class="text-muted fst-italic" style="font-size:12px;"><i class="fa-solid fa-user-secret me-1 text-muted" style="font-size:11px;"></i>Unknown / Not provided</span>
+                                    ` : `
+                                        <span class="phone-masked"><i class="fa-solid fa-phone me-1 text-muted" style="font-size:11px;"></i>${escapeHtml(c.customer_phone_masked)}</span>
+                                    `}
+                                    ${countBadge}
+                                </div>
+                                ${(c.forwarded_from_masked || c.forwarded_from_display || c.forwarded_from_number) ? `
+                                    <div class="small mt-0.5" title="Call forwarded from operator number">
+                                        <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-50 px-1 py-0.5 font-monospace" style="font-size:9.5px;">
+                                            <i class="fa-solid fa-share me-1 text-warning"></i>Fwd From: ${escapeHtml(c.forwarded_from_masked || c.forwarded_from_display || c.forwarded_from_number)}
+                                        </span>
+                                    </div>
+                                ` : ''}
                             </div>
                         </td>
                         <td>
@@ -2160,13 +2183,19 @@
                         <td class="text-end">
                             <div class="d-flex flex-column align-items-end gap-1">
                                 <div class="d-flex gap-1">
-                                    <button class="btn btn-outline-success btn-sm btn-action-sm px-2 py-1" 
-                                            data-phone="${escapeHtml(cleanPhoneNum)}" 
-                                            data-name="${escapeHtml(safeCustName)}" 
-                                            data-lead-id="${escapeHtml(safeLeadId)}" 
-                                            onclick="triggerDialFromBtn(this)">
-                                        <i class="fa-solid fa-phone"></i> Dial
-                                    </button>
+                                    ${(cleanPhoneNum && cleanPhoneNum !== 'unresolved' && cleanPhoneNum.length >= 6 && c.caller_identity_source !== 'unresolved_forwarded') ? `
+                                        <button class="btn btn-outline-success btn-sm btn-action-sm px-2 py-1" 
+                                                data-phone="${escapeHtml(cleanPhoneNum)}" 
+                                                data-name="${escapeHtml(safeCustName)}" 
+                                                data-lead-id="${escapeHtml(safeLeadId)}" 
+                                                onclick="triggerDialFromBtn(this)">
+                                            <i class="fa-solid fa-phone"></i> Dial
+                                        </button>
+                                    ` : `
+                                        <button class="btn btn-outline-secondary btn-sm btn-action-sm px-2 py-1 disabled" title="Customer number not provided" style="opacity:0.4;" disabled>
+                                            <i class="fa-solid fa-phone-slash"></i> Dial
+                                        </button>
+                                    `}
                                     <button class="btn btn-outline-info btn-sm btn-action-sm px-2 py-1" 
                                             data-phone="${escapeHtml(cleanPhoneNum)}" 
                                             data-name="${escapeHtml(safeCustName)}" 

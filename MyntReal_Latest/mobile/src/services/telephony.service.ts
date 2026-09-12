@@ -45,6 +45,7 @@ class TelephonyService {
   private boostedMicTrack: MediaStreamTrack | null = null;
   private micBoostCtx: AudioContext | null = null;
   private isMicBoostApplied: boolean = false;
+  private _isDialInProgress: boolean = false;
 
   // Active Session State
   private session: TelephonyCallSession = {
@@ -562,16 +563,19 @@ class TelephonyService {
     // MUST occur synchronously at the very entry point of the call stack before any await.
     this.audioAdapter.unlockAudio();
 
-    if (this.isCallActive()) {
+    if (this._isDialInProgress || this.isCallActive()) {
       return { success: false, error: 'A call is already in progress.' };
     }
+    this._isDialInProgress = true;
 
     if (!destinationPhone || typeof destinationPhone !== 'string' || destinationPhone.includes('•') || destinationPhone.includes('*')) {
+      this._isDialInProgress = false;
       return { success: false, error: 'Please provide a valid 10-digit phone number.' };
     }
 
     const digits = destinationPhone.replace(/\D/g, '');
     if (digits.length < 10) {
+      this._isDialInProgress = false;
       return { success: false, error: 'Please enter a valid 10-digit phone number.' };
     }
 
@@ -598,6 +602,7 @@ class TelephonyService {
     if (this.registrationState !== 'REGISTERED') {
       const ready = await this.initPlivoWebRTC();
       if (!ready || this.getRegistrationState() !== 'REGISTERED' || !this.plivoClient || typeof this.plivoClient.call !== 'function') {
+        this._isDialInProgress = false;
         this.session.state = 'failed';
         this.session.errorMessage =
           'Telephony network unavailable: Plivo registration failed. Please check your internet connection or use Direct SIM.';
@@ -668,6 +673,7 @@ class TelephonyService {
       return { success: true, sessionId: this.session.sessionId || undefined };
     } catch (err: any) {
       console.error('[TelephonyService] Outbound dial error:', err);
+      this._isDialInProgress = false;
       this.audioAdapter.stopRingback();
       this.session.state = 'failed';
       this.session.errorMessage = err.message || 'Call placement failed';
@@ -751,6 +757,7 @@ class TelephonyService {
   }
 
   private handleCallEnd(reason: string = 'Call ended', isFailed: boolean = false): void {
+    this._isDialInProgress = false;
     // Monotonic Terminal State Lock: Once terminal, no subsequent event or callback can modify it
     if (this.isTerminalState()) {
       console.log(`[TelephonyService] handleCallEnd ignored: already in terminal state (${this.session.state})`);
@@ -929,6 +936,10 @@ class TelephonyService {
       this.micBoostCtx = ctx;
       if (ctx.state === 'suspended') {
         await ctx.resume();
+      }
+      if (ctx.state !== 'running') {
+        console.warn('[TelephonyService] AudioContext is not running (state:', ctx.state, '). Skipping mic boost to preserve audio.');
+        return;
       }
 
       const inputStream = new MediaStream([originalTrack]);

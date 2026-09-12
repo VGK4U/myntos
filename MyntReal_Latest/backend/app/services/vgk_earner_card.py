@@ -291,6 +291,13 @@ def compose_earner_card(
         payload = {}
 
     winner_title = payload.get("winner_title") or designation.upper() or "PROUD WINNER"
+    winner_title = winner_title.replace("★", "").replace("*", "").replace("⭐", "").strip()
+    if any(legacy in winner_title for legacy in ["SENIOR CHANNEL PARTNER", "LEAD CHANNEL PARTNER", "EXTENDED PARTNER", "CORE PARTNER"]):
+        winner_title = "CHANNEL PARTNER"
+    elif "ZONAL MANAGER" in winner_title:
+        winner_title = "MANAGER"
+    elif "DIRECTOR" in winner_title:
+        winner_title = "REGIONAL MANAGER"
     member_name = payload.get("member_name") or f"{name_title.strip() + '. ' if name_title else ''}{partner_name.strip()}".upper()
     todays_stage1_advance = float(payload.get("todays_stage1_advance") or gross_amount)
     todays_extra_comm = float(payload.get("todays_extra_comm") or 0.0)
@@ -378,12 +385,12 @@ def compose_earner_card(
     # Connectors
     draw.polygon([(290, ribbon_y + 40), (290, ribbon_y + 50), (305, ribbon_y + 40)], fill=(15, 23, 42))
     draw.polygon([(790, ribbon_y + 40), (790, ribbon_y + 50), (775, ribbon_y + 40)], fill=(15, 23, 42))
-    _draw_text_centered(draw, "★ CONGRATULATIONS ★", ribbon_y + 8, _font(True, 18), GOLD_LIGHT, shadow=False)
+    _draw_text_centered(draw, "CONGRATULATIONS", ribbon_y + 8, _font(True, 18), GOLD_LIGHT, shadow=False)
 
     # C. Cursive Congs Subtitle
     _draw_text_centered(draw, member_name, 270, _serif(True, 32), GOLD_LIGHT, shadow=False)
     _draw_rounded_rect(draw, 240, 340, 840, 380, 6, fill=(30, 58, 138))
-    _draw_text_centered(draw, "★ ON YOUR WELL-DESERVED ACHIEVEMENT! ★", 348, _font(True, 16), WHITE, shadow=False)
+    _draw_text_centered(draw, "ON YOUR WELL-DESERVED ACHIEVEMENT!", 348, _font(True, 16), WHITE, shadow=False)
 
     # ── VERTICAL STACK ZONE (y: 380 to 1700) ──────────────────────────────────
     # 1. Winner Profile Card
@@ -411,7 +418,7 @@ def compose_earner_card(
 
     # Golden Champion badge decoration at the bottom
     _draw_rounded_rect(draw, 390, wcard_y + 395, 690, wcard_y + 445, 20, fill=CARD_BG, outline=GOLD, width=2)
-    _draw_text_in_range(draw, "★ CHAMPION ★", 390, 690, wcard_y + 406, _font(True, 20), GOLD_LIGHT)
+    _draw_text_in_range(draw, "CHAMPION", 390, 690, wcard_y + 406, _font(True, 20), GOLD_LIGHT)
 
     # 2. Overall Earning Marquee Box
     marquee_y1 = 890
@@ -426,14 +433,14 @@ def compose_earner_card(
     draw.rectangle([942, marquee_y1 + 55, 950, marquee_y1 + 75], fill=(10, 25, 47))
 
     # Centerpiece text
-    _draw_text_centered(draw, "★ OVERALL EARNING ★", marquee_y1 + 15, _font(True, 16), GOLD_LIGHT, shadow=False)
+    _draw_text_centered(draw, "OVERALL EARNING", marquee_y1 + 15, _font(True, 16), GOLD_LIGHT, shadow=False)
     _draw_text_centered(draw, f"{fmt_inr(overall_earnings_val)}/-", marquee_y1 + 38, _font(True, 54), WHITE, shadow=True)
     _draw_text_centered(draw, "LIFETIME EARNING", marquee_y1 + 105, _font(True, 15), (156, 163, 175), shadow=False)
 
     # 3. Today's Payout Card
     payout_card_y = 1070
     _draw_rounded_rect(draw, 140, payout_card_y, 940, payout_card_y + 250, 14, fill=CARD_BG, outline=GOLD, width=2)
-    _draw_text_centered(draw, "★ TODAY'S PAYOUT ★", payout_card_y + 15, _font(True, 18), GOLD_LIGHT, shadow=False)
+    _draw_text_centered(draw, "TODAY'S PAYOUT", payout_card_y + 15, _font(True, 18), GOLD_LIGHT, shadow=False)
     
     # Breakups inside
     _draw_text_centered(draw, f"Stage 1 Advance: {fmt_inr(todays_stage1_advance)}/-", payout_card_y + 55, _font(True, 26), WHITE, shadow=False)
@@ -502,7 +509,7 @@ def compose_earner_card(
 
     # Bottom bar
     draw.rectangle([0, 1835, CARD_W, CARD_H], fill=NAVY)
-    _draw_text_centered(draw, "★ JOIN VGK4U TODAY TO START YOUR EARNING ★", 1860, _font(True, 20), GOLD_LIGHT, shadow=False)
+    _draw_text_centered(draw, "JOIN VGK4U TODAY TO START YOUR EARNING", 1860, _font(True, 20), GOLD_LIGHT, shadow=False)
 
     # 3. Save buffer
     buf = io.BytesIO()
@@ -1254,6 +1261,22 @@ def _do_celebration(db, entry_id: int):
      designation, whatsapp_number, vgk_cash_earned_total,
      _name_title, _gender, source_lead_id, bonanza_id) = row
 
+    # Authoritative canonical career designation lookup
+    try:
+        from app.services.vgk4u_career_service import VGK4UCareerService
+        cs = VGK4UCareerService.get_partner_career_status(db, partner_id)
+        if cs and cs.get('career_designation'):
+            designation = cs['career_designation']
+    except Exception:
+        pass
+    designation = (designation or 'Channel Partner').replace('★', '').replace('*', '').replace('⭐', '').strip()
+    if any(legacy in designation.upper() for legacy in ['SENIOR CHANNEL PARTNER', 'LEAD CHANNEL PARTNER', 'EXTENDED PARTNER', 'CORE PARTNER']):
+        designation = 'Channel Partner'
+    elif 'ZONAL MANAGER' in designation.upper():
+        designation = 'Manager'
+    elif 'DIRECTOR' in designation.upper():
+        designation = 'Regional Manager'
+
     def _resolve_title(nt, g):
         t = (nt or '').strip()
         if t:
@@ -1523,6 +1546,22 @@ def run_earner_celebration_batch(db, partner_id: int, entry_ids: list) -> dict:
     designation = p_row[5] or 'Channel Partner'
     _name_title = p_row[6]
     _gender = p_row[7]
+
+    # Authoritative canonical career designation lookup
+    try:
+        from app.services.vgk4u_career_service import VGK4UCareerService
+        cs = VGK4UCareerService.get_partner_career_status(db, partner_id)
+        if cs and cs.get('career_designation'):
+            designation = cs['career_designation']
+    except Exception:
+        pass
+    designation = (designation or 'Channel Partner').replace('★', '').replace('*', '').replace('⭐', '').strip()
+    if any(legacy in designation.upper() for legacy in ['SENIOR CHANNEL PARTNER', 'LEAD CHANNEL PARTNER', 'EXTENDED PARTNER', 'CORE PARTNER']):
+        designation = 'Channel Partner'
+    elif 'ZONAL MANAGER' in designation.upper():
+        designation = 'Manager'
+    elif 'DIRECTOR' in designation.upper():
+        designation = 'Regional Manager'
 
     location_parts = [p for p in [city, state] if p and str(p).strip()]
     location = ', '.join(location_parts) or 'Visakhapatnam'

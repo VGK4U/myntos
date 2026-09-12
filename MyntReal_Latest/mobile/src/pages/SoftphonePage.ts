@@ -63,6 +63,17 @@ interface CallItem {
   is_performance_call?: boolean;
   crm_lead_id?: string | number;
   called_did?: string;
+  customer_phone_display?: string;
+  raw_provider_from?: string;
+  normalized_provider_from?: string;
+  original_caller_number?: string;
+  forwarded_from_number?: string;
+  forwarded_from_display?: string;
+  forwarded_from_masked?: string;
+  is_forwarded?: boolean;
+  caller_identity_source?: string;
+  caller_identity_confidence?: string;
+  parent_call_identifier?: string;
 }
 
 interface CustomerContact {
@@ -1512,14 +1523,18 @@ export class SoftphonePage {
     const rawCustomerNum = c.raw_caller_number || c.customer_phone || '';
     const cleanPhone = (rawCustomerNum || '').replace(/\D/g, '').slice(-10);
     const name = this.escapeHtml(c.customer_name || 'Customer Lead');
-    const maskedPhone = this.escapeHtml(c.customer_phone_masked || this.maskPhone(cleanPhone));
+    const isUnresolved = c.caller_identity_source === 'unresolved_forwarded' || c.customer_phone_masked === 'Unknown / Not provided' || c.customer_phone_display === 'Unknown / Not provided';
+    const maskedPhone = isUnresolved ? '<span style="color:#94a3b8; font-style:italic;">Unknown / Not provided</span>' : this.escapeHtml(c.customer_phone_masked || this.maskPhone(cleanPhone));
     const initial = (name.replace(/[^a-zA-Z]/g, '') || 'C').slice(0, 2).toUpperCase();
+
+    const isForwarded = Boolean(c.is_forwarded || c.forwarded_from_number);
+    const fwdMasked = c.forwarded_from_masked || c.forwarded_from_display || (c.forwarded_from_number ? this.maskPhone(c.forwarded_from_number) : '');
 
     // Direction Pill
     const isIncoming = (c.direction === 'inbound') || ['inbound_answered', 'missed_by_staff', 'voicemail'].includes(c.computed_type || '');
     const dirBadgeColor = isIncoming ? 'rgba(34, 197, 94, 0.2)' : 'rgba(59, 130, 246, 0.2)';
     const dirTextColor = isIncoming ? '#4ade80' : '#60a5fa';
-    const dirText = isIncoming ? '↙ IN' : '↗ OUT';
+    const dirText = isIncoming ? (isForwarded ? '↙ FWD IN' : '↙ IN') : '↗ OUT';
 
     // Type Badge
     let typeBadgeBg = 'rgba(148, 163, 184, 0.2)';
@@ -1529,11 +1544,11 @@ export class SoftphonePage {
     if (c.computed_type === 'inbound_answered') {
       typeBadgeBg = 'rgba(34, 197, 94, 0.25)';
       typeBadgeColor = '#86efac';
-      typeText = 'Incoming';
+      typeText = isForwarded ? 'Fwd Answered' : 'Incoming';
     } else if (c.computed_type === 'missed_by_staff') {
       typeBadgeBg = 'rgba(239, 68, 68, 0.25)';
       typeBadgeColor = '#fca5a5';
-      typeText = 'Missed';
+      typeText = isForwarded ? 'Fwd Missed' : 'Missed';
     } else if (c.computed_type === 'outbound_answered') {
       typeBadgeBg = 'rgba(59, 130, 246, 0.25)';
       typeBadgeColor = '#93c5fd';
@@ -1633,6 +1648,11 @@ export class SoftphonePage {
 
               <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; color: #94a3b8;">
                 <span style="font-family: monospace;">${maskedPhone}</span>
+                ${isForwarded && fwdMasked ? `
+                  <span style="font-size: 9.5px; padding: 1px 5px; border-radius: 4px; background: rgba(234, 179, 8, 0.15); border: 1px solid rgba(234, 179, 8, 0.3); color: #facc15; font-family: monospace;" title="Forwarded From">
+                    <i class="fas fa-share fa-xs" style="margin-right: 2px;"></i>Fwd: ${this.escapeHtml(fwdMasked)}
+                  </span>
+                ` : ''}
                 <span>·</span>
                 <span>${timeFormatted}</span>
                 ${c.operator_name ? `<span>· 👤 ${this.escapeHtml(c.operator_name)}</span>` : ''}
@@ -1654,9 +1674,15 @@ export class SoftphonePage {
               <i class="fas fa-clock-rotate-left fa-xs"></i>
             </button>
 
-            <button class="call-action-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(name)}" title="Call Now" style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-              <i class="fas fa-phone fa-xs"></i>
-            </button>
+            ${(!isUnresolved && cleanPhone && cleanPhone.length >= 6 && cleanPhone !== 'unresolved') ? `
+              <button class="call-action-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(name)}" title="Call Now" style="width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-phone fa-xs"></i>
+              </button>
+            ` : `
+              <button class="call-action-btn disabled" title="Customer number not provided" style="width: 34px; height: 34px; border-radius: 50%; background: #334155; border: none; color: #64748b; cursor: not-allowed; display: flex; align-items: center; justify-content: center; opacity: 0.5;" disabled>
+                <i class="fas fa-phone-slash fa-xs"></i>
+              </button>
+            `}
           </div>
         </div>
       </div>

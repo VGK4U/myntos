@@ -24,7 +24,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 from app.core.database import get_db
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
 from app.core.security import get_current_user_hybrid
-from app.models.staff import StaffEmployee
+from app.models.staff import StaffEmployee, StaffDepartment
 from app.models.crm import CRMLead
 from app.models.telephony_call_flow import (
     TelephonyCallFlow, TelephonyCallFlowVersion, TelephonyRingGroup,
@@ -461,9 +461,23 @@ async def plivo_inbound_answer(
     """
     try:
         form_data = await request.form()
+        form_dict = dict(form_data)
+        headers_dict = dict(request.headers)
+
         caller_phone = form_data.get("From", "")
         called_did = form_data.get("To", "")
         call_uuid = form_data.get("CallUUID", "")
+        forwarded_from = (
+            form_data.get("ForwardedFrom")
+            or form_data.get("forwarded_from")
+            or headers_dict.get("sip-h-diversion")
+            or headers_dict.get("SIP-H-Diversion")
+            or headers_dict.get("diversion")
+            or headers_dict.get("Diversion")
+            or headers_dict.get("x-ph-forwarded-from")
+            or headers_dict.get("X-PH-Forwarded-From")
+            or ""
+        )
         session_id_param = (
             request.query_params.get("session_id")
             or form_data.get("session_id")
@@ -478,7 +492,10 @@ async def plivo_inbound_answer(
             called_did=called_did,
             provider_call_id=call_uuid,
             base_api_url=base_url,
-            call_session_id=session_id_param
+            call_session_id=session_id_param,
+            raw_payload=form_dict,
+            headers=headers_dict,
+            forwarded_from=forwarded_from
         )
         return Response(content=xml_str, media_type="application/xml")
     except Exception as e:
@@ -1218,11 +1235,31 @@ def list_staff_destinations(
 def _mask_phone(p: Optional[str]) -> str:
     if not p:
         return "—"
+    p_lower = str(p).strip().lower()
+    if p_lower in ("unresolved", "unknown"):
+        return "Unknown / Not provided"
+    if p_lower in ("none", "null", "-", "—"):
+        return "—"
     clean = re.sub(r'\D', '', str(p))
     if len(clean) < 6:
         return str(p)
     c10 = clean[-10:]
     return f"+91 {c10[:2]}••••{c10[-4:]}"
+
+
+def _format_phone(p: Optional[str]) -> str:
+    if not p:
+        return "—"
+    p_lower = str(p).strip().lower()
+    if p_lower in ("unresolved", "unknown"):
+        return "Unknown / Not provided"
+    if p_lower in ("none", "null", "-", "—"):
+        return "—"
+    clean = re.sub(r'\D', '', str(p))
+    if len(clean) >= 10:
+        c10 = clean[-10:]
+        return f"+91 {c10[:5]} {c10[5:]}"
+    return str(p)
 
 
 def _resolve_contacts_batch(db: Session, phone_list: List[str], company_id: Optional[int] = None) -> Dict[str, Dict[str, Any]]:
@@ -1703,34 +1740,6 @@ def list_incoming_calls(
             query = query.filter(VoIPCallSession.company_id == company_id)
         query = query.filter(VoIPCallSession.direction == "inbound")
         query = query.filter(
-            or_(
-                VoIPCallSession.operator_id.is_(None),
-                VoIPCallSession.status.in_(["no_answer", "missed", "ringing", "voicemail", "failed"]),
-                VoIPCallSession.duration_seconds == 0
-            )
-        )
-        conn_subq = db.query(
-            func.distinct(func.coalesce(VoIPCallSession.customer_phone, VoIPCallSession.destination_number))
-        ).filter(
-            or_(
-                and_(VoIPCallSession.direction == 'outbound', VoIPCallSession.duration_seconds > 0),
-                and_(VoIPCallSession.direction == 'inbound', VoIPCallSession.operator_id.isnot(None), VoIPCallSession.duration_seconds > 0)
-            )
-        )
-        if not is_supreme:
-            conn_subq = conn_subq.filter(VoIPCallSession.company_id == company_id)
-
-        conn_tuples = conn_subq.all()
-        conn_clean_set = set([re.sub(r'\D', '', p[0] or '')[-10:] for p in conn_tuples if p[0]])
-        if conn_clean_set:
-            excl_filters = []
-            for c_num in list(conn_clean_set)[:500]:
-                excl_filters.append(VoIPCallSession.customer_phone.ilike(f"%{c_num}%"))
-                excl_filters.append(VoIPCallSession.destination_number.ilike(f"%{c_num}%"))
-            if excl_filters:
-                query = query.filter(not_(or_(*excl_filters)))
-
-        query = query.filter(
             VoIPCallSession.created_at >= effective_start_dt,
             VoIPCallSession.created_at < effective_end_dt
         )
@@ -2045,12 +2054,58 @@ def list_incoming_calls(
             meta_dict.get("dialer_campaign_id") is not None
         )
 
+        caller_id_meta = meta_dict.get("caller_identity") or {}
+
+        raw_provider_from = caller_id_meta.get("raw_provider_from") or c.customer_phone or ""
+        normalized_provider_from = caller_id_meta.get("normalized_provider_from") or re.sub(r'\D', '', raw_provider_from)
+        original_caller_number = caller_id_meta.get("original_caller_number")
+        forwarded_from_number = caller_id_meta.get("forwarded_from_number")
+        called_plivo_did = caller_id_meta.get("called_plivo_did") or c.caller_id or c.destination_number
+        provider_call_uuid = caller_id_meta.get("provider_call_uuid") or c.provider_call_id
+        parent_call_identifier = caller_id_meta.get("parent_call_identifier")
+        caller_identity_source = caller_id_meta.get("caller_identity_source")
+        caller_identity_confidence = caller_id_meta.get("caller_identity_confidence")
+
+        if not caller_identity_source:
+            if dir_lower == "inbound":
+                caller_identity_source = "direct_provider_from"
+                caller_identity_confidence = "high"
+                original_caller_number = normalized_provider_from
+            else:
+                caller_identity_source = "direct_provider_from"
+                caller_identity_confidence = "high"
+
+        is_forwarded = bool(forwarded_from_number) or caller_identity_source in (
+            "forwarded_original_cli", "forwarded_from_metadata", "unresolved_forwarded"
+        )
+
+        # Truthful Customer Number & Display Resolution (Sections 21, 23, 24)
+        if caller_identity_source == "unresolved_forwarded":
+            customer_phone_display = "Unknown / Not provided"
+            customer_phone_masked = "Unknown / Not provided"
+            effective_customer_num = None
+        elif original_caller_number:
+            effective_customer_num = str(original_caller_number)
+            customer_phone_display = _format_phone(effective_customer_num)
+            customer_phone_masked = _mask_phone(effective_customer_num)
+        else:
+            effective_customer_num = raw_customer_num if raw_customer_num != "unresolved" else None
+            customer_phone_display = _format_phone(effective_customer_num) if effective_customer_num else "Unknown / Not provided"
+            customer_phone_masked = _mask_phone(effective_customer_num) if effective_customer_num else "Unknown / Not provided"
+
+        forwarded_from_display = _format_phone(forwarded_from_number) if forwarded_from_number else None
+        forwarded_from_masked = _mask_phone(forwarded_from_number) if forwarded_from_number else None
+
         if is_dialer:
             call_from = "Auto Dialer"
             call_from_badge = "primary"
             call_from_icon = "fa-robot"
         elif dir_lower == "inbound":
-            if meta_dict.get("ivr_path") or meta_dict.get("ivr_selections") or method_tag in ("inbound_ivr", "ivr"):
+            if is_forwarded:
+                call_from = "Forwarded Inbound"
+                call_from_badge = "warning"
+                call_from_icon = "fa-share"
+            elif meta_dict.get("ivr_path") or meta_dict.get("ivr_selections") or method_tag in ("inbound_ivr", "ivr"):
                 call_from = "Inbound IVR"
                 call_from_badge = "warning"
                 call_from_icon = "fa-sitemap"
@@ -2110,7 +2165,8 @@ def list_incoming_calls(
             "raw_caller_number": raw_customer_num,
             "customer_phone": raw_customer_num,
             "destination_number": c.destination_number,
-            "customer_phone_masked": _mask_phone(raw_customer_num),
+            "customer_phone_display": customer_phone_display,
+            "customer_phone_masked": customer_phone_masked,
             "customer_name": (contact_match['name'] if contact_match else None) or meta_dict.get("customer_name") or meta_dict.get("contact_name") or "Guest Caller",
             "crm_lead_id": contact_match['id'] if (contact_match and contact_match.get('source') == 'CRM Lead') else None,
             "contact_source": contact_match['source'] if contact_match else None,
@@ -2129,6 +2185,16 @@ def list_incoming_calls(
             "lead_scope_label": lead_sc_label,
             "is_performance_call": True,
             "source": source_label,
+            "raw_provider_from": raw_provider_from,
+            "normalized_provider_from": normalized_provider_from,
+            "original_caller_number": original_caller_number,
+            "forwarded_from_number": forwarded_from_number,
+            "forwarded_from_display": forwarded_from_display,
+            "forwarded_from_masked": forwarded_from_masked,
+            "is_forwarded": is_forwarded,
+            "caller_identity_source": caller_identity_source,
+            "caller_identity_confidence": caller_identity_confidence,
+            "parent_call_identifier": parent_call_identifier,
             "started_at": started_iso,
             "answered_at": c.answered_at.isoformat() if c.answered_at else None,
             "ended_at": c.ended_at.isoformat() if c.ended_at else None,
@@ -2224,7 +2290,18 @@ def list_incoming_calls(
             "raw_caller_number": raw_customer_num,
             "customer_phone": raw_customer_num,
             "destination_number": raw_customer_num,
+            "customer_phone_display": _format_phone(raw_customer_num),
             "customer_phone_masked": _mask_phone(raw_customer_num),
+            "raw_provider_from": raw_customer_num,
+            "normalized_provider_from": clean_10,
+            "original_caller_number": clean_10,
+            "forwarded_from_number": None,
+            "forwarded_from_display": None,
+            "forwarded_from_masked": None,
+            "is_forwarded": False,
+            "caller_identity_source": "direct_provider_from",
+            "caller_identity_confidence": "high",
+            "parent_call_identifier": None,
             "customer_name": effective_scl_name,
             "crm_lead_id": s.matched_lead_id or (contact_match['id'] if (contact_match and contact_match.get('source') == 'CRM Lead') else None),
             "contact_source": contact_match['source'] if contact_match else ('CRM Lead' if s.matched_lead_id else None),
@@ -2948,6 +3025,8 @@ def get_incoming_call_detail(
         "action_notes": meta.get("action_notes", ""),
         "action_by": meta.get("action_by", ""),
         "action_at": meta.get("action_at", ""),
+        "caller_identity": meta.get("caller_identity"),
+        "raw_provider_payload": meta.get("raw_provider_payload"),
         "execution_trace": exec_log.traversed_nodes if exec_log else [],
         "final_outcome": exec_log.final_outcome if exec_log else session.status
     }
@@ -2988,4 +3067,349 @@ async def plivo_ivr_dial_complete(
     <Record maxLength="120" finishOnKey="#" action="{voicemail_url}" />
     <Hangup />
 </Response>""", media_type="application/xml")
+
+
+# ── 8. DIRECT ROUTING (CONFIGURABLE FIRST-STAGE IVR) ──────────────────────────
+
+@router.get("/departments")
+def list_company_departments(
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(require_telephony_permission("telephony.call_flow.view"))
+):
+    """List active departments for Direct Routing configuration"""
+    depts = db.query(StaffDepartment).filter(
+        StaffDepartment.is_active == True
+    ).order_by(StaffDepartment.name.asc()).all()
+    return [
+        {
+            "id": d.id,
+            "name": d.name,
+            "department_code": d.department_code or f"DEPT{d.id:03d}",
+            "is_active": d.is_active
+        }
+        for d in depts
+    ]
+
+
+@router.get("/direct-routing")
+def get_direct_routing_config(
+    flow_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(require_telephony_permission("telephony.call_flow.view"))
+):
+    """
+    Retrieves current direct routing options (draft and published) for the flow or company.
+    """
+    company_id = getattr(current_user, 'base_company_id', 1) or 1
+
+    flow = None
+    if flow_id:
+        flow = db.query(TelephonyCallFlow).filter(
+            TelephonyCallFlow.id == flow_id,
+            TelephonyCallFlow.company_id == company_id
+        ).first()
+
+    if not flow:
+        flow = db.query(TelephonyCallFlow).filter(
+            TelephonyCallFlow.company_id == company_id
+        ).order_by(TelephonyCallFlow.id.asc()).first()
+
+    if not flow:
+        flow = TelephonyCallFlow(
+            company_id=company_id,
+            name="Primary Inbound Flow",
+            did_number="+918031728899",
+            status="draft",
+            created_by_staff_id=current_user.id
+        )
+        db.add(flow)
+        db.commit()
+        db.refresh(flow)
+
+    draft_version = db.query(TelephonyCallFlowVersion).filter(
+        TelephonyCallFlowVersion.flow_id == flow.id,
+        TelephonyCallFlowVersion.status == 'draft'
+    ).order_by(TelephonyCallFlowVersion.id.desc()).first()
+
+    published_version = None
+    if flow.current_published_version_id:
+        published_version = db.query(TelephonyCallFlowVersion).filter(
+            TelephonyCallFlowVersion.id == flow.current_published_version_id
+        ).first()
+
+    draft_opts = []
+    if draft_version and draft_version.flow_data and isinstance(draft_version.flow_data, dict):
+        draft_opts = draft_version.flow_data.get("direct_routing", [])
+
+    published_opts = []
+    if published_version and published_version.flow_data and isinstance(published_version.flow_data, dict):
+        published_opts = published_version.flow_data.get("direct_routing", [])
+
+    return {
+        "flow_id": flow.id,
+        "flow_name": flow.name,
+        "did_number": flow.did_number,
+        "current_published_version_id": flow.current_published_version_id,
+        "draft_options": draft_opts,
+        "published_options": published_opts
+    }
+
+
+@router.put("/direct-routing/draft")
+def save_direct_routing_draft(
+    payload: Dict[str, Any] = Body(...),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(require_telephony_permission("telephony.call_flow.edit"))
+):
+    """
+    Saves direct routing options to the draft version of the flow.
+    Validates DTMF keys, destinations, and tenant boundaries.
+    """
+    company_id = getattr(current_user, 'base_company_id', 1) or 1
+    flow_id = payload.get("flow_id")
+    raw_options = payload.get("options", [])
+
+    flow = None
+    if flow_id:
+        flow = db.query(TelephonyCallFlow).filter(
+            TelephonyCallFlow.id == flow_id,
+            TelephonyCallFlow.company_id == company_id
+        ).first()
+
+    if not flow:
+        flow = db.query(TelephonyCallFlow).filter(
+            TelephonyCallFlow.company_id == company_id
+        ).order_by(TelephonyCallFlow.id.asc()).first()
+
+    if not flow:
+        flow = TelephonyCallFlow(
+            company_id=company_id,
+            name="Primary Inbound Flow",
+            did_number="+918031728899",
+            status="draft",
+            created_by_staff_id=current_user.id
+        )
+        db.add(flow)
+        db.commit()
+        db.refresh(flow)
+
+    active_keys = set()
+    validated_options = []
+    for idx, opt in enumerate(raw_options, 1):
+        dtmf = str(opt.get("dtmf_key", "")).strip()
+        if not dtmf or (not dtmf.isalnum() and dtmf not in ('*', '#')):
+            raise HTTPException(status_code=400, detail=f"Invalid DTMF key '{dtmf}'. Must be 0-9, *, or #.")
+
+        is_active = bool(opt.get("is_active", True))
+        if is_active:
+            if dtmf in active_keys:
+                raise HTTPException(status_code=400, detail=f"Duplicate active DTMF key '{dtmf}' is not allowed.")
+            active_keys.add(dtmf)
+
+        dest_type = str(opt.get("destination_type", "staff")).strip().lower()
+        dest_id = opt.get("destination_id")
+        if not dest_id:
+            raise HTTPException(status_code=400, detail=f"Option for key '{dtmf}' is missing destination_id.")
+
+        display_name = str(opt.get("display_name", "")).strip()
+
+        if dest_type == "staff":
+            emp = db.query(StaffEmployee).filter(
+                StaffEmployee.id == dest_id,
+                StaffEmployee.status.in_(['active', 'ACTIVE']),
+                StaffEmployee.is_deleted == False
+            ).first()
+            if not emp:
+                raise HTTPException(status_code=400, detail=f"Selected staff ID {dest_id} does not exist or is not active.")
+
+            allowed_comps = [emp.base_company_id]
+            if getattr(emp, 'data_companies', None):
+                allowed_comps.extend(emp.data_companies if isinstance(emp.data_companies, list) else [])
+            if company_id not in allowed_comps and emp.base_company_id != company_id:
+                raise HTTPException(status_code=403, detail=f"Staff member {emp.full_name} does not belong to authorized company {company_id}.")
+
+            if not display_name:
+                display_name = emp.full_name
+
+        elif dest_type == "department":
+            dept = db.query(StaffDepartment).filter(
+                StaffDepartment.id == dest_id,
+                StaffDepartment.is_active == True
+            ).first()
+            if not dept:
+                raise HTTPException(status_code=400, detail=f"Selected department ID {dest_id} does not exist or is not active.")
+            if not display_name:
+                display_name = dept.name
+        else:
+            raise HTTPException(status_code=400, detail=f"Invalid destination_type '{dest_type}'. Must be 'staff' or 'department'.")
+
+        ring_timeout = int(opt.get("ring_timeout") or 20)
+        if ring_timeout < 5 or ring_timeout > 60:
+            ring_timeout = 20
+
+        order_val = int(opt.get("order") or idx)
+
+        validated_options.append({
+            "dtmf_key": dtmf,
+            "destination_type": dest_type,
+            "destination_id": dest_id,
+            "display_name": display_name,
+            "ring_timeout": ring_timeout,
+            "order": order_val,
+            "is_active": is_active,
+            "fallback_action": "main_ivr"
+        })
+
+    draft = db.query(TelephonyCallFlowVersion).filter(
+        TelephonyCallFlowVersion.flow_id == flow.id,
+        TelephonyCallFlowVersion.status == 'draft'
+    ).order_by(TelephonyCallFlowVersion.id.desc()).first()
+
+    if not draft:
+        last_v = db.query(TelephonyCallFlowVersion).filter(
+            TelephonyCallFlowVersion.flow_id == flow.id
+        ).order_by(TelephonyCallFlowVersion.version_number.desc()).first()
+        next_num = (last_v.version_number + 1) if last_v else 1
+
+        draft = TelephonyCallFlowVersion(
+            flow_id=flow.id,
+            company_id=company_id,
+            version_number=next_num,
+            status='draft',
+            flow_data={"nodes": [], "edges": [], "direct_routing": validated_options}
+        )
+        db.add(draft)
+    else:
+        curr_data = dict(draft.flow_data or {})
+        curr_data["direct_routing"] = validated_options
+        draft.flow_data = curr_data
+        draft.updated_at = get_indian_time()
+
+    db.commit()
+    db.refresh(draft)
+    return {
+        "status": "success",
+        "message": "Direct routing draft saved successfully",
+        "draft_options": validated_options
+    }
+
+
+@router.post("/direct-routing/publish")
+def publish_direct_routing_config(
+    payload: Dict[str, Any] = Body(...),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(require_telephony_permission("telephony.call_flow.publish"))
+):
+    """
+    Publishes direct routing options to an active, immutable flow version.
+    Makes the configuration live immediately for inbound calls.
+    """
+    company_id = getattr(current_user, 'base_company_id', 1) or 1
+    flow_id = payload.get("flow_id")
+    raw_options = payload.get("options")
+
+    flow = None
+    if flow_id:
+        flow = db.query(TelephonyCallFlow).filter(
+            TelephonyCallFlow.id == flow_id,
+            TelephonyCallFlow.company_id == company_id
+        ).first()
+
+    if not flow:
+        flow = db.query(TelephonyCallFlow).filter(
+            TelephonyCallFlow.company_id == company_id
+        ).order_by(TelephonyCallFlow.id.asc()).first()
+
+    if not flow:
+        raise HTTPException(status_code=404, detail="Call flow not found")
+
+    if raw_options is not None:
+        save_direct_routing_draft(payload, db, current_user)
+
+    draft = db.query(TelephonyCallFlowVersion).filter(
+        TelephonyCallFlowVersion.flow_id == flow.id,
+        TelephonyCallFlowVersion.status == 'draft'
+    ).order_by(TelephonyCallFlowVersion.id.desc()).first()
+
+    if not draft:
+        raise HTTPException(status_code=400, detail="No draft configuration found to publish.")
+
+    prior_published = db.query(TelephonyCallFlowVersion).filter(
+        TelephonyCallFlowVersion.flow_id == flow.id,
+        TelephonyCallFlowVersion.status == 'published'
+    ).all()
+    for p in prior_published:
+        p.status = 'superseded'
+        p.updated_at = get_indian_time()
+
+    draft.status = 'published'
+    draft.published_at = get_indian_time()
+    draft.published_by_staff_id = current_user.id
+    draft.updated_at = get_indian_time()
+
+    flow.current_published_version_id = draft.id
+    flow.status = 'published'
+    flow.updated_at = get_indian_time()
+
+    db.commit()
+    db.refresh(flow)
+    db.refresh(draft)
+
+    return {
+        "status": "success",
+        "message": f"Direct routing published successfully as version {draft.version_number}",
+        "version_number": draft.version_number,
+        "published_options": draft.flow_data.get("direct_routing", [])
+    }
+
+
+@router.api_route("/plivo/ivr/agent-dial-complete", methods=["GET", "POST"])
+async def plivo_ivr_agent_dial_complete(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Invoked by Plivo when a direct staff <Dial> completes.
+    If answered/completed -> Hangup.
+    If unanswered -> returns unavailable message + Main IVR.
+    """
+    form_data = {}
+    if request.method == "POST":
+        try:
+            form_data = await request.form()
+        except Exception:
+            pass
+
+    query_params = dict(request.query_params)
+    xml_response = CallFlowInterpreter.handle_agent_dial_complete(
+        db=db,
+        form_data=dict(form_data),
+        query_params=query_params
+    )
+    return Response(content=xml_response, media_type="application/xml")
+
+
+@router.get("/my-extension")
+def get_my_extension(
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Returns the dynamic IVR extension assigned to the logged-in staff employee
+    in the published call flow version.
+    """
+    company_id = getattr(current_user, 'base_company_id', 1) or 1
+    ext = CallFlowInterpreter.get_staff_configured_extension(
+        db=db,
+        company_id=company_id,
+        staff_id=current_user.id
+    )
+    return {
+        "success": True,
+        "staff_id": current_user.id,
+        "extension": ext,
+        "company_id": company_id
+    }
+
+
 

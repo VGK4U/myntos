@@ -47,6 +47,11 @@ export interface QueueItem {
   last_contact_days: number | null;
   queue_priority: QueuePriority;
   slot_type: 'assigned' | 'unassigned';
+  is_hot_lead?: boolean;
+  is_fresh_lead?: boolean;
+  temperature?: 'hot' | 'fresh' | 'standard';
+  dial_count?: number;
+  has_connected?: boolean;
 }
 
 export interface DialerSession {

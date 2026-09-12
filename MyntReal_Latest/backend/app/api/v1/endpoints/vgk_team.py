@@ -171,9 +171,10 @@ def _build_tree_node(
             leads_by_status = {}
 
     rpos = (bulk_rpos_map or {}).get(partner.id) or {}
+    resolved_desig = rpos.get('career_designation') or getattr(partner, 'vgk4u_current_designation', None) or 'Channel Partner'
     resolved_stars = rpos.get('stars', 1)
     resolved_slab = float(rpos.get('rank_slab_pct', 5.00) or 5.00)
-    resolved_display = rpos.get('rank_display', '1★ Channel Partner')
+    resolved_display = rpos.get('rank_display') or resolved_desig
     _lm = (inst_lead_map or {}).get(partner.id, {"total_files": 0, "installed_files": 0})
     cm_earning = float((cm_income_map or {}).get(partner.id, 0.0))
 
@@ -186,6 +187,10 @@ def _build_tree_node(
         "vgk_role": partner.vgk_role,
         "rank_num": resolved_stars,
         "rank_display": resolved_display,
+        "career_designation": resolved_desig,
+        "current_designation": resolved_desig,
+        "personal_prod_qualification": rpos.get('personal_prod_qualification') or getattr(partner, 'vgk4u_personal_prod_qualification', None) or 'None',
+        "effective_personal_producer_rate": rpos.get('effective_personal_producer_rate', 0.0),
         "rank_slab_pct": resolved_slab,
         "current_month_earning": cm_earning,
         "eligible_files_total": _lm["total_files"],
@@ -635,8 +640,8 @@ def list_vgk_members(
     _CP_TIER_LABELS = {
         'none':               '—',
         'channel_partner':    'Channel Partner',
-        'sr_channel_partner': 'Sr. Channel Partner',
-        'official_partner':   'Official Partner',
+        'sr_channel_partner': 'Channel Partner',
+        'official_partner':   'Channel Partner',
     }
     coupon_map: dict = {}
     activ_map: dict = {}
@@ -771,38 +776,19 @@ def list_vgk_members(
 
         # Attach V26 Authoritative Rank Position
         rpos = bulk_rpos_map.get(m.id) or {}
-        comm_pct = float(getattr(m, 'commission_pct', 0.0) or 0.0)
+        resolved_desig = rpos.get('career_designation') or getattr(m, 'vgk4u_current_designation', None) or 'Channel Partner'
+        resolved_display = resolved_desig
         resolved_stars = rpos.get('stars', 1)
         resolved_slab = float(rpos.get('rank_slab_pct', 5.00) or 5.00)
-        resolved_display = rpos.get('rank_display', '1★ Channel Partner')
-        resolved_desig = rpos.get('current_designation', 'Channel Partner')
 
-        if comm_pct >= 8.5:
-            resolved_stars = max(resolved_stars, 5)
-            resolved_slab = max(resolved_slab, 8.50)
-            resolved_display = '5★ Director'
-            resolved_desig = 'Director'
-        elif comm_pct >= 8.25:
-            resolved_stars = max(resolved_stars, 4)
-            resolved_slab = max(resolved_slab, 8.25)
-            resolved_display = '4★ Regional Manager'
-            resolved_desig = 'Regional Manager'
-        elif comm_pct >= 7.5:
-            resolved_stars = max(resolved_stars, 3)
-            resolved_slab = max(resolved_slab, 7.50)
-            resolved_display = '3★ Zonal Manager'
-            resolved_desig = 'Zonal Manager'
-        elif comm_pct >= 6.5:
-            resolved_stars = max(resolved_stars, 2)
-            resolved_slab = max(resolved_slab, 6.50)
-            resolved_display = '2★ Manager'
-            resolved_desig = 'Manager'
-
+        d['career_designation']    = resolved_desig
+        d['current_designation']   = resolved_desig
+        d['current_rank']          = resolved_desig
+        d['rank_display']          = resolved_display
+        d['personal_prod_qualification'] = rpos.get('personal_prod_qualification') or getattr(m, 'vgk4u_personal_prod_qualification', None) or 'None'
+        d['effective_personal_producer_rate'] = rpos.get('effective_personal_producer_rate', 0.0)
         d['rank_code']             = rpos.get('rank_code', f'RANK_{resolved_stars}')
         d['rank_num']              = resolved_stars
-        d['current_rank']          = rpos.get('current_rank', f'Rank {resolved_stars} — {resolved_desig}')
-        d['current_designation']   = resolved_desig
-        d['rank_display']          = resolved_display
         d['rank_slab_pct']         = resolved_slab
         d['activated_team_cnt']    = max(rpos.get('activated_team', 0), activ_map.get(m.id, 0))
         d['next_rank']             = rpos.get('next_rank')
@@ -1954,7 +1940,11 @@ def get_vgk_member_tree(
     # Attach rank data to upline
     for u in upline:
         urpos = bulk_rpos_map.get(u["id"]) or {}
-        u["rank_display"] = urpos.get("rank_display", "1★ Channel Partner")
+        u["rank_display"] = urpos.get("rank_display", "Channel Partner")
+        u["career_designation"] = urpos.get("career_designation", "Channel Partner")
+        u["current_designation"] = urpos.get("current_designation", "Channel Partner")
+        u["personal_prod_qualification"] = urpos.get("personal_prod_qualification", "None")
+        u["effective_personal_producer_rate"] = urpos.get("effective_personal_producer_rate", 0.0)
         u["rank_slab_pct"] = float(urpos.get("rank_slab_pct", 5.00) or 5.00)
         u["rank_num"] = urpos.get("stars", 1)
 
@@ -1991,7 +1981,11 @@ def get_vgk_member_tree(
     # Attach performance data to root member
     member_dict = member.to_dict()
     mem_rpos = bulk_rpos_map.get(member.id) or {}
-    member_dict["rank_display"] = mem_rpos.get("rank_display", "1★ Channel Partner")
+    member_dict["rank_display"] = mem_rpos.get("rank_display", "Channel Partner")
+    member_dict["career_designation"] = mem_rpos.get("career_designation", "Channel Partner")
+    member_dict["current_designation"] = mem_rpos.get("current_designation", "Channel Partner")
+    member_dict["personal_prod_qualification"] = mem_rpos.get("personal_prod_qualification", "None")
+    member_dict["effective_personal_producer_rate"] = mem_rpos.get("effective_personal_producer_rate", 0.0)
     member_dict["rank_slab_pct"] = float(mem_rpos.get("rank_slab_pct", 5.00) or 5.00)
     member_dict["rank_num"] = mem_rpos.get("stars", 1)
     member_dict["current_month_earning"] = float(cm_income_map.get(member.id, 0.0))
@@ -5557,6 +5551,9 @@ def member_earnings_dashboard(
     from app.services.vgk_earner_card import get_bulk_partner_potential_earning
     pot_map = get_bulk_partner_potential_earning(db, member_ids, exclude_l1=False) if member_ids else {}
 
+    from app.services.vgk4u_career_service import VGK4UCareerService
+    bulk_career_map = VGK4UCareerService.get_bulk_partner_career_status(db, member_ids) if member_ids else {}
+
     items = []
     for m in members:
         p = pts_map.get(m.id, {})
@@ -5622,42 +5619,16 @@ def member_earnings_dashboard(
         net_earning = round(net_earning, 2)
         _lvl = lvl_map.get(m.id, {})
         
-        active_team_count = team_network_map.get(m.id, {}).get("total", 0) if team_network_map else 0
-        installed_cnt = installed_files_map.get(m.id, 0)
-        curr_pos = getattr(m, 'current_position', None) or 'Channel Partner'
-        if curr_pos and curr_pos not in ('Channel Partner', 'none'):
-            if 'Director' in curr_pos:
-                p_stars = 5
-                p_rank_display = '5★ Director'
-            elif 'Regional' in curr_pos:
-                p_stars = 4
-                p_rank_display = '4★ Regional Manager'
-            elif 'Zonal' in curr_pos or 'Senior' in curr_pos or 'Sr.' in curr_pos:
-                p_stars = 3
-                p_rank_display = '3★ Senior Channel Partner'
-            elif 'Manager' in curr_pos:
-                p_stars = 2
-                p_rank_display = '2★ Manager'
-            else:
-                p_stars = 1
-                p_rank_display = curr_pos
-        elif active_team_count >= 50:
-            p_stars = 5
-            p_rank_display = '5★ Director'
-        elif active_team_count >= 25:
-            p_stars = 4
-            p_rank_display = '4★ Regional Manager'
-        elif active_team_count >= 10 or installed_cnt >= 10:
-            p_stars = 3
-            p_rank_display = '3★ Senior Channel Partner'
-        elif active_team_count >= 2 or installed_cnt >= 3:
-            p_stars = 2
-            p_rank_display = '2★ Channel Partner'
-        else:
-            p_stars = 1
-            p_rank_display = 'Channel Partner'
+        cs = bulk_career_map.get(m.id, {})
+        c_desig = cs.get('career_designation') or getattr(m, 'vgk4u_current_designation', None) or 'Channel Partner'
+        p_qual = cs.get('personal_prod_qualification') or getattr(m, 'vgk4u_personal_prod_qualification', None) or 'None'
+        p_rate = cs.get('effective_personal_producer_rate', 0.0)
+        p_stars = 0
+        p_rank_display = c_desig
+        curr_pos = c_desig
 
         senior_info = parent_map.get(m.parent_partner_id, {}) if m.parent_partner_id else {}
+        direct_sponsor_name = senior_info.get("partner_name")
 
         items.append({
             "id":                     m.id,
@@ -5668,7 +5639,8 @@ def member_earnings_dashboard(
             "is_active":              m.is_active,
             "logo_path":              m.logo_path,
             "passport_photo":         passport_photo_map.get(m.id) or m.logo_path,
-            "senior_name":            senior_info.get("partner_name"),
+            "senior_name":            direct_sponsor_name,
+            "direct_sponsor_name":    direct_sponsor_name,
             "senior_phone":           senior_info.get("phone"),
             "senior_earning":         senior_info.get("gross_earned"),
             "senior_potential_earned": senior_info.get("potential_earned"),
@@ -5704,6 +5676,10 @@ def member_earnings_dashboard(
             "total_team_size":        team_network_map.get(m.id, {}).get("total", 0) if team_network_map else 0,
             "stars":                  p_stars,
             "current_position":       curr_pos,
+            "current_designation":    c_desig,
+            "career_designation":     c_desig,
+            "personal_prod_qualification": p_qual,
+            "effective_personal_producer_rate": p_rate,
             "rank_display":           p_rank_display,
         })
 

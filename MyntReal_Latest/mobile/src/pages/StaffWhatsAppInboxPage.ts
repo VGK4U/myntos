@@ -13,6 +13,7 @@
 import { apiService } from '../services/api.service';
 import { authService } from '../services/auth.service';
 import { PageHeader } from '../components/PageHeader';
+import { callController } from '../services/call-controller';
 
 export class StaffWhatsAppInboxPage {
   private container: HTMLElement;
@@ -401,6 +402,11 @@ export class StaffWhatsAppInboxPage {
             ${msg}
           </div>
         </div>
+        ${!isGroup && cleanPhone ? `
+          <button class="wa-card-call-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(displayName)}" title="Call via Softphone" style="background: #14532d; border: 1px solid #22c55e; color: #4ade80; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; cursor: pointer; flex-shrink: 0; margin-right: 4px;">
+            <i class="fas fa-phone-alt"></i>
+          </button>
+        ` : ''}
         <i class="fas fa-chevron-right" style="color: #475569; font-size: 11px;"></i>
       </div>
     `;
@@ -429,6 +435,11 @@ export class StaffWhatsAppInboxPage {
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 6px;">
+            ${!isGroup && cleanPhone ? `
+              <button id="waHeaderSoftphoneBtn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(headerTitle || '')}" title="Call via Softphone" style="width: 32px; height: 32px; border-radius: 50%; background: #15803d; border: 1px solid #86efac; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer;">
+                <i class="fas fa-phone-alt"></i>
+              </button>
+            ` : ''}
             <a href="tel:${cleanPhone}" style="width: 32px; height: 32px; border-radius: 50%; background: #059669; color: #fff; display: flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px;">
               <i class="fas fa-phone"></i>
             </a>
@@ -638,7 +649,10 @@ export class StaffWhatsAppInboxPage {
           ${isBot ? '<div style="font-size: 9.5px; font-weight: 700; color: #a7f3d0; margin-bottom: 2px;"><i class="fas fa-robot"></i> Bot Automated</div>' : ''}
           ${mediaHtml}
           ${text ? `<div style="font-size: 13px; line-height: 1.35; word-break: break-word; white-space: pre-wrap;">${this.escapeHtml(text)}</div>` : ''}
-          <div style="font-size: 9.5px; color: #a7f3d0; text-align: right; margin-top: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 3px;">
+          <div style="font-size: 9.5px; color: #a7f3d0; text-align: right; margin-top: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+            <button class="wa-bubble-fwd-btn" data-msg="${this.escapeAttr(text)}" style="background: none; border: none; color: #a7f3d0; cursor: pointer; font-size: 10px; padding: 2px 4px; display: inline-flex; align-items: center;" title="Forward message">
+              <i class="fas fa-share" style="transform: scaleX(-1);"></i>
+            </button>
             <span>${timeStr}</span>
             <span style="font-size: 10px; color: #a7f3d0;">${ticks}</span>
           </div>
@@ -650,8 +664,11 @@ export class StaffWhatsAppInboxPage {
       <div style="align-self: flex-start; max-width: 82%; background: #1e293b; color: #f8fafc; padding: 8px 12px; border-radius: 12px 12px 12px 2px; border: 1px solid #334155; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
         ${mediaHtml}
         ${text ? `<div style="font-size: 13px; line-height: 1.35; word-break: break-word; white-space: pre-wrap;">${this.escapeHtml(text)}</div>` : ''}
-        <div style="font-size: 9.5px; color: #94a3b8; text-align: right; margin-top: 3px;">
-          ${timeStr}
+        <div style="font-size: 9.5px; color: #94a3b8; text-align: right; margin-top: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+          <button class="wa-bubble-fwd-btn" data-msg="${this.escapeAttr(text)}" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 10px; padding: 2px 4px; display: inline-flex; align-items: center;" title="Forward message">
+            <i class="fas fa-share" style="transform: scaleX(-1);"></i>
+          </button>
+          <span>${timeStr}</span>
         </div>
       </div>
     `;
@@ -802,6 +819,11 @@ export class StaffWhatsAppInboxPage {
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #1e293b; padding-top: 6px;">
               <span>By: <strong style="color:#e2e8f0;">${lastSentBy}</strong></span>
               <div style="display: flex; gap: 6px;">
+                ${cleanPhone ? `
+                  <button class="wa-row-call-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(displayName)}" title="Call via Softphone" style="background: #14532d; border: 1px solid #22c55e; color: #4ade80; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                    <i class="fas fa-phone-alt"></i> Call
+                  </button>
+                ` : ''}
                 <button class="wa-row-assign-btn" data-phone="${phone}" data-name="${this.escapeAttr(displayName)}" style="background: #1e293b; border: 1px solid #475569; color: #38bdf8; border-radius: 6px; padding: 2px 8px; font-size: 11px; cursor: pointer;">
                   <i class="fas fa-tag"></i> Assign
                 </button>
@@ -1180,10 +1202,36 @@ export class StaffWhatsAppInboxPage {
     this.container.querySelectorAll('.wa-inbox-card').forEach(card => {
       card.addEventListener('click', (e) => {
         const target = e.target as HTMLElement;
-        if (target.closest('.wa-row-assign-btn')) return;
+        if (target.closest('.wa-row-assign-btn') || target.closest('.wa-row-call-btn') || target.closest('.wa-row-chat-btn')) return;
 
         const phone = (card as HTMLElement).dataset.phone;
         const name = (card as HTMLElement).dataset.name || 'Customer';
+        if (phone) {
+          this.loadChat(phone, name, 'inbox');
+        }
+      });
+    });
+
+    this.container.querySelectorAll('.wa-row-call-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const phone = (btn as HTMLElement).dataset.phone || '';
+        const name = (btn as HTMLElement).dataset.name || '';
+        if (phone) {
+          callController.openCallDialer({
+            phoneNumber: phone,
+            name: name || 'Customer',
+            autoStart: true
+          });
+        }
+      });
+    });
+
+    this.container.querySelectorAll('.wa-row-chat-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const phone = (btn as HTMLElement).dataset.phone || '';
+        const name = (btn as HTMLElement).dataset.name || '';
         if (phone) {
           this.loadChat(phone, name, 'inbox');
         }
@@ -1207,10 +1255,27 @@ export class StaffWhatsAppInboxPage {
 
     // Messenger Conversation Cards
     this.container.querySelectorAll('.wa-msg-card').forEach(card => {
-      card.addEventListener('click', () => {
+      card.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target.closest('.wa-card-call-btn')) return;
         const phone = (card as HTMLElement).dataset.phone || '';
         const name = (card as HTMLElement).dataset.name || 'Customer';
         this.loadChat(phone, name, this.activeTab === 'team' ? 'team' : 'messenger');
+      });
+    });
+
+    this.container.querySelectorAll('.wa-card-call-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const phone = (btn as HTMLElement).dataset.phone || '';
+        const name = (btn as HTMLElement).dataset.name || '';
+        if (phone) {
+          callController.openCallDialer({
+            phoneNumber: phone,
+            name: name || 'Customer',
+            autoStart: true
+          });
+        }
       });
     });
 
@@ -1378,9 +1443,13 @@ export class StaffWhatsAppInboxPage {
       this.showEmojiTray = false;
       this.showAttachMenu = false;
 
-      const user = authService.getAuthState().user || {};
+      const user: any = authService.getAuthState().user || {};
       const staffName = user.full_name || user.name || 'Staff';
-      const signature = `\n\nRegards,\n${staffName}`;
+      const ext = user.extension || user.ext || (typeof window !== 'undefined' ? (window as any).__STAFF_EXTENSION__ : null);
+      let signature = `\n\nRegards,\n${staffName}\n8585852738`;
+      if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
+        signature = `\n\nRegards,\n${staffName}\n8585852738\nExt: ${String(ext).trim()}`;
+      }
       const finalMsg = text ? (!text.toLowerCase().includes('regards,') ? `${text}${signature}` : text) : '';
 
       this.chatHistory.push({
@@ -1419,6 +1488,30 @@ export class StaffWhatsAppInboxPage {
         e.preventDefault();
         doSend();
       }
+    });
+
+    // Header Softphone Call Button
+    document.getElementById('waHeaderSoftphoneBtn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const btn = e.currentTarget as HTMLElement;
+      const phone = btn.dataset.phone;
+      const name = btn.dataset.name;
+      if (phone) {
+        callController.openCallDialer({
+          phoneNumber: phone,
+          name: name || 'Customer',
+          autoStart: true
+        });
+      }
+    });
+
+    // Message Bubble Forward Button
+    this.container.querySelectorAll('.wa-bubble-fwd-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const msg = (btn as HTMLElement).dataset.msg || '';
+        this.openForwardModal(msg);
+      });
     });
 
     // Template "Use in Chat"
@@ -1509,9 +1602,13 @@ export class StaffWhatsAppInboxPage {
     const modalWrap = document.getElementById('waCenterModalContainer');
     if (!modalWrap) return;
 
-    const user = authService.getAuthState().user || {};
+    const user: any = authService.getAuthState().user || {};
     const staffName = user.full_name || user.name || 'Staff';
-    const defaultSig = `Regards,\n${staffName}`;
+    const ext = user.extension || user.ext || (typeof window !== 'undefined' ? (window as any).__STAFF_EXTENSION__ : null);
+    let defaultSig = `Regards,\n${staffName}\n8585852738`;
+    if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
+      defaultSig = `Regards,\n${staffName}\n8585852738\nExt: ${String(ext).trim()}`;
+    }
 
     let activeModalEmojiCat = 'smileys';
     let showModalEmoji = false;
@@ -2259,6 +2356,184 @@ export class StaffWhatsAppInboxPage {
     document.getElementById('waAssignSaveBtn')?.addEventListener('click', () => {
       modalWrap.innerHTML = '';
       this.loadInbox();
+    });
+  }
+
+  private openForwardModal(msgText: string, mediaUrl?: string): void {
+    const modalWrap = document.getElementById('waCenterModalContainer');
+    if (!modalWrap) return;
+
+    let selectedTarget: { phone: string; name: string; type: string } | null = null;
+    let searchDebounceTimer: any = null;
+
+    modalWrap.innerHTML = `
+      <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 10000; display: flex; align-items: flex-end; justify-content: center;">
+        <div style="background: #1e293b; border-radius: 16px 16px 0 0; padding: 16px; width: 100%; max-width: 480px; max-height: 85vh; display: flex; flex-direction: column; border-top: 1px solid #334155;">
+          
+          <!-- Header -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="font-size: 15px; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+              <i class="fas fa-share" style="color: #25d366; transform: scaleX(-1);"></i> Forward Message
+            </div>
+            <button id="waForwardCloseBtn" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer; padding: 4px;">✕</button>
+          </div>
+
+          <!-- Message Preview -->
+          <div style="font-size: 10.5px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px;">Message to Forward</div>
+          <div style="background: #0f172a; border-left: 3px solid #25d366; padding: 8px 10px; border-radius: 6px; font-size: 12px; color: #e2e8f0; max-height: 60px; overflow-y: auto; white-space: pre-wrap; margin-bottom: 12px;">${this.escapeHtml(msgText || (mediaUrl ? '[Media Attachment]' : ''))}</div>
+
+          <!-- Search Input -->
+          <div style="position: relative; margin-bottom: 10px;">
+            <i class="fas fa-search" style="position: absolute; left: 10px; top: 10px; color: #94a3b8; font-size: 12px;"></i>
+            <input 
+              type="text" 
+              id="waForwardSearchInp" 
+              placeholder="Search contact name or phone..." 
+              style="width: 100%; box-sizing: border-box; padding: 8px 12px 8px 30px; border-radius: 8px; background: #0f172a; border: 1px solid #334155; color: #fff; font-size: 12.5px; outline: none;"
+            />
+          </div>
+
+          <!-- Recipients List -->
+          <div style="font-size: 10.5px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 6px;">Recent Chats & Contacts</div>
+          <div id="waForwardList" style="flex: 1; overflow-y: auto; max-height: 240px; border: 1px solid #334155; border-radius: 8px; background: #0f172a; margin-bottom: 12px;">
+          </div>
+
+          <!-- Selection & Send -->
+          <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 6px; border-top: 1px solid #334155;">
+            <div id="waForwardTargetLabel" style="font-size: 11.5px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px;">
+              Select a recipient
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button id="waForwardCancelBtn" style="padding: 8px 14px; border-radius: 8px; background: #334155; color: #e2e8f0; border: none; font-size: 12px; font-weight: 600; cursor: pointer;">Cancel</button>
+              <button id="waForwardSubmitBtn" disabled style="padding: 8px 16px; border-radius: 8px; background: #059669; color: #fff; border: none; font-size: 12px; font-weight: 700; cursor: pointer; opacity: 0.5;">
+                <i class="fas fa-paper-plane"></i> Forward
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    const listEl = document.getElementById('waForwardList');
+    const targetLabel = document.getElementById('waForwardTargetLabel');
+    const submitBtn = document.getElementById('waForwardSubmitBtn') as HTMLButtonElement;
+    const searchInp = document.getElementById('waForwardSearchInp') as HTMLInputElement;
+
+    const renderList = (items: any[]) => {
+      if (!listEl) return;
+      if (!items || !items.length) {
+        listEl.innerHTML = '<div style="padding: 20px; text-align: center; color: #64748b; font-size: 12px;">No contacts found.</div>';
+        return;
+      }
+      listEl.innerHTML = items.map(c => {
+        const phone = c.phone || c.from_phone || c.mobile_number || '';
+        const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-10);
+        const name = c.name || c.contact_name || c.resolved_name || c.from_name || `Customer (${this.maskPhone(cleanPhone)})`;
+        const badge = c.badge || (c.type === 'STAFF' ? '👔 Staff' : (c.recipient_type === 'group' || (phone && phone.includes('@g.us')) ? '👥 Group' : '👤 Contact'));
+        const isSel = selectedTarget && selectedTarget.phone === cleanPhone;
+        return `
+          <div 
+            class="wa-fwd-target-item" 
+            data-phone="${cleanPhone}" 
+            data-name="${this.escapeAttr(name)}"
+            data-type="${c.recipient_type || (phone && phone.includes('@g.us') ? 'group' : 'individual')}"
+            style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid #1e293b; cursor: pointer; background: ${isSel ? '#064e3b' : 'transparent'};"
+          >
+            <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: #059669; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0;">
+                ${name.charAt(0).toUpperCase()}
+              </div>
+              <div style="min-width: 0;">
+                <div style="font-size: 12.5px; font-weight: 600; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.escapeHtml(name)}</div>
+                <div style="font-size: 10.5px; color: #64748b;">${this.maskPhone(cleanPhone)}</div>
+              </div>
+            </div>
+            <span style="font-size: 9.5px; background: #1e293b; color: #94a3b8; padding: 2px 6px; border-radius: 4px; font-weight: 600;">${badge}</span>
+          </div>
+        `;
+      }).join('');
+
+      listEl.querySelectorAll('.wa-fwd-target-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const el = item as HTMLElement;
+          const phone = el.dataset.phone || '';
+          const name = el.dataset.name || '';
+          const type = el.dataset.type || 'individual';
+          selectedTarget = { phone, name, type };
+          if (targetLabel) {
+            targetLabel.innerHTML = `To: <strong style="color: #25d366;">${this.escapeHtml(name)}</strong>`;
+          }
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+          }
+          renderList(items);
+        });
+      });
+    };
+
+    // Initial render from existing conversations
+    renderList(this.convsList.length ? this.convsList : this.inboxItems);
+
+    // Search handler
+    searchInp?.addEventListener('input', () => {
+      clearTimeout(searchDebounceTimer);
+      const q = (searchInp.value || '').trim();
+      if (!q) {
+        renderList(this.convsList.length ? this.convsList : this.inboxItems);
+        return;
+      }
+      searchDebounceTimer = setTimeout(async () => {
+        try {
+          if (listEl) listEl.innerHTML = '<div style="padding: 16px; text-align: center; color: #94a3b8; font-size: 11px;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+          const res = await apiService.get<any>(`/whatsapp/contacts-search?query=${encodeURIComponent(q)}&scope=all`);
+          renderList(res?.results || []);
+        } catch {
+          if (listEl) listEl.innerHTML = '<div style="padding: 16px; text-align: center; color: #ef4444; font-size: 11px;">Search failed.</div>';
+        }
+      }, 300);
+    });
+
+    const closeModal = () => {
+      modalWrap.innerHTML = '';
+    };
+
+    document.getElementById('waForwardCloseBtn')?.addEventListener('click', closeModal);
+    document.getElementById('waForwardCancelBtn')?.addEventListener('click', closeModal);
+
+    submitBtn?.addEventListener('click', async () => {
+      if (!selectedTarget) return;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+
+      try {
+        const payload = {
+          recipient: selectedTarget.phone,
+          recipient_type: selectedTarget.type,
+          recipient_name: selectedTarget.name,
+          message: msgText,
+          media_url: mediaUrl || null,
+          client_msg_id: `fwd_${Date.now()}`
+        };
+
+        const res = await apiService.post<any>('/whatsapp/send-message', payload);
+        if (res && (res.success || res.status === 200 || (res.data && (res.data.success || res.data.status === 'sent')))) {
+          alert(`Message forwarded to ${selectedTarget.name}!`);
+          closeModal();
+          if (this.activeChatPhone && this.activeChatPhone.slice(-10) === selectedTarget.phone.slice(-10)) {
+            this.loadChat(this.activeChatPhone, selectedTarget.name);
+          }
+        } else {
+          alert((res && (res.message || res.error)) || 'Failed to forward message');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Forward';
+        }
+      } catch (err: any) {
+        alert(err?.message || 'Failed to forward message');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Forward';
+      }
     });
   }
 

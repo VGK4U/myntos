@@ -197,16 +197,28 @@ def sync_browser_call_event(
     Updates the session record and emits WebSocket updates for UI synchronization.
     """
     call_session_id = payload.get("call_session_id")
-    event_type = (payload.get("event_type") or "").lower()
-    company_id = getattr(current_user, 'base_company_id', 1) or 1
-
     session = db.query(VoIPCallSession).filter(
-        VoIPCallSession.call_session_id == call_session_id,
-        VoIPCallSession.company_id == company_id
+        VoIPCallSession.call_session_id == call_session_id
     ).first()
 
     if not session:
         return {"success": False, "error": "Call session not found"}
+
+    # Tenant & Operator authorization
+    is_supreme = getattr(current_user, 'is_supreme', False)
+    user_company_id = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None) or 1
+    allowed_company_ids = {user_company_id}
+    if getattr(current_user, 'data_companies', None):
+        comps = current_user.data_companies if isinstance(current_user.data_companies, list) else []
+        allowed_company_ids.update(comps)
+
+    is_operator_owner = (
+        (session.operator_id is not None and getattr(current_user, 'id', None) == session.operator_id) or
+        (session.operator_user_ref is not None and getattr(current_user, 'emp_code', None) == session.operator_user_ref)
+    )
+
+    if not is_supreme and not is_operator_owner and session.company_id and session.company_id not in allowed_company_ids:
+        return {"success": False, "error": "Unauthorized access to call session"}
 
     state_map = {
         "ringing": CallStateEnum.RINGING.value,
@@ -597,6 +609,34 @@ async def handle_plivo_ivr_gather(
         digits=digits,
         menu_type=menu,
         lang=lang or "en"
+    )
+    return Response(content=xml_response, media_type="application/xml")
+
+
+@router.api_route("/ivr/agent-dial-complete", methods=["GET", "POST"])
+async def handle_plivo_agent_dial_complete(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Callback endpoint for Plivo staff direct dial completion.
+    If answered -> Hangup.
+    If unanswered -> Returns unavailable prompt + Main IVR.
+    """
+    from app.services.telephony.flow_interpreter import CallFlowInterpreter
+
+    form_data = {}
+    if request.method == "POST":
+        try:
+            form_data = await request.form()
+        except Exception:
+            pass
+
+    query_params = dict(request.query_params)
+    xml_response = CallFlowInterpreter.handle_agent_dial_complete(
+        db=db,
+        form_data=dict(form_data),
+        query_params=query_params
     )
     return Response(content=xml_response, media_type="application/xml")
 

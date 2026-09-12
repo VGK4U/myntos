@@ -51,7 +51,7 @@
                 <input type="file" id="postMemberPhotoFile" accept="image/*" onchange="handleMemberPhotoUpload(event)" style="font-size:11px;width:100%">
               </div>
               <div>
-                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">SENIOR PHOTO</label>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">DIRECT SPONSOR PHOTO</label>
                 <input type="file" id="postSeniorPhotoFile" accept="image/*" onchange="handleSeniorPhotoUpload(event)" style="font-size:11px;width:100%">
               </div>
               <div>
@@ -63,8 +63,8 @@
                 <input type="text" id="postSubtitle" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. BANDI GANGARAJU">
               </div>
               <div>
-                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">MEMBER RANK &amp; DESIGNATION</label>
-                <input type="text" id="postRank" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. 2★ CHANNEL PARTNER">
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">CAREER DESIGNATION</label>
+                <input type="text" id="postRank" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. CHANNEL PARTNER">
               </div>
               <div>
                 <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">OVERALL EARNING (₹)</label>
@@ -147,26 +147,26 @@
           
           <div style="border-top:1px solid #e5e7eb;margin-top:8px;padding-top:10px">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-              <h6 style="font-size:12px;font-weight:700;color:#111827;margin:0">SENIOR REFERRER DETAILS</h6>
+              <h6 style="font-size:12px;font-weight:700;color:#111827;margin:0">DIRECT SPONSOR DETAILS</h6>
               <label style="font-size:11px;font-weight:700;color:#059669;display:flex;align-items:center;gap:5px;cursor:pointer;user-select:none">
-                <input type="checkbox" id="postShowSenior" checked onchange="updatePoster()" style="accent-color:#059669"> Show Senior
+                <input type="checkbox" id="postShowSenior" checked onchange="updatePoster()" style="accent-color:#059669"> Show Direct Sponsor
               </label>
             </div>
             <div style="display:flex;flex-direction:column;gap:8px">
               <div>
-                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">SENIOR NAME</label>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">DIRECT SPONSOR NAME</label>
                 <input type="text" id="postSeniorName" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. MS. JARRA KUMARI">
               </div>
               <div>
-                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">SENIOR TODAY'S EARNING (₹)</label>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">DIRECT SPONSOR TODAY'S EARNING (₹)</label>
                 <input type="text" id="postSeniorToday" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. ₹1,835/-">
               </div>
               <div>
-                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">SENIOR OVERALL (₹)</label>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">DIRECT SPONSOR OVERALL (₹)</label>
                 <input type="text" id="postSeniorEarning" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. ₹49,875/-">
               </div>
               <div>
-                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">SENIOR POTENTIAL (₹)</label>
+                <label style="font-size:10px;font-weight:600;color:#6b7280;display:block;margin-bottom:2px">DIRECT SPONSOR POTENTIAL (₹)</label>
                 <input type="text" id="postSeniorPotential" oninput="updatePoster()" style="width:100%;padding:7px 9px;font-size:11.5px;border:1.5px solid #d1d5db;border-radius:6px" placeholder="e.g. ₹91,650/-">
               </div>
             </div>
@@ -225,15 +225,15 @@
               <img src="/assets/logos/vgk4u-logo.png" style="height:28px;max-width:100px;object-fit:contain" alt="VGK4U">
             </div>
 
-            <div id="prevCelebrationTitle" style="background:linear-gradient(135deg, #854d0e 0%, #ca8a04 50%, #854d0e 100%);border:1.5px solid #fde047;color:#fffbeb;font-family:Georgia,serif;font-size:11px;font-weight:900;letter-spacing:1px;padding:4px 14px;border-radius:30px;box-shadow:0 4px 15px rgba(202,138,4,0.5);margin-bottom:5px;text-transform:uppercase;white-space:nowrap;max-width:100%;box-sizing:border-box">🎉 👑 ★★ CONGRATULATIONS ★★ 👑 🎉</div>
+            <div id="prevCelebrationTitle" style="background:linear-gradient(135deg, #854d0e 0%, #ca8a04 50%, #854d0e 100%);border:1.5px solid #fde047;color:#fffbeb;font-family:Georgia,serif;font-size:11px;font-weight:900;letter-spacing:1px;padding:4px 14px;border-radius:30px;box-shadow:0 4px 15px rgba(202,138,4,0.5);margin-bottom:5px;text-transform:uppercase;white-space:nowrap;max-width:100%;box-sizing:border-box">🎉 👑 CONGRATULATIONS 👑 🎉</div>
 
             <div style="width:100%;text-align:center;margin-bottom:6px">
               <div id="prevSubtitle" style="width:100%;background:#fbbf24;color:#000000 !important;-webkit-text-fill-color:#000000 !important;font-family:'Segoe UI',Roboto,Helvetica,sans-serif;text-transform:uppercase;padding:6px 12px;border:2.5px solid #ffffff;border-radius:12px;box-shadow:0 6px 20px rgba(251,191,36,0.75);box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center">
                 <!-- Line 1: Member Name -->
                 <div id="prevName" style="font-size:22px;font-weight:950;letter-spacing:1px;line-height:1.15;color:#000000">MR. BANDI GANGARAJU</div>
-                <!-- Line 2: Rank & Designation below Name -->
-                <div id="prevRankContainer" style="font-size:12.5px;font-weight:900;letter-spacing:1.2px;color:#78350f;line-height:1.1;margin-top:3px;display:inline-flex;align-items:center;gap:4px">
-                  <span>★</span><span id="prevRank">2★ CHANNEL PARTNER</span><span>★</span>
+                <!-- Line 2: Career Designation below Name -->
+                <div id="prevRankContainer" style="font-size:12.5px;font-weight:900;letter-spacing:1.2px;color:#78350f;line-height:1.1;margin-top:3px;display:inline-flex;align-items:center;gap:6px">
+                  <span style="font-size:10px;font-weight:800;letter-spacing:1px;opacity:0.85">CAREER DESIGNATION:</span><span id="prevRank">CHANNEL PARTNER</span>
                 </div>
               </div>
             </div>
@@ -247,11 +247,11 @@
               </div>
 
               <div style="position:absolute;bottom:4px;right:-106px;font-size:82px;line-height:1;filter:drop-shadow(0 6px 16px rgba(251,191,36,0.9));z-index:10;user-select:none">🏆</div>
-              <div id="prevChampionBadge" style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#b45309,#f59e0b,#b45309);border:1.5px solid #fef08a;color:#ffffff;font-size:10.5px;font-weight:900;padding:4px 18px;border-radius:14px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.6);z-index:11">🏆 CHAMPION</div>
+              <div id="prevChampionBadge" style="position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#b45309,#f59e0b,#b45309);border:1.5px solid #fef08a;color:#ffffff;font-size:10.5px;font-weight:900;padding:4px 18px;border-radius:14px;letter-spacing:1.2px;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.6);z-index:11">🏆 TOP PERFORMER</div>
             </div>
 
             <div style="width:100%;background:linear-gradient(135deg, #ffffff 0%, #fffbeb 50%, #fef3c7 100%);border:2.5px solid #eab308;border-radius:16px;padding:7px 14px;text-align:center;margin-bottom:6px;box-shadow:0 8px 25px rgba(0,0,0,0.5), 0 0 20px rgba(251,191,36,0.3)">
-              <div style="color:#92400e;font-size:11.5px;font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">★ OVERALL EARNING ★</div>
+              <div style="color:#92400e;font-size:11.5px;font-weight:900;letter-spacing:2px;text-transform:uppercase;margin-bottom:2px">OVERALL EARNING</div>
               <div id="prevHighlight" style="color:#b91c1c;font-size:34px;font-weight:950;line-height:1;font-family:'Segoe UI',Roboto,sans-serif;letter-spacing:-0.5px">₹1,07,880/-</div>
               <div id="prevHighlightInWords" style="font-size:9.5px;font-weight:850;color:#92400e;margin-top:3px;text-transform:uppercase;letter-spacing:0.3px;width:100%;line-height:1.2;text-align:center;word-break:break-word;overflow:visible">Rupees One Lakh Seven Thousand Eight Hundred Eighty Only</div>
             </div>
@@ -292,7 +292,7 @@
                 <div id="prevSeniorAvatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;font-size:36px;font-weight:900">NE</div>
               </div>
 
-              <div id="prevSeniorName" style="font-size:13.5px;font-weight:950;color:#fde047;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;letter-spacing:0.5px">Senior : MS. JARRA KUMARI</div>
+              <div id="prevSeniorName" style="font-size:13.5px;font-weight:950;color:#fde047;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;letter-spacing:0.5px">Direct Sponsor : MS. JARRA KUMARI</div>
 
               <div style="display:flex;justify-content:space-between;align-items:center;width:100%;padding-right:4px">
                 <div style="text-align:left">
@@ -512,7 +512,7 @@
 
       // Authoritative Potential Pending Calculation on Active In-Flight Leads
       // Formula: Deal Value * Rank Rate + Brand Allowance (APS/Navgrun = ₹2k) + Field Support (1.5%) - Advances Already Paid
-      const memberRatePct = (m.commission_pct || (m.stars === 2 ? 6.5 : (m.stars === 3 ? 7.5 : (m.stars === 4 ? 8.25 : (m.stars === 5 ? 8.5 : 5.0))))) / 100.0;
+      const memberRatePct = (m.commission_pct || (m.current_position === 'Regional Manager' ? 9.0 : (m.current_position === 'General Manager' ? 8.5 : (m.current_position === 'Manager' ? 7.5 : (m.current_position === 'Channel Partner' ? 6.0 : 5.0))))) / 100.0;
       const activeLeadPendingMap = {};
 
       entries.forEach(e => {
@@ -616,18 +616,13 @@
       const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
       const setChecked = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val; };
 
-      const partnerStars = m.stars || (m.current_position === 'Director' ? 5 : (m.current_position === 'Regional Manager' ? 4 : (m.current_position === 'Zonal Manager' || m.current_position === 'Senior Channel Partner' ? 3 : (m.current_position === 'Manager' ? 2 : 1))));
-      
-      let rankTitle = 'Channel Partner';
-      if (m.rank_display) {
-        rankTitle = m.rank_display;
-      } else if (m.current_position && m.current_position !== 'none') {
-        rankTitle = (partnerStars > 1 ? `${partnerStars}★ ` : '') + m.current_position;
-      } else if (partnerStars > 1) {
-        rankTitle = `${partnerStars}★ Channel Partner`;
-      } else {
-        rankTitle = 'Channel Partner';
-      }
+      let rankTitle = m.career_designation || m.current_designation || m.rank_display || 'Channel Partner';
+      // Clean any residual star symbols or numeric prefixes
+      rankTitle = rankTitle.replace(/^[0-9]+[★\*\s]*/g, '').replace(/[★\*⭐]/g, '').trim();
+      if (rankTitle.toUpperCase().includes('SENIOR CHANNEL PARTNER') || rankTitle.toUpperCase().includes('LEAD CHANNEL PARTNER')) rankTitle = 'Channel Partner';
+      else if (rankTitle.toUpperCase().includes('ZONAL MANAGER')) rankTitle = 'Manager';
+      else if (rankTitle.toUpperCase().includes('DIRECTOR')) rankTitle = 'Regional Manager';
+      if (!rankTitle || rankTitle.toLowerCase() === 'none') rankTitle = 'Channel Partner';
 
       setVal('postTitle', 'CONGRATULATIONS');
       setVal('postSubtitle', m.partner_name || '');
@@ -635,13 +630,12 @@
 
       const prevChampionBadgeEl = document.getElementById('prevChampionBadge');
       if (prevChampionBadgeEl) {
-        prevChampionBadgeEl.textContent = partnerStars > 1 ? `🏆 ${partnerStars}★ CHAMPION` : `🏆 CHAMPION`;
+        prevChampionBadgeEl.textContent = `🏆 TOP PERFORMER`;
       }
 
       const prevCelebrationTitleEl = document.getElementById('prevCelebrationTitle');
       if (prevCelebrationTitleEl) {
-        const starStr = '★'.repeat(partnerStars > 1 ? partnerStars : 2);
-        prevCelebrationTitleEl.textContent = `🎉 👑 ${starStr} CONGRATULATIONS ${starStr} 👑 🎉`;
+        prevCelebrationTitleEl.textContent = `🎉 👑 CONGRATULATIONS 👑 🎉`;
       }
 
       // Overall Earning: Total cumulative earnings irrespective of level
@@ -657,10 +651,11 @@
 
       if (m.total_team_size && m.total_team_size > 0) {
         setVal('postOverall', `${m.total_team_size} ${m.total_team_size === 1 ? 'MEMBER' : 'MEMBERS'}`);
-        setVal('postTeamBreakup', `L2: ${m.team_l2_count || 1} Team Partner`);
+        setVal('postTeamBreakup', `Direct Team: ${m.team_l2_count || m.total_team_size} Channel Partners`);
       } else {
-        setVal('postOverall', (activeFiles || m.ground_leads_count || 0) + ' LEADS');
-        setVal('postTeamBreakup', `L1 Ground-Source Business Only`);
+        const directFiles = m.own_qualifying_files !== undefined ? m.own_qualifying_files : (m.total_files || (activeFiles || m.ground_leads_count || 0));
+        setVal('postOverall', `${directFiles} FILES`);
+        setVal('postTeamBreakup', `Direct Personal Production: ${directFiles} Files`);
       }
       // Member Gross Potential Valuation (calculated from active entries)
       const potVal = truePotentialPending;
@@ -1016,15 +1011,20 @@
     const getVal = id => document.getElementById(id)?.value || '';
     const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
 
-    setTxt('prevTitle', '★ ' + getVal('postTitle').toUpperCase() + ' ★');
+    setTxt('prevTitle', getVal('postTitle').toUpperCase());
     
-    const rankVal = (getVal('postRank') || '').toUpperCase().trim();
+    let rankVal = (getVal('postRank') || '').toUpperCase().trim();
+    rankVal = rankVal.replace(/^[0-9]+[★\*\s]*/g, '').replace(/[★\*⭐]/g, '').trim();
+    if (rankVal.includes('SENIOR CHANNEL PARTNER') || rankVal.includes('LEAD CHANNEL PARTNER')) rankVal = 'CHANNEL PARTNER';
+    else if (rankVal.includes('ZONAL MANAGER')) rankVal = 'MANAGER';
+    else if (rankVal.includes('DIRECTOR')) rankVal = 'REGIONAL MANAGER';
+    if (!rankVal) rankVal = 'CHANNEL PARTNER';
     const nameVal = (getVal('postSubtitle') || '').toUpperCase().trim();
 
     const prevRankEl = document.getElementById('prevRank');
     const prevRankContainerEl = document.getElementById('prevRankContainer');
     if (prevRankEl) {
-      prevRankEl.textContent = rankVal || '2★ CHANNEL PARTNER';
+      prevRankEl.textContent = rankVal;
       if (prevRankContainerEl) prevRankContainerEl.style.display = rankVal ? 'inline-flex' : 'none';
     }
     const prevNameEl = document.getElementById('prevName');
@@ -1081,8 +1081,11 @@
     setTxt('prevLocation', getVal('postLocation').toUpperCase());
 
     let rawSeniorName = getVal('postSeniorName').trim().toUpperCase();
-    if (rawSeniorName && !rawSeniorName.startsWith('SENIOR :')) rawSeniorName = 'Senior : ' + rawSeniorName;
-    setTxt('prevSeniorName', rawSeniorName || 'SENIOR : —');
+    if (rawSeniorName) {
+      rawSeniorName = rawSeniorName.replace(/^SENIOR\s*:\s*/i, '').replace(/^DIRECT SPONSOR\s*:\s*/i, '').trim();
+      rawSeniorName = 'Direct Sponsor : ' + rawSeniorName;
+    }
+    setTxt('prevSeniorName', rawSeniorName || 'Direct Sponsor : —');
     setTxt('prevSeniorToday', getVal('postSeniorToday'));
     setTxt('prevSeniorEarning', getVal('postSeniorEarning'));
     setTxt('prevSeniorPotential', getVal('postSeniorPotential'));
@@ -1297,7 +1300,7 @@
     const rawName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevName')?.textContent || '').trim();
     const rawRank = (document.getElementById('postRank')?.value || document.getElementById('prevRank')?.textContent || '').trim();
     const partnerName = rawName || 'Channel Partner';
-    const partnerRank = rawRank ? (rawRank.startsWith('★') ? rawRank : `★ ${rawRank} ★`) : '';
+    const partnerRank = rawRank ? rawRank.replace(/[★*]/g, '').trim().toUpperCase() : '';
     const partnerOverall = (document.getElementById('postHighlight')?.value || document.getElementById('prevHighlight')?.textContent || '').trim();
     const partnerToday = (document.getElementById('prevTotalToday')?.textContent || document.getElementById('postTodayPayout')?.value || '').trim();
     const partnerPotential = (document.getElementById('postPotential')?.value || document.getElementById('prevPotential')?.textContent || '').trim();
@@ -1305,7 +1308,7 @@
     const filesVal = (document.getElementById('postFiles')?.value || document.getElementById('prevFiles')?.textContent || '').trim();
     const teamVal = (document.getElementById('postOverall')?.value || document.getElementById('prevOverall')?.textContent || '').trim();
 
-    let seniorName = (document.getElementById('postSeniorName')?.value || document.getElementById('prevSeniorName')?.textContent || '').replace(/^Senior\s*:\s*/i, '').trim();
+    let seniorName = (document.getElementById('postSeniorName')?.value || document.getElementById('prevSeniorName')?.textContent || '').replace(/^Direct Sponsor\s*:\s*/i, '').replace(/^Senior\s*:\s*/i, '').trim();
     const seniorToday = (document.getElementById('postSeniorToday')?.value || document.getElementById('prevSeniorToday')?.textContent || '').trim();
     const seniorOverall = (document.getElementById('postSeniorEarning')?.value || document.getElementById('prevSeniorEarning')?.textContent || '').trim();
     const prevSeniorPot = document.getElementById('prevSeniorPotential');
@@ -1319,6 +1322,7 @@
     if (tpl === 'payout') {
       let t = `💰 *TODAY'S PAYOUT RELEASED!* 💰\n\n`;
       t += `🎉 Congratulations to *${partnerName}*${partnerRank ? ' (' + partnerRank + ')' : ''}!\n\n`;
+      if (partnerRank) t += `🏆 *Career Designation:* ${partnerRank}\n`;
       if (partnerToday) t += `💵 *Today's Earning:* ${partnerToday}\n`;
       if (breakupText && breakupText !== 'No Payouts for Selected Date') t += `📋 *Breakup:* ${breakupText}\n`;
       if (filesVal) t += `📂 *Files Status:* ${filesVal}\n`;
@@ -1329,8 +1333,9 @@
     }
 
     if (tpl === 'milestone') {
-      let t = `⭐ *NEW MILESTONE ACHIEVED!* ⭐\n\n`;
+      let t = `🏆 *NEW MILESTONE ACHIEVED!* 🏆\n\n`;
       t += `🏆 Proud to celebrate *${partnerName}* — ${partnerRank || 'Channel Partner'}!\n\n`;
+      if (partnerRank) t += `🏆 *Career Designation:* ${partnerRank}\n`;
       if (partnerOverall) t += `📈 *Total Career Earnings:* ${partnerOverall}\n`;
       if (teamVal) t += `👥 *Total Team Size:* ${teamVal}\n`;
       if (partnerPotential) t += `🔮 *Expected Potential:* ${partnerPotential}\n`;
@@ -1342,12 +1347,12 @@
     }
 
     if (tpl === 'short') {
-      return `🎉 Big congratulations to *${partnerName}* for earning *${partnerToday}* today with VGK4U! 🚀 Overall: ${partnerOverall}. Proud of your achievement! 👏 https://vgk4u.com`;
+      return `🎉 Big congratulations to *${partnerName}* (${partnerRank || 'Channel Partner'}) for earning *${partnerToday}* today with VGK4U! 🚀 Overall: ${partnerOverall}. Proud of your achievement! 👏 https://vgk4u.com`;
     }
 
     let text = `🎉 *CONGRATULATIONS TO ${partnerName}!* 🎉\n\n`;
     if (partnerRank) {
-      text += `${partnerRank}\n\n`;
+      text += `🏆 *Career Designation:* ${partnerRank}\n\n`;
     }
     text += `👤 *Member Name:* ${partnerName}\n`;
     if (partnerToday) {
@@ -1362,10 +1367,10 @@
     text += `\n`;
 
     if (isSeniorVisible && seniorName && seniorName !== '—' && seniorName !== 'NONE' && !seniorName.endsWith('—')) {
-      text += `🙌 *Senior Referrer:* ${seniorName}\n`;
-      text += `💰 *Senior Today:* ${seniorToday} | *Overall:* ${seniorOverall}\n`;
+      text += `🙌 *Direct Sponsor:* ${seniorName}\n`;
+      text += `💰 *Sponsor Today:* ${seniorToday} | *Overall:* ${seniorOverall}\n`;
       if (seniorPotential && seniorPotential !== '₹0/-') {
-        text += `🔮 *Senior Potential:* ${seniorPotential}\n`;
+        text += `🔮 *Sponsor Potential:* ${seniorPotential}\n`;
       }
       text += `\n`;
     }
@@ -1380,12 +1385,12 @@
     const rawName = (document.getElementById('postSubtitle')?.value || document.getElementById('prevName')?.textContent || '').trim();
     const rawRank = (document.getElementById('postRank')?.value || document.getElementById('prevRank')?.textContent || '').trim();
     const partnerName = rawName || 'Channel Partner';
-    const partnerRank = rawRank ? (rawRank.startsWith('★') ? rawRank : `★ ${rawRank} ★`) : '';
+    const partnerRank = rawRank ? rawRank.replace(/[★*]/g, '').trim().toUpperCase() : '';
     const partnerOverall = (document.getElementById('postHighlight')?.value || document.getElementById('prevHighlight')?.textContent || '').trim();
     const partnerToday = (document.getElementById('prevTotalToday')?.textContent || document.getElementById('postTodayPayout')?.value || '').trim();
     const partnerPotential = (document.getElementById('postPotential')?.value || document.getElementById('prevPotential')?.textContent || '').trim();
 
-    let seniorName = (document.getElementById('postSeniorName')?.value || document.getElementById('prevSeniorName')?.textContent || '').replace(/^Senior\s*:\s*/i, '').trim();
+    let seniorName = (document.getElementById('postSeniorName')?.value || document.getElementById('prevSeniorName')?.textContent || '').replace(/^Direct Sponsor\s*:\s*/i, '').replace(/^Senior\s*:\s*/i, '').trim();
     const seniorToday = (document.getElementById('postSeniorToday')?.value || document.getElementById('prevSeniorToday')?.textContent || '').trim();
     const seniorOverall = (document.getElementById('postSeniorEarning')?.value || document.getElementById('prevSeniorEarning')?.textContent || '').trim();
     const prevSeniorPot = document.getElementById('prevSeniorPotential');

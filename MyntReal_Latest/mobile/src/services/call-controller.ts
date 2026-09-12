@@ -14,6 +14,10 @@ export interface CallIntent {
   entityId?: string | number | null;
   source?: string;
   autoStart?: boolean;
+  categoryName?: string;
+  status?: string;
+  isHotLead?: boolean;
+  isFreshLead?: boolean;
 }
 
 class CallController {
@@ -48,7 +52,11 @@ class CallController {
       entityType: intent.entityType || 'lead',
       entityId: intent.entityId || null,
       source: intent.source || 'contextual',
-      autoStart: intent.autoStart ?? true
+      autoStart: intent.autoStart ?? true,
+      categoryName: intent.categoryName,
+      status: intent.status,
+      isHotLead: intent.isHotLead,
+      isFreshLead: intent.isFreshLead
     };
 
     softphoneModal.open(modalOptions);

@@ -3049,9 +3049,17 @@ class OfficialPartner(BaseModel):
     vgk_cash_wallet       = Column(Numeric(15, 2), nullable=False, default=0)
     vgk_cash_earned_total = Column(Numeric(15, 2), nullable=False, default=0)
 
-    # Universal Incentive Engine: Position & File qualification tracking
+    # Universal Incentive Engine: Position & File qualification tracking (Legacy)
     current_position              = Column(String(40), nullable=False, default='Channel Partner')
     solar_qualifying_files_count = Column(Integer, nullable=False, default=0)
+
+    # Universal VGK4U Career & Personal Production Architecture (Sep 2026)
+    vgk4u_current_designation = Column(String(50), nullable=True, default='Member', index=True)
+    vgk4u_personal_prod_qualification = Column(String(50), nullable=True, default='None', index=True)
+    vgk4u_own_qualifying_files = Column(Integer, nullable=False, default=0)
+    vgk4u_active_team_count = Column(Integer, nullable=False, default=0)
+    vgk4u_designation_updated_at = Column(DateTime, nullable=True)
+    is_apex_node = Column(Boolean, nullable=False, default=False)
 
     # DC Protocol Mar 2026: KYC status for VGK/Partner members (mirrors User.kyc_status)
     kyc_status = Column(String(30), nullable=True, default='Not Submitted')

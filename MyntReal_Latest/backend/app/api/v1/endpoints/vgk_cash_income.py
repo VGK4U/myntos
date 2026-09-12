@@ -352,15 +352,79 @@ def member_cash_income(
             SUM(CASE WHEN status IN ('RELEASED','PAID') THEN commission_amount  ELSE 0 END)               AS released_total,
             SUM(CASE WHEN status IN ('RELEASED','PAID') THEN admin_charges + tds_amount ELSE 0 END)      AS total_deductions,
             SUM(CASE WHEN status='DRAFT'          THEN commission_amount ELSE 0 END)                     AS draft_total,
-            COUNT(*)                                                                                     AS total_entries
+            COUNT(*)                                                                                     AS total_entries,
+            -- VGK4U 6-Stream Categorization (Phase 4)
+            SUM(CASE WHEN kind = 'COMMISSION' AND level = 1 THEN commission_amount ELSE 0 END)           AS personal_producer_total,
+            SUM(CASE WHEN (kind = 'COMMISSION' AND level IN (2, 3, 4)) OR kind = 'SENIOR_COMM' THEN commission_amount ELSE 0 END) AS team_differential_total,
+            SUM(CASE WHEN kind = 'COMMISSION' AND level = 5 THEN commission_amount ELSE 0 END)           AS support_total,
+            SUM(CASE WHEN kind = 'COMMISSION' AND level = 6 THEN commission_amount ELSE 0 END)           AS showroom_total,
+            SUM(CASE WHEN kind IN ('ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'CIBIL_ADVANCE') THEN commission_amount ELSE 0 END) AS stage_advances_total,
+            SUM(CASE WHEN kind IN ('SLAB_BONUS', 'EXTRA_COMMISSION', 'BRAND_COMMISSION') THEN commission_amount ELSE 0 END) AS stage_bonuses_total
         FROM vgk_cash_income_entries
         WHERE partner_id = :pid AND status != 'CANCELLED'
     """), {'pid': partner_id}).fetchone()
+
+    # Category breakdown for member
+    cat_rows = db.execute(text("""
+        SELECT COALESCE(sc.name, 'Uncategorized') as cat_name,
+               SUM(vci.commission_amount) as total_amt
+        FROM vgk_cash_income_entries vci
+        LEFT JOIN signup_categories sc ON sc.id = vci.category_id
+        WHERE vci.partner_id = :pid AND vci.status != 'CANCELLED'
+        GROUP BY sc.name
+        ORDER BY total_amt DESC
+    """), {'pid': partner_id}).fetchall()
+    by_category = {r[0]: float(r[1]) for r in cat_rows}
 
     wallet = float(getattr(current_member, 'vgk_cash_wallet', 0) or 0)
 
     def _member_entry(e: VGKCashIncomeEntry) -> dict:
         d = e.to_dict()
+        notes = (e.notes or '').strip()
+        kind = (e.kind or '').strip()
+        lvl = e.level or 0
+
+        # Stream determination
+        if kind == 'COMMISSION' and lvl == 1:
+            earning_stream = 'PERSONAL_PRODUCER'
+            stream_label = f"Personal Commission ({float(e.commission_pct or 0):.1f}%)"
+        elif (kind in ('COMMISSION', 'SENIOR_COMM') and lvl == 2) or 'Sponsor' in notes or 'Manager' in notes:
+            if 'Sponsor' in notes:
+                earning_stream = 'DIRECT_SPONSOR_OVERRIDE'
+                stream_label = f"Direct Sponsor Override ({float(e.commission_pct or 1.0):.1f}%)"
+            else:
+                earning_stream = 'MANAGER_DIFFERENTIAL'
+                stream_label = f"Manager Differential ({float(e.commission_pct or 1.5):.1f}%)"
+        elif kind == 'COMMISSION' and lvl == 3:
+            earning_stream = 'GM_DIFFERENTIAL'
+            stream_label = f"General Manager Differential ({float(e.commission_pct or 1.0):.1f}%)"
+        elif kind == 'COMMISSION' and lvl == 4:
+            earning_stream = 'RM_DIFFERENTIAL'
+            stream_label = f"Regional Manager Differential ({float(e.commission_pct or 0.5):.1f}%)"
+        elif kind == 'COMMISSION' and lvl == 5:
+            earning_stream = 'FIELD_SUPPORT'
+            stream_label = f"Field Support Commission ({float(e.commission_pct or 1.5):.1f}%)"
+        elif kind == 'COMMISSION' and lvl == 6:
+            earning_stream = 'SHOWROOM'
+            stream_label = f"Showroom Commission ({float(e.commission_pct or 3.5):.1f}%)"
+        elif kind in ('ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'CIBIL_ADVANCE'):
+            earning_stream = 'STAGE_ADVANCE'
+            stream_label = f"Stage Advance ({kind})"
+        elif kind == 'SLAB_BONUS':
+            earning_stream = 'STAGE_BONUS'
+            stream_label = "Milestone Slab Bonus"
+        elif kind == 'EXTRA_COMMISSION':
+            earning_stream = 'STAGE_BONUS'
+            stream_label = "Bonanza Extra Commission"
+        elif kind == 'BRAND_COMMISSION':
+            earning_stream = 'STAGE_BONUS'
+            stream_label = "Brand Incentive"
+        else:
+            earning_stream = 'OTHER_COMMISSION'
+            stream_label = kind
+
+        d['earning_stream'] = earning_stream
+        d['stream_label'] = stream_label
         d['level_label'] = LEVEL_LABELS.get(e.level, f'L{e.level}')
         cat_row = db.execute(text(
             "SELECT name FROM signup_categories WHERE id = :cid"
@@ -389,13 +453,20 @@ def member_cash_income(
         'wallet_balance': wallet,
         'earned_total':   earned_total,
         'summary': {
-            'gross_total':           float(summary.gross_total           or 0),
-            'draft_total':           float(summary.draft_total           or 0),
-            'pending_total':         float(summary.pending_total         or 0),
-            'stage1_approved_total': float(summary.stage1_approved_total or 0),
-            'released_total':        float(summary.released_total        or 0),
-            'total_deductions':      float(summary.total_deductions      or 0),
-            'total_entries':         int(summary.total_entries           or 0),
+            'gross_total':             float(summary.gross_total             or 0),
+            'draft_total':             float(summary.draft_total             or 0),
+            'pending_total':           float(summary.pending_total           or 0),
+            'stage1_approved_total':   float(summary.stage1_approved_total   or 0),
+            'released_total':          float(summary.released_total          or 0),
+            'total_deductions':        float(summary.total_deductions        or 0),
+            'total_entries':           int(summary.total_entries             or 0),
+            'personal_producer_total': float(summary.personal_producer_total or 0),
+            'team_differential_total': float(summary.team_differential_total or 0),
+            'support_total':           float(summary.support_total           or 0),
+            'showroom_total':          float(summary.showroom_total          or 0),
+            'stage_advances_total':    float(summary.stage_advances_total    or 0),
+            'stage_bonuses_total':     float(summary.stage_bonuses_total     or 0),
+            'by_category':             by_category,
         },
         'total':    total,
         'page':     page,
@@ -1747,6 +1818,23 @@ async def download_earner_card(
         if not row:
             raise HTTPException(status_code=404, detail='Partner data missing')
         pname, pcode, city, state, desig, gross, pid, _ntitle, _gender = row
+
+        # Authoritative canonical career designation lookup
+        try:
+            from app.services.vgk4u_career_service import VGK4UCareerService
+            cs = VGK4UCareerService.get_partner_career_status(db, pid)
+            if cs and cs.get('career_designation'):
+                desig = cs['career_designation']
+        except Exception:
+            pass
+        desig = (desig or 'Channel Partner').replace('★', '').replace('*', '').replace('⭐', '').strip()
+        if any(legacy in desig.upper() for legacy in ['SENIOR CHANNEL PARTNER', 'LEAD CHANNEL PARTNER', 'EXTENDED PARTNER', 'CORE PARTNER']):
+            desig = 'Channel Partner'
+        elif 'ZONAL MANAGER' in desig.upper():
+            desig = 'Manager'
+        elif 'DIRECTOR' in desig.upper():
+            desig = 'Regional Manager'
+
         # Derive display title: stored name_title wins; fall back to gender
         _t = (_ntitle or '').strip()
         if not _t:
@@ -2283,13 +2371,20 @@ def get_member_executive_summary(
         if str(r.get('status', '')).upper() in ('DRAFT', 'PENDING', 'STAGE1_APPROVED')
     )
 
+    from app.services.vgk4u_career_service import VGK4UCareerService
+    cs = VGK4UCareerService.get_partner_career_status(db, partner.id) if partner else None
+    c_desig = (cs.get('career_designation') if cs else None) or getattr(partner, 'vgk4u_current_designation', None) or "Channel Partner"
+    p_qual = (cs.get('personal_prod_qualification') if cs else None) or getattr(partner, 'vgk4u_personal_prod_qualification', None) or "None"
+
     return {
         "success": True,
         "member_id": partner.id,
         "member_name": p_name,
         "user_code": p_code,
         "phone": getattr(partner, 'phone', '—') or "—",
-        "designation": getattr(partner, 'designation_label', '') or getattr(partner, 'category', '') or "Channel Partner",
+        "designation": c_desig,
+        "career_designation": c_desig,
+        "personal_prod_qualification": p_qual,
         "registered_at": reg_date.strftime("%Y-%m-%d") if reg_date else "—",
         "payout_status": payout_status,
         "payout_status_label": payout_status_label,
@@ -2424,5 +2519,158 @@ def send_member_whatsapp_statement(
         if isinstance(exc, HTTPException):
             raise exc
         raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.get('/staff/vgk4u/corporate-margins')
+def get_vgk4u_corporate_margins(
+    company_id: Optional[int] = Query(None),
+    lead_id: Optional[int] = Query(None),
+    category_slug: Optional[str] = Query(None),
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+    current_staff: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    Staff / Accounting endpoint to inspect VGK4U corporate retained margins
+    (Apex Remainder, Inactive Producer Forfeiture, Inactive Sponsor Forfeiture).
+    Strictly segregated from partner personal earnings.
+    """
+    from sqlalchemy import func
+    from app.models.vgk4u_models import VGK4UCorporateMarginLedger
+
+    query = db.query(VGK4UCorporateMarginLedger)
+    if company_id:
+        query = query.filter(VGK4UCorporateMarginLedger.company_id == company_id)
+    if lead_id:
+        query = query.filter(VGK4UCorporateMarginLedger.source_lead_id == lead_id)
+    if category_slug:
+        query = query.filter(VGK4UCorporateMarginLedger.category_slug == category_slug)
+
+    total_count = query.count()
+    total_retained = db.query(func.coalesce(func.sum(VGK4UCorporateMarginLedger.net_retained_amount), 0)).scalar()
+
+    records = query.order_by(VGK4UCorporateMarginLedger.id.desc()).offset(offset).limit(limit).all()
+
+    return {
+        "success": True,
+        "total_count": total_count,
+        "total_retained_amount": float(total_retained or 0.0),
+        "records": [
+            {
+                "id": r.id,
+                "company_id": r.company_id,
+                "source_lead_id": r.source_lead_id,
+                "category_slug": r.category_slug,
+                "program_version": r.program_version,
+                "deal_value": float(r.deal_value),
+                "retained_pct": float(r.retained_pct),
+                "retained_amount": float(r.retained_amount),
+                "admin_charges": float(r.admin_charges),
+                "tds_amount": float(r.tds_amount),
+                "net_retained_amount": float(r.net_retained_amount),
+                "retained_reason": r.retained_reason,
+                "status": r.status,
+                "notes": r.notes,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in records
+        ],
+    }
+
+
+@router.get('/staff/vgk4u/configs')
+def get_vgk4u_staff_configs(
+    db: Session = Depends(get_db),
+    current_staff: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    Staff endpoint to read authoritative VGK4U Career, Personal Production,
+    and Category Commission configurations from the database.
+    """
+    career_rows = db.execute(text("""
+        SELECT id, designation_code, designation_name, hierarchy_order,
+               required_own_qualifying_files, required_active_team_members,
+               self_earning_pct, team_differential_pct, is_active, updated_at
+        FROM vgk4u_career_designation_configs
+        ORDER BY hierarchy_order ASC
+    """)).fetchall()
+
+    career_configs = [
+        {
+            "id": r[0],
+            "designation_code": r[1],
+            "designation_name": r[2],
+            "hierarchy_order": r[3],
+            "required_own_qualifying_files": r[4],
+            "required_active_team_members": r[5],
+            "self_earning_pct": float(r[6]),
+            "team_differential_pct": float(r[7]),
+            "is_active": bool(r[8]),
+            "updated_at": r[9].isoformat() if r[9] else None,
+        }
+        for r in career_rows
+    ]
+
+    prod_rows = db.execute(text("""
+        SELECT id, tier_code, tier_name, min_qualifying_files,
+               commission_rate_pct, is_active, updated_at
+        FROM vgk4u_personal_prod_configs
+        ORDER BY min_qualifying_files ASC
+    """)).fetchall()
+
+    prod_configs = [
+        {
+            "id": r[0],
+            "tier_code": r[1],
+            "tier_name": r[2],
+            "min_qualifying_files": r[3],
+            "commission_rate_pct": float(r[4]),
+            "is_active": bool(r[5]),
+            "updated_at": r[6].isoformat() if r[6] else None,
+        }
+        for r in prod_rows
+    ]
+
+    cat_rows = db.execute(text("""
+        SELECT id, version_label, category_slug, category_name,
+               max_network_pool_pct, producer_base_pct, sponsor_override_pct,
+               manager_diff_pct, gm_diff_pct, rm_diff_pct,
+               support_journey_pct, support_end_to_end_pct, showroom_pct,
+               admin_charge_pct, tds_pct, is_active, updated_at
+        FROM vgk4u_category_commission_configs
+        ORDER BY id ASC
+    """)).fetchall()
+
+    category_configs = [
+        {
+            "id": r[0],
+            "version_label": r[1],
+            "category_slug": r[2],
+            "category_name": r[3],
+            "max_network_pool_pct": float(r[4]),
+            "producer_base_pct": float(r[5]),
+            "sponsor_override_pct": float(r[6]),
+            "manager_diff_pct": float(r[7]),
+            "gm_diff_pct": float(r[8]),
+            "rm_diff_pct": float(r[9]),
+            "support_journey_pct": float(r[10]),
+            "support_end_to_end_pct": float(r[11]),
+            "showroom_pct": float(r[12]),
+            "admin_charge_pct": float(r[13]),
+            "tds_pct": float(r[14]),
+            "is_active": bool(r[15]),
+            "updated_at": r[16].isoformat() if r[16] else None,
+        }
+        for r in cat_rows
+    ]
+
+    return {
+        "success": True,
+        "career_designations": career_configs,
+        "personal_prod_tiers": prod_configs,
+        "category_configs": category_configs,
+    }
+
 
 

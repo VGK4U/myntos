@@ -107,13 +107,29 @@
         for (var i = 0; i < els.length; i++) _fitNameEl(els[i]);
     }
 
+    function _sanitizeDesignation(raw) {
+        if (!raw) return 'Channel Partner';
+        let s = String(raw).replace(/^[0-9]+[★\*\s]*/g, '').replace(/[★\*⭐]/g, '').trim();
+        const up = s.toUpperCase();
+        if (up.includes('SENIOR CHANNEL PARTNER') || up.includes('LEAD CHANNEL PARTNER')) return 'Channel Partner';
+        if (up.includes('ZONAL MANAGER')) return 'Manager';
+        if (up.includes('DIRECTOR')) return 'Regional Manager';
+        if (up === 'COMPANY APEX NODE') return 'Company Apex Node';
+        if (up === 'REGIONAL MANAGER') return 'Regional Manager';
+        if (up === 'GENERAL MANAGER') return 'General Manager';
+        if (up === 'MANAGER') return 'Manager';
+        if (up === 'CHANNEL PARTNER') return 'Channel Partner';
+        if (up === 'MEMBER') return 'Member';
+        return s || 'Channel Partner';
+    }
+
     /* ── Visiting Card FRONT ─────────────────────────────────────────────── */
     function _vcardFrontHtml(cd) {
         const name         = _e(cd.display_name || '—');
         const vgkId        = _e(cd.partner_code || '—');
         const city         = _e(cd.location || cd.city || '');
         const qrSrc        = cd.qr_b64 || '';
-        const designation  = _e(cd.designation_label || 'Channel Partner');
+        const designation  = _e(_sanitizeDesignation(cd.designation_label || cd.career_designation || cd.current_designation || cd.rank_display || 'Channel Partner'));
         const companyPh    = '+91 858585 2738';
         const phoneDisplay = _e(_fmtPhone(cd.phone));
 
@@ -176,7 +192,7 @@
     /* ── Visiting Card BACK ──────────────────────────────────────────────── */
     function _vcardBackHtml(cd) {
         const vgkId        = _e(cd.partner_code || '—');
-        const designation  = _e(cd.designation_label || 'Channel Partner');
+        const designation  = _e(_sanitizeDesignation(cd.designation_label || cd.career_designation || cd.current_designation || cd.rank_display || 'Channel Partner'));
         const phoneDisplay = _e(_fmtPhone(cd.phone));
 
         return `<div id="vcardBack" style="width:340px;height:194px;border-radius:10px;overflow:hidden;box-shadow:0 3px 14px rgba(0,0,0,.15);font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column">
@@ -277,7 +293,7 @@
             <div style="flex:1;min-width:0;padding-top:2px">
                 <div style="font-size:11px;font-weight:800;color:#d97706;letter-spacing:.04em;margin-bottom:2px">VGK ID</div>
                 <div data-vgk-name="${name}" style="font-size:12px;font-weight:900;color:#111;line-height:1.2;margin-bottom:3px;white-space:nowrap;overflow:visible">${name}</div>
-                <div style="font-size:10px;color:#1d4ed8;font-weight:700;font-style:italic">~·~ ${_e(cd.designation_label || cd.current_designation || cd.rank_display || 'Channel Partner')}</div>
+                <div style="font-size:10px;color:#1d4ed8;font-weight:700;font-style:italic">~·~ ${_e(_sanitizeDesignation(cd.designation_label || cd.career_designation || cd.current_designation || cd.rank_display || 'Channel Partner'))}</div>
             </div>
         </div>
         <div style="display:flex;gap:10px;justify-content:center;padding-top:8px">

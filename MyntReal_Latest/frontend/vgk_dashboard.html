@@ -542,13 +542,14 @@
                 <div class="sidebar-head-id" id="sidebarMemberId"></div>
                 <div id="sidebarMemberRankBadge" style="margin-top:6px;display:none">
                     <span style="background:rgba(255,255,255,0.18);color:#fff;border:1px solid rgba(255,255,255,0.35);border-radius:12px;padding:2px 10px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:4px">
-                        <i class="fas fa-star text-warning"></i><span id="sidebarMemberRankText">2★ Manager</span>
+                        <i class="fas fa-user-tie" style="color:#fde047"></i><span id="sidebarMemberRankText">Member</span>
                     </span>
                 </div>
             </div>
         </div>
         <nav class="sidebar-nav">
             <button class="snav-item active" id="snav-earnings" onclick="showTab('earnings'); closeSidebar()"><i class="fas fa-home"></i>Dashboard</button>
+            <button class="snav-item" id="snav-career" onclick="showTab('career'); closeSidebar()"><i class="fas fa-award"></i>Career &amp; Milestones</button>
             <button class="snav-item" id="snav-profile" onclick="showTab('profile'); closeSidebar()"><i class="fas fa-user"></i>Profile</button>
             <button class="snav-item" id="snav-mycard" onclick="showTab('mycard'); closeSidebar()"><i class="fas fa-id-card"></i>My Card &amp; Progress</button>
             <button class="snav-item" id="snav-addmember" onclick="showTab('addmember'); closeSidebar()"><i class="fas fa-user-plus"></i>Add Channel Partner</button>
@@ -597,6 +598,7 @@
     <div class="tab-nav">
         <ul class="nav nav-pills" id="dashTabs">
             <li class="nav-item"><a class="nav-link active" href="#" onclick="return showTab('earnings', this)"><i class="fas fa-coins me-1"></i>Earnings</a></li>
+            <li class="nav-item"><a class="nav-link" href="#" id="dashTab-career" onclick="return showTab('career', this)"><i class="fas fa-award me-1"></i>Career</a></li>
             <li class="nav-item"><a class="nav-link" href="#" onclick="return showTab('leads', this)"><i class="fas fa-user-tag me-1"></i>My Leads</a></li>
             <li class="nav-item"><a class="nav-link" href="#" onclick="return showTab('orders', this)"><i class="fas fa-box me-1"></i>Orders</a></li>
             <li class="nav-item"><a class="nav-link" href="#" onclick="return showTab('tickets', this)"><i class="fas fa-tools me-1"></i>Service Tickets</a></li>
@@ -656,35 +658,101 @@
                     </div>
                 </div>
 
-                <!-- MY VGK4U RANK Hero Card -->
-                <div style="background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%); border-radius: 16px; padding: 22px 24px; color: white; box-shadow: 0 4px 18px rgba(124,58,237,0.25); margin-bottom: 16px;">
-                    <div class="row align-items-center">
-                        <div class="col-md-4 col-12 mb-3 mb-md-0">
-                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; font-weight: 700;">MY VGK4U RANK & INCENTIVE SLAB</div>
-                            <div style="font-size: 22px; font-weight: 800; margin-top: 4px; display: flex; align-items: center; gap: 8px;">
-                                <span><i class="fas fa-star text-warning me-1"></i><span id="vgkCurrentRankDisplay">Loading…</span></span>
+                <!-- VGK4U DUAL ARCHITECTURE HERO CARDS (Career Designation & Personal Production) -->
+                <div class="row g-3 mb-3" id="vgk4uHeroRow">
+                    <!-- CARD 1: Career Designation & Team Leadership -->
+                    <div class="col-lg-6 col-12">
+                        <div style="background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%); border-radius: 16px; padding: 20px 22px; color: white; box-shadow: 0 4px 18px rgba(30,27,75,0.28); height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                    <div>
+                                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; font-weight: 700;">CAREER DESIGNATION</div>
+                                        <div style="font-size: 22px; font-weight: 900; margin-top: 2px; display: flex; align-items: center; gap: 8px;">
+                                            <i class="fas fa-sitemap text-warning"></i>
+                                            <span id="vgk4uCareerDesigTitle">Loading…</span>
+                                        </div>
+                                    </div>
+                                    <span id="vgk4uCareerDesigBadge" style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 800;">
+                                        Career Rank
+                                    </span>
+                                </div>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px 14px; margin: 12px 0;">
+                                    <div>
+                                        <div style="font-size: 10px; text-transform: uppercase; opacity: 0.75; font-weight: 700;">Own Qualifying Files</div>
+                                        <div style="font-size: 20px; font-weight: 800; color: #a7f3d0;" id="vgk4uOwnFilesCount">—</div>
+                                    </div>
+                                    <div style="border-left: 1px solid rgba(255,255,255,0.15); padding-left: 10px;">
+                                        <div style="font-size: 10px; text-transform: uppercase; opacity: 0.75; font-weight: 700;">Active Team Legs</div>
+                                        <div style="font-size: 20px; font-weight: 800; color: #fde047;" id="vgk4uActiveLegsCount">—</div>
+                                    </div>
+                                </div>
                             </div>
-                            <div style="margin-top: 6px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                                <span style="background: rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;">Rank Slab: <span id="vgkRankSlabPctDisplay">—</span></span>
-                                <span style="background: #059669; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;"><i class="fas fa-shield-alt me-1"></i>Permanent Rank</span>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; margin-bottom: 4px;">
+                                    <span>NEXT CAREER: <strong id="vgk4uNextCareerTitle" style="color:#fde047;">—</strong></span>
+                                    <span id="vgk4uCareerRemainingText" style="opacity: 0.9;">—</span>
+                                </div>
+                                <div class="progress" style="height: 8px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden; margin-bottom: 12px;">
+                                    <div class="progress-bar bg-warning" id="vgk4uCareerProgressBar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <button onclick="showTab('career')" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; text-align: center; transition: all 0.2s;">
+                                    <i class="fas fa-list-ol me-1"></i> View Career Ladder &amp; Rules
+                                </button>
                             </div>
-                        </div>
-                        <div class="col-md-4 col-12 mb-3 mb-md-0" style="border-left: 1px solid rgba(255,255,255,0.15); border-right: 1px solid rgba(255,255,255,0.15); padding-left: 18px; padding-right: 18px;">
-                            <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; font-weight: 700;">ACTIVATED TEAM MEMBERS</div>
-                            <div style="font-size: 24px; font-weight: 800; margin-top: 2px;"><span id="vgkActivatedTeamCount">—</span> <small style="font-size: 12px; opacity: 0.8; font-weight: 500;">Active: <span id="vgkActiveTeamCount">—</span></small></div>
-                            <div style="font-size: 11px; opacity: 0.85; margin-top: 4px;"><i class="fas fa-info-circle me-1"></i>Downline with ≥3 unique first-payment files</div>
-                        </div>
-                        <div class="col-md-4 col-12">
-                            <div style="display: flex; justify-content: space-between; font-size: 11px; text-transform: uppercase; font-weight: 700; opacity: 0.85; margin-bottom: 4px;">
-                                <span>NEXT RANK: <strong id="vgkNextRankDisplay" style="color: #fde047;">—</strong></span>
-                                <span>GAP: <strong id="vgkRankGapDisplay">—</strong></span>
-                            </div>
-                            <div class="progress" style="height: 10px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden;">
-                                <div class="progress-bar bg-warning" id="vgkRankProgressBar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                            </div>
-                            <div style="font-size: 11px; opacity: 0.85; margin-top: 6px; text-align: right;"><span id="vgkRankProgressPctDisplay">0.0%</span> Completed towards <span id="vgkNextRankReqDisplay">—</span> Activated Members</div>
                         </div>
                     </div>
+
+                    <!-- CARD 2: Personal Production Qualification & Commission Rate -->
+                    <div class="col-lg-6 col-12">
+                        <div style="background: linear-gradient(135deg, #065f46 0%, #047857 100%); border-radius: 16px; padding: 20px 22px; color: white; box-shadow: 0 4px 18px rgba(6,95,70,0.28); height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+                            <div>
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                                    <div>
+                                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; font-weight: 700;">PERSONAL PRODUCTION</div>
+                                        <div style="font-size: 22px; font-weight: 900; margin-top: 2px; display: flex; align-items: center; gap: 8px;">
+                                            <i class="fas fa-bolt text-warning"></i>
+                                            <span id="vgk4uProdQualTitle">Loading…</span>
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 10px; text-transform: uppercase; opacity: 0.75; font-weight: 700;">Effective Commission</div>
+                                        <span id="vgk4uEffectiveRateBadge" style="background: #fbbf24; color: #78350f; border-radius: 20px; padding: 4px 12px; font-size: 14px; font-weight: 900; display: inline-block; margin-top: 2px;">
+                                            —%
+                                        </span>
+                                    </div>
+                                </div>
+                                <div style="background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px 14px; margin: 12px 0; font-size: 12px; line-height: 1.4; opacity: 0.95;">
+                                    <i class="fas fa-info-circle me-1 text-warning"></i>
+                                    <strong>Separate Sales Track:</strong> Personal qualifying files unlock up to 9.0% direct commission independently of team career designation.
+                                </div>
+                            </div>
+                            <div>
+                                <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: 700; margin-bottom: 4px;">
+                                    <span>NEXT SALES TIER: <strong id="vgk4uNextProdTitle" style="color:#fde047;">—</strong></span>
+                                    <span id="vgk4uProdRemainingText" style="opacity: 0.9;">—</span>
+                                </div>
+                                <div class="progress" style="height: 8px; background: rgba(255,255,255,0.2); border-radius: 10px; overflow: hidden; margin-bottom: 12px;">
+                                    <div class="progress-bar bg-warning" id="vgk4uProdProgressBar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                                <button onclick="showTab('career')" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 8px; padding: 6px 14px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%; text-align: center; transition: all 0.2s;">
+                                    <i class="fas fa-chart-line me-1"></i> View Sales Tiers &amp; Absorption
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legacy compatibility hidden hooks for any background scripts -->
+                <div style="display:none">
+                    <span id="vgkCurrentRankDisplay"></span>
+                    <span id="vgkRankSlabPctDisplay"></span>
+                    <span id="vgkActivatedTeamCount"></span>
+                    <span id="vgkActiveTeamCount"></span>
+                    <span id="vgkNextRankDisplay"></span>
+                    <span id="vgkRankGapDisplay"></span>
+                    <span id="vgkRankProgressPctDisplay"></span>
+                    <span id="vgkNextRankReqDisplay"></span>
+                    <div id="vgkRankProgressBar"></div>
                 </div>
 
 
@@ -907,6 +975,138 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- CAREER & MILESTONES TAB (VGK4U Phase 4) -->
+        <div id="tab-career" style="display:none">
+            <div class="section-card">
+                <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                    <span><i class="fas fa-award" style="color:#4338ca"></i>Career &amp; Milestones</span>
+                    <span style="font-size:11px;background:#e0e7ff;color:#3730a3;font-weight:700;padding:3px 10px;border-radius:12px">
+                        Dual-Track Architecture
+                    </span>
+                </div>
+
+                <!-- Explanation Banner: Independence of Tracks -->
+                <div style="background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:12px;padding:14px 16px;margin-bottom:16px;color:#3730a3;font-size:12.5px;line-height:1.5">
+                    <strong><i class="fas fa-lightbulb me-1 text-warning"></i>Two Independent Progression Tracks:</strong><br>
+                    1. <strong>Career Designation</strong> represents your <em>organizational leadership</em> and team hierarchy. It requires personal qualification files plus active direct team legs.<br>
+                    2. <strong>Personal Production Qualification</strong> governs your <em>direct sales commission rate</em> (up to 9.0%). It escalates with your lifetime personal files, regardless of team size.
+                </div>
+
+                <!-- 10 Questions Answer Cards -->
+                <div class="row g-3 mb-4">
+                    <!-- Current Position Explanation -->
+                    <div class="col-md-6 col-12">
+                        <div style="background:#fff;border:1.5px solid #e2e8f0;border-left:4px solid #4338ca;border-radius:12px;padding:16px;height:100%">
+                            <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Career Leadership Status</div>
+                            <div style="font-size:20px;font-weight:800;color:#1e1b4b;margin-top:2px" id="careerDetailDesigTitle">—</div>
+                            <div style="font-size:12px;color:#475569;margin-top:8px;line-height:1.5" id="careerDetailDesigExplanation">
+                                Loading explanation…
+                            </div>
+                            <div style="margin-top:12px;padding-top:10px;border-top:1px solid #f1f5f9;display:flex;gap:14px">
+                                <div>
+                                    <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700">Qualifying Files</div>
+                                    <div style="font-size:16px;font-weight:800;color:#0f172a" id="careerDetailOwnFiles">—</div>
+                                </div>
+                                <div>
+                                    <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700">Active Team Legs</div>
+                                    <div style="font-size:16px;font-weight:800;color:#0f172a" id="careerDetailActiveLegs">—</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Personal Production Explanation -->
+                    <div class="col-md-6 col-12">
+                        <div style="background:#fff;border:1.5px solid #e2e8f0;border-left:4px solid #059669;border-radius:12px;padding:16px;height:100%">
+                            <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Personal Sales Commission</div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px">
+                                <div style="font-size:20px;font-weight:800;color:#065f46" id="careerDetailProdQualTitle">—</div>
+                                <span style="background:#d1fae5;color:#065f46;font-size:14px;font-weight:900;padding:2px 10px;border-radius:14px" id="careerDetailEffectiveRate">—%</span>
+                            </div>
+                            <div style="font-size:12px;color:#475569;margin-top:8px;line-height:1.5" id="careerDetailProdExplanation">
+                                Loading sales explanation…
+                            </div>
+                            <div style="margin-top:12px;padding-top:10px;border-top:1px solid #f1f5f9;">
+                                <div style="font-size:11px;font-weight:700;color:#065f46" id="careerDetailNextProdRequirement">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Career Designation Ladder Table -->
+                <div style="background:#fff;border-radius:12px;border:1.5px solid #e2e8f0;overflow:hidden;margin-bottom:20px">
+                    <div style="padding:14px 16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">
+                        <div style="font-size:13px;font-weight:800;color:#0f172a">
+                            <i class="fas fa-sitemap text-primary me-2"></i>Career Designation Ladder (Live Targets)
+                        </div>
+                        <span style="font-size:11px;color:#64748b">Sequential progression Option A</span>
+                    </div>
+                    <div style="overflow-x:auto">
+                        <table style="width:100%;border-collapse:collapse;font-size:12.5px" id="careerLadderTable">
+                            <thead>
+                                <tr style="background:#f1f5f9;color:#475569;text-transform:uppercase;font-size:10.5px;letter-spacing:.05em">
+                                    <th style="padding:10px 14px;text-align:left">Designation</th>
+                                    <th style="padding:10px 14px;text-align:center">Min Own Files</th>
+                                    <th style="padding:10px 14px;text-align:center">Min Active Legs</th>
+                                    <th style="padding:10px 14px;text-align:center">Personal Rate</th>
+                                    <th style="padding:10px 14px;text-align:center">Team Diff</th>
+                                    <th style="padding:10px 14px;text-align:center">Your Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="careerLadderTableBody">
+                                <tr><td colspan="6" style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin me-2"></i>Loading career targets…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Personal Production Qualification Table -->
+                <div style="background:#fff;border-radius:12px;border:1.5px solid #e2e8f0;overflow:hidden;margin-bottom:20px">
+                    <div style="padding:14px 16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center">
+                        <div style="font-size:13px;font-weight:800;color:#0f172a">
+                            <i class="fas fa-bolt text-success me-2"></i>Personal Production Tiers (Individual Sales)
+                        </div>
+                        <span style="font-size:11px;color:#64748b">Cumulative Lifetime Qualifying Files</span>
+                    </div>
+                    <div style="overflow-x:auto">
+                        <table style="width:100%;border-collapse:collapse;font-size:12.5px" id="prodLadderTable">
+                            <thead>
+                                <tr style="background:#f1f5f9;color:#475569;text-transform:uppercase;font-size:10.5px;letter-spacing:.05em">
+                                    <th style="padding:10px 14px;text-align:left">Sales Tier</th>
+                                    <th style="padding:10px 14px;text-align:center">Lifetime Files</th>
+                                    <th style="padding:10px 14px;text-align:center">Direct Sales Rate</th>
+                                    <th style="padding:10px 14px;text-align:center">Team Differentials Absorbed</th>
+                                    <th style="padding:10px 14px;text-align:center">Your Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="prodLadderTableBody">
+                                <tr><td colspan="5" style="text-align:center;padding:20px;color:#94a3b8"><i class="fas fa-spinner fa-spin me-2"></i>Loading sales tiers…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Commission Waterfall Breakdown Explanation -->
+                <div style="background:#fff;border-radius:12px;border:1.5px solid #e2e8f0;padding:18px">
+                    <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:10px">
+                        <i class="fas fa-balance-scale text-warning me-2"></i>Solar Network Commission Waterfall (9.00% Pool)
+                    </div>
+                    <div style="font-size:12px;color:#475569;line-height:1.6">
+                        Every qualifying Solar project distributes up to <strong>9.00%</strong> across the unilevel team:
+                        <ul style="margin-top:6px;margin-bottom:10px;padding-left:20px">
+                            <li><strong>Producer (6.00% Base):</strong> Earned by the direct closing Channel Partner / Manager / GM / RM.</li>
+                            <li><strong>Direct Sponsor Override (1.00%):</strong> Dedicated override to the immediate sponsor, provided sponsor is active. If sponsor is inactive or missing, this is retained by corporate.</li>
+                            <li><strong>Manager Differential (1.50%):</strong> Paid to the first eligible Manager in the upline. Absorbed if Producer is Manager or above.</li>
+                            <li><strong>General Manager Differential (1.00%):</strong> Paid to the first eligible GM in the upline. Absorbed if Producer is 8.5% or above.</li>
+                            <li><strong>Regional Manager Differential (0.50%):</strong> Paid to the first eligible RM in the upline.</li>
+                        </ul>
+                        <em>Note: Field Support (0.75% / 1.50%) and Showroom Channel (3.50%) are operational budgets paid outside the 9.00% network pool.</em>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -1458,6 +1658,39 @@
                     <div style="flex:1;min-width:110px;background:#fff;border:1.5px solid #ede9fe;border-radius:10px;padding:12px 14px">
                         <div style="font-size:10px;color:#6b7280;text-transform:uppercase;margin-bottom:4px">Total Released</div>
                         <div style="font-size:18px;font-weight:800;color:#7c3aed" id="ciReleasedTotal">—</div>
+                    </div>
+                </div>
+
+                <!-- VGK4U Earnings by Stream (Phase 4) -->
+                <div style="background:#fff;border-radius:12px;border:1.5px solid #ede9fe;padding:16px;margin-bottom:16px">
+                    <div style="font-size:13px;font-weight:800;color:#1e1b4b;margin-bottom:12px;display:flex;align-items:center;gap:6px">
+                        <i class="fas fa-layer-group text-primary"></i> Earnings by Stream (VGK4U Breakdown)
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px">
+                            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase">Personal Sales</div>
+                            <div style="font-size:16px;font-weight:800;color:#0f172a;margin-top:2px" id="ciStreamPersonal">₹0.00</div>
+                        </div>
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px">
+                            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase">Team Differential</div>
+                            <div style="font-size:16px;font-weight:800;color:#4338ca;margin-top:2px" id="ciStreamTeam">₹0.00</div>
+                        </div>
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px">
+                            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase">Field Support</div>
+                            <div style="font-size:16px;font-weight:800;color:#0d9488;margin-top:2px" id="ciStreamSupport">₹0.00</div>
+                        </div>
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px">
+                            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase">Showroom</div>
+                            <div style="font-size:16px;font-weight:800;color:#b45309;margin-top:2px" id="ciStreamShowroom">₹0.00</div>
+                        </div>
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px">
+                            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase">Stage Advances</div>
+                            <div style="font-size:16px;font-weight:800;color:#047857;margin-top:2px" id="ciStreamAdvances">₹0.00</div>
+                        </div>
+                        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px">
+                            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase">Milestone Bonuses</div>
+                            <div style="font-size:16px;font-weight:800;color:#9333ea;margin-top:2px" id="ciStreamBonuses">₹0.00</div>
+                        </div>
                     </div>
                 </div>
 
@@ -2394,7 +2627,7 @@
             return `<span class="badge-pending">${escHtml(s)}</span>`;
         }
 
-        const ALL_TABS = ['earnings','leads','orders','tickets','network','addmember','points','ledger','coupons','profile','bonanza','vendors','media','mycard'];
+        const ALL_TABS = ['earnings','leads','orders','tickets','network','addmember','points','ledger','coupons','profile','bonanza','vendors','media','mycard','career'];
         let loaded = {};
 
         function openSidebar() {
@@ -2455,6 +2688,9 @@
                 else if (name === 'vendors') loadVendorDirectory();
                 else if (name === 'media') loadMediaSection();
                 else if (name === 'mycard') loadMyCard();
+                else if (name === 'career') { loadEarnings().then(() => renderCareerTab()); }
+            } else if (name === 'career') {
+                renderCareerTab();
             } else if (name === 'mycard' && !_mycardData) {
                 // [DC-LOADING-ROBUST] If user returns to mycard tab while previous load is still
                 // pending or failed without resetting the flag, retry so they don't see a frozen spinner.
@@ -2555,6 +2791,116 @@
             } catch(e) {}
         }
 
+        function renderCareerTab() {
+            const cs = window._vgk4uCareerStatus;
+            if (!cs) return;
+
+            const elDesigTitle = document.getElementById('careerDetailDesigTitle');
+            if (elDesigTitle) elDesigTitle.textContent = cs.career_designation_label || 'Member';
+            const elOwnFiles = document.getElementById('careerDetailOwnFiles');
+            if (elOwnFiles) elOwnFiles.textContent = cs.own_qualifying_files ?? 0;
+            const elActiveLegs = document.getElementById('careerDetailActiveLegs');
+            if (elActiveLegs) elActiveLegs.textContent = cs.active_legs ?? 0;
+
+            const elDesigExp = document.getElementById('careerDetailDesigExplanation');
+            if (elDesigExp) {
+                if (cs.career_designation === 'MEMBER') {
+                    elDesigExp.innerHTML = 'You are currently an entry-level <strong>Member</strong> (0 personal qualifying files). Once you close 1 personal qualifying file, you unlock the <strong>Channel Partner</strong> designation and become eligible for team differential earnings.';
+                } else if (cs.career_designation === 'CHANNEL_PARTNER') {
+                    elDesigExp.innerHTML = 'You are a qualified <strong>Channel Partner</strong> with personal qualifying production. To reach <strong>Manager</strong>, develop direct active team legs in your frontline.';
+                } else if (cs.career_designation === 'MANAGER') {
+                    elDesigExp.innerHTML = 'You are a recognized <strong>Manager</strong> with active team legs. You qualify for a <strong>1.50% team differential</strong> on downline volume generated below Manager rank.';
+                } else if (cs.career_designation === 'GENERAL_MANAGER') {
+                    elDesigExp.innerHTML = 'You have achieved <strong>General Manager</strong> with 5+ active legs. You qualify for an additional <strong>1.00% GM differential</strong> on team volume.';
+                } else if (cs.career_designation === 'REGIONAL_MANAGER') {
+                    elDesigExp.innerHTML = 'You have achieved <strong>Regional Manager</strong> with 10+ active legs. You command the top-tier <strong>0.50% RM differential</strong> across your organization.';
+                } else {
+                    elDesigExp.innerHTML = `You hold the designation of <strong>${escHtml(cs.career_designation_label)}</strong>.`;
+                }
+            }
+
+            const elProdTitle = document.getElementById('careerDetailProdQualTitle');
+            if (elProdTitle) elProdTitle.textContent = cs.personal_prod_tier_label || 'Base';
+            const elEffectiveRate = document.getElementById('careerDetailEffectiveRate');
+            if (elEffectiveRate) elEffectiveRate.textContent = Number(cs.effective_personal_rate || 6.0).toFixed(1) + '%';
+
+            const elProdExp = document.getElementById('careerDetailProdExplanation');
+            if (elProdExp) {
+                elProdExp.innerHTML = `Your personal sales rate is <strong>${Number(cs.effective_personal_rate || 6.0).toFixed(1)}%</strong> on Solar projects, based on your cumulative <strong>${cs.own_qualifying_files || 0} lifetime qualifying files</strong>. Personal production rate scales completely independently of team career designation.`;
+            }
+
+            const elNextProdReq = document.getElementById('careerDetailNextProdRequirement');
+            if (elNextProdReq) {
+                const pl = window._vgk4uProdLadder || [];
+                const pIdx = pl.findIndex(p => p.code === cs.personal_prod_tier);
+                const nextTier = (pIdx >= 0 && pIdx < pl.length - 1) ? pl[pIdx + 1] : null;
+                if (nextTier) {
+                    const need = Math.max(0, (nextTier.min_files || 0) - (cs.own_qualifying_files || 0));
+                    elNextProdReq.innerHTML = `<i class="fas fa-arrow-up me-1 text-success"></i>Next Tier: <strong>${escHtml(nextTier.label)} (${nextTier.commission_pct.toFixed(1)}%)</strong> — Need <strong>${need}</strong> more qualifying file(s).`;
+                } else {
+                    elNextProdReq.innerHTML = `<i class="fas fa-check-circle me-1 text-success"></i>You have achieved the maximum personal sales commission rate (9.00%).`;
+                }
+            }
+
+            // Populate Career Ladder Table
+            const clTableBody = document.getElementById('careerLadderTableBody');
+            const cl = window._vgk4uCareerLadder || [];
+            if (clTableBody && cl.length) {
+                const currentRankOrder = (cl.find(c => c.code === cs.career_designation) || {}).rank_order || 0;
+                clTableBody.innerHTML = cl.map(c => {
+                    const isCurrent = c.code === cs.career_designation;
+                    const isAchieved = c.rank_order < currentRankOrder;
+                    const statusBadge = isCurrent
+                        ? '<span class="badge bg-primary text-white" style="font-weight:700">Current Rank</span>'
+                        : isAchieved
+                            ? '<span class="badge bg-success text-white" style="font-weight:700">Achieved ✓</span>'
+                            : '<span class="badge bg-light text-secondary" style="border:1px solid #cbd5e1">Locked</span>';
+                    const bg = isCurrent ? 'background:#eff6ff;' : '';
+                    return `<tr style="${bg}border-bottom:1px solid #f1f5f9">
+                        <td style="padding:10px 14px;font-weight:700;color:#1e293b">${escHtml(c.label)}</td>
+                        <td style="padding:10px 14px;text-align:center">${c.min_files}</td>
+                        <td style="padding:10px 14px;text-align:center">${c.min_legs}</td>
+                        <td style="padding:10px 14px;text-align:center;font-weight:600">${Number(c.self_pct||0).toFixed(2)}%</td>
+                        <td style="padding:10px 14px;text-align:center;font-weight:600;color:#4338ca">${Number(c.diff_pct||0).toFixed(2)}%</td>
+                        <td style="padding:10px 14px;text-align:center">${statusBadge}</td>
+                    </tr>`;
+                }).join('');
+            }
+
+            // Populate Personal Production Ladder Table
+            const plTableBody = document.getElementById('prodLadderTableBody');
+            const pl = window._vgk4uProdLadder || [];
+            if (plTableBody && pl.length) {
+                const currentProdOrder = (pl.find(p => p.code === cs.personal_prod_tier) || {}).rank_order || 0;
+                plTableBody.innerHTML = pl.map(p => {
+                    const isCurrent = p.code === cs.personal_prod_tier;
+                    const isAchieved = p.rank_order < currentProdOrder;
+                    const statusBadge = isCurrent
+                        ? '<span class="badge bg-success text-white" style="font-weight:700">Current Tier</span>'
+                        : isAchieved
+                            ? '<span class="badge bg-secondary text-white" style="font-weight:700">Passed</span>'
+                            : '<span class="badge bg-light text-secondary" style="border:1px solid #cbd5e1">Locked</span>';
+                    const bg = isCurrent ? 'background:#ecfdf5;' : '';
+                    let absorbed = 'None (Full team differentials pass upline)';
+                    if (p.commission_pct >= 9.0) {
+                        absorbed = 'Absorbs All (Direct Sponsor, Mgr, GM, RM) — 9.00% retained by Producer';
+                    } else if (p.commission_pct >= 8.5) {
+                        absorbed = 'Absorbs Manager (1.50%) + GM (1.00%) — Sponsor=0%';
+                    } else if (p.commission_pct >= 7.5) {
+                        absorbed = 'Absorbs Manager differential (1.50%)';
+                    }
+                    const filesRange = p.max_files ? `${p.min_files} – ${p.max_files}` : `${p.min_files}+`;
+                    return `<tr style="${bg}border-bottom:1px solid #f1f5f9">
+                        <td style="padding:10px 14px;font-weight:700;color:#1e293b">${escHtml(p.label)}</td>
+                        <td style="padding:10px 14px;text-align:center">${filesRange}</td>
+                        <td style="padding:10px 14px;text-align:center;font-weight:800;color:#059669">${Number(p.commission_pct||0).toFixed(2)}%</td>
+                        <td style="padding:10px 14px;text-align:center;font-size:11.5px;color:#475569">${absorbed}</td>
+                        <td style="padding:10px 14px;text-align:center">${statusBadge}</td>
+                    </tr>`;
+                }).join('');
+            }
+        }
+
         function _applyEarningsData(data) {
             try {
                 const m = data.member || {};
@@ -2583,11 +2929,11 @@
                 // V27 Authoritative Rank Position & Earnings Reconciliation Binding
                 if (data.rank_position) {
                     const rp = data.rank_position;
-                    const elR = document.getElementById('vgkCurrentRankDisplay'); if (elR) elR.textContent = rp.rank_display || '1★ Channel Partner';
+                    const elR = document.getElementById('vgkCurrentRankDisplay'); if (elR) elR.textContent = (rp.career_designation || rp.current_designation || rp.rank_display || 'Channel Partner').replace(/[★*]/g, '').trim();
                     const elS = document.getElementById('vgkRankSlabPctDisplay'); if (elS) elS.textContent = (rp.rank_slab_pct || 5.0).toFixed(2) + '%';
                     const elA = document.getElementById('vgkActivatedTeamCount'); if (elA) elA.textContent = rp.activated_team || 0;
                     const elV = document.getElementById('vgkActiveTeamCount'); if (elV) elV.textContent = rp.active_team || 0;
-                    const elN = document.getElementById('vgkNextRankDisplay'); if (elN) elN.textContent = rp.next_rank || 'Director (Max Rank)';
+                    const elN = document.getElementById('vgkNextRankDisplay'); if (elN) elN.textContent = (rp.next_career || rp.next_rank || 'Regional Manager (Max Career)').replace(/[★*]/g, '').trim();
                     const elG = document.getElementById('vgkRankGapDisplay'); if (elG) elG.textContent = rp.next_rank ? (rp.rank_gap || 0) : '0';
                     const elP = document.getElementById('vgkRankProgressPctDisplay'); if (elP) elP.textContent = (rp.rank_progress_percent || 0).toFixed(1) + '%';
                     const elReq = document.getElementById('vgkNextRankReqDisplay'); if (elReq) elReq.textContent = rp.next_rank_requirement || '50';
@@ -2601,6 +2947,90 @@
                         _srb.style.display = 'block';
                     }
                 }
+
+                // VGK4U Decoupled Architecture: Career Designation & Personal Production Binding
+                if (data.vgk4u_career_status) {
+                    const cs = data.vgk4u_career_status;
+                    window._vgk4uCareerStatus = cs;
+                    window._vgk4uCareerLadder = data.career_ladder || cs.career_ladder || [];
+                    window._vgk4uProdLadder = data.personal_prod_ladder || cs.personal_prod_ladder || [];
+
+                    // Card 1: Organizational Career & Leadership
+                    const elDesig = document.getElementById('vgk4uCareerDesigTitle');
+                    if (elDesig) elDesig.textContent = cs.career_designation_label || 'Member';
+                    const elDesigBadge = document.getElementById('vgk4uCareerDesigBadge');
+                    if (elDesigBadge) elDesigBadge.textContent = 'Level ' + (cs.career_designation_level ?? (cs.career_designation === 'MEMBER' ? 0 : 1));
+                    const elOwnFiles = document.getElementById('vgk4uOwnFilesCount');
+                    if (elOwnFiles) elOwnFiles.textContent = cs.own_qualifying_files ?? 0;
+                    const elLegs = document.getElementById('vgk4uActiveLegsCount');
+                    if (elLegs) elLegs.textContent = cs.active_legs ?? 0;
+
+                    // Next career progression
+                    const cl = window._vgk4uCareerLadder;
+                    const cIdx = cl.findIndex(c => c.code === cs.career_designation);
+                    const nextCareer = (cIdx >= 0 && cIdx < cl.length - 1) ? cl[cIdx + 1] : null;
+                    const elNextCareer = document.getElementById('vgk4uNextCareerTitle');
+                    const elCareerRem = document.getElementById('vgk4uCareerRemainingText');
+                    const elCareerBar = document.getElementById('vgk4uCareerProgressBar');
+
+                    if (nextCareer) {
+                        if (elNextCareer) elNextCareer.textContent = nextCareer.label;
+                        const legsNeed = Math.max(0, (nextCareer.min_legs || 0) - (cs.active_legs || 0));
+                        const filesNeed = Math.max(0, (nextCareer.min_files || 0) - (cs.own_qualifying_files || 0));
+                        const parts = [];
+                        if (legsNeed > 0) parts.push(`${legsNeed} leg${legsNeed === 1 ? '' : 's'}`);
+                        if (filesNeed > 0) parts.push(`${filesNeed} file${filesNeed === 1 ? '' : 's'}`);
+                        if (elCareerRem) elCareerRem.textContent = parts.length ? `Need ${parts.join(' & ')}` : 'Requirements met';
+                        
+                        let pct = 0;
+                        if (nextCareer.min_legs > 0) {
+                            pct = Math.min(100, Math.round(((cs.active_legs || 0) / nextCareer.min_legs) * 100));
+                        } else if (nextCareer.min_files > 0) {
+                            pct = Math.min(100, Math.round(((cs.own_qualifying_files || 0) / nextCareer.min_files) * 100));
+                        }
+                        if (elCareerBar) elCareerBar.style.width = pct + '%';
+                    } else {
+                        if (elNextCareer) elNextCareer.textContent = 'Highest Career Rank Reached';
+                        if (elCareerRem) elCareerRem.textContent = '100% Achieved';
+                        if (elCareerBar) elCareerBar.style.width = '100%';
+                    }
+
+                    // Card 2: Personal Production Qualification & Direct Commission
+                    const elProdTitle = document.getElementById('vgk4uProdQualTitle');
+                    if (elProdTitle) elProdTitle.textContent = cs.personal_prod_tier_label || 'Base';
+                    const elRateBadge = document.getElementById('vgk4uEffectiveRateBadge');
+                    if (elRateBadge) elRateBadge.textContent = Number(cs.effective_personal_rate || 6.0).toFixed(1) + '%';
+
+                    const pl = window._vgk4uProdLadder;
+                    const pIdx = pl.findIndex(p => p.code === cs.personal_prod_tier);
+                    const nextTier = (pIdx >= 0 && pIdx < pl.length - 1) ? pl[pIdx + 1] : null;
+                    const elNextProd = document.getElementById('vgk4uNextProdTitle');
+                    const elProdRem = document.getElementById('vgk4uProdRemainingText');
+                    const elProdBar = document.getElementById('vgk4uProdProgressBar');
+
+                    if (nextTier) {
+                        if (elNextProd) elNextProd.textContent = `${nextTier.label} (${nextTier.commission_pct.toFixed(1)}%)`;
+                        const fNeed = Math.max(0, (nextTier.min_files || 0) - (cs.own_qualifying_files || 0));
+                        if (elProdRem) elProdRem.textContent = fNeed > 0 ? `Need ${fNeed} more file${fNeed === 1 ? '' : 's'}` : 'Qualified';
+                        const pPct = Math.min(100, Math.round(((cs.own_qualifying_files || 0) / (nextTier.min_files || 1)) * 100));
+                        if (elProdBar) elProdBar.style.width = pPct + '%';
+                    } else {
+                        if (elNextProd) elNextProd.textContent = 'Maximum Rate (9.0%)';
+                        if (elProdRem) elProdRem.textContent = '100% Achieved';
+                        if (elProdBar) elProdBar.style.width = '100%';
+                    }
+
+                    // Sidebar badge alignment
+                    const _srb = document.getElementById('sidebarMemberRankBadge');
+                    const _srt = document.getElementById('sidebarMemberRankText');
+                    if (_srb && _srt) {
+                        _srt.textContent = `${cs.career_designation_label} · ${Number(cs.effective_personal_rate || 6.0).toFixed(1)}%`;
+                        _srb.style.display = 'block';
+                    }
+
+                    renderCareerTab();
+                }
+
                 if (data.earnings_breakdown) {
                     const eb = data.earnings_breakdown;
                     const fmtInr = n => '₹' + Number(n||0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -4612,8 +5042,8 @@
                     fields = [
                         ['Member ID', `<strong style="color:#7c3aed;font-size:17px">${escHtml(p.partner_code)}</strong>`],
                         ['Display Name', escHtml(p.partner_name||'—')],
-                        ['Designation', `<strong style="color:#7c3aed;font-size:16px"><i class="fas fa-award text-warning me-1"></i>${escHtml(p.current_designation || p.designation_label || 'Channel Partner')}</strong>`],
-                        ['Current Rank', `<span style="background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;border-radius:20px;padding:4px 14px;font-size:13px;font-weight:800;display:inline-flex;align-items:center;gap:6px"><i class="fas fa-star text-warning"></i>${escHtml(p.rank_display || '1★ Channel Partner')}</span>`],
+                        ['Designation', `<strong style="color:#7c3aed;font-size:16px"><i class="fas fa-award text-warning me-1"></i>${escHtml((p.career_designation || p.current_designation || p.designation_label || 'Channel Partner').replace(/[★*]/g, '').trim())}</strong>`],
+                        ['Career Designation', `<span style="background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;border-radius:20px;padding:4px 14px;font-size:13px;font-weight:800;display:inline-flex;align-items:center;gap:6px"><i class="fas fa-user-tie text-warning"></i>${escHtml((p.career_designation || p.current_designation || p.rank_display || 'Channel Partner').replace(/[★*]/g, '').trim())}</span>`],
                         ['Incentive Slab', `<strong style="color:#059669;font-size:15px">${Number(p.rank_slab_pct || 5.0).toFixed(2)}%</strong> <span style="background:#059669;color:#fff;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700;margin-left:6px">Permanent Rank</span>`],
                         ['Activated Team', `<strong style="color:#4c1d95;font-size:16px">${p.activated_team_cnt || 0} Members</strong> <span style="font-size:11px;color:#6b7280">(≥3 paid files)</span>`],
                         ['Title', escHtml(p.name_title||'—')],
@@ -6047,7 +6477,7 @@
         // ── Init ────────────────────────────────────────────────────────
         async function init() {
             // [DC-INSTANT-TAB] Restore and render target active tab IMMEDIATELY (0ms delay)
-            const _validTabs = ['earnings','leads','orders','tickets','network','addmember','points','ledger','coupons','profile','bonanza','vendors','media','mycard'];
+            const _validTabs = ['earnings','leads','orders','tickets','network','addmember','points','ledger','coupons','profile','bonanza','vendors','media','mycard','career'];
             const urlParams = new URLSearchParams(window.location.search);
             const queryTab = urlParams.get('tab');
             let _lastTab = queryTab || localStorage.getItem('vgk_active_tab') || 'earnings';
@@ -6106,7 +6536,7 @@
                 const _tn = document.getElementById('topbarMemberName'); if (_tn) _tn.textContent = stored.partner_name;
                 const _sn = document.getElementById('sidebarMemberName'); if (_sn) _sn.textContent = stored.partner_name;
             }
-            const rankText = stored.rank_display || (stored.current_designation ? stored.current_designation : '1★ Channel Partner');
+            const rankText = (stored.career_designation || stored.current_designation || stored.rank_display || 'Channel Partner').replace(/[★*]/g, '').trim();
             const _srb = document.getElementById('sidebarMemberRankBadge');
             const _srt = document.getElementById('sidebarMemberRankText');
             if (_srb && _srt && rankText) {
@@ -6911,6 +7341,15 @@
                     // Wallet Balance — Pending = Under Review + Awaiting Release combined
                     document.getElementById('ciWalletBalance').textContent   = fmtInr(pendingGrandTotal);
 
+                    // VGK4U 6-Stream Earnings Breakdown Binding
+                    const _el = id => document.getElementById(id);
+                    if (_el('ciStreamPersonal')) _el('ciStreamPersonal').textContent = fmtInr(s.personal_producer_total || 0);
+                    if (_el('ciStreamTeam')) _el('ciStreamTeam').textContent = fmtInr(s.team_differential_total || 0);
+                    if (_el('ciStreamSupport')) _el('ciStreamSupport').textContent = fmtInr(s.support_total || 0);
+                    if (_el('ciStreamShowroom')) _el('ciStreamShowroom').textContent = fmtInr(s.showroom_total || 0);
+                    if (_el('ciStreamAdvances')) _el('ciStreamAdvances').textContent = fmtInr(s.stage_advances_total || 0);
+                    if (_el('ciStreamBonuses')) _el('ciStreamBonuses').textContent = fmtInr(s.stage_bonuses_total || 0);
+
                     const STATUS_BADGE = {
                         DRAFT:          '<span style="background:#fef3c7;color:#92400e;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">Under Review</span>',
                         PENDING:        '<span style="background:#fef3c7;color:#92400e;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">Under Review</span>',
@@ -6923,11 +7362,15 @@
                     if (!entries.length) {
                         entriesEl.innerHTML = '<div style="text-align:center;padding:20px;color:#9ca3af"><i class="fas fa-inbox fa-2x" style="margin-bottom:8px"></i><br>No income entries yet.<br><small>Entries appear when your CRM deals are fully paid and completed.</small></div>';
                     } else {
-                        entriesEl.innerHTML = entries.map(e => `
+                        entriesEl.innerHTML = entries.map(e => {
+                            const streamBadge = e.stream_label 
+                                ? `<span style="background:#ede9fe;color:#6d28d9;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700;margin-right:4px">${escHtml(e.stream_label)}</span>`
+                                : `<span style="background:#ede9fe;color:#6d28d9;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700;margin-right:4px">L${e.level}</span>`;
+                            return `
                             <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f5f3ff;flex-wrap:wrap">
                                 <div style="flex:1;min-width:160px">
                                     <div style="font-size:13px;font-weight:700;color:#111">${e.entry_number} &nbsp;${STATUS_BADGE[e.status]||''}</div>
-                                    <div style="font-size:11px;color:#6b7280">L${e.level} — ${e.category_name||'—'} | Client: ${e.client_name||'—'}</div>
+                                    <div style="font-size:11px;color:#6b7280">${streamBadge}${escHtml(e.category_name||'—')} | Client: ${escHtml(e.client_name||'—')}</div>
                                     <div style="font-size:10px;color:#9ca3af">${e.created_at ? new Date(e.created_at).toLocaleDateString('en-IN') : ''}</div>
                                 </div>
                                 <div style="text-align:right">
@@ -6936,7 +7379,7 @@
                                     ${['STAGE1_APPROVED','RELEASED','PAID'].includes(e.status) && e.net_payout ? `<div style="font-size:10px;color:#d97706">Net: ${fmtInr(e.net_payout)}</div>` : ''}
                                 </div>
                             </div>
-                        `).join('') + (incomeData.total > 20 ? `<div style="text-align:center;font-size:12px;color:#9ca3af;padding:8px">Showing 20 of ${incomeData.total} entries</div>` : '');
+                        `;}).join('') + (incomeData.total > 20 ? `<div style="text-align:center;font-size:12px;color:#9ca3af;padding:8px">Showing 20 of ${incomeData.total} entries</div>` : '');
                     }
                 }
                 // Save to cache after both wallet+income data rendered
@@ -8598,9 +9041,10 @@
 
         const fmtInr = v => '₹' + Number(v).toLocaleString('en-IN');
         const storedPartner = JSON.parse(localStorage.getItem('vgk_partner') || '{}');
-        const memberRankDisplay = storedPartner.rank_display || d.rank_display || (storedPartner.stars === 0 ? 'Member' : '1★ Channel Partner');
-        const memberDesig = storedPartner.current_designation || d.tier_label || 'Member';
-        const memberStars = storedPartner.rank_num !== undefined ? storedPartner.rank_num : (memberRankDisplay === 'Member' ? 0 : memberRankDisplay.startsWith('2★') ? 2 : memberRankDisplay.startsWith('3★') ? 3 : memberRankDisplay.startsWith('4★') ? 4 : memberRankDisplay.startsWith('5★') ? 5 : 1);
+        const memberRankDisplay = (storedPartner.career_designation || storedPartner.current_designation || storedPartner.rank_display || d.rank_display || (storedPartner.stars === 0 ? 'Member' : 'Channel Partner')).replace(/[★*]/g, '').trim();
+        const memberDesig = storedPartner.career_designation || storedPartner.current_designation || d.tier_label || 'Member';
+        const rankIndexMap = { 'Member': 0, 'Channel Partner': 1, 'Manager': 2, 'General Manager': 3, 'Regional Manager': 4, 'Company Apex Node': 5 };
+        const memberStars = storedPartner.rank_num !== undefined ? storedPartner.rank_num : (rankIndexMap[memberRankDisplay] !== undefined ? rankIndexMap[memberRankDisplay] : (memberRankDisplay === 'Member' ? 0 : 1));
         const memberActivatedCnt = storedPartner.activated_team_cnt !== undefined ? storedPartner.activated_team_cnt : (d.activated_people || 0);
 
         const badgeBox = document.getElementById('mycardBadgeBox');
@@ -8609,32 +9053,31 @@
         document.getElementById('mycardBadgeLabel').style.color = '#4c1d95';
         document.getElementById('mycardBadgeLabel').innerHTML = memberStars === 0 
             ? `<i class="fas fa-user-circle text-primary me-2"></i>Member`
-            : `<i class="fas fa-star text-warning me-2"></i>${escHtml(memberRankDisplay)}`;
+            : `<i class="fas fa-user-tie text-warning me-2"></i>${escHtml(memberRankDisplay)}`;
         
-        const nextRankName = storedPartner.next_rank || (memberStars === 0 ? '1★ Channel Partner' : memberStars === 1 ? 'Manager' : memberStars === 2 ? 'Zonal Manager' : memberStars === 3 ? 'Regional Manager' : memberStars === 4 ? 'Director' : 'Director (Max Rank)');
-        const nextRankReq = storedPartner.next_rank_requirement || (memberStars === 0 ? 1 : memberStars === 1 ? 2 : memberStars === 2 ? 10 : memberStars === 3 ? 25 : memberStars === 4 ? 50 : 50);
+        const nextRankName = storedPartner.next_career || storedPartner.next_rank || (memberStars === 0 ? 'Channel Partner' : memberStars === 1 ? 'Manager' : memberStars === 2 ? 'General Manager' : memberStars === 3 ? 'Regional Manager' : 'Regional Manager (Max Career)');
+        const nextRankReq = storedPartner.next_rank_requirement || (memberStars === 0 ? 1 : memberStars === 1 ? 1 : memberStars === 2 ? 5 : memberStars === 3 ? 10 : 10);
         const rankGap = Math.max(0, nextRankReq - memberActivatedCnt);
 
         if (memberStars === 0) {
-            document.getElementById('mycardBadgeSub').innerHTML = `Welcome to VGK4U! Complete your <strong>1st File 1st Payment</strong> to activate and unlock <strong>1★ Channel Partner</strong> (5.00% Permanent Slab).`;
-        } else if (memberStars >= 5) {
-            document.getElementById('mycardBadgeSub').innerHTML = `<span style="color:#059669;font-weight:700">🎉 Maximum Rank Achieved! You are an Authoritative Director.</span>`;
+            document.getElementById('mycardBadgeSub').innerHTML = `Welcome to VGK4U! Complete your <strong>1st Qualifying File</strong> to activate and unlock <strong>Channel Partner</strong> (6.00% Base Slab).`;
+        } else if (memberStars >= 4) {
+            document.getElementById('mycardBadgeSub').innerHTML = `<span style="color:#059669;font-weight:700">🎉 Top Career Designation Achieved! Regional Manager.</span>`;
         } else {
-            document.getElementById('mycardBadgeSub').innerHTML = `Permanent Rank achieved with <strong>${memberActivatedCnt} Activated Downlines</strong>. Need <strong>${rankGap} more</strong> to unlock <strong>${escHtml(nextRankName)}</strong>.`;
+            document.getElementById('mycardBadgeSub').innerHTML = `Career Designation achieved with <strong>${memberActivatedCnt} Active Direct Legs</strong>. Need <strong>${rankGap} more</strong> to unlock <strong>${escHtml(nextRankName)}</strong>.`;
         }
         
         document.getElementById('mycardCoupons').textContent   = d.coupons_used || 0;
-        document.getElementById('mycardRevenue').textContent   = (storedPartner.rank_slab_pct ? storedPartner.rank_slab_pct.toFixed(2) + '%' : '6.50%');
+        document.getElementById('mycardRevenue').textContent   = (storedPartner.rank_slab_pct ? storedPartner.rank_slab_pct.toFixed(2) + '%' : '6.00%');
         document.getElementById('mycardActivated').textContent = memberActivatedCnt;
 
-        // Authoritative Career Progression Ladder (Starting from Member -> 1st File -> 5 Ranks)
+        // Authoritative VGK4U Career Progression Ladder
         const rankTiers = [
-            { rankNum: 0, name: 'Member', icon: '👤', slab: 'Standard', reqText: 'Default Joining', isUnlocked: true, color: '#6b7280' },
-            { rankNum: 1, name: 'Channel Partner', icon: '1★', slab: '5.00%', reqText: '1st File 1st Payment', isUnlocked: memberStars >= 1, color: '#6b7280' },
-            { rankNum: 2, name: 'Manager', icon: '2★', slab: '6.50%', reqText: '2 Activated Downlines', isUnlocked: memberStars >= 2, color: '#7c3aed' },
-            { rankNum: 3, name: 'Zonal Manager', icon: '3★', slab: '7.50%', reqText: '10 Activated Downlines', isUnlocked: memberStars >= 3, color: '#2563eb' },
-            { rankNum: 4, name: 'Regional Manager', icon: '4★', slab: '8.25%', reqText: '25 Activated Downlines', isUnlocked: memberStars >= 4, color: '#d97706' },
-            { rankNum: 5, name: 'Director', icon: '5★', slab: '8.50%', reqText: '50 Activated Downlines', isUnlocked: memberStars >= 5, color: '#059669' },
+            { rankNum: 0, name: 'Member', icon: '👤', slab: 'Standard', reqText: 'Default Joining (0 Files)', isUnlocked: true, color: '#6b7280' },
+            { rankNum: 1, name: 'Channel Partner', icon: 'CP', slab: '6.00%', reqText: '1 Own File', isUnlocked: memberStars >= 1, color: '#6b7280' },
+            { rankNum: 2, name: 'Manager', icon: 'M', slab: '7.50%', reqText: '1 Active Leg (1 Own File)', isUnlocked: memberStars >= 2, color: '#7c3aed' },
+            { rankNum: 3, name: 'General Manager', icon: 'GM', slab: '8.50%', reqText: '5 Active Legs (1 Own File)', isUnlocked: memberStars >= 3, color: '#2563eb' },
+            { rankNum: 4, name: 'Regional Manager', icon: 'RM', slab: '9.00%', reqText: '10 Active Legs (1 Own File)', isUnlocked: memberStars >= 4, color: '#059669' },
         ];
 
         let html = '';
@@ -9416,8 +9859,8 @@
 
             // Badges
             const badges = [];
-            const memberRank = d.rank_display || (d.stars ? d.stars + '★ ' + d.position : '1★ Channel Partner');
-            badges.push(`<span style="background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:800"><i class="fas fa-star text-warning me-1"></i>${escHtml(memberRank)}</span>`);
+            const memberRank = (d.career_designation || d.current_designation || d.rank_display || 'Channel Partner').replace(/[★*]/g, '').trim();
+            badges.push(`<span style="background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:800"><i class="fas fa-user-tie text-warning me-1"></i>${escHtml(memberRank)}</span>`);
             if (d.is_loyal_coupon) badges.push(`<span style="background:#fef9c3;color:#854d0e;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700"><i class="fas fa-certificate" style="margin-right:3px"></i>Loyal Coupon</span>`);
             if (d.is_paid_activation) badges.push(`<span style="background:#f5f3ff;color:#5b21b6;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700"><i class="fas fa-check-circle" style="margin-right:3px"></i>PIN Activated</span>`);
             document.getElementById('vgkMpBadges').innerHTML = badges.join(' ');
