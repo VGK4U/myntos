@@ -10,6 +10,7 @@ from sqlalchemy import desc, or_, and_
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import os
+import json
 import logging
 from app.core.config import settings
 from app.core.database import get_db
@@ -648,7 +649,83 @@ async def handle_plivo_voicemail_callback(
 ):
     """
     Callback endpoint when an after-hours caller leaves a voicemail recording.
+    Captures Plivo RecordUrl, updates VoIPCallSession with status='voicemail' and recording key.
     """
+    form_data = {}
+    try:
+        form = await request.form()
+        form_data = dict(form)
+    except Exception:
+        pass
+
+    if not form_data:
+        try:
+            body = await request.body()
+            if body:
+                form_data = json.loads(body.decode("utf-8"))
+        except Exception:
+            pass
+
+    query_params = dict(request.query_params)
+    rec_url = form_data.get("RecordUrl") or form_data.get("RecordingUrl") or form_data.get("record_url") or query_params.get("RecordUrl", "")
+    duration_str = form_data.get("RecordingDuration") or form_data.get("Duration") or form_data.get("recording_duration") or query_params.get("RecordingDuration", "0")
+    try:
+        duration = int(float(duration_str))
+    except Exception:
+        duration = 0
+
+    rec_id = form_data.get("RecordingID") or form_data.get("RecordingId") or form_data.get("recording_id") or query_params.get("RecordingID", "")
+    call_uuid = form_data.get("CallUUID") or form_data.get("call_uuid") or query_params.get("CallUUID", "")
+    from_phone = form_data.get("From") or query_params.get("From", "")
+    to_phone = form_data.get("To") or query_params.get("To", "")
+
+    logger.info(f"[PLIVO-VOICEMAIL] Callback received: url={rec_url}, duration={duration}s, call_uuid={call_uuid}, from={from_phone}")
+
+    voip_session = None
+    if call_uuid:
+        voip_session = db.query(VoIPCallSession).filter(VoIPCallSession.provider_call_id == call_uuid).first()
+        if not voip_session:
+            voip_session = db.query(VoIPCallSession).filter(VoIPCallSession.call_session_id.ilike(f"%{call_uuid[-12:]}%")).first()
+
+    if not voip_session and from_phone:
+        clean_from = "".join(c for c in str(from_phone) if c.isdigit())[-10:]
+        if clean_from:
+            voip_session = db.query(VoIPCallSession).filter(
+                VoIPCallSession.customer_phone.ilike(f"%{clean_from}%"),
+                VoIPCallSession.direction == "inbound"
+            ).order_by(VoIPCallSession.created_at.desc()).first()
+
+    if voip_session:
+        voip_session.status = "voicemail"
+        if rec_url:
+            voip_session.recording_storage_key = rec_url
+            voip_session.recording_status = "AVAILABLE"
+            voip_session.recording_duration_seconds = duration
+        if duration > (voip_session.duration_seconds or 0):
+            voip_session.duration_seconds = duration
+        voip_session.ended_at = datetime.utcnow()
+
+        meta = {}
+        if voip_session.metadata_json:
+            try:
+                meta = json.loads(voip_session.metadata_json) if isinstance(voip_session.metadata_json, str) else dict(voip_session.metadata_json)
+            except Exception:
+                pass
+        if rec_url:
+            meta["recording_url"] = rec_url
+            meta["recording_id"] = rec_id or call_uuid
+            meta["recording_duration_seconds"] = duration
+        meta["is_voicemail"] = True
+        meta["voicemail_received_at"] = datetime.utcnow().isoformat()
+        voip_session.metadata_json = json.dumps(meta)
+
+        try:
+            db.commit()
+            logger.info(f"[PLIVO-VOICEMAIL] Successfully persisted voicemail recording {rec_url} ({duration}s) to session #{voip_session.id}")
+        except Exception as e:
+            db.rollback()
+            logger.error(f"[PLIVO-VOICEMAIL] Failed to commit voicemail session: {e}")
+
     xml = """<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Speak voice="Polly.Aditi" language="en-IN">Thank you. Your message has been received. Our team will contact you during business hours.</Speak>

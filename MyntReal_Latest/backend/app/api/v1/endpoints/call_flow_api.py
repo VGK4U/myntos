@@ -8,7 +8,7 @@ Created: Sep 2026
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, Body, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, not_
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Set
 from datetime import datetime, timedelta, timezone
 import os
 import logging
@@ -1262,6 +1262,43 @@ def _format_phone(p: Optional[str]) -> str:
     return str(p)
 
 
+def _is_supreme_user(current_user: Any) -> bool:
+    if not current_user:
+        return False
+    if getattr(current_user, 'is_supreme', False) is True:
+        return True
+    if getattr(current_user, 'admin_scope', '') == 'PLATFORM':
+        return True
+    staff_type_upper = (getattr(current_user, "staff_type", "") or "").strip().upper()
+    if staff_type_upper in ["VGK4U", "VGK4U SUPREME", "VGK"]:
+        return True
+    role = getattr(current_user, 'role', None)
+    role_code_lower = (getattr(role, "role_code", "") if role else "").lower()
+    if role_code_lower in ["vgk4u", "vgk4u_supreme", "vgk_mentor", "supreme_admin", "super_admin"]:
+        return True
+    if getattr(current_user, 'id', None) == 1:
+        return True
+    if getattr(current_user, 'emp_code', '') == "MR10001":
+        return True
+    return False
+
+
+def _get_allowed_company_ids(current_user: Any) -> Set[int]:
+    allowed = set()
+    base_cid = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None)
+    if base_cid:
+        try:
+            allowed.add(int(base_cid))
+        except (ValueError, TypeError):
+            pass
+    raw_data = getattr(current_user, 'data_companies', []) or []
+    if isinstance(raw_data, list):
+        for c in raw_data:
+            if str(c).isdigit():
+                allowed.add(int(c))
+    return allowed or {1}
+
+
 def _resolve_contacts_batch(db: Session, phone_list: List[str], company_id: Optional[int] = None) -> Dict[str, Dict[str, Any]]:
     """
     Multi-tier caller identity resolver:
@@ -1676,19 +1713,16 @@ def list_incoming_calls(
     sort_by = sort_by if isinstance(sort_by, str) else "newest"
 
     company_id = getattr(current_user, 'base_company_id', 1) or 1
-    is_supreme = getattr(current_user, 'is_supreme', False)
     emp_code = getattr(current_user, 'emp_code', '') or ''
     full_name_lower = (getattr(current_user, 'full_name', '') or f"{current_user.first_name or ''} {current_user.last_name or ''}").lower()
+    is_supreme = _is_supreme_user(current_user)
+    allowed_company_ids = _get_allowed_company_ids(current_user)
 
     is_overall_authorized = (
         emp_code == 'MR10001' or
         'yaswanth' in full_name_lower or
         is_supreme
     )
-
-    query = db.query(VoIPCallSession)
-    if not is_supreme:
-        query = query.filter(VoIPCallSession.company_id == company_id)
 
     # 1. Tier / Scope Filtering with Strict Security
     scope_clean = (scope or "my").lower().strip()
@@ -1736,8 +1770,8 @@ def list_incoming_calls(
     # ── BRANCH A: new_calls (Inbound missed DID queue waiting for callback) ───
     if scope_clean in ("new_calls", "new"):
         query = db.query(VoIPCallSession)
-        if not is_supreme:
-            query = query.filter(VoIPCallSession.company_id == company_id)
+        if not is_supreme and not is_overall_authorized:
+            query = query.filter(VoIPCallSession.company_id.in_(list(allowed_company_ids)))
         query = query.filter(VoIPCallSession.direction == "inbound")
         query = query.filter(
             VoIPCallSession.created_at >= effective_start_dt,
@@ -1774,8 +1808,8 @@ def list_incoming_calls(
 
         # 1. Source 1: VoIPCallSession (Softphone calls + Inbound DID)
         voip_q = db.query(VoIPCallSession)
-        if not is_supreme:
-            voip_q = voip_q.filter(VoIPCallSession.company_id == company_id)
+        if not is_supreme and scope_clean != "overall":
+            voip_q = voip_q.filter(VoIPCallSession.company_id.in_(list(allowed_company_ids)))
 
         if target_staff_ids:
             voip_q = voip_q.filter(
@@ -1836,8 +1870,8 @@ def list_incoming_calls(
         if not did_number and (not call_type or call_type.lower() != 'voicemail'):
             from app.models.call_tracking import StaffCallLog
             scl_q = db.query(StaffCallLog)
-            if not is_supreme:
-                scl_q = scl_q.filter(StaffCallLog.company_id == company_id)
+            if not is_supreme and scope_clean != "overall":
+                scl_q = scl_q.filter(StaffCallLog.company_id.in_(list(allowed_company_ids)))
 
             if target_staff_ids:
                 scl_q = scl_q.filter(StaffCallLog.staff_id.in_(target_staff_ids))
@@ -1904,9 +1938,9 @@ def list_incoming_calls(
                 att_sql += f" AND a.user_ref IN ({', '.join(ref_binds)})"
                 for i, sid_val in enumerate(target_staff_ids):
                     params[f"ref_{i}"] = str(sid_val)
-            elif not is_supreme:
-                att_sql += " AND l.company_id = :comp_id"
-                params["comp_id"] = company_id
+            elif not is_supreme and scope_clean != "overall":
+                cids_str = ', '.join(str(cid) for cid in allowed_company_ids) if allowed_company_ids else str(company_id)
+                att_sql += f" AND l.company_id IN ({cids_str})"
 
             if search:
                 s_clean = search.strip().replace('+', '')
@@ -2461,7 +2495,8 @@ def list_incoming_calls(
         "total_count": total_count,
         "page": page,
         "page_size": page_size,
-        "total_pages": (total_count + page_size - 1) // page_size if total_count > 0 else 1
+        "total_pages": (total_count + page_size - 1) // page_size if total_count > 0 else 1,
+        "current_user_can_view_overall": is_overall_authorized
     }
 
 
@@ -2662,14 +2697,15 @@ def get_customer_call_history(
         raise HTTPException(status_code=400, detail="Invalid phone number provided")
 
     company_id = getattr(current_user, 'base_company_id', 1) or 1
-    is_supreme = getattr(current_user, 'is_supreme', False)
+    is_supreme = _is_supreme_user(current_user)
+    allowed_company_ids = _get_allowed_company_ids(current_user)
 
     query = db.query(VoIPCallSession).filter(
         (VoIPCallSession.customer_phone.ilike(f"%{clean_digits}%")) |
         (VoIPCallSession.destination_number.ilike(f"%{clean_digits}%"))
     )
     if not is_supreme:
-        query = query.filter(VoIPCallSession.company_id == company_id)
+        query = query.filter(VoIPCallSession.company_id.in_(list(allowed_company_ids)))
 
     sessions = query.order_by(VoIPCallSession.created_at.desc()).limit(50).all()
 
@@ -2821,7 +2857,9 @@ def get_incoming_call_detail(
     Detailed audit view of an incoming call with execution trace and recording.
     """
     company_id = getattr(current_user, 'base_company_id', 1) or 1
-    is_super = getattr(current_user, 'is_supreme', False)
+    emp_code = getattr(current_user, 'emp_code', '') or ''
+    is_super = _is_supreme_user(current_user)
+    allowed_company_ids = _get_allowed_company_ids(current_user)
 
     query = db.query(VoIPCallSession).filter(
         (VoIPCallSession.call_session_id == call_id) |
@@ -2835,7 +2873,13 @@ def get_incoming_call_detail(
         )
 
     if not is_super:
-        query = query.filter(VoIPCallSession.company_id == company_id)
+        query = query.filter(
+            or_(
+                VoIPCallSession.company_id.in_(list(allowed_company_ids)),
+                VoIPCallSession.operator_id == current_user.id,
+                VoIPCallSession.operator_user_ref == emp_code
+            )
+        )
 
     session = query.first()
     if not session:

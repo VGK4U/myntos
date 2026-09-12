@@ -1646,13 +1646,17 @@
                     timeHtml = `<span class="badge bg-dark border border-secondary text-warning font-monospace" style="font-size:10.5px;"><i class="fa-solid fa-clock text-warning me-1"></i>${dateStr} ${timeStr}</span>`;
                 }
 
-                // Recording Audio Player
+                // Recording / Voicemail Audio Player
                 let recHtml = '';
-                if ((c.has_recording || (c.duration_seconds && c.duration_seconds > 0)) && c.recording_url) {
+                const hasAudio = Boolean(c.recording_url || c.has_recording);
+                if (hasAudio) {
+                    const audioSrc = c.recording_url || `/api/v1/telephony/calls/${c.call_session_id}/recording`;
+                    const isVoicemail = c.computed_type === 'voicemail' || (c.status && c.status.toLowerCase().includes('voicemail'));
+                    const recTitle = isVoicemail ? 'Play Voicemail' : 'Play Recording';
                     const playerKey = `dialer_rec_${c.id}`;
                     recHtml = `
-                        <div class="audio-scrubber-player mt-1" id="player-row-${playerKey}" style="min-width:160px;max-width:200px;padding:2px 8px;">
-                            <button class="play-btn" id="pbtn-${playerKey}" onclick="toggleAudio('${escapeHtml(c.recording_url)}', '${playerKey}', '${escapeHtml(c.duration_formatted)}')" title="Play Recording" style="width:22px;height:22px;font-size:9px;">
+                        <div class="audio-scrubber-player mt-1 ${isVoicemail ? 'border border-warning border-opacity-50' : ''}" id="player-row-${playerKey}" style="min-width:160px;max-width:200px;padding:2px 8px;">
+                            <button class="play-btn" id="pbtn-${playerKey}" onclick="toggleAudio('${escapeHtml(audioSrc)}', '${playerKey}', '${escapeHtml(c.duration_formatted)}')" title="${recTitle}" style="width:22px;height:22px;font-size:9px; ${isVoicemail ? 'background: linear-gradient(135deg, #a855f7, #7e22ce);' : ''}">
                                 <i class="fa-solid fa-play"></i>
                             </button>
                             <div class="scrubber-track-wrapper">
@@ -2047,11 +2051,17 @@
                 `;
 
                 // Recording Audio Scrubber Player
-                let recHtml = `<span class="badge bg-secondary bg-opacity-25 text-muted px-2 py-1" style="font-size:11px;" title="No recording available — Call was not answered (00m 00s duration)"><i class="fa-solid fa-microphone-slash me-1"></i>No Recording</span>`;
-                if ((c.has_recording || (c.duration_seconds && c.duration_seconds > 0)) && c.recording_url) {
+                const isVoicemail = c.computed_type === 'voicemail' || (c.status && c.status.toLowerCase().includes('voicemail'));
+                const recTitle = isVoicemail ? 'Play Voicemail Recording' : 'Play Call Recording';
+                let recHtml = `<span class="badge bg-secondary bg-opacity-25 text-muted px-2 py-1" style="font-size:11px;" title="No recording available"><i class="fa-solid fa-microphone-slash me-1"></i>No Recording</span>`;
+                if (isVoicemail && !c.recording_url && !c.has_recording) {
+                    recHtml = `<span class="badge bg-secondary bg-opacity-25 text-muted px-2 py-1" style="font-size:11px;" title="No voicemail audio recorded"><i class="fa-solid fa-voicemail me-1"></i>No Audio</span>`;
+                }
+                if (c.recording_url || c.has_recording) {
+                    const audioSrc = c.recording_url || `/api/v1/telephony/calls/${c.call_session_id}/recording`;
                     recHtml = `
-                        <div class="audio-scrubber-player" id="player-row-${c.id}">
-                            <button class="play-btn" id="pbtn-${c.id}" onclick="toggleAudio('${escapeHtml(c.recording_url)}', '${c.id}', '${escapeHtml(c.duration_formatted)}')" title="Play Call Recording">
+                        <div class="audio-scrubber-player ${isVoicemail ? 'border border-warning border-opacity-50' : ''}" id="player-row-${c.id}">
+                            <button class="play-btn" id="pbtn-${c.id}" onclick="toggleAudio('${escapeHtml(audioSrc)}', '${c.id}', '${escapeHtml(c.duration_formatted)}')" title="${recTitle}" style="${isVoicemail ? 'background: linear-gradient(135deg, #a855f7, #7e22ce);' : ''}">
                                 <i class="fa-solid fa-play"></i>
                             </button>
                             <div class="scrubber-track-wrapper">
@@ -2417,12 +2427,15 @@
                     }
                     
                     let recAudio = '';
-                    if (h.has_recording && h.recording_url) {
+                    const isVm = h.computed_type === 'voicemail' || (h.status && h.status.toLowerCase().includes('voicemail'));
+                    const vmTitle = isVm ? "Play Voicemail Recording" : "Play Call Recording";
+                    if (h.has_recording || h.recording_url) {
                         const hId = 'dh_' + h.id;
+                        const audioSrc = h.recording_url || `/api/v1/telephony/calls/${h.call_session_id}/recording`;
                         recAudio = `
                             <div class="mt-2">
-                                <div class="audio-scrubber-player" id="player-row-${hId}">
-                                    <button class="play-btn" id="pbtn-${hId}" onclick="toggleAudio('${escapeHtml(h.recording_url)}', '${hId}', '${escapeHtml(h.duration_formatted)}')" title="Play Call Recording">
+                                <div class="audio-scrubber-player ${isVm ? 'border border-warning border-opacity-50' : ''}" id="player-row-${hId}">
+                                    <button class="play-btn" id="pbtn-${hId}" onclick="toggleAudio('${escapeHtml(audioSrc)}', '${hId}', '${escapeHtml(h.duration_formatted)}')" title="${vmTitle}" style="${isVm ? 'background: linear-gradient(135deg, #a855f7, #7e22ce);' : ''}">
                                         <i class="fa-solid fa-play"></i>
                                     </button>
                                     <div class="scrubber-track-wrapper">
@@ -2435,6 +2448,8 @@
                                 </div>
                             </div>
                         `;
+                    } else if (isVm) {
+                        recAudio = `<div class="mt-1"><span class="badge bg-secondary bg-opacity-25 text-muted px-2 py-1" style="font-size:10.5px;"><i class="fa-solid fa-voicemail me-1"></i>No Audio</span></div>`;
                     } else {
                         recAudio = `<div class="mt-1"><span class="badge bg-secondary bg-opacity-25 text-muted px-2 py-1" style="font-size:10.5px;"><i class="fa-solid fa-microphone-slash me-1"></i>No Recording</span></div>`;
                     }

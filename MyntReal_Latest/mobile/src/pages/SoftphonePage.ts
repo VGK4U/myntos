@@ -120,6 +120,9 @@ interface CustomerTimelineData {
     called_did?: string;
     has_recording?: boolean;
     recording_url?: string;
+    call_session_id?: string;
+    status?: string;
+    computed_type?: string;
     ivr_selections?: Array<{ label?: string; digit?: string; time?: string }>;
     latest_selection?: string;
   }>;
@@ -1566,7 +1569,13 @@ export class SoftphonePage {
     const durationText = c.duration_formatted || this.formatDuration(c.duration_seconds || 0);
     const timeFormatted = this.formatRelativeTime(c.started_at || c.answered_at || c.created_at);
     const audioKey = `rec_${c.id}`;
-    const hasRecording = Boolean((c.has_recording || (c.duration_seconds && c.duration_seconds > 0)) && c.recording_url);
+    const hasRecording = Boolean(c.recording_url || c.has_recording);
+    const isVoicemail = c.computed_type === 'voicemail' || (c.status && c.status.toLowerCase().includes('voicemail'));
+    const recPlayTitle = isVoicemail ? 'Listen to Voicemail' : 'Listen to Call Recording';
+    const recBtnBg = isVoicemail ? 'rgba(192, 132, 252, 0.2)' : 'rgba(56, 189, 248, 0.15)';
+    const recBtnBorder = isVoicemail ? '1px solid rgba(192, 132, 252, 0.4)' : '1px solid rgba(56, 189, 248, 0.3)';
+    const recBtnColor = isVoicemail ? '#d8b4fe' : '#38bdf8';
+    const recAudioUrl = c.recording_url || `/api/v1/telephony/calls/${c.call_session_id}/recording`;
 
     // Missed Call Action Taken UI
     let actionTakenHtml = '';
@@ -1665,7 +1674,7 @@ export class SoftphonePage {
           <!-- Actions: Audio Recording Play + Customer Timeline + Redial Call -->
           <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-top: 2px;">
             ${hasRecording ? `
-              <button class="audio-play-trigger-btn" data-audio-key="${audioKey}" data-stream-url="${this.escapeAttr(c.recording_url || '')}" title="Listen to Call Recording" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+              <button class="audio-play-trigger-btn" data-audio-key="${audioKey}" data-stream-url="${this.escapeAttr(recAudioUrl)}" title="${recPlayTitle}" style="width: 32px; height: 32px; border-radius: 50%; background: ${recBtnBg}; border: ${recBtnBorder}; color: ${recBtnColor}; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                 <i class="fas ${this.playingAudioKey === audioKey ? 'fa-pause' : 'fa-play'} fa-xs"></i>
               </button>
             ` : ''}
@@ -1877,17 +1886,19 @@ export class SoftphonePage {
                   const isIncoming = (h.direction === 'inbound') || (h.type && h.type.toLowerCase().includes('in')) || h.type === 'Missed by Staff';
                   const timeFormatted = this.formatRelativeTime(h.started_at || h.created_at);
                   const audioKey = `timeline_${h.id}`;
-                  const hasRecording = Boolean(h.has_recording && h.recording_url);
+                  const hasRecording = Boolean(h.recording_url || h.has_recording);
+                  const isVm = (h.type && h.type.toLowerCase().includes('voicemail')) || (h.computed_type === 'voicemail') || (h.status && h.status.toLowerCase().includes('voicemail'));
+                  const audioUrl = h.recording_url || `/api/v1/telephony/calls/${h.call_session_id || h.id}/recording`;
 
                   return `
                     <div style="position: relative; background: #1e293b; border-radius: 10px; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.06);">
                       <!-- Timeline Node Dot -->
-                      <div style="position: absolute; left: -21px; top: 12px; width: 12px; height: 12px; border-radius: 50%; background: ${isIncoming ? '#22c55e' : '#3b82f6'}; border: 2px solid #0f172a;"></div>
+                      <div style="position: absolute; left: -21px; top: 12px; width: 12px; height: 12px; border-radius: 50%; background: ${isVm ? '#c084fc' : (isIncoming ? '#22c55e' : '#3b82f6')}; border: 2px solid #0f172a;"></div>
 
                       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
                         <div style="display: flex; align-items: center; gap: 6px;">
-                          <span style="font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: ${isIncoming ? 'rgba(34, 197, 94, 0.2)' : 'rgba(59, 130, 246, 0.2)'}; color: ${isIncoming ? '#4ade80' : '#60a5fa'}; font-family: monospace;">
-                            ${isIncoming ? '↙ IN' : '↗ OUT'}
+                          <span style="font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: ${isVm ? 'rgba(192, 132, 252, 0.2)' : (isIncoming ? 'rgba(34, 197, 94, 0.2)' : 'rgba(59, 130, 246, 0.2)')}; color: ${isVm ? '#d8b4fe' : (isIncoming ? '#4ade80' : '#60a5fa')}; font-family: monospace;">
+                            ${isVm ? '📼 VM' : (isIncoming ? '↙ IN' : '↗ OUT')}
                           </span>
                           <span style="font-size: 11px; font-weight: 700; color: #fff;">${this.escapeHtml(h.type)}</span>
                           <span style="font-size: 10px; font-weight: 600; color: #facc15; font-family: monospace;">${this.escapeHtml(h.duration_formatted || '00m 00s')}</span>
@@ -1909,8 +1920,8 @@ export class SoftphonePage {
 
                       ${hasRecording ? `
                         <div style="margin-top: 6px;">
-                          <button class="audio-play-trigger-btn" data-audio-key="${audioKey}" data-stream-url="${this.escapeAttr(h.recording_url || '')}" style="padding: 4px 10px; border-radius: 12px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; font-size: 10.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
-                            <i class="fas ${this.playingAudioKey === audioKey ? 'fa-pause' : 'fa-play'} fa-xs"></i> Play Audio
+                          <button class="audio-play-trigger-btn" data-audio-key="${audioKey}" data-stream-url="${this.escapeAttr(audioUrl)}" style="padding: 4px 10px; border-radius: 12px; background: ${isVm ? 'rgba(192, 132, 252, 0.2)' : 'rgba(56, 189, 248, 0.15)'}; border: ${isVm ? '1px solid rgba(192, 132, 252, 0.4)' : '1px solid rgba(56, 189, 248, 0.3)'}; color: ${isVm ? '#d8b4fe' : '#38bdf8'}; font-size: 10.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                            <i class="fas ${this.playingAudioKey === audioKey ? 'fa-pause' : 'fa-play'} fa-xs"></i> ${isVm ? 'Play Voicemail' : 'Play Audio'}
                           </button>
                         </div>
                       ` : ''}
