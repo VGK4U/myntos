@@ -40,7 +40,7 @@ eb.create_application_version(
         'S3Bucket': S3_BUCKET,
         'S3Key': S3_KEY
     },
-    Description='MyntOS v2.4.1 Production Release: Universal Phone Masking across all portals, staff lead WhatsApp alert suppression, auto dialer latching & reservation takeover, follow-up IST date handling, and full 4-platform parity',
+    Description='MyntOS v2.4.1: Universal Phone Masking, Staff Alert Suppression, Dialer Latch & Takeover, IST Dates, 4-Platform Parity',
     AutoCreateApplication=False
 )
 print("Application version created.")
