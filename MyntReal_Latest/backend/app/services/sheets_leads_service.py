@@ -123,6 +123,26 @@ def fetch_sheet_data(sheet_url_or_id: str, gid: str = '0',
         return [], []
     return rows[0], rows[1:]
 
+def is_test_or_dummy_lead(name: Optional[str], phone: Optional[str],
+                          email: Optional[str], raw_row: Optional[List[str]] = None) -> bool:
+    """
+    DC_LEAD_FILTER: Detects Meta/Facebook Developer test leads or placeholder data.
+    Prevents dummy test entries from being imported into CRM and dispatching fake alerts.
+    """
+    check_str = f"{name or ''} {phone or ''} {email or ''}".lower()
+    if "<test lead" in check_str or "dummy data" in check_str:
+        return True
+    if email and email.strip().lower() in ("test@meta.com", "test@facebook.com", "test@fb.com"):
+        return True
+    if raw_row and any("<test lead" in str(c).lower() or "dummy data" in str(c).lower() for c in raw_row):
+        return True
+    if phone:
+        digits = re.sub(r'[^0-9]', '', str(phone))
+        # Malformed text without minimum 8 numeric digits is invalid lead data
+        if len(digits) < 8 and ("test" in str(phone).lower() or "dummy" in str(phone).lower()):
+            return True
+    return False
+
 def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
                     company_id: int, source_tag: str = 'Google Sheets') -> Optional[Dict[str, Any]]:
     """Convert a sheet row into a CRM lead dict."""
@@ -144,6 +164,11 @@ def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
     if phone:
         phone = re.sub(r'^[pP]:\s*', '', phone).strip()
     email = get('email') or None
+
+    # DC_LEAD_FILTER: Suppress developer test leads and placeholder rows
+    if is_test_or_dummy_lead(name, phone, email, row):
+        logger.info(f"[SHEETS-IMPORT] Skipping Meta test/dummy lead: name='{name}', email='{email}'")
+        return None
     city    = get('city') or None
     state   = get('state') or None
     pincode = get('pincode') or get('zip_code') or get('post_code') or get('zip') or None

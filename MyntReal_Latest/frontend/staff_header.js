@@ -1063,7 +1063,9 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
 
         let syncWs = null;
         let syncTimer = null;
-        let reconnectBackoff = 1000;
+        let reconnectBackoff = 2000;
+        let consecutiveFailures = 0;
+        const MAX_BACKOFF = 60000;
 
         function getAuthToken() {
             const c = document.cookie.split(';').map(s => s.trim())
@@ -1107,13 +1109,29 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
             if (b) b.style.display = 'none';
         }
 
+        function scheduleReconnect() {
+            syncWs = null;
+            if (syncTimer) clearTimeout(syncTimer);
+            consecutiveFailures++;
+            const delay = consecutiveFailures > 4 ? MAX_BACKOFF : reconnectBackoff;
+            syncTimer = setTimeout(() => {
+                if (!document.hidden || consecutiveFailures <= 2) {
+                    connectSyncWs();
+                }
+            }, delay);
+            reconnectBackoff = Math.min(reconnectBackoff * 2, MAX_BACKOFF);
+        }
+
         function connectSyncWs() {
+            if (document.hidden && consecutiveFailures > 2) return;
+
             const token = getAuthToken();
             if (!token) return;
 
             if (syncWs !== null) {
                 const rs = syncWs.readyState;
                 if (rs === WebSocket.OPEN || rs === WebSocket.CONNECTING) return;
+                try { syncWs.close(); } catch (_) {}
                 syncWs = null;
             }
 
@@ -1123,11 +1141,13 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
             try {
                 syncWs = new WebSocket(wsUrl);
             } catch (e) {
+                scheduleReconnect();
                 return;
             }
 
             syncWs.onopen = () => {
-                reconnectBackoff = 1000;
+                reconnectBackoff = 2000;
+                consecutiveFailures = 0;
             };
 
             syncWs.onmessage = (ev) => {
@@ -1164,16 +1184,23 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
             };
 
             syncWs.onclose = () => {
-                syncWs = null;
-                if (syncTimer) clearTimeout(syncTimer);
-                syncTimer = setTimeout(connectSyncWs, reconnectBackoff);
-                reconnectBackoff = Math.min(reconnectBackoff * 2, 30000);
+                scheduleReconnect();
             };
 
             syncWs.onerror = () => {
                 try { syncWs.close(); } catch (_) {}
             };
         }
+
+        // Reconnect immediately when staff returns to tab
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                if (!syncWs || syncWs.readyState === WebSocket.CLOSED || syncWs.readyState === WebSocket.CLOSING) {
+                    reconnectBackoff = 2000;
+                    connectSyncWs();
+                }
+            }
+        });
 
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', connectSyncWs);

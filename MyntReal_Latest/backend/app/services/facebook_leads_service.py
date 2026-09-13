@@ -836,6 +836,21 @@ class FacebookLeadsService:
             raise ex
 
         # 4. Canonical Post-Commit Ingestion Triggers
+        # DC_LEAD_FILTER: Suppress automated WhatsApp triggers for Developer test leads
+        lead_name_str = str(crm_lead.name or '').lower()
+        lead_phone_str = str(crm_lead.phone or '').lower()
+        lead_email_str = str(crm_lead.email or '').lower()
+        is_test_lead = (
+            '<test lead' in lead_name_str or
+            'dummy data' in lead_name_str or
+            '<test lead' in lead_phone_str or
+            lead_email_str in ('test@meta.com', 'test@facebook.com', 'test@fb.com')
+        )
+        if is_test_lead:
+            trigger_ipm = False
+            trigger_alert = False
+            logger.info(f"[META-TEST-LEAD] Lead #{crm_lead.id} identified as Developer test lead. IPM and sales group alert suppressed.")
+
         if trigger_ipm and crm_lead.phone:
             try:
                 from app.services.whatsapp_auto_service import send_lead_welcome

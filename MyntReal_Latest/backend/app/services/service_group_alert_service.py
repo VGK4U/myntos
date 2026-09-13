@@ -100,7 +100,7 @@ def send_instant_service_ticket_alert(db: Session, ticket_db_id: int) -> Dict[st
         f"🔥 *Priority*: {ticket.priority or 'Medium'}\n"
         f"⏰ *Raised At*: Today at {time_str} IST\n\n"
         f"👉 *Assigned Technician*: {assigned_tech}\n"
-        f"🔗 *Manage Ticket*: https://myntreal.com/staff/service-tickets"
+        f"🔗 *Manage Ticket*: https://www.myntreal.com/staff/service-tickets"
     )
 
     return send_service_group_bot_message(msg)

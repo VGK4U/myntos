@@ -208,7 +208,7 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
     else:
         masked_phone = phone
 
-    softphone_call_link = f"https://myntreal.com/staff/softphone?lead_id={lead.id}&auto_dial=1"
+    softphone_call_link = f"https://www.myntreal.com/staff/softphone?lead_id={lead.id}&auto_dial=1"
 
     # Build structured alert text
     msg_lines = [
@@ -255,7 +255,7 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
 
     msg_lines.append(f"\n👉 *Assigned Staff*: {assigned_name}")
     msg_lines.append(f"📞 *Direct Softphone Call*: {softphone_call_link}")
-    msg_lines.append(f"🔗 *View Lead in CRM*: https://myntreal.com/staff/leads")
+    msg_lines.append(f"🔗 *View Lead in CRM*: https://www.myntreal.com/staff/leads")
 
     message_text = "\n".join(msg_lines)
     return send_group_bot_message(

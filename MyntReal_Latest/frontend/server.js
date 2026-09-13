@@ -24875,6 +24875,12 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     })();
     return;
   } else if (url.startsWith('/api/v1/')) {
+    // DC_DIALER_WS_002: Reject standard HTTP requests to WebSocket paths with 426
+    if (url.startsWith('/api/v1/crm/ws/') || url.startsWith('/api/v1/ws/') || url.startsWith('/ws/')) {
+      res.writeHead(426, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ detail: 'WebSocket Upgrade Required' }));
+      return;
+    }
     // Generic API proxy for all backend calls
     const apiPath = url; // Keep the full path including query params
     const apiUrl = BACKEND_URL_SERVER + apiPath;
@@ -30605,7 +30611,10 @@ server.on('upgrade', (req, socket, head) => {
     socket.pipe(backendSocket);
   });
   backendSocket.on('error', (err) => {
-    console.error('[DC_DIALER_WS] Backend WS proxy error:', err.message);
+    console.warn('[DC_DIALER_WS] Backend WS proxy error:', err.message);
+    try {
+      socket.write('HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n');
+    } catch (_) {}
     socket.destroy();
   });
   socket.on('error', () => { backendSocket.destroy(); });
