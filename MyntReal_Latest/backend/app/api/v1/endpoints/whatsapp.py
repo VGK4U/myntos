@@ -5633,6 +5633,22 @@ def send_bot_cluster_command(payload: dict = Body(...), db: Session = Depends(ge
         return {"success": False, "error": str(e)}
 
 
+@router.get("/check-blocked")
+def check_phone_blocked(phone: str, db: Session = Depends(get_db)):
+    """[DC-VGK-BLOCKED-001] Check if a phone number belongs to a blocked channel partner."""
+    from sqlalchemy import text
+    clean_p = ''.join(c for c in str(phone or '') if c.isdigit())[-10:]
+    if len(clean_p) < 10:
+        return {"is_blocked": False}
+    is_blocked = db.execute(text("""
+        SELECT 1 FROM official_partners 
+        WHERE (is_blocked = TRUE OR member_status = 'BLOCKED')
+          AND RIGHT(REGEXP_REPLACE(COALESCE(phone, whatsapp_number, ''), '[^0-9]', '', 'g'), 10) = :p
+        LIMIT 1
+    """), {"p": clean_p}).scalar()
+    return {"is_blocked": bool(is_blocked)}
+
+
 @router.post("/bot-queue-enqueue")
 def enqueue_bot_message(payload: dict = Body(...), db: Session = Depends(get_db)):
     """Enqueue an outbound bot message into PostgreSQL for the leader instance to dispatch."""
@@ -5645,6 +5661,23 @@ def enqueue_bot_message(payload: dict = Body(...), db: Session = Depends(get_db)
 
     if not target_jid or (not message and not media_url):
         raise HTTPException(status_code=400, detail="target_jid and message or media_url required")
+
+    # [DC-VGK-BLOCKED-001] Suppress messages to blocked channel partners
+    if target_type == "direct" and target_jid:
+        clean_p = ''.join(c for c in str(target_jid) if c.isdigit())[-10:]
+        if len(clean_p) == 10:
+            is_blocked = db.execute(text("""
+                SELECT 1 FROM official_partners 
+                WHERE (is_blocked = TRUE OR member_status = 'BLOCKED')
+                  AND RIGHT(REGEXP_REPLACE(COALESCE(phone, whatsapp_number, ''), '[^0-9]', '', 'g'), 10) = :p
+                LIMIT 1
+            """), {"p": clean_p}).scalar()
+            if is_blocked:
+                return {
+                    "success": False,
+                    "blocked": True,
+                    "error": "Recipient is a Blocked Channel Partner. Communications are strictly suppressed."
+                }
 
     try:
         res = db.execute(

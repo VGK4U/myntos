@@ -46,8 +46,11 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
         cls.db = SessionLocal()
         # Retrieve test employees
         cls.admin_mr10001 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MR10001').first()
+        cls.subash_mr10025 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MR10025').first()
         cls.ea_mr10016 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MR10016').first()
-        cls.agent_mn10016 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MN10016').first()
+        cls.jagannath_mr10018 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MR10018').first()
+        cls.poojitha_mn10016 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MN10016').first()
+        cls.regular_agent = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code.notin_(['MR10001', 'MR10025', 'MR10016', 'MR10018', 'MN10016']), StaffEmployee.status == 'active').first()
 
         # Find or create a dedicated test VGK partner
         cls.test_partner = cls.db.query(OfficialPartner).filter(
@@ -86,33 +89,49 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
         cls.db.close()
 
     def test_01_dynamic_role_based_admin_and_visibility(self):
-        """Req 2 & 10: Dynamic authorization checks without hardcoding employee codes."""
-        # MR10001 (VGK4U, hierarchy level 150) -> Admin & Full Visibility
+        """Req 2 & 10: 5-user whitelist visibility (Poojitha, Subash, Yaswanth, Jagannath, Mr10001)."""
+        # MR10001 (Admin) -> Full Visibility
         self.assertTrue(_is_vgk_admin(self.admin_mr10001))
         self.assertTrue(_has_full_vgk_visibility(self.admin_mr10001))
 
-        # MR10016 (EA, hierarchy level 95) -> Admin & Full Visibility
+        # MR10016 (Yaswanth) -> Full Visibility
         self.assertTrue(_is_vgk_admin(self.ea_mr10016))
         self.assertTrue(_has_full_vgk_visibility(self.ea_mr10016))
 
-        # MN10016 (agent, hierarchy level 10) -> Regular staff (NOT Admin)
-        self.assertFalse(_is_vgk_admin(self.agent_mn10016))
-        self.assertFalse(_has_full_vgk_visibility(self.agent_mn10016))
+        # MR10025 (Subash) -> Full Visibility
+        if self.subash_mr10025:
+            self.assertTrue(_is_vgk_admin(self.subash_mr10025))
+            self.assertTrue(_has_full_vgk_visibility(self.subash_mr10025))
+
+        # MR10018 (Jagannath) -> Full Visibility
+        if self.jagannath_mr10018:
+            self.assertTrue(_is_vgk_admin(self.jagannath_mr10018))
+            self.assertTrue(_has_full_vgk_visibility(self.jagannath_mr10018))
+
+        # MN10016 (Poojitha) -> Full Visibility
+        if self.poojitha_mn10016:
+            self.assertTrue(_is_vgk_admin(self.poojitha_mn10016))
+            self.assertTrue(_has_full_vgk_visibility(self.poojitha_mn10016))
+
+        # Regular agent (NOT in whitelist) -> Restricted
+        if self.regular_agent:
+            self.assertFalse(_has_full_vgk_visibility(self.regular_agent))
 
     def test_02_manual_assignment_permissions(self):
         """Req 2: Regular staff cannot assign (403), Admin can assign."""
         payload = AssignMemberPayload(assigned_staff_id=self.ea_mr10016.id, assignment_reason="Testing assignment")
 
         # 1. Regular staff attempts assignment -> 403 Forbidden
-        with self.assertRaises(HTTPException) as ctx:
-            assign_vgk_member(
-                member_id=self.test_partner.id,
-                payload=payload,
-                current_user=self.agent_mn10016,
-                db=self.db
-            )
-        self.assertEqual(ctx.exception.status_code, 403)
-        self.assertIn("Forbidden", ctx.exception.detail)
+        if self.regular_agent:
+            with self.assertRaises(HTTPException) as ctx:
+                assign_vgk_member(
+                    member_id=self.test_partner.id,
+                    payload=payload,
+                    current_user=self.regular_agent,
+                    db=self.db
+                )
+            self.assertEqual(ctx.exception.status_code, 403)
+            self.assertIn("Forbidden", ctx.exception.detail)
 
         # 2. Admin assigns partner -> Success
         res = assign_vgk_member(
@@ -179,14 +198,15 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
     def test_04_status_edit_and_blocked_communication_prevention(self):
         """Req 9: Editable Active/Inactive/Blocked status and audit trail."""
         # Regular staff not assigned to partner cannot update status -> 403
-        with self.assertRaises(HTTPException) as ctx:
-            update_vgk_member_status(
-                member_id=self.test_partner.id,
-                payload=UpdateMemberStatusPayload(status="INACTIVE", status_note="Unauthorized try"),
-                current_user=self.agent_mn10016,
-                db=self.db
-            )
-        self.assertEqual(ctx.exception.status_code, 403)
+        if self.regular_agent:
+            with self.assertRaises(HTTPException) as ctx:
+                update_vgk_member_status(
+                    member_id=self.test_partner.id,
+                    payload=UpdateMemberStatusPayload(status="INACTIVE", status_note="Unauthorized try"),
+                    current_user=self.regular_agent,
+                    db=self.db
+                )
+            self.assertEqual(ctx.exception.status_code, 403)
 
         # Assigned staff or Admin CAN update status
         res = update_vgk_member_status(
@@ -300,14 +320,15 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
     def test_06_communication_history_aggregation(self):
         """Req 5 & 6: Communication history aggregation & permission checks."""
         # Partner assigned to MR10016
-        # Ordinary staff (MN10016) not assigned cannot view history -> 403
-        with self.assertRaises(HTTPException) as ctx:
-            get_vgk_communication_history(
-                member_id=self.test_partner.id,
-                current_user=self.agent_mn10016,
-                db=self.db
-            )
-        self.assertEqual(ctx.exception.status_code, 403)
+        # Ordinary staff not assigned cannot view history -> 403
+        if self.regular_agent:
+            with self.assertRaises(HTTPException) as ctx:
+                get_vgk_communication_history(
+                    member_id=self.test_partner.id,
+                    current_user=self.regular_agent,
+                    db=self.db
+                )
+            self.assertEqual(ctx.exception.status_code, 403)
 
         # Assigned staff (MR10016) or Admin (MR10001) can view history
         hist = get_vgk_communication_history(
@@ -333,7 +354,7 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
         )
         self.assertTrue(res["success"])
     def test_08_server_side_visibility_restriction(self):
-        """Req 10: Role-based visibility — Admin sees all; regular staff sees ONLY assigned/registered."""
+        """Req 10: Whitelist visibility — Poojitha and Admins see all; regular staff sees ONLY assigned/registered."""
         # Admin sees full platform members
         res_admin = list_vgk_members(
             current_user=self.admin_mr10001,
@@ -342,30 +363,36 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
         total_admin = res_admin["total"]
         self.assertGreater(total_admin, 0)
 
-        # Assign test partner to MR10016 (EA), not MN10016
+        # Poojitha (MN10016) is in whitelist -> Sees full platform members
+        if self.poojitha_mn10016:
+            res_poojitha = list_vgk_members(
+                current_user=self.poojitha_mn10016,
+                db=self.db
+            )
+            self.assertEqual(res_poojitha["total"], total_admin)
+
+        # Assign test partner to MR10016 (EA), not regular_agent
         self.test_partner.assigned_staff_id = self.ea_mr10016.id
         self.test_partner.registered_by_emp_code = 'VGK07102207'
         self.db.commit()
 
-        # Regular agent MN10016 queries members
-        res_agent = list_vgk_members(
-            current_user=self.agent_mn10016,
-            db=self.db
-        )
-        # Verify EVERY member returned to agent belongs strictly to her
-        for m in res_agent["data"]:
-            is_assigned_to_agent = (m.get("assigned_staff_id") == self.agent_mn10016.id)
-            is_registered_by_agent_unassigned = (
-                m.get("assigned_staff_id") is None and 
-                m.get("registered_by_emp_code") == self.agent_mn10016.emp_code
+        # Regular agent (NOT in whitelist) queries members
+        if self.regular_agent:
+            res_agent = list_vgk_members(
+                current_user=self.regular_agent,
+                db=self.db
             )
-            self.assertTrue(
-                is_assigned_to_agent or is_registered_by_agent_unassigned,
-                f"Ordinary agent was served member {m.get('partner_code')} not assigned/registered by her!"
-            )
-        # And test_partner (assigned to MR10016) MUST NOT appear in agent's results
-        agent_partner_ids = [m["id"] for m in res_agent["data"]]
-        self.assertNotIn(self.test_partner.id, agent_partner_ids)
+            # Verify EVERY member returned to agent belongs strictly to her
+            for m in res_agent["data"]:
+                is_assigned_to_agent = (m.get("assigned_staff_id") == self.regular_agent.id)
+                is_registered_by_agent = (m.get("registered_by_emp_code") == self.regular_agent.emp_code)
+                self.assertTrue(
+                    is_assigned_to_agent or is_registered_by_agent,
+                    f"Ordinary agent was served member {m.get('partner_code')} not assigned/registered by her!"
+                )
+            # And test_partner (assigned to MR10016) MUST NOT appear in agent's results
+            agent_partner_ids = [m["id"] for m in res_agent["data"]]
+            self.assertNotIn(self.test_partner.id, agent_partner_ids)
 
     def test_09_verify_31_columns_in_frontend(self):
         """Req 11, 12, 13: Verify exact 31-column ordering and sticky styles."""

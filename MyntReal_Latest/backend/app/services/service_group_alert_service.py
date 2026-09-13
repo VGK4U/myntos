@@ -32,7 +32,8 @@ def send_service_group_bot_message(message_text: str) -> Dict[str, Any]:
     """
     payload = {
         "message": message_text,
-        "inviteCode": SERVICE_GROUP_INVITE_CODE
+        "inviteCode": SERVICE_GROUP_INVITE_CODE,
+        "groupName": "Service & Maintenance Team"
     }
     
     env_url = os.getenv("WHATSAPP_BOT_URL") or os.getenv("WA_BOT_URL") or os.getenv("WA_GROUP_BOT_URL")
@@ -47,7 +48,7 @@ def send_service_group_bot_message(message_text: str) -> Dict[str, Any]:
     last_exc = None
     for url in urls:
         try:
-            resp = requests.post(url, json=payload, timeout=8)
+            resp = requests.post(url, json=payload, timeout=15)
             raw = resp.json()
             if resp.status_code == 200 and raw.get("success"):
                 return {"success": True, "data": raw}

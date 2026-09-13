@@ -1079,12 +1079,22 @@ app.post('/api/send-group-message', async (req, res) => {
                 });
             }
             try {
+                let queueTargetJid = groupId || null;
+                if (!queueTargetJid && !req.body.inviteCode && !req.body.inviteCodes && !req.body.groupName) {
+                    queueTargetJid = DEFAULT_INVITE_CODE;
+                }
+                if (!queueTargetJid) {
+                    return res.status(400).json({
+                        success: false,
+                        error: "Target resolution required for non-leader queue dispatch."
+                    });
+                }
                 const enqResp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-enqueue`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         target_type: 'group',
-                        target_jid: groupId || DEFAULT_INVITE_CODE,
+                        target_jid: queueTargetJid,
                         message: message || '',
                         media_url: mediaSource,
                         instance_id: INSTANCE_ID
@@ -1139,8 +1149,17 @@ app.post('/api/send-group-message', async (req, res) => {
             });
         }
 
-        const codesToUse = req.body.inviteCodes || (req.body.inviteCode ? [req.body.inviteCode] : [DEFAULT_INVITE_CODE]);
-        const targetCodes = Array.from(new Set(Array.isArray(codesToUse) ? codesToUse : [codesToUse]));
+        let codesToUse;
+        if (req.body.inviteCodes) {
+            codesToUse = Array.isArray(req.body.inviteCodes) ? req.body.inviteCodes : [req.body.inviteCodes];
+        } else if (req.body.inviteCode) {
+            codesToUse = [req.body.inviteCode];
+        } else if (!req.body.groupName && !req.body.groupId) {
+            codesToUse = [DEFAULT_INVITE_CODE];
+        } else {
+            codesToUse = [''];
+        }
+        const targetCodes = Array.from(new Set(codesToUse));
         
         let sentCount = 0;
         let failedCount = 0;
@@ -1175,7 +1194,10 @@ app.post('/api/send-group-message', async (req, res) => {
             }
 
             if (!destinationJid && codeToUse) {
-                if (jidCache[codeToUse]) {
+                if (codeToUse.endsWith('@g.us') || codeToUse.includes('@newsletter')) {
+                    destinationJid = codeToUse;
+                    jidCache[codeToUse] = destinationJid;
+                } else if (jidCache[codeToUse]) {
                     destinationJid = jidCache[codeToUse];
                 } else {
                     const withTimeout = (promise, ms = 4000) => Promise.race([
@@ -1221,7 +1243,7 @@ app.post('/api/send-group-message', async (req, res) => {
             }
 
             if (!destinationJid && targetType === 'group') {
-                if (!req.body.groupName && !req.body.inviteCode && targetJid) {
+                if (!req.body.groupName && !req.body.inviteCode && !req.body.inviteCodes && targetJid) {
                     destinationJid = targetJid;
                     console.log(`[WA-BOT] Used pre-resolved startup targetJid: ${destinationJid}`);
                 }
@@ -1229,15 +1251,16 @@ app.post('/api/send-group-message', async (req, res) => {
 
             // STRICT TARGET TYPE & RESOLUTION VALIDATION
             if (!destinationJid) {
-                console.warn(`[WA-BOT] ❌ Target resolution failed for '${rawCode}' (Type: ${targetType}).`);
+                const targetDesc = req.body.groupName || rawCode || 'unspecified';
+                console.warn(`[WA-BOT] ❌ Target resolution failed for '${targetDesc}' (Type: ${targetType}).`);
                 failedCount++;
                 results.push({
-                    intended_target: rawCode,
+                    intended_target: targetDesc,
                     clean_code: codeToUse,
                     target_type: targetType,
                     resolved_jid: null,
                     success: false,
-                    error: "TARGET_RESOLUTION_FAILED",
+                    error: `TARGET_RESOLUTION_FAILED: Could not find or access group/channel '${targetDesc}'`,
                     fallback_used: false
                 });
                 continue;
@@ -1308,7 +1331,11 @@ app.post('/api/send-group-message', async (req, res) => {
                 failedCount++;
                 let userFriendlyErr = sendErr.message || String(sendErr);
                 if (String(sendErr.message).toLowerCase().includes('forbidden') || String(sendErr.message).includes('403')) {
-                    userFriendlyErr = "GROUP PERMISSION DENIED: In 'Mynt Sales New Group', only Admins can send messages. Please promote the connected WhatsApp phone to Admin in WhatsApp Group Settings or change group settings to 'All Participants'.";
+                    if (targetType === 'channel' || String(destinationJid).includes('@newsletter')) {
+                        userFriendlyErr = "CHANNEL PERMISSION DENIED: The connected WhatsApp phone account is not an Admin or Owner of this WhatsApp Channel. In WhatsApp Channels, only Channel Admins can publish messages. Please make the connected WhatsApp phone an Admin of the channel.";
+                    } else {
+                        userFriendlyErr = `GROUP PERMISSION DENIED: In this WhatsApp group, only Admins can send messages. Please promote the connected WhatsApp phone to Admin or set group settings to 'All Participants'.`;
+                    }
                 }
                 results.push({
                     intended_target: rawCode,
@@ -1367,6 +1394,24 @@ app.post('/api/send-message', async (req, res) => {
         let cleanPhone = String(phone).replace(/\D/g, '');
         if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
         const recipientJid = cleanPhone.includes('@s.whatsapp.net') ? cleanPhone : `${cleanPhone}@s.whatsapp.net`;
+
+        // [DC-VGK-BLOCKED-001] Strict Suppression Check for Blocked Channel Partners
+        try {
+            const chkBlockResp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/check-blocked?phone=${cleanPhone}`);
+            if (chkBlockResp.ok) {
+                const blockData = await chkBlockResp.json();
+                if (blockData.is_blocked) {
+                    console.log(`[WA-BOT] 🛡️ [BLOCKED-SUPPRESSION] Refusing direct dispatch to blocked partner: ${cleanPhone}`);
+                    return res.status(403).json({
+                        success: false,
+                        blocked: true,
+                        error: "Recipient is a Blocked Channel Partner. Communications are strictly suppressed."
+                    });
+                }
+            }
+        } catch (blkErr) {
+            // Non-blocking fallback if backend check momentarily unreachable
+        }
 
         if (!ALLOW_LOCAL_SOCKET) {
             console.log(`[WA-BOT] 🛡️ [DEV-STANDBY] Mocked direct message dispatch to ${cleanPhone}: ${message || '[Media]'}`);

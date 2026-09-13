@@ -475,8 +475,9 @@ def sync_myoperator_logs(
                     raw_payload=json.dumps(raw_src)[:4000],
                 )
                 try:
-                    db.add(call)
-                    db.flush()
+                    with db.begin_nested():
+                        db.add(call)
+                        db.flush()
                     if status == 'missed':
                         _ensure_followup(db, call)
                         if call.followup_created:
@@ -488,7 +489,6 @@ def sync_myoperator_logs(
                             logger.warning(f"[OPERATOR_SYNC] Could not send missed call WA ACK: {_mc_e}")
                     created += 1
                 except IntegrityError:
-                    db.rollback()
                     skipped += 1
 
             synced += 1

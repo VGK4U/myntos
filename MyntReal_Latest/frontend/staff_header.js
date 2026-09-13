@@ -1045,6 +1045,133 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
             autoStart: true
         });
     };
+
+    // DC_DIALER_WEB_SYNC: Real-time mirror between mobile app and web desktop
+    (function initMobileWebSync() {
+        if (typeof window === 'undefined') return;
+        // staff_dialer already has its own dedicated WebSocket handler
+        if (window.location.pathname.includes('staff_dialer')) return;
+
+        let syncWs = null;
+        let syncTimer = null;
+        let reconnectBackoff = 1000;
+
+        function getAuthToken() {
+            const c = document.cookie.split(';').map(s => s.trim())
+                .find(s => s.startsWith('staff_token=') || s.startsWith('session_token='));
+            return c ? c.slice(c.indexOf('=') + 1) : (localStorage.getItem('staff_token') || localStorage.getItem('token') || '');
+        }
+
+        function ensureSyncBanner() {
+            let banner = document.getElementById('dc-global-sync-banner');
+            if (!banner) {
+                banner = document.createElement('div');
+                banner.id = 'dc-global-sync-banner';
+                banner.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;background:linear-gradient(135deg,#064e3b,#065f46);color:#fff;padding:12px 18px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.35);display:none;align-items:center;gap:12px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;font-size:13px;border:1px solid rgba(16,185,129,0.4);';
+                banner.innerHTML = `
+                    <div style="font-size:22px;line-height:1;">📱</div>
+                    <div style="flex:1;">
+                        <div id="dc-sync-banner-title" style="font-weight:700;letter-spacing:0.3px;">Mobile Sync Active</div>
+                        <div id="dc-sync-banner-sub" style="font-size:11px;opacity:0.85;margin-top:2px;">Syncing with mobile device...</div>
+                    </div>
+                    <button id="dc-sync-banner-close" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;margin-left:8px;opacity:0.7;padding:0 4px;">&times;</button>
+                `;
+                document.body.appendChild(banner);
+                document.getElementById('dc-sync-banner-close')?.addEventListener('click', () => {
+                    banner.style.display = 'none';
+                });
+            }
+            return banner;
+        }
+
+        function showSyncBanner(title, sub) {
+            const b = ensureSyncBanner();
+            const t = document.getElementById('dc-sync-banner-title');
+            const s = document.getElementById('dc-sync-banner-sub');
+            if (t) t.textContent = title;
+            if (s) s.textContent = sub;
+            b.style.display = 'flex';
+        }
+
+        function hideSyncBanner() {
+            const b = document.getElementById('dc-global-sync-banner');
+            if (b) b.style.display = 'none';
+        }
+
+        function connectSyncWs() {
+            const token = getAuthToken();
+            if (!token) return;
+
+            if (syncWs !== null) {
+                const rs = syncWs.readyState;
+                if (rs === WebSocket.OPEN || rs === WebSocket.CONNECTING) return;
+                syncWs = null;
+            }
+
+            const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+            const wsUrl = `${proto}://${location.host}/api/v1/crm/ws/dialer/sync?token=${encodeURIComponent(token)}`;
+
+            try {
+                syncWs = new WebSocket(wsUrl);
+            } catch (e) {
+                return;
+            }
+
+            syncWs.onopen = () => {
+                reconnectBackoff = 1000;
+            };
+
+            syncWs.onmessage = (ev) => {
+                try {
+                    const msg = JSON.parse(ev.data);
+                    if (!msg) return;
+
+                    // 1. Call State Sync (Active mobile call)
+                    if (msg.type === 'call_state') {
+                        if (msg.active && msg.lead_id) {
+                            showSyncBanner(
+                                `📱 Mobile Call: ${msg.lead_name || 'Lead'}`,
+                                `${msg.lead_phone ? msg.lead_phone + ' · ' : ''}Call in progress on mobile`
+                            );
+                            if (typeof window.viewLead === 'function') {
+                                window.viewLead(msg.lead_id, msg.company_id);
+                            }
+                        } else {
+                            hideSyncBanner();
+                        }
+                    }
+
+                    // 2. Lead View Sync (Lead viewed on mobile)
+                    if (msg.type === 'lead_view' && msg.lead_id) {
+                        showSyncBanner(
+                            `👁 Viewing: ${msg.lead_name || 'Lead #' + msg.lead_id}`,
+                            `Opened on mobile app`
+                        );
+                        if (typeof window.viewLead === 'function') {
+                            window.viewLead(msg.lead_id, msg.company_id);
+                        }
+                    }
+                } catch (_) {}
+            };
+
+            syncWs.onclose = () => {
+                syncWs = null;
+                if (syncTimer) clearTimeout(syncTimer);
+                syncTimer = setTimeout(connectSyncWs, reconnectBackoff);
+                reconnectBackoff = Math.min(reconnectBackoff * 2, 30000);
+            };
+
+            syncWs.onerror = () => {
+                try { syncWs.close(); } catch (_) {}
+            };
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', connectSyncWs);
+        } else {
+            connectSyncWs();
+        }
+    })();
 }
 
 if (typeof module !== 'undefined' && module.exports) {

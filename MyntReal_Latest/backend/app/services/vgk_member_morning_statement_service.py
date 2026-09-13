@@ -175,11 +175,18 @@ def run_vgk_member_daily_morning_statement_dispatch(db: Session, trigger_type: s
     payload = {
         "qualifying_members_count": len(qualifying_members),
         "dispatched_count": dispatched_count,
+        "skipped_count": skipped_count,
         "failed_count": failed_count,
         "detail": results
     }
 
-    status = "SUCCESS" if dispatched_count > 0 or len(qualifying_members) == 0 else "FAILED"
+    if failed_count > 0 and dispatched_count == 0 and len(qualifying_members) > skipped_count:
+        status = "FAILED"
+    elif dispatched_count == 0 and skipped_count > 0:
+        status = "SKIPPED"
+    else:
+        status = "SUCCESS"
+
     _record_audit_log(
         job_id="vgk_member_morning_statement",
         job_name="VGK Members Daily 8 AM Revenue Statement",

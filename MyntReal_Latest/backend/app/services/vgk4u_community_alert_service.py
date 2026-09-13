@@ -162,12 +162,12 @@ def dispatch_daily_vgk4u_morning_wish(
 
     for tg in target_groups:
         ident = tg.get("identifier", "").strip()
-        if not ident:
+        t_name = tg.get("name", "").strip()
+        if not ident and not t_name:
             continue
-        clean_code = extract_invite_code(ident)
-        if not clean_code:
-            continue
-        res = send_vgk4u_group_bot_message(quote, invite_code=clean_code)
+        clean_code = extract_invite_code(ident) if ident else ""
+        code_or_name = clean_code or ident or t_name
+        res = send_vgk4u_group_bot_message(quote, invite_code=code_or_name)
         results.append(res)
         if res.get("success"):
             success_count += 1

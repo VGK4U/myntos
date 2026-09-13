@@ -10,6 +10,8 @@ import { PageHeader } from '../components/PageHeader';
 import { routerService } from '../services/router.service';
 import { vgkBannerService } from '../services/vgk-banner.service';
 import { unifiedWAModal } from '../components/UnifiedWAModal';
+import { callController } from '../services/call-controller';
+import { dialerService } from '../services/dialer.service';
 
 interface Company {
   id: number;
@@ -319,6 +321,66 @@ export class StaffTeamLeadsPage {
             <button class="modal-close" id="closeDetailModal">&times;</button>
           </div>
           <div class="modal-body" id="detailBody"></div>
+        </div>
+      </div>
+
+      <!-- Post-Call Disposition & Lead Update Modal (DC Protocol) -->
+      <div class="modal-overlay action-modal" id="callDispositionModal" style="display: none;">
+        <div class="modal-content" style="max-width: 420px;">
+          <div class="modal-header" style="background: linear-gradient(135deg, #059669 0%, #047857 100%);">
+            <div>
+              <h4 style="margin: 0; color: white;">📞 Call Ended · Disposition</h4>
+              <div id="cdLeadSubtitle" style="font-size: 12px; color: #a7f3d0; margin-top: 2px;"></div>
+            </div>
+            <button class="modal-close" id="closeCallDispositionModal">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 8px 12px; margin-bottom: 14px;">
+              <span style="font-size: 13px; color: #e6f1ff;">Call Duration:</span>
+              <span id="cdCallDurationBadge" style="font-size: 14px; font-weight: 700; color: #10b981;">0s</span>
+            </div>
+
+            <div class="form-group">
+              <label>Call Outcome <span class="required">*</span></label>
+              <div class="outcome-chips" id="cdOutcomeChips" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px;">
+                <button type="button" class="cd-outcome-chip active" data-outcome="connected" style="padding: 6px 10px; border-radius: 6px; font-size: 12px; border: 1px solid #10b981; background: #10b981; color: white; cursor: pointer;">✅ Answered</button>
+                <button type="button" class="cd-outcome-chip" data-outcome="busy" style="padding: 6px 10px; border-radius: 6px; font-size: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: #a8c0d8; cursor: pointer;">⏳ Busy</button>
+                <button type="button" class="cd-outcome-chip" data-outcome="no_answer" style="padding: 6px 10px; border-radius: 6px; font-size: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: #a8c0d8; cursor: pointer;">📵 No Answer</button>
+                <button type="button" class="cd-outcome-chip" data-outcome="callback" style="padding: 6px 10px; border-radius: 6px; font-size: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: #a8c0d8; cursor: pointer;">🔄 Callback</button>
+                <button type="button" class="cd-outcome-chip" data-outcome="not_interested" style="padding: 6px 10px; border-radius: 6px; font-size: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.05); color: #a8c0d8; cursor: pointer;">❌ Not Interested</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Update Lead Status <span class="required">*</span></label>
+              <select id="cdLeadStatus" class="form-select">
+                <option value="new">New</option>
+                <option value="contacted">Contacted</option>
+                <option value="follow-up">Follow-up</option>
+                <option value="interested">Interested</option>
+                <option value="meeting_scheduled">Meeting Scheduled</option>
+                <option value="converted">Converted</option>
+                <option value="lost">Lost</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Next Follow-up (Optional)</label>
+              <div class="form-row">
+                <input type="date" id="cdFollowupDate" class="form-input">
+                <input type="time" id="cdFollowupTime" class="form-input" value="11:00">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Call Notes / Remarks</label>
+              <textarea id="cdCallNotes" class="form-textarea" rows="2" placeholder="Summary of discussion with lead..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="cancelCallDispositionBtn">Skip</button>
+            <button class="btn btn-primary" id="saveCallDispositionBtn">Update Lead</button>
+          </div>
         </div>
       </div>
 
@@ -634,6 +696,48 @@ export class StaffTeamLeadsPage {
     
     document.getElementById('closeBulkModal')?.addEventListener('click', () => this.hideModal('bulkModal'));
     document.getElementById('closeDetailModal')?.addEventListener('click', () => this.hideModal('detailModal'));
+    document.getElementById('closeCallDispositionModal')?.addEventListener('click', () => this.hideModal('callDispositionModal'));
+    document.getElementById('cancelCallDispositionBtn')?.addEventListener('click', () => this.hideModal('callDispositionModal'));
+    document.getElementById('saveCallDispositionBtn')?.addEventListener('click', () => this.saveCallDisposition());
+
+    document.querySelectorAll('#cdOutcomeChips .cd-outcome-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelectorAll('#cdOutcomeChips .cd-outcome-chip').forEach(c => {
+          (c as HTMLElement).style.background = 'rgba(255,255,255,0.05)';
+          (c as HTMLElement).style.borderColor = 'rgba(255,255,255,0.2)';
+          (c as HTMLElement).style.color = '#a8c0d8';
+          c.classList.remove('active');
+        });
+        (chip as HTMLElement).style.background = '#10b981';
+        (chip as HTMLElement).style.borderColor = '#10b981';
+        (chip as HTMLElement).style.color = 'white';
+        chip.classList.add('active');
+
+        const outcome = chip.getAttribute('data-outcome');
+        const statusSelect = document.getElementById('cdLeadStatus') as HTMLSelectElement;
+        if (statusSelect && outcome) {
+          if (outcome === 'busy' || outcome === 'no_answer') {
+            statusSelect.value = 'follow-up';
+          } else if (outcome === 'not_interested') {
+            statusSelect.value = 'lost';
+          } else if (outcome === 'callback') {
+            statusSelect.value = 'follow-up';
+          }
+        }
+      });
+    });
+
+    window.addEventListener('myntos:lead-call-ended', (e: Event) => {
+      const customEv = e as CustomEvent;
+      const detail = customEv.detail;
+      if (!detail || !detail.leadId) return;
+      const leadId = Number(detail.leadId);
+      const lead = this.leads.find(l => l.id === leadId);
+      if (lead) {
+        this.showPostCallDispositionModal(lead, detail.durationSeconds || 0);
+      }
+    });
+
     document.getElementById('closeLeadFormModal')?.addEventListener('click', () => this.hideModal('leadFormModal'));
     document.getElementById('cancelLeadFormBtn')?.addEventListener('click', () => this.hideModal('leadFormModal'));
     document.getElementById('saveLeadBtn')?.addEventListener('click', () => this.saveLead());
@@ -1539,13 +1643,16 @@ export class StaffTeamLeadsPage {
       console.warn('Failed to load call history', e);
     }
 
+    const leadName = lead.name || 'Lead';
+    const avatarInitials = leadName.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'L';
+
     body.innerHTML = `
       <div class="lead-detail">
         <div class="lead-header-info">
-          <div class="lead-avatar">${lead.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</div>
+          <div class="lead-avatar">${avatarInitials}</div>
           <div>
             <h3>${lead.name}</h3>
-            <p>${lead.phone}</p>
+            <p>${lead.phone || '-'}</p>
             ${lead.email ? `<p>${lead.email}</p>` : ''}
           </div>
         </div>
@@ -1620,7 +1727,7 @@ export class StaffTeamLeadsPage {
           <button class="btn btn-primary" id="detailEditBtn" style="flex: 1; min-width: 120px;">Edit</button>
           <button class="btn btn-info" id="detailFollowupBtn" style="flex: 1; min-width: 120px;">Follow-up</button>
           <button class="btn btn-warning" id="detailStatusBtn" style="flex: 1; min-width: 120px;">Status</button>
-          <button class="btn btn-secondary" onclick="if(window.triggerLeadCall){window.triggerLeadCall('${lead.phone || ''}', '${(lead.name || '').replace(/'/g, "\\'")}');}" style="flex: 1; min-width: 100px;">Softphone</button>
+          <button class="btn btn-secondary" onclick="if(window.triggerLeadCall){window.triggerLeadCall('${lead.phone || ''}', '${(lead.name || '').replace(/'/g, "\\'")}', ${lead.id});}" style="flex: 1; min-width: 100px;">Softphone</button>
           <button class="btn btn-success open-team-lead-wa-btn" data-phone="${(lead.phone || '').replace(/\D/g, '')}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" style="flex: 1; min-width: 100px;">WhatsApp</button>
         </div>
       </div>
@@ -1658,6 +1765,81 @@ export class StaffTeamLeadsPage {
     });
 
     this.showModal('detailModal');
+    void dialerService.notifyLeadViewed(leadId);
+  }
+
+  private showPostCallDispositionModal(lead: Lead, durationSeconds: number): void {
+    this.selectedLead = lead;
+    const sub = document.getElementById('cdLeadSubtitle');
+    if (sub) sub.textContent = `${lead.name} · ${lead.phone || ''}`;
+
+    const durBadge = document.getElementById('cdCallDurationBadge');
+    if (durBadge) {
+      if (durationSeconds > 0) {
+        const m = Math.floor(durationSeconds / 60);
+        const s = durationSeconds % 60;
+        durBadge.textContent = m > 0 ? `${m}m ${s}s` : `${s}s`;
+      } else {
+        durBadge.textContent = 'Just dialed';
+      }
+    }
+
+    const statusSel = document.getElementById('cdLeadStatus') as HTMLSelectElement;
+    if (statusSel && lead.status) {
+      statusSel.value = lead.status.toLowerCase().replace(' ', '-');
+    }
+
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const dateStr = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth()+1)}-${pad(tomorrow.getDate())}`;
+    const fDate = document.getElementById('cdFollowupDate') as HTMLInputElement;
+    if (fDate) fDate.value = dateStr;
+
+    const notes = document.getElementById('cdCallNotes') as HTMLTextAreaElement;
+    if (notes) notes.value = '';
+
+    this.showModal('callDispositionModal');
+  }
+
+  private async saveCallDisposition(): Promise<void> {
+    if (!this.selectedLead) return;
+
+    const activeChip = document.querySelector('#cdOutcomeChips .cd-outcome-chip.active');
+    const outcome = activeChip?.getAttribute('data-outcome') || 'connected';
+    const status = (document.getElementById('cdLeadStatus') as HTMLSelectElement)?.value || this.selectedLead.status;
+    const fDate = (document.getElementById('cdFollowupDate') as HTMLInputElement)?.value;
+    const fTime = (document.getElementById('cdFollowupTime') as HTMLInputElement)?.value || '11:00';
+    const notes = (document.getElementById('cdCallNotes') as HTMLTextAreaElement)?.value.trim();
+
+    const btn = document.getElementById('saveCallDispositionBtn') as HTMLButtonElement;
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+    try {
+      await apiService.put(`/crm/leads/${this.selectedLead.id}`, {
+        status: status,
+        status_remarks: notes || `Call outcome: ${outcome}`
+      });
+
+      if (fDate) {
+        await apiService.post(`/crm/leads/${this.selectedLead.id}/followup`, {
+          followup_date: `${fDate}T${fTime}:00`,
+          remarks: notes || `Follow-up after ${outcome} call`
+        }).catch(() => {});
+      }
+
+      await apiService.post(`/crm/leads/${this.selectedLead.id}/activity`, {
+        activity_type: 'call',
+        description: `Call outcome: ${outcome}. ${notes ? 'Notes: ' + notes : ''}`
+      }).catch(() => {});
+
+      alert('Lead disposition updated successfully!');
+      this.hideModal('callDispositionModal');
+      await this.loadTeamLeads();
+    } catch (e: any) {
+      alert(e.message || 'Failed to save disposition');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Update Lead'; }
+    }
   }
 
   private playCallRecording(recordingId: number, btnEl: HTMLElement): void {

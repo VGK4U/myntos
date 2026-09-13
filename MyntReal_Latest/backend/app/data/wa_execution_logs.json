@@ -1,5 +1,130 @@
 [
   {
+    "id": "log_712a041c",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "13 Sep 2026, 10:30:00 AM IST",
+    "iso_timestamp": "2026-09-13T10:30:00.434216",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_db4c8770",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "13 Sep 2026, 10:00:00 AM IST",
+    "iso_timestamp": "2026-09-13T10:00:00.418414",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_2aedcd15",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "13 Sep 2026, 09:30:00 AM IST",
+    "iso_timestamp": "2026-09-13T09:30:00.486573",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_4bed066d",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "13 Sep 2026, 09:30:00 AM IST",
+    "iso_timestamp": "2026-09-13T09:30:00.365923",
+    "target_summary": "Mynt Sales New",
+    "targets": [
+      {
+        "id": "t1",
+        "type": "group",
+        "name": "Mynt Sales New",
+        "identifier": "120363410784518818@g.us"
+      }
+    ],
+    "sent_count": 1,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "success": true,
+      "data": {
+        "success": true,
+        "mocked": true,
+        "sent_count": 1,
+        "failed_count": 0,
+        "results": [
+          {
+            "success": true,
+            "message_id": "mock_dev_1789272000351"
+          }
+        ],
+        "message": "Dev mode: Simulated group broadcast (live socket disabled in dev)"
+      }
+    }
+  },
+  {
     "id": "log_36292aeb",
     "job_id": "missed_call_ack",
     "job_name": "Instant Missed Call Auto-ACK",
@@ -17746,176 +17871,6 @@
           }
         ],
         "message_id": "3EB070CA7D4F0815AB66CC"
-      }
-    }
-  },
-  {
-    "id": "log_09df8879",
-    "job_id": "field_staff_journey_report",
-    "job_name": "Field Journey Performance & Leaderboard Report",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "21 Aug 2026, 08:45:01 PM IST",
-    "iso_timestamp": "2026-08-21T20:45:01.572540",
-    "target_summary": "Field Updates",
-    "targets": [
-      {
-        "type": "group",
-        "name": "Field Updates",
-        "identifier": "BctONtnv8431uxxybKBEtS"
-      }
-    ],
-    "sent_count": 1,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "group_posted": true,
-      "alerts_sent": 0,
-      "active_journeys": 0
-    }
-  },
-  {
-    "id": "log_a042d6ed",
-    "job_id": "wa_bihourly_sales_perf_report",
-    "job_name": "Sales Team 2-Hour Report & Leaderboard",
-    "trigger_type": "MANUAL",
-    "triggered_by": "Staff MR10016 (Yaswanth Kumar)",
-    "timestamp": "21 Aug 2026, 08:44:54 PM IST",
-    "iso_timestamp": "2026-08-21T20:44:54.768191",
-    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
-    "targets": [
-      {
-        "id": "t1",
-        "type": "group",
-        "name": "Mynt Sales New Group",
-        "identifier": "9053899899"
-      },
-      {
-        "id": "t2",
-        "type": "group",
-        "name": "Executive Team Announcements",
-        "identifier": "7702830269"
-      }
-    ],
-    "sent_count": 1,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "success": true,
-      "data": {
-        "success": true,
-        "sent_count": 1,
-        "failed_count": 0,
-        "results": [
-          {
-            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
-            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
-            "target_type": "group",
-            "resolved_jid": "120363410784518818@g.us",
-            "message_id": "3EB0B2DE10D16B5354A46D",
-            "success": true,
-            "fallback_used": false
-          }
-        ],
-        "message_id": "3EB0B2DE10D16B5354A46D"
-      }
-    }
-  },
-  {
-    "id": "log_56143d62",
-    "job_id": "wa_bihourly_sales_perf_report",
-    "job_name": "Sales Team 2-Hour Report & Leaderboard",
-    "trigger_type": "MANUAL",
-    "triggered_by": "Staff MR10016 (Yaswanth Kumar)",
-    "timestamp": "21 Aug 2026, 08:44:17 PM IST",
-    "iso_timestamp": "2026-08-21T20:44:17.530505",
-    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
-    "targets": [
-      {
-        "id": "t1",
-        "type": "group",
-        "name": "Mynt Sales New Group",
-        "identifier": "9053899899"
-      },
-      {
-        "id": "t2",
-        "type": "group",
-        "name": "Executive Team Announcements",
-        "identifier": "7702830269"
-      }
-    ],
-    "sent_count": 1,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "success": true,
-      "data": {
-        "success": true,
-        "sent_count": 1,
-        "failed_count": 0,
-        "results": [
-          {
-            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
-            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
-            "target_type": "group",
-            "resolved_jid": "120363410784518818@g.us",
-            "message_id": "3EB098B74E6BC212307281",
-            "success": true,
-            "fallback_used": false
-          }
-        ],
-        "message_id": "3EB098B74E6BC212307281"
-      }
-    }
-  },
-  {
-    "id": "log_afe4af9b",
-    "job_id": "wa_bihourly_sales_perf_report",
-    "job_name": "Sales Team 2-Hour Report & Leaderboard",
-    "trigger_type": "MANUAL",
-    "triggered_by": "Staff MR10016 (Yaswanth Kumar)",
-    "timestamp": "21 Aug 2026, 08:43:08 PM IST",
-    "iso_timestamp": "2026-08-21T20:43:08.935171",
-    "target_summary": "Mynt Sales New Group, Executive Team Announcements",
-    "targets": [
-      {
-        "id": "t1",
-        "type": "group",
-        "name": "Mynt Sales New Group",
-        "identifier": "9053899899"
-      },
-      {
-        "id": "t2",
-        "type": "group",
-        "name": "Executive Team Announcements",
-        "identifier": "7702830269"
-      }
-    ],
-    "sent_count": 1,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "success": true,
-      "data": {
-        "success": true,
-        "sent_count": 1,
-        "failed_count": 0,
-        "results": [
-          {
-            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
-            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
-            "target_type": "group",
-            "resolved_jid": "120363410784518818@g.us",
-            "message_id": "3EB074835F1AC76DC7014C",
-            "success": true,
-            "fallback_used": false
-          }
-        ],
-        "message_id": "3EB074835F1AC76DC7014C"
       }
     }
   }

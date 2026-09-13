@@ -56,10 +56,29 @@ def require_ea(current_user: StaffEmployee = Depends(get_current_staff_user)):
     return current_user
 
 
+# [DC-VGK-RBAC-001] Strict 5-User Visibility Whitelist
+# Requirement: All members displayed to Poojitha, Subash, Yaswanth, Jagannath and Mr10001 only.
+# All other staff only see members registered by them or assigned to them.
+VGK_FULL_VISIBILITY_EMP_CODES = {
+    'MR10001',   # System Administrator (VGK4U Supreme)
+    'MR10025',   # Subash (Mr. Subhash Kumar Kari)
+    'MR10016',   # Yaswanth (Mr. Yaswanth Kumar Appalabattula)
+    'MR10018',   # Jagannath (Mr. Jagannadh Velaga)
+    'MN10016',   # Poojitha (Ms. Narsi Kurmasri pujitha)
+}
+VGK_FULL_VISIBILITY_STAFF_IDS = {1, 16, 19, 28, 118}
+
+
 def _is_vgk_admin(user: StaffEmployee) -> bool:
     """Check if user has administrative authority over VGK partner assignments & configurations."""
     if not user:
         return False
+    emp_code = (getattr(user, 'emp_code', '') or '').strip().upper()
+    if emp_code in VGK_FULL_VISIBILITY_EMP_CODES or getattr(user, 'id', None) in VGK_FULL_VISIBILITY_STAFF_IDS:
+        return True
+    full_name = (getattr(user, 'full_name', '') or getattr(user, 'name', '') or '').lower()
+    if any(k in full_name for k in ('poojitha', 'pujitha', 'subhash', 'subash', 'yaswanth', 'jagannath', 'jagannadh')):
+        return True
     st = (getattr(user, 'staff_type', '') or '').upper()
     if 'VGK' in st or st in ('EA', 'SUPER_ADMIN', 'ADMIN', 'TENANT_ADMIN', 'MANAGEMENT'):
         return True
@@ -76,12 +95,20 @@ def _is_vgk_admin(user: StaffEmployee) -> bool:
 def _has_full_vgk_visibility(user: StaffEmployee) -> bool:
     """
     Check if user is permitted to see all VGK members across the platform.
-    VGK Leadership / Admin / EA have full visibility.
-    Ordinary staff are restricted to their assigned members (or unassigned members they registered).
+    Strict access rule: All members should be displayed to Poojitha, Subash, Yaswanth, Jagannath and Mr10001 only.
+    All other staff are strictly restricted to members registered by them or assigned to them.
     """
     if not user:
         return False
-    return _is_vgk_admin(user)
+    emp_code = (getattr(user, 'emp_code', '') or '').strip().upper()
+    if emp_code in VGK_FULL_VISIBILITY_EMP_CODES:
+        return True
+    if getattr(user, 'id', None) in VGK_FULL_VISIBILITY_STAFF_IDS:
+        return True
+    full_name = (getattr(user, 'full_name', '') or getattr(user, 'name', '') or '').lower()
+    if any(k in full_name for k in ('poojitha', 'pujitha', 'subhash', 'subash', 'yaswanth', 'jagannath', 'jagannadh')):
+        return True
+    return False
 
 
 def _next_vgk_partner_code(db: Session, company_id: int) -> str:
@@ -389,11 +416,11 @@ def list_vgk_members(
     page_size = int(page_size) if isinstance(page_size, (int, str)) and str(page_size).isdigit() else 25
     query = db.query(OfficialPartner).filter(OfficialPartner.category == 'VGK_TEAM')
 
-    # [DC-VGK-RBAC-001] Role-based member visibility: Ordinary staff are restricted to assigned members
+    # [DC-VGK-RBAC-001] Strict member visibility: Ordinary staff only see members registered by them or assigned to them
     if not _has_full_vgk_visibility(current_user):
         query = query.filter(or_(
             OfficialPartner.assigned_staff_id == current_user.id,
-            and_(OfficialPartner.assigned_staff_id.is_(None), OfficialPartner.registered_by_emp_code == current_user.emp_code)
+            OfficialPartner.registered_by_emp_code == current_user.emp_code
         ))
 
     # [DC-VGK-ASSIGN-001] Filter by assigned staff ID
@@ -1701,6 +1728,11 @@ def get_vgk_member(
     if not member:
         raise HTTPException(status_code=404, detail="VGK member not found")
 
+    # [DC-VGK-RBAC-001] Strict visibility guard for single member view
+    if not _has_full_vgk_visibility(current_user):
+        if member.assigned_staff_id != current_user.id and member.registered_by_emp_code != current_user.emp_code:
+            raise HTTPException(status_code=403, detail="Forbidden: You can only view your assigned or registered VGK members.")
+
     d = member.to_dict()
     if member.parent_partner_id:
         upline = db.query(OfficialPartner).filter(OfficialPartner.id == member.parent_partner_id).first()
@@ -1893,6 +1925,11 @@ def get_vgk_member_tree(
     ).first()
     if not member:
         raise HTTPException(status_code=404, detail="VGK member not found")
+
+    # [DC-VGK-RBAC-001] Strict visibility guard for tree view
+    if not _has_full_vgk_visibility(current_user):
+        if member.assigned_staff_id != current_user.id and member.registered_by_emp_code != current_user.emp_code:
+            raise HTTPException(status_code=403, detail="Forbidden: You can only view the network tree for your assigned or registered VGK members.")
 
     all_tree_partners = _collect_tree_partners(member, db, depth=3)
     all_partner_ids = [p.id for p in all_tree_partners]

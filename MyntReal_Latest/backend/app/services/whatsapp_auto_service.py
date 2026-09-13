@@ -381,13 +381,46 @@ def _send_meta(phone: str, message: str, template=None, db=None,
                 logger.warning(f"[WA-AUTO] Error checking 24h service window: {_we}")
 
         if not is_window_open:
+            logger.info(
+                f"[WA-AUTO] Cold outbound text to {phone} outside Meta 24h window. "
+                f"Falling back to Scanned WhatsApp Bot gateway..."
+            )
+            # Fallback to Scanned WhatsApp Bot on port 5002
+            env_url = os.getenv("WHATSAPP_BOT_URL") or os.getenv("WA_BOT_URL")
+            urls = []
+            if env_url:
+                urls.append(env_url if env_url.endswith("/api/send-message") else f"{env_url.rstrip('/')}/api/send-message")
+            urls.extend([
+                "http://127.0.0.1:5002/api/send-message",
+                "http://localhost:5002/api/send-message"
+            ])
+            for bot_url in urls:
+                try:
+                    bot_resp = requests.post(
+                        bot_url,
+                        json={"phone": phone, "message": message},
+                        timeout=12
+                    )
+                    if bot_resp.status_code == 200:
+                        b_data = bot_resp.json()
+                        if b_data.get("success"):
+                            logger.info(f"✅ [WA-AUTO] Successfully dispatched via Scanned Bot to {phone}")
+                            return {
+                                "success": True,
+                                "wamid": b_data.get("message_id") or f"bot_{int(datetime.utcnow().timestamp())}",
+                                "method": "scanned_bot"
+                            }
+                except Exception as _b_err:
+                    logger.debug(f"[WA-AUTO] Scanned bot attempt at {bot_url} failed: {_b_err}")
+                    continue
+
             logger.warning(
                 f"[WA-AUTO] Cold outbound text to {phone} rejected: "
-                f"Recipient has not messaged within Meta 24-hour service window."
+                f"Recipient has not messaged within Meta 24-hour service window and Scanned Bot unavailable."
             )
             return {
                 "success": False,
-                "reason": "Meta 24-hour customer service window has expired for this recipient. Initiating contact requires an approved Meta template.",
+                "reason": "Meta 24-hour customer service window has expired and WhatsApp Bot is unavailable.",
                 "error_code": "WINDOW_EXPIRED"
             }
 

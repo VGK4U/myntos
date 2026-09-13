@@ -454,6 +454,12 @@ class DialerService {
     } catch (_) { /* non-critical */ }
   }
 
+  async notifyLeadViewed(leadId: number): Promise<void> {
+    try {
+      await apiService.post('/crm/dialer/lead/view-active', { lead_id: leadId });
+    } catch (_) { /* non-critical — fire and forget */ }
+  }
+
   // ── MyOperator Click-to-Call ─────────────────────────────────────────────────
 
   async clickToCall(customerPhone: string, leadId: number | null, sessionId?: number | null): Promise<{ success: boolean; call_id: string; agent_number: string; message?: string }> {

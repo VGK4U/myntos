@@ -57,7 +57,7 @@ def send_group_bot_message(
     last_exc = None
     for url in urls:
         try:
-            resp = requests.post(url, json=payload, timeout=8)
+            resp = requests.post(url, json=payload, timeout=15)
             raw = resp.json()
             if resp.status_code == 200 and raw.get("success"):
                 return {"success": True, "data": raw}

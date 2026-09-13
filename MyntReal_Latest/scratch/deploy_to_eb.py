@@ -20,7 +20,7 @@ APP_NAME = 'vgk4u'
 ENV_NAME = 'Vgk4u-env'
 S3_BUCKET = 'elasticbeanstalk-ap-south-2-251714435676'
 TIMESTAMP = int(time.time() * 1000)
-VERSION_LABEL = f'v2.3.9-production-release-{TIMESTAMP}'
+VERSION_LABEL = f'v2.4.0-production-release-{TIMESTAMP}'
 S3_KEY = f'deployments/{VERSION_LABEL}.zip'
 ZIP_PATH = os.path.join(os.path.dirname(__file__), '..', 'deployment.zip')
 
@@ -40,7 +40,7 @@ eb.create_application_version(
         'S3Bucket': S3_BUCKET,
         'S3Key': S3_KEY
     },
-    Description='MyntOS v2.3.9: Meta Ads Webhook Hardening & HMAC Verification, Google Sheets Lead Sync & IPM Reconciliation Pipeline, Centralized WhatsApp Signature, and Full 4-Platform Parity',
+    Description='MyntOS v2.4.0: Mobile Lead Details, Post-Call Disposition Modal, Real-time Web/Mobile Call & View Mirroring, and VGK Visibility Restrictions',
     AutoCreateApplication=False
 )
 print("Application version created.")

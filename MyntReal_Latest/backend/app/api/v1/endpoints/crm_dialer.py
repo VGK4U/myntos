@@ -3440,6 +3440,59 @@ async def set_active_call(
     return {"success": True}
 
 
+@router.post("/dialer/lead/view-active")
+async def set_active_lead_view(
+    body: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user_hybrid)
+):
+    """
+    DC_ACTIVE_VIEW_001: Mobile notifies web desktop when an agent views a lead details page/modal.
+    Web desktop mirrors this view and automatically opens the corresponding lead modal.
+    """
+    lead_id = body.get("lead_id")
+    if not lead_id:
+        return {"success": False, "error": "lead_id is required"}
+
+    user_ref = str(current_user.id)
+    import asyncio as _asyncio
+    lead_row = db.execute(text(
+        "SELECT id, name, phone, status, city, company_id FROM crm_leads WHERE id = :lid"
+    ), {"lid": int(lead_id)}).fetchone()
+
+    if lead_row:
+        ws_payload = {
+            "type": "lead_view",
+            "lead_id": lead_row[0],
+            "lead_name": lead_row[1] or "—",
+            "lead_phone": lead_row[2] or "",
+            "lead_status": lead_row[3] or "new",
+            "lead_city": lead_row[4] or "",
+            "company_id": lead_row[5],
+        }
+    else:
+        ws_payload = {"type": "lead_view", "lead_id": int(lead_id)}
+
+    try:
+        db.execute(text("SELECT pg_notify(:ch, :payload)"), {
+            "ch": "dialer_events",
+            "payload": json.dumps({"user_ref": user_ref, "payload": ws_payload}),
+        })
+    except Exception as _ne:
+        logger.debug("[DC_DIALER_WS] pg_notify (lead_view) failed: %s", _ne)
+
+    db.commit()
+
+    try:
+        loop = _asyncio.get_event_loop()
+        if loop.is_running():
+            loop.create_task(_push_dialer_ws(user_ref, ws_payload))
+    except Exception as _ws_err:
+        logger.debug("[DC_DIALER_WS] same-worker push skipped: %s", _ws_err)
+
+    return {"success": True}
+
+
 @router.get("/dialer/leads/limbo")
 async def get_limbo_leads(
     company_id: Optional[int] = Query(None),

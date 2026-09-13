@@ -1587,20 +1587,23 @@
     const isSeniorVisible = shareDetails.isSeniorVisible;
 
     const m = window._currentPosterMember || {};
+    const isMemberBlocked = Boolean(m.is_blocked || m.member_status === 'BLOCKED');
+    const isSeniorBlocked = Boolean(m.senior_is_blocked || m.senior_member_status === 'BLOCKED');
     const mPhone = (m.phone || '').replace(/\D/g, '');
     const sPhone = isSeniorVisible ? (m.senior_phone || '').replace(/\D/g, '') : '';
 
-    console.log('[MYNTOS SHARE DEBUG] 2. Prepared share details:', { partnerName, seniorName, mPhone, sPhone, isSeniorVisible });
+    console.log('[MYNTOS SHARE DEBUG] 2. Prepared share details:', { partnerName, seniorName, mPhone, sPhone, isSeniorVisible, isMemberBlocked, isSeniorBlocked });
 
     const dispatchTargets = [
-      { id: 'member', type: 'member', label: `Member: ${partnerName}`, target: mPhone ? `+91 ${mPhone.slice(-10)}` : 'No Phone', phone: mPhone, status: 'sending', msg: 'Broadcasting...' },
-      { id: 'senior', type: 'member', label: `Senior: ${seniorName || 'Referrer'}`, target: !isSeniorVisible ? 'Excluded (Show Senior unchecked)' : (sPhone ? `+91 ${sPhone.slice(-10)}` : 'No Phone'), phone: sPhone, status: isSeniorVisible ? (sPhone ? 'sending' : 'skipped') : 'skipped', msg: !isSeniorVisible ? 'Excluded by toggle' : (sPhone ? 'Broadcasting...' : 'No Senior Phone') },
+      { id: 'member', type: 'member', label: `Member: ${partnerName}`, target: isMemberBlocked ? 'Blocked Partner (Excluded)' : (mPhone ? `+91 ${mPhone.slice(-10)}` : 'No Phone'), phone: mPhone, status: isMemberBlocked ? 'skipped' : (mPhone ? 'sending' : 'skipped'), msg: isMemberBlocked ? 'Suppressed (Blocked Partner)' : (mPhone ? 'Broadcasting...' : 'No Phone') },
+      { id: 'senior', type: 'member', label: `Senior: ${seniorName || 'Referrer'}`, target: !isSeniorVisible ? 'Excluded (Show Senior unchecked)' : (isSeniorBlocked ? 'Blocked Senior (Excluded)' : (sPhone ? `+91 ${sPhone.slice(-10)}` : 'No Phone')), phone: sPhone, status: isSeniorVisible ? (isSeniorBlocked ? 'skipped' : (sPhone ? 'sending' : 'skipped')) : 'skipped', msg: !isSeniorVisible ? 'Excluded by toggle' : (isSeniorBlocked ? 'Suppressed (Blocked Senior)' : (sPhone ? 'Broadcasting...' : 'No Senior Phone')) },
       { id: 'channel_official', type: 'group', label: 'VGK4U Official Channel', target: 'whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m', inviteCode: '0029Vb7Vb5f9cDDXf3zWtf0m', status: 'sending', msg: 'Broadcasting to channel...' },
       { id: 'group_main', type: 'group', label: 'VGK Community Group', target: 'chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY', inviteCode: 'HNQQoKXFfCm5PQngGdrlcY', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'group_exec', type: 'group', label: 'Executive Announcements', target: 'chat.whatsapp.com/LfX8mGootXa7SpwNIz7P5C', inviteCode: 'LfX8mGootXa7SpwNIz7P5C', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'group_ev_stars', type: 'group', label: 'Ev scooty. MNR (royal ev ) stars', target: 'Ev scooty. MNR (royal ev ) stars', groupName: 'Ev scooty. MNR (royal ev ) stars', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'group_mnr_gen', type: 'group', label: 'MNR General Group', target: 'MNR General Group', groupName: 'MNR General Group', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'group_vgk_vjd', type: 'group', label: 'VGK4U - Vijayawada', target: 'VGK4U - Vijayawada', groupName: 'VGK4U - Vijayawada', status: 'sending', msg: 'Broadcasting to group...' },
+      { id: 'group_vgk_gen', type: 'group', label: 'VGK4U General', target: 'VGK4U General', groupName: 'VGK4U General', status: 'sending', msg: 'Broadcasting to group...' },
       { id: 'portal_shoutout', type: 'portal', label: 'VGK4U Login Page Shoutout', target: 'vgk4u.com (Login Banner)', status: 'sending', msg: 'Publishing shoutout...' }
     ];
 
@@ -1625,7 +1628,7 @@
       blob = null;
     }
 
-    const fetchWithTimeout = async (url, opts = {}, ms = 2500) => {
+    const fetchWithTimeout = async (url, opts = {}, ms = 10000) => {
       const controller = new AbortController();
       const tid = setTimeout(() => controller.abort(), ms);
       try {
@@ -1669,7 +1672,9 @@
       }
 
       // 2. Member Direct Send via Scanned Bot
-      if (mPhone) {
+      if (isMemberBlocked) {
+        updateDispatchStatus('member', 'skipped', 'Suppressed (Blocked Channel Partner)');
+      } else if (mPhone) {
         try {
           const res = await fetchWithTimeout('/api/send-message', {
             method: 'POST',
@@ -1679,6 +1684,8 @@
           const json = await res.json();
           if (json.success) {
             updateDispatchStatus('member', 'sent', 'Delivered via Scanned WhatsApp');
+          } else if (json.blocked) {
+            updateDispatchStatus('member', 'skipped', 'Suppressed (Blocked Channel Partner)');
           } else {
             updateDispatchStatus('member', 'error', json.error || 'Bot Error');
           }
@@ -1690,7 +1697,11 @@
       }
 
       // 3. Senior Direct Send via Scanned Bot
-      if (isSeniorVisible && sPhone) {
+      if (!isSeniorVisible) {
+        updateDispatchStatus('senior', 'skipped', 'Excluded by toggle');
+      } else if (isSeniorBlocked) {
+        updateDispatchStatus('senior', 'skipped', 'Suppressed (Blocked Senior Partner)');
+      } else if (sPhone) {
         try {
           const res = await fetchWithTimeout('/api/send-message', {
             method: 'POST',
@@ -1700,6 +1711,8 @@
           const json = await res.json();
           if (json.success) {
             updateDispatchStatus('senior', 'sent', 'Delivered via Scanned WhatsApp');
+          } else if (json.blocked) {
+            updateDispatchStatus('senior', 'skipped', 'Suppressed (Blocked Senior Partner)');
           } else {
             updateDispatchStatus('senior', 'error', json.error || 'Bot Error');
           }
@@ -1707,7 +1720,7 @@
           updateDispatchStatus('senior', 'error', 'WhatsApp Bot Offline');
         }
       } else {
-        updateDispatchStatus('senior', 'skipped', !isSeniorVisible ? 'Excluded by toggle' : 'No Senior Phone');
+        updateDispatchStatus('senior', 'skipped', 'No Senior Phone');
       }
 
       // 4. VGK4U Official Channel Send
@@ -1810,6 +1823,23 @@
         }
       } catch (gErr) {
         updateDispatchStatus('group_vgk_vjd', 'error', 'WhatsApp Bot Offline');
+      }
+
+      // 10. VGK4U General Group Send
+      try {
+        const res = await fetchWithTimeout('/api/send-group-message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageUrl: dataUrl, message: shareText, groupName: 'VGK4U General' })
+        });
+        const json = await res.json();
+        if (json.success) {
+          updateDispatchStatus('group_vgk_gen', 'sent', 'Delivered to VGK4U General Group');
+        } else {
+          updateDispatchStatus('group_vgk_gen', 'error', json.error || 'Group Send Error');
+        }
+      } catch (genErr) {
+        updateDispatchStatus('group_vgk_gen', 'error', 'WhatsApp Bot Offline');
       }
 
     } catch (err) {

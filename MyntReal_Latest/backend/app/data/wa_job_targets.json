@@ -49,6 +49,12 @@
       "type": "group",
       "name": "VGK4U - Vijayawada",
       "identifier": "VGK4U - Vijayawada"
+    },
+    {
+      "id": "t_vgk_general",
+      "type": "group",
+      "name": "VGK4U General",
+      "identifier": "VGK4U General"
     }
   ],
   "service_summary": [
@@ -56,7 +62,7 @@
       "id": "t8",
       "type": "group",
       "name": "Service & Maintenance Team",
-      "identifier": "8875551666"
+      "identifier": "https://chat.whatsapp.com/EyuAwaVoF6E6nQqC0QfiBe"
     }
   ]
 }
