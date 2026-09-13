@@ -495,8 +495,10 @@ __all__ = [
     "VGK4UPersonalProdConfig",
     "VGK4UCategoryCommissionConfig",
     "VGK4UCorporateMarginLedger",
+    "VGKSelfBusinessPointsAccrualLedger",
 ]
 
+from app.models.vgk_business_points import VGKSelfBusinessPointsAccrualLedger
 from app.models.voip_enums import CallMethodEnum, CallStateEnum, RecordingStatusEnum
 from app.models.voip_call_session import VoIPCallSession
 from app.models.telephony_call_flow import (

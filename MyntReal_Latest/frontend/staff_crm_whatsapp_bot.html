@@ -1535,6 +1535,8 @@
                 tbody.innerHTML = data.jobs.map(j => {
                     function renderBadge(d) {
                         if (!d) return '<span class="badge bg-secondary">Unknown</span>';
+                        if (d.uncertain_count > 0 && d.sent_count > 0) return `<span class="badge bg-warning text-dark px-2 py-1">${d.label}</span>`;
+                        if (d.status === 'UNCERTAIN' || (d.uncertain_count > 0 && !d.sent_count)) return `<span class="badge bg-warning text-dark px-2 py-1">${d.label}</span>`;
                         if (d.status === 'EXECUTED') return `<span class="badge bg-success px-2 py-1">${d.label}</span>`;
                         if (d.status === 'PENDING') return `<span class="badge bg-warning text-dark px-2 py-1">${d.label}</span>`;
                         return `<span class="badge bg-danger px-2 py-1">🔴 Failed</span>`;
@@ -1555,15 +1557,20 @@
                         </div>
                     `;
 
-                    const st = j.latest_stats || { total_messages: 1, sent_count: 1, failed_count: 0 };
+                    const st = j.latest_stats || { total_messages: 1, sent_count: 1, failed_count: 0, uncertain_count: 0 };
                     const totalVal = (st.total_messages || 0).toLocaleString('en-IN');
                     const sentVal = (st.sent_count || 0).toLocaleString('en-IN');
                     const failedVal = (st.failed_count || 0).toLocaleString('en-IN');
+                    const uncertainVal = (st.uncertain_count || 0).toLocaleString('en-IN');
 
                     const statsCell = `
                         <div class="d-flex flex-wrap gap-1 align-items-center" style="font-size:11px">
                             <span class="badge bg-secondary text-light fw-bold" title="Total Target Recipients"><i class="fas fa-paper-plane me-1"></i>${totalVal} Total</span>
                             <span class="badge bg-success text-white fw-bold" title="Successfully Dispatched / Sent"><i class="fas fa-check-circle me-1"></i>${sentVal} Sent</span>
+                            ${st.uncertain_count > 0
+                                ? `<span class="badge bg-warning text-dark fw-bold" title="Uncertain Dispatches"><i class="fas fa-exclamation-triangle me-1"></i>${uncertainVal} Uncertain</span>`
+                                : ''
+                            }
                             ${st.failed_count > 0 
                                 ? `<span class="badge bg-danger text-white fw-bold" title="Failed Dispatches"><i class="fas fa-times-circle me-1"></i>${failedVal} Failed</span>`
                                 : `<span class="badge bg-dark text-muted fw-normal" title="Zero Failures"><i class="fas fa-check me-1"></i>0 Failed</span>`

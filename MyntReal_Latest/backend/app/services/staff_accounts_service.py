@@ -3720,6 +3720,11 @@ class IncomeEntryService:
                     if lead:
                         lead.deal_value_received = max(0, (lead.deal_value_received or 0) - float(entry.amount))
                         lead.deal_value_balance = max(0, (lead.deal_value_total or 0) - lead.deal_value_received)
+                        try:
+                            from app.services.vgk_self_business_points import reverse_self_business_points
+                            reverse_self_business_points(db, lead.id, reason='Income entry unconfirmed to PENDING')
+                        except Exception as _rev_sbp_e:
+                            logger.warning(f"[VGK-SELF-BUSINESS-PTS] Reversal hook error for lead {lead.id}: {_rev_sbp_e}")
                     crm_txn.validation_status = 'pending'
                     crm_txn.validated_by_id = None
                     crm_txn.validated_at = None

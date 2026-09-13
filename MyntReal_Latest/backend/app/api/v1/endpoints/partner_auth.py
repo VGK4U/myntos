@@ -2480,6 +2480,15 @@ async def create_walkin(
             ), {"cid": crm_lead_id, "wid": walkin_id})
             db.commit()
 
+            # [DC-VGK-V2-TEAM-LEAD-POINTS] Award +2,000 V2 points to direct sponsor for qualifying direct team lead
+            try:
+                from app.services.vgk_team_lead_points import award_direct_team_lead_points
+                award_res = award_direct_team_lead_points(db=db, lead_id=new_lead.id)
+                if award_res.get('awarded'):
+                    db.commit()
+            except Exception as _pt_err:
+                logger.warning(f"[DC-VGK-TEAM-LEAD-POINTS] Walkin direct team lead points error: {_pt_err}")
+
             try:
                 from app.services.whatsapp_auto_service import send_lead_welcome
                 if new_lead.phone:
@@ -2858,6 +2867,15 @@ async def update_walkin(
         sets.append("updated_at = NOW()")
         db.execute(sq_text(f"UPDATE partner_walkins SET {', '.join(sets)} WHERE id = :wid"), params)
         db.commit()
+
+        if params.get("cid"):
+            try:
+                from app.services.vgk_team_lead_points import award_direct_team_lead_points
+                award_res = award_direct_team_lead_points(db=db, lead_id=params["cid"])
+                if award_res.get('awarded'):
+                    db.commit()
+            except Exception as _pt_err:
+                logger.warning(f"[DC-VGK-TEAM-LEAD-POINTS] Walkin update lead points error: {_pt_err}")
 
     return {"success": True, "message": "Walk-in updated"}
 
@@ -5317,12 +5335,13 @@ async def solar_vendor_leads(
             staff_map[s.id] = nm
 
     rows = []
+    from app.services.crm_contact_privacy import mask_phone_canonical
     for l in leads:
         vs = _compute_vendor_status(l.status, l.solar_pipeline_status)
         rows.append({
             "id": l.id,
             "name": l.name,
-            "phone": l.phone[-4:].rjust(10, '•') if l.phone else None,
+            "phone": mask_phone_canonical(l.phone),
             "status": l.status,
             "solar_pipeline_status": l.solar_pipeline_status,
             "vendor_status": vs,
@@ -5335,7 +5354,7 @@ async def solar_vendor_leads(
             "monthly_income": float(l.monthly_income) if l.monthly_income is not None else None,
             "regular_income_available": l.regular_income_available,
             "co_applicant_name": l.co_applicant_name,
-            "co_applicant_phone": l.co_applicant_phone,
+            "co_applicant_phone": mask_phone_canonical(l.co_applicant_phone) if l.co_applicant_phone else None,
             "co_applicant_aadhaar": '••••' + str(l.co_applicant_aadhaar)[-4:] if l.co_applicant_aadhaar else None,
             "co_applicant_pan": l.co_applicant_pan,
             "co_applicant_bank_account": '••••' + str(l.co_applicant_bank_account)[-4:] if l.co_applicant_bank_account else None,

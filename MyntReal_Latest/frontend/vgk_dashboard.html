@@ -3433,14 +3433,20 @@
                     return `<tr style="cursor:pointer" onclick="vgkViewLead(${l.id},${l.company_id})">
                         <td>
                             <strong style="color:#0d9488;font-size:13px">${escHtml(l.name)}</strong>
-                            <div style="font-size:11px;color:#6b7280;margin-top:2px">${escHtml(l.phone)}</div>
-                            <div style="margin-top:3px"><span style="background:#f3f4f6;color:#374151;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600">${escHtml(coName)}</span></div>
+                            <div style="font-size:11px;color:#6b7280;margin-top:2px">
+                                ${l.is_phone_masked ? '<i class="fas fa-user-shield me-1" style="color:#0d9488" title="Contact Masked for Privacy"></i>' : ''}${escHtml(l.phone)}
+                            </div>
+                            <div style="margin-top:3px">
+                                <span style="background:#f3f4f6;color:#374151;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600">${escHtml(coName)}</span>
+                                ${l.is_direct_team_lead_sponsor ? '<span class="ms-1" style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700"><i class="fas fa-gift me-1"></i>+2,000 Team Lead Pts</span>' : ''}
+                            </div>
                         </td>
                         <td>${leadStatusBadge(l.status)}</td>
                         <td>${catStageHtml}</td>
                         ${tdSupport}
                         <td>${followupHtml}</td>
                         <td style="white-space:nowrap">
+                            ${l.can_click_to_call ? `<button class="btn btn-sm" style="background:#dcfce7;color:#15803d;border:none;padding:3px 8px;border-radius:6px;margin-right:2px;font-weight:600" onclick="event.stopPropagation();vgkClickToCall(${l.id},${l.company_id})" title="Secure Click-to-Call"><i class="fas fa-phone-alt"></i> Call</button>` : ''}
                             <button class="btn btn-sm" style="background:#ede9fe;color:#0d9488;border:none;padding:3px 9px;border-radius:6px" onclick="event.stopPropagation();vgkViewLead(${l.id},${l.company_id})" title="View"><i class="fas fa-eye"></i></button>
                             <button class="btn btn-sm" style="background:#ede9fe;color:#7c3aed;border:none;padding:3px 9px;border-radius:6px;margin-left:2px" onclick="event.stopPropagation();vgkEditLead(${l.id},${l.company_id})" title="Edit"><i class="fas fa-edit"></i></button>
                         </td>
@@ -3457,6 +3463,28 @@
                     </div>${pagination}`;
             } catch(e) {
                 document.getElementById('leadsContent').innerHTML = `<div class="alert alert-danger">Failed to load leads. ${escHtml(e.message||'')}</div>`;
+            }
+        }
+
+        async function vgkClickToCall(leadId, companyId) {
+            if (!confirm('Initiate outbound call to customer via secure telephony bridge?')) return;
+            try {
+                const resp = await fetch(BASE + '/dashboard/leads/' + leadId + '/click-to-call', {
+                    method: 'POST',
+                    headers: { ...authHeaders(), 'Content-Type': 'application/json' }
+                });
+                if (resp.status === 401) { logout(); return; }
+                const data = await resp.json();
+                if (resp.status === 409) {
+                    alert('⚠️ ' + (data.detail || 'Lead is currently in an active call reservation with another user.'));
+                    return;
+                }
+                if (!resp.ok || !data.success) {
+                    throw new Error(data.detail || 'Call initiation failed');
+                }
+                alert('📞 Call initiated successfully via Telephony Bridge!\n\nSession ID: ' + (data.call_session_id || '—') + '\nStatus: ' + (data.status || 'initiated') + '\nDestination: ' + (data.destination_phone || '—'));
+            } catch(e) {
+                alert('Call initiation error: ' + (e.message || 'Unknown error'));
             }
         }
 
@@ -3498,7 +3526,14 @@
                             <h6 style="color:#0d9488"><i class="fas fa-user me-2"></i>Contact Information</h6>
                             <table class="table table-sm">
                                 <tr><td class="fw-semibold w-50">Name</td><td>${escHtml(l.name || '-')}</td></tr>
-                                <tr><td class="fw-semibold">Phone</td><td>${escHtml(l.phone || '-')}</td></tr>
+                                <tr>
+                                    <td class="fw-semibold">Phone</td>
+                                    <td>
+                                        <span>${escHtml(l.phone || '-')}</span>
+                                        ${l.is_phone_masked ? '<span class="badge ms-1" style="background:#e0e7ff;color:#3730a3;font-size:10px"><i class="fas fa-user-shield me-1"></i>Masked</span>' : ''}
+                                        ${l.can_click_to_call ? `<button class="btn btn-sm btn-success py-0 px-2 ms-2" style="font-size:11px" onclick="vgkClickToCall(${l.id},${l.company_id})"><i class="fas fa-phone-alt me-1"></i>Call Customer</button>` : ''}
+                                    </td>
+                                </tr>
                                 <tr><td class="fw-semibold">Email</td><td>${escHtml(l.email || '-')}</td></tr>
                                 <tr><td class="fw-semibold">City</td><td>${escHtml(l.city || '-')}</td></tr>
                                 <tr><td class="fw-semibold">State</td><td>${escHtml(l.state || '-')}</td></tr>
@@ -4826,11 +4861,29 @@
                     const drAmt    = parseFloat(e.points_debit  || 0);
                     const runBal   = parseFloat(e.running_balance != null ? e.running_balance : (e.balance_after || 0));
                     const isRoyalty = !isDebit && e.reason_code === 'COMPANY_ROYALTY';
+                    const isBusinessBonus = !isDebit && (e.reason_code === 'BUSINESS_BONUS' || e.reason_code === 'BUSINESS_V2');
+                    const isBusinessReversal = isDebit && (e.reason_code === 'BUSINESS_REVERSAL' || e.reason_code === 'BUSINESS_REVERSAL_V2');
+                    const isDirectTeamLead = !isDebit && e.reason_code === 'DIRECT_TEAM_LEAD_V2';
+                    const isDirectTeamLeadReversal = isDebit && e.reason_code === 'DIRECT_TEAM_LEAD_REVERSAL_V2';
+                    const isOnboarding = !isDebit && (e.reason_code === 'ONBOARDING_V2' || e.reason_code === 'V2_ONBOARDING_GRANT');
+                    const isPayoutDebit = isDebit && e.reason_code === 'PAYOUT_DEBIT_V2';
                     const typeBadge = isDebit
-                        ? '<span style="background:#fee2e2;color:#991b1b;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700">USED</span>'
+                        ? isBusinessReversal
+                            ? '<span style="background:#fee2e2;color:#991b1b;border:1px solid #ef4444;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700"><i class="fas fa-undo" style="font-size:9px;margin-right:3px"></i>BUSINESS REVERSAL</span>'
+                            : isDirectTeamLeadReversal
+                                ? '<span style="background:#fee2e2;color:#991b1b;border:1px solid #f87171;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700"><i class="fas fa-user-minus" style="font-size:9px;margin-right:3px"></i>TEAM LEAD REVERSAL</span>'
+                                : isPayoutDebit
+                                    ? '<span style="background:#fee2e2;color:#991b1b;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700"><i class="fas fa-money-bill-wave" style="font-size:9px;margin-right:3px"></i>PAYOUT DEBIT</span>'
+                                    : '<span style="background:#fee2e2;color:#991b1b;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700">USED</span>'
                         : isRoyalty
                             ? '<span style="background:#fef3c7;color:#92400e;border:1px solid #f59e0b;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700"><i class="fas fa-crown" style="font-size:9px;margin-right:3px"></i>COMPANY ROYALTY</span>'
-                            : '<span style="background:#ede9fe;color:#4c1d95;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700">CREDITED</span>';
+                            : isBusinessBonus
+                                ? '<span style="background:#ecfdf5;color:#065f46;border:1px solid #10b981;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700"><i class="fas fa-briefcase" style="font-size:9px;margin-right:3px"></i>BUSINESS BONUS</span>'
+                                : isDirectTeamLead
+                                    ? '<span style="background:#e0f2fe;color:#0369a1;border:1px solid #38bdf8;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700"><i class="fas fa-user-friends" style="font-size:9px;margin-right:3px"></i>DIRECT TEAM LEAD</span>'
+                                    : isOnboarding
+                                        ? '<span style="background:#e0e7ff;color:#3730a3;border:1px solid #6366f1;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700"><i class="fas fa-gift" style="font-size:9px;margin-right:3px"></i>V2 ONBOARDING</span>'
+                                        : '<span style="background:#ede9fe;color:#4c1d95;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700">CREDITED</span>';
                     const usedAtCell = e.used_at
                         ? `<span style="background:#f5f3ff;color:#5b21b6;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:600">${escHtml(e.used_at)}</span>`
                         : '<span style="color:#9ca3af;font-size:11px">—</span>';
@@ -9863,6 +9916,7 @@
             badges.push(`<span style="background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:800"><i class="fas fa-user-tie text-warning me-1"></i>${escHtml(memberRank)}</span>`);
             if (d.is_loyal_coupon) badges.push(`<span style="background:#fef9c3;color:#854d0e;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700"><i class="fas fa-certificate" style="margin-right:3px"></i>Loyal Coupon</span>`);
             if (d.is_paid_activation) badges.push(`<span style="background:#f5f3ff;color:#5b21b6;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700"><i class="fas fa-check-circle" style="margin-right:3px"></i>PIN Activated</span>`);
+            if (d.is_business_activated) badges.push(`<span style="background:#ecfdf5;color:#065f46;border-radius:8px;padding:2px 8px;font-size:10px;font-weight:700"><i class="fas fa-check-double" style="margin-right:3px"></i>Business Activated</span>`);
             document.getElementById('vgkMpBadges').innerHTML = badges.join(' ');
 
             // Stats

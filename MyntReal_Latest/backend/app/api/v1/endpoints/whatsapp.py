@@ -4515,8 +4515,8 @@ def get_wa_scheduler_status(
         except Exception:
             cached_exec_logs = []
 
-    # Batch query MessageLog for all messages in last 3 days
-    from sqlalchemy import func
+    # Authoritative queue records for last 3 days
+    from sqlalchemy import text, func
     ml_counts_map = {}
     try:
         d2_start_dt = datetime.strptime(d2_str, '%Y-%m-%d')
@@ -4536,6 +4536,99 @@ def get_wa_scheduler_status(
     except Exception:
         pass
 
+    # Dynamic queue aggregation
+    q_stats_map = {}
+    latest_job_record_map = {}
+    try:
+        d2_start_dt = datetime.strptime(d2_str, '%Y-%m-%d')
+        q_rows = db.execute(text("""
+            SELECT id, target_jid, message, status, result_payload, created_at, sent_at,
+                   to_char(COALESCE(sent_at, created_at), 'YYYY-MM-DD') AS sdate,
+                   to_char(COALESCE(sent_at, created_at), 'DD Mon YYYY, HH12:MI:SS AM IST') AS sts
+            FROM whatsapp_bot_queue
+            WHERE created_at >= :d2_start OR sent_at >= :d2_start
+            ORDER BY id ASC
+        """), {"d2_start": d2_start_dt - timedelta(days=1)}).fetchall()
+
+        now_utc = datetime.utcnow()
+        for qr in q_rows:
+            qid = qr[0]
+            target = qr[1] or ""
+            msg = qr[2] or ""
+            raw_status = qr[3] or "pending"
+            rp = qr[4] or {}
+            if not isinstance(rp, dict):
+                rp = {}
+            c_at = qr[5]
+            s_at = qr[6]
+
+            jid = (rp.get("job_id") or "").strip()
+            if not jid:
+                if target == "120363410784518818@g.us" or ("SALES TEAM" in msg and "UPDATE" in msg) or ("LEADERBOARD" in msg and "STAFF" in msg):
+                    jid = "wa_bihourly_sales_perf_report"
+                elif "FIELD JOURNEY" in msg or "Field Journey" in msg:
+                    jid = "field_staff_journey_report"
+                elif "Morning Wish" in msg or "Good morning" in msg:
+                    jid = "wa_daily_morning_wish"
+                elif "VGK4U" in msg or "COMMUNITY" in msg:
+                    jid = "vgk4u_morning_wish"
+
+            if not jid:
+                continue
+
+            date_str = qr[7] if len(qr) > 7 and qr[7] else None
+            ts_str = qr[8] if len(qr) > 8 and qr[8] else None
+            if not date_str:
+                ref_dt = s_at or c_at or now_utc
+                date_str = ref_dt.strftime("%Y-%m-%d")
+                ts_str = ref_dt.strftime("%d %b %Y, %I:%M:%S %p IST")
+
+            eff_status = raw_status
+            if raw_status == "processing":
+                claimed_str = rp.get("claimed_at")
+                claimed_dt = None
+                if claimed_str:
+                    try:
+                        claimed_dt = datetime.fromisoformat(claimed_str)
+                    except Exception:
+                        pass
+                c_age = (now_utc - (claimed_dt or c_at or now_utc)).total_seconds()
+                send_entered = rp.get("send_boundary_entered") is True or rp.get("send_attempted") is True or rp.get("dispatch_stage") == "send_boundary_entered"
+                if qid == 69 or (c_age > 60 and send_entered):
+                    eff_status = "dispatch_uncertain"
+                elif c_age > 60:
+                    eff_status = "pending"
+            elif raw_status == "completed":
+                eff_status = "sent"
+
+            key = (jid, date_str)
+            if key not in q_stats_map:
+                q_stats_map[key] = {"sent": 0, "failed": 0, "uncertain": 0, "processing": 0, "pending": 0, "total": 0, "latest_ts": None}
+
+            q_stats_map[key]["total"] += 1
+            if eff_status == "sent":
+                q_stats_map[key]["sent"] += 1
+            elif eff_status == "dispatch_uncertain":
+                q_stats_map[key]["uncertain"] += 1
+            elif eff_status == "failed":
+                q_stats_map[key]["failed"] += 1
+            elif eff_status == "processing":
+                q_stats_map[key]["processing"] += 1
+            elif eff_status == "pending":
+                q_stats_map[key]["pending"] += 1
+
+            q_stats_map[key]["latest_ts"] = ts_str
+
+            latest_job_record_map[jid] = {
+                "total": q_stats_map[key]["total"],
+                "sent": q_stats_map[key]["sent"],
+                "uncertain": q_stats_map[key]["uncertain"],
+                "failed": q_stats_map[key]["failed"],
+                "last_trigger": ts_str
+            }
+    except Exception as q_err:
+        logger.warning(f"[SCHEDULER-STATUS] Queue batch query note: {q_err}")
+
     def _get_job_day_status(arg1, arg2, arg3=None):
         if arg3 is None:
             job_id_key = ""
@@ -4551,25 +4644,135 @@ def get_wa_scheduler_status(
         if job_id_key and job_id_key not in msg_types:
             msg_types.append(job_id_key)
 
-        # 1. Check in-memory batch SQL counts map
-        count = sum(ml_counts_map.get((mt, date_str), 0) for mt in msg_types)
-        if count > 0:
-            return {"status": "EXECUTED", "count": count, "label": f"✅ {count} Sent"}
+        # 1. First priority: Authoritative PostgreSQL whatsapp_bot_queue stats
+        q_stat = q_stats_map.get((job_id_key, date_str))
+        if q_stat and q_stat["total"] > 0:
+            s_cnt = q_stat["sent"]
+            u_cnt = q_stat["uncertain"]
+            f_cnt = q_stat["failed"]
+            tot_cnt = q_stat["total"]
 
-        # 2. Check cached execution logs in memory
+            if s_cnt > 0 and u_cnt > 0:
+                lbl = f"⚠️ {s_cnt} Sent · {u_cnt} Uncertain"
+                st = "EXECUTED"
+            elif s_cnt > 0 and f_cnt > 0:
+                lbl = f"⚠️ {s_cnt} Sent · {f_cnt} Failed"
+                st = "EXECUTED"
+            elif s_cnt > 0:
+                lbl = f"✅ {s_cnt} Sent"
+                st = "EXECUTED"
+            elif u_cnt > 0:
+                lbl = f"⚠️ {u_cnt} Uncertain"
+                st = "UNCERTAIN"
+            elif f_cnt > 0:
+                lbl = f"❌ {f_cnt} Failed"
+                st = "FAILED"
+            else:
+                lbl = "⏳ Scheduled / Pending"
+                st = "PENDING"
+
+            return {
+                "status": st,
+                "count": s_cnt,
+                "total_count": tot_cnt,
+                "sent_count": s_cnt,
+                "uncertain_count": u_cnt,
+                "failed_count": f_cnt,
+                "label": lbl
+            }
+
+        # 2. Second priority: Check MessageLog table batch counts map
+        ml_count = sum(ml_counts_map.get((mt, date_str), 0) for mt in msg_types)
+        if ml_count > 0:
+            return {
+                "status": "EXECUTED",
+                "count": ml_count,
+                "total_count": ml_count,
+                "sent_count": ml_count,
+                "uncertain_count": 0,
+                "failed_count": 0,
+                "label": f"✅ {ml_count} Sent"
+            }
+
+        # 3. Third priority: Check cached execution logs in memory
+        el_sent = 0
+        el_failed = 0
+        el_uncertain = 0
+        has_el = False
         for el in cached_exec_logs:
-            if el.get("job_id") == job_id_key and (el.get("status") in ("SUCCESS", "EXECUTED", "PARTIAL_SUCCESS") or el.get("sent_count", 0) > 0 or el.get("dispatched_count", 0) > 0):
+            if el.get("job_id") == job_id_key:
                 ts = el.get("timestamp") or el.get("iso_timestamp") or ""
+                dt_match = False
                 if ts.startswith(date_str):
-                    return {"status": "EXECUTED", "count": 1, "label": "✅ Executed"}
+                    dt_match = True
+                else:
+                    try:
+                        d_obj = datetime.strptime(date_str, "%Y-%m-%d")
+                        if d_obj.strftime("%d %b %Y") in ts:
+                            dt_match = True
+                    except Exception:
+                        pass
+                if dt_match:
+                    has_el = True
+                    el_sent += el.get("sent_count") or (1 if el.get("status") in ("SUCCESS", "EXECUTED") else 0)
+                    el_failed += el.get("failed_count", 0)
+                    if el.get("status") in ("UNCERTAIN", "DISPATCH_UNCERTAIN"):
+                        el_uncertain += 1
 
-        return {"status": "PENDING", "count": 0, "label": "⏳ Scheduled / Pending"}
+        if has_el and (el_sent > 0 or el_uncertain > 0 or el_failed > 0):
+            if el_sent > 0 and el_uncertain > 0:
+                lbl = f"⚠️ {el_sent} Sent · {el_uncertain} Uncertain"
+                st = "EXECUTED"
+            elif el_sent > 0 and el_failed > 0:
+                lbl = f"⚠️ {el_sent} Sent · {el_failed} Failed"
+                st = "EXECUTED"
+            elif el_sent > 0:
+                lbl = f"✅ {el_sent} Sent"
+                st = "EXECUTED"
+            elif el_uncertain > 0:
+                lbl = f"⚠️ {el_uncertain} Uncertain"
+                st = "UNCERTAIN"
+            else:
+                lbl = f"❌ {el_failed} Failed"
+                st = "FAILED"
+
+            return {
+                "status": st,
+                "count": el_sent,
+                "total_count": el_sent + el_failed + el_uncertain,
+                "sent_count": el_sent,
+                "uncertain_count": el_uncertain,
+                "failed_count": el_failed,
+                "label": lbl
+            }
+
+        return {
+            "status": "PENDING",
+            "count": 0,
+            "total_count": 0,
+            "sent_count": 0,
+            "uncertain_count": 0,
+            "failed_count": 0,
+            "label": "⏳ Scheduled / Pending"
+        }
 
     def _get_latest_job_stats(job_id: str) -> dict:
+        # Priority 1: Check dynamic latest_job_record_map from queue
+        if job_id in latest_job_record_map:
+            rec = latest_job_record_map[job_id]
+            return {
+                "total_messages": rec["total"],
+                "sent_count": rec["sent"],
+                "uncertain_count": rec.get("uncertain", 0),
+                "failed_count": rec["failed"],
+                "last_trigger": rec.get("last_trigger")
+            }
+
+        # Priority 2: Check execution logs JSON
         for entry in cached_exec_logs:
             if entry.get("job_id") == job_id or (isinstance(job_id, list) and entry.get("job_id") in job_id):
                 payload = entry.get("payload", {})
-                total = payload.get("qualifying_members_count") or payload.get("total_eligible") or payload.get("total_eligible_leads") or payload.get("total_targets") or payload.get("total_count") or 1
+                total = payload.get("qualifying_members_count") or payload.get("total_eligible") or payload.get("total_eligible_leads") or payload.get("total_targets") or payload.get("total_count") or entry.get("sent_count") or 1
                 sent = payload.get("dispatched_count") or payload.get("sent_count") or (1 if entry.get("status") in ("SUCCESS", "EXECUTED") else 0)
                 failed = payload.get("failed_count", 0)
                 if job_id == "wa_daily_morning_wish" and total == 1:
@@ -4578,17 +4781,20 @@ def get_wa_scheduler_status(
                 return {
                     "total_messages": total,
                     "sent_count": sent,
+                    "uncertain_count": 0,
                     "failed_count": failed,
                     "last_trigger": entry.get("timestamp")
                 }
 
+        # Priority 3: Fallback based on job target configuration
         if job_id == "wa_daily_morning_wish":
-            return {"total_messages": 4013, "sent_count": 4013, "failed_count": 0}
+            return {"total_messages": 4013, "sent_count": 0, "uncertain_count": 0, "failed_count": 0}
         elif job_id == "vgk_member_morning_statement":
-            return {"total_messages": 24, "sent_count": 24, "failed_count": 0}
+            return {"total_messages": 24, "sent_count": 0, "uncertain_count": 0, "failed_count": 0}
         elif job_id == "vgk_member_zero_lead_motivational":
-            return {"total_messages": 11, "sent_count": 11, "failed_count": 0}
-        return {"total_messages": 1, "sent_count": 1, "failed_count": 0}
+            return {"total_messages": 11, "sent_count": 0, "uncertain_count": 0, "failed_count": 0}
+        rec_list = active_targets.get(job_id, [])
+        return {"total_messages": len(rec_list) if rec_list else 1, "sent_count": 0, "uncertain_count": 0, "failed_count": 0}
 
     active_targets = _load_targets_from_db(db)
 
@@ -5680,10 +5886,18 @@ def enqueue_bot_message(payload: dict = Body(...), db: Session = Depends(get_db)
                 }
 
     try:
+        import json
+        initial_rp = payload.get("result_payload") or {}
+        if not isinstance(initial_rp, dict):
+            initial_rp = {}
+        for k in ("job_id", "job_name", "trigger_type"):
+            if payload.get(k) and k not in initial_rp:
+                initial_rp[k] = payload.get(k)
+
         res = db.execute(
             text("""
-                INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, media_url, status, created_at, instance_id)
-                VALUES (:target_type, :target_jid, :message, :media_url, 'pending', NOW(), :instance_id)
+                INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, media_url, status, created_at, instance_id, result_payload)
+                VALUES (:target_type, :target_jid, :message, :media_url, 'pending', NOW(), :instance_id, CAST(:result_payload AS jsonb))
                 RETURNING id
             """),
             {
@@ -5691,7 +5905,8 @@ def enqueue_bot_message(payload: dict = Body(...), db: Session = Depends(get_db)
                 "target_jid": target_jid,
                 "message": message,
                 "media_url": media_url,
-                "instance_id": instance_id
+                "instance_id": instance_id,
+                "result_payload": json.dumps(initial_rp) if initial_rp else None
             }
         )
         db.commit()
@@ -5702,14 +5917,195 @@ def enqueue_bot_message(payload: dict = Body(...), db: Session = Depends(get_db)
         return {"success": False, "error": str(e)}
 
 
+def recover_stale_queue_claims(db: Session, threshold_seconds: int = 60) -> int:
+    """
+    Recovers orphaned/stale queue items in 'processing' status from dead workers or terminated EC2 instances.
+    Authoritative Tri-State Execution Model:
+    1. Confirmed ACK: WAMID present or matching MessageLog found -> mark 'sent'.
+    2. Broadcast Expired: Time-sensitive broadcast > 2 hours old -> mark 'expired'.
+    3. Uncertain Dispatch: Worker crashed within/after send boundary (send_boundary_entered == True)
+       without confirmed ACK -> mark 'dispatch_uncertain'. NEVER duplicate resend!
+    4. Known Pre-Dispatch Failure: Worker crashed before send boundary (send_boundary_entered == False).
+       - If attempts < 3: safely reset to 'pending' for clean reprocessing.
+       - If attempts >= 3: mark 'failed' with retries exceeded.
+    """
+    from sqlalchemy import text
+    import json
+    from datetime import datetime, timedelta
+
+    reconciled_count = 0
+    try:
+        rows = db.execute(text("""
+            SELECT id, target_jid, message, created_at, result_payload
+            FROM whatsapp_bot_queue
+            WHERE status = 'processing'
+            FOR UPDATE SKIP LOCKED
+        """)).fetchall()
+
+        now_utc = datetime.utcnow()
+        for r in rows:
+            q_id = r[0]
+            target = r[1] or ""
+            msg_body = r[2] or ""
+            c_at = r[3]
+            res_payload = r[4] or {}
+            if not isinstance(res_payload, dict):
+                res_payload = {}
+
+            # Determine claimed timestamp
+            claimed_at_str = res_payload.get("claimed_at")
+            claimed_dt = None
+            if claimed_at_str:
+                try:
+                    claimed_dt = datetime.fromisoformat(claimed_at_str)
+                except Exception:
+                    claimed_dt = None
+            if not claimed_dt:
+                claimed_dt = c_at or now_utc
+
+            age_seconds = (now_utc - claimed_dt).total_seconds()
+            if age_seconds < threshold_seconds:
+                # Still within active worker lease window
+                continue
+
+            # Case 1: Confirmed ACK via WAMID in result_payload
+            if res_payload.get("wamid"):
+                res_payload["reconciled_from"] = "payload_wamid"
+                res_payload["dispatch_stage"] = "sent_confirmed"
+                db.execute(text("""
+                    UPDATE whatsapp_bot_queue
+                    SET status = 'sent', sent_at = NOW(), result_payload = CAST(:rp AS jsonb)
+                    WHERE id = :qid
+                """), {"qid": q_id, "rp": json.dumps(res_payload)})
+                reconciled_count += 1
+                continue
+
+            # Case 2: Confirmed ACK via MessageLog match
+            clean_phone = ''.join(filter(str.isdigit, target))[-10:] if target else ""
+            log_match = None
+            if clean_phone:
+                log_match = db.execute(text("""
+                    SELECT message_sid FROM message_log 
+                    WHERE mobile_number LIKE :p 
+                      AND (message_body = :body OR :body LIKE concat('%', message_body, '%'))
+                      AND sent_at >= :since 
+                    LIMIT 1
+                """), {
+                    "p": f"%{clean_phone}",
+                    "body": msg_body[:100],
+                    "since": (c_at - timedelta(minutes=5)) if c_at else (now_utc - timedelta(minutes=10))
+                }).fetchone()
+
+            if log_match:
+                res_payload["wamid"] = log_match[0]
+                res_payload["reconciled_from_log"] = True
+                res_payload["dispatch_stage"] = "sent_confirmed"
+                db.execute(text("""
+                    UPDATE whatsapp_bot_queue
+                    SET status = 'sent', sent_at = NOW(), result_payload = CAST(:rp AS jsonb)
+                    WHERE id = :qid
+                """), {"qid": q_id, "rp": json.dumps(res_payload)})
+                reconciled_count += 1
+                continue
+
+            # Case 3: Time-sensitive / expired broadcast (> 2 hours old)
+            total_age = (now_utc - c_at).total_seconds() if c_at else age_seconds
+            if total_age > 7200:
+                res_payload["expired_at"] = now_utc.isoformat()
+                res_payload["dispatch_stage"] = "expired"
+                db.execute(text("""
+                    UPDATE whatsapp_bot_queue
+                    SET status = 'expired',
+                        error_message = 'Dispatch expired: Time-sensitive broadcast superseded by newer schedule (>2 hours old).',
+                        result_payload = CAST(:rp AS jsonb)
+                    WHERE id = :qid
+                """), {"qid": q_id, "rp": json.dumps(res_payload)})
+                reconciled_count += 1
+                continue
+
+            # Case 4: Uncertain Dispatch vs Known Pre-Dispatch Failure
+            send_entered = (
+                res_payload.get("send_boundary_entered") is True
+                or res_payload.get("send_attempted") is True
+                or res_payload.get("dispatch_stage") == "send_boundary_entered"
+            )
+
+            if send_entered:
+                # WORKER DIED IN SEND BOUNDARY: NEVER AUTO RESEND! Preserve dispatch_uncertain
+                res_payload["dispatch_stage"] = "uncertain_send_boundary"
+                res_payload["uncertain_at"] = now_utc.isoformat()
+                res_payload["uncertain_reason"] = f"Worker process terminated after send boundary entered (lease age {int(age_seconds)}s). Delivery unconfirmed."
+                db.execute(text("""
+                    UPDATE whatsapp_bot_queue
+                    SET status = 'dispatch_uncertain',
+                        error_message = :err,
+                        result_payload = CAST(:rp AS jsonb)
+                    WHERE id = :qid
+                """), {
+                    "qid": q_id,
+                    "err": "Worker process/instance terminated after send boundary entered. WhatsApp delivery unconfirmed; held as dispatch_uncertain to prevent duplicate send.",
+                    "rp": json.dumps(res_payload)
+                })
+                reconciled_count += 1
+            else:
+                # KNOWN PRE-DISPATCH FAILURE: Socket was never called. Safe to retry or fail.
+                attempts = res_payload.get("attempts", 1)
+                if attempts < 3:
+                    res_payload["dispatch_stage"] = "requeued_pre_dispatch"
+                    res_payload.pop("claimed_at", None)
+                    res_payload.pop("claim_instance_id", None)
+                    db.execute(text("""
+                        UPDATE whatsapp_bot_queue
+                        SET status = 'pending',
+                            error_message = :err,
+                            result_payload = CAST(:rp AS jsonb)
+                        WHERE id = :qid
+                    """), {
+                        "qid": q_id,
+                        "err": f"Pre-dispatch worker crash recovered (attempt {attempts}/3). Re-queued for retry.",
+                        "rp": json.dumps(res_payload)
+                    })
+                    reconciled_count += 1
+                else:
+                    res_payload["dispatch_stage"] = "failed_pre_dispatch_retries_exceeded"
+                    db.execute(text("""
+                        UPDATE whatsapp_bot_queue
+                        SET status = 'failed',
+                            error_message = 'Max pre-dispatch retry attempts (3) exceeded without socket transmission.',
+                            result_payload = CAST(:rp AS jsonb)
+                        WHERE id = :qid
+                    """), {"qid": q_id, "rp": json.dumps(res_payload)})
+                    reconciled_count += 1
+
+        db.commit()
+        return reconciled_count
+    except Exception as e:
+        db.rollback()
+        logger.error(f"[WA-STALE-RECOVERY] Error: {e}")
+        return 0
+
+
 @router.get("/bot-queue-poll")
-def poll_bot_queue(limit: int = 5, db: Session = Depends(get_db)):
+def poll_bot_queue(
+    limit: int = 5,
+    instance_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
     """Leader polls pending outbound messages from queue."""
     from sqlalchemy import text
+    import json
+    from datetime import datetime
+
+    # Heal any stale claims first
+    try:
+        recover_stale_queue_claims(db, threshold_seconds=60)
+    except Exception as rh_err:
+        logger.warning(f"[BOT-QUEUE-POLL] Stale recovery note: {rh_err}")
+
     try:
         rows = db.execute(
             text("""
-                SELECT id, target_type, target_jid, message, media_url
+                SELECT id, target_type, target_jid, message, media_url, result_payload
                 FROM whatsapp_bot_queue
                 WHERE status = 'pending'
                 ORDER BY id ASC
@@ -5723,23 +6119,98 @@ def poll_bot_queue(limit: int = 5, db: Session = Depends(get_db)):
             db.commit()
             return {"success": True, "items": []}
 
-        ids = [r[0] for r in rows]
-        db.execute(
-            text(f"UPDATE whatsapp_bot_queue SET status = 'processing' WHERE id IN ({','.join(str(i) for i in ids)})")
-        )
-        db.commit()
+        items = []
+        now_iso = datetime.utcnow().isoformat()
+        worker_id = instance_id or "leader_worker"
 
-        items = [{
-            "id": r[0],
-            "target_type": r[1],
-            "target_jid": r[2],
-            "message": r[3],
-            "media_url": r[4]
-        } for r in rows]
+        for r in rows:
+            q_id = r[0]
+            rp = r[5] or {}
+            if not isinstance(rp, dict):
+                rp = {}
+            current_attempts = rp.get("attempts", 0) + 1
+            rp.update({
+                "claimed_at": now_iso,
+                "claim_instance_id": worker_id,
+                "attempts": current_attempts,
+                "send_boundary_entered": False,
+                "send_attempted": False,
+                "dispatch_stage": "claimed"
+            })
+            db.execute(
+                text("""
+                    UPDATE whatsapp_bot_queue
+                    SET status = 'processing',
+                        result_payload = CAST(:rp AS jsonb)
+                    WHERE id = :qid
+                """),
+                {"qid": q_id, "rp": json.dumps(rp)}
+            )
+            items.append({
+                "id": q_id,
+                "target_type": r[1],
+                "target_jid": r[2],
+                "message": r[3],
+                "media_url": r[4],
+                "attempts": current_attempts,
+                "result_payload": rp
+            })
+
+        db.commit()
         return {"success": True, "items": items}
     except Exception as e:
         db.rollback()
         return {"success": False, "error": str(e), "items": []}
+
+
+@router.post("/bot-queue-attempting")
+def mark_bot_queue_attempting(payload: dict = Body(...), db: Session = Depends(get_db)):
+    """
+    Worker signals that it is entering the socket send boundary for a queue item.
+    This internal boundary marker distinguishes pre-dispatch crashes from post-dispatch/in-flight uncertainty.
+    """
+    from sqlalchemy import text
+    import json
+    from datetime import datetime
+
+    queue_id = payload.get("queue_id") or payload.get("item_id")
+    instance_id = payload.get("instance_id")
+    if not queue_id:
+        raise HTTPException(status_code=400, detail="queue_id is required")
+
+    try:
+        row = db.execute(
+            text("SELECT result_payload FROM whatsapp_bot_queue WHERE id = :qid FOR UPDATE"),
+            {"qid": queue_id}
+        ).fetchone()
+        if not row:
+            return {"success": False, "error": "Item not found"}
+
+        rp = row[0] or {}
+        if not isinstance(rp, dict):
+            rp = {}
+
+        rp.update({
+            "send_boundary_entered": True,
+            "send_attempted": True,
+            "dispatch_stage": "send_boundary_entered",
+            "send_boundary_at": datetime.utcnow().isoformat(),
+            "attempt_instance_id": instance_id
+        })
+
+        db.execute(
+            text("""
+                UPDATE whatsapp_bot_queue
+                SET result_payload = CAST(:rp AS jsonb)
+                WHERE id = :qid
+            """),
+            {"qid": queue_id, "rp": json.dumps(rp)}
+        )
+        db.commit()
+        return {"success": True}
+    except Exception as e:
+        db.rollback()
+        return {"success": False, "error": str(e)}
 
 
 @router.post("/bot-queue-complete")
@@ -5751,28 +6222,78 @@ def complete_bot_queue(payload: dict = Body(...), db: Session = Depends(get_db))
     queue_id = payload.get("queue_id") or payload.get("item_id")
     status = payload.get("status", "sent")
     error_message = payload.get("error_message") or payload.get("error")
-    result_payload = payload.get("result_payload")
+    new_result = payload.get("result_payload") or {}
+    if not isinstance(new_result, dict):
+        new_result = {}
 
     if not queue_id:
         raise HTTPException(status_code=400, detail="queue_id or item_id is required")
 
     try:
-        db.execute(
-            text("""
-                UPDATE whatsapp_bot_queue
-                SET status = :status,
-                    error_message = :error_message,
-                    result_payload = CAST(:result_payload AS jsonb),
-                    sent_at = NOW()
-                WHERE id = :queue_id
-            """),
-            {
-                "queue_id": queue_id,
-                "status": status,
-                "error_message": error_message,
-                "result_payload": json.dumps(result_payload) if result_payload else None
-            }
-        )
+        row = db.execute(
+            text("SELECT result_payload FROM whatsapp_bot_queue WHERE id = :qid FOR UPDATE"),
+            {"qid": queue_id}
+        ).fetchone()
+
+        merged_rp = {}
+        if row and row[0] and isinstance(row[0], dict):
+            merged_rp.update(row[0])
+        merged_rp.update(new_result)
+
+        if status == "sent":
+            merged_rp["dispatch_stage"] = "sent_confirmed"
+            if "wamid" in new_result:
+                merged_rp["wamid"] = new_result["wamid"]
+            db.execute(
+                text("""
+                    UPDATE whatsapp_bot_queue
+                    SET status = :status,
+                        error_message = NULL,
+                        result_payload = CAST(:result_payload AS jsonb),
+                        sent_at = NOW()
+                    WHERE id = :queue_id
+                """),
+                {
+                    "queue_id": queue_id,
+                    "status": status,
+                    "result_payload": json.dumps(merged_rp)
+                }
+            )
+        elif status == "dispatch_uncertain":
+            merged_rp["dispatch_stage"] = "uncertain_send_boundary"
+            db.execute(
+                text("""
+                    UPDATE whatsapp_bot_queue
+                    SET status = :status,
+                        error_message = :error_message,
+                        result_payload = CAST(:result_payload AS jsonb)
+                    WHERE id = :queue_id
+                """),
+                {
+                    "queue_id": queue_id,
+                    "status": status,
+                    "error_message": error_message or "Socket/Network severed during transmission. Delivery unconfirmed.",
+                    "result_payload": json.dumps(merged_rp)
+                }
+            )
+        else:
+            merged_rp["dispatch_stage"] = "failed"
+            db.execute(
+                text("""
+                    UPDATE whatsapp_bot_queue
+                    SET status = :status,
+                        error_message = :error_message,
+                        result_payload = CAST(:result_payload AS jsonb)
+                    WHERE id = :queue_id
+                """),
+                {
+                    "queue_id": queue_id,
+                    "status": status,
+                    "error_message": error_message,
+                    "result_payload": json.dumps(merged_rp)
+                }
+            )
+
         db.commit()
         return {"success": True}
     except Exception as e:
@@ -5781,98 +6302,19 @@ def complete_bot_queue(payload: dict = Body(...), db: Session = Depends(get_db))
 
 
 @router.post("/bot-queue-reconcile-inflight")
-def reconcile_inflight_queue(payload: dict = Body(...), db: Session = Depends(get_db)):
+def reconcile_inflight_queue(payload: dict = Body(default={}), db: Session = Depends(get_db)):
     """
-    Safe outbound queue reconciliation during gateway disconnect, crash, or session_conflict (440).
+    Safe outbound queue reconciliation during gateway disconnect, crash, leader takeover, or session_conflict (440).
     CRITICAL INVARIANT: NEVER blindly flip 'processing' back to 'pending'!
-    - Checks MessageLog for verified delivery -> marks 'sent' with wamid
-    - Checks for time-sensitive / expired broadcasts -> marks 'expired'
-    - For indeterminate in-flight messages -> marks 'dispatch_uncertain' with detailed audit reason
-    Prevents both silent message loss and duplicate message delivery.
+    - Checks MessageLog / WAMID for verified delivery -> marks 'sent'
+    - Checks for time-sensitive / expired broadcasts (> 2 hours) -> marks 'expired'
+    - For worker crashed in send boundary -> marks 'dispatch_uncertain'
+    - For worker crashed before send boundary -> resets 'pending' (if attempts < 3) or 'failed'
     """
-    from sqlalchemy import text
-    reason = payload.get("reason", "unknown_disconnect")
-
     try:
-        rows = db.execute(text("""
-            SELECT id, target_jid, message, created_at, result_payload 
-            FROM whatsapp_bot_queue 
-            WHERE status = 'processing'
-        """)).fetchall()
-
-        reconciled_count = 0
-        for r in rows:
-            q_id = r[0]
-            target = r[1] or ""
-            msg_body = r[2] or ""
-            c_at = r[3]
-            res_payload = r[4] or {}
-
-            # Case 1: Result payload already has wamid (WhatsApp accepted, but ack failed to commit)
-            if isinstance(res_payload, dict) and res_payload.get("wamid"):
-                db.execute(text("""
-                    UPDATE whatsapp_bot_queue 
-                    SET status = 'sent', sent_at = NOW() 
-                    WHERE id = :qid
-                """), {"qid": q_id})
-                reconciled_count += 1
-                continue
-
-            # Case 2: Check MessageLog for recent identical dispatch to target
-            clean_phone = ''.join(filter(str.isdigit, target))[-10:] if target else ""
-            log_match = None
-            if clean_phone:
-                log_match = db.execute(text("""
-                    SELECT message_sid FROM message_logs 
-                    WHERE mobile_number LIKE :p 
-                      AND message_body = :body 
-                      AND sent_at >= :since 
-                    LIMIT 1
-                """), {
-                    "p": f"%{clean_phone}",
-                    "body": msg_body,
-                    "since": c_at - timedelta(minutes=5) if c_at else datetime.utcnow() - timedelta(minutes=10)
-                }).fetchone()
-
-            if log_match:
-                db.execute(text("""
-                    UPDATE whatsapp_bot_queue 
-                    SET status = 'sent', 
-                        sent_at = NOW(), 
-                        result_payload = json_build_object('wamid', :sid, 'reconciled_from_log', true) 
-                    WHERE id = :qid
-                """), {"qid": q_id, "sid": log_match[0]})
-                reconciled_count += 1
-                continue
-
-            # Case 3: Time-sensitive / expired broadcast (> 2 hours old or update/leaderboard)
-            age_seconds = (datetime.utcnow() - c_at).total_seconds() if c_at else 99999
-            if age_seconds > 7200 or "UPDATE" in msg_body or "LEADERBOARD" in msg_body:
-                db.execute(text("""
-                    UPDATE whatsapp_bot_queue 
-                    SET status = 'expired', 
-                        error_message = 'Dispatch expired: Time-sensitive broadcast superseded by newer schedule.' 
-                    WHERE id = :qid
-                """), {"qid": q_id})
-                reconciled_count += 1
-                continue
-
-            # Case 4: Indeterminate state -> dispatch_uncertain (REQUIRES AUDIT; NO BLIND RESEND)
-            db.execute(text("""
-                UPDATE whatsapp_bot_queue 
-                SET status = 'dispatch_uncertain', 
-                    error_message = :err 
-                WHERE id = :qid
-            """), {
-                "qid": q_id, 
-                "err": f"Socket disconnected ({reason}) while dispatch in flight. Marked dispatch_uncertain to prevent duplicate send."
-            })
-            reconciled_count += 1
-
-        db.commit()
+        reconciled_count = recover_stale_queue_claims(db, threshold_seconds=0)
         return {"success": True, "reconciled_count": reconciled_count}
     except Exception as e:
-        db.rollback()
         logger.error(f"[WA-QUEUE-RECONCILE] Error: {e}")
         return {"success": False, "error": str(e)}
 

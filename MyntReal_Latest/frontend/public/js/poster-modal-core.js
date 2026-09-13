@@ -666,7 +666,7 @@
       setVal('postCustomer', customerName);
       setVal('postLocation', location);
       setVal('postSeniorName', seniorName);
-      // Senior Metrics: Overall Advances Paid (₹9,000/-) & Net Potential Pending (₹34,350/-)
+      // Senior Metrics: Overall Cumulative Earnings & Net Potential Pending
       const srEntries = window._seniorEntries || [];
       const srUniquePot = {};
       let srAdvPaidTotal = 0;
@@ -682,10 +682,26 @@
           }
         }
       });
+      // Overall Earning: Total cumulative earnings across all valid commission entries
+      const srAllTimeSum = srEntries.reduce((sum, e) => {
+        if (e.status === 'CANCELLED') return sum;
+        if (e.entry_number && String(e.entry_number).startsWith('VSCA-')) return sum;
+        if (e.id && String(e.id).startsWith('VSCA-')) return sum;
+        return sum + (parseFloat(e.commission_amount || e.amount || 0) || 0);
+      }, 0);
       const srGrossPotTotal = Object.values(srUniquePot).reduce((a, b) => a + b, 0);
       const srNetPotTotal = Math.max(0, srGrossPotTotal - srAdvPaidTotal);
-      const seniorPotentialVal = (srNetPotTotal > 0) ? '₹' + _meFormatInr(srNetPotTotal) + '/-' : '₹34,350/-';
-      const seniorOverallVal = (srAdvPaidTotal > 0) ? '₹' + _meFormatInr(srAdvPaidTotal) + '/-' : '₹9,000/-';
+      const seniorPotentialVal = (srNetPotTotal > 0)
+        ? '₹' + _meFormatInr(srNetPotTotal) + '/-'
+        : ((m.senior_potential_earned !== undefined && m.senior_potential_earned !== null && m.senior_potential_earned > 0)
+            ? '₹' + _meFormatInr(m.senior_potential_earned) + '/-'
+            : '—');
+      const seniorOverallRaw = (srAllTimeSum > 0)
+        ? srAllTimeSum
+        : ((m.senior_earning !== undefined && m.senior_earning !== null)
+            ? m.senior_earning
+            : srAdvPaidTotal);
+      const seniorOverallVal = (seniorOverallRaw > 0) ? '₹' + _meFormatInr(seniorOverallRaw) + '/-' : '—';
 
       let srTodayAmt = 0;
       const todayIso = new Date().toISOString().split('T')[0];

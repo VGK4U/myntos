@@ -81,7 +81,7 @@ def get_today_sales_performance_stats(db: Session, start_date=None, end_date=Non
     from app.models.voip_call_session import VoIPCallSession
     from sqlalchemy import and_
 
-    # 1. Tele Sales / Telecaller Department Staff (Strictly excluding Freelancers & Non-Telecaller Departments)
+    # 1. Tele Sales / Telecaller Department Staff (Authoritative database attributes, strictly excluding Freelancers & Service/Non-caller staff)
     staff_rows = db.execute(text("""
         SELECT e.id, e.full_name, e.emp_code
         FROM staff_employees e
@@ -89,9 +89,16 @@ def get_today_sales_performance_stats(db: Session, start_date=None, end_date=Non
         LEFT JOIN staff_employee_departments ed ON ed.employee_id = e.id
         LEFT JOIN staff_departments ad ON ad.id = ed.department_id
         LEFT JOIN staff_roles r ON r.id = e.role_id
+        LEFT JOIN staff_employees mgr ON mgr.id = e.reporting_manager_id
+        LEFT JOIN staff_departments mgr_d ON mgr_d.id = mgr.department_id
         WHERE (
-            LOWER(d.name) LIKE '%tele%' 
-            OR LOWER(ad.name) LIKE '%tele%'
+            LOWER(d.name) = 'tele sales'
+            OR LOWER(ad.name) = 'tele sales'
+            OR (LOWER(d.name) = 'sales' AND (
+                LOWER(mgr_d.name) = 'tele sales'
+                OR EXISTS (SELECT 1 FROM voip_call_sessions v WHERE v.operator_id = e.id)
+                OR EXISTS (SELECT 1 FROM staff_call_logs cl WHERE cl.staff_id = e.id)
+            ))
             OR LOWER(COALESCE(r.role_code, '')) LIKE '%tele%'
             OR LOWER(COALESCE(r.role_name, '')) LIKE '%tele%'
           )
@@ -99,14 +106,12 @@ def get_today_sales_performance_stats(db: Session, start_date=None, end_date=Non
           AND (e.is_deleted IS NOT TRUE)
           AND e.full_name IS NOT NULL
           AND e.full_name != ''
-          AND LOWER(e.full_name) NOT LIKE '%hema%'
-          AND LOWER(e.full_name) NOT LIKE '%raju%'
-          AND LOWER(e.full_name) NOT LIKE '%padma%'
           AND e.emp_code NOT ILIKE 'FL%'
           AND e.emp_code NOT ILIKE 'FP%'
           AND LOWER(COALESCE(e.employment_type, '')) NOT IN ('freelancer', 'external', 'partner_freelancer', 'contractor_freelancer', 'partner')
           AND LOWER(COALESCE(r.role_code, '')) NOT LIKE '%freelancer%'
           AND LOWER(COALESCE(r.role_name, '')) NOT LIKE '%freelancer%'
+          AND COALESCE(e.staff_type, '') != 'FREELANCER'
         GROUP BY e.id, e.full_name, e.emp_code
     """)).fetchall()
 
@@ -464,9 +469,13 @@ def dispatch_bi_hourly_sales_performance_report(
         msg,
         invite_code="LfX8mGootXa7SpwNIz7P5C",
         group_name="Mynt Sales New",
-        group_id="120363410784518818@g.us"
+        group_id="120363410784518818@g.us",
+        job_id="wa_bihourly_sales_perf_report",
+        job_name="Sales Team 2-Hour Report & Leaderboard",
+        trigger_type=trigger_type,
+        db=db
     )
-    is_succ = isinstance(res, dict) and res.get("success") is True
+    is_succ = isinstance(res, dict) and (res.get("success") is True or res.get("queued") is True)
 
     targets = [
         {"id": "t1", "type": "group", "name": "Mynt Sales New", "identifier": "120363410784518818@g.us"}
@@ -484,5 +493,27 @@ def dispatch_bi_hourly_sales_performance_report(
         error_message=res.get("error") if not is_succ else None,
         detail_data=res
     )
+
+    # Durable unified MessageLog audit entry for parity with manual trigger
+    try:
+        from app.models.whatsapp import MessageLog
+        import uuid
+        log_entry = MessageLog(
+            message_sid=f"wamid_sched_{uuid.uuid4().hex[:12]}",
+            mobile_number="GROUP:sales_perf"[:20],
+            user_name=f"{triggered_by}"[:100],
+            sent_by_name=f"{triggered_by}"[:100],
+            sender_type="system" if trigger_type == "AUTO_SCHEDULER" else "staff",
+            message_type="sales_performance",
+            message_body=f"Sales Performance Report ({slot_name} by {triggered_by})",
+            initial_status="sent" if is_succ else "failed",
+            current_status="sent" if is_succ else "failed",
+            sent_at=datetime.utcnow()
+        )
+        db.add(log_entry)
+        db.commit()
+    except Exception as log_e:
+        db.rollback()
+        logger.warning("[SALES-PERF] Failed to write MessageLog: %s", log_e)
 
     return res

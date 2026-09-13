@@ -1262,6 +1262,17 @@ def vgk_my_leads(
             "updated_at": l.updated_at.isoformat() if l.updated_at else None,
             "company_id": l.company_id,
         }
+
+        # DC-PRIVACY-001 (Sep 2026): Server-side Lead Contact Privacy & Masking
+        from app.services.crm_contact_privacy import evaluate_lead_contact_authorization
+        auth_decision = evaluate_lead_contact_authorization(l, current_member, db)
+        base["phone"] = auth_decision["display_phone"]
+        base["is_phone_masked"] = auth_decision["is_masked"]
+        base["can_click_to_call"] = auth_decision["can_click_to_call"]
+        base["contact_relationship"] = auth_decision["relationship"]
+        if getattr(l, 'alternate_phone', None):
+            base["alternate_phone"] = auth_decision["display_alternate_phone"]
+
         if norm in ("source", "source_marked"):
             base["support_info"] = _get_support_info(l)
         elif norm == "guru":
@@ -1282,6 +1293,18 @@ def vgk_my_leads(
             base["support_confirmed"] = e.support_confirmed if e else None
             base["income_status"] = e.status if e else None
             base["commission_amount"] = float(e.commission_amount or 0) if e else 0
+        # DC-DIRECT-TEAM-LEAD-PTS-001 (Sep 2026): Expose Direct Team Lead referral reward context
+        # Only the authenticated direct sponsor who was awarded points sees the reward attribution
+        is_sponsor_recipient = bool(getattr(l, 'direct_team_lead_points_awarded', False) and getattr(l, 'direct_team_lead_sponsor_id', None) == mid)
+        base["is_direct_team_lead_sponsor"] = is_sponsor_recipient
+        base["direct_team_lead_points_awarded"] = bool(getattr(l, 'direct_team_lead_points_awarded', False))
+        if is_sponsor_recipient:
+            base["sponsor_lead_points_reward"] = 2000
+            base["sponsor_lead_points_label"] = "Direct Team Lead Referral (+2,000 Pts)"
+        else:
+            base["sponsor_lead_points_reward"] = 0
+            base["sponsor_lead_points_label"] = None
+
         return base
 
     return {
@@ -1301,6 +1324,22 @@ def vgk_my_leads(
         },
         "data": [lead_dict(l) for l in leads]
     }
+
+
+@router.post("/dashboard/leads/{lead_id}/click-to-call")
+def vgk_lead_click_to_call(
+    lead_id: int,
+    current_member: OfficialPartner = Depends(get_current_vgk_member),
+    db: Session = Depends(get_db)
+):
+    """
+    DC-CLICK-TO-CALL-001 (Sep 2026): Server-side click-to-call for VGK members.
+    Reuses existing Plivo bridge, enforces contact authorization & crm_dialer_reservations.
+    Does NOT expose customer phone to masked users.
+    Zero changes to lead ownership, sponsor, or points.
+    """
+    from app.services.crm_contact_privacy import initiate_lead_click_to_call
+    return initiate_lead_click_to_call(db=db, lead_id=lead_id, current_user=current_member)
 
 
 class SupportConfirmRequest(BaseModel):
@@ -1703,12 +1742,12 @@ def vgk_signup(request: VGKSignupRequest, db: Session = Depends(get_db)):
         add_vgk_points_entry(
             db=db,
             partner_id=member.id,
-            points_credit=Decimal('10000'),
+            points_credit=Decimal('20000'),
             points_debit=Decimal('0'),
-            reason_code='WELCOME_BONUS',
+            reason_code='REGISTRATION_V2',
             reference_type='signup',
             reference_id=None,
-            notes='Welcome bonus — 10,000 VGK Discount Credits on registration',
+            notes='Welcome bonus — 20,000 VGK Discount Credits on registration',
             created_by=None,
         )
         db.commit()
@@ -1716,9 +1755,9 @@ def vgk_signup(request: VGKSignupRequest, db: Session = Depends(get_db)):
     except Exception as _we:
         logger.warning(f"[VGK-SIGNUP] Could not write welcome points ledger entry for {partner_code}: {_we}")
 
-    logger.info(f"[VGK-SIGNUP] New member {partner_code} registered via self-signup, referrer={referrer_code}, 10000 welcome points credited")
+    logger.info(f"[VGK-SIGNUP] New member {partner_code} registered via self-signup, referrer={referrer_code}, 20000 welcome points credited")
 
-    # [DC-REFERRAL] +5,000 additional bonus for using any referral code (explicitly entered)
+    # [DC-REFERRAL] +10,000 additional bonus for using any referral code (explicitly entered)
     referral_bonus_applied = False
     if referrer and _referrer_explicitly_provided:
         try:
@@ -1726,17 +1765,17 @@ def vgk_signup(request: VGKSignupRequest, db: Session = Depends(get_db)):
             _apv(
                 db=db,
                 partner_id=member.id,
-                points_credit=Decimal('5000'),
+                points_credit=Decimal('10000'),
                 points_debit=Decimal('0'),
-                reason_code='CAMPAIGN_BONUS',
+                reason_code='REFERRAL_V2',
                 reference_type='referral_signup',
                 reference_id=None,
-                notes=f'Referral code bonus — joined via {referrer.partner_code} (+5,000 additional points)',
+                notes=f'Referral code bonus — joined via {referrer.partner_code} (+10,000 additional points)',
                 created_by=None,
             )
             db.commit()
             referral_bonus_applied = True
-            logger.info(f"[DC-REFERRAL] 5,000 referral bonus credited to {partner_code} for using referrer {referrer.partner_code}")
+            logger.info(f"[DC-REFERRAL] 10,000 referral bonus credited to {partner_code} for using referrer {referrer.partner_code}")
         except Exception as _rb:
             logger.warning(f"[DC-REFERRAL] Referral signup bonus failed for {partner_code}: {_rb}")
             try:
@@ -2233,6 +2272,19 @@ def vgk_points_ledger(
         'MANUAL_ADJUSTMENT':     'Manual Adjustment',
         'MIGRATION_BALANCE':     'Opening Balance',
         'COMPANY_ROYALTY':       'Company Side Royalty Points',
+        'BUSINESS_BONUS':        'Self-Business Milestone Bonus',
+        'BUSINESS_REVERSAL':     'Self-Business Milestone Reversal',
+        'ONBOARDING_V2':         'V2 Onboarding Grant',
+        'REGISTRATION_V2':       'Registration Bonus',
+        'REFERRAL_V2':           'Referral Bonus',
+        'ACTIVATION_V2':         'Activation Bonus',
+        'ACTIVATION_SPONSOR_V2': 'Referral Activation Reward',
+        'BUSINESS_V2':           'Self-Business Milestone Bonus',
+        'BUSINESS_REVERSAL_V2':  'Self-Business Milestone Reversal',
+        'PAYOUT_DEBIT_V2':       'Points Utilised for Income',
+        'LIABILITY_RECOVERY_V2': 'Points Liability Recovery',
+        'DIRECT_TEAM_LEAD_V2':          'Direct Team Lead Referral',
+        'DIRECT_TEAM_LEAD_REVERSAL_V2': 'Direct Team Lead Referral Reversal',
     }
 
     ref_labels = {
@@ -2243,6 +2295,8 @@ def vgk_points_ledger(
         'service':       'Service Ticket',
         'invoice':       'Sales Invoice',
         'migration':     'Opening Balance',
+        'v2_cutover':    'V2 Onboarding Grant',
+        'CRM_LEAD':      'Deal Milestone Confirmation',
     }
 
     # Pre-fetch promo code labels for PROMO_CODE entries (avoids N+1 in loop)
@@ -2521,6 +2575,8 @@ def vgk_dashboard_summary(
         'BONANZA_REWARD': 'Bonanza Reward', 'PRODUCT_DISCOUNT': 'Product Discount Used',
         'CAMPAIGN_BONUS': 'Campaign Reward', 'COMMISSION_ADJUSTMENT': 'Commission Adjustment',
         'MANUAL_ADJUSTMENT': 'Manual Adjustment', 'MIGRATION_BALANCE': 'Opening Balance',
+        'BUSINESS_BONUS': 'Self-Business Milestone Bonus',
+        'BUSINESS_REVERSAL': 'Self-Business Milestone Reversal',
     }
     recent_pts_rows = db.query(VGKPointsLedger).filter(
         VGKPointsLedger.partner_id == pid
@@ -2709,6 +2765,16 @@ def vgk_submit_lead(
     db.refresh(lead)
     logger.info("[DC-VGK-LEAD-SUBMIT] Lead #%s created by %s product=%s staff=%s", lead.id, current_member.partner_code, pt, handler_staff.id if handler_staff else None)
 
+    # [DC-VGK-V2-TEAM-LEAD-POINTS] Award +2,000 V2 points to direct sponsor for qualifying direct team lead
+    try:
+        from app.services.vgk_team_lead_points import award_direct_team_lead_points
+        award_res = award_direct_team_lead_points(db=db, lead_id=lead.id)
+        if award_res.get('awarded'):
+            db.commit()
+            logger.info(f"[DC-VGK-TEAM-LEAD-POINTS] +2,000 V2 pts awarded for lead #{lead.id}: {award_res}")
+    except Exception as _pt_err:
+        logger.warning(f"[DC-VGK-TEAM-LEAD-POINTS] Direct team lead points hook error (non-fatal): {_pt_err}")
+
     # [DC-VGK-ACCOUNT] Auto-create VGK account for lead if requested
     vgk_account_data = None
     if req.create_vgk_account:
@@ -2753,19 +2819,19 @@ def vgk_submit_lead(
                 db.add(new_vgk)
                 db.commit()
                 db.refresh(new_vgk)
-                # Credit 10,000 welcome + 5,000 lead-origin bonus
+                # Credit 20,000 welcome + 10,000 lead-origin bonus
                 try:
                     from app.services.vgk_commission import add_vgk_points_entry as _apv2
-                    _apv2(db=db, partner_id=new_vgk.id, points_credit=Decimal('10000'),
+                    _apv2(db=db, partner_id=new_vgk.id, points_credit=Decimal('20000'),
                           points_debit=Decimal('0'), reason_code='WELCOME_BONUS',
                           reference_type='signup', reference_id=None,
-                          notes='Welcome bonus — 10,000 VGK Discount Credits on registration', created_by=None)
-                    _apv2(db=db, partner_id=new_vgk.id, points_credit=Decimal('5000'),
+                          notes='Welcome bonus — 20,000 VGK Discount Credits on registration', created_by=None)
+                    _apv2(db=db, partner_id=new_vgk.id, points_credit=Decimal('10000'),
                           points_debit=Decimal('0'), reason_code='CAMPAIGN_BONUS',
                           reference_type='lead_origin', reference_id=lead.id,
-                          notes=f'Lead origin bonus — account created via VGK lead by {current_member.partner_code}', created_by=None)
+                          notes=f'Lead origin bonus — account created via VGK lead by {current_member.partner_code} (+10,000 additional points)', created_by=None)
                     db.commit()
-                    logger.info("[DC-VGK-ACCOUNT] New VGK account %s created from lead #%s by %s, 15000 pts credited", new_partner_code, lead.id, current_member.partner_code)
+                    logger.info("[DC-VGK-ACCOUNT] New VGK account %s created from lead #%s by %s, 30000 pts credited", new_partner_code, lead.id, current_member.partner_code)
                 except Exception as _pe2:
                     logger.warning(f"[DC-VGK-ACCOUNT] Points credit failed for {new_partner_code}: {_pe2}")
                 vgk_account_data = {

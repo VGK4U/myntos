@@ -132,6 +132,7 @@ class CRMLead(BaseModel):
     deal_tax_rate = Column(Float, default=0, nullable=False)        # GST % applied (0/5/12/18/28)
     deal_value_received = Column(Float, default=0, nullable=False)  # Amount received so far
     deal_value_balance = Column(Float, default=0, nullable=False)  # Auto-calculated: total - received
+    points_evaluated_dvr = Column(Numeric(12, 2), default=0.00, nullable=False)  # Cumulative DVR processed for business points
     confirmed_final_value = Column(Float, nullable=True)            # Locked at completion stage — used for all payouts/incentives
     solar_value = Column(Float, nullable=True)                      # DC-SOLAR-VALUE-001: Manual project value for VGK incentive base (set at Balance Received)
 
@@ -149,6 +150,10 @@ class CRMLead(BaseModel):
     telecaller_id = Column(Integer, ForeignKey('staff_employees.id', ondelete='SET NULL'), nullable=True, index=True)
     field_staff_id = Column(Integer, ForeignKey('staff_employees.id', ondelete='SET NULL'), nullable=True, index=True)
     associated_partner_id = Column(Integer, ForeignKey('official_partners.id', ondelete='SET NULL'), nullable=True, index=True)
+    # Direct Team Lead Points Tracking (V2 Rule: 2,000 pts to direct sponsor)
+    direct_team_lead_points_awarded = Column(Boolean, default=False, nullable=False, server_default='false', index=True)
+    direct_team_lead_points_awarded_at = Column(DateTime, nullable=True)
+    direct_team_lead_sponsor_id = Column(Integer, ForeignKey('official_partners.id', ondelete='SET NULL'), nullable=True, index=True)
     # Vendor/Partner assignment (Dec 2025) - DC Protocol: vendor_id links to VendorMaster
     # Note: vendor_id is exposed as "Partner" in UI for simplicity
     vendor_id = Column(Integer, ForeignKey('vendor_master.id', ondelete='SET NULL'), nullable=True, index=True)
@@ -349,6 +354,7 @@ class CRMLead(BaseModel):
             'deal_tax_rate': getattr(self, 'deal_tax_rate', 0) or 0,
             'deal_value_received': getattr(self, 'deal_value_received', 0) or 0,
             'deal_value_balance': getattr(self, 'deal_value_balance', 0) or 0,
+            'points_evaluated_dvr': float(self.points_evaluated_dvr) if getattr(self, 'points_evaluated_dvr', None) is not None else 0.0,
             'confirmed_final_value': getattr(self, 'confirmed_final_value', None),
             'solar_value': getattr(self, 'solar_value', None),
             'solar_brand_id': getattr(self, 'solar_brand_id', None),
@@ -361,6 +367,9 @@ class CRMLead(BaseModel):
             'telecaller_id': self.telecaller_id,
             'field_staff_id': self.field_staff_id,
             'associated_partner_id': self.associated_partner_id,
+            'direct_team_lead_points_awarded': bool(getattr(self, 'direct_team_lead_points_awarded', False)),
+            'direct_team_lead_points_awarded_at': _si(getattr(self, 'direct_team_lead_points_awarded_at', None)),
+            'direct_team_lead_sponsor_id': getattr(self, 'direct_team_lead_sponsor_id', None),
             'vendor_id': self.vendor_id,
             'partner_id': self.vendor_id,  # Alias for UI - vendor shown as Partner
             'mnr_handler_id': self.mnr_handler_id,

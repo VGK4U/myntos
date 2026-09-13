@@ -3023,6 +3023,9 @@ class OfficialPartner(BaseModel):
     parent_partner_id = Column(Integer, ForeignKey('official_partners.id', ondelete='SET NULL'), nullable=True, index=True)
     vgk_role = Column(String(30), nullable=True)
     vgk_points_balance = Column(Numeric(15, 2), nullable=False, default=0)
+    cumulative_self_business_dvr = Column(Numeric(14, 2), nullable=False, default=0)
+    points_recovery_liability = Column(Numeric(12, 2), nullable=False, default=0)
+    is_business_activated = Column(Boolean, default=False, nullable=False, index=True)
     vgk_activated_at = Column(DateTime, nullable=True)
 
     # DC Protocol Mar 2026: Loyal Coupon — zero-cost activation by VGK Mentor staff only.
@@ -3187,10 +3190,13 @@ class OfficialPartner(BaseModel):
             'parent_partner_id': self.parent_partner_id,
             'vgk_role': self.vgk_role,
             'vgk_points_balance': float(self.vgk_points_balance) if self.vgk_points_balance else 0,
+            'cumulative_self_business_dvr': float(self.cumulative_self_business_dvr) if getattr(self, 'cumulative_self_business_dvr', None) else 0,
+            'points_recovery_liability': float(self.points_recovery_liability) if getattr(self, 'points_recovery_liability', None) else 0,
             'vgk_cash_wallet': float(self.vgk_cash_wallet) if getattr(self, 'vgk_cash_wallet', None) else 0,
             'vgk_activated_at': self.vgk_activated_at.isoformat() if self.vgk_activated_at else None,
             'is_loyal_coupon': self.is_loyal_coupon,
             'is_paid_activation': bool(self.is_paid_activation),
+            'is_business_activated': bool(getattr(self, 'is_business_activated', False)),
             # [DC-NAME-GENDER] split name + gender fields
             'name_title': self.name_title,
             'first_name': self.first_name,
@@ -6668,7 +6674,10 @@ class VGKPointsLedger(BaseModel):
             "reason_code IN ('WELCOME_BONUS','ACTIVATION_BONUS','LOYAL_BONUS','BONANZA_REWARD',"
             "'PRODUCT_DISCOUNT','COMMISSION_ADJUSTMENT','MANUAL_ADJUSTMENT','MIGRATION_BALANCE',"
             "'CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY','INCOME_EARNED','BONANZA_CASH_CREDIT',"
-            "'REFERRAL_BONUS','SIGNUP_BONUS','SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION')",
+            "'REFERRAL_BONUS','SIGNUP_BONUS','SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION',"
+            "'BUSINESS_BONUS','BUSINESS_REVERSAL','ONBOARDING_V2','REGISTRATION_V2','REFERRAL_V2','ACTIVATION_V2',"
+            "'ACTIVATION_SPONSOR_V2','BUSINESS_V2','PAYOUT_DEBIT_V2','BUSINESS_REVERSAL_V2','LIABILITY_RECOVERY_V2',"
+            "'V2_ONBOARDING_GRANT','DIRECT_TEAM_LEAD_V2','DIRECT_TEAM_LEAD_REVERSAL_V2')",
             name='vgk_points_reason_check'
         ),
         Index('idx_vgk_pts_partner', 'partner_id'),

@@ -1064,14 +1064,14 @@
     ]
   },
   "2026-09-13": {
-    "timestamp_ist": "2026-09-13 13:30:00",
+    "timestamp_ist": "2026-09-13 22:27:22",
     "date_str": "13 September 2026",
-    "time_str": "01:30 PM",
+    "time_str": "10:27 PM",
     "total_calls": 0,
     "total_talk_seconds": 0,
     "total_talk_formatted": "00h 00m 00s",
     "missed_calls": 0,
-    "new_leads": 35,
+    "new_leads": 58,
     "leaderboard": [
       {
         "handled_by": "Ms. Anusha Moyyi",
@@ -1135,6 +1135,36 @@
       },
       {
         "handled_by": "Ms. Anushka Karri",
+        "call_count": 0,
+        "missed_count": 0,
+        "talk_seconds": 0,
+        "talk_time_formatted": "0m",
+        "sim_call_count": 0,
+        "sim_talk_seconds": 0,
+        "operator_call_count": 0,
+        "operator_talk_seconds": 0,
+        "softphone_call_count": 0,
+        "softphone_talk_seconds": 0,
+        "softphone_talk_formatted": "00m",
+        "softphone_missed_count": 0
+      },
+      {
+        "handled_by": "Ms. Narsi Kurmasri pujitha",
+        "call_count": 0,
+        "missed_count": 0,
+        "talk_seconds": 0,
+        "talk_time_formatted": "0m",
+        "sim_call_count": 0,
+        "sim_talk_seconds": 0,
+        "operator_call_count": 0,
+        "operator_talk_seconds": 0,
+        "softphone_call_count": 0,
+        "softphone_talk_seconds": 0,
+        "softphone_talk_formatted": "00m",
+        "softphone_missed_count": 0
+      },
+      {
+        "handled_by": "Mrs. Janapala Hema",
         "call_count": 0,
         "missed_count": 0,
         "talk_seconds": 0,

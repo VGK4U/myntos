@@ -1,5 +1,11 @@
+import os
+import sys
 import unittest
 from datetime import datetime, timedelta
+
+# Dynamic path resolution (NO ABSOLUTE PATHS)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from fastapi.testclient import TestClient
 from app.main import app
 from app.core.database import SessionLocal

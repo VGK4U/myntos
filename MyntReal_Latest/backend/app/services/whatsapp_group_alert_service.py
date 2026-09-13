@@ -30,10 +30,16 @@ def send_group_bot_message(
     message_text: str,
     invite_code: str = DEFAULT_INVITE_CODE,
     group_name: Optional[str] = None,
-    group_id: Optional[str] = None
+    group_id: Optional[str] = None,
+    job_id: Optional[str] = None,
+    job_name: Optional[str] = None,
+    trigger_type: Optional[str] = None,
+    db: Optional[Session] = None
 ) -> Dict[str, Any]:
     """
     Sends message payload to WhatsApp Web Group Bot Gateway with IPv4/IPv6 & env-var fallback.
+    If the bot HTTP gateway is unreachable and a database session is provided,
+    falls back safely to enqueuing directly into PostgreSQL whatsapp_bot_queue.
     """
     clean_code = extract_invite_code(invite_code)
     payload = {
@@ -44,7 +50,13 @@ def send_group_bot_message(
         payload["groupName"] = group_name
     if group_id:
         payload["groupId"] = group_id
-    
+    if job_id:
+        payload["job_id"] = job_id
+    if job_name:
+        payload["job_name"] = job_name
+    if trigger_type:
+        payload["trigger_type"] = trigger_type
+
     env_url = os.getenv("WHATSAPP_BOT_URL") or os.getenv("WA_BOT_URL") or os.getenv("WA_GROUP_BOT_URL")
     urls = []
     if env_url:
@@ -53,7 +65,7 @@ def send_group_bot_message(
         "http://127.0.0.1:5002/api/send-group-message",
         "http://localhost:5002/api/send-group-message"
     ])
-    
+
     last_exc = None
     for url in urls:
         try:
@@ -69,6 +81,32 @@ def send_group_bot_message(
             continue
 
     logger.warning(f"Could not connect to WhatsApp Group Bot Gateway: {last_exc}")
+
+    # Fallback directly to PostgreSQL queue if DB session available
+    if db is not None:
+        try:
+            from sqlalchemy import text
+            import json
+            target_jid = group_id or clean_code or invite_code or "120363410784518818@g.us"
+            rp = {"job_id": job_id, "job_name": job_name, "trigger_type": trigger_type}
+            clean_rp = {k: v for k, v in rp.items() if v is not None}
+            res = db.execute(text("""
+                INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, status, created_at, result_payload)
+                VALUES ('group', :target_jid, :msg, 'pending', NOW(), CAST(:rp AS jsonb))
+                RETURNING id
+            """), {
+                "target_jid": target_jid,
+                "msg": message_text,
+                "rp": json.dumps(clean_rp) if clean_rp else None
+            })
+            db.commit()
+            queue_id = res.fetchone()[0]
+            logger.info(f"[WA-GROUP-ALERT] Gateway offline; safely enqueued directly to whatsapp_bot_queue (ID #{queue_id})")
+            return {"success": True, "queued": True, "queue_id": queue_id, "message": "Enqueued directly to PostgreSQL queue"}
+        except Exception as db_err:
+            db.rollback()
+            logger.warning(f"[WA-GROUP-ALERT] DB fallback enqueue note: {db_err}")
+
     return {"success": False, "error": f"WhatsApp Group Bot service is currently offline on port 5002 ({last_exc}). Please start the WhatsApp Bot daemon on the server."}
 
 

@@ -107,7 +107,7 @@ async function processOutboundQueue() {
     if (isProcessingQueue || !sock || connectionStatus !== 'connected') return;
     isProcessingQueue = true;
     try {
-        const resp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-poll?limit=5`);
+        const resp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-poll?limit=5&instance_id=${encodeURIComponent(INSTANCE_ID)}`);
         if (!resp.ok) return;
         const data = await resp.json();
         const items = data.items || [];
@@ -122,6 +122,21 @@ async function processOutboundQueue() {
                         caption: item.message || ''
                     };
                 }
+
+                // Internal signal: enter send boundary before calling sock.sendMessage
+                try {
+                    await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-attempting`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            queue_id: item.id,
+                            instance_id: INSTANCE_ID
+                        })
+                    });
+                } catch (attErr) {
+                    console.warn(`⚠️ [OUTBOUND-QUEUE] Attempt marker warning:`, attErr.message);
+                }
+
                 const sentMsg = await sock.sendMessage(target, contentPayload);
                 const wamid = sentMsg?.key?.id || null;
                 await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-complete`, {
@@ -139,13 +154,26 @@ async function processOutboundQueue() {
                 });
             } catch (sendErr) {
                 console.error(`❌ [OUTBOUND-QUEUE] Failed to send message to ${target}:`, sendErr.message);
+                const isNetworkOrDisconnect = 
+                    sendErr.message?.includes('timed out') ||
+                    sendErr.message?.includes('Connection Closed') ||
+                    sendErr.message?.includes('WebSocket') ||
+                    sendErr.message?.includes('Socket') ||
+                    sendErr.message?.includes('ECONNRESET');
+
+                const statusToReport = isNetworkOrDisconnect ? 'dispatch_uncertain' : 'failed';
+
                 await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-complete`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         queue_id: item.id,
-                        status: 'failed',
-                        error_message: sendErr.message
+                        status: statusToReport,
+                        error_message: sendErr.message,
+                        result_payload: {
+                            error: sendErr.message,
+                            uncertain_reason: isNetworkOrDisconnect ? 'Socket/Network severed during transmission' : null
+                        }
                     })
                 });
             }
@@ -209,6 +237,13 @@ async function syncClusterCoordinator() {
                 isLeader = true;
                 leaderHost = INSTANCE_HOST;
                 startWhatsAppBot();
+                try {
+                    fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-reconcile-inflight`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reason: 'leader_takeover', instance_id: INSTANCE_ID })
+                    }).catch(() => {});
+                } catch (recErr) {}
             }
             if (data.command === 'logout') {
                 console.log(`🚪 [CLUSTER-COORDINATOR] Received remote 'logout' command from cluster.`);
@@ -1051,7 +1086,7 @@ function cleanTargetCode(raw) {
 
 app.post('/api/send-group-message', async (req, res) => {
     try {
-        const { message, inviteCode, groupId, imageUrl, imagePath, media_url, mediaUrl } = req.body;
+        const { message, inviteCode, groupId, imageUrl, imagePath, media_url, mediaUrl, job_id, job_name, trigger_type } = req.body;
         const mediaSource = imageUrl || imagePath || media_url || mediaUrl || null;
         if (!message && !mediaSource) {
             return res.status(400).json({ success: false, error: "message or media parameter required" });
@@ -1097,7 +1132,10 @@ app.post('/api/send-group-message', async (req, res) => {
                         target_jid: queueTargetJid,
                         message: message || '',
                         media_url: mediaSource,
-                        instance_id: INSTANCE_ID
+                        instance_id: INSTANCE_ID,
+                        job_id: job_id || null,
+                        job_name: job_name || null,
+                        trigger_type: trigger_type || null
                     })
                 });
                 const enqData = await enqResp.json();

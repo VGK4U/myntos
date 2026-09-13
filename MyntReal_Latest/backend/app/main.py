@@ -10731,7 +10731,8 @@ def _startup_worker():
                         'PRODUCT_DISCOUNT','COMMISSION_ADJUSTMENT','MANUAL_ADJUSTMENT',
                         'MIGRATION_BALANCE','CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY',
                         'INCOME_EARNED','BONANZA_CASH_CREDIT','REFERRAL_BONUS','SIGNUP_BONUS',
-                        'SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION'
+                        'SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION',
+                        'BUSINESS_BONUS','BUSINESS_REVERSAL'
                     )
                 )
             """))
@@ -12922,7 +12923,8 @@ def _startup_worker():
                 "'PRODUCT_DISCOUNT','COMMISSION_ADJUSTMENT','MANUAL_ADJUSTMENT','MIGRATION_BALANCE',"
                 "'CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY',"
                 "'INCOME_EARNED','BONANZA_CASH_CREDIT','REFERRAL_BONUS','SIGNUP_BONUS',"
-                "'SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION'"
+                "'SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION',"
+                "'BUSINESS_BONUS','BUSINESS_REVERSAL'"
                 "))"
             ))
             _conn_re.commit()
@@ -16376,6 +16378,165 @@ def _startup_worker():
             _pdr_db.close()
     except Exception as _pdr_e2:
         print(f"[DC-DEAL-PER-DEAL-RECV-BACKFILL-001] ⚠️ outer: {_pdr_e2}", flush=True)
+
+    # DC-VGK-SELF-BUSINESS-POINTS-001 (Sep 2026): VGK Self-Business Points Engine
+    # Ensures additive columns on official_partners, crm_leads, creates vgk_self_business_points_accrual_ledger,
+    # and updates vgk_points_reason_check constraint with BUSINESS_BONUS and BUSINESS_REVERSAL.
+    try:
+        _sbp_key = 'dc_vgk_self_business_points_v1_20260913'
+        _sbp_db = SessionLocal()
+        try:
+            if _sbp_key in _applied_keys:
+                print("[DC-VGK-SELF-BUSINESS-POINTS-001] ⏭️  Already applied — skip", flush=True)
+            else:
+                _sbp_db.execute(text("ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS cumulative_self_business_dvr NUMERIC(14,2) DEFAULT 0.00;"))
+                _sbp_db.execute(text("ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS points_recovery_liability NUMERIC(12,2) DEFAULT 0.00;"))
+                _sbp_db.execute(text("ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS points_evaluated_dvr NUMERIC(12,2) DEFAULT 0.00;"))
+                _sbp_db.execute(text("""
+                    CREATE TABLE IF NOT EXISTS vgk_self_business_points_accrual_ledger (
+                        id SERIAL PRIMARY KEY,
+                        partner_id INTEGER NOT NULL REFERENCES official_partners(id) ON DELETE CASCADE,
+                        lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                        previous_lead_dvr NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+                        current_lead_dvr NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+                        incremental_dvr NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+                        partner_cumulative_dvr_before NUMERIC(14,2) NOT NULL DEFAULT 0.00,
+                        partner_cumulative_dvr_after NUMERIC(14,2) NOT NULL DEFAULT 0.00,
+                        milestones_crossed INTEGER NOT NULL DEFAULT 0,
+                        points_awarded NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+                        carry_forward_volume NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+                        ledger_entry_id INTEGER,
+                        transaction_type VARCHAR(30) NOT NULL DEFAULT 'ACCRUAL',
+                        liability_offset_amount NUMERIC(12,2) NOT NULL DEFAULT 0.00,
+                        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+                    );
+                """))
+                _sbp_db.execute(text("CREATE INDEX IF NOT EXISTS ix_vgk_sbp_accrual_partner ON vgk_self_business_points_accrual_ledger(partner_id);"))
+                _sbp_db.execute(text("CREATE INDEX IF NOT EXISTS ix_vgk_sbp_accrual_lead ON vgk_self_business_points_accrual_ledger(lead_id);"))
+                _sbp_db.execute(text("CREATE INDEX IF NOT EXISTS ix_vgk_sbp_accrual_created ON vgk_self_business_points_accrual_ledger(created_at);"))
+                _sbp_db.execute(text("ALTER TABLE vgk_points_ledger DROP CONSTRAINT IF EXISTS vgk_points_reason_check;"))
+                _sbp_db.execute(text("""
+                    ALTER TABLE vgk_points_ledger ADD CONSTRAINT vgk_points_reason_check CHECK (
+                        reason_code IN (
+                            'WELCOME_BONUS','ACTIVATION_BONUS','LOYAL_BONUS','BONANZA_REWARD',
+                            'PRODUCT_DISCOUNT','COMMISSION_ADJUSTMENT','MANUAL_ADJUSTMENT',
+                            'MIGRATION_BALANCE','CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY',
+                            'INCOME_EARNED','BONANZA_CASH_CREDIT','REFERRAL_BONUS','SIGNUP_BONUS',
+                            'SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION',
+                            'BUSINESS_BONUS','BUSINESS_REVERSAL'
+                        )
+                    );
+                """))
+                _sbp_db.execute(
+                    text("INSERT INTO dc_migrations (key) VALUES (:k) ON CONFLICT DO NOTHING"),
+                    {'k': _sbp_key}
+                )
+                _sbp_db.commit()
+                print("[DC-VGK-SELF-BUSINESS-POINTS-001] ✅ VGK self-business points schema & migration complete", flush=True)
+        except Exception as _sbp_err:
+            print(f"[DC-VGK-SELF-BUSINESS-POINTS-001] ⚠️ {_sbp_err}", flush=True)
+            try: _sbp_db.rollback()
+            except Exception: pass
+        finally:
+            _sbp_db.close()
+    except Exception as _sbp_e2:
+        print(f"[DC-VGK-SELF-BUSINESS-POINTS-001] ⚠️ outer: {_sbp_e2}", flush=True)
+
+    # DC-VGK-POINTS-V2-RESET-20260913 (Sep 2026): Points V2 Reset & Dual Activation Engine
+    try:
+        _v2_key = 'dc_vgk_points_v2_reset_and_activation_20260913'
+        _v2_db = SessionLocal()
+        try:
+            if _v2_key in _applied_keys:
+                print("[DC-VGK-POINTS-V2-RESET] ⏭️  Already applied — skip", flush=True)
+            else:
+                _v2_db.execute(text("CREATE TABLE IF NOT EXISTS vgk_points_ledger_v1_archive AS SELECT *, NOW() as archived_at FROM vgk_points_ledger;"))
+                _v2_db.execute(text("ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS is_business_activated BOOLEAN NOT NULL DEFAULT FALSE;"))
+                _v2_db.execute(text("CREATE INDEX IF NOT EXISTS idx_official_partners_biz_act ON official_partners(is_business_activated);"))
+                _v2_db.execute(text("""
+                    ALTER TABLE vgk_points_ledger DROP CONSTRAINT IF EXISTS vgk_points_reason_check;
+                    ALTER TABLE vgk_points_ledger ADD CONSTRAINT vgk_points_reason_check CHECK (
+                        reason_code IN (
+                            'WELCOME_BONUS','ACTIVATION_BONUS','LOYAL_BONUS','BONANZA_REWARD',
+                            'PRODUCT_DISCOUNT','COMMISSION_ADJUSTMENT','MANUAL_ADJUSTMENT',
+                            'MIGRATION_BALANCE','CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY',
+                            'INCOME_EARNED','BONANZA_CASH_CREDIT','REFERRAL_BONUS','SIGNUP_BONUS',
+                            'SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION',
+                            'BUSINESS_BONUS','BUSINESS_REVERSAL',
+                            'ONBOARDING_V2','REGISTRATION_V2','REFERRAL_V2','ACTIVATION_V2',
+                            'ACTIVATION_SPONSOR_V2','BUSINESS_V2','PAYOUT_DEBIT_V2',
+                            'BUSINESS_REVERSAL_V2','LIABILITY_RECOVERY_V2','V2_ONBOARDING_GRANT'
+                        )
+                    );
+                """))
+                _v2_db.execute(text("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS uq_vgk_points_onboarding_v2 
+                    ON vgk_points_ledger(partner_id) 
+                    WHERE reason_code = 'ONBOARDING_V2';
+                """))
+                _v2_db.execute(
+                    text("INSERT INTO dc_migrations (key) VALUES (:k) ON CONFLICT DO NOTHING"),
+                    {'k': _v2_key}
+                )
+                _v2_db.commit()
+                print("[DC-VGK-POINTS-V2-RESET] ✅ Points V2 reset & activation migration complete", flush=True)
+        except Exception as _v2_err:
+            print(f"[DC-VGK-POINTS-V2-RESET] ⚠️ {_v2_err}", flush=True)
+            try: _v2_db.rollback()
+            except Exception: pass
+        finally:
+            _v2_db.close()
+    except Exception as _v2_e2:
+        print(f"[DC-VGK-POINTS-V2-RESET] ⚠️ outer: {_v2_e2}", flush=True)
+
+    # DC-VGK-POINTS-V2-TEAM-LEAD-20260913: Direct Team Lead Referral (+2,000 pts to sponsor)
+    try:
+        _dtl_key = 'dc_vgk_points_v2_team_lead_20260913'
+        _dtl_db = SessionLocal()
+        try:
+            if _dtl_key in _applied_keys:
+                print("[DC-VGK-POINTS-V2-TEAM-LEAD] ⏭️  Already applied — skip", flush=True)
+            else:
+                _dtl_db.execute(text("ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded BOOLEAN NOT NULL DEFAULT FALSE;"))
+                _dtl_db.execute(text("ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded_at TIMESTAMP NULL;"))
+                _dtl_db.execute(text("ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS direct_team_lead_sponsor_id INTEGER REFERENCES official_partners(id) ON DELETE SET NULL;"))
+                _dtl_db.execute(text("CREATE INDEX IF NOT EXISTS idx_crm_leads_dtl_points ON crm_leads(direct_team_lead_points_awarded);"))
+                _dtl_db.execute(text("ALTER TABLE vgk_points_ledger DROP CONSTRAINT IF EXISTS vgk_points_reason_check;"))
+                _dtl_db.execute(text("""
+                    ALTER TABLE vgk_points_ledger ADD CONSTRAINT vgk_points_reason_check CHECK (
+                        reason_code IN (
+                            'WELCOME_BONUS','ACTIVATION_BONUS','LOYAL_BONUS','BONANZA_REWARD',
+                            'PRODUCT_DISCOUNT','COMMISSION_ADJUSTMENT','MANUAL_ADJUSTMENT',
+                            'MIGRATION_BALANCE','CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY',
+                            'INCOME_EARNED','BONANZA_CASH_CREDIT','REFERRAL_BONUS','SIGNUP_BONUS',
+                            'SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION',
+                            'BUSINESS_BONUS','BUSINESS_REVERSAL',
+                            'ONBOARDING_V2','REGISTRATION_V2','REFERRAL_V2','ACTIVATION_V2',
+                            'ACTIVATION_SPONSOR_V2','BUSINESS_V2','PAYOUT_DEBIT_V2',
+                            'BUSINESS_REVERSAL_V2','LIABILITY_RECOVERY_V2','V2_ONBOARDING_GRANT',
+                            'DIRECT_TEAM_LEAD_V2','DIRECT_TEAM_LEAD_REVERSAL_V2'
+                        )
+                    );
+                """))
+                _dtl_db.execute(text("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS uq_vgk_pts_direct_team_lead_v2
+                    ON vgk_points_ledger (reference_id)
+                    WHERE reference_type = 'CRM_LEAD' AND reason_code = 'DIRECT_TEAM_LEAD_V2';
+                """))
+                _dtl_db.execute(
+                    text("INSERT INTO dc_migrations (key) VALUES (:k) ON CONFLICT DO NOTHING"),
+                    {'k': _dtl_key}
+                )
+                _dtl_db.commit()
+                print("[DC-VGK-POINTS-V2-TEAM-LEAD] ✅ Direct team lead referral points schema & migration complete", flush=True)
+        except Exception as _dtl_err:
+            print(f"[DC-VGK-POINTS-V2-TEAM-LEAD] ⚠️ {_dtl_err}", flush=True)
+            try: _dtl_db.rollback()
+            except Exception: pass
+        finally:
+            _dtl_db.close()
+    except Exception as _dtl_e2:
+        print(f"[DC-VGK-POINTS-V2-TEAM-LEAD] ⚠️ outer: {_dtl_e2}", flush=True)
 
     try:
         seed_bank_wise_leads_menu()

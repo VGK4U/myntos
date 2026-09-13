@@ -1613,24 +1613,24 @@ def create_vgk_member(
     db.commit()
     db.refresh(member)
 
-    # DC Protocol Apr 2026: Credit 10,000 welcome bonus points on registration (non-paid status).
+    # DC Protocol Apr 2026 / Sep 2026: Credit 20,000 welcome bonus points on registration (non-paid status).
     # Full 50,000 activation bonus is credited separately when the member pays ₹4,999 PIN.
     try:
         from app.services.vgk_commission import add_vgk_points_entry
         add_vgk_points_entry(
             db=db,
             partner_id=member.id,
-            points_credit=Decimal('10000'),
+            points_credit=Decimal('20000'),
             points_debit=Decimal('0'),
-            reason_code='WELCOME_BONUS',
+            reason_code='REGISTRATION_V2',
             reference_type='registration',
             reference_id=None,
-            notes='Welcome bonus on VGK registration — 10,000 VGK Discount Credits',
+            notes='Welcome bonus on VGK registration — 20,000 VGK Discount Credits',
             created_by=current_user.id,
         )
         db.commit()
         db.refresh(member)
-        logger.info(f"[VGK] 10,000 welcome bonus credited to {member.partner_code}")
+        logger.info(f"[VGK] 20,000 welcome bonus credited to {member.partner_code}")
     except Exception as _wb_err:
         logger.warning(f"[VGK] Welcome bonus credit failed (non-fatal): {_wb_err}")
 
@@ -1649,7 +1649,7 @@ def create_vgk_member(
                     "1": member.partner_name or "Member",
                     "2": member.partner_code,
                     "3": "https://www.vgk4u.com/vgk/login",
-                    "4": "10,000",
+                    "4": "20,000",
                 },
             )
     except Exception as _wa_err:

@@ -487,17 +487,17 @@ def activate_vgk_member(db: Session, partner_id: int, company_id: int, activated
             partner_id=partner_id,
             points_credit=Decimal('50000'),
             points_debit=Decimal('0'),
-            reason_code='ACTIVATION_BONUS',
+            reason_code='ACTIVATION_V2',
             reference_type='activation',
             reference_id=None,
-            notes='Partner paid activation bonus (₹4,999 PIN) — 50,000 VGK Discount Credits (total 60,000 with registration)',
+            notes='Partner paid activation bonus (₹4,999 PIN) — 50,000 VGK Discount Credits',
             created_by=activated_by_staff_id,
         )
 
         db.commit()
-        logger.info(f"[VGK-ACTIVATE] Partner {partner.partner_code} paid-activated, 50,000 points credited to ledger (total 60,000)")
+        logger.info(f"[VGK-ACTIVATE] Partner {partner.partner_code} paid-activated, 50,000 points credited to ledger")
 
-        # [DC-REFERRAL] Credit 2,000 points to referrer on activation
+        # [DC-REFERRAL] Credit 5,000 points to referrer on activation (V2 rule)
         if partner.parent_partner_id:
             try:
                 referrer = db.query(OfficialPartner).filter(
@@ -508,16 +508,16 @@ def activate_vgk_member(db: Session, partner_id: int, company_id: int, activated
                     add_vgk_points_entry(
                         db=db,
                         partner_id=referrer.id,
-                        points_credit=Decimal('2000'),
+                        points_credit=Decimal('5000'),
                         points_debit=Decimal('0'),
-                        reason_code='CAMPAIGN_BONUS',
+                        reason_code='ACTIVATION_SPONSOR_V2',
                         reference_type='referral_activation',
                         reference_id=partner_id,
-                        notes=f'Referral activation reward — {partner.partner_code} activated (paid ₹5,000)',
+                        notes=f'Referral activation reward — {partner.partner_code} activated (paid ₹4,999 PIN)',
                         created_by=activated_by_staff_id,
                     )
                     db.commit()
-                    logger.info(f"[DC-REFERRAL] 2,000 pts credited to referrer {referrer.partner_code} for activation of {partner.partner_code}")
+                    logger.info(f"[DC-REFERRAL] 5,000 pts credited to referrer {referrer.partner_code} for activation of {partner.partner_code}")
             except Exception as _re:
                 logger.warning(f"[DC-REFERRAL] Could not credit referrer activation reward: {_re}")
                 try:
@@ -613,7 +613,7 @@ def activate_loyal_coupon_member(
                     add_vgk_points_entry(
                         db=db,
                         partner_id=referrer.id,
-                        points_credit=Decimal('2000'),
+                        points_credit=Decimal('5000'),
                         points_debit=Decimal('0'),
                         reason_code='CAMPAIGN_BONUS',
                         reference_type='referral_activation',
@@ -622,7 +622,7 @@ def activate_loyal_coupon_member(
                         created_by=activated_by_staff_id,
                     )
                     db.commit()
-                    logger.info(f"[DC-REFERRAL] 2,000 pts credited to referrer {referrer.partner_code} for loyal-coupon activation of {partner.partner_code}")
+                    logger.info(f"[DC-REFERRAL] 5,000 pts credited to referrer {referrer.partner_code} for loyal-coupon activation of {partner.partner_code}")
             except Exception as _re:
                 logger.warning(f"[DC-REFERRAL] Could not credit referrer loyal-coupon activation reward: {_re}")
                 try:

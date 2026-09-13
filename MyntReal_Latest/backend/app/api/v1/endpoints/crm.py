@@ -10200,6 +10200,16 @@ def create_lead(
     db.commit()
     db.refresh(new_lead)
 
+    # [DC-VGK-V2-TEAM-LEAD-POINTS] Award +2,000 V2 points to direct sponsor for qualifying direct team lead
+    if getattr(new_lead, 'associated_partner_id', None):
+        try:
+            from app.services.vgk_team_lead_points import award_direct_team_lead_points
+            award_res = award_direct_team_lead_points(db=db, lead_id=new_lead.id)
+            if award_res.get('awarded'):
+                db.commit()
+        except Exception as _pt_err:
+            logger.warning(f"[DC-VGK-TEAM-LEAD-POINTS] CRM create lead points error: {_pt_err}")
+
     # Automatically capture initial comment as a CRMLeadNote on create
     if lead_data.recent_comments and str(lead_data.recent_comments).strip():
         _rc_init = str(lead_data.recent_comments).strip()
@@ -10691,6 +10701,15 @@ def get_lead(
             print(f"[CRM-WARNING] Error fetching staff_visits for lead {lead.id}: {_sve}")
             lead_dict['staff_visits'] = []
 
+        # DC-PRIVACY-001 (Sep 2026): Contact Privacy & Masking for Staff
+        from app.services.crm_contact_privacy import evaluate_lead_contact_authorization
+        auth_decision = evaluate_lead_contact_authorization(lead, current_employee, db)
+        lead_dict['phone'] = auth_decision['display_phone']
+        lead_dict['alternate_phone'] = auth_decision['display_alternate_phone']
+        lead_dict['is_phone_masked'] = auth_decision['is_masked']
+        lead_dict['can_click_to_call'] = auth_decision['can_click_to_call']
+        lead_dict['contact_relationship'] = auth_decision['relationship']
+
         return {
             'success': True,
             'data': lead_dict
@@ -10701,6 +10720,22 @@ def get_lead(
         error_detail = f"get_lead error for lead_id={lead_id}, company_id={company_id}: {str(e)}\n{traceback.format_exc()}"
         print(f"[CRM-ERROR] {error_detail}")
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+@router.post("/leads/{lead_id}/click-to-call")
+def staff_lead_click_to_call(
+    lead_id: int,
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    DC-CLICK-TO-CALL-003 (Sep 2026): Server-side click-to-call for Staff.
+    Reuses existing Plivo bridge, enforces contact authorization & crm_dialer_reservations.
+    Does NOT expose customer phone to masked users.
+    Zero changes to lead ownership, sponsor, or points.
+    """
+    from app.services.crm_contact_privacy import initiate_lead_click_to_call
+    return initiate_lead_click_to_call(db=db, lead_id=lead_id, current_user=current_employee)
 
 
 @router.put("/leads/{lead_id}")
@@ -11373,6 +11408,16 @@ def update_lead(
             detail=f"Save failed due to a database error. Please contact support. (ref: lead {lead_id})"
         )
     db.refresh(lead)
+
+    # [DC-VGK-V2-TEAM-LEAD-POINTS] Award +2,000 V2 points if partner was newly assigned and not yet awarded
+    if getattr(lead, 'associated_partner_id', None) and not getattr(lead, 'direct_team_lead_points_awarded', False):
+        try:
+            from app.services.vgk_team_lead_points import award_direct_team_lead_points
+            award_res = award_direct_team_lead_points(db=db, lead_id=lead.id)
+            if award_res.get('awarded'):
+                db.commit()
+        except Exception as _pt_err:
+            logger.warning(f"[DC-VGK-TEAM-LEAD-POINTS] CRM update lead points error: {_pt_err}")
 
     # DC-TEAM-ASSIGN-001 (Jun 2026): Trigger VGK income drafts on completion.
     # Two cases handled — both rely on generate_vgk_cash_income_drafts idempotency
@@ -12703,6 +12748,13 @@ def delete_lead(
         entry.lead_id = None
     if linked_entries:
         db.flush()
+
+    # [DC-VGK-V2-TEAM-LEAD-POINTS] Reverse direct team lead points if awarded
+    try:
+        from app.services.vgk_team_lead_points import reverse_direct_team_lead_points
+        reverse_direct_team_lead_points(db=db, lead_id=lead_id, reason="Lead deleted by staff")
+    except Exception as _rev_err:
+        logger.warning(f"[DC-VGK-TEAM-LEAD-POINTS] Points reversal failed on lead delete (non-fatal): {_rev_err}")
 
     db.delete(lead)
     db.commit()
@@ -14432,6 +14484,14 @@ def validate_transaction(
             except Exception as _dvr_txn_e:
                 logger.warning(f'[DC-DVR-ADV-TXN] Hook failed for lead {lead.id}: {_dvr_txn_e}')
 
+        # VGK Self-Business Points hook (every ₹5,00,000 DVR = 50,000 points)
+        if lead and getattr(lead, 'associated_partner_id', None) and (lead.deal_value_received or 0) > 0:
+            try:
+                from app.services.vgk_self_business_points import process_incremental_self_business_points
+                process_incremental_self_business_points(db, lead.id)
+            except Exception as _sbp_e:
+                logger.warning(f"[VGK-SELF-BUSINESS-PTS] validate_transaction hook failed for lead {lead.id}: {_sbp_e}")
+
         incentive_result = None
         if lead:
             try:
@@ -15743,7 +15803,16 @@ async def get_unified_my_leads(
         if lead.adi_guru_id:
             adi_guru = db.query(User).filter(User.id == lead.adi_guru_id).first()
             lead_dict['adi_guru_name'] = adi_guru.name if adi_guru else None
-        
+
+        # DC-PRIVACY-001 (Sep 2026): Contact Privacy & Masking
+        from app.services.crm_contact_privacy import evaluate_lead_contact_authorization
+        auth_decision = evaluate_lead_contact_authorization(lead, current_user, db)
+        lead_dict['phone'] = auth_decision['display_phone']
+        lead_dict['alternate_phone'] = auth_decision['display_alternate_phone']
+        lead_dict['is_phone_masked'] = auth_decision['is_masked']
+        lead_dict['can_click_to_call'] = auth_decision['can_click_to_call']
+        lead_dict['contact_relationship'] = auth_decision['relationship']
+
         leads_data.append(lead_dict)
     
     # DC Protocol (Apr 2026): Compute per-segment counts for partner 5-tab badges
@@ -16044,11 +16113,51 @@ async def get_unified_lead_details(
         CRMLeadNote.lead_id == lead_id
     ).order_by(CRMLeadNote.created_at.desc()).all()
     lead_dict['notes'] = [note.to_dict() for note in notes]
-    
+
+    # DC-PRIVACY-001 (Sep 2026): Contact Privacy & Masking
+    from app.services.crm_contact_privacy import evaluate_lead_contact_authorization
+    auth_decision = evaluate_lead_contact_authorization(lead, current_user, db)
+    lead_dict['phone'] = auth_decision['display_phone']
+    lead_dict['alternate_phone'] = auth_decision['display_alternate_phone']
+    lead_dict['is_phone_masked'] = auth_decision['is_masked']
+    lead_dict['can_click_to_call'] = auth_decision['can_click_to_call']
+    lead_dict['contact_relationship'] = auth_decision['relationship']
+
     return {
         'success': True,
         'data': lead_dict
     }
+
+
+@router.post("/unified-my-leads/{lead_id}/click-to-call")
+async def unified_lead_click_to_call(
+    request: Request,
+    lead_id: int,
+    role: Optional[str] = Query(None, description="Role hint: 'mnr' or 'partner'"),
+    db: Session = Depends(get_db)
+):
+    """
+    DC-CLICK-TO-CALL-002 (Sep 2026): Click-to-Call endpoint for unified leads.
+    Supports Staff, Official Partners, and MNR members.
+    Reuses existing Plivo bridge, enforces contact authorization & crm_dialer_reservations.
+    Does NOT expose customer phone to masked users.
+    Zero changes to lead ownership, sponsor, or points.
+    """
+    from app.core.security import get_current_user_hybrid_with_partner
+    if role == 'partner':
+        from app.api.v1.endpoints.vgk_auth import get_current_vgk_member
+        try:
+            current_user = get_current_vgk_member(request, db)
+        except HTTPException as e:
+            if e.status_code == 401:
+                current_user = await get_current_user_hybrid_with_partner(request, db)
+            else:
+                raise e
+    else:
+        current_user = await get_current_user_hybrid_with_partner(request, db)
+
+    from app.services.crm_contact_privacy import initiate_lead_click_to_call
+    return initiate_lead_click_to_call(db=db, lead_id=lead_id, current_user=current_user)
 
 
 @router.put("/leads/{lead_id}/mnr-assignment")

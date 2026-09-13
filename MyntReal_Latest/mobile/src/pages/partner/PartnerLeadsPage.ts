@@ -37,6 +37,9 @@ interface Lead {
   submit_date?: string | null;
   complete_date?: string | null;
   next_followup_date?: string;
+  is_phone_masked?: boolean;
+  can_click_to_call?: boolean;
+  contact_relationship?: string;
 }
 
 const LEAD_STATUSES = ['new', 'contacted', 'qualified', 'converted', 'lost'];
@@ -322,8 +325,12 @@ export class PartnerLeadsPage {
           <div>
             <div class="lead-name">${lead.name}</div>
             <div class="lead-contact-row">
-              <a href="tel:${lead.phone || ''}" class="lead-phone-link" onclick="event.stopPropagation()">${lead.phone || 'No phone'}</a>
-              ${lead.phone ? `<button class="whatsapp-link open-partner-wa-btn" data-phone="${(lead.phone || '').replace(/\D/g, '')}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category_name || ''}" onclick="event.stopPropagation()" style="background:none;border:none;cursor:pointer;padding:0 2px;">💬</button>` : ''}
+              ${lead.is_phone_masked ? `
+                <span class="lead-phone-link" style="color:#64748b;font-weight:600"><span style="font-size:11px">🛡️</span> ${lead.phone || 'No phone'}</span>
+              ` : `
+                <a href="tel:${lead.phone || ''}" class="lead-phone-link" onclick="event.stopPropagation()">${lead.phone || 'No phone'}</a>
+                ${lead.phone ? `<button class="whatsapp-link open-partner-wa-btn" data-phone="${(lead.phone || '').replace(/\D/g, '')}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category_name || ''}" onclick="event.stopPropagation()" style="background:none;border:none;cursor:pointer;padding:0 2px;">💬</button>` : ''}
+              `}
             </div>
           </div>
           <span class="lead-status ${lead.status}">${lead.status}</span>
@@ -336,13 +343,38 @@ export class PartnerLeadsPage {
           ${lead.complete_date ? `<span class="meta-item" style="font-size:10px;color:#059669">✅ ${new Date(lead.complete_date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</span>` : ''}
         </div>
         <div class="lead-actions">
-          <a href="tel:${lead.phone || ''}" class="action-btn call" onclick="event.stopPropagation()">📞</a>
-          <button class="action-btn whatsapp open-partner-wa-btn" data-phone="${(lead.phone || '').replace(/\D/g, '')}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category_name || ''}" onclick="event.stopPropagation()" style="border:none;cursor:pointer;" title="Send WhatsApp">💬</button>
+          ${lead.is_phone_masked ? `
+            <button class="action-btn call btn-partner-click-to-call" data-id="${lead.id}" onclick="event.stopPropagation()" title="Secure Click-to-Call">📞</button>
+          ` : `
+            <a href="tel:${lead.phone || ''}" class="action-btn call" onclick="event.stopPropagation()">📞</a>
+            <button class="action-btn whatsapp open-partner-wa-btn" data-phone="${(lead.phone || '').replace(/\D/g, '')}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category_name || ''}" onclick="event.stopPropagation()" style="border:none;cursor:pointer;" title="Send WhatsApp">💬</button>
+          `}
           <button class="action-btn view" data-action="view" data-id="${lead.id}">👁</button>
           <button class="action-btn edit" data-action="edit" data-id="${lead.id}">✏️</button>
         </div>
       </div>
     `).join('');
+
+    // Secure Click-to-Call for Masked Leads (DC-CLICK-TO-CALL-001)
+    document.querySelectorAll('.btn-partner-click-to-call').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const leadId = (btn as HTMLElement).dataset.id;
+        if (!leadId) return;
+        if (!confirm('Initiate outbound call to customer via secure telephony bridge?')) return;
+        try {
+          const res = await apiService.post<any>(`/crm/unified-my-leads/${leadId}/click-to-call?role=partner`, {});
+          if (res && res.success) {
+            alert(`📞 Outbound call initiated!\nSession: ${res.call_session_id || '—'}\nDestination: ${res.destination_phone || '—'}`);
+          } else {
+            alert(`Call initiation failed: ${res?.detail || res?.message || 'Unknown error'}`);
+          }
+        } catch (err: any) {
+          alert(`Call failed: ${err.message || 'Error'}`);
+        }
+      });
+    });
 
     // Unified WhatsApp Send Modal (Scan WA Common Number / WhatsApp API)
     document.querySelectorAll('.open-partner-wa-btn').forEach(btn => {

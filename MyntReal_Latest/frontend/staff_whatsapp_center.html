@@ -2073,8 +2073,15 @@ async function loadAutomationsHub() {
 
     function renderStatusBadge(d) {
       if (!d) return '<span class="ei-chip" style="background:#f3f4f6;color:#6b7280">Pending</span>';
+      if (d.uncertain_count > 0 && d.sent_count > 0) {
+        return `<span class="ei-chip" style="background:#fffbeb;color:#b45309;font-weight:600" title="${d.label || ''}"><i class="fas fa-exclamation-triangle"></i> ${d.sent_count} Sent · ${d.uncertain_count} Uncertain</span>`;
+      }
+      if (d.status === 'UNCERTAIN' || (d.uncertain_count > 0 && !d.sent_count)) {
+        return `<span class="ei-chip" style="background:#fffbeb;color:#b45309;font-weight:600" title="${d.label || ''}"><i class="fas fa-exclamation-triangle"></i> Uncertain</span>`;
+      }
       if (d.status === 'EXECUTED' || d.status === 'SENT' || d.status === 'SUCCESS') {
-        return `<span class="ei-chip ei-contacts" style="background:#ecfdf5;color:#047857"><i class="fas fa-check-circle"></i> Executed</span>`;
+        const cntLbl = (d.count > 1 || d.sent_count > 1) ? `${d.sent_count || d.count} Sent` : 'Executed';
+        return `<span class="ei-chip ei-contacts" style="background:#ecfdf5;color:#047857"><i class="fas fa-check-circle"></i> ${cntLbl}</span>`;
       }
       if (d.status === 'PENDING') {
         return `<span class="ei-chip" style="background:#fef3c7;color:#92400e"><i class="fas fa-clock"></i> Scheduled</span>`;
@@ -2104,15 +2111,20 @@ async function loadAutomationsHub() {
         return `<span class="ei-chip ei-crm" style="margin:1px 2px"><i class="fas ${icon}"></i> ${r.name || r.identifier}</span>`;
       }).join('') || '<span class="ei-chip" style="background:#f3f4f6;color:#6b7280">System Contacts</span>';
 
-      const st = j.latest_stats || { total_messages: 1, sent_count: 1, failed_count: 0 };
+      const st = j.latest_stats || { total_messages: 1, sent_count: 1, failed_count: 0, uncertain_count: 0 };
       const totalVal = (st.total_messages || 0).toLocaleString('en-IN');
       const sentVal = (st.sent_count || 0).toLocaleString('en-IN');
       const failedVal = (st.failed_count || 0).toLocaleString('en-IN');
+      const uncertainVal = (st.uncertain_count || 0).toLocaleString('en-IN');
 
       const statsBadge = `
         <div style="font-size:11px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">
           <span class="ei-chip" style="background:#f3f4f6;color:#374151;font-weight:700" title="Total Target Recipients"><i class="fas fa-paper-plane" style="color:#6b7280;margin-right:2px"></i> ${totalVal} Total</span>
           <span class="ei-chip" style="background:#ecfdf5;color:#047857;font-weight:700" title="Successfully Dispatched / Sent"><i class="fas fa-check-circle" style="color:#059669;margin-right:2px"></i> ${sentVal} Sent</span>
+          ${st.uncertain_count > 0 
+            ? `<span class="ei-chip" style="background:#fffbeb;color:#b45309;font-weight:700" title="Uncertain Dispatches"><i class="fas fa-exclamation-triangle" style="color:#d97706;margin-right:2px"></i> ${uncertainVal} Uncertain</span>`
+            : ''
+          }
           ${st.failed_count > 0 
             ? `<span class="ei-chip" style="background:#fef2f2;color:#dc2626;font-weight:700" title="Failed Dispatches"><i class="fas fa-times-circle" style="color:#dc2626;margin-right:2px"></i> ${failedVal} Failed</span>`
             : `<span class="ei-chip" style="background:#f9fafb;color:#9ca3af;font-weight:600" title="Zero Failures"><i class="fas fa-check" style="color:#9ca3af;margin-right:2px"></i> 0 Failed</span>`

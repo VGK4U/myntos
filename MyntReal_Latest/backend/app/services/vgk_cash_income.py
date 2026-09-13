@@ -447,6 +447,15 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
         if l_date >= date(2026, 9, 8):
             is_vgk4u = True
 
+    # VGK Self-Business Points hook (every ₹5,00,000 DVR = 50,000 points)
+    try:
+        from app.services.vgk_self_business_points import process_incremental_self_business_points
+        lead_id = getattr(lead, 'id', None)
+        if lead_id and getattr(lead, 'associated_partner_id', None):
+            process_incremental_self_business_points(db, lead_id)
+    except Exception as _sbp_e:
+        logger.warning(f"[VGK-SELF-BUSINESS-PTS] Hook failed for lead {getattr(lead, 'id', None)}: {_sbp_e}")
+
     if is_vgk4u:
         return _generate_vgk4u_waterfall_income_drafts(db, lead)
     return _generate_legacy_cash_income_drafts(db, lead)
@@ -2273,6 +2282,34 @@ def mark_paid_cash_income(
     if pm == 'BANK' and not utr:
         return {'success': False, 'error': 'UTR is required for BANK payments'}
 
+    # PRE-FLIGHT PAYOUT CAPACITY GATE:
+    # A cash earning CANNOT be released as PAID unless the partner has sufficient points
+    # to cover the full applicable net payout (avail >= net_due).
+    _net_due_gate = entry.net_payout if (entry.net_payout and entry.net_payout > 0) else (Decimal(str(entry.commission_amount or 0)) * Decimal('0.90'))
+    _net_due_gate = Decimal(str(_net_due_gate))
+
+    if entry.partner_id and _net_due_gate > Decimal('0'):
+        from app.models.staff_accounts import OfficialPartner as _OP_Gate
+        _gate_partner = db.query(_OP_Gate).filter(_OP_Gate.id == entry.partner_id).with_for_update().first()
+        if _gate_partner:
+            _avail_points = _gate_partner.vgk_points_balance or Decimal('0')
+            if _avail_points < _net_due_gate:
+                logger.warning(
+                    f"[VGK-PAYOUT-GATE] Payout blocked for entry {entry.entry_number} (partner {_gate_partner.id}): "
+                    f"insufficient points capacity. Required: {float(_net_due_gate):.2f}, Available: {float(_avail_points):.2f}"
+                )
+                return {
+                    'success': False,
+                    'error': 'INSUFFICIENT_POINTS_FOR_PAYOUT',
+                    'message': (
+                        f"Partner has insufficient points capacity for payout. "
+                        f"Required: {float(_net_due_gate):,.2f}, Available: {float(_avail_points):,.2f}"
+                    ),
+                    'required_points': float(_net_due_gate),
+                    'available_points': float(_avail_points),
+                    'entry_number': entry.entry_number,
+                }
+
     # DC-VGK-NO-AUTO-JV-001: Auto JV posting removed — all entries are manual via SFMS Entries page.
 
     now = _get_ist()
@@ -2366,7 +2403,7 @@ def mark_paid_cash_income(
                     add_vgk_points_entry(
                         db, _partner.id,
                         points_debit=_debit,
-                        reason_code='INCOME_EARNED',
+                        reason_code='PAYOUT_DEBIT_V2',
                         reference_type='VGK_CASH_INCOME',
                         reference_id=entry.id,
                         notes=f'Points debited on payment confirmation — {entry.entry_number}',
@@ -2398,10 +2435,10 @@ def mark_paid_cash_income(
         except Exception as _pts_e:
             logger.warning(f'[VGK-MARK-PAID] Partner update failed (non-fatal): {_pts_e}')
 
-    # DC-VGK-FLOW-002: COMMISSION kind — debit points at PAID stage.
+    # DC-VGK-FLOW-002: COMMISSION & all earning kinds — debit points at PAID stage.
     # Wallet deduction (admin+TDS) already happened at Stage 1 Approve (release_cash_income).
     # Only debit if not already debited (guard against double-debit).
-    if entry.kind == 'COMMISSION':
+    if entry.kind in ('COMMISSION', 'SENIOR_COMM', 'EXTRA_COMMISSION', 'BRAND_COMMISSION'):
         try:
             from app.services.vgk_commission import add_vgk_points_entry as _avpe_paid
             from app.models.staff_accounts import OfficialPartner as _OP2
@@ -2409,14 +2446,15 @@ def mark_paid_cash_income(
             if _cp is not None:
                 _already_debited = entry.points_actually_debited or Decimal('0')
                 if _already_debited == Decimal('0'):
-                    _net_due = Decimal(str(entry.net_payout or 0))
+                    _net_due = entry.net_payout if (entry.net_payout and entry.net_payout > 0) else (Decimal(str(entry.commission_amount or 0)) * Decimal('0.90'))
+                    _net_due = Decimal(str(_net_due))
                     _avail   = _cp.vgk_points_balance or Decimal('0')
                     _debit   = min(_net_due, _avail) if _net_due > Decimal('0') else Decimal('0')
                     if _debit > Decimal('0'):
                         _avpe_paid(
                             db, _cp.id,
                             points_debit=_debit,
-                            reason_code='COMMISSION_ADJUSTMENT',
+                            reason_code='PAYOUT_DEBIT_V2',
                             reference_type='VGK_CASH_INCOME',
                             reference_id=entry.id,
                             notes=f'Net payout points debit at paid — {entry.entry_number}',
@@ -2424,12 +2462,13 @@ def mark_paid_cash_income(
                         entry.points_actually_debited = _debit
                         entry.updated_at = _get_ist()
                         logger.info(
-                            f'[VGK-MARK-PAID] COMMISSION points debit: '
+                            f'[VGK-MARK-PAID] {entry.kind} points debit: '
                             f'partner={_cp.id} entry={entry.entry_number} debit={float(_debit):.2f}'
                         )
         except Exception as _comm_pts_e:
-            logger.warning(f'[VGK-MARK-PAID] COMMISSION points debit failed (non-fatal): {_comm_pts_e}')
+            logger.warning(f'[VGK-MARK-PAID] {entry.kind} points debit failed (non-fatal): {_comm_pts_e}')
 
+    db.flush()
     return {
         'success':      True,
         'entry_number': entry.entry_number,
