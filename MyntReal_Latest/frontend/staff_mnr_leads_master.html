@@ -1702,6 +1702,82 @@ const TABS = [
   {key:'ground-source', label:'Ground Source Wise', icon:'fa-map-marker-alt', category:null, cls:'t-ground-source'}
 ];
 
+// ── DC Protocol: Hoisted Shared Constants & Helpers to prevent TDZ in Safari WebKit ──
+const JPEG_DL_TYPES = new Set(['adhar','passport_photo','signature','bank_book']);
+const SDOC_GROUPS = {
+  consumer:[
+    {group:'Identity & Ownership',docs:[
+      {type:'adhar',label:'Aadhaar Card'},
+      {type:'passport_photo',label:'Passport Photo'},
+      {type:'signature',label:'Signature Document'},
+      {type:'pan',label:'PAN Card'},
+      {type:'powerbill',label:'Electricity Bill (Powerbill)'},
+    ]},
+    {group:'Financial',docs:[
+      {type:'bank_book',label:'Bank Book'},
+      {type:'bank_statement',label:'Bank Statement'},
+      {type:'bank_submission_letter',label:'Bank Submission Letter',is_cdoc:true},
+      {type:'cibil_report',label:'CIBIL Credit Report'},
+      {type:'house_tax',label:'House Tax Receipt'},
+      {type:'bank_loan_application',label:'Bank Loan Application'},
+    ]},
+    {group:'Site & Technical',docs:[
+      {type:'roof_top_photo',label:'Roof Top Photo'},
+      {type:'geotagging_photo',label:'Geo Solar Photo'},
+      {type:'geo_location_photo',label:'Geo Location Photo'},
+      {type:'solar_rooftop_registration',label:'Solar Rooftop Registration'},
+      {type:'technical_installation_details',label:'Technical Installation Details'},
+    ]},
+    {group:'Application & Process',docs:[
+      {type:'quotation',label:'Quotation',generatable:true},
+      {type:'feasibility_letter',label:'Feasibility Letter'},
+      {type:'etoken',label:'Etoken'},
+      {type:'acknowledgement',label:'Acknowledgement'},
+      {type:'net_meter_agreement',label:'Net Meter Agreement'},
+      {type:'net_meter_application',label:'Net Meter Application'},
+    ]},
+    {group:'Certificates & Completion',docs:[
+      {type:'dcr_certificate',label:'DCR Certificate'},
+      {type:'invoice',label:'Invoice',generatable:true},
+      {type:'installation_certificate',label:'Installation Certificate'},
+      {type:'annexure_a',label:'Annexure-A',generatable:true},
+      {type:'annexure_c',label:'Annexure-C (Project Completion)',generatable:true},
+      {type:'annexure_c_technical',label:'Annexure-C (Technical Details)',generatable:true},
+      {type:'synchronisation_certificate',label:'Synchronisation Certificate',generatable:true},
+      {type:'commissioning_test_report',label:'Commissioning Test Report: Solar Project 3KW',generatable:true},
+      {type:'annexure_iv',label:'Annexure-IV Work Completion Report',generatable:true},
+    ]},
+  ],
+  co_applicant:[
+    {group:'Co-Applicant Documents',docs:[
+      {type:'co_adhar',label:'Aadhaar Card'},
+      {type:'co_pan',label:'PAN Card'},
+      {type:'co_bank_statement',label:'Bank Statement'},
+    ]},
+    {group:'Co-Applicant Generated Documents',docs:[
+      {type:'co_applicant_quotation',label:'Co-applicant Quotation',generatable:true},
+    ]},
+  ],
+};
+const SDOC_TOTAL_REQUIRED = Object.values(SDOC_GROUPS).reduce((s,gs)=>s+gs.reduce((s2,g)=>s2+g.docs.length,0),0);
+let _solarVendors = [];
+
+function _crm_esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function _commentCell(l){
+  const rc=(l.recent_comments||'').trim();
+  const snippet=rc.length>35?rc.slice(0,35)+'…':rc;
+  const cid=l.company_id;
+  const nm=(l.name||'Lead #'+l.id).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  return `<span style="font-size:10.5px;color:#374151;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle" title="${_crm_esc(rc)}">${_crm_esc(snippet||'—')}</span>
+<button onclick="openComments(${l.id},${cid},'${nm}')" title="View / add comments" style="background:none;border:none;cursor:pointer;color:#6b7280;padding:2px 4px;vertical-align:middle"><i class="fas fa-comment-dots" style="font-size:13px"></i></button>`;
+}
+function _vgkCell(l, companyId, name){
+  if(l.is_vgk_program){
+    return `<span style="display:inline-block;background:#d1fae5;color:#065f46;border-radius:10px;padding:2px 8px;font-size:10.5px;font-weight:700"><i class="fas fa-check-circle me-1"></i>VGK ✓</span>`;
+  }
+  return `<button onclick="registerVgkFromTable(${l.id},${companyId},'${name}')" style="padding:3px 8px;font-size:10.5px;font-weight:700;border:none;border-radius:6px;background:#fef3c7;color:#92400e;cursor:pointer" title="Register as VGK member"><i class="fas fa-plus-circle me-1"></i>Register</button>`;
+}
+
 // State
 let activeTab = 'solar';
 let currentPage = 1;
@@ -1744,12 +1820,14 @@ try {
           if (wasRestricted !== _isRestrictedFreelancer) {
             console.log('[DC-RESTRICT] Restricted freelancer status changed dynamically:', _isRestrictedFreelancer);
             localStorage.setItem('staff_user', JSON.stringify(profile));
-            buildTableHead();
-            if (activeTab === 'etc') {
-              loadEtcStudents(1);
-              loadEtcStageStats();
-            } else if (activeTab !== 'ground-source') {
-              loadData();
+            if (typeof buildTableHead === 'function') buildTableHead();
+            if (document.readyState !== 'loading') {
+              if (activeTab === 'etc') {
+                if (typeof loadEtcStudents === 'function') loadEtcStudents(1);
+                if (typeof loadEtcStageStats === 'function') loadEtcStageStats();
+              } else if (activeTab !== 'ground-source') {
+                if (typeof loadData === 'function') loadData();
+              }
             }
           }
         }
@@ -2287,7 +2365,7 @@ function renderLeadsTable(leads) {
           <td><span class="status-badge s-${st}">${STATUS_LABELS[st]||st}</span></td>
           <td style="font-size:10px;color:#6b7280;white-space:nowrap">${l.solar_pipeline_status_updated_at?fmtDateShort(l.solar_pipeline_status_updated_at):'—'}</td>
           ${_daysCell}
-          <td class="cmn-td" style="text-align:center;min-width:110px">${_commentCell(l)}</td>
+          <td class="cmn-td" style="text-align:center;min-width:110px">${typeof _commentCell==='function'?_commentCell(l):('<span>'+esc(l.recent_comments||'—')+'</span>')}</td>
         </tr>`;
       }
 
@@ -2314,7 +2392,7 @@ function renderLeadsTable(leads) {
         <td style="padding:3px 4px;min-width:110px"><input type="date" class="form-control" style="font-size:10.5px;padding:2px 5px;border:1px solid ${l.complete_date&&!['MR10025','MR10001'].includes(_viewerEmpCode)?'#d1d5db':'#e5e7eb'};border-radius:4px;min-width:105px;${l.complete_date&&!['MR10025','MR10001'].includes(_viewerEmpCode)?'background:#f9fafb;cursor:not-allowed;':''};" value="${l.complete_date?l.complete_date.slice(0,10):''}" ${l.complete_date&&!['MR10025','MR10001'].includes(_viewerEmpCode)?'disabled title="Locked — only Subash (MR10025) or VGK Mentor (MR10001) can modify"':'title="Complete Date"'} onchange="saveCompleteDate(${l.id},this.value)"></td>
         <td style="text-align:center;min-width:90px"><button onclick="openPanelSerialModal(${l.id})" style="padding:2px 7px;font-size:10px;border:1px solid #d1d5db;border-radius:5px;background:#f0fdf4;color:#065f46;cursor:pointer;font-weight:600" title="Add/edit panel serial numbers, brand, make, warranty"><i class="fas fa-solar-panel"></i> Panels</button></td>
         <td style="text-align:center;min-width:90px"><button onclick="openInverterModal(${l.id})" style="padding:2px 7px;font-size:10px;border:1px solid #d1d5db;border-radius:5px;background:#eff6ff;color:#1e40af;cursor:pointer;font-weight:600" title="Add/edit inverter serial number, brand, make, warranty"><i class="fas fa-bolt"></i> Inverter</button></td>
-        <td class="cmn-td" style="text-align:center;min-width:110px">${_commentCell(l)}</td>
+        <td class="cmn-td" style="text-align:center;min-width:110px">${typeof _commentCell==='function'?_commentCell(l):('<span>'+esc(l.recent_comments||'—')+'</span>')}</td>
         <td class="ic" data-lid="${l.id}" data-field="source" data-type="text" data-val="${esc(l.source||'')}">${l.source?`<span class="source-tag">${esc(l.source)}</span>`:'—'}</td>
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="telecaller_id" data-type="handler_staff" data-val="${l.telecaller_id||''}" data-name="${esc(l.telecaller_name||'')}">${handlerTele}</td>
         <td class="ic-handler" onclick="inlineHandlerEdit(this)" data-lid="${l.id}" data-field="field_staff_id" data-type="handler_showroom" data-val="${l.field_staff_id||l.associated_partner_id||''}" data-name="${esc(l.field_staff_name||l.associated_partner_name||'')}" data-valtype="${l.field_staff_id?'staff':l.associated_partner_id?'partner':''}">${handlerField}</td>
@@ -2339,13 +2417,13 @@ function renderLeadsTable(leads) {
         <td style="font-size:10.5px" class="masked">${l.co_applicant_bank_account?'••••'+String(l.co_applicant_bank_account).slice(-4):'—'}</td>
         <td style="font-size:10.5px">${esc(l.co_applicant_ifsc||'—')}</td>
         <td style="text-align:center">${docB}</td>
-        <td style="text-align:center;font-size:11px;font-weight:700">${(()=>{const u=l.solar_docs_uploaded||0;const t=SDOC_TOTAL_REQUIRED;const c=u>=t?'#16a34a':u>0?'#d97706':'#9ca3af';return `<span style="color:${c}" title="${u} uploaded of ${t} required">${u}/${t}</span>`;})()}</td>
+        <td style="text-align:center;font-size:11px;font-weight:700">${(()=>{const u=l.solar_docs_uploaded||0;const t=(typeof SDOC_TOTAL_REQUIRED!=='undefined'&&SDOC_TOTAL_REQUIRED)?SDOC_TOTAL_REQUIRED:27;const c=u>=t?'#16a34a':u>0?'#d97706':'#9ca3af';return `<span style="color:${c}" title="${u} uploaded of ${t} required">${u}/${t}</span>`;})()}</td>
         <td class="ic" data-lid="${l.id}" data-field="material_reach_date" data-type="date" data-val="${l.material_reach_date?l.material_reach_date.slice(0,10):''}" style="font-size:10.5px">${l.material_reach_date?fmtDateShort(l.material_reach_date):'—'}</td>
         <td>${assocB}</td>
         <td>${dv>0?`<span class="value-chip">₹${fmtVal(dv)}</span>`:'—'}</td>
         <td style="font-size:11px">${l.deal_value_received>0?`<span class="value-chip" style="background:#d1fae5;color:#065f46">₹${fmtVal(l.deal_value_received)}</span>`:'—'}</td>
         <td class="ic" data-lid="${l.id}" data-field="next_followup_date" data-type="date" data-val="${l.next_followup_date?l.next_followup_date.slice(0,10):''}" style="font-size:10.5px${isOverdue?';color:#dc2626;font-weight:700':''}">${nf}</td>
-        <td style="text-align:center;min-width:100px">${_vgkCell(l, l.company_id, _sdName)}</td>
+        <td style="text-align:center;min-width:100px">${typeof _vgkCell==='function'?_vgkCell(l, l.company_id, _sdName):'—'}</td>
         <td><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button></td>
       </tr>`;
     } else if (isB2B) {
@@ -2361,7 +2439,7 @@ function renderLeadsTable(leads) {
           <td>${phoneCell}</td>
           <td><span class="status-badge s-${st}">${STATUS_LABELS[st]||st}</span></td>
           <td>${bStageB}</td>
-          <td class="cmn-td" style="text-align:center;min-width:110px">${_commentCell(l)}</td>
+          <td class="cmn-td" style="text-align:center;min-width:110px">${typeof _commentCell==='function'?_commentCell(l):('<span>'+esc(l.recent_comments||'—')+'</span>')}</td>
         </tr>`;
       }
 
@@ -2398,7 +2476,7 @@ function renderLeadsTable(leads) {
           <td>${phoneCell}</td>
           <td><span class="status-badge s-${st}">${STATUS_LABELS[st]||st}</span></td>
           <td><span class="priority-badge p-${pr}">${pr}</span></td>
-          <td class="cmn-td" style="text-align:center;min-width:110px">${_commentCell(l)}</td>
+          <td class="cmn-td" style="text-align:center;min-width:110px">${typeof _commentCell==='function'?_commentCell(l):('<span>'+esc(l.recent_comments||'—')+'</span>')}</td>
         </tr>`;
       }
 
@@ -5339,64 +5417,7 @@ window.addEventListener('DOMContentLoaded',()=>{
 if(typeof StaffSidebar!=='undefined')StaffSidebar.init();
 if(typeof StaffHeader!=='undefined')StaffHeader.inject('Category Lead Master','fas fa-layer-group');
 
-// ── Solar Document Management ──────────────────────────────────────────────
-const JPEG_DL_TYPES=new Set(['adhar','passport_photo','signature','bank_book']);
-const SDOC_GROUPS={
-  consumer:[
-    {group:'Identity & Ownership',docs:[
-      {type:'adhar',label:'Aadhaar Card'},
-      {type:'passport_photo',label:'Passport Photo'},
-      {type:'signature',label:'Signature Document'},
-      {type:'pan',label:'PAN Card'},
-      {type:'powerbill',label:'Electricity Bill (Powerbill)'},
-    ]},
-    {group:'Financial',docs:[
-      {type:'bank_book',label:'Bank Book'},
-      {type:'bank_statement',label:'Bank Statement'},
-      {type:'bank_submission_letter',label:'Bank Submission Letter',is_cdoc:true},
-      {type:'cibil_report',label:'CIBIL Credit Report'},
-      {type:'house_tax',label:'House Tax Receipt'},
-      {type:'bank_loan_application',label:'Bank Loan Application'},
-    ]},
-    {group:'Site & Technical',docs:[
-      {type:'roof_top_photo',label:'Roof Top Photo'},
-      {type:'geotagging_photo',label:'Geo Solar Photo'},
-      {type:'geo_location_photo',label:'Geo Location Photo'},
-      {type:'solar_rooftop_registration',label:'Solar Rooftop Registration'},
-      {type:'technical_installation_details',label:'Technical Installation Details'},
-    ]},
-    {group:'Application & Process',docs:[
-      {type:'quotation',label:'Quotation',generatable:true},
-      {type:'feasibility_letter',label:'Feasibility Letter'},
-      {type:'etoken',label:'Etoken'},
-      {type:'acknowledgement',label:'Acknowledgement'},
-      {type:'net_meter_agreement',label:'Net Meter Agreement'},
-      {type:'net_meter_application',label:'Net Meter Application'},
-    ]},
-    {group:'Certificates & Completion',docs:[
-      {type:'dcr_certificate',label:'DCR Certificate'},
-      {type:'invoice',label:'Invoice',generatable:true},
-      {type:'installation_certificate',label:'Installation Certificate'},
-      {type:'annexure_a',label:'Annexure-A',generatable:true},
-      {type:'annexure_c',label:'Annexure-C (Project Completion)',generatable:true},
-      {type:'annexure_c_technical',label:'Annexure-C (Technical Details)',generatable:true},
-      {type:'synchronisation_certificate',label:'Synchronisation Certificate',generatable:true},
-      {type:'commissioning_test_report',label:'Commissioning Test Report: Solar Project 3KW',generatable:true},
-      {type:'annexure_iv',label:'Annexure-IV Work Completion Report',generatable:true},
-    ]},
-  ],
-  co_applicant:[
-    {group:'Co-Applicant Documents',docs:[
-      {type:'co_adhar',label:'Aadhaar Card'},
-      {type:'co_pan',label:'PAN Card'},
-      {type:'co_bank_statement',label:'Bank Statement'},
-    ]},
-    {group:'Co-Applicant Generated Documents',docs:[
-      {type:'co_applicant_quotation',label:'Co-applicant Quotation',generatable:true},
-    ]},
-  ],
-};
-const SDOC_TOTAL_REQUIRED = Object.values(SDOC_GROUPS).reduce((s,gs)=>s+gs.reduce((s2,g)=>s2+g.docs.length,0),0);
+// ── Solar Document Management (SDOC constants hoisted to top of script) ──────────
 let _sdocLeadId=null,_sdocLeadName='',_sdocCache=[],_sdocTab='consumer',_sdocBusy=false;
 let _sdocVendorId=null;  // carries selected vendor across all doc types for this lead
 function openSolarDocs(leadId,leadName){
@@ -5637,7 +5658,7 @@ async function deleteSdoc(docId,docLabel){
   }catch(e){showToast('Delete failed: '+e.message,'error');}
 }
 // ── Solar Document Generation ──────────────────────────────────────────────────
-let _genDocType='',_genDocLabel='',_solarVendors=[],_genBusy=false;
+let _genDocType='',_genDocLabel='',_genBusy=false;
 
 function normKw(s){
   if(!s)return'3KW';

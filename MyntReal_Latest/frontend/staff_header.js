@@ -657,6 +657,8 @@ window.StaffHeader = window.StaffHeader || {
     updateUserInfo: function() {
         const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
         const name = userData.full_name || 'Staff Member';
+        const role = userData.role_name || 'Employee';
+        const empId = userData.emp_code || userData.employee_code || '-';
         const staffType = userData.staff_type || 'MYNT_REAL';
         
         // DC Protocol: Bootstrap staff extension globally for WhatsApp signatures and routing
