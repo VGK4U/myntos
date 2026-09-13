@@ -237,6 +237,7 @@ def sync_browser_call_event(
         "failed": CallStateEnum.FAILED.value
     }
 
+    event_type = str(payload.get("event_type") or payload.get("event") or "").strip().lower()
     new_state = state_map.get(event_type)
     if new_state and not CallStateEnum(session.status).is_terminal():
         session.status = new_state
@@ -245,8 +246,14 @@ def sync_browser_call_event(
         elif new_state in (CallStateEnum.ENDED.value, CallStateEnum.REJECTED.value, CallStateEnum.BUSY.value):
             session.ended_at = get_indian_time()
             explicit_dur = payload.get("duration_seconds")
-            if explicit_dur is not None and int(explicit_dur) > 0:
-                session.duration_seconds = int(explicit_dur)
+            parsed_dur = 0
+            if explicit_dur is not None:
+                try:
+                    parsed_dur = int(explicit_dur)
+                except (ValueError, TypeError):
+                    parsed_dur = 0
+            if parsed_dur > 0:
+                session.duration_seconds = parsed_dur
             elif session.answered_at:
                 session.duration_seconds = int((session.ended_at - session.answered_at).total_seconds())
             elif session.started_at:
@@ -263,7 +270,7 @@ def sync_browser_call_event(
                     call_type_val = 'OUTGOING' if new_state == CallStateEnum.ENDED.value and (session.duration_seconds or 0) > 0 else 'MISSED'
                     if not existing_log:
                         db.add(StaffCallLog(
-                            company_id=session.company_id or company_id or 1,
+                            company_id=session.company_id or user_company_id or 1,
                             staff_id=session.operator_id,
                             phone_number=session.destination_number or '',
                             contact_name=session.operator_name or '',

@@ -48,6 +48,7 @@ class SoftphoneModal {
   private dragStartPointer: { x: number; y: number } = { x: 0, y: 0 };
   private dragStartPos: { x: number; y: number } = { x: 0, y: 0 };
   private hasInitializedPosition: boolean = false;
+  private lastNotifiedLeadId: number | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -152,6 +153,7 @@ class SoftphoneModal {
     this.currentOptions = null;
     this.currentSession = null;
     this.hasInitializedPosition = false;
+    this.lastNotifiedLeadId = null;
   }
 
   private handleTelephonyStateUpdate(session: TelephonyCallSession): void {
@@ -170,35 +172,42 @@ class SoftphoneModal {
       if (this.uiState === 'DIALER') {
         this.uiState = 'ACTIVE_FLOATING';
       }
-      if (this.currentOptions?.entityId && (this.currentOptions?.entityType === 'lead' || !this.currentOptions?.entityType)) {
-        void dialerService.notifyCallActive(Number(this.currentOptions.entityId));
-      }
-    } else if (session.state === 'ended') {
-      this.uiState = 'ENDED_SUMMARY';
-      const endedOptions = this.currentOptions;
-      const durationSecs = session.durationSeconds || 0;
-      void dialerService.clearCallActive();
-      if (endedOptions?.entityId) {
-        window.dispatchEvent(new CustomEvent('myntos:lead-call-ended', {
-          detail: {
-            leadId: endedOptions.entityId,
-            name: endedOptions.name,
-            phoneNumber: endedOptions.phoneNumber,
-            durationSeconds: durationSecs,
-            categoryName: endedOptions.categoryName,
-            status: endedOptions.status
-          }
-        }));
-      }
-      setTimeout(() => {
-        if (this.uiState === 'ENDED_SUMMARY') {
-          this.teardown();
+      const leadIdNum = Number(this.currentOptions?.entityId);
+      if (leadIdNum && (this.currentOptions?.entityType === 'lead' || !this.currentOptions?.entityType)) {
+        if (this.lastNotifiedLeadId !== leadIdNum) {
+          this.lastNotifiedLeadId = leadIdNum;
+          void dialerService.notifyCallActive(leadIdNum);
         }
-      }, 1600);
-    } else if (session.state === 'idle' && this.uiState !== 'DIALER') {
-      void dialerService.clearCallActive();
-      this.teardown();
-      return;
+      }
+    } else {
+      this.lastNotifiedLeadId = null;
+      if (session.state === 'ended') {
+        this.uiState = 'ENDED_SUMMARY';
+        const endedOptions = this.currentOptions;
+        const durationSecs = session.durationSeconds || 0;
+        void dialerService.clearCallActive();
+        if (endedOptions?.entityId) {
+          window.dispatchEvent(new CustomEvent('myntos:lead-call-ended', {
+            detail: {
+              leadId: endedOptions.entityId,
+              name: endedOptions.name,
+              phoneNumber: endedOptions.phoneNumber,
+              durationSeconds: durationSecs,
+              categoryName: endedOptions.categoryName,
+              status: endedOptions.status
+            }
+          }));
+        }
+        setTimeout(() => {
+          if (this.uiState === 'ENDED_SUMMARY') {
+            this.teardown();
+          }
+        }, 1600);
+      } else if (session.state === 'idle' && this.uiState !== 'DIALER') {
+        void dialerService.clearCallActive();
+        this.teardown();
+        return;
+      }
     }
 
     this.updateVisibility();

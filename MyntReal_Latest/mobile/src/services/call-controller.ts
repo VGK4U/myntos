@@ -38,6 +38,20 @@ class CallController {
       return;
     }
 
+    const rawDigits = cleanPhone.replace(/\D/g, '');
+    if (rawDigits.length < 10) {
+      console.warn('[CallController] Phone number is invalid (fewer than 10 digits):', cleanPhone);
+      if (typeof window !== 'undefined') {
+        const toastFn = (window as any).showToast;
+        if (typeof toastFn === 'function') {
+          toastFn(`Invalid phone number: ${cleanPhone}. At least 10 digits required.`, 'error');
+        } else if (typeof alert === 'function') {
+          alert(`Invalid phone number: ${cleanPhone}. At least 10 digits required.`);
+        }
+      }
+      return;
+    }
+
     console.log(
       `[CallController] Handling call intent for: ${cleanPhone} (${intent.name || 'Contact'}, entity: ${intent.entityType || 'lead'})`
     );

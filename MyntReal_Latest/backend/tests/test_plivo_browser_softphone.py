@@ -42,6 +42,11 @@ from app.services.telephony.factory import get_telephony_provider
 from app.services.telephony.flow_interpreter import CallFlowInterpreter
 from app.services.voip_call_service import VoIPCallService
 from app.core.config import settings
+from app.core.security import SecurityManager
+from app.models.call_tracking import StaffCallLog
+from app.api.v1.endpoints.staff_auth import get_current_staff_user
+from fastapi.testclient import TestClient
+from app.main import app
 
 
 class TestPlivoBrowserSoftphone(unittest.TestCase):
@@ -487,6 +492,117 @@ class TestPlivoBrowserSoftphone(unittest.TestCase):
         provider = get_telephony_provider("plivo")
         self.assertIsInstance(provider, PlivoTelephonyProvider)
         self.assertEqual(provider.provider_name, "plivo")
+
+    # 17. Browser Call Event 'connected' sets answered_at
+    def test_17_sync_browser_call_event_connected(self):
+        client = TestClient(app)
+        app.dependency_overrides[get_current_staff_user] = lambda: self.staff_1
+
+        session_id = f"sess_evt_conn_{int(time.time())}"
+        self.test_session_ids.append(session_id)
+        session = VoIPCallSession(
+            company_id=1,
+            call_session_id=session_id,
+            provider="plivo",
+            caller_id="+918031728899",
+            customer_phone="9876500001",
+            destination_number="9876500001",
+            operator_id=self.staff_1.id,
+            operator_user_ref=self.staff_1.emp_code,
+            direction="outbound",
+            status=CallStateEnum.RINGING.value
+        )
+        self.db.add(session)
+        self.db.commit()
+
+        try:
+            resp = client.post(
+                "/api/v1/telephony/plivo/browser/call-event",
+                json={"call_session_id": session_id, "event_type": "connected"}
+            )
+            self.assertEqual(resp.status_code, 200)
+            self.assertTrue(resp.json().get("success"))
+            self.assertEqual(resp.json().get("status"), CallStateEnum.CONNECTED.value)
+
+            self.db.expire_all()
+            fresh = self.db.query(VoIPCallSession).filter_by(call_session_id=session_id).first()
+            self.assertIsNotNone(fresh.answered_at)
+        finally:
+            app.dependency_overrides.pop(get_current_staff_user, None)
+
+    # 18. Browser Call Event 'ended' sets status, duration, and synchronizes StaffCallLog
+    def test_18_sync_browser_call_event_ended_with_staff_call_log(self):
+        client = TestClient(app)
+        app.dependency_overrides[get_current_staff_user] = lambda: self.staff_1
+
+        session_id = f"sess_evt_end_{int(time.time())}"
+        self.test_session_ids.append(session_id)
+        session = VoIPCallSession(
+            company_id=1,
+            call_session_id=session_id,
+            provider="plivo",
+            caller_id="+918031728899",
+            customer_phone="9876500001",
+            destination_number="9876500001",
+            operator_id=self.staff_1.id,
+            operator_user_ref=self.staff_1.emp_code,
+            direction="outbound",
+            status=CallStateEnum.CONNECTED.value
+        )
+        self.db.add(session)
+        self.db.commit()
+
+        try:
+            resp = client.post(
+                "/api/v1/telephony/plivo/browser/call-event",
+                json={"call_session_id": session_id, "event_type": "ended", "duration_seconds": 65}
+            )
+            self.assertEqual(resp.status_code, 200)
+            self.assertTrue(resp.json().get("success"))
+            self.assertEqual(resp.json().get("status"), CallStateEnum.ENDED.value)
+            self.assertEqual(resp.json().get("duration_seconds"), 65)
+
+            # Verify StaffCallLog synchronized
+            self.db.expire_all()
+            scl = self.db.query(StaffCallLog).filter_by(device_call_id=session_id).first()
+            self.assertIsNotNone(scl)
+            self.assertEqual(scl.duration_seconds, 65)
+            self.assertEqual(scl.call_type, "OUTGOING")
+            self.assertEqual(scl.source, "softphone")
+        finally:
+            app.dependency_overrides.pop(get_current_staff_user, None)
+
+    # 19. Browser Call Event with malformed duration handled gracefully
+    def test_19_sync_browser_call_event_malformed_duration(self):
+        client = TestClient(app)
+        app.dependency_overrides[get_current_staff_user] = lambda: self.staff_1
+
+        session_id = f"sess_evt_mal_{int(time.time())}"
+        self.test_session_ids.append(session_id)
+        session = VoIPCallSession(
+            company_id=1,
+            call_session_id=session_id,
+            provider="plivo",
+            caller_id="+918031728899",
+            customer_phone="9876500001",
+            destination_number="9876500001",
+            operator_id=self.staff_1.id,
+            operator_user_ref=self.staff_1.emp_code,
+            direction="outbound",
+            status=CallStateEnum.CONNECTED.value
+        )
+        self.db.add(session)
+        self.db.commit()
+
+        try:
+            resp = client.post(
+                "/api/v1/telephony/plivo/browser/call-event",
+                json={"call_session_id": session_id, "event_type": "ended", "duration_seconds": "corrupt_data"}
+            )
+            self.assertEqual(resp.status_code, 200)
+            self.assertTrue(resp.json().get("success"))
+        finally:
+            app.dependency_overrides.pop(get_current_staff_user, None)
 
 
 if __name__ == '__main__':

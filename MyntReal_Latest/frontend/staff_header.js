@@ -1034,8 +1034,17 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
 
     window.triggerLeadCall = function(phone, name, leadId) {
         if (!phone) return;
-        const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
-        if (!cleanPhone) return;
+        const rawDigits = String(phone).replace(/\D/g, '');
+        if (rawDigits.length < 10) {
+            console.warn('[triggerLeadCall] Phone number is invalid (fewer than 10 digits):', phone);
+            if (typeof window.showToast === 'function') {
+                window.showToast(`Invalid phone number: ${phone}. At least 10 digits required.`, 'error');
+            } else if (typeof alert === 'function') {
+                alert(`Invalid phone number: ${phone}. At least 10 digits required.`);
+            }
+            return;
+        }
+        const cleanPhone = rawDigits.slice(-10);
         const safeName = (name || 'Contact Lead').trim();
         window.openCallDialer({
             phoneNumber: cleanPhone,

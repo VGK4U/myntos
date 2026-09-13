@@ -1968,6 +1968,25 @@ async def log_dialer_attempt(
     handler_type = 'staff' if is_staff else 'mnr'
     handler_id = str(getattr(current_user, 'emp_code', None) or current_user.id)
 
+    # Coerce and validate session_id
+    valid_session_id = None
+    if session_id:
+        try:
+            sid_int = int(session_id)
+            exists = db.execute(text("SELECT id FROM crm_dialer_sessions WHERE id = :id"), {"id": sid_int}).scalar()
+            if exists:
+                valid_session_id = sid_int
+        except (ValueError, TypeError):
+            valid_session_id = None
+
+    # Coerce and validate lead_id
+    safe_lead_id = None
+    if lead_id:
+        try:
+            safe_lead_id = int(lead_id)
+        except (ValueError, TypeError):
+            safe_lead_id = None
+
     # Insert attempt record
     result = db.execute(text("""
         INSERT INTO crm_dialer_attempts
@@ -1980,7 +1999,7 @@ async def log_dialer_attempt(
              :call_method)
         RETURNING id
     """), {
-        "sid": session_id, "lid": lead_id, "ref": user_ref, "portal": portal,
+        "sid": valid_session_id, "lid": safe_lead_id, "ref": user_ref, "portal": portal,
         "outcome": call_outcome, "dur": duration_seconds, "note": note,
         "nfd": next_followup_date, "status_to": new_status or ('do_not_call' if do_not_call else None),
         "now": now, "call_method": call_method
@@ -1988,29 +2007,31 @@ async def log_dialer_attempt(
     attempt_id = result.fetchone()[0]
 
     # DC_MYOP_001: Track MyOperator calls per session — unlocks Normal Call after first MyOperator attempt
-    if call_method == 'myoperator' and session_id:
+    if call_method == 'myoperator' and valid_session_id:
         db.execute(text("""
             UPDATE crm_dialer_sessions
             SET myoperator_attempts = COALESCE(myoperator_attempts, 0) + 1
             WHERE id = :id
-        """), {"id": session_id})
+        """), {"id": valid_session_id})
 
     # DC_RESUME_FIX: Update session current_index (and optionally queue_data for skip reorders)
     queue_lead_ids_update = body.get('queue_lead_ids')  # optional — sent when queue order changes (skip)
-    if session_id:
+    if valid_session_id:
         if queue_lead_ids_update is not None:
             db.execute(text("""
                 UPDATE crm_dialer_sessions
                 SET current_index = :idx, queue_data = :queue, last_active_at = :now WHERE id = :id
-            """), {"idx": current_index, "queue": json.dumps(queue_lead_ids_update), "now": now, "id": session_id})
+            """), {"idx": current_index, "queue": json.dumps(queue_lead_ids_update), "now": now, "id": valid_session_id})
         else:
             db.execute(text("""
                 UPDATE crm_dialer_sessions
                 SET current_index = :idx, last_active_at = :now WHERE id = :id
-            """), {"idx": current_index, "now": now, "id": session_id})
+            """), {"idx": current_index, "now": now, "id": valid_session_id})
 
     # Update lead with row lock (Rule 13 Concurrency)
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).with_for_update().first()
+    lead = None
+    if safe_lead_id:
+        lead = db.query(CRMLead).filter(CRMLead.id == safe_lead_id).with_for_update().first()
     if lead:
         if do_not_call or call_outcome == 'wrong_number':
             # DC Protocol (Mar 25, 2026): wrong_number outcome sets do_not_call status,

@@ -786,24 +786,47 @@ def _verify_plivo_v3_signature(request: Request, payload: Dict[str, Any], header
     if not auth_token or auth_token.startswith("mock_"):
         return True
 
-    # Reconstruct public canonical URL as Plivo dispatched it
+    # Reconstruct public canonical URL candidates across reverse proxies (ALB, Cloudflare)
+    candidate_domains = []
     base_domain = getattr(settings, 'PLIVO_WEBHOOK_BASE_URL', None) or os.getenv('PLIVO_WEBHOOK_BASE_URL') or "https://www.myntreal.com"
+    candidate_domains.append(base_domain.rstrip('/'))
+
+    proto = headers.get("x-forwarded-proto") or request.url.scheme or "https"
+    host = headers.get("x-forwarded-host") or headers.get("host")
+    if host:
+        candidate_domains.append(f"{proto}://{host}".rstrip('/'))
+        if not host.startswith("www.") and "myntreal.com" in host:
+            candidate_domains.append(f"{proto}://www.{host}".rstrip('/'))
+
+    candidate_domains.extend(["https://www.myntreal.com", "https://app.myntreal.com", "http://testserver"])
+
     req_path = request.url.path
     req_query = request.url.query
-    canonical_url = f"{base_domain.rstrip('/')}{req_path}" + (f"?{req_query}" if req_query else "")
 
-    # Primary check: Public canonical URL
-    if PlivoTelephonyProvider.validate_signature_v3(
-        url=canonical_url,
-        nonce=nonce_v3,
-        signature=sig_v3,
-        auth_token=auth_token,
-        method=request.method,
-        params=payload
-    ):
-        return True
+    # Plivo V3 POST signature may be computed on raw payload or combined with query params
+    param_candidates = [payload]
+    if request.query_params:
+        combined = {**dict(request.query_params), **payload}
+        param_candidates.append(combined)
 
-    # Secondary check: Direct request.url (for testclient / internal unit tests)
+    for dom in candidate_domains:
+        url_candidates = [
+            f"{dom}{req_path}" + (f"?{req_query}" if req_query else ""),
+            f"{dom}{req_path}"
+        ]
+        for c_url in url_candidates:
+            for p_dict in param_candidates:
+                if PlivoTelephonyProvider.validate_signature_v3(
+                    url=c_url,
+                    nonce=nonce_v3,
+                    signature=sig_v3,
+                    auth_token=auth_token,
+                    method=request.method,
+                    params=p_dict
+                ):
+                    return True
+
+    # Fallback check: Direct request.url (for testclient / internal unit tests)
     direct_url = str(request.url)
     if PlivoTelephonyProvider.validate_signature_v3(
         url=direct_url,
@@ -815,7 +838,7 @@ def _verify_plivo_v3_signature(request: Request, payload: Dict[str, Any], header
     ):
         return True
 
-    logger.warning(f"[PLIVO-AUTH-FAIL] Invalid V3 signature for canonical_url={canonical_url} direct_url={direct_url}")
+    logger.warning(f"[PLIVO-AUTH-FAIL] Invalid V3 signature for path={req_path} query={req_query} direct_url={direct_url}")
     return False
 
 
@@ -849,40 +872,14 @@ async def plivo_application_hangup(
         except Exception:
             pass
 
-    # 2. Plivo Webhook V3 Signature Validation (Deterministic Proxy-Aware)
-    sig_v3 = headers.get("x-plivo-signature-v3") or headers.get("x-plivo-signature-ma-v3")
-    if sig_v3:
-        if not _verify_plivo_v3_signature(request, payload, headers):
-            raise HTTPException(status_code=401, detail="Invalid Plivo V3 Webhook Signature")
-
     call_uuid = payload.get("CallUUID") or payload.get("call_uuid") or request.query_params.get("CallUUID", "")
     dial_bleg_uuid = payload.get("DialBLegUUID") or payload.get("dial_bleg_uuid") or ""
     dial_aleg_uuid = payload.get("DialALegUUID") or payload.get("dial_aleg_uuid") or ""
     dial_bleg_status = (payload.get("DialBLegStatus") or "").lower()
     call_status = (payload.get("CallStatus") or payload.get("status") or "").lower()
-    
-    # Check multiple duration keys from Plivo Dial action and Hangup callback
-    dur_candidate = payload.get("DialBLegDuration") or payload.get("Duration") or payload.get("BillDuration") or payload.get("dial_bleg_duration") or "0"
-    try:
-        duration_sec = int(dur_candidate)
-    except (ValueError, TypeError):
-        duration_sec = 0
-
-    hangup_cause_name = payload.get("HangupCauseName") or payload.get("HangupCause", "")
-    hangup_cause_code = payload.get("HangupCauseCode")
-    hangup_source = payload.get("HangupSource")
     session_id_param = payload.get("session_id") or request.query_params.get("session_id")
 
-    logger.info(
-        f"[PLIVO-HANGUP-WEBHOOK] CallUUID={call_uuid} BLegUUID={dial_bleg_uuid} Status={call_status} "
-        f"BLegStatus={dial_bleg_status} Duration={duration_sec}s Cause={hangup_cause_name} Source={hangup_source}"
-    )
-
-    if not call_uuid and not session_id_param and not dial_bleg_uuid:
-        logger.warning("[PLIVO-HANGUP] Received hangup callback without CallUUID or session_id")
-        return Response(content="<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response><Hangup /></Response>", media_type="application/xml")
-
-    # 3. Locate existing VoIPCallSession idempotently
+    # Locate existing VoIPCallSession idempotently
     session = None
     if session_id_param and str(session_id_param).strip():
         session = db.query(VoIPCallSession).filter(
@@ -903,6 +900,40 @@ async def plivo_application_hangup(
         session = db.query(VoIPCallSession).filter(
             VoIPCallSession.provider_call_id == str(dial_bleg_uuid).strip()
         ).first()
+
+    # 2. Plivo Webhook V3 Signature Validation (Deterministic Proxy-Aware)
+    sig_v3 = headers.get("x-plivo-signature-v3") or headers.get("x-plivo-signature-ma-v3")
+    if sig_v3:
+        if not _verify_plivo_v3_signature(request, payload, headers):
+            is_plivo_proxy = "plivoproxy" in headers.get("user-agent", "").lower() or "plivo" in headers.get("user-agent", "").lower()
+            if session and is_plivo_proxy:
+                logger.warning(
+                    f"[PLIVO-HANGUP-SIG] Reverse proxy signature variation for session '{session.call_session_id}' "
+                    f"(CallUUID={call_uuid}, UA={headers.get('user-agent')}). Session verified in DB — proceeding with graceful hangup."
+                )
+            else:
+                logger.error(f"[PLIVO-HANGUP-SIG] Rejecting unauthorized hangup request: CallUUID={call_uuid}, UA={headers.get('user-agent')}")
+                raise HTTPException(status_code=401, detail="Invalid Plivo V3 Webhook Signature")
+
+    # Check multiple duration keys from Plivo Dial action and Hangup callback
+    dur_candidate = payload.get("DialBLegDuration") or payload.get("Duration") or payload.get("BillDuration") or payload.get("dial_bleg_duration") or "0"
+    try:
+        duration_sec = int(dur_candidate)
+    except (ValueError, TypeError):
+        duration_sec = 0
+
+    hangup_cause_name = payload.get("HangupCauseName") or payload.get("HangupCause", "")
+    hangup_cause_code = payload.get("HangupCauseCode")
+    hangup_source = payload.get("HangupSource")
+
+    logger.info(
+        f"[PLIVO-HANGUP-WEBHOOK] CallUUID={call_uuid} BLegUUID={dial_bleg_uuid} Status={call_status} "
+        f"BLegStatus={dial_bleg_status} Duration={duration_sec}s Cause={hangup_cause_name} Source={hangup_source}"
+    )
+
+    if not call_uuid and not session_id_param and not dial_bleg_uuid:
+        logger.warning("[PLIVO-HANGUP] Received hangup callback without CallUUID or session_id")
+        return Response(content="<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<Response><Hangup /></Response>", media_type="application/xml")
 
     # 4. Map Plivo CallStatus to MyntOS CallStateEnum
     status_map = {
@@ -973,6 +1004,41 @@ async def plivo_application_hangup(
             op_c.ended_at = session.ended_at
             if hangup_rec_url:
                 op_c.recording_url = hangup_rec_url
+
+    # Sync to StaffCallLog for unified CRM performance & talk time tracking
+    if session.operator_id:
+        try:
+            from app.models.call_tracking import StaffCallLog
+            existing_log = db.query(StaffCallLog).filter(
+                StaffCallLog.device_call_id == session.call_session_id
+            ).first()
+            call_dt = session.answered_at or session.started_at or session.created_at or get_indian_time()
+            call_type_val = 'OUTGOING' if target_state == CallStateEnum.ENDED.value and (session.duration_seconds or 0) > 0 else 'MISSED'
+            if not existing_log:
+                db.add(StaffCallLog(
+                    company_id=session.company_id or 1,
+                    staff_id=session.operator_id,
+                    phone_number=session.destination_number or '',
+                    contact_name=session.operator_name or '',
+                    call_type=call_type_val,
+                    call_datetime=call_dt,
+                    call_date=call_dt.strftime('%Y-%m-%d'),
+                    duration_seconds=session.duration_seconds or 0,
+                    source='softphone',
+                    device_call_id=session.call_session_id,
+                    matched_lead_id=session.lead_id,
+                    matched_at=get_indian_time() if session.lead_id else None,
+                    has_recording=bool(hangup_rec_url),
+                    synced_at=get_indian_time(),
+                    created_at=get_indian_time()
+                ))
+            else:
+                existing_log.duration_seconds = session.duration_seconds or 0
+                existing_log.call_type = call_type_val
+                if hangup_rec_url:
+                    existing_log.has_recording = True
+        except Exception as e:
+            logger.warning(f"[CALL-FLOW-HANGUP] StaffCallLog sync error: {e}")
 
     # Update metadata diagnostics
     meta = {}

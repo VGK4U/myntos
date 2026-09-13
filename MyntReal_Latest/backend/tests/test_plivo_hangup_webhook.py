@@ -103,6 +103,7 @@ class TestPlivoHangupWebhookV3(unittest.TestCase):
         self.assertIn("<Hangup", resp.text)
 
         # Verify DB session update
+        self.db.expire_all()
         fresh_session = self.db.query(VoIPCallSession).filter_by(call_session_id=self.session_id).first()
         self.assertEqual(fresh_session.status, CallStateEnum.ENDED.value)
         self.assertEqual(fresh_session.duration_seconds, 45)
@@ -118,10 +119,10 @@ class TestPlivoHangupWebhookV3(unittest.TestCase):
             "CallUUID": self.call_uuid,
             "CallStatus": "completed",
             "Duration": "50",
-            "HangupCauseName": "NORMAL_CLEARING"
+            "HangupCauseName": "NORMAL_CLEARING",
+            "HangupSource": "caller"
         }
 
-        # First callback
         resp1 = self.client.post("/api/v1/telephony/plivo/hangup", data=payload)
         self.assertEqual(resp1.status_code, 200)
         self.assertIn("application/xml", resp1.headers.get("content-type", ""))
@@ -132,6 +133,7 @@ class TestPlivoHangupWebhookV3(unittest.TestCase):
         self.assertIn("application/xml", resp2.headers.get("content-type", ""))
 
         # Verify DB session remains valid
+        self.db.expire_all()
         fresh = self.db.query(VoIPCallSession).filter_by(call_session_id=self.session_id).first()
         self.assertEqual(fresh.status, CallStateEnum.ENDED.value)
         self.assertEqual(fresh.duration_seconds, 50)
