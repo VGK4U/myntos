@@ -657,9 +657,19 @@ window.StaffHeader = window.StaffHeader || {
     updateUserInfo: function() {
         const userData = JSON.parse(localStorage.getItem('staff_user') || '{}');
         const name = userData.full_name || 'Staff Member';
-        const role = userData.role_name || 'Employee';
-        const empId = userData.emp_code || userData.employee_code || '-';
         const staffType = userData.staff_type || 'MYNT_REAL';
+        
+        // DC Protocol: Bootstrap staff extension globally for WhatsApp signatures and routing
+        const ext = userData.extension || userData.ext || (() => {
+            if (userData.emp_code) {
+                const m = String(userData.emp_code).match(/(\d{2,4})$/);
+                if (m) return m[1].replace(/^0+/, '') || m[1];
+            }
+            return null;
+        })();
+        if (ext) {
+            window.__STAFF_EXTENSION__ = ext;
+        }
         
         const isMnStaff = staffType === 'MN_STAFF' || userData.is_mn_staff;
         const isMnEmployee = staffType === 'MN_EMPLOYEE' || userData.is_mn_employee;
@@ -1162,6 +1172,21 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
                                 `📱 Mobile Call: ${msg.lead_name || 'Lead'}`,
                                 `${msg.lead_phone ? msg.lead_phone + ' · ' : ''}Call in progress on mobile`
                             );
+                            const modalEl = document.getElementById('leadDetailModal');
+                            const isShowing = modalEl && (modalEl.classList.contains('show') || modalEl.style.display === 'block');
+                            const isSame = String(window.currentLeadId || '') === String(msg.lead_id);
+
+                            const now = Date.now();
+                            if (window.__lastCallSyncLeadId === msg.lead_id && (now - (window.__lastCallSyncTime || 0) < 2000)) {
+                                return; // Throttle duplicate rapid syncs
+                            }
+                            window.__lastCallSyncLeadId = msg.lead_id;
+                            window.__lastCallSyncTime = now;
+
+                            if (isShowing && isSame) {
+                                return; // Already on screen!
+                            }
+
                             if (typeof window.viewLead === 'function') {
                                 window.viewLead(msg.lead_id, msg.company_id);
                             }
@@ -1176,6 +1201,21 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
                             `👁 Viewing: ${msg.lead_name || 'Lead #' + msg.lead_id}`,
                             `Opened on mobile app`
                         );
+                        const modalEl = document.getElementById('leadDetailModal');
+                        const isShowing = modalEl && (modalEl.classList.contains('show') || modalEl.style.display === 'block');
+                        const isSame = String(window.currentLeadId || '') === String(msg.lead_id);
+
+                        const now = Date.now();
+                        if (window.__lastViewSyncLeadId === msg.lead_id && (now - (window.__lastViewSyncTime || 0) < 2000)) {
+                            return; // Throttle duplicate rapid syncs
+                        }
+                        window.__lastViewSyncLeadId = msg.lead_id;
+                        window.__lastViewSyncTime = now;
+
+                        if (isShowing && isSame) {
+                            return; // Already on screen!
+                        }
+
                         if (typeof window.viewLead === 'function') {
                             window.viewLead(msg.lead_id, msg.company_id);
                         }

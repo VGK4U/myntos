@@ -506,7 +506,10 @@
               <div class="dc-field">
                 <label>Phone (Primary)</label>
                 <div style="display:flex;gap:6px;align-items:center;">
-                  <input type="tel" id="e-phone" placeholder="10-digit mobile" style="flex:1;">
+                  <input type="tel" id="e-phone" placeholder="10-digit mobile" style="flex:1;" readonly>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="unlockDialerPhone('e-phone')" title="Edit / Change Number" style="border-radius:8px;padding:5px 8px;font-size:12px;height:38px;">
+                    <i class="fas fa-edit"></i>
+                  </button>
                   <button type="button" class="btn btn-sm btn-outline-primary" onclick="doDialerRedial('primary')" title="Redial Primary Phone" style="border-radius:8px;padding:5px 10px;font-weight:700;font-size:12px;height:38px;display:inline-flex;align-items:center;gap:4px;">
                     <i class="fas fa-phone-alt"></i> Redial
                   </button>
@@ -516,7 +519,10 @@
               <div class="dc-field">
                 <label>Alternate Phone</label>
                 <div style="display:flex;gap:6px;align-items:center;">
-                  <input type="tel" id="e-alt-phone" placeholder="Alternate number" style="flex:1;">
+                  <input type="tel" id="e-alt-phone" placeholder="Alternate number" style="flex:1;" readonly>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" onclick="unlockDialerPhone('e-alt-phone')" title="Edit / Change Number" style="border-radius:8px;padding:5px 8px;font-size:12px;height:38px;">
+                    <i class="fas fa-edit"></i>
+                  </button>
                   <button type="button" class="btn btn-sm btn-outline-primary" onclick="doDialerRedial('alt')" title="Redial Alternate Phone" style="border-radius:8px;padding:5px 10px;font-weight:700;font-size:12px;height:38px;display:inline-flex;align-items:center;gap:4px;">
                     <i class="fas fa-phone-alt"></i> Redial
                   </button>
@@ -873,6 +879,27 @@
 <script src="/public/js/nda-enforcement.js"></script>
 <script>
 (async function() {
+  function maskPhone(p) {
+    if (!p || p === '—' || p === '-' || p === 'null') return '—';
+    const s = String(p).trim();
+    if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+    const digits = s.replace(/\D/g, '');
+    if (digits.length < 6) return s;
+    const clean10 = digits.slice(-10);
+    return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+  }
+  window.maskPhone = maskPhone;
+
+  window.unlockDialerPhone = function(id) {
+    const el = document.getElementById(id);
+    if (el) {
+      el.readOnly = false;
+      el.value = '';
+      el.placeholder = 'Enter new 10-digit mobile';
+      el.focus();
+    }
+  };
+
   // ── Sidebar/Header ──────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', async () => {
     if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
@@ -919,7 +946,7 @@
   async function _dcHandleCallState(msg) {
     if (msg.active && msg.lead_id) {
       document.getElementById('mob-lead-name').textContent =
-        '📱 ' + (msg.lead_name || 'Unknown Lead') + (msg.lead_phone ? ' · ' + msg.lead_phone : '');
+        '📱 ' + (msg.lead_name || 'Unknown Lead') + (msg.lead_phone ? ' · ' + maskPhone(msg.lead_phone) : '');
       const subParts = [];
       if (msg.lead_status) subParts.push(msg.lead_status.replace(/_/g,' ').toUpperCase());
       if (msg.lead_city) subParts.push(msg.lead_city);
@@ -1437,7 +1464,7 @@
       <div class="dc-dial-btns">
         ${lead.phone ? `
           <button class="dc-dial-btn" onclick="doDial('${escHtml(lead.phone)}', ${canonicalId}, 'plivo')" title="Dial via Softphone (WebRTC Cloud Call with Recording)">
-            <i class="fas fa-headset me-2"></i>Dial: ${escHtml(lead.phone)} (Softphone)
+            <i class="fas fa-headset me-2"></i>Dial: ${maskPhone(lead.phone)} (Softphone)
           </button>
           <div class="d-flex align-items-center justify-content-between mt-1 px-1">
             <button type="button" class="btn btn-link btn-sm text-decoration-none text-muted p-0" style="font-size:11px;" onclick="doDial('${escHtml(lead.phone)}', ${canonicalId}, 'mobile')" title="Open native phone dialer / SIM bypass">
@@ -1450,7 +1477,7 @@
         ` : ''}
         ${lead.alternate_phone ? `
           <button class="dc-dial-btn alt mt-2" onclick="doDial('${escHtml(lead.alternate_phone)}', ${canonicalId}, 'plivo')" title="Dial Alt via Softphone">
-            <i class="fas fa-headset me-2"></i>Alt: ${escHtml(lead.alternate_phone)} (Softphone)
+            <i class="fas fa-headset me-2"></i>Alt: ${maskPhone(lead.alternate_phone)} (Softphone)
           </button>
           <div class="d-flex align-items-center justify-content-between mt-1 px-1">
             <button type="button" class="btn btn-link btn-sm text-decoration-none text-muted p-0" style="font-size:11px;" onclick="doDial('${escHtml(lead.alternate_phone)}', ${canonicalId}, 'mobile')">
@@ -1607,13 +1634,30 @@
 
   let _dialerClickDebounce = false;
 
+  function checkAndClearStaleSoftphoneLatch() {
+    if (!window.PlivoSoftphone) return false;
+    const client = window.PlivoSoftphone.client;
+    const hasActualCall = client && (
+      client.callSession ||
+      (typeof client.isCallActive === 'function' && client.isCallActive())
+    );
+    if (!hasActualCall && (window.PlivoSoftphone._isDialInProgress || window.PlivoSoftphone.isCallActive)) {
+      console.warn('[DIALER] Clearing stale softphone latch (no active call session in SDK)');
+      window.PlivoSoftphone._isDialInProgress = false;
+      window.PlivoSoftphone.isCallActive = false;
+      return false;
+    }
+    return !!hasActualCall;
+  }
+
   window.doDialerRedial = function(which = 'auto') {
     if (_dialerClickDebounce) {
       console.warn('[DIALER] Redial click debounced');
       return;
     }
-    if (window.PlivoSoftphone && (window.PlivoSoftphone._isDialInProgress || window.PlivoSoftphone.isCallActive)) {
+    if (checkAndClearStaleSoftphoneLatch()) {
       console.warn('[DIALER] Redial ignored: call already in progress or active');
+      toast('⚠️ A call is already active. Please hang up before dialing another number.');
       return;
     }
     _dialerClickDebounce = true;
@@ -1622,13 +1666,13 @@
     const pInput = document.getElementById('e-phone');
     const aInput = document.getElementById('e-alt-phone');
     const lead = currentLead || {};
-    const pVal = (pInput?.value || lead.phone || '').trim();
-    const aVal = (aInput?.value || lead.alternate_phone || '').trim();
+    const rawP = pInput?.dataset?.rawPhone || lead.phone || (pInput?.value && !pInput.value.includes('•') ? pInput.value.trim() : '') || '';
+    const rawA = aInput?.dataset?.rawPhone || lead.alternate_phone || (aInput?.value && !aInput.value.includes('•') ? aInput.value.trim() : '') || '';
 
     let targetPhone = '';
-    if (which === 'primary') targetPhone = pVal;
-    else if (which === 'alt') targetPhone = aVal;
-    else targetPhone = lastDialedPhone || pVal || aVal;
+    if (which === 'primary') targetPhone = rawP;
+    else if (which === 'alt') targetPhone = rawA;
+    else targetPhone = lastDialedPhone || rawP || rawA;
 
     if (!targetPhone) {
       toast('⚠️ No phone number available to redial.');
@@ -1644,7 +1688,7 @@
       window.rchInvalidateCache();
     }
 
-    toast(`📞 Redialing ${targetPhone}...`);
+    toast(`📞 Redialing ${maskPhone(targetPhone)}...`);
     doRedialLead(targetPhone, currentLeadId || lead.id || lead.lead_id);
   };
 
@@ -1690,8 +1734,9 @@
       console.warn('[DIALER] Dial click debounced');
       return;
     }
-    if (window.PlivoSoftphone && (window.PlivoSoftphone._isDialInProgress || window.PlivoSoftphone.isCallActive)) {
+    if (checkAndClearStaleSoftphoneLatch()) {
       console.warn('[DIALER] Dial ignored: call already in progress or active');
+      toast('⚠️ A call is already active. Please hang up before dialing another number.');
       return;
     }
     _dialerClickDebounce = true;
@@ -1830,8 +1875,18 @@
 
   function populateEditForm(lead) {
     setVal('e-name', lead.name);
-    setVal('e-phone', lead.phone);
-    setVal('e-alt-phone', lead.alternate_phone);
+    const pEl = document.getElementById('e-phone');
+    if (pEl) {
+      pEl.value = maskPhone(lead.phone);
+      pEl.dataset.rawPhone = lead.phone || '';
+      pEl.readOnly = true;
+    }
+    const aEl = document.getElementById('e-alt-phone');
+    if (aEl) {
+      aEl.value = maskPhone(lead.alternate_phone);
+      aEl.dataset.rawPhone = lead.alternate_phone || '';
+      aEl.readOnly = true;
+    }
     _setStatusSafe('e-status', lead.status);
     setVal('e-priority', lead.priority || 'normal');
     setVal('e-category', lead.category_id);
@@ -1848,8 +1903,18 @@
   function populateEditFormFull(data) {
     setVal('e-name', data.name);
     setVal('e-email', data.email);
-    setVal('e-phone', data.phone);
-    setVal('e-alt-phone', data.alternate_phone);
+    const pEl = document.getElementById('e-phone');
+    if (pEl) {
+      pEl.value = maskPhone(data.phone);
+      pEl.dataset.rawPhone = data.phone || '';
+      pEl.readOnly = true;
+    }
+    const aEl = document.getElementById('e-alt-phone');
+    if (aEl) {
+      aEl.value = maskPhone(data.alternate_phone);
+      aEl.dataset.rawPhone = data.alternate_phone || '';
+      aEl.readOnly = true;
+    }
     setChk('e-phone-wa', data.phone_primary_whatsapp);
     setChk('e-alt-phone-wa', data.phone_secondary_whatsapp);
     _setStatusSafe('e-status', data.status);
@@ -1981,8 +2046,8 @@
         const dialedBadge = r.dialed_today
           ? `<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;">✅ Called Today</span>`
           : '';
-        const metaParts = [r.phone || '—'];
-        if (hasAlt) metaParts.push(`Alt: ${escHtml(r.alternate_phone)}`);
+        const metaParts = [maskPhone(r.phone) || '—'];
+        if (hasAlt) metaParts.push(`Alt: ${maskPhone(r.alternate_phone)}`);
         if (loc) metaParts.push(escHtml(loc));
         if (r.status) metaParts.push(`<span style="color:#374151">${escHtml(statusLabel)}</span>`);
         const dialFn = (!r.lead_id) ? 'dcDirectDial' : 'dcOverrideDial';
@@ -1993,7 +2058,7 @@
               <div class="dc-search-result-meta">${metaParts.join(' · ')}</div>
             </div>
             <div style="display:flex;gap:6px;flex-shrink:0">
-              ${r.phone ? `<button class="dc-search-result-dial" onclick="${dialFn}('${escHtml(r.phone)}', ${r.lead_id || 'null'}, '${escHtml(r.name)}')">📞 ${escHtml(r.phone)}</button>` : ''}
+              ${r.phone ? `<button class="dc-search-result-dial" onclick="${dialFn}('${escHtml(r.phone)}', ${r.lead_id || 'null'}, '${escHtml(r.name)}')">📞 ${maskPhone(r.phone)}</button>` : ''}
               ${hasAlt ? `<button class="dc-search-result-dial alt" onclick="${dialFn}('${escHtml(r.alternate_phone)}', ${r.lead_id || 'null'}, '${escHtml(r.name)}')">📞 Alt</button>` : ''}
               ${!r.phone && !hasAlt ? `<span style="color:#9ca3af;font-size:12px">No phone</span>` : ''}
             </div>
@@ -2092,12 +2157,23 @@
       const closeDateVal = document.getElementById('e-expected-close').value;
       const teleId = document.getElementById('e-tele-id').value;
 
+      const pIn = document.getElementById('e-phone');
+      let pVal = pIn?.value?.trim() || undefined;
+      if (pVal && (pVal.includes('•') || pVal.includes('*'))) {
+        pVal = pIn.dataset.rawPhone || lead.phone || undefined;
+      }
+      const aIn = document.getElementById('e-alt-phone');
+      let aVal = aIn?.value?.trim() || undefined;
+      if (aVal && (aVal.includes('•') || aVal.includes('*'))) {
+        aVal = aIn.dataset.rawPhone || lead.alternate_phone || undefined;
+      }
+
       const leadPayload = {
         name: document.getElementById('e-name').value || undefined,
         email: document.getElementById('e-email').value || undefined,
-        phone: document.getElementById('e-phone').value || undefined,
+        phone: pVal,
         phone_primary_whatsapp: document.getElementById('e-phone-wa').checked,
-        alternate_phone: document.getElementById('e-alt-phone').value || undefined,
+        alternate_phone: aVal,
         phone_secondary_whatsapp: document.getElementById('e-alt-phone-wa').checked,
         status: document.getElementById('e-status').value || undefined,
         priority: document.getElementById('e-priority').value || undefined,
@@ -2764,8 +2840,9 @@
         const cfg = RCH_TYPE[e.call_type] || RCH_TYPE['OUTGOING'];
         let rawName = (e.contact_name || e.name || '').trim();
         if (rawName.toLowerCase() === 'unknown') rawName = '';
-        const name = (rawName || e.phone || '').replace(/</g,'&lt;');
         const phone = e.phone || '';
+        const maskedPhone = maskPhone(phone);
+        const name = (rawName || maskedPhone || '').replace(/</g,'&lt;');
         const dur = rchFmtDur(e.duration_seconds || 0);
         const isCrm = (e.source === 'dialer' || e.source === 'softphone');
         const isVgk = (e.source === 'vgk' || e.source === 'vgk_member');
@@ -2782,20 +2859,20 @@
         }
         const outcomeBadge = e.call_outcome ? `<span style="background:#e0e7ff;color:#3730a3;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;text-transform:capitalize;">${escHtml(String(e.call_outcome).replace(/_/g, ' '))}</span>` : '';
         const dialBtn   = phone
-          ? `<button class="rch-dial-btn" onclick="rchDial('${phone.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}')" title="Call ${phone}">📞 Call</button>`
+          ? `<button class="rch-dial-btn" onclick="rchDial('${phone.replace(/'/g,"\\'")}','${name.replace(/'/g,"\\'")}')" title="Call ${maskedPhone}">📞 Call</button>`
           : '';
         return `
           <div class="rch-row">
             <div class="rch-icon" style="color:${cfg.color}">${cfg.icon}</div>
             <div class="rch-info">
-              <div class="rch-name">${name || phone}</div>
+              <div class="rch-name">${name || maskedPhone}</div>
               <div class="rch-meta">
                 <span class="rch-type-label" style="color:${cfg.color}">${cfg.label}</span>
                 ${sourceBadge}${outcomeBadge}
                 ${dur ? `<span>· ${dur}</span>` : ''}
                 <span>· ${rchFmtTime(e.dialed_at)}</span>
               </div>
-              ${phone && phone !== name ? `<div class="rch-phone">${phone}</div>` : ''}
+              ${phone && phone !== name ? `<div class="rch-phone">${maskedPhone}</div>` : ''}
             </div>
             <div>${dialBtn}</div>
           </div>`;

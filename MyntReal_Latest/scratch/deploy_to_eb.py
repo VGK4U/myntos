@@ -20,7 +20,7 @@ APP_NAME = 'vgk4u'
 ENV_NAME = 'Vgk4u-env'
 S3_BUCKET = 'elasticbeanstalk-ap-south-2-251714435676'
 TIMESTAMP = int(time.time() * 1000)
-VERSION_LABEL = f'v2.4.1-telephony-hardening-{TIMESTAMP}'
+VERSION_LABEL = f'v2.4.1-production-release-{TIMESTAMP}'
 S3_KEY = f'deployments/{VERSION_LABEL}.zip'
 ZIP_PATH = os.path.join(os.path.dirname(__file__), '..', 'deployment.zip')
 
@@ -40,7 +40,7 @@ eb.create_application_version(
         'S3Bucket': S3_BUCKET,
         'S3Key': S3_KEY
     },
-    Description='MyntOS v2.4.1: Softphone Disconnect Fix (Proxy-Aware Hangup V3 Signature & Session Fallback, Browser Event State Fix, Dial Number Digit Validation, and Active Sync Throttling)',
+    Description='MyntOS v2.4.1 Production Release: Universal Phone Masking across all portals, staff lead WhatsApp alert suppression, auto dialer latching & reservation takeover, follow-up IST date handling, and full 4-platform parity',
     AutoCreateApplication=False
 )
 print("Application version created.")

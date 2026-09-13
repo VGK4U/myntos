@@ -86,11 +86,18 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
     if not lead:
         return {"success": False, "reason": "lead_not_found"}
 
-    # DC-SELF-LEAD-001: Suppress group alert for self-generated / private staff leads
+    # DC-SELF-LEAD-001 / DC-STAFF-LEAD-001: Suppress group alert for staff-related / private / manually added staff leads
     lead_source = (getattr(lead, 'source', '') or '').strip()
-    if lead_source.lower() == 'self lead' or lead_source == SELF_LEAD_SOURCE_NAME or getattr(lead, 'source_ref_type', '') == 'self':
-        logger.info(f"[SCOUT-ALERT] Suppressing Sales Group notification for Self Lead #{lead.id} (Private Workflow)")
-        return {"success": True, "skipped": True, "reason": "self_lead_private"}
+    created_by_type = (getattr(lead, 'created_by_type', '') or '').strip().lower()
+    source_ref_type = (getattr(lead, 'source_ref_type', '') or '').strip().lower()
+    if (
+        created_by_type == 'staff'
+        or source_ref_type in ('staff', 'self', 'mn_staff')
+        or lead_source.lower() == 'self lead'
+        or lead_source == SELF_LEAD_SOURCE_NAME
+    ):
+        logger.info(f"[SCOUT-ALERT] Suppressing Sales Group notification for Staff-created / Private Lead #{lead.id} (Internal Staff Lead)")
+        return {"success": True, "skipped": True, "reason": "staff_lead_suppressed"}
 
     lead_name = (getattr(lead, 'first_name', '') or getattr(lead, 'name', '') or 'Valued Prospect').strip()
     phone = getattr(lead, 'phone', 'N/A') or 'N/A'

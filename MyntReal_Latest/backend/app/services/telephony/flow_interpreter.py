@@ -804,6 +804,19 @@ class CallFlowInterpreter:
                 and opt.get("destination_id") == staff_id
             ):
                 return str(opt.get("dtmf_key", "")).strip() or None
+
+        # Fallback: Derive extension from staff employee code when direct routing is unconfigured
+        if staff_id and db:
+            try:
+                emp = db.query(StaffEmployee).filter(StaffEmployee.id == staff_id).first()
+                if emp and emp.emp_code:
+                    m = re.search(r'(\d{2,4})$', str(emp.emp_code).strip())
+                    if m:
+                        digits = m.group(1).lstrip('0') or m.group(1)
+                        return digits
+            except Exception:
+                pass
+
         return None
 
     @classmethod

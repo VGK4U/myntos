@@ -285,13 +285,13 @@ def _acquire_lead_reservation(lead_id: int, user_ref: str, session_id: Optional[
         if existing_user_ref != str(user_ref) and existing_expires > now:
             return False, "Lead is currently in another agent's active preview", existing_expires
         
-        # Reserved by same user: extend
+        # Reserved by same user or previous reservation expired: takeover / extend
         new_expires = now + timedelta(seconds=ttl_seconds)
         db.execute(text("""
             UPDATE crm_dialer_reservations
-            SET session_id = :sid, portal = :portal, expires_at = :expires
-            WHERE lead_id = :lid AND user_ref = :ref
-        """), {"sid": session_id, "portal": portal, "expires": new_expires, "lid": lead_id, "ref": str(user_ref)})
+            SET session_id = :sid, user_ref = :ref, portal = :portal, reserved_at = :now, expires_at = :expires
+            WHERE lead_id = :lid
+        """), {"sid": session_id, "ref": str(user_ref), "portal": portal, "now": now, "expires": new_expires, "lid": lead_id})
         db.commit()
         return True, "Reservation extended", new_expires
 

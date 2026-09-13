@@ -836,8 +836,11 @@ export class StaffLeadsPage {
               </div>
               <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                 <div class="form-group" style="margin-bottom: 16px;">
-                  <label style="display: flex; align-items: center; gap: 6px; color: #a8c0d8; font-size: 13px; font-weight: 500; margin-bottom: 8px;">Mobile <span class="required" style="color: #f87171;">*</span></label>
-                  <input type="tel" id="leadMobile" class="form-input" placeholder="10-digit mobile" maxlength="10" inputmode="numeric" style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.08); background: rgba(13, 27, 42, 0.6) !important; color: #e6f1ff !important; font-size: 15px; box-sizing: border-box;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <label style="display: flex; align-items: center; gap: 6px; color: #a8c0d8; font-size: 13px; font-weight: 500; margin-bottom: 0;">Mobile <span class="required" style="color: #f87171;">*</span></label>
+                    <button type="button" id="leadMobileEditBtn" style="display: none; background: none; border: none; color: #10b981; font-size: 12px; cursor: pointer; padding: 0;">Change</button>
+                  </div>
+                  <input type="tel" id="leadMobile" class="form-input" placeholder="10-digit mobile" maxlength="20" style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.08); background: rgba(13, 27, 42, 0.6) !important; color: #e6f1ff !important; font-size: 15px; box-sizing: border-box;">
                 </div>
                 <div class="form-group" style="margin-bottom: 16px;">
                   <label style="display: flex; align-items: center; gap: 6px; color: #a8c0d8; font-size: 13px; font-weight: 500; margin-bottom: 8px;">Email</label>
@@ -891,8 +894,11 @@ export class StaffLeadsPage {
                 </div>
               </div>
               <div class="form-group" style="margin-bottom: 16px;">
-                <label style="display: flex; align-items: center; gap: 6px; color: #a8c0d8; font-size: 13px; font-weight: 500; margin-bottom: 8px;">Alternate Mobile</label>
-                <input type="tel" id="leadMobileSecondary" class="form-input" placeholder="Alternate number" maxlength="10" inputmode="numeric" style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.08); background: rgba(13, 27, 42, 0.6) !important; color: #e6f1ff !important; font-size: 15px; box-sizing: border-box;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                  <label style="display: flex; align-items: center; gap: 6px; color: #a8c0d8; font-size: 13px; font-weight: 500; margin-bottom: 0;">Alternate Mobile</label>
+                  <button type="button" id="leadMobileSecondaryEditBtn" style="display: none; background: none; border: none; color: #10b981; font-size: 12px; cursor: pointer; padding: 0;">Change</button>
+                </div>
+                <input type="tel" id="leadMobileSecondary" class="form-input" placeholder="Alternate number" maxlength="20" style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.08); background: rgba(13, 27, 42, 0.6) !important; color: #e6f1ff !important; font-size: 15px; box-sizing: border-box;">
               </div>
               <div class="form-group" style="margin-bottom: 8px;">
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -1394,6 +1400,28 @@ export class StaffLeadsPage {
     document.getElementById('closeFormModal')?.addEventListener('click', () => this.hideModal('leadFormModal'));
     document.getElementById('cancelFormBtn')?.addEventListener('click', () => this.hideModal('leadFormModal'));
     document.getElementById('saveLeadBtn')?.addEventListener('click', () => this.saveLead());
+    document.getElementById('leadMobileEditBtn')?.addEventListener('click', () => {
+      const inp = document.getElementById('leadMobile') as HTMLInputElement;
+      if (inp) {
+        inp.readOnly = false;
+        inp.value = '';
+        inp.dataset.rawPhone = '';
+        inp.focus();
+      }
+      const btn = document.getElementById('leadMobileEditBtn');
+      if (btn) btn.style.display = 'none';
+    });
+    document.getElementById('leadMobileSecondaryEditBtn')?.addEventListener('click', () => {
+      const inp = document.getElementById('leadMobileSecondary') as HTMLInputElement;
+      if (inp) {
+        inp.readOnly = false;
+        inp.value = '';
+        inp.dataset.rawPhone = '';
+        inp.focus();
+      }
+      const btn = document.getElementById('leadMobileSecondaryEditBtn');
+      if (btn) btn.style.display = 'none';
+    });
 
     document.getElementById('closeFollowupModal')?.addEventListener('click', () => this.hideModal('followupModal'));
     document.getElementById('cancelFollowupBtn')?.addEventListener('click', () => this.hideModal('followupModal'));
@@ -2291,7 +2319,7 @@ export class StaffLeadsPage {
     });
     document.getElementById('createTaskBtn')?.addEventListener('click', () => {
       (document.getElementById('taskTitle') as HTMLInputElement).value = `Follow-up: ${lead.name}`;
-      (document.getElementById('taskDescription') as HTMLTextAreaElement).value = `Lead: ${lead.name}\nMobile: ${lead.phone}\nCategory: ${lead.category}`;
+      (document.getElementById('taskDescription') as HTMLTextAreaElement).value = `Lead: ${lead.name}\nMobile: ${this.maskPhone(lead.phone || '')}\nCategory: ${lead.category}`;
       this.showModal('taskModal');
     });
     document.getElementById('deleteLeadBtn')?.addEventListener('click', () => this.showModal('deleteModal'));
@@ -2416,7 +2444,15 @@ export class StaffLeadsPage {
     this.selectedLead = null;
     (document.getElementById('leadFormTitle') as HTMLElement).textContent = 'Add New Lead';
     (document.getElementById('leadName') as HTMLInputElement).value = '';
-    (document.getElementById('leadMobile') as HTMLInputElement).value = '';
+    const pInp = document.getElementById('leadMobile') as HTMLInputElement;
+    if (pInp) { pInp.readOnly = false; pInp.value = ''; pInp.dataset.rawPhone = ''; }
+    const pBtn = document.getElementById('leadMobileEditBtn');
+    if (pBtn) pBtn.style.display = 'none';
+
+    const aInp = document.getElementById('leadMobileSecondary') as HTMLInputElement;
+    if (aInp) { aInp.readOnly = false; aInp.value = ''; aInp.dataset.rawPhone = ''; }
+    const aBtn = document.getElementById('leadMobileSecondaryEditBtn');
+    if (aBtn) aBtn.style.display = 'none';
     (document.getElementById('leadEmail') as HTMLInputElement).value = '';
     (document.getElementById('leadCategory') as HTMLSelectElement).value = '';
     (document.getElementById('leadPriority') as HTMLSelectElement).value = 'normal';
@@ -2529,7 +2565,25 @@ export class StaffLeadsPage {
     this.selectedLead = lead;
     (document.getElementById('leadFormTitle') as HTMLElement).textContent = 'Edit Lead';
     (document.getElementById('leadName') as HTMLInputElement).value = lead.name || '';
-    (document.getElementById('leadMobile') as HTMLInputElement).value = lead.phone || '';
+    const pInp = document.getElementById('leadMobile') as HTMLInputElement;
+    if (pInp) {
+      pInp.dataset.rawPhone = lead.phone || '';
+      pInp.value = lead.phone ? this.maskPhone(lead.phone) : '';
+      pInp.readOnly = !!lead.phone;
+    }
+    const pBtn = document.getElementById('leadMobileEditBtn');
+    if (pBtn) pBtn.style.display = lead.phone ? 'inline-block' : 'none';
+
+    const aInp = document.getElementById('leadMobileSecondary') as HTMLInputElement;
+    if (aInp) {
+      const altP = (lead as any).alternate_phone || '';
+      aInp.dataset.rawPhone = altP;
+      aInp.value = altP ? this.maskPhone(altP) : '';
+      aInp.readOnly = !!altP;
+    }
+    const aBtn = document.getElementById('leadMobileSecondaryEditBtn');
+    if (aBtn) aBtn.style.display = (lead as any).alternate_phone ? 'inline-block' : 'none';
+
     (document.getElementById('leadEmail') as HTMLInputElement).value = lead.email || '';
     (document.getElementById('leadCategory') as HTMLSelectElement).value = lead.category_id?.toString() || lead.category || '';
     (document.getElementById('leadPriority') as HTMLSelectElement).value = lead.priority?.toLowerCase() || 'normal';
@@ -2589,7 +2643,14 @@ export class StaffLeadsPage {
   private async saveLead(): Promise<void> {
     // Get all form field values
     const name = (document.getElementById('leadName') as HTMLInputElement).value.trim();
-    const phone = (document.getElementById('leadMobile') as HTMLInputElement).value.trim();
+    const pInp = document.getElementById('leadMobile') as HTMLInputElement;
+    let phone = pInp ? pInp.value.trim() : '';
+    if (phone.includes('•') || phone.includes('*')) {
+      phone = pInp.dataset.rawPhone || '';
+    } else {
+      phone = phone.replace(/\D/g, '').slice(-10);
+    }
+
     const email = (document.getElementById('leadEmail') as HTMLInputElement).value.trim();
     const categoryId = (document.getElementById('leadCategory') as HTMLSelectElement).value;
     const priority = (document.getElementById('leadPriority') as HTMLSelectElement).value;
@@ -2597,7 +2658,14 @@ export class StaffLeadsPage {
     const address = (document.getElementById('leadAddress') as HTMLTextAreaElement)?.value?.trim();
     const description = (document.getElementById('leadNotes') as HTMLTextAreaElement)?.value?.trim();
     const phonePrimaryWhatsapp = (document.getElementById('leadPhoneWhatsapp') as HTMLInputElement)?.checked;
-    const alternatePhone = (document.getElementById('leadMobileSecondary') as HTMLInputElement)?.value?.trim();
+
+    const aInp = document.getElementById('leadMobileSecondary') as HTMLInputElement;
+    let alternatePhone = aInp ? aInp.value.trim() : '';
+    if (alternatePhone.includes('•') || alternatePhone.includes('*')) {
+      alternatePhone = aInp.dataset.rawPhone || '';
+    } else {
+      alternatePhone = alternatePhone.replace(/\D/g, '').slice(-10);
+    }
     const phoneSecondaryWhatsapp = (document.getElementById('leadPhoneSecondaryWhatsapp') as HTMLInputElement)?.checked;
     const requirements = (document.getElementById('leadRequirements') as HTMLTextAreaElement)?.value?.trim();
     const lookingFor = (document.getElementById('leadLookingFor') as HTMLInputElement)?.value?.trim();

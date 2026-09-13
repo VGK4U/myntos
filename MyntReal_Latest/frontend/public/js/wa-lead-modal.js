@@ -82,7 +82,10 @@
     /* recipient phone */
     '<div style="margin-bottom:12px">',
     '<label style="font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Recipient Mobile Number</label>',
-    '<input type="tel" id="_lwaPhoneInp" style="width:100%;font-size:13px;border:1px solid #e5e7eb;border-radius:7px;padding:7px 10px;box-sizing:border-box" placeholder="10-digit mobile number">',
+    '<div style="display:flex;gap:6px">',
+    '<input type="tel" id="_lwaPhoneInp" style="flex:1;font-size:13px;border:1px solid #e5e7eb;border-radius:7px;padding:7px 10px;box-sizing:border-box" placeholder="10-digit mobile number">',
+    '<button type="button" id="_lwaPhoneEditBtn" onclick="window._lwaUnlockPhone()" style="display:none;padding:7px 12px;border:1px solid #d1d5db;border-radius:7px;background:#f9fafb;color:#374151;font-size:12px;cursor:pointer" title="Change Number"><i class="fas fa-edit"></i></button>',
+    '</div>',
     '</div>',
 
     /* message */
@@ -267,7 +270,10 @@
   /* ── Send dispatch ───────────────────────────────────────────────────────── */
   function _doSend() {
     var phoneInput = document.getElementById('_lwaPhoneInp');
-    var targetPhone = (phoneInput ? phoneInput.value : '') || _s.phone || '';
+    var rawPhone = (phoneInput && (phoneInput.value.includes('•') || phoneInput.value.includes('*')))
+        ? (phoneInput.dataset.rawPhone || '')
+        : (phoneInput ? phoneInput.value : '');
+    var targetPhone = rawPhone || _s.phone || '';
     var targetNum = targetPhone.replace(/\D/g, '').slice(-10);
 
     if (!targetNum || targetNum.length < 10) {
@@ -402,6 +408,10 @@
         var u = parsed.user || parsed.employee || parsed;
         var name = u.full_name || u.name || (u.first_name ? u.first_name + ' ' + (u.last_name || '') : '') || 'Staff';
         var ext = u.extension || u.ext || (typeof window !== 'undefined' ? window.__STAFF_EXTENSION__ : null);
+        if (!ext && u.emp_code) {
+          var m = String(u.emp_code).match(/(\d{2,4})$/);
+          if (m) ext = m[1].replace(/^0+/, '') || m[1];
+        }
         if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
           return '\n\nRegards,\n' + name + '\n📞 +91 85858 52738 | +91 8897797667\nExt: ' + String(ext).trim();
         }
@@ -467,7 +477,10 @@
   /* ── Direct Web WhatsApp & Copy Actions ─────────────────────────────────── */
   function _directWeb() {
     var phoneInput = document.getElementById('_lwaPhoneInp');
-    var targetPhone = (phoneInput ? phoneInput.value : '') || _s.phone || '';
+    var rawPhone = (phoneInput && (phoneInput.value.includes('•') || phoneInput.value.includes('*')))
+        ? (phoneInput.dataset.rawPhone || '')
+        : (phoneInput ? phoneInput.value : '');
+    var targetPhone = rawPhone || _s.phone || '';
     var cleanP = targetPhone.replace(/\D/g, '').slice(-10);
     var msg = document.getElementById('_lwaMsg') ? document.getElementById('_lwaMsg').value : '';
     var url = cleanP ? ('https://wa.me/91' + cleanP + '?text=' + encodeURIComponent(msg)) : ('https://wa.me/?text=' + encodeURIComponent(msg));
@@ -485,6 +498,18 @@
     });
   }
 
+  function _maskPhone(p) {
+    if (!p) return '-';
+    var digits = String(p).replace(/\D/g, '');
+    if (digits.length >= 10) {
+      return '+91 ' + digits.slice(-10, -8) + '••••' + digits.slice(-4);
+    }
+    if (digits.length >= 4) {
+      return '••••' + digits.slice(-4);
+    }
+    return '••••';
+  }
+
   /* ── Expose window functions (called from inline HTML) ───────────────────── */
   function _bindGlobals() {
     window._lwaClose      = function() { document.getElementById('_lwaModal').style.display = 'none'; };
@@ -496,6 +521,17 @@
     window._lwaDirectWeb  = function() { _directWeb(); };
     window._lwaCopyText   = function() { _copyText(); };
     window._lwaApplyQuick = function(a) { _applyQuick(a); };
+    window._lwaUnlockPhone = function() {
+      var _inp = document.getElementById('_lwaPhoneInp');
+      if (_inp) {
+        _inp.readOnly = false;
+        _inp.value = '';
+        _inp.dataset.rawPhone = '';
+        _inp.focus();
+      }
+      var _ebtn = document.getElementById('_lwaPhoneEditBtn');
+      if (_ebtn) _ebtn.style.display = 'none';
+    };
   }
 
   /* ── Public entry point ──────────────────────────────────────────────────── */
@@ -506,9 +542,16 @@
     _s = { leadId: leadId, phone: cleanP, name: name, companyId: companyId, mode: 'scanned', tpls: [], bodyTpl: '', context: context || '' };
 
     /* reset UI */
-    document.getElementById('_lwaSub').textContent     = (name || 'Contact') + (cleanP ? (' · ' + cleanP) : '');
-    if (document.getElementById('_lwaPhoneInp')) {
-      document.getElementById('_lwaPhoneInp').value = cleanP;
+    document.getElementById('_lwaSub').textContent     = (name || 'Contact') + (cleanP ? (' · ' + _maskPhone(cleanP)) : '');
+    var _inp = document.getElementById('_lwaPhoneInp');
+    var _ebtn = document.getElementById('_lwaPhoneEditBtn');
+    if (_inp) {
+      _inp.dataset.rawPhone = cleanP;
+      _inp.value = cleanP ? _maskPhone(cleanP) : '';
+      _inp.readOnly = !!cleanP;
+    }
+    if (_ebtn) {
+      _ebtn.style.display = cleanP ? 'inline-block' : 'none';
     }
     document.getElementById('_lwaSeg').value           = '';
     document.getElementById('_lwaCat').value           = '';

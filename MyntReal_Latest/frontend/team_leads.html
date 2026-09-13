@@ -756,6 +756,9 @@
                                 <label class="form-label">Phone (Primary)</label>
                                 <div class="input-group">
                                     <input type="tel" class="form-control" id="leadPhone" placeholder="10-digit phone">
+                                    <button type="button" class="btn btn-outline-secondary" id="leadPhoneEditBtn" onclick="unlockLeadPhone('leadPhone')" title="Change Number" style="display:none;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
                                     <button type="button" class="btn btn-outline-success btn-whatsapp" onclick="sendWhatsApp('leadPhone')" title="Send WhatsApp">
                                         <i class="fab fa-whatsapp"></i>
                                     </button>
@@ -774,6 +777,9 @@
                                 <label class="form-label">Phone (Secondary)</label>
                                 <div class="input-group">
                                     <input type="tel" class="form-control" id="leadAlternatePhone" placeholder="Alternate phone">
+                                    <button type="button" class="btn btn-outline-secondary" id="leadAltPhoneEditBtn" onclick="unlockLeadPhone('leadAlternatePhone')" title="Change Number" style="display:none;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
                                     <button type="button" class="btn btn-outline-success btn-whatsapp" onclick="sendWhatsApp('leadAlternatePhone')" title="Send WhatsApp">
                                         <i class="fab fa-whatsapp"></i>
                                     </button>
@@ -1703,6 +1709,36 @@
             is_leader: false,
             staff_type: ''
         };
+
+        function maskPhone(p) {
+            if (!p) return '-';
+            const digits = String(p).replace(/\D/g, '');
+            if (digits.length >= 10) {
+                const last4 = digits.slice(-4);
+                const first2 = digits.slice(-10, -8);
+                const prefix = digits.length > 10 ? `+${digits.slice(0, -10)} ` : '+91 ';
+                return `${prefix}${first2}••••${last4}`;
+            }
+            if (digits.length >= 4) {
+                return '••••' + digits.slice(-4);
+            }
+            return '••••';
+        }
+
+        function unlockLeadPhone(fieldId) {
+            const input = document.getElementById(fieldId);
+            if (input) {
+                input.readOnly = false;
+                input.value = '';
+                input.dataset.rawPhone = '';
+                input.focus();
+                const btnId = fieldId === 'leadPhone' ? 'leadPhoneEditBtn' : 'leadAltPhoneEditBtn';
+                const btn = document.getElementById(btnId);
+                if (btn) btn.style.display = 'none';
+            }
+        }
+        window.unlockLeadPhone = unlockLeadPhone;
+        window.maskPhone = maskPhone;
         
         // Bulk edit state
         let bulkEditMode = false;
@@ -3106,7 +3142,7 @@
                     <td>
                         <div class="lead-name">${(lead.name && lead.name !== 'Unknown') ? lead.name : '<span style="color:#9ca3af;font-style:italic;font-weight:400;">Unknown</span>'}</div>
                         <div class="lead-contact">
-                            ${lead.email || ''} ${lead.phone ? '| ' + lead.phone : ''}
+                            ${lead.email || ''} ${lead.phone ? '| ' + maskPhone(lead.phone) : ''}
                         </div>
                     </td>
                     <td>${lead.category_name || '-'}</td>
@@ -3284,6 +3320,14 @@
             if (typeof fieldStaffSearch !== 'undefined' && fieldStaffSearch) fieldStaffSearch.clearSelection();
             if (typeof partnerSearch !== 'undefined' && partnerSearch) partnerSearch.clearSelection();
             if (typeof primaryOwnerSearch !== 'undefined' && primaryOwnerSearch) primaryOwnerSearch.clearSelection();
+            const pInput = document.getElementById('leadPhone');
+            if (pInput) { pInput.readOnly = false; pInput.dataset.rawPhone = ''; }
+            const aInput = document.getElementById('leadAlternatePhone');
+            if (aInput) { aInput.readOnly = false; aInput.dataset.rawPhone = ''; }
+            const pBtn = document.getElementById('leadPhoneEditBtn');
+            if (pBtn) pBtn.style.display = 'none';
+            const aBtn = document.getElementById('leadAltPhoneEditBtn');
+            if (aBtn) aBtn.style.display = 'none';
             resetInlineTaskForm();
             // Reset and hide revenue section for new leads
             toggleLeadRevenueSection('new');
@@ -3432,9 +3476,25 @@
                     document.getElementById('leadId').value = lead.id;
                     document.getElementById('leadName').value = lead.name;
                     document.getElementById('leadEmail').value = lead.email || '';
-                    document.getElementById('leadPhone').value = lead.phone || '';
+                    const pInp = document.getElementById('leadPhone');
+                    if (pInp) {
+                        pInp.dataset.rawPhone = lead.phone || '';
+                        pInp.value = lead.phone ? maskPhone(lead.phone) : '';
+                        pInp.readOnly = !!lead.phone;
+                    }
+                    const pBtn = document.getElementById('leadPhoneEditBtn');
+                    if (pBtn) pBtn.style.display = lead.phone ? 'inline-block' : 'none';
+
                     document.getElementById('leadPhonePrimaryWhatsapp').checked = lead.phone_primary_whatsapp || false;
-                    document.getElementById('leadAlternatePhone').value = lead.alternate_phone || '';
+
+                    const aInp = document.getElementById('leadAlternatePhone');
+                    if (aInp) {
+                        aInp.dataset.rawPhone = lead.alternate_phone || '';
+                        aInp.value = lead.alternate_phone ? maskPhone(lead.alternate_phone) : '';
+                        aInp.readOnly = !!lead.alternate_phone;
+                    }
+                    const aBtn = document.getElementById('leadAltPhoneEditBtn');
+                    if (aBtn) aBtn.style.display = lead.alternate_phone ? 'inline-block' : 'none';
                     document.getElementById('leadPhoneSecondaryWhatsapp').checked = lead.phone_secondary_whatsapp || false;
                     // DC Protocol (Mar 2026): Reload categories for lead's specific company before setting value
                     await loadCategoriesForCompany(effectiveCompanyId);
@@ -3566,12 +3626,16 @@
         }
         
         function sendWhatsApp(fieldId) {
-            const phone = document.getElementById(fieldId).value.replace(/\D/g, '');
+            const inputEl = document.getElementById(fieldId);
+            const rawVal = (inputEl?.value && (inputEl.value.includes('•') || inputEl.value.includes('*')))
+                ? (inputEl.dataset.rawPhone || '')
+                : (inputEl?.value || '');
+            const phone = rawVal.replace(/\D/g, '');
             if (!phone || phone.length < 10) {
                 showToast('Please enter a valid phone number first', 'warning');
                 return;
             }
-            const name = document.getElementById('leadName')?.value || phone;
+            const name = document.getElementById('leadName')?.value || 'Customer';
             if (typeof openLeadWAModal === 'function' && currentLeadId) {
                 openLeadWAModal(currentLeadId, phone.slice(-10), name, selectedLeadCompanyId);
             } else {
@@ -3580,7 +3644,9 @@
         }
 
         function _qaWaSend() {
-            const phone = (document.getElementById('detailPhone')?.textContent || '').replace(/\D/g, '');
+            const el = document.getElementById('detailPhone');
+            const rawVal = el?.dataset?.rawPhone || (el?.textContent || '').replace(/[^\d+]/g, '');
+            const phone = rawVal.replace(/\D/g, '');
             const name  = (document.getElementById('detailLeadName')?.textContent || '').trim();
             if (!phone || phone.length < 10) {
                 if (typeof showToast === 'function') showToast('No valid phone number for this lead', 'warning');
@@ -3819,10 +3885,16 @@
                 return false;
             }
             
-            const phone = document.getElementById('leadPhone').value.trim();
-            const altPhone = document.getElementById('leadAlternatePhone').value.trim();
-            const phoneClean = phone.replace(/\D/g, '');
-            const altPhoneClean = altPhone.replace(/\D/g, '');
+            const pInputEl = document.getElementById('leadPhone');
+            const aInputEl = document.getElementById('leadAlternatePhone');
+            const phone = pInputEl ? pInputEl.value.trim() : '';
+            const altPhone = aInputEl ? aInputEl.value.trim() : '';
+            const phoneClean = (phone.includes('•') || phone.includes('*'))
+                ? ((pInputEl?.dataset?.rawPhone || '').replace(/\D/g, ''))
+                : phone.replace(/\D/g, '');
+            const altPhoneClean = (altPhone.includes('•') || altPhone.includes('*'))
+                ? ((aInputEl?.dataset?.rawPhone || '').replace(/\D/g, ''))
+                : altPhone.replace(/\D/g, '');
             
             if (!phoneClean && !altPhoneClean) {
                 showToast('At least one phone number is required (Primary or Secondary)', 'error');
@@ -3890,12 +3962,28 @@
                 }
             }
             
+            const pInput = document.getElementById('leadPhone');
+            let pVal = pInput ? pInput.value.trim() : null;
+            if (pVal && (pVal.includes('•') || pVal.includes('*'))) {
+                pVal = pInput.dataset.rawPhone || null;
+            } else if (pVal) {
+                pVal = pVal.replace(/\D/g, '').slice(-10) || null;
+            }
+
+            const aInput = document.getElementById('leadAlternatePhone');
+            let aVal = aInput ? aInput.value.trim() : null;
+            if (aVal && (aVal.includes('•') || aVal.includes('*'))) {
+                aVal = aInput.dataset.rawPhone || null;
+            } else if (aVal) {
+                aVal = aVal.replace(/\D/g, '').slice(-10) || null;
+            }
+
             const leadData = {
                 name: document.getElementById('leadName').value,
                 email: document.getElementById('leadEmail').value || null,
-                phone: document.getElementById('leadPhone').value || null,
+                phone: pVal,
                 phone_primary_whatsapp: document.getElementById('leadPhonePrimaryWhatsapp').checked,
-                alternate_phone: document.getElementById('leadAlternatePhone').value || null,
+                alternate_phone: aVal,
                 phone_secondary_whatsapp: document.getElementById('leadPhoneSecondaryWhatsapp').checked,
                 category_id: document.getElementById('leadCategory').value || null,
                 source: document.getElementById('leadSource').value || null,
@@ -4349,7 +4437,14 @@
                     document.getElementById('detailLeadName').textContent = _displayName;
                     document.getElementById('detailName').textContent = _displayName;
                     document.getElementById('detailEmail').textContent = lead.email || '-';
-                    document.getElementById('detailPhone').textContent = lead.phone || '-';
+                    const rawP = lead.phone || '';
+                    const cleanP10 = rawP.replace(/\D/g, '').slice(-10);
+                    const waBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-success btn-whatsapp-direct ms-1" onclick="openLeadWAModal('${lead.id}', '${cleanP10}', '${(lead.name || '').replace(/'/g, "\\'")}', '${lead.company_id}')" title="Send WhatsApp"><i class="fab fa-whatsapp me-1"></i> Chat</button>` : '';
+                    const detailPhoneEl = document.getElementById('detailPhone');
+                    if (detailPhoneEl) {
+                        detailPhoneEl.dataset.rawPhone = rawP;
+                        detailPhoneEl.innerHTML = `${maskPhone(rawP)} ${waBtnHtml}`;
+                    }
                     document.getElementById('detailCategory').textContent = lead.category_name || '-';
                     document.getElementById('detailSource').textContent = lead.source || '-';
                     document.getElementById('detailBudget').textContent = lead.budget_min || lead.budget_max ? 

@@ -589,6 +589,9 @@
                                 <label class="form-label">Phone (Primary)</label>
                                 <div class="input-group">
                                     <input type="tel" class="form-control" id="leadPhone" placeholder="10-digit phone" oninput="updateLeadModalCallLink(this.value)">
+                                    <button type="button" class="btn btn-outline-secondary" id="leadPhoneEditBtn" onclick="unlockLeadPhone('leadPhone')" title="Change / Edit Phone Number" style="display:none;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
                                     <a class="btn btn-outline-primary btn-call-direct" id="leadModalCallBtn" href="tel:" title="Direct Call">
                                         <i class="fas fa-phone-alt me-1"></i> Call
                                     </a>
@@ -610,6 +613,9 @@
                                 <label class="form-label">Phone (Secondary)</label>
                                 <div class="input-group">
                                     <input type="tel" class="form-control" id="leadAlternatePhone" placeholder="Alternate phone">
+                                    <button type="button" class="btn btn-outline-secondary" id="leadAltPhoneEditBtn" onclick="unlockLeadPhone('leadAlternatePhone')" title="Change / Edit Alternate Phone Number" style="display:none;">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
                                     <button type="button" class="btn btn-outline-success btn-whatsapp" onclick="sendWhatsApp('leadAlternatePhone')" title="Send WhatsApp">
                                         <i class="fab fa-whatsapp"></i>
                                     </button>
@@ -1647,6 +1653,19 @@
             const clean10 = digits.slice(-10);
             return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
         }
+
+        function unlockLeadPhone(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.readOnly = false;
+                el.value = '';
+                el.placeholder = 'Enter new 10-digit phone';
+                el.focus();
+                const editBtn = document.getElementById(id === 'leadPhone' ? 'leadPhoneEditBtn' : 'leadAltPhoneEditBtn');
+                if (editBtn) editBtn.style.display = 'none';
+            }
+        }
+        window.unlockLeadPhone = unlockLeadPhone;
 
         const API_BASE = '/api/v1/crm';
         let companyId = null;
@@ -2808,7 +2827,9 @@
         function updateLeadModalCallLink(phoneVal) {
             const btn = document.getElementById('leadModalCallBtn');
             if (!btn) return;
-            const digits = (phoneVal || '').replace(/[^0-9]/g, '');
+            const pInput = document.getElementById('leadPhone');
+            const rawPhone = pInput?.dataset?.rawPhone || phoneVal || '';
+            const digits = (rawPhone || '').replace(/[^0-9]/g, '');
             const clean10 = digits.slice(-10);
             if (clean10.length === 10) {
                 btn.removeAttribute('href');
@@ -2829,6 +2850,20 @@
         function openAddModal() {
             document.getElementById('leadModalTitle').innerHTML = '<i class="fas fa-user-plus me-2"></i>Add New Lead';
             document.getElementById('leadForm').reset();
+            const pInput = document.getElementById('leadPhone');
+            if (pInput) {
+                pInput.readOnly = false;
+                pInput.dataset.rawPhone = '';
+            }
+            const aInput = document.getElementById('leadAlternatePhone');
+            if (aInput) {
+                aInput.readOnly = false;
+                aInput.dataset.rawPhone = '';
+            }
+            const pEditBtn = document.getElementById('leadPhoneEditBtn');
+            if (pEditBtn) pEditBtn.style.display = 'none';
+            const aEditBtn = document.getElementById('leadAltPhoneEditBtn');
+            if (aEditBtn) aEditBtn.style.display = 'none';
             updateLeadModalCallLink('');
             document.getElementById('leadId').value = '';
             document.getElementById('leadDependsOnStaffId').value = '';
@@ -3001,10 +3036,28 @@
                     document.getElementById('leadId').value = lead.id;
                     document.getElementById('leadName').value = lead.name;
                     document.getElementById('leadEmail').value = lead.email || '';
-                    document.getElementById('leadPhone').value = lead.phone || '';
+                    
+                    const pInput = document.getElementById('leadPhone');
+                    if (pInput) {
+                        pInput.value = lead.phone ? maskPhone(lead.phone) : '';
+                        pInput.dataset.rawPhone = lead.phone || '';
+                        pInput.readOnly = !!lead.phone;
+                    }
+                    const pEditBtn = document.getElementById('leadPhoneEditBtn');
+                    if (pEditBtn) pEditBtn.style.display = lead.phone ? 'inline-block' : 'none';
+
                     updateLeadModalCallLink(lead.phone || '');
                     document.getElementById('leadPhonePrimaryWhatsapp').checked = lead.phone_primary_whatsapp || false;
-                    document.getElementById('leadAlternatePhone').value = lead.alternate_phone || '';
+
+                    const aInput = document.getElementById('leadAlternatePhone');
+                    if (aInput) {
+                        aInput.value = lead.alternate_phone ? maskPhone(lead.alternate_phone) : '';
+                        aInput.dataset.rawPhone = lead.alternate_phone || '';
+                        aInput.readOnly = !!lead.alternate_phone;
+                    }
+                    const aEditBtn = document.getElementById('leadAltPhoneEditBtn');
+                    if (aEditBtn) aEditBtn.style.display = lead.alternate_phone ? 'inline-block' : 'none';
+
                     document.getElementById('leadPhoneSecondaryWhatsapp').checked = lead.phone_secondary_whatsapp || false;
                     // DC Protocol (Mar 2026): Reload categories for lead's specific company before setting value
                     await loadCategoriesForCompany(effectiveCompanyId);
@@ -3233,12 +3286,16 @@
         }
         
         function sendWhatsApp(fieldId) {
-            const phone = document.getElementById(fieldId).value.replace(/\D/g, '');
+            const inputEl = document.getElementById(fieldId);
+            const rawVal = (inputEl?.value && (inputEl.value.includes('•') || inputEl.value.includes('*')))
+                ? (inputEl.dataset.rawPhone || '')
+                : (inputEl?.value || '');
+            const phone = rawVal.replace(/\D/g, '');
             if (!phone || phone.length < 10) {
                 showToast('Please enter a valid phone number first', 'warning');
                 return;
             }
-            const name = document.getElementById('leadName')?.value || phone;
+            const name = document.getElementById('leadName')?.value || 'Customer';
             const targetLeadId = document.getElementById('leadId')?.value || currentLeadId || 'new';
             const targetCompanyId = document.getElementById('leadFormCompany')?.value || selectedLeadCompanyId || companyId;
             if (typeof openLeadWAModal === 'function') {
@@ -3249,7 +3306,9 @@
         }
 
         function _qaWaSend() {
-            const phone = (document.getElementById('detailPhone')?.textContent || '').replace(/\D/g, '');
+            const el = document.getElementById('detailPhone');
+            const rawVal = el?.dataset?.rawPhone || (el?.textContent || '').replace(/[^\d+]/g, '');
+            const phone = rawVal.replace(/\D/g, '');
             const name  = (document.getElementById('detailLeadName')?.textContent || '').trim();
             if (!phone || phone.length < 10) {
                 if (typeof showToast === 'function') showToast('No valid phone number for this lead', 'warning');
@@ -3662,8 +3721,13 @@
                 return false;
             }
             
-            const phone = document.getElementById('leadPhone').value.trim();
-            const altPhone = document.getElementById('leadAlternatePhone').value.trim();
+            const pInput = document.getElementById('leadPhone');
+            const aInput = document.getElementById('leadAlternatePhone');
+            const pVal = pInput ? pInput.value.trim() : '';
+            const aVal = aInput ? aInput.value.trim() : '';
+
+            const phone = (pVal.includes('•') || pVal.includes('*')) ? (pInput.dataset.rawPhone || '') : pVal;
+            const altPhone = (aVal.includes('•') || aVal.includes('*')) ? (aInput.dataset.rawPhone || '') : aVal;
             const phoneClean = phone.replace(/\D/g, '');
             const altPhoneClean = altPhone.replace(/\D/g, '');
             
@@ -3775,12 +3839,28 @@
                 }
             }
             
+            const pInput = document.getElementById('leadPhone');
+            let pVal = pInput ? pInput.value.trim() : null;
+            if (pVal && (pVal.includes('•') || pVal.includes('*'))) {
+                pVal = pInput.dataset.rawPhone || null;
+            } else if (pVal) {
+                pVal = pVal.replace(/\D/g, '').slice(-10) || null;
+            }
+
+            const aInput = document.getElementById('leadAlternatePhone');
+            let aVal = aInput ? aInput.value.trim() : null;
+            if (aVal && (aVal.includes('•') || aVal.includes('*'))) {
+                aVal = aInput.dataset.rawPhone || null;
+            } else if (aVal) {
+                aVal = aVal.replace(/\D/g, '').slice(-10) || null;
+            }
+
             const leadData = {
                 name: document.getElementById('leadName').value,
                 email: document.getElementById('leadEmail').value || null,
-                phone: document.getElementById('leadPhone').value || null,
+                phone: pVal,
                 phone_primary_whatsapp: document.getElementById('leadPhonePrimaryWhatsapp').checked,
-                alternate_phone: document.getElementById('leadAlternatePhone').value || null,
+                alternate_phone: aVal,
                 phone_secondary_whatsapp: document.getElementById('leadPhoneSecondaryWhatsapp').checked,
                 category_id: document.getElementById('leadCategory').value || null,
                 source: document.getElementById('leadSource').value || null,
@@ -4295,8 +4375,11 @@
                     const rawP = lead.phone || '';
                     const cleanP10 = rawP.replace(/\D/g, '').slice(-10);
                     const callBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-primary btn-call-direct ms-2" onclick="triggerLeadCall('${cleanP10}', '${(lead.name || '').replace(/'/g, "\\'")}', ${lead.id})" title="Softphone WebRTC Call"><i class="fas fa-phone-alt me-1"></i> Call</button>` : '';
-                    const waBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-success btn-whatsapp-direct ms-1" onclick="openLeadWAModal('${lead.id}', '${cleanP10}', '${(lead.name || '').replace(/'/g, "\\'")}', '${lead.company_id}')" title="Send WhatsApp"><i class="fab fa-whatsapp me-1"></i> Chat</button>` : '';
-                    document.getElementById('detailPhone').innerHTML = `${maskPhone(rawP)} ${callBtnHtml} ${waBtnHtml}`;
+                    const detailPhoneEl = document.getElementById('detailPhone');
+                    if (detailPhoneEl) {
+                        detailPhoneEl.dataset.rawPhone = rawP;
+                        detailPhoneEl.innerHTML = `${maskPhone(rawP)} ${callBtnHtml} ${waBtnHtml}`;
+                    }
                     document.getElementById('detailCategory').textContent = lead.category_name || '-';
                     document.getElementById('detailSource').textContent = lead.source || '-';
                     document.getElementById('detailBudget').textContent = lead.budget_min || lead.budget_max ? 

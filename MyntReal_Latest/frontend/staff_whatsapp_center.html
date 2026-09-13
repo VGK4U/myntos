@@ -1847,7 +1847,11 @@ function getStaffSignature() {
       const parsed = JSON.parse(raw);
       const u = parsed.user || parsed.employee || parsed;
       const name = u.full_name || u.name || (u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : '') || 'Staff';
-      const ext = u.extension || u.ext || (typeof window !== 'undefined' ? window.__STAFF_EXTENSION__ : null);
+      let ext = u.extension || u.ext || (typeof window !== 'undefined' ? window.__STAFF_EXTENSION__ : null);
+      if (!ext && u.emp_code) {
+        const m = String(u.emp_code).match(/(\d{2,4})$/);
+        if (m) ext = m[1].replace(/^0+/, '') || m[1];
+      }
       if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
         return `\n\nRegards,\n${name}\n📞 +91 85858 52738 | +91 8897797667\nExt: ${String(ext).trim()}`;
       }

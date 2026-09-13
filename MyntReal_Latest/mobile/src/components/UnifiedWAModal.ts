@@ -56,7 +56,11 @@ class UnifiedWAModal {
     const authState = authService.getAuthState();
     const user: any = authState.user || {};
     const fullName = user.full_name || user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Staff';
-    const ext = user.extension || user.ext || (typeof window !== 'undefined' ? (window as any).__STAFF_EXTENSION__ : null);
+    let ext = user.extension || user.ext || (typeof window !== 'undefined' ? (window as any).__STAFF_EXTENSION__ : null);
+    if (!ext && user.emp_code) {
+      const m = String(user.emp_code).match(/(\d{2,4})$/);
+      if (m) ext = m[1].replace(/^0+/, '') || m[1];
+    }
     if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
       return `\n\nRegards,\n${fullName}\n📞 +91 85858 52738 | +91 8897797667\nExt: ${String(ext).trim()}`;
     }
@@ -265,7 +269,7 @@ class UnifiedWAModal {
             </div>
             <h3 class="uwa-title"><i class="fab fa-whatsapp me-1"></i> Send WhatsApp</h3>
             <div class="uwa-recipient-sub">
-              <strong>${this.escapeHtml(name || 'Customer')}</strong> · +91 ${cleanPhone}
+              <strong>${this.escapeHtml(name || 'Customer')}</strong> · ${this.maskPhone(cleanPhone)}
               ${context ? `<span class="uwa-ctx-tag ms-1">${this.escapeHtml(context)}</span>` : ''}
             </div>
           </div>
@@ -548,6 +552,18 @@ class UnifiedWAModal {
     feedbackBox.style.display = 'block';
     feedbackBox.className = `uwa-feedback-box ${type}`;
     feedbackBox.innerHTML = msg;
+  }
+
+  private maskPhone(p: string): string {
+    if (!p) return '-';
+    const digits = String(p).replace(/\D/g, '');
+    if (digits.length >= 10) {
+      return '+91 ' + digits.slice(-10, -8) + '••••' + digits.slice(-4);
+    }
+    if (digits.length >= 4) {
+      return '••••' + digits.slice(-4);
+    }
+    return '••••';
   }
 
   private escapeHtml(text: string): string {

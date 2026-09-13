@@ -3084,7 +3084,9 @@
             if (q) url += `&q=${encodeURIComponent(q)}`;
 
             try {
-                const data = await staffFetch(url);
+                const res = await staffFetch(url);
+                if (!res || !res.ok) throw new Error('Failed to load contacts');
+                const data = await res.json();
                 renderMyContacts(data);
             } catch (err) {
                 if (list) list.innerHTML = `<div class="text-center py-4 text-danger small"><i class="fa-solid fa-triangle-exclamation me-1"></i> Failed to load contacts: ${escapeHtml(err.message)}</div>`;

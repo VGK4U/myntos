@@ -10154,7 +10154,7 @@ def create_lead(
         state=lead_data.state,
         pincode=lead_data.pincode,
         expected_close_date=lead_data.expected_close_date,
-        next_followup_date=lead_data.next_followup_date,
+        next_followup_date=_to_ist_naive(lead_data.next_followup_date),
         depends_on_staff_id=lead_data.depends_on_staff_id,
         tags=lead_data.tags,
         created_by_type='staff',
@@ -10200,19 +10200,40 @@ def create_lead(
     db.commit()
     db.refresh(new_lead)
 
-    _is_self_lead = (
+    # Automatically capture initial comment as a CRMLeadNote on create
+    if lead_data.recent_comments and str(lead_data.recent_comments).strip():
+        _rc_init = str(lead_data.recent_comments).strip()
+        init_note = CRMLeadNote(
+            company_id=resolved_company_id,
+            lead_id=new_lead.id,
+            note=f"[Initial Note] {_rc_init}",
+            is_private=False,
+            created_by_type='staff',
+            created_by_id=current_employee.emp_code if current_employee else 'System',
+            created_at=get_indian_time()
+        )
+        db.add(init_note)
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+
+    # DC-STAFF-LEAD-001 / DC-SELF-LEAD-001: Staff-created leads are internal workflows and must NOT trigger shared Sales Group notifications
+    _is_staff_or_self_lead = (
         (_resolved_source or '').strip().lower() == 'self lead'
         or _resolved_source == SELF_LEAD_SOURCE_NAME
-        or getattr(new_lead, 'source_ref_type', '') == 'self'
+        or getattr(new_lead, 'source_ref_type', '') in ('self', 'staff', 'mn_staff')
+        or getattr(new_lead, 'created_by_type', '') == 'staff'
+        or current_employee is not None
     )
-    if not _is_self_lead:
+    if not _is_staff_or_self_lead:
         try:
             from app.services.whatsapp_group_alert_service import send_instant_new_lead_group_alert
             send_instant_new_lead_group_alert(db, new_lead.id)
         except Exception as _ga_e:
             print(f"[CRM_CREATE_LEAD] Could not send WhatsApp group alert: {_ga_e}", flush=True)
     else:
-        logger.info(f"[CRM_CREATE_LEAD] Suppressed group alert for self lead #{new_lead.id}")
+        logger.info(f"[CRM_CREATE_LEAD] Suppressed group alert for staff/self lead #{new_lead.id}")
     
     if lead_data.handler_type and lead_data.handler_type != 'unassigned':
         assignment = CRMLeadAssignment(
@@ -10389,7 +10410,7 @@ def _get_lead_staff_visits(db: Session, lead: CRMLead) -> list:
 @router.get("/leads/{lead_id}")
 def get_lead(
     lead_id: int,
-    company_id: int = Query(..., description="Company ID for DC Protocol"),
+    company_id: Optional[int] = Query(None, description="Company ID for DC Protocol"),
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
@@ -10401,6 +10422,8 @@ def get_lead(
         if not lead:
             raise HTTPException(status_code=404, detail="Lead not found")
             
+        effective_company_id = company_id if (company_id is not None and company_id > 0) else lead.company_id
+
         # DC Protocol: Creator & authorized cross-company access check
         _gl_emp_code = getattr(current_employee, 'emp_code', None)
         _gl_emp_id = getattr(current_employee, 'id', None)
@@ -10414,7 +10437,7 @@ def get_lead(
             (_gl_emp_code and lead.handler_id == _gl_emp_code)
         )
 
-        if lead.company_id != company_id and not (_gl_is_creator or _gl_is_admin or _gl_is_assigned):
+        if lead.company_id != effective_company_id and not (_gl_is_creator or _gl_is_admin or _gl_is_assigned):
             raise HTTPException(status_code=404, detail="Lead not found")
             
         _validate_freelancer_lead_access(lead, current_employee)
@@ -11183,6 +11206,9 @@ def update_lead(
                     detail=f"Invalid year {_dv_year} in field '{_dwf}'. "
                            f"Must be between 2000 and 2099."
                 )
+
+    if 'next_followup_date' in update_data and update_data['next_followup_date'] is not None:
+        update_data['next_followup_date'] = _to_ist_naive(update_data['next_followup_date'])
 
     for key, value in update_data.items():
         if hasattr(lead, key):
@@ -12091,25 +12117,24 @@ def assign_lead_handlers(
 def create_followup(
     lead_id: int,
     followup_data: FollowUpCreate,
-    company_id: int = Query(..., description="Company ID for DC Protocol"),
+    company_id: Optional[int] = Query(None, description="Company ID for DC Protocol"),
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
     """Schedule a follow-up for a lead"""
-    lead = db.query(CRMLead).filter(
-        CRMLead.id == lead_id,
-        CRMLead.company_id == company_id
-    ).first()
+    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
     
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
+        
+    effective_company_id = company_id if (company_id is not None and company_id > 0) else lead.company_id
     
     valid_types = ['call', 'email', 'meeting', 'site_visit', 'whatsapp', 'other']
     if followup_data.followup_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"Invalid followup type. Must be one of: {valid_types}")
     
     followup = CRMLeadFollowUp(
-        company_id=company_id,
+        company_id=effective_company_id,
         lead_id=lead_id,
         followup_type=followup_data.followup_type,
         status='scheduled',
@@ -12187,17 +12212,16 @@ def update_followup(
 @router.get("/leads/{lead_id}/notes")
 def list_lead_notes(
     lead_id: int,
-    company_id: int = Query(..., description="Company ID for DC Protocol"),
+    company_id: Optional[int] = Query(None, description="Company ID for DC Protocol"),
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
     """DC Protocol (May 2026): List notes for a lead, newest first."""
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id, CRMLead.company_id == company_id).first()
+    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
     notes = db.query(CRMLeadNote).filter(
-        CRMLeadNote.lead_id == lead_id,
-        CRMLeadNote.company_id == company_id
+        CRMLeadNote.lead_id == lead_id
     ).order_by(CRMLeadNote.created_at.desc()).all()
     return {'success': True, 'data': [n.to_dict() for n in notes]}
 
@@ -12207,7 +12231,7 @@ async def add_note(
     lead_id: int,
     note_data: NoteCreate,
     request: Request,
-    company_id: int = Query(..., description="Company ID for DC Protocol"),
+    company_id: Optional[int] = Query(None, description="Company ID for DC Protocol"),
     db: Session = Depends(get_db)
 ):
     """Add note to a lead — accepts staff token, VGK token, or partner token (DC Protocol Apr 2026)"""
@@ -12222,13 +12246,12 @@ async def add_note(
     is_partner = isinstance(current_user, _OfficialPartner)
     is_staff = isinstance(current_user, StaffEmployee)
 
-    lead = db.query(CRMLead).filter(
-        CRMLead.id == lead_id,
-        CRMLead.company_id == company_id
-    ).first()
+    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
 
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
+        
+    effective_company_id = company_id if (company_id is not None and company_id > 0) else lead.company_id
 
     # DC Protocol (Apr 2026): Partner can only note their own associated leads
     if is_partner:
@@ -12249,7 +12272,7 @@ async def add_note(
         note_author_id = str(current_user.id)
 
     note = CRMLeadNote(
-        company_id=company_id,
+        company_id=effective_company_id,
         lead_id=lead_id,
         note=note_data.note,
         is_private=note_data.is_private,
@@ -16305,19 +16328,23 @@ async def create_lead_unified(
     db.commit()
     db.refresh(new_lead)
 
-    _is_self_lead = (
+    # DC-STAFF-LEAD-001 / DC-SELF-LEAD-001: Staff-created leads are internal workflows and must NOT trigger shared Sales Group notifications
+    _is_staff_or_self_lead = (
         (getattr(new_lead, 'source', '') or '').strip().lower() == 'self lead'
         or getattr(new_lead, 'source', '') == SELF_LEAD_SOURCE_NAME
-        or getattr(new_lead, 'source_ref_type', '') == 'self'
+        or getattr(new_lead, 'source_ref_type', '') in ('self', 'staff', 'mn_staff')
+        or getattr(new_lead, 'created_by_type', '') == 'staff'
+        or is_staff
+        or user_type == 'staff'
     )
-    if not _is_self_lead:
+    if not _is_staff_or_self_lead:
         try:
             from app.services.whatsapp_group_alert_service import send_instant_new_lead_group_alert
             send_instant_new_lead_group_alert(db, new_lead.id)
         except Exception as _ga_e:
             logger.warning(f"[CRM_UNIFIED_CREATE_LEAD] Group alert trigger exception for lead {new_lead.id}: {_ga_e}")
     else:
-        logger.info(f"[CRM_UNIFIED_CREATE_LEAD] Suppressed group alert for self lead #{new_lead.id}")
+        logger.info(f"[CRM_UNIFIED_CREATE_LEAD] Suppressed group alert for staff/self lead #{new_lead.id}")
 
     try:
         from app.services.whatsapp_auto_service import send_lead_welcome

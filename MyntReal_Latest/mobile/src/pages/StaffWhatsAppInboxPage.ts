@@ -1531,7 +1531,11 @@ export class StaffWhatsAppInboxPage {
 
       const user: any = authService.getAuthState().user || {};
       const staffName = user.full_name || user.name || 'Staff';
-      const ext = user.extension || user.ext || (typeof window !== 'undefined' ? (window as any).__STAFF_EXTENSION__ : null);
+      let ext = user.extension || user.ext || (typeof window !== 'undefined' ? (window as any).__STAFF_EXTENSION__ : null);
+      if (!ext && user.emp_code) {
+        const m = String(user.emp_code).match(/(\d{2,4})$/);
+        if (m) ext = m[1].replace(/^0+/, '') || m[1];
+      }
       let signature = `\n\nRegards,\n${staffName}\n📞 +91 85858 52738 | +91 8897797667`;
       if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
         signature = `\n\nRegards,\n${staffName}\n📞 +91 85858 52738 | +91 8897797667\nExt: ${String(ext).trim()}`;
@@ -1694,7 +1698,11 @@ export class StaffWhatsAppInboxPage {
 
     const user: any = authService.getAuthState().user || {};
     const staffName = user.full_name || user.name || 'Staff';
-    const ext = user.extension || user.ext || (typeof window !== 'undefined' ? (window as any).__STAFF_EXTENSION__ : null);
+    let ext = user.extension || user.ext || (typeof window !== 'undefined' ? (window as any).__STAFF_EXTENSION__ : null);
+    if (!ext && user.emp_code) {
+      const m = String(user.emp_code).match(/(\d{2,4})$/);
+      if (m) ext = m[1].replace(/^0+/, '') || m[1];
+    }
     let defaultSig = `Regards,\n${staffName}\n📞 +91 85858 52738 | +91 8897797667`;
     if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
       defaultSig = `Regards,\n${staffName}\n📞 +91 85858 52738 | +91 8897797667\nExt: ${String(ext).trim()}`;

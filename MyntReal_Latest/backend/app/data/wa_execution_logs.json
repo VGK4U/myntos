@@ -1,5 +1,34 @@
 [
   {
+    "id": "log_98b3caac",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "13 Sep 2026, 01:00:00 PM IST",
+    "iso_timestamp": "2026-09-13T13:00:00.446842",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
     "id": "log_e4f90de3",
     "job_id": "missed_call_ack",
     "job_name": "Instant Missed Call Auto-ACK",
@@ -17827,32 +17856,6 @@
       "updated": 1,
       "skipped": 0,
       "followups_created": 0
-    }
-  },
-  {
-    "id": "log_ea942641",
-    "job_id": "field_staff_journey_report",
-    "job_name": "Field Journey Performance & Leaderboard Report",
-    "trigger_type": "MANUAL",
-    "triggered_by": "Staff MR10016 (Yaswanth Kumar)",
-    "timestamp": "21 Aug 2026, 08:49:41 PM IST",
-    "iso_timestamp": "2026-08-21T20:49:41.214259",
-    "target_summary": "Field Updates",
-    "targets": [
-      {
-        "type": "group",
-        "name": "Field Updates",
-        "identifier": "BctONtnv8431uxxybKBEtS"
-      }
-    ],
-    "sent_count": 1,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "group_posted": true,
-      "alerts_sent": 0,
-      "active_journeys": 0
     }
   }
 ]
