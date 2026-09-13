@@ -391,15 +391,12 @@ export class StaffLeadsPage {
 
   private async claimLead(leadId: number, companyId?: number | null): Promise<void> {
     const cid = companyId || this.selectedCompanyId;
-    if (!cid) {
-      alert('Please select a specific company to claim this lead.');
-      return;
-    }
     if (!confirm(`Do you want to claim Lead #${leadId} to your personal active pipeline?`)) {
       return;
     }
     try {
-      const response = await apiService.post<any>(`/crm/leads/${leadId}/claim?company_id=${cid}`, {});
+      const endpoint = cid ? `/crm/leads/${leadId}/claim?company_id=${cid}` : `/crm/leads/${leadId}/claim`;
+      const response = await apiService.post<any>(endpoint, {});
       if (response.success) {
         alert(response.message || response.data?.message || 'Lead successfully claimed!');
         await Promise.all([

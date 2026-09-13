@@ -14,6 +14,7 @@ Features:
 """
 
 import os
+import re
 import json
 import time
 import random
@@ -276,24 +277,34 @@ class FacebookLeadsService:
         """
         Check if this Facebook lead_id was already imported into CRM.
         DC Protocol: Queries indexed MetaLeadsAttribution first (O(1)), then fallback.
+        Normalizes source ID by stripping optional 'l:' / 'L:' prefix.
         """
         if not fb_lead_id:
+            return False
+        import re
+        raw_id = str(fb_lead_id).strip()
+        clean_id = re.sub(r'^[lL]:', '', raw_id).strip()
+        if not clean_id:
             return False
         try:
             from app.models.meta_attribution import MetaLeadsAttribution
             att = db.query(MetaLeadsAttribution.id).filter(
-                MetaLeadsAttribution.meta_lead_id == str(fb_lead_id)
+                MetaLeadsAttribution.meta_lead_id.in_([clean_id, f"l:{clean_id}", raw_id])
             ).first()
             if att:
                 return True
 
             row = db.execute(
-                text("SELECT id FROM crm_leads WHERE source IN ('Online - M', 'Facebook Lead Ads', 'Social Media') AND source_details LIKE :pattern LIMIT 1"),
-                {'pattern': f"%'lead_id': '{fb_lead_id}'%"}
+                text("SELECT id FROM crm_leads WHERE source IN ('Online - M', 'Facebook Lead Ads', 'Social Media') AND (source_details LIKE :p1 OR source_details LIKE :p2) LIMIT 1"),
+                {'p1': f"%'lead_id': '{clean_id}'%", 'p2': f"%'lead_id': 'l:{clean_id}'%"}
             ).fetchone()
             return row is not None
         except Exception as e:
             logger.warning(f"Error checking lead existence for {fb_lead_id}: {e}")
+            try:
+                db.rollback()
+            except Exception:
+                pass
             return False
 
     # ── Graph API Execution with Retry / Backoff ──────────────────────────────
@@ -733,6 +744,118 @@ class FacebookLeadsService:
         if target_category_id:
             crm['category_id'] = target_category_id
         return crm
+
+    def ingest_lead_atomic(
+        self,
+        db: Session,
+        lead_data: Dict[str, Any],
+        company_id: Optional[int] = None,
+        category_id: Optional[int] = None,
+        page_segment: str = 'GENERAL',
+        page_name: str = '',
+        form_id: Optional[str] = None,
+        page_id: Optional[str] = None,
+        trigger_ipm: bool = True,
+        trigger_alert: bool = True
+    ) -> Optional[Any]:
+        """
+        Process a single Meta lead atomically into CRMLead and MetaLeadsAttribution.
+        Enforces DB-level idempotency, transactional consistency, and triggers
+        the automated WhatsApp welcome message (IPM) and sales group alert.
+        """
+        from app.models.crm import CRMLead
+        from app.models.meta_attribution import MetaLeadsAttribution
+        from sqlalchemy.exc import IntegrityError
+
+        lead_id = str(lead_data.get('id', '')).strip()
+        if not lead_id:
+            logger.warning("[META-INGEST] Lead data missing 'id'. Skipping.")
+            return None
+
+        # 1. Fast Duplicate Guard (Idempotency)
+        if self.lead_already_exists(lead_id, db):
+            logger.info(f"[META-DEDUP] Lead {lead_id} already exists in CRM. Skipping.")
+            return None
+
+        # 2. Map to CRM Lead Schema (Dynamic Database-Driven Routing)
+        resolved_form_id = form_id or lead_data.get('form_id')
+        resolved_page_id = page_id or lead_data.get('page_id')
+        crm_data = self.map_to_crm_lead(
+            lead_data=lead_data,
+            company_id=company_id,
+            category_id=category_id,
+            page_segment=page_segment,
+            page_name=page_name,
+            form_id=resolved_form_id,
+            page_id=resolved_page_id,
+            db=db
+        )
+        if not crm_data:
+            logger.warning(f"[META-REJECT] Lead {lead_id} mapping returned empty data.")
+            return None
+
+        # 3. Single Atomic Transaction: CRMLead + MetaLeadsAttribution
+        try:
+            crm_lead = CRMLead(**crm_data)
+            db.add(crm_lead)
+            db.flush()  # Generates crm_lead.id within active transaction
+
+            attribution = MetaLeadsAttribution(
+                company_id=crm_lead.company_id,
+                lead_id=crm_lead.id,
+                meta_lead_id=str(lead_id),
+                meta_campaign_id=str(lead_data.get('campaign_id') or '') or None,
+                meta_campaign_name=str(lead_data.get('campaign_name') or '') or None,
+                meta_adset_id=str(lead_data.get('adset_id') or '') or None,
+                meta_adset_name=str(lead_data.get('adset_name') or '') or None,
+                meta_ad_id=str(lead_data.get('ad_id') or '') or None,
+                meta_ad_name=str(lead_data.get('ad_name') or '') or None,
+                meta_form_id=str(resolved_form_id or '') or None,
+                meta_form_name=str(page_name) if page_name else None
+            )
+            db.add(attribution)
+            db.commit()
+            db.refresh(crm_lead)
+            logger.info(f"[META-INGESTION-SUCCESS] CRM Lead #{crm_lead.id} created atomically with attribution for Meta lead {lead_id} (Company: {crm_lead.company_id})")
+
+        except IntegrityError as ie:
+            db.rollback()
+            clean_id = re.sub(r'^[lL]:\s*', '', lead_id)
+            existing_att = db.query(MetaLeadsAttribution).filter(
+                MetaLeadsAttribution.meta_lead_id.in_([clean_id, f"l:{clean_id}", lead_id])
+            ).first()
+            if existing_att:
+                logger.info(f"[META-CONCURRENT-DEDUP] Meta lead {lead_id} was ingested concurrently. Returning existing lead #{existing_att.lead_id}.")
+                return db.query(CRMLead).filter(CRMLead.id == existing_att.lead_id).first()
+            logger.error(f"[DB-INTEGRITY-ERROR] Integrity error ingesting lead {lead_id}: {ie}")
+            return None
+
+        except Exception as ex:
+            db.rollback()
+            logger.exception(f"[CRITICAL-INGESTION-ERROR] Failed to atomically persist Meta lead {lead_id}: {ex}")
+            raise ex
+
+        # 4. Canonical Post-Commit Ingestion Triggers
+        if trigger_ipm and crm_lead.phone:
+            try:
+                from app.services.whatsapp_auto_service import send_lead_welcome
+                send_lead_welcome(
+                    db=db,
+                    phone=crm_lead.phone,
+                    lead_name=crm_lead.name,
+                    lead_id=crm_lead.id
+                )
+            except Exception as wa_err:
+                logger.warning(f"[POST-INGESTION-TRIGGER] Auto WhatsApp welcome trigger exception for lead {crm_lead.id}: {wa_err}")
+
+        if trigger_alert:
+            try:
+                from app.services.whatsapp_group_alert_service import send_instant_new_lead_group_alert
+                send_instant_new_lead_group_alert(db, crm_lead.id)
+            except Exception as alert_err:
+                logger.warning(f"[POST-INGESTION-TRIGGER] Auto group alert trigger exception for lead {crm_lead.id}: {alert_err}")
+
+        return crm_lead
 
 
 facebook_leads_service = FacebookLeadsService()

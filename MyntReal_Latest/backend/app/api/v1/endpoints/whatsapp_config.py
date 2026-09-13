@@ -2311,6 +2311,130 @@ async def update_wa_credentials(
         return {"success": True, "message": f"Credentials saved (verification check failed: {e})", "warning": True}
 
 
+# ── DC-WA-PIN-REAUTH-001: Phone Number Status & Two-Step PIN Re-Authentication ──
+
+class ReauthenticatePinPayload(BaseModel):
+    pin: str
+
+
+@router.get("/phone-status", summary="Get WhatsApp Phone Number Verification & Registration Status from Meta")
+async def get_wa_phone_status(
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_wa_config),
+):
+    """Query Meta Graph API for the phone number status, including code_verification_status and pin status."""
+    import requests as _req
+    from app.services.wa_credentials import get_wa_credentials
+
+    cid = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None) or 1
+    creds = get_wa_credentials(db, company_id=cid)
+    token = creds.get("access_token")
+    phone_number_id = creds.get("phone_number_id")
+
+    if not token or not phone_number_id:
+        return {
+            "configured": False,
+            "message": "WhatsApp credentials not configured"
+        }
+
+    try:
+        url = f"https://graph.facebook.com/v21.0/{phone_number_id}"
+        resp = _req.get(
+            url,
+            headers={"Authorization": f"Bearer {token}"},
+            params={"fields": "id,verified_name,display_phone_number,code_verification_status,is_pin_enabled,status,quality_rating"},
+            timeout=10
+        )
+        data = resp.json()
+        if resp.status_code == 200:
+            return {
+                "configured": True,
+                "phone_number_id": phone_number_id,
+                "display_phone_number": data.get("display_phone_number", ""),
+                "verified_name": data.get("verified_name", ""),
+                "code_verification_status": data.get("code_verification_status", "UNKNOWN"),
+                "is_pin_enabled": data.get("is_pin_enabled", False),
+                "status": data.get("status", "UNKNOWN"),
+                "quality_rating": data.get("quality_rating", "UNKNOWN"),
+            }
+        else:
+            err = data.get("error", {})
+            return {
+                "configured": True,
+                "phone_number_id": phone_number_id,
+                "error": err.get("message", "Meta API returned an error"),
+                "error_code": err.get("code"),
+                "error_subcode": err.get("error_subcode")
+            }
+    except Exception as e:
+        return {
+            "configured": True,
+            "phone_number_id": phone_number_id,
+            "error": str(e)
+        }
+
+
+@router.post("/reauthenticate-pin", summary="Re-authenticate / Register Phone Number with Meta using 6-Digit PIN")
+async def reauthenticate_wa_pin(
+    payload: ReauthenticatePinPayload,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_wa_config),
+):
+    """
+    Submits the 6-digit two-step verification PIN to Meta's /register endpoint
+    to restore code_verification_status to VERIFIED.
+    """
+    import re
+    import requests as _req
+    from app.services.wa_credentials import get_wa_credentials
+
+    pin = (payload.pin or "").strip()
+    if not re.match(r"^\d{6}$", pin):
+        raise HTTPException(status_code=400, detail="PIN must be exactly 6 numeric digits (e.g. 123456)")
+
+    cid = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None) or 1
+    creds = get_wa_credentials(db, company_id=cid)
+    token = creds.get("access_token")
+    phone_number_id = creds.get("phone_number_id")
+
+    if not token or not phone_number_id:
+        raise HTTPException(status_code=400, detail="WhatsApp credentials not configured")
+
+    try:
+        url = f"https://graph.facebook.com/v21.0/{phone_number_id}/register"
+        resp = _req.post(
+            url,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json={"messaging_product": "whatsapp", "pin": pin},
+            timeout=15
+        )
+        data = resp.json()
+        if resp.status_code == 200 and data.get("success"):
+            return {
+                "success": True,
+                "message": "Phone number two-step verification PIN successfully registered with Meta! Your WhatsApp number is now re-authenticated and active."
+            }
+        else:
+            err = data.get("error", {})
+            err_msg = err.get("message") or err.get("error_user_msg") or "Registration failed"
+            err_code = err.get("code")
+            if err_code == 133005:
+                err_msg = "Two-step verification PIN Mismatch: The 6-digit PIN entered does not match the PIN configured in Meta WhatsApp Manager. Please check your PIN or reset it in Meta Business Suite."
+            elif err_code == 133010:
+                err_msg = "Too many attempts: Phone number registration is temporarily rate-limited by Meta. Please wait before trying again."
+            raise HTTPException(
+                status_code=400,
+                detail=f"Meta Error {err_code or resp.status_code}: {err_msg}"
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[WA-PIN-REAUTH] Error registering PIN: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to communicate with Meta: {e}")
+
+
 # ── DC-WA-MORNING-WISH-001: 8 AM ROTATING BILINGUAL MORNING WISH ENDPOINTS ────
 
 @router.get("/morning-wish/status")

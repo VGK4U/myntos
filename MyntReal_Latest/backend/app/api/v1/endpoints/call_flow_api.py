@@ -1676,11 +1676,14 @@ def _resolve_ist_iso(dt_val: Optional[datetime], created_fallback: Optional[date
         return None
     dt = dt_val or created_fallback
     if dt_val and created_fallback:
-        # Detect if dt_val is ~5.5 hours behind created_fallback (18000s to 21600s)
-        diff_sec = (created_fallback - dt_val).total_seconds()
-        if 18000 <= diff_sec <= 21600:
-            dt = created_fallback
-    return dt.isoformat() if dt else None
+        try:
+            diff_obj = created_fallback - dt_val
+            diff_sec = diff_obj.total_seconds() if hasattr(diff_obj, 'total_seconds') else None
+            if isinstance(diff_sec, (int, float)) and 18000 <= diff_sec <= 21600:
+                dt = created_fallback
+        except Exception:
+            pass
+    return dt.isoformat() if hasattr(dt, 'isoformat') and callable(dt.isoformat) else (str(dt) if dt else None)
 
 
 @router.get("/incoming-calls")

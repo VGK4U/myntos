@@ -5005,6 +5005,49 @@ def init_scheduler():
     except Exception as _meta_sched_e:
         logger.warning(f"   📡 Meta Ads: Health Check schedule failed: {_meta_sched_e}")
 
+    # ── META-LEADS-AUTO-SYNC-001: 15-Minute Automated Meta Lead Ingestion ─────
+    try:
+        def run_meta_leads_periodic_sync_job():
+            """
+            DC Protocol Automated Meta Leads Sync:
+            Runs every 15 minutes using the verified permanent Page Access Tokens.
+            Acts as a fail-proof background reconciliation against dropped webhooks or signature changes.
+            """
+            import asyncio
+            db = SessionLocal()
+            try:
+                from app.api.v1.endpoints.facebook_leads import pull_meta_leads
+                try:
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        import concurrent.futures
+                        with concurrent.futures.ThreadPoolExecutor() as pool:
+                            res = pool.submit(asyncio.run, pull_meta_leads(current_user=None, db=db)).result()
+                    else:
+                        res = loop.run_until_complete(pull_meta_leads(current_user=None, db=db))
+                except Exception:
+                    res = asyncio.run(pull_meta_leads(current_user=None, db=db))
+                ingested = res.get('ingested_count', 0) if isinstance(res, dict) else 0
+                if ingested > 0:
+                    logger.info(f"📥 [META-AUTO-SYNC] Successfully pulled and ingested {ingested} new Meta leads into CRM!")
+            except Exception as sync_err:
+                logger.warning(f"⚠️ [META-AUTO-SYNC] Error during scheduled Meta lead sync: {sync_err}")
+            finally:
+                db.close()
+
+        scheduler.add_job(
+            run_meta_leads_periodic_sync_job,
+            trigger=CronTrigger(minute='*/15', timezone='Asia/Kolkata'),
+            id='meta_leads_periodic_sync',
+            name='Meta Ads: 15-Minute Automated Lead Ingestion & Graph API Sync',
+            replace_existing=True,
+            misfire_grace_time=300,
+            max_instances=1,
+        )
+        logger.info("   📥 Meta Ads: 15-Minute Automated Lead Ingestion & Sync scheduled (Every 15 mins)")
+    except Exception as _sync_sched_e:
+        logger.warning(f"   📥 Meta Ads: Periodic Sync schedule failed: {_sync_sched_e}")
+
     scheduler.start()
     logger.info("✅ APScheduler initialized with IST timezone - All jobs scheduled in Asia/Kolkata time")
     logger.info(f"   📅 Next midnight run: {scheduler.get_job('midnight_income_calculation').next_run_time}")

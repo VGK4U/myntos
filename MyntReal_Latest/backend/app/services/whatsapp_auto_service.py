@@ -55,22 +55,110 @@ def _is_paused(db: Session) -> bool:
         return False
 
 
+def get_channel_business_contacts(channel: str = "whatsapp") -> Dict[str, str]:
+    """
+    Centralized authority for channel-specific business contact numbers and branding.
+
+    Channels:
+    - 'whatsapp' (WhatsApp API & WhatsApp Scan):
+        Primary:   +91 85858 52738
+        Secondary: +91 8897797667
+        Display:   📞 +91 85858 52738 | +91 8897797667
+    - 'ivy' / 'ivr' / 'telephony':
+        Primary:   +91 85858 52738
+        Secondary: +91 80317 28899
+        Display:   📞 +91 85858 52738 | +91 80317 28899
+    """
+    ch = (channel or "whatsapp").strip().lower()
+    is_ivy = ch in ("ivy", "ivr", "telephony", "plivo")
+    try:
+        from app.core.config import settings
+        if is_ivy:
+            primary = getattr(settings, "IVY_PRIMARY_BUSINESS_NUMBER", "+91 85858 52738")
+            secondary = getattr(settings, "IVY_SECONDARY_BUSINESS_NUMBER", "+91 80317 28899")
+            company = getattr(settings, "IVY_BUSINESS_SIGNATURE_COMPANY", "Mynt Real")
+        else:
+            primary = getattr(settings, "WHATSAPP_PRIMARY_BUSINESS_NUMBER", "+91 85858 52738")
+            secondary = getattr(settings, "WHATSAPP_SECONDARY_BUSINESS_NUMBER", "+91 8897797667")
+            company = getattr(settings, "WHATSAPP_BUSINESS_SIGNATURE_COMPANY", "Mynt Real")
+    except Exception:
+        if is_ivy:
+            primary = "+91 85858 52738"
+            secondary = "+91 80317 28899"
+            company = "Mynt Real"
+        else:
+            primary = "+91 85858 52738"
+            secondary = "+91 8897797667"
+            company = "Mynt Real"
+
+    combined = f"{primary} | {secondary}"
+    return {
+        "channel": "ivy" if is_ivy else "whatsapp",
+        "primary": primary,
+        "secondary": secondary,
+        "company": company,
+        "combined_formatted": combined,
+        "canonical_display": f"📞 {combined}",
+    }
+
+
+def get_whatsapp_business_contacts() -> Dict[str, str]:
+    """WhatsApp business contact authority (backward-compatible wrapper)."""
+    return get_channel_business_contacts("whatsapp")
+
+
+def get_ivy_business_contacts() -> Dict[str, str]:
+    """Ivy / IVR business contact authority."""
+    return get_channel_business_contacts("ivy")
+
+
+def build_channel_customer_signature(
+    channel: str = "whatsapp",
+    sender_name: Optional[str] = None,
+    extension: Optional[str] = None,
+    include_icon: bool = False
+) -> str:
+    """
+    Authoritative channel-specific customer signature builder.
+    channel: 'whatsapp' or 'ivy'
+    include_icon: whether to prefix numbers with 📞
+    """
+    contacts = get_channel_business_contacts(channel)
+    display_name = str(sender_name).strip() if sender_name and str(sender_name).strip() else contacts["company"]
+    phone_line = contacts["canonical_display"] if include_icon else contacts["combined_formatted"]
+
+    sig_lines = ["Regards,", display_name, phone_line]
+    clean_ext = str(extension or "").strip()
+    if clean_ext and clean_ext.lower() not in ("none", "null", "undefined", "n/a"):
+        sig_lines.append(f"Ext: {clean_ext}")
+
+    return "\n".join(sig_lines)
+
+
+def build_whatsapp_customer_signature(
+    sender_name: Optional[str] = None,
+    extension: Optional[str] = None,
+    include_icon: bool = False
+) -> str:
+    """WhatsApp API customer signature builder (backward-compatible wrapper)."""
+    return build_channel_customer_signature(
+        "whatsapp",
+        sender_name=sender_name,
+        extension=extension,
+        include_icon=include_icon
+    )
+
+
 def strip_staff_whatsapp_signature(message: str) -> str:
     """
     Removes any existing staff signature block from the message body
     (e.g., when forwarding, replying, or re-formatting to prevent stacked signatures).
-    Matches patterns like:
-    Regards,
-    <Name>
-    8585852738
-    Ext: <X>
-    or
-    Regards,
-    <Name>
+    Handles single number (8585852738, +91 85858 52738), dual numbers (+91 85858 52738 | +91 8897797667 or +91 85858 52738 | +91 80317 28899),
+    and extensions.
     """
     if not message:
         return ""
-    pattern = r'(?:\r?\n){1,4}Regards,\s*\n[^\n]+(?:\s*\n8585852738)?(?:\s*\nExt:\s*\S+)?\s*$'
+    pattern = r'(?:\r?\n){1,4}Regards,\s*\n[^\n]+(?:\s*\n[^\n]*(?:85858|88977|80317)[^\n]*)?(?:\s*\nExt:\s*\S+)?\s*$'
     cleaned = re.sub(pattern, '', message.strip(), flags=re.IGNORECASE)
     return cleaned.strip()
 
@@ -114,24 +202,29 @@ def resolve_staff_extension(
 def format_staff_whatsapp_message(
     message: str,
     staff_name: str,
-    contact_number: str = "8585852738",
-    extension: Optional[str] = None
+    contact_number: Optional[str] = None,
+    extension: Optional[str] = None,
+    channel: str = "whatsapp"
 ) -> str:
     """
-    Authoritative staff WhatsApp signature composer.
+    Authoritative staff signature composer.
     Appends:
 
     Regards,
     <Staff Name>
-    8585852738
+    +91 85858 52738 | +91 8897797667  (for WhatsApp)
     Ext: <X>   (ONLY when extension is configured)
+
+    Or for Ivy/IVR:
+    +91 85858 52738 | +91 80317 28899
 
     If employee does NOT have an extension:
     - Include staff name
-    - Include contact_number (8585852738)
+    - Include contact numbers
     - Do NOT display empty extension, "Ext: N/A", or placeholder.
 
     Guards against stacked or double signatures by stripping prior signature blocks.
+    When contact_number is explicitly passed, respects the argument for backward compatibility.
     """
     if not message:
         return ""
@@ -142,10 +235,17 @@ def format_staff_whatsapp_message(
     # Strip existing trailing signature if present to ensure idempotency
     clean_msg = strip_staff_whatsapp_signature(clean_msg)
 
+    # Use channel dual numbers if not explicitly overridden
+    if contact_number is None:
+        contacts = get_channel_business_contacts(channel)
+        contact_str = contacts["combined_formatted"]
+    else:
+        contact_str = str(contact_number).strip()
+
     # Build signature block
     sig_lines = ["Regards,", str(staff_name).strip()]
-    if contact_number and str(contact_number).strip():
-        sig_lines.append(str(contact_number).strip())
+    if contact_str:
+        sig_lines.append(contact_str)
 
     clean_ext = str(extension or "").strip()
     if clean_ext and clean_ext.lower() not in ("none", "null", "undefined", "n/a"):
@@ -749,11 +849,29 @@ def send_lead_welcome(
         if not template:
             # Fallback to general template if specific ETC template is missing
             template = db.query(WhatsAppTemplate).filter_by(slug="lead_welcome_general", is_active=True).first()
-            if not template:
-                logger.warning("[WA-WELCOME] Template '%s' not found — skipping", event_key)
-                return {"success": False, "reason": "template_not_found"}
 
-        context = {"name": lead_name or "there"}
+        # Fallback to approved myntreal_lead_thankyou_general if template is missing or unapproved
+        if not template or not getattr(template, 'is_meta_approved', False):
+            if event_key == "lead_welcome_general" or not template or not getattr(template, 'is_meta_approved', False):
+                fallback = db.query(WhatsAppTemplate).filter_by(slug="myntreal_lead_thankyou_general", is_active=True).first()
+                if fallback and getattr(fallback, 'is_meta_approved', False):
+                    logger.info(
+                        "[WA-WELCOME] Falling back from unapproved/missing '%s' to approved 'myntreal_lead_thankyou_general'",
+                        event_key
+                    )
+                    template = fallback
+                    event_key = "myntreal_lead_thankyou_general"
+
+        if not template:
+            logger.warning("[WA-WELCOME] Template '%s' not found — skipping", event_key)
+            return {"success": False, "reason": "template_not_found"}
+
+        now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        context = {
+            "name": lead_name or "there",
+            "lead_ref": f"#{lead_id}" if lead_id else "LEAD",
+            "date": now_ist.strftime("%d-%m-%Y")
+        }
         if partner_phone:
             context["partner_phone"] = partner_phone
         message = _render_body(template.body_text, context)

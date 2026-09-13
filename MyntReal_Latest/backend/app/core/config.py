@@ -115,6 +115,16 @@ class Settings(BaseSettings):
     PLIVO_APP_ID: Optional[str] = os.getenv("PLIVO_APP_ID", "10583407997011554")
     PLIVO_DEFAULT_CALLER_ID: str = os.getenv("PLIVO_DEFAULT_CALLER_ID", "+918031728899")
 
+    # ── WhatsApp API Centralized Business Contact Numbers & Signature Settings ──
+    WHATSAPP_PRIMARY_BUSINESS_NUMBER: str = os.getenv("WHATSAPP_PRIMARY_BUSINESS_NUMBER", "+91 85858 52738")
+    WHATSAPP_SECONDARY_BUSINESS_NUMBER: str = os.getenv("WHATSAPP_SECONDARY_BUSINESS_NUMBER", "+91 8897797667")
+    WHATSAPP_BUSINESS_SIGNATURE_COMPANY: str = os.getenv("WHATSAPP_BUSINESS_SIGNATURE_COMPANY", "Mynt Real")
+
+    # ── Ivy / IVR Telephony Business Contact Numbers ──
+    IVY_PRIMARY_BUSINESS_NUMBER: str = os.getenv("IVY_PRIMARY_BUSINESS_NUMBER", "+91 85858 52738")
+    IVY_SECONDARY_BUSINESS_NUMBER: str = os.getenv("IVY_SECONDARY_BUSINESS_NUMBER", "+91 80317 28899")
+    IVY_BUSINESS_SIGNATURE_COMPANY: str = os.getenv("IVY_BUSINESS_SIGNATURE_COMPANY", "Mynt Real")
+
     @validator("DATABASE_URL", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: dict) -> str:
         """Create database URL from environment or use PostgreSQL default"""

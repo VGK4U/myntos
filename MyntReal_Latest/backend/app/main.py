@@ -16707,7 +16707,6 @@ async def serve_staff_softphone_center():
 
 
 @app.get("/staff/whatsapp-center", include_in_schema=False)
-@app.get("/staff/whatsapp-config", include_in_schema=False)
 @app.get("/staff/crm/whatsapp-inbox", include_in_schema=False)
 @app.get("/staff/crm/whatsapp-bot", include_in_schema=False)
 async def serve_staff_whatsapp_center():
@@ -16721,6 +16720,17 @@ async def serve_staff_whatsapp_center():
     if os.path.exists(fallback_file):
         return FileResponse(fallback_file, media_type="text/html")
     raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/staff/whatsapp-config", include_in_schema=False)
+@app.get("/staff/whatsapp/config", include_in_schema=False)
+async def serve_staff_whatsapp_config():
+    from fastapi.responses import FileResponse
+    _workspace_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    target_file = os.path.join(_workspace_root, "frontend", "staff_whatsapp_config.html")
+    if os.path.exists(target_file):
+        return FileResponse(target_file, media_type="text/html")
+    raise HTTPException(status_code=404, detail="WhatsApp Config page not found")
 
 
 # DC_WHATSAPP_SCAN_001: WhatsApp Bot QR Pairing & Management Routes (/scan, /qr, /whatsapp-qr, /qr-data)

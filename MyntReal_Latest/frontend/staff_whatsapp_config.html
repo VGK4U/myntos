@@ -1228,6 +1228,96 @@ Or paste a loaded template body here to rewrite / improve it."
       </div>
     </div>
   </div>
+
+  <!-- DC-WA-PIN-REAUTH-001: Phone Number Live Status & PIN Re-Authentication -->
+  <div class="row g-3 mt-1">
+    <div class="col-lg-7">
+      <div class="card-box">
+        <div class="card-hdr" style="display:flex;justify-content:space-between;align-items:center">
+          <h3><i class="fas fa-shield-alt" style="color:#2563eb"></i> Meta Phone Number &amp; Two-Step PIN Re-Authentication</h3>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="checkPhoneStatus(true)" id="refreshStatusBtn" title="Refresh live status from Meta">
+            <i class="fas fa-sync-alt"></i> Refresh Status
+          </button>
+        </div>
+        <div class="card-body">
+          <div id="phone-status-loading" style="text-align:center;padding:15px;color:#6b7280;font-size:13px">
+            <i class="fas fa-spinner fa-spin"></i> Checking live phone status with Meta...
+          </div>
+          <div id="phone-status-card" style="display:none">
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px">
+              <div class="row g-2">
+                <div class="col-sm-6">
+                  <span style="color:#6b7280">Phone Number:</span> <strong id="ps-phone">--</strong>
+                </div>
+                <div class="col-sm-6">
+                  <span style="color:#6b7280">Verified Name:</span> <strong id="ps-name">--</strong>
+                </div>
+                <div class="col-sm-6">
+                  <span style="color:#6b7280">Registration Status:</span> <span id="ps-verification-badge">--</span>
+                </div>
+                <div class="col-sm-6">
+                  <span style="color:#6b7280">PIN Protection:</span> <span id="ps-pin-badge">--</span>
+                </div>
+                <div class="col-sm-6">
+                  <span style="color:#6b7280">Connection Status:</span> <span id="ps-status-badge">--</span>
+                </div>
+                <div class="col-sm-6">
+                  <span style="color:#6b7280">Quality Rating:</span> <span id="ps-quality-badge">--</span>
+                </div>
+              </div>
+            </div>
+
+            <div id="phone-pin-alert" style="display:none;padding:10px 14px;border-radius:6px;margin-bottom:14px;font-size:13px;font-weight:500"></div>
+
+            <div id="phone-pin-form-wrap">
+              <label class="form-label fw-semibold">
+                6-Digit Two-Step Verification PIN
+                <span style="font-size:11px;font-weight:normal;color:#6b7280">(Configured in Meta WhatsApp Manager)</span>
+              </label>
+              <div style="position:relative;max-width:320px;margin-bottom:10px">
+                <input type="password" class="form-control" id="reauthPinInput" maxlength="6" pattern="\d{6}" placeholder="Enter 6-digit PIN" style="font-family:monospace;letter-spacing:4px;font-size:16px;font-weight:bold" autocomplete="off">
+                <button type="button" onclick="revealField('reauthPinInput',document.getElementById('reauthPinInput'))" style="position:absolute;top:50%;right:8px;transform:translateY(-50%);background:none;border:none;color:#6b7280;cursor:pointer;font-size:14px" title="Toggle visibility">
+                  <i class="fas fa-eye"></i>
+                </button>
+              </div>
+              <p class="form-text text-muted" style="margin-bottom:14px;font-size:12px">
+                Meta requires entering the 6-digit PIN to activate messaging whenever the verification status is <code>EXPIRED</code> or after changing credentials.
+              </p>
+              <button type="button" class="btn btn-primary" id="reauthPinBtn" onclick="submitReauthPin()">
+                <i class="fas fa-bolt"></i> Re-Authenticate PIN with Meta
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-5">
+      <div class="card-box">
+        <div class="card-hdr">
+          <h3><i class="fas fa-info-circle" style="color:#2563eb"></i> How to Reset or Find Your PIN</h3>
+        </div>
+        <div class="card-body" style="font-size:13px;line-height:1.7">
+          <ol style="padding-left:18px;margin:0">
+            <li>Log in to <a href="https://business.facebook.com/wa/manage/phone-numbers/" target="_blank" style="color:#2563eb;font-weight:600">Meta WhatsApp Manager <i class="fas fa-external-link-alt fa-xs"></i></a></li>
+            <li>Locate your phone number: <strong id="guide-phone-display">+91 85858 52738</strong></li>
+            <li>Under the <strong>Settings</strong> column, click <strong>Two-step verification</strong> (gear icon).</li>
+            <li>If you remember your PIN, enter it here and click Re-Authenticate.</li>
+            <li>If forgotten, click <strong>&quot;Forgot PIN?&quot;</strong> / <strong>&quot;Reset PIN&quot;</strong>:
+              <ul style="margin-top:4px">
+                <li>Meta will send a reset link to your business administrator's email.</li>
+                <li>Click the link in your email and set a new 6-digit PIN (e.g. <code>220792</code> or any 6 digits).</li>
+              </ul>
+            </li>
+            <li>Come back here, enter the new 6-digit PIN, and click <strong>Re-Authenticate PIN with Meta</strong>.</li>
+          </ol>
+          <div style="margin-top:14px;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;font-size:12px;color:#991b1b">
+            <i class="fas fa-shield-alt"></i>
+            <strong>Security Protection:</strong> Do NOT make repeated blind guesses. Meta locks the phone number for 24 hours after 5 failed PIN attempts. Always use &quot;Reset PIN&quot; if you are unsure.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 </div><!-- /.content-area -->
@@ -1734,6 +1824,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadTemplatesForSelects();
   await loadTestHistory();
   loadMyMessages();
+  const hash = (window.location.hash || '').replace('#', '').replace('tab-', '');
+  if (hash && document.getElementById(`tab-${hash}`)) {
+    switchTab(hash);
+  }
 });
 
 // ── Template selects ──────────────────────────────────────────────────────────
@@ -4271,6 +4365,7 @@ async function loadCredentials() {
       if (d.facebook_app_id) document.getElementById('credAppId').value = d.facebook_app_id;
     }
   } catch(e) {}
+  checkPhoneStatus();
 }
 
 async function saveCredentials(e) {
@@ -4306,6 +4401,7 @@ async function saveCredentials(e) {
       }
       banner.style.display = 'block';
       loadCredentials();
+      checkPhoneStatus(true);
     } else {
       banner.style.background = '#fee2e2'; banner.style.border = '1px solid #fca5a5'; banner.style.color = '#991b1b';
       banner.innerHTML = `<i class="fas fa-times-circle"></i> ${esc(d.detail || 'Failed to save')}`;
@@ -4317,6 +4413,162 @@ async function saveCredentials(e) {
     banner.style.display = 'block';
   }
   btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Save & Verify Credentials';
+}
+
+// ═══════ DC-WA-PIN-REAUTH-001: PHONE STATUS & PIN RE-AUTH ═══════
+
+async function checkPhoneStatus(manual = false) {
+  const loading = document.getElementById('phone-status-loading');
+  const card = document.getElementById('phone-status-card');
+  const alertBox = document.getElementById('phone-pin-alert');
+  if (!loading || !card) return;
+
+  if (manual) {
+    const rBtn = document.getElementById('refreshStatusBtn');
+    if (rBtn) { rBtn.disabled = true; rBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...'; }
+  }
+  try {
+    const r = await fetch('/api/v1/whatsapp-config/phone-status');
+    const d = await r.json();
+    loading.style.display = 'none';
+    card.style.display = 'block';
+
+    if (!d.configured) {
+      alertBox.style.display = 'block';
+      alertBox.style.background = '#fff3cd'; alertBox.style.border = '1px solid #ffc107'; alertBox.style.color = '#856404';
+      alertBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + esc(d.message || 'WhatsApp credentials not configured');
+      return;
+    }
+
+    if (d.error) {
+      alertBox.style.display = 'block';
+      alertBox.style.background = '#fee2e2'; alertBox.style.border = '1px solid #fca5a5'; alertBox.style.color = '#991b1b';
+      alertBox.innerHTML = '<i class="fas fa-times-circle"></i> Meta API Error: ' + esc(d.error);
+      return;
+    }
+
+    const phoneDisp = d.display_phone_number || d.phone_number_id || '--';
+    const pPhoneEl = document.getElementById('ps-phone');
+    if (pPhoneEl) pPhoneEl.textContent = phoneDisp;
+    const gPhoneEl = document.getElementById('guide-phone-display');
+    if (gPhoneEl) gPhoneEl.textContent = phoneDisp;
+
+    const pNameEl = document.getElementById('ps-name');
+    if (pNameEl) pNameEl.textContent = d.verified_name || '--';
+
+    const vBadge = document.getElementById('ps-verification-badge');
+    const vStatus = (d.code_verification_status || '').toUpperCase();
+    if (vBadge) {
+      if (vStatus === 'VERIFIED') {
+        vBadge.innerHTML = '<span class="badge" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;padding:4px 8px;font-size:12px"><i class="fas fa-check-circle"></i> VERIFIED (Active)</span>';
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#d1fae5'; alertBox.style.border = '1px solid #6ee7b7'; alertBox.style.color = '#065f46';
+        alertBox.innerHTML = '<i class="fas fa-check-circle"></i> Phone number is active, verified, and ready to send WhatsApp messages.';
+      } else if (vStatus === 'EXPIRED') {
+        vBadge.innerHTML = '<span class="badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;padding:4px 8px;font-size:12px"><i class="fas fa-exclamation-triangle"></i> EXPIRED (Re-Auth Required)</span>';
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#fff3cd'; alertBox.style.border = '1px solid #ffc107'; alertBox.style.color = '#856404';
+        alertBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <strong>Action Required:</strong> Meta registration has expired. Enter your 6-digit Two-Step Verification PIN below to re-authenticate.';
+      } else {
+        vBadge.innerHTML = `<span class="badge" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;padding:4px 8px;font-size:12px">${esc(vStatus || 'UNKNOWN')}</span>`;
+      }
+    }
+
+    const pinBadge = document.getElementById('ps-pin-badge');
+    if (pinBadge) {
+      if (d.is_pin_enabled) {
+        pinBadge.innerHTML = '<span class="badge" style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;padding:4px 8px;font-size:12px"><i class="fas fa-lock"></i> Enabled</span>';
+      } else {
+        pinBadge.innerHTML = '<span class="badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;padding:4px 8px;font-size:12px">Disabled</span>';
+      }
+    }
+
+    const statusBadge = document.getElementById('ps-status-badge');
+    const cStatus = (d.status || '').toUpperCase();
+    if (statusBadge) {
+      if (cStatus === 'CONNECTED') {
+        statusBadge.innerHTML = '<span class="badge" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;padding:4px 8px;font-size:12px"><i class="fas fa-wifi"></i> CONNECTED</span>';
+      } else {
+        statusBadge.innerHTML = `<span class="badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;padding:4px 8px;font-size:12px">${esc(cStatus || 'DISCONNECTED')}</span>`;
+      }
+    }
+
+    const qBadge = document.getElementById('ps-quality-badge');
+    const qRating = (d.quality_rating || '').toUpperCase();
+    if (qBadge) {
+      if (qRating === 'GREEN') {
+        qBadge.innerHTML = '<span class="badge" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;padding:4px 8px;font-size:12px"><i class="fas fa-circle" style="color:#10b981;font-size:10px"></i> HIGH (GREEN)</span>';
+      } else if (qRating === 'YELLOW') {
+        qBadge.innerHTML = '<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:4px 8px;font-size:12px"><i class="fas fa-circle" style="color:#f59e0b;font-size:10px"></i> MEDIUM (YELLOW)</span>';
+      } else if (qRating === 'RED') {
+        qBadge.innerHTML = '<span class="badge" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;padding:4px 8px;font-size:12px"><i class="fas fa-circle" style="color:#ef4444;font-size:10px"></i> LOW (RED)</span>';
+      } else {
+        qBadge.innerHTML = `<span class="badge" style="background:#f3f4f6;color:#6b7280;padding:4px 8px;font-size:12px">${esc(qRating || 'UNKNOWN')}</span>`;
+      }
+    }
+
+  } catch(e) {
+    loading.style.display = 'none';
+    card.style.display = 'block';
+    alertBox.style.display = 'block';
+    alertBox.style.background = '#fee2e2'; alertBox.style.border = '1px solid #fca5a5'; alertBox.style.color = '#991b1b';
+    alertBox.innerHTML = '<i class="fas fa-times-circle"></i> Failed to check phone status: ' + esc(String(e));
+  } finally {
+    if (manual) {
+      const rBtn = document.getElementById('refreshStatusBtn');
+      if (rBtn) { rBtn.disabled = false; rBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh Status'; }
+    }
+  }
+}
+
+async function submitReauthPin() {
+  const pinInput = document.getElementById('reauthPinInput');
+  const pin = (pinInput.value || '').trim();
+  const alertBox = document.getElementById('phone-pin-alert');
+  const btn = document.getElementById('reauthPinBtn');
+
+  if (!pin) {
+    alert('Please enter your 6-digit Two-Step Verification PIN');
+    pinInput.focus();
+    return;
+  }
+  if (!/^\d{6}$/.test(pin)) {
+    alert('PIN must be exactly 6 numeric digits (e.g. 123456)');
+    pinInput.focus();
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting to Meta...';
+  alertBox.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/v1/whatsapp-config/reauthenticate-pin', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ pin: pin })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      alertBox.style.display = 'block';
+      alertBox.style.background = '#d1fae5'; alertBox.style.border = '1px solid #6ee7b7'; alertBox.style.color = '#065f46';
+      alertBox.innerHTML = `<i class="fas fa-check-circle"></i> <strong>Success:</strong> ${esc(data.message)}`;
+      pinInput.value = '';
+      checkPhoneStatus();
+    } else {
+      alertBox.style.display = 'block';
+      alertBox.style.background = '#fee2e2'; alertBox.style.border = '1px solid #fca5a5'; alertBox.style.color = '#991b1b';
+      const msg = data.detail || data.error || 'PIN registration failed';
+      alertBox.innerHTML = `<i class="fas fa-times-circle"></i> <strong>Failed:</strong> ${esc(msg)}`;
+    }
+  } catch(err) {
+    alertBox.style.display = 'block';
+    alertBox.style.background = '#fee2e2'; alertBox.style.border = '1px solid #fca5a5'; alertBox.style.color = '#991b1b';
+    alertBox.innerHTML = `<i class="fas fa-times-circle"></i> Network error: ${esc(String(err))}`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-bolt"></i> Re-Authenticate PIN with Meta';
+  }
 }
 
 // ═══════ META SYNC MODAL ═══════

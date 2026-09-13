@@ -263,6 +263,7 @@
               <input type="text" id="globalSearchInput" placeholder="Search phone, contact, group..." oninput="onGlobalSearchInput(this.value)">
             </div>
             <button class="btn-custom btn-green" onclick="openNewChatModal()"><i class="fas fa-plus"></i> New Message</button>
+            <a href="/staff/whatsapp-config#tab-credentials" class="btn-custom btn-outline-custom" style="background:rgba(255,255,255,.9);color:#065f46;border:none" title="Configure WhatsApp API Credentials & PIN"><i class="fas fa-key"></i> API Config &amp; PIN</a>
             <a href="https://web.whatsapp.com" target="_blank" class="btn-custom btn-outline-custom" style="background:rgba(255,255,255,.9);color:#065f46;border:none"><i class="fab fa-whatsapp"></i> Open WA Web</a>
           </div>
         </div>
@@ -282,7 +283,7 @@
         </button>
       </div>
 
-      <!-- ═══ 8-TAB NAVIGATION ══════════════════════════════════════════════════ -->
+      <!-- ═══ 9-TAB NAVIGATION ══════════════════════════════════════════════════ -->
       <div class="wa-tab-bar">
         <button class="wa-tab-btn active" id="btn-tab-messenger" onclick="switchCenterTab('messenger')"><i class="fas fa-comments"></i> 1. My Messages</button>
         <button class="wa-tab-btn" id="btn-tab-team" onclick="switchCenterTab('team')"><i class="fas fa-users"></i> 2. Team Messages</button>
@@ -292,6 +293,7 @@
         <button class="wa-tab-btn admin-only-tab" id="btn-tab-templates" onclick="switchCenterTab('templates')"><i class="fas fa-file-alt"></i> 6. Templates</button>
         <button class="wa-tab-btn admin-only-tab" id="btn-tab-automations" onclick="switchCenterTab('automations')"><i class="fas fa-cogs"></i> 7. Automations</button>
         <button class="wa-tab-btn admin-only-tab" id="btn-tab-audit" onclick="switchCenterTab('audit')"><i class="fas fa-shield-alt"></i> 8. Audit Log</button>
+        <a href="/staff/whatsapp-config#tab-credentials" class="wa-tab-btn admin-only-tab" style="text-decoration:none;color:#475569"><i class="fas fa-key"></i> 9. API Config &amp; PIN</a>
       </div>
 
       <!-- ═══ TAB 1: CRM INBOX ═════════════════════════════════════════════════ -->
@@ -1847,12 +1849,12 @@ function getStaffSignature() {
       const name = u.full_name || u.name || (u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : '') || 'Staff';
       const ext = u.extension || u.ext || (typeof window !== 'undefined' ? window.__STAFF_EXTENSION__ : null);
       if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
-        return `\n\nRegards,\n${name}\n8585852738\nExt: ${String(ext).trim()}`;
+        return `\n\nRegards,\n${name}\n📞 +91 85858 52738 | +91 8897797667\nExt: ${String(ext).trim()}`;
       }
-      return `\n\nRegards,\n${name}\n8585852738`;
+      return `\n\nRegards,\n${name}\n📞 +91 85858 52738 | +91 8897797667`;
     }
   } catch(e) {}
-  return '\n\nRegards,\nStaff\n8585852738';
+  return '\n\nRegards,\nStaff\n📞 +91 85858 52738 | +91 8897797667';
 }
 
 async function sendChatMessage() {

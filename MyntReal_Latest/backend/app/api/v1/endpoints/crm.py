@@ -1116,7 +1116,11 @@ def get_staff_handler_dashboard(
         else:
             u_conds.append(CRMLead.id == -1)
     fresh_cond = or_(and_(*u_conds), is_test_lead_cond)
-    unassigned_count = base.filter(fresh_cond).count()
+    # DC Protocol (Sep 2026): Fresh pool count is driven 100% by assigned categories from CRM Settings
+    if not target_is_admin:
+        unassigned_count = db.query(CRMLead).filter(fresh_cond).count()
+    else:
+        unassigned_count = base.filter(fresh_cond).count()
     
     # DC Protocol (Jan 7, 2026): All My Leads - where user is primary owner OR any handler
     # DC Protocol (Jan 22, 2026): Use target_employee instead of current_employee
@@ -3703,7 +3707,11 @@ def get_my_leads(
     is_test_lead_cond = or_(CRMLead.phone.ilike('%8143450736%'), CRMLead.alternate_phone.ilike('%8143450736%'), CRMLead.id == 8850)
     
     # Apply company filter — use data_companies when no specific company selected
-    if company_id:
+    # DC Protocol (Sep 2026): When querying fresh/unassigned leads, category routing from CRM Settings
+    # takes precedence across companies so staff see all leads for their assigned categories.
+    if role_filter in ('fresh', 'unassigned'):
+        pass
+    elif company_id:
         query = query.filter(or_(CRMLead.company_id == company_id, is_test_lead_cond))
     elif not is_admin:
         # DC Protocol (Mar 2026): Use staff's accessible companies instead of requiring a specific one
@@ -3759,6 +3767,8 @@ def get_my_leads(
                     u_conds.append(or_(*[and_(CRMLead.company_id == co, CRMLead.category_id == cat) for co, cat in eligibility]))
                 else:
                     u_conds.append(CRMLead.id == -1)
+            elif company_id:
+                u_conds.append(CRMLead.company_id == company_id)
             query = query.filter(or_(and_(*u_conds), is_test_lead_cond))
         elif role_filter == 'self':
             query = query.filter(
@@ -4958,7 +4968,10 @@ def list_leads(
             else:
                 u_conds.append(CRMLead.id == -1)
         fresh_cond = or_(and_(*u_conds), is_test_lead_cond)
-        if company_filter_clause is not None:
+        # DC Protocol (Sep 2026): Category-Driven Fresh Leads Routing
+        # For non-admin staff, fresh leads are scoped strictly by assigned categories from CRM Settings,
+        # regardless of header company selection. For admins, company_filter_clause can still filter.
+        if is_admin and company_filter_clause is not None:
             query = query.filter(and_(company_filter_clause, fresh_cond))
         else:
             query = query.filter(fresh_cond)
@@ -19524,7 +19537,7 @@ def get_unclaimed_leads(
 @router.post("/leads/{lead_id}/claim")
 def claim_lead(
     lead_id: int,
-    company_id: int = Query(...),
+    company_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
@@ -19539,9 +19552,14 @@ def claim_lead(
     from pytz import timezone as _tz
     _now = datetime.now(_tz('Asia/Kolkata')).replace(tzinfo=None)
 
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id, CRMLead.company_id == company_id).first()
+    lead = None
+    if company_id is not None:
+        lead = db.query(CRMLead).filter(CRMLead.id == lead_id, CRMLead.company_id == company_id).first()
+    if not lead:
+        lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
+    company_id = lead.company_id
 
     is_eligible, reason = is_lead_claim_eligible_for_staff(lead, current_employee.id, current_employee.emp_code, db)
     if not is_eligible:

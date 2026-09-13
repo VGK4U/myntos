@@ -141,6 +141,8 @@ def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
         return None  # Skip rows with no name
 
     phone = get('phone')
+    if phone:
+        phone = re.sub(r'^[pP]:\s*', '', phone).strip()
     email = get('email') or None
     city    = get('city') or None
     state   = get('state') or None
@@ -166,6 +168,8 @@ def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
     req      = get('requirements') or None
     budget   = get('budget') or None
     lead_id  = get('lead_id') or None
+    if lead_id:
+        lead_id = re.sub(r'^[lL]:\s*', '', lead_id).strip()
     ad_name  = get('ad_name') or get('form_name') or get('campaign_name') or None
     investment_capacity = get('investment_capacity') or None
     planning_start      = get('planning_start') or None
@@ -260,24 +264,49 @@ def is_duplicate(phone: Optional[str], email: Optional[str],
     from sqlalchemy import text
     try:
         if fb_lead_id and fb_lead_id not in ('', 'None', 'nan'):
+            raw_id = str(fb_lead_id).strip()
+            clean_id = re.sub(r'^[lL]:\s*', '', raw_id)
+
+            # 1. Check meta_leads_attribution table
+            try:
+                from app.models.meta_attribution import MetaLeadsAttribution
+                att = db.query(MetaLeadsAttribution.id).filter(
+                    MetaLeadsAttribution.meta_lead_id.in_([clean_id, f"l:{clean_id}", raw_id])
+                ).first()
+                if att:
+                    return True
+            except Exception as att_err:
+                logger.warning(f"Attribution check error in is_duplicate: {att_err}")
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+
+            # 2. Check crm_leads source_details
             row = db.execute(text(
-                "SELECT id FROM crm_leads WHERE source_details LIKE :pat LIMIT 1"
-            ), {'pat': f"%'lead_id': '{fb_lead_id}'%"}).fetchone()
+                "SELECT id FROM crm_leads WHERE (source_details LIKE :p1 OR source_details LIKE :p2) LIMIT 1"
+            ), {'p1': f"%'lead_id': '{clean_id}'%", 'p2': f"%'lead_id': 'l:{clean_id}'%"}).fetchone()
             if row:
                 return True
 
-        if phone and len(phone) >= 8:
-            clean_phone = re.sub(r'[^0-9]', '', phone)[-10:]
-            # DC-DEDUP-002: Check given phone against BOTH phone and alternate_phone columns
-            row = db.execute(text(
-                "SELECT id FROM crm_leads WHERE "
-                "regexp_replace(phone, '[^0-9]', '', 'g') LIKE :ph "
-                "OR regexp_replace(alternate_phone, '[^0-9]', '', 'g') LIKE :ph LIMIT 1"
-            ), {'ph': f'%{clean_phone}'}).fetchone()
-            if row:
-                return True
+        if phone and len(str(phone).strip()) >= 8:
+            clean_phone = re.sub(r'^[pP]:\s*', '', str(phone).strip())
+            clean_phone = re.sub(r'[^0-9]', '', clean_phone)[-10:]
+            if len(clean_phone) >= 8:
+                # DC-DEDUP-002: Check given phone against BOTH phone and alternate_phone columns
+                row = db.execute(text(
+                    "SELECT id FROM crm_leads WHERE "
+                    "regexp_replace(phone, '[^0-9]', '', 'g') LIKE :ph "
+                    "OR regexp_replace(alternate_phone, '[^0-9]', '', 'g') LIKE :ph LIMIT 1"
+                ), {'ph': f'%{clean_phone}'}).fetchone()
+                if row:
+                    return True
     except Exception as e:
         logger.warning(f"Duplicate check error: {e}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
     return False
 
 def import_sheet_to_crm(sheet_url: str, db, company_id: int = 1,

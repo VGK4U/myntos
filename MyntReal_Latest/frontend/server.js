@@ -20036,9 +20036,9 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.end(html);
     });
     return;
-  } else if (url.startsWith('/staff/whatsapp-config')) {
+  } else if (url.startsWith('/staff/whatsapp-config') || url.startsWith('/staff/whatsapp/config')) {
     const staffToken = cookies.staff_token || cookies.session_token || cookies.session || '';
-    const filePath = path.join(__dirname, 'staff_whatsapp_center.html');
+    const filePath = path.join(__dirname, 'staff_whatsapp_config.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('WhatsApp Config not found'); return; }
       let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);

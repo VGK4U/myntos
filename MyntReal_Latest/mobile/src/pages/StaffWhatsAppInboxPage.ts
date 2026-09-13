@@ -1532,9 +1532,9 @@ export class StaffWhatsAppInboxPage {
       const user: any = authService.getAuthState().user || {};
       const staffName = user.full_name || user.name || 'Staff';
       const ext = user.extension || user.ext || (typeof window !== 'undefined' ? (window as any).__STAFF_EXTENSION__ : null);
-      let signature = `\n\nRegards,\n${staffName}\n8585852738`;
+      let signature = `\n\nRegards,\n${staffName}\n📞 +91 85858 52738 | +91 8897797667`;
       if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
-        signature = `\n\nRegards,\n${staffName}\n8585852738\nExt: ${String(ext).trim()}`;
+        signature = `\n\nRegards,\n${staffName}\n📞 +91 85858 52738 | +91 8897797667\nExt: ${String(ext).trim()}`;
       }
       const finalMsg = text ? (!text.toLowerCase().includes('regards,') ? `${text}${signature}` : text) : '';
 
@@ -1695,9 +1695,9 @@ export class StaffWhatsAppInboxPage {
     const user: any = authService.getAuthState().user || {};
     const staffName = user.full_name || user.name || 'Staff';
     const ext = user.extension || user.ext || (typeof window !== 'undefined' ? (window as any).__STAFF_EXTENSION__ : null);
-    let defaultSig = `Regards,\n${staffName}\n8585852738`;
+    let defaultSig = `Regards,\n${staffName}\n📞 +91 85858 52738 | +91 8897797667`;
     if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
-      defaultSig = `Regards,\n${staffName}\n8585852738\nExt: ${String(ext).trim()}`;
+      defaultSig = `Regards,\n${staffName}\n📞 +91 85858 52738 | +91 8897797667\nExt: ${String(ext).trim()}`;
     }
 
     let activeModalEmojiCat = 'smileys';

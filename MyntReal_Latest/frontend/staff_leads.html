@@ -2540,7 +2540,7 @@
             // Staff Leads: Apply handler role filter
             // DC Protocol (Jan 28, 2026): Fixed visibility dropdown to handler role mapping
             if (currentHandlerRole === 'unassigned') {
-                baseEndpoint += `&handler_type=unassigned`;
+                baseEndpoint += `&scope=unassigned`;
             } else if (currentHandlerRole === 'self') {
                 baseEndpoint += `&primary_owner=true`;
             } else if (currentHandlerRole && currentHandlerRole !== '') {

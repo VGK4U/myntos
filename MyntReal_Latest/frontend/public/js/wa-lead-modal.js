@@ -403,12 +403,12 @@
         var name = u.full_name || u.name || (u.first_name ? u.first_name + ' ' + (u.last_name || '') : '') || 'Staff';
         var ext = u.extension || u.ext || (typeof window !== 'undefined' ? window.__STAFF_EXTENSION__ : null);
         if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
-          return '\n\nRegards,\n' + name + '\n8585852738\nExt: ' + String(ext).trim();
+          return '\n\nRegards,\n' + name + '\n📞 +91 85858 52738 | +91 8897797667\nExt: ' + String(ext).trim();
         }
-        return '\n\nRegards,\n' + name + '\n8585852738';
+        return '\n\nRegards,\n' + name + '\n📞 +91 85858 52738 | +91 8897797667';
       }
     } catch (e) {}
-    return '\n\nRegards,\nStaff\n8585852738';
+    return '\n\nRegards,\nStaff\n📞 +91 85858 52738 | +91 8897797667';
   }
 
   function _getVerticalQuickMessage(action, customerName, context) {

@@ -6057,17 +6057,14 @@
         
         // ── DC Protocol: Atomic Lead Claiming with Server-Side Interaction Validation ──
         async function claimLead(leadId, leadCompId) {
-            const cid = leadCompId || companyId;
-            if (!cid || cid === 'all') {
-                showToast('Please select a specific company or lead must have a valid company.', 'error');
-                return;
-            }
+            const cid = (leadCompId && leadCompId !== 'null' && leadCompId !== 'all') ? leadCompId : (companyId && companyId !== 'all' ? companyId : null);
             if (!confirm(`Do you want to claim Lead #${leadId} to your personal active pipeline?`)) {
                 return;
             }
             try {
                 const token = localStorage.getItem('token') || localStorage.getItem('staff_token');
-                const res = await fetch(`/api/v1/crm/leads/${leadId}/claim?company_id=${cid}`, {
+                const url = cid ? `/api/v1/crm/leads/${leadId}/claim?company_id=${cid}` : `/api/v1/crm/leads/${leadId}/claim`;
+                const res = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,

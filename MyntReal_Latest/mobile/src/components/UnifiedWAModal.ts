@@ -58,9 +58,9 @@ class UnifiedWAModal {
     const fullName = user.full_name || user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Staff';
     const ext = user.extension || user.ext || (typeof window !== 'undefined' ? (window as any).__STAFF_EXTENSION__ : null);
     if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
-      return `\n\nRegards,\n${fullName}\n8585852738\nExt: ${String(ext).trim()}`;
+      return `\n\nRegards,\n${fullName}\n📞 +91 85858 52738 | +91 8897797667\nExt: ${String(ext).trim()}`;
     }
-    return `\n\nRegards,\n${fullName}\n8585852738`;
+    return `\n\nRegards,\n${fullName}\n📞 +91 85858 52738 | +91 8897797667`;
   }
 
   private getVerticalQuickMessage(action: 'thanks_connecting' | 'trying_to_reach'): string {
