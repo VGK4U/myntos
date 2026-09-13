@@ -111,6 +111,9 @@ class TestArchitecturalInvariants(unittest.TestCase):
             "veh_color_in",
             "veh_color_out",
             "first_payment_received_date",
+            "cumulative_self_business_dvr",
+            "points_evaluated_dvr",
+            "vgk_self_business_points_accrual_ledger",
         ]
 
         for item in required_tables_and_columns:

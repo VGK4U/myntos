@@ -51,6 +51,9 @@ echo "Starting FastAPI Backend with Uvicorn supervisor (background)..."
   echo "Verifying Python dependencies..."
   $PYTHON_EXE -m pip install --prefer-binary -q -r "$SCRIPT_DIR/backend/requirements.txt" 2>/dev/null || true
   
+  echo "Running database schema synchronization..."
+  $PYTHON_EXE "$SCRIPT_DIR/backend/scripts/run_schema_migrations.py" || true
+
   while true; do
     cd "$SCRIPT_DIR/backend"
     $PYTHON_EXE -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --log-level info || true

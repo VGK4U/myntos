@@ -350,6 +350,80 @@ def run_migrations():
                         ADD COLUMN first_payment_received_date DATE
                     """))
 
+                # 4.10 official_partners Points System V2 columns
+                conn.execute(text("""
+                    ALTER TABLE official_partners 
+                    ADD COLUMN IF NOT EXISTS cumulative_self_business_dvr NUMERIC(14, 2) DEFAULT 0 NOT NULL,
+                    ADD COLUMN IF NOT EXISTS points_recovery_liability NUMERIC(12, 2) DEFAULT 0 NOT NULL,
+                    ADD COLUMN IF NOT EXISTS is_business_activated BOOLEAN DEFAULT FALSE NOT NULL
+                """))
+
+                # 4.11 crm_leads Points System V2 & Direct Team Lead columns
+                conn.execute(text("""
+                    ALTER TABLE crm_leads 
+                    ADD COLUMN IF NOT EXISTS points_evaluated_dvr NUMERIC(12, 2) DEFAULT 0.0 NOT NULL,
+                    ADD COLUMN IF NOT EXISTS direct_team_lead_sponsor_id INTEGER,
+                    ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded BOOLEAN DEFAULT FALSE NOT NULL,
+                    ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded_at TIMESTAMP WITHOUT TIME ZONE
+                """))
+
+                # 4.12 vgk_self_business_points_accrual_ledger table
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS vgk_self_business_points_accrual_ledger (
+                        id SERIAL PRIMARY KEY,
+                        partner_id INTEGER NOT NULL REFERENCES official_partners(id) ON DELETE CASCADE,
+                        lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                        previous_lead_dvr NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+                        current_lead_dvr NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+                        incremental_dvr NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+                        partner_cumulative_dvr_before NUMERIC(14, 2) NOT NULL DEFAULT 0.00,
+                        partner_cumulative_dvr_after NUMERIC(14, 2) NOT NULL DEFAULT 0.00,
+                        milestones_crossed INTEGER NOT NULL DEFAULT 0,
+                        points_awarded NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+                        carry_forward_volume NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+                        ledger_entry_id INTEGER,
+                        transaction_type VARCHAR(30) NOT NULL DEFAULT 'ACCRUAL',
+                        liability_offset_amount NUMERIC(12, 2) NOT NULL DEFAULT 0.00,
+                        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+                    )
+                """))
+                conn.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_vgk_self_biz_partner ON vgk_self_business_points_accrual_ledger (partner_id)
+                """))
+                conn.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_vgk_self_biz_lead ON vgk_self_business_points_accrual_ledger (lead_id)
+                """))
+                conn.execute(text("""
+                    CREATE INDEX IF NOT EXISTS idx_vgk_self_biz_created ON vgk_self_business_points_accrual_ledger (created_at)
+                """))
+
+                # 4.13 ev & purchase missing columns (safe synchronization)
+                conn.execute(text("""
+                    ALTER TABLE ev 
+                    ADD COLUMN IF NOT EXISTS manufacturer VARCHAR(100),
+                    ADD COLUMN IF NOT EXISTS specifications TEXT,
+                    ADD COLUMN IF NOT EXISTS category VARCHAR(50),
+                    ADD COLUMN IF NOT EXISTS image_url VARCHAR(500),
+                    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+                    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+                """))
+
+                conn.execute(text("""
+                    ALTER TABLE purchase 
+                    ADD COLUMN IF NOT EXISTS delivery_address TEXT,
+                    ADD COLUMN IF NOT EXISTS admin_notes TEXT,
+                    ADD COLUMN IF NOT EXISTS enhanced_coupon_id INTEGER,
+                    ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(30),
+                    ADD COLUMN IF NOT EXISTS original_price INTEGER DEFAULT 0,
+                    ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(50),
+                    ADD COLUMN IF NOT EXISTS verified_by_admin_id VARCHAR(20),
+                    ADD COLUMN IF NOT EXISTS rejection_reason TEXT,
+                    ADD COLUMN IF NOT EXISTS delivery_date TIMESTAMP WITHOUT TIME ZONE,
+                    ADD COLUMN IF NOT EXISTS verification_date TIMESTAMP WITHOUT TIME ZONE,
+                    ADD COLUMN IF NOT EXISTS discount_amount INTEGER DEFAULT 0,
+                    ADD COLUMN IF NOT EXISTS final_price INTEGER DEFAULT 0
+                """))
+
         logger.info("✅ Feature-specific schema migrations complete")
     except Exception as e:
         logger.error(f"❌ Feature migrations failed: {e}")

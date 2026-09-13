@@ -28,6 +28,23 @@ if not os.path.exists(ZIP_PATH):
     print(f"Error: {ZIP_PATH} not found.")
     sys.exit(1)
 
+# DC Protocol: Always synchronize database schema prior to deployment version switch
+print("Running pre-deployment database schema synchronization...")
+os.environ['ALLOW_PROD_DB_ACCESS'] = '1'
+prod_db_url = os.environ.get('PROD_DATABASE_URL')
+if prod_db_url:
+    os.environ['DATABASE_URL'] = prod_db_url
+
+try:
+    backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend'))
+    if backend_path not in sys.path:
+        sys.path.insert(0, backend_path)
+    from scripts.run_schema_migrations import run_migrations
+    run_migrations()
+    print("✅ Pre-deployment database migrations successfully synchronized.")
+except Exception as mig_err:
+    print(f"⚠️ Pre-deployment migration warning: {mig_err}")
+
 print(f"Uploading {ZIP_PATH} ({os.path.getsize(ZIP_PATH)} bytes) to s3://{S3_BUCKET}/{S3_KEY}...")
 s3.upload_file(ZIP_PATH, S3_BUCKET, S3_KEY)
 print("Upload complete.")
