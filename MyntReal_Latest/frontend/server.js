@@ -30545,11 +30545,24 @@ async function processAction(id, action){
       res.end(data);
     });
 
-  } else if (url.startsWith('/community-services/') || url === '/community-services' || url.startsWith('/community-services?')) {
-    // DC Protocol (Jul 2026): Public community services landing page — no auth required
+  } else if (url === '/guc' || url.startsWith('/guc/') || url.startsWith('/guc?') || url === '/camgan' || url.startsWith('/camgan/') || url.startsWith('/camgan?')) {
+    // Dedicated /guc page with ONLY registration form (Utsav Committee)
+    const gucPath = path.join(__dirname, 'guc.html');
+    readFileWithRetry(gucPath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('Page not found'); return; }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
+  } else if (url.startsWith('/community-services/') || url === '/community-services' || url.startsWith('/community-services?') || url === '/comgan' || url.startsWith('/comgan/') || url.startsWith('/comgan?')) {
+    // DC Protocol: Public community services landing page (/comgan)
     const landingPath = path.join(__dirname, 'community_landing.html');
     readFileWithRetry(landingPath, (err, data) => {
-      if (err) { res.writeHead(404); res.end('Community page not found'); return; }
+      if (err) { res.writeHead(404); res.end('Page not found'); return; }
       res.writeHead(200, {
         'Content-Type': 'text/html',
         'Cache-Control': 'no-cache, no-store, must-revalidate',

@@ -14,6 +14,7 @@ import { apiService } from '../services/api.service';
 import { authService } from '../services/auth.service';
 import { PageHeader } from '../components/PageHeader';
 import { callController } from '../services/call-controller';
+import { APP_CONFIG } from '../config/app.config';
 
 export class StaffWhatsAppInboxPage {
   private container: HTMLElement;
@@ -701,22 +702,36 @@ export class StaffWhatsAppInboxPage {
     if (/^\d+$/.test(url)) {
       url = `/api/v1/whatsapp/media/${url}`;
     }
-    const dlUrl = url.includes('?') ? `${url}&download=1` : `${url}?download=1`;
+    // Prefix relative URLs with APP_CONFIG.MEDIA_BASE_URL for native Capacitor / mobile parity
+    const fullUrl = (url.startsWith('/') && APP_CONFIG.MEDIA_BASE_URL)
+      ? `${APP_CONFIG.MEDIA_BASE_URL}${url}`
+      : url;
+
+    const dlUrl = fullUrl.includes('?') ? `${fullUrl}&download=1` : `${fullUrl}?download=1`;
     const mime = (m.media_mime_type || '').toLowerCase();
     const type = (m.media_type || '').toLowerCase();
-    const isPdf = (type === 'document') || mime.includes('pdf') || /\.pdf(\?.*)?$/i.test(url);
-    const isImage = !isPdf && ((type === 'image') || mime.startsWith('image/') || (/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(url)));
-    const filename = m.media_name || m.filename || (url.split('/').pop()?.split('?')[0]) || (isImage ? 'image.jpg' : 'Document.pdf');
+    const isPdf = (type === 'document') || mime.includes('pdf') || /\.pdf(\?.*)?$/i.test(fullUrl);
+    const isImage = !isPdf && ((type === 'image') || mime.startsWith('image/') || (/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(fullUrl)));
+    
+    let rawFilename = m.media_name || m.filename || (url.split('/').pop()?.split('?')[0]) || '';
+    let displayFilename = rawFilename;
+    if (!displayFilename || /^\d+$/.test(displayFilename)) {
+      displayFilename = isImage ? 'Photo Attachment' : (isPdf ? 'Document Attachment' : 'Media Attachment');
+    }
 
     if (isImage) {
       return `
-        <div style="margin-bottom: 6px; border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08);">
-          <a href="${url}" target="_blank" rel="noopener noreferrer" style="display: block;">
-            <img src="${url}" alt="Attachment" style="width: 100%; max-height: 220px; object-fit: cover; display: block;" onerror="this.style.display='none'" />
+        <div class="wa-media-card" style="margin-bottom: 6px; border-radius: 8px; overflow: hidden; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); position: relative;">
+          <a href="${fullUrl}" target="_blank" rel="noopener noreferrer" style="display: block; position: relative; min-height: 120px; background: rgba(0,0,0,0.2);">
+            <img src="${fullUrl}" alt="Photo" style="width: 100%; max-height: 240px; object-fit: cover; display: block;" 
+                 loading="lazy"
+                 onerror="this.onerror=null; this.parentElement.innerHTML='<div style=\\'padding: 24px 12px; text-align: center; color: #94a3b8; font-size: 11px;\\'><i class=\\'fas fa-image\\' style=\\'font-size: 28px; color: #64748b; margin-bottom: 6px; display: block;\\'></i>Photo Attachment</div>';" />
           </a>
-          <div style="padding: 4px 8px; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-size: 10px; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px;">${this.escapeHtml(filename)}</span>
-            <a href="${dlUrl}" download="${this.escapeAttr(filename)}" style="display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; color: #34d399; font-weight: 700; text-decoration: none;">
+          <div style="padding: 6px 8px; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 10.5px; color: #cbd5e1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px;">
+              <i class="fas fa-camera" style="margin-right: 4px; font-size: 9.5px; color: #38bdf8;"></i>${this.escapeHtml(displayFilename)}
+            </span>
+            <a href="${dlUrl}" download="${this.escapeAttr(displayFilename)}" style="display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; color: #34d399; font-weight: 700; text-decoration: none;">
               <i class="fas fa-download"></i> Download
             </a>
           </div>
@@ -727,13 +742,13 @@ export class StaffWhatsAppInboxPage {
     return `
       <div style="margin-bottom: 6px;">
         <div style="display: flex; align-items: center; gap: 8px; padding: 7px 10px; background: rgba(0,0,0,0.25); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
-          <i class="fas fa-file-pdf" style="font-size: 20px; color: #ef4444; flex-shrink: 0;"></i>
+          <i class="${isPdf ? 'fas fa-file-pdf' : 'fas fa-file-alt'}" style="font-size: 20px; color: ${isPdf ? '#ef4444' : '#38bdf8'}; flex-shrink: 0;"></i>
           <div style="flex: 1; min-width: 0;">
-            <div style="font-size: 11.5px; font-weight: 600; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.escapeHtml(filename)}</div>
-            <div style="font-size: 9.5px; color: #94a3b8;">Document Attachment</div>
+            <div style="font-size: 11.5px; font-weight: 600; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.escapeHtml(displayFilename)}</div>
+            <div style="font-size: 9.5px; color: #94a3b8;">${isPdf ? 'PDF Document' : 'Attachment'}</div>
           </div>
-          <a href="${url}" target="_blank" rel="noopener noreferrer" style="padding: 4px 8px; background: #0284c7; color: #fff; border-radius: 4px; font-size: 10px; text-decoration: none; font-weight: 600; margin-right: 4px;">View</a>
-          <a href="${dlUrl}" download="${this.escapeAttr(filename)}" style="padding: 4px 8px; background: #059669; color: #fff; border-radius: 4px; font-size: 10px; text-decoration: none; font-weight: 600;">Download</a>
+          <a href="${fullUrl}" target="_blank" rel="noopener noreferrer" style="padding: 4px 8px; background: #0284c7; color: #fff; border-radius: 4px; font-size: 10px; text-decoration: none; font-weight: 600; margin-right: 4px;">View</a>
+          <a href="${dlUrl}" download="${this.escapeAttr(displayFilename)}" style="padding: 4px 8px; background: #059669; color: #fff; border-radius: 4px; font-size: 10px; text-decoration: none; font-weight: 600;">Download</a>
         </div>
       </div>
     `;

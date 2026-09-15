@@ -424,9 +424,244 @@ def run_migrations():
                     ADD COLUMN IF NOT EXISTS final_price INTEGER DEFAULT 0
                 """))
 
+                # 4.14 SaaS Phase 1 Foundation Migration (Authoritative Integration)
+                saas_sql_file = _backend_dir / "migrations" / "add_saas_phase1_foundation_20260914.sql"
+                if saas_sql_file.exists():
+                    logger.info(f"Executing SaaS Phase 1 Foundation migration from {saas_sql_file.name}...")
+                    with open(saas_sql_file, "r", encoding="utf-8") as f:
+                        saas_sql = f.read()
+                    conn.execute(text(saas_sql))
+                    logger.info("✅ SaaS Phase 1 Foundation migration executed successfully")
+                else:
+                    logger.warning(f"⚠️ SaaS Phase 1 SQL migration file not found at {saas_sql_file}")
+
+                # 4.15 CRM Phone Identity Association & Provenance Tables (b8c9d0e1f2a3 / c9d0e1f2a3b4)
+                logger.info("Executing CRM Phone Identity tables migration...")
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS crm_lead_phones (
+                        id BIGSERIAL PRIMARY KEY,
+                        tenant_id INTEGER NOT NULL,
+                        company_id INTEGER NOT NULL,
+                        lead_id INTEGER NOT NULL,
+                        phone_norm VARCHAR(15) NOT NULL,
+                        phone_role VARCHAR(30) NOT NULL DEFAULT 'PRIMARY',
+                        is_primary BOOLEAN NOT NULL DEFAULT TRUE,
+                        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                        verification_status VARCHAR(30) NOT NULL DEFAULT 'UNVERIFIED',
+                        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                        
+                        CONSTRAINT fk_crm_lead_phones_lead 
+                            FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_crm_lead_phones_tenant_company 
+                            FOREIGN KEY (tenant_id, company_id) REFERENCES associated_companies(client_id, id) ON DELETE RESTRICT,
+                        CONSTRAINT fk_crm_lead_phones_tenant 
+                            FOREIGN KEY (tenant_id) REFERENCES platform_clients(id) ON DELETE RESTRICT,
+                        CONSTRAINT uq_crm_lead_phones_association 
+                            UNIQUE (tenant_id, company_id, lead_id, phone_norm)
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_crm_lead_phones_lookup 
+                    ON crm_lead_phones (tenant_id, company_id, phone_norm) 
+                    WHERE (is_active = TRUE);
+
+                    CREATE INDEX IF NOT EXISTS idx_crm_lead_phones_lead_id 
+                    ON crm_lead_phones (lead_id);
+
+                    CREATE TABLE IF NOT EXISTS crm_lead_phone_provenances (
+                        id BIGSERIAL PRIMARY KEY,
+                        phone_association_id BIGINT NOT NULL,
+                        tenant_id INTEGER NOT NULL,
+                        company_id INTEGER NOT NULL,
+                        lead_id INTEGER NOT NULL,
+                        source_field VARCHAR(50) NOT NULL,
+                        raw_value VARCHAR(100),
+                        source_channel VARCHAR(50) NOT NULL DEFAULT 'manual',
+                        source_ref TEXT,
+                        captured_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+
+                        CONSTRAINT fk_crm_lead_phone_prov_assoc 
+                            FOREIGN KEY (phone_association_id) REFERENCES crm_lead_phones(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_crm_lead_phone_prov_lead 
+                            FOREIGN KEY (lead_id) REFERENCES crm_leads(id) ON DELETE CASCADE,
+                        CONSTRAINT fk_crm_lead_phone_prov_company 
+                            FOREIGN KEY (tenant_id, company_id) REFERENCES associated_companies(client_id, id) ON DELETE RESTRICT
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_crm_lead_phone_prov_assoc 
+                    ON crm_lead_phone_provenances (phone_association_id);
+
+                    CREATE INDEX IF NOT EXISTS idx_crm_lead_phone_prov_lead 
+                    ON crm_lead_phone_provenances (lead_id);
+
+                    DO $body$
+                    BEGIN
+                        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_crm_leads_tenant_company_id') THEN
+                            ALTER TABLE crm_leads ADD CONSTRAINT uq_crm_leads_tenant_company_id UNIQUE (tenant_id, company_id, id);
+                        END IF;
+                        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_crm_lead_phones_composite_id') THEN
+                            ALTER TABLE crm_lead_phones ADD CONSTRAINT uq_crm_lead_phones_composite_id UNIQUE (id, tenant_id, company_id, lead_id);
+                        END IF;
+                    END $body$;
+                """))
+                logger.info("✅ CRM Phone Identity tables migration executed successfully")
+
+                # 4.16 CRM Phone Identity Historical Backfill (non-destructive)
+                phone_count = conn.execute(text("SELECT count(*) FROM crm_lead_phones")).scalar() or 0
+                if phone_count == 0:
+                    logger.info("Populating CRM phone identity tables from crm_leads...")
+                    conn.execute(text("""
+                        INSERT INTO crm_lead_phones (tenant_id, company_id, lead_id, phone_norm, phone_role, is_primary, is_active, verification_status, created_at, updated_at)
+                        SELECT 
+                            l.tenant_id,
+                            l.company_id,
+                            l.id,
+                            CASE 
+                                WHEN length(regexp_replace(l.phone, '\\D', '', 'g')) >= 10 
+                                    THEN substring(regexp_replace(l.phone, '\\D', '', 'g') from length(regexp_replace(l.phone, '\\D', '', 'g')) - 9 for 10)
+                                WHEN length(regexp_replace(l.phone, '\\D', '', 'g')) IN (8, 9) 
+                                    THEN regexp_replace(l.phone, '\\D', '', 'g')
+                                ELSE NULL
+                            END AS phone_norm,
+                            'PRIMARY',
+                            TRUE,
+                            TRUE,
+                            'UNVERIFIED',
+                            NOW(),
+                            NOW()
+                        FROM crm_leads l
+                        WHERE l.phone IS NOT NULL 
+                          AND length(regexp_replace(l.phone, '\\D', '', 'g')) >= 8
+                          AND l.tenant_id IS NOT NULL
+                        ON CONFLICT (tenant_id, company_id, lead_id, phone_norm) DO NOTHING;
+                    """))
+
+                    conn.execute(text("""
+                        INSERT INTO crm_lead_phone_provenances (phone_association_id, tenant_id, company_id, lead_id, source_field, raw_value, source_channel, source_ref, captured_at)
+                        SELECT 
+                            p.id,
+                            p.tenant_id,
+                            p.company_id,
+                            p.lead_id,
+                            'phone',
+                            l.phone,
+                            COALESCE(l.source, 'crm_leads_backfill'),
+                            'Phase 1 Migration Backfill',
+                            NOW()
+                        FROM crm_lead_phones p
+                        JOIN crm_leads l ON p.lead_id = l.id
+                        WHERE p.phone_role = 'PRIMARY'
+                        ON CONFLICT DO NOTHING;
+                    """))
+
+                    conn.execute(text("""
+                        INSERT INTO crm_lead_phones (tenant_id, company_id, lead_id, phone_norm, phone_role, is_primary, is_active, verification_status, created_at, updated_at)
+                        SELECT 
+                            l.tenant_id,
+                            l.company_id,
+                            l.id,
+                            CASE 
+                                WHEN length(regexp_replace(l.alternate_phone, '\\D', '', 'g')) >= 10 
+                                    THEN substring(regexp_replace(l.alternate_phone, '\\D', '', 'g') from length(regexp_replace(l.alternate_phone, '\\D', '', 'g')) - 9 for 10)
+                                WHEN length(regexp_replace(l.alternate_phone, '\\D', '', 'g')) IN (8, 9) 
+                                    THEN regexp_replace(l.alternate_phone, '\\D', '', 'g')
+                                ELSE NULL
+                            END AS phone_norm,
+                            'ALTERNATE',
+                            FALSE,
+                            TRUE,
+                            'UNVERIFIED',
+                            NOW(),
+                            NOW()
+                        FROM crm_leads l
+                        WHERE l.alternate_phone IS NOT NULL 
+                          AND length(regexp_replace(l.alternate_phone, '\\D', '', 'g')) >= 8
+                          AND l.tenant_id IS NOT NULL
+                        ON CONFLICT (tenant_id, company_id, lead_id, phone_norm) DO NOTHING;
+                    """))
+
+                    conn.execute(text("""
+                        INSERT INTO crm_lead_phone_provenances (phone_association_id, tenant_id, company_id, lead_id, source_field, raw_value, source_channel, source_ref, captured_at)
+                        SELECT 
+                            p.id,
+                            p.tenant_id,
+                            p.company_id,
+                            p.lead_id,
+                            'alternate_phone',
+                            l.alternate_phone,
+                            COALESCE(l.source, 'crm_leads_backfill'),
+                            'Phase 1 Migration Backfill',
+                            NOW()
+                        FROM crm_lead_phones p
+                        JOIN crm_leads l ON p.lead_id = l.id
+                        WHERE p.phone_role = 'ALTERNATE'
+                        ON CONFLICT DO NOTHING;
+                    """))
+                    logger.info("✅ CRM Phone Identity backfill completed")
+                else:
+                    logger.info(f"⏭️ CRM Phone Identity tables already populated ({phone_count} associations)")
+
+                # 4.14 GUC Committee Fields Migration
+                guc_mig_file = _backend_dir / "migrations" / "add_guc_committee_fields_20260915.sql"
+                if guc_mig_file.exists():
+                    logger.info("Executing GUC committee fields migration (add_guc_committee_fields_20260915.sql)...")
+                    sql_content = guc_mig_file.read_text(encoding="utf-8")
+                    for statement in sql_content.split(";"):
+                        cleaned_lines = [l for l in statement.splitlines() if not l.strip().startswith("--")]
+                        stmt = "\n".join(cleaned_lines).strip()
+                        if stmt:
+                            conn.execute(text(stmt))
+                    logger.info("✅ GUC committee fields migration executed successfully")
+
         logger.info("✅ Feature-specific schema migrations complete")
     except Exception as e:
         logger.error(f"❌ Feature migrations failed: {e}")
+        sys.exit(1)
+
+    # 5. Pre-Deployment Schema Compatibility Gate & Architectural Invariant Check
+    try:
+        logger.info("Running pre-deployment schema compatibility gate...")
+        with engine.connect() as conn:
+            # Check 1: staff_employees columns
+            staff_cols = conn.execute(text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'staff_employees' AND column_name IN ('tenant_id', 'token_version')
+            """)).fetchall()
+            found_staff_cols = {r[0] for r in staff_cols}
+            if 'tenant_id' not in found_staff_cols or 'token_version' not in found_staff_cols:
+                raise RuntimeError(f"Gate Failed: staff_employees missing required columns. Found: {found_staff_cols}")
+
+            # Check 2: crm_leads column
+            crm_cols = conn.execute(text("""
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'crm_leads' AND column_name = 'tenant_id'
+            """)).fetchall()
+            if not crm_cols:
+                raise RuntimeError("Gate Failed: crm_leads missing tenant_id column")
+
+            # Check 3: required tables exist
+            required_tables = ['staff_company_memberships', 'crm_lead_phones', 'crm_lead_phone_provenances']
+            res_tbls = conn.execute(text(f"""
+                SELECT table_name FROM information_schema.tables 
+                WHERE table_name IN ({', '.join(repr(t) for t in required_tables)})
+            """)).fetchall()
+            found_tbls = {r[0] for r in res_tbls}
+            missing_tbls = set(required_tables) - found_tbls
+            if missing_tbls:
+                raise RuntimeError(f"Gate Failed: Missing required tables: {missing_tbls}")
+
+            # Check 4: no unexpected NULLs in tenant_id
+            null_staff = conn.execute(text("SELECT count(*) FROM staff_employees WHERE tenant_id IS NULL")).scalar()
+            if null_staff > 0:
+                raise RuntimeError(f"Gate Failed: Found {null_staff} staff_employees records with NULL tenant_id")
+
+            null_leads = conn.execute(text("SELECT count(*) FROM crm_leads WHERE tenant_id IS NULL")).scalar()
+            if null_leads > 0:
+                raise RuntimeError(f"Gate Failed: Found {null_leads} crm_leads records with NULL tenant_id")
+
+            logger.info("✅ Pre-deployment schema compatibility gate passed: all invariants satisfied")
+    except Exception as e:
+        logger.critical(f"❌ Schema compatibility gate failed: {e}")
         sys.exit(1)
         
     logger.info("==================================================")

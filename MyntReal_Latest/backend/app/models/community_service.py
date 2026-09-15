@@ -61,6 +61,34 @@ class CommunityRegistration(BaseModel):
     user_id = Column(Integer, ForeignKey('official_partners.id', ondelete='SET NULL'), nullable=True)  # Associated partner login credentials
     google_location = Column(String(500), nullable=True)
     
+    # GUC / Ganesh Utsav Committee Dedicated Application Fields
+    application_no = Column(String(100), nullable=True)
+    assembly_constituency = Column(String(100), default='Pendurthi', nullable=True)
+    president_name = Column(String(200), nullable=True)
+    president_phone = Column(String(20), nullable=True)
+    secretary_name = Column(String(200), nullable=True)
+    secretary_phone = Column(String(20), nullable=True)
+    treasurer_name = Column(String(200), nullable=True)
+    treasurer_phone = Column(String(20), nullable=True)
+    mandap_location = Column(String, nullable=True)
+    location_category = Column(String(50), nullable=True)  # Temple, Community, Government, Private
+    location_owner_details = Column(String, nullable=True)
+    idol_height = Column(String(50), nullable=True)
+    utsav_start_date = Column(Date, nullable=True)
+    utsav_end_date = Column(Date, nullable=True)
+    visarjan_date = Column(Date, nullable=True)
+    visarjan_time = Column(String(50), nullable=True)
+    visarjan_phone = Column(String(20), nullable=True)
+    mandap_volunteers = Column(JSONB, nullable=True, default=list)  # [{name, phone}]
+    cultural_programs = Column(JSONB, nullable=True, default=list)  # [program1, program2, program3]
+    sound_system_details = Column(String, nullable=True)
+    latitude = Column(Numeric(10, 7), nullable=True)
+    longitude = Column(Numeric(10, 7), nullable=True)
+    formatted_address = Column(String, nullable=True)
+    applicant_signature = Column(String, nullable=True)
+    registered_from = Column(String(100), default='Community Service', nullable=True)
+    landmark = Column(String(255), nullable=True)
+
     created_at = Column(DateTime, default=get_indian_time, nullable=False)
     updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time, nullable=False)
 

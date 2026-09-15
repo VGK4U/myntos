@@ -27,6 +27,7 @@ from app.services.crm_phone_sync_service import (
     sync_lead_phone_identities,
     find_candidate_lead_ids_for_search,
 )
+from app.core.timezone import normalize_date_input
 
 logger = logging.getLogger(__name__)
 
@@ -19449,15 +19450,9 @@ async def generate_solar_doc(
                 # ── DC-DATE-NORM: normalise sanction_date to ISO YYYY-MM-DD ──────
                 if "sanction_date" in _lead_saves:
                     _raw_sd = str(_lead_saves["sanction_date"]).strip()
-                    _parsed_sd = None
-                    for _fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%d-%m-%y", "%d/%m/%y", "%-d-%-m-%Y", "%-d/%-m/%Y"):
-                        try:
-                            _parsed_sd = datetime.strptime(_raw_sd, _fmt).date()
-                            break
-                        except ValueError:
-                            continue
-                    if _parsed_sd:
-                        _lead_saves["sanction_date"] = _parsed_sd.isoformat()
+                    _norm_sd = normalize_date_input(_raw_sd)
+                    if _norm_sd:
+                        _lead_saves["sanction_date"] = _norm_sd
                     else:
                         # Unrecognised format — remove to avoid DB error
                         logger.warning("[DC-SOLAR-PREFLIGHT] Unrecognised sanction_date format '%s' — skipping save", _raw_sd)

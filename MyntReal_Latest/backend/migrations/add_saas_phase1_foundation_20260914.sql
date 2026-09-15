@@ -78,28 +78,28 @@ CREATE TABLE IF NOT EXISTS staff_company_memberships (
 CREATE INDEX IF NOT EXISTS idx_scm_staff_id ON staff_company_memberships (staff_id);
 CREATE INDEX IF NOT EXISTS idx_scm_tenant_company ON staff_company_memberships (tenant_id, company_id);
 
--- Backfill primary memberships from base_company_id
+-- Backfill primary memberships from base_company_id (authoritative tenant_id from associated_companies.client_id)
 INSERT INTO staff_company_memberships (staff_id, tenant_id, company_id, is_primary, is_active, role_id)
-SELECT s.id, s.tenant_id, s.base_company_id, TRUE, (s.status = 'active'), s.role_id
+SELECT s.id, ac.client_id, s.base_company_id, TRUE, (s.status = 'active'), s.role_id
 FROM staff_employees s
-WHERE s.base_company_id IS NOT NULL AND s.base_company_id IN (SELECT id FROM associated_companies)
+JOIN associated_companies ac ON ac.id = s.base_company_id
+WHERE s.base_company_id IS NOT NULL
 ON CONFLICT (staff_id, tenant_id, company_id) DO NOTHING;
 
--- Backfill secondary memberships from data_companies
+-- Backfill secondary memberships from data_companies (authoritative tenant_id from associated_companies.client_id)
 INSERT INTO staff_company_memberships (staff_id, tenant_id, company_id, is_primary, is_active, role_id)
 SELECT 
     s.id, 
-    s.tenant_id, 
+    ac.client_id, 
     (elem)::INTEGER, 
     FALSE, 
     (s.status = 'active'), 
     s.role_id
 FROM staff_employees s,
 jsonb_array_elements_text(CASE WHEN jsonb_typeof(s.data_companies::jsonb) = 'array' THEN s.data_companies::jsonb ELSE '[]'::jsonb END) AS elem
+JOIN associated_companies ac ON ac.id = (elem)::INTEGER
 WHERE elem ~ '^[0-9]+$' 
-  AND (elem)::INTEGER IN (SELECT id FROM associated_companies)
   AND (s.base_company_id IS NULL OR (elem)::INTEGER != s.base_company_id)
-  AND s.tenant_id IS NOT NULL
 ON CONFLICT (staff_id, tenant_id, company_id) DO NOTHING;
 
 -- 3. crm_leads: tenant_id + composite FK

@@ -20,7 +20,7 @@ APP_NAME = 'vgk4u'
 ENV_NAME = 'Vgk4u-env'
 S3_BUCKET = 'elasticbeanstalk-ap-south-2-251714435676'
 TIMESTAMP = int(time.time() * 1000)
-VERSION_LABEL = f'v2.4.3-production-release-{TIMESTAMP}'
+VERSION_LABEL = f'v2.4.4-production-release-{TIMESTAMP}'
 S3_KEY = f'deployments/{VERSION_LABEL}.zip'
 ZIP_PATH = os.path.join(os.path.dirname(__file__), '..', 'deployment.zip')
 
@@ -43,7 +43,9 @@ try:
     run_migrations()
     print("✅ Pre-deployment database migrations successfully synchronized.")
 except Exception as mig_err:
-    print(f"⚠️ Pre-deployment migration warning: {mig_err}")
+    print(f"❌ CRITICAL PRE-DEPLOYMENT MIGRATION FAILURE: {mig_err}")
+    print("🛑 DEPLOYMENT ABORTED: Production database schema cannot be verified or migrated.")
+    sys.exit(1)
 
 print(f"Uploading {ZIP_PATH} ({os.path.getsize(ZIP_PATH)} bytes) to s3://{S3_BUCKET}/{S3_KEY}...")
 s3.upload_file(ZIP_PATH, S3_BUCKET, S3_KEY)
@@ -57,7 +59,7 @@ eb.create_application_version(
         'S3Bucket': S3_BUCKET,
         'S3Key': S3_KEY
     },
-    Description='MyntOS v2.4.3: CRM contact privacy, click-to-call, VGK points V2, WhatsApp cluster resilience, 4-platform parity',
+    Description='MyntOS v2.4.4: Dedicated GUC registration form, comgan community portal, SaaS tenant schema sync, 4-platform parity',
     AutoCreateApplication=False
 )
 print("Application version created.")

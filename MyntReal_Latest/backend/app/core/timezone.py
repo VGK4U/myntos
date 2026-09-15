@@ -110,3 +110,45 @@ def format_indian_time(dt_val: Optional[datetime], fmt: str = "%d %b %Y, %I:%M %
     if not ist_dt:
         return "—"
     return ist_dt.strftime(fmt)
+
+
+def normalize_date_input(val: Union[str, date, datetime, None]) -> Optional[str]:
+    """
+    Authoritative Date Normalizer for MyntOS (ISO 8601 YYYY-MM-DD).
+    Robustly handles:
+    - '26/07/26', '26/07/2026', '26-07-2026', '2026-07-26', '2026/07/26'
+    - Single digit days/months: '6/7/2026', '6-7-26'
+    - datetime / date instances
+    - Returns 'YYYY-MM-DD' string or None if unparseable.
+    - Fully cross-platform without platform-dependent format specifiers like %-d.
+    """
+    if val is None:
+        return None
+    if isinstance(val, datetime):
+        return val.date().isoformat()
+    if isinstance(val, date):
+        return val.isoformat()
+    raw = str(val).strip()
+    if not raw:
+        return None
+    import re
+    # Match YYYY-MM-DD or YYYY/MM/DD
+    m_iso = re.match(r'^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$', raw)
+    if m_iso:
+        y, m, d = int(m_iso.group(1)), int(m_iso.group(2)), int(m_iso.group(3))
+        try:
+            return date(y, m, d).isoformat()
+        except ValueError:
+            return None
+    # Match DD-MM-YYYY or DD/MM/YYYY or DD-MM-YY or DD/MM/YY
+    m_dmy = re.match(r'^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$', raw)
+    if m_dmy:
+        d, m, y = int(m_dmy.group(1)), int(m_dmy.group(2)), int(m_dmy.group(3))
+        if y < 100:
+            y += 2000 if y < 70 else 1900
+        try:
+            return date(y, m, d).isoformat()
+        except ValueError:
+            return None
+    return None
+

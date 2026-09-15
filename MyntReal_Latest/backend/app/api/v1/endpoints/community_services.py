@@ -15,6 +15,7 @@ from app.models.community_service import CommunityService, CommunityRegistration
 from app.services.universal_upload_service import UniversalUploadService
 from app.models.base import get_indian_time
 from app.api.v1.endpoints.vgk_auth import get_current_vgk_member
+from app.core.timezone import normalize_date_input, get_indian_today
 
 
 router = APIRouter()
@@ -140,23 +141,67 @@ def get_public_service_details(short_name: str, db: Session = Depends(get_db)):
     """
     Get dynamic public landing page details by short_name.
     """
+    target = short_name.strip()
     service = db.query(CommunityService).filter(
-        CommunityService.short_name.ilike(short_name),
+        CommunityService.short_name.ilike(target),
         CommunityService.status == 'ACTIVE'
     ).first()
+    if not service and target.lower() in ('camgan', 'guc', 'ganesh', 'ganesh-utsav', 'comgan'):
+        service = db.query(CommunityService).filter(
+            or_(
+                CommunityService.short_name.ilike('camgan'),
+                CommunityService.short_name.ilike('guc'),
+                CommunityService.short_name.ilike('ganesh%'),
+                CommunityService.service_name.ilike('%ganesh%')
+            ),
+            CommunityService.status == 'ACTIVE'
+        ).first()
     if not service:
-        raise HTTPException(status_code=404, detail="Community Service not found or inactive")
+        if target.lower() in ('camgan', 'guc', 'ganesh', 'ganesh-utsav'):
+            from datetime import timedelta
+            service = CommunityService(
+                service_name="విశాఖపట్నం జిల్లా గణేష్ ఉత్సవ సమితి",
+                short_name="camgan",
+                description="సామూహిక గణేష్ ఉత్సవాలు జరుపుకొనుటకు నమోదు పత్రం (Application Form for Organizing Collective Ganesh Utsav)",
+                start_date=get_indian_today(),
+                end_date=get_indian_today() + timedelta(days=90),
+                status="ACTIVE",
+                applicable_verticals=["Solar", "Real Estate"],
+                settings={"show_homepage_popup": False}
+            )
+            db.add(service)
+            db.commit()
+            db.refresh(service)
+        else:
+            raise HTTPException(status_code=404, detail="Community Service not found or inactive")
     return {
         "success": True,
         "data": service.to_dict()
     }
 
+@router.get("/public/registrations/{reg_id}")
+def get_registration_public(reg_id: int, db: Session = Depends(get_db)):
+    """
+    Public / Staff read endpoint for a single community registration by ID.
+    Enables VIEW / EDIT across Web, /mobile, Android, iOS.
+    """
+    from fastapi.encoders import jsonable_encoder
+    reg = db.query(CommunityRegistration).filter(CommunityRegistration.id == reg_id).first()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration not found")
+    data = reg.to_dict()
+    data['kyc_documents'] = reg.kyc_uploads or []
+    data['service_name'] = reg.service.service_name if reg.service else 'Ganesh Utsav Committee'
+    data['service_short_name'] = reg.service.short_name if reg.service else 'guc'
+    return {"success": True, "data": jsonable_encoder(data)}
+
+
 @router.post("/public/register")
 async def register_community(
-    community_service_id: int = Form(...),
+    community_service_id: Optional[int] = Form(None),
     association_name: Optional[str] = Form(None),
-    primary_name: str = Form(...),
-    primary_phone_1: str = Form(...),
+    primary_name: Optional[str] = Form(None),
+    primary_phone_1: Optional[str] = Form(None),
     primary_phone_2: Optional[str] = Form(None),
     secondary_name: Optional[str] = Form(None),
     secondary_phone_1: Optional[str] = Form(None),
@@ -175,116 +220,343 @@ async def register_community(
     aadhar_second_front: Optional[UploadFile] = File(None),
     aadhar_second_back: Optional[UploadFile] = File(None),
     police_permission: Optional[UploadFile] = File(None),
+    cultural_pamphlet: Optional[UploadFile] = File(None),
+    signature_upload: Optional[UploadFile] = File(None),
     files: Optional[List[UploadFile]] = File(None),
+
+    # GUC / Ganesh Utsav Committee Dedicated Form Fields
+    registration_id: Optional[int] = Form(None),
+    application_no: Optional[str] = Form(None),
+    assembly_constituency: Optional[str] = Form("Pendurthi"),
+    president_name: Optional[str] = Form(None),
+    president_phone: Optional[str] = Form(None),
+    secretary_name: Optional[str] = Form(None),
+    secretary_phone: Optional[str] = Form(None),
+    treasurer_name: Optional[str] = Form(None),
+    treasurer_phone: Optional[str] = Form(None),
+    mandap_location: Optional[str] = Form(None),
+    location_category: Optional[str] = Form(None),
+    location_owner_details: Optional[str] = Form(None),
+    idol_height: Optional[str] = Form(None),
+    utsav_start_date: Optional[str] = Form(None),
+    utsav_end_date: Optional[str] = Form(None),
+    visarjan_date: Optional[str] = Form(None),
+    visarjan_time: Optional[str] = Form(None),
+    visarjan_phone: Optional[str] = Form(None),
+    mandap_volunteers: Optional[str] = Form(None),
+    cultural_programs: Optional[str] = Form(None),
+    sound_system_details: Optional[str] = Form(None),
+    latitude: Optional[float] = Form(None),
+    longitude: Optional[float] = Form(None),
+    formatted_address: Optional[str] = Form(None),
+    applicant_signature: Optional[str] = Form(None),
+    registered_from: Optional[str] = Form(None),
+    landmark: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     """
-    Submit community registration form with structured KYC uploads and Google Maps link.
+    Submit community registration form with structured KYC uploads, location picker,
+    and GUC (Ganesh Utsav Committee) physical form reproduction.
+    Supports CREATE, SAVE, EDIT, and VIEW across Web, /mobile, Android, iOS.
     """
-    # Create the registration record
-    reg = CommunityRegistration(
-        community_service_id=community_service_id,
-        association_name=association_name or primary_name,
-        primary_name=primary_name,
-        primary_phone_1=primary_phone_1,
-        primary_phone_2=primary_phone_2,
-        secondary_name=secondary_name,
-        secondary_phone_1=secondary_phone_1,
-        secondary_phone_2=secondary_phone_2,
-        area=area or "Not Specified",
-        pin_code=pin_code or "500001",
-        district=district or "Not Specified",
-        state=state or "Telangana",
-        google_location=google_location,
-        ref1_member_id=ref1_member_id,
-        ref2_member_id=ref2_member_id,
-        referral_type=referral_type or 'direct',
-        referral_code=referral_code,
-        kyc_uploads=[],
-        status='PENDING',
-        created_at=get_indian_time(),
-        updated_at=get_indian_time()
-    )
-    db.add(reg)
-    db.commit()
-    db.refresh(reg)
-
-    # Generate login credentials (inactive until approved)
     import random
     import string
+    import logging
     from decimal import Decimal
+    from datetime import timedelta
     from app.core.security import SecurityManager
     from app.api.v1.endpoints.vgk_team import _next_vgk_partner_code
     from app.utils.phone_otp import normalize_phone_10
-    
-    clean_phone = normalize_phone_10(primary_phone_1) or primary_phone_1.strip()
 
-    # Check if a VGK member with this phone already exists
-    existing_partner = db.query(OfficialPartner).filter(
-        OfficialPartner.category == 'VGK_TEAM',
-        or_(
-            OfficialPartner.phone == clean_phone,
-            OfficialPartner.phone == primary_phone_1.strip()
-        )
-    ).first()
+    logger = logging.getLogger("community_services")
 
-    if existing_partner:
-        partner = existing_partner
-        partner_code = existing_partner.partner_code
-        # Ensure clean phone is updated if it had whitespace
-        if clean_phone and existing_partner.phone != clean_phone:
-            existing_partner.phone = clean_phone
-            db.commit()
-    else:
-        raw_password = "".join(random.choices(string.ascii_letters + string.digits, k=8))
-        password_hash = SecurityManager.get_password_hash(raw_password)
-        
-        company_id = 1
-        partner_code = _next_vgk_partner_code(db, company_id)
-
-        # Resolve default root upline and reg_by
-        VGK_DEFAULT_ROOT = 'VGK07102207'
-        default_root = db.query(OfficialPartner).filter(
-            OfficialPartner.partner_code == VGK_DEFAULT_ROOT,
-            OfficialPartner.category == 'VGK_TEAM'
+    # 1. Resolve community_service_id if not provided (default to GUC service)
+    if not community_service_id:
+        svc = db.query(CommunityService).filter(
+            or_(
+                CommunityService.short_name.ilike('guc'),
+                CommunityService.short_name.ilike('ganesh%'),
+                CommunityService.service_name.ilike('%ganesh%')
+            )
         ).first()
-        default_root_id = default_root.id if default_root else None
+        if not svc:
+            svc = db.query(CommunityService).filter(CommunityService.status == 'ACTIVE').first()
+        if not svc:
+            svc = CommunityService(
+                service_name="విశాఖపట్నం జిల్లా గణేష్ ఉత్సవ సమితి",
+                short_name="guc",
+                description="సామూహిక గణేష్ ఉత్సవాలు జరుపుకొనుటకు నమోదు పత్రం (Application Form for Organizing Collective Ganesh Utsav)",
+                start_date=get_indian_today(),
+                end_date=get_indian_today() + timedelta(days=90),
+                status="ACTIVE",
+                applicable_verticals=["Solar", "Real Estate"],
+                settings={"show_homepage_popup": False}
+            )
+            db.add(svc)
+            db.commit()
+            db.refresh(svc)
+        community_service_id = svc.id
 
-        parent_id = ref1_member_id if referral_type == 'vgk_member' and ref1_member_id else default_root_id
-        reg_by = referral_code.strip().upper() if referral_type == 'staff' and referral_code else VGK_DEFAULT_ROOT
+    # 2. Resolve field values with sensible defaults / fallbacks
+    resolved_primary_name = (primary_name or president_name or association_name or "Ganesh Utsav Committee").strip()
+    resolved_primary_phone = (primary_phone_1 or president_phone or "9999999999").strip()
+    resolved_secondary_name = (secondary_name or secretary_name or "").strip()
+    resolved_secondary_phone = (secondary_phone_1 or secretary_phone or "").strip()
+    resolved_association_name = (association_name or mandap_location or "గణేష్ ఉత్సవ కమిటీ").strip()
+    resolved_area = (area or mandap_location or "Pendurthi").strip()
+    resolved_constituency = (assembly_constituency or "Pendurthi").strip()
 
-        partner = OfficialPartner(
-            company_id=company_id,
-            partner_code=partner_code,
-            partner_name=primary_name,
-            phone=clean_phone,
-            email=None,
-            category='VGK_TEAM',
-            is_active=False, # Inactive upon initial signup
-            vgk_role='COMMUNITY',
-            parent_partner_id=parent_id,
-            registered_by_emp_code=reg_by,
-            vgk_points_balance=Decimal('0'),
-            password_hash=password_hash,
+    # Resolve registered_from origin: 'Ganesh Utsav Committee' vs 'Community Service'
+    if not registered_from:
+        if (application_no and any(k in application_no.lower() for k in ('guc', 'camgan'))) or (svc and svc.short_name and svc.short_name.lower() in ('camgan', 'guc', 'ganesh-utsav')):
+            resolved_registered_from = 'Ganesh Utsav Committee'
+        else:
+            resolved_registered_from = 'Community Service'
+    else:
+        resolved_registered_from = registered_from.strip()
+
+    # 3. Parse Dates
+    parsed_start_date = None
+    if utsav_start_date:
+        d_norm = normalize_date_input(utsav_start_date)
+        if d_norm:
+            try:
+                parsed_start_date = datetime.strptime(d_norm, "%Y-%m-%d").date()
+            except Exception:
+                pass
+
+    parsed_end_date = None
+    if utsav_end_date:
+        d_norm = normalize_date_input(utsav_end_date)
+        if d_norm:
+            try:
+                parsed_end_date = datetime.strptime(d_norm, "%Y-%m-%d").date()
+            except Exception:
+                pass
+
+    parsed_visarjan_date = None
+    if visarjan_date:
+        d_norm = normalize_date_input(visarjan_date)
+        if d_norm:
+            try:
+                parsed_visarjan_date = datetime.strptime(d_norm, "%Y-%m-%d").date()
+            except Exception:
+                pass
+
+    # 4. Parse Volunteers (JSON or text)
+    parsed_volunteers = []
+    if mandap_volunteers:
+        if isinstance(mandap_volunteers, list):
+            parsed_volunteers = mandap_volunteers
+        elif isinstance(mandap_volunteers, str):
+            try:
+                parsed_volunteers = json.loads(mandap_volunteers)
+            except Exception:
+                parsed_volunteers = [{"name": line.strip(), "phone": ""} for line in mandap_volunteers.splitlines() if line.strip()]
+
+    # 5. Parse Cultural Programs (JSON or text)
+    parsed_cultural = []
+    if cultural_programs:
+        if isinstance(cultural_programs, list):
+            parsed_cultural = cultural_programs
+        elif isinstance(cultural_programs, str):
+            try:
+                parsed_cultural = json.loads(cultural_programs)
+            except Exception:
+                parsed_cultural = [line.strip() for line in cultural_programs.splitlines() if line.strip()]
+
+    # 6. Map Link
+    if not google_location and latitude and longitude:
+        google_location = f"https://www.google.com/maps/search/?api=1&query={latitude},{longitude}"
+
+    # 7. Check if EDIT mode (registration_id passed)
+    reg = None
+    if registration_id:
+        reg = db.query(CommunityRegistration).filter(CommunityRegistration.id == registration_id).first()
+
+    if not reg:
+        if not application_no:
+            application_no = f"GUC-2026-{random.randint(10000, 99999)}"
+
+        reg = CommunityRegistration(
+            community_service_id=community_service_id,
+            association_name=resolved_association_name,
+            primary_name=resolved_primary_name,
+            primary_phone_1=resolved_primary_phone,
+            primary_phone_2=primary_phone_2,
+            secondary_name=resolved_secondary_name or None,
+            secondary_phone_1=resolved_secondary_phone or None,
+            secondary_phone_2=secondary_phone_2,
+            area=resolved_area,
+            pin_code=pin_code or "530051",
+            district=district or "Visakhapatnam",
+            state=state or "Andhra Pradesh",
+            google_location=google_location,
+            ref1_member_id=ref1_member_id,
+            ref2_member_id=ref2_member_id,
+            referral_type=referral_type or 'direct',
+            referral_code=referral_code,
+
+            # GUC dedicated fields
+            application_no=application_no,
+            assembly_constituency=resolved_constituency,
+            president_name=president_name or resolved_primary_name,
+            president_phone=president_phone or resolved_primary_phone,
+            secretary_name=secretary_name or resolved_secondary_name or None,
+            secretary_phone=secretary_phone or resolved_secondary_phone or None,
+            treasurer_name=treasurer_name,
+            treasurer_phone=treasurer_phone,
+            mandap_location=mandap_location or resolved_area,
+            location_category=location_category,
+            location_owner_details=location_owner_details,
+            idol_height=idol_height,
+            utsav_start_date=parsed_start_date,
+            utsav_end_date=parsed_end_date,
+            visarjan_date=parsed_visarjan_date,
+            visarjan_time=visarjan_time,
+            visarjan_phone=visarjan_phone,
+            mandap_volunteers=parsed_volunteers,
+            cultural_programs=parsed_cultural,
+            sound_system_details=sound_system_details,
+            latitude=latitude,
+            longitude=longitude,
+            formatted_address=formatted_address or resolved_area,
+            applicant_signature=applicant_signature,
+            registered_from=resolved_registered_from,
+            landmark=landmark,
+
+            kyc_uploads=[],
+            status='PENDING',
             created_at=get_indian_time(),
             updated_at=get_indian_time()
         )
-        db.add(partner)
+        db.add(reg)
         db.commit()
-        db.refresh(partner)
-    
-    reg.user_id = partner.id
-    db.commit()
+        db.refresh(reg)
+    else:
+        # Update existing registration
+        reg.association_name = resolved_association_name
+        reg.primary_name = resolved_primary_name
+        reg.primary_phone_1 = resolved_primary_phone
+        if primary_phone_2 is not None: reg.primary_phone_2 = primary_phone_2
+        if resolved_secondary_name: reg.secondary_name = resolved_secondary_name
+        if resolved_secondary_phone: reg.secondary_phone_1 = resolved_secondary_phone
+        if secondary_phone_2 is not None: reg.secondary_phone_2 = secondary_phone_2
+        reg.area = resolved_area
+        if pin_code: reg.pin_code = pin_code
+        if district: reg.district = district
+        if state: reg.state = state
+        if google_location: reg.google_location = google_location
+        if ref1_member_id: reg.ref1_member_id = ref1_member_id
+        if ref2_member_id: reg.ref2_member_id = ref2_member_id
+        if referral_type: reg.referral_type = referral_type
+        if referral_code: reg.referral_code = referral_code
 
-    # Handle structured KYC uploads
-    kyc_paths = []
-    
+        # GUC fields update
+        if application_no: reg.application_no = application_no
+        reg.assembly_constituency = resolved_constituency
+        reg.president_name = president_name or resolved_primary_name
+        reg.president_phone = president_phone or resolved_primary_phone
+        if secretary_name is not None: reg.secretary_name = secretary_name
+        if secretary_phone is not None: reg.secretary_phone = secretary_phone
+        if treasurer_name is not None: reg.treasurer_name = treasurer_name
+        if treasurer_phone is not None: reg.treasurer_phone = treasurer_phone
+        if mandap_location is not None: reg.mandap_location = mandap_location
+        if location_category is not None: reg.location_category = location_category
+        if location_owner_details is not None: reg.location_owner_details = location_owner_details
+        if idol_height is not None: reg.idol_height = idol_height
+        if parsed_start_date is not None: reg.utsav_start_date = parsed_start_date
+        if parsed_end_date is not None: reg.utsav_end_date = parsed_end_date
+        if parsed_visarjan_date is not None: reg.visarjan_date = parsed_visarjan_date
+        if visarjan_time is not None: reg.visarjan_time = visarjan_time
+        if visarjan_phone is not None: reg.visarjan_phone = visarjan_phone
+        if mandap_volunteers is not None: reg.mandap_volunteers = parsed_volunteers
+        if cultural_programs is not None: reg.cultural_programs = parsed_cultural
+        if sound_system_details is not None: reg.sound_system_details = sound_system_details
+        if latitude is not None: reg.latitude = latitude
+        if longitude is not None: reg.longitude = longitude
+        if formatted_address is not None: reg.formatted_address = formatted_address
+        if applicant_signature is not None: reg.applicant_signature = applicant_signature
+        if registered_from is not None: reg.registered_from = resolved_registered_from
+        if landmark is not None: reg.landmark = landmark
+
+        reg.updated_at = get_indian_time()
+        db.commit()
+        db.refresh(reg)
+
+    # 8. Generate / Resolve login credentials
+    partner_code = None
+    raw_password = None
+    clean_phone = normalize_phone_10(resolved_primary_phone) or resolved_primary_phone.strip()
+
+    if not reg.user_id:
+        existing_partner = db.query(OfficialPartner).filter(
+            OfficialPartner.category == 'VGK_TEAM',
+            or_(
+                OfficialPartner.phone == clean_phone,
+                OfficialPartner.phone == resolved_primary_phone.strip()
+            )
+        ).first()
+
+        if existing_partner:
+            partner = existing_partner
+            partner_code = existing_partner.partner_code
+            if clean_phone and existing_partner.phone != clean_phone:
+                existing_partner.phone = clean_phone
+                db.commit()
+        else:
+            raw_password = "".join(random.choices(string.ascii_letters + string.digits, k=8))
+            password_hash = SecurityManager.get_password_hash(raw_password)
+            company_id = 1
+            partner_code = _next_vgk_partner_code(db, company_id)
+
+            VGK_DEFAULT_ROOT = 'VGK07102207'
+            default_root = db.query(OfficialPartner).filter(
+                OfficialPartner.partner_code == VGK_DEFAULT_ROOT,
+                OfficialPartner.category == 'VGK_TEAM'
+            ).first()
+            default_root_id = default_root.id if default_root else None
+
+            parent_id = ref1_member_id if referral_type == 'vgk_member' and ref1_member_id else default_root_id
+            reg_by = referral_code.strip().upper() if referral_type == 'staff' and referral_code else VGK_DEFAULT_ROOT
+
+            partner = OfficialPartner(
+                company_id=company_id,
+                partner_code=partner_code,
+                partner_name=resolved_primary_name,
+                phone=clean_phone,
+                email=None,
+                category='VGK_TEAM',
+                is_active=False,
+                vgk_role='COMMUNITY',
+                parent_partner_id=parent_id,
+                registered_by_emp_code=reg_by,
+                vgk_points_balance=Decimal('0'),
+                password_hash=password_hash,
+                created_at=get_indian_time(),
+                updated_at=get_indian_time()
+            )
+            db.add(partner)
+            db.commit()
+            db.refresh(partner)
+
+        reg.user_id = partner.id
+        db.commit()
+    else:
+        partner = db.query(OfficialPartner).filter(OfficialPartner.id == reg.user_id).first()
+        partner_code = partner.partner_code if partner else None
+
+    # 9. Handle uploads (Aadhaar, Permission, Cultural Pamphlet, Signature)
+    kyc_paths = list(reg.kyc_uploads or [])
+
     upload_map = [
         ("1st Contact Aadhaar Front", aadhar_first_front),
         ("1st Contact Aadhaar Back", aadhar_first_back),
         ("2nd Contact Aadhaar Front", aadhar_second_front),
         ("2nd Contact Aadhaar Back", aadhar_second_back),
         ("Police Permission Letter", police_permission),
+        ("Cultural Programs Pamphlet", cultural_pamphlet),
+        ("Applicant Signature", signature_upload),
     ]
 
     for label, file_obj in upload_map:
@@ -294,17 +566,19 @@ async def register_community(
                     file=file_obj,
                     table_name="community_registrations",
                     record_id=reg.id,
-                    uploaded_by_id=0, # public upload
+                    uploaded_by_id=0,
                     uploaded_by_type="user",
                     storage_dir="community_kyc",
                     db=db
                 )
                 if upload_res.get("file_path"):
-                    kyc_paths.append(upload_res["file_path"])
+                    fpath = upload_res["file_path"]
+                    kyc_paths.append(fpath)
+                    if label == "Applicant Signature" and not reg.applicant_signature:
+                        reg.applicant_signature = fpath
             except Exception as e:
-                print(f"File upload error for {label}: {e}")
+                logger.error("File upload error for %s: %s", label, e)
 
-    # Handle legacy files parameter if any
     if files:
         for file in files:
             if file and file.filename:
@@ -321,21 +595,23 @@ async def register_community(
                     if upload_res.get("file_path"):
                         kyc_paths.append(upload_res["file_path"])
                 except Exception as e:
-                    print(f"File upload error for legacy file: {e}")
+                    logger.error("File upload error for extra file: %s", e)
 
     if kyc_paths:
         reg.kyc_uploads = kyc_paths
         db.commit()
         db.refresh(reg)
-        
+
     return {
         "success": True,
         "message": "Registration submitted successfully! Upline / Admin verification is pending.",
         "registration_id": reg.id,
+        "application_no": reg.application_no,
+        "data": reg.to_dict(),
         "credentials": {
             "partner_code": partner_code,
             "raw_password": raw_password,
-            "phone": primary_phone_1
+            "phone": resolved_primary_phone
         }
     }
 

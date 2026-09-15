@@ -769,7 +769,8 @@
         if (_autoNarrationDirty) return;          // respect manual edits
         const drName  = (document.getElementById('fvDrName').value  || '').trim();
         const crName  = (document.getElementById('fvCrName').value  || '').trim();
-        const party   = (document.getElementById('fvPartyName').value || '').trim() || crName || drName;
+        const rawParty = (document.getElementById('fvPartyName').value || '').trim();
+        const party   = rawParty || (_vtype === 'PAYMENT' ? drName : (_vtype === 'RECEIPT' ? crName : (drName || crName)));
         const amount  = document.getElementById('fvAmount').value;
         const mode    = document.getElementById('fvPayMode').value;
         if (!drName && !crName && !amount) return;

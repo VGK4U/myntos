@@ -1963,8 +1963,10 @@ function renderWhatsAppMediaAttachment(m) {
   const mime = (m.media_mime_type || '').toLowerCase();
   const type = (m.media_type || '').toLowerCase();
   const isPdf = (type === 'document') || mime.includes('pdf') || /\.pdf(\?.*)?$/i.test(finalUrl);
-  const isImage = !isPdf && ((type === 'image') || mime.startsWith('image/') || (/\.(jpg|jpeg|png|webp|gif)(\?.*)?$/i.test(finalUrl)));
-  const fileName = m.media_name || m.filename || finalUrl.split('/').pop().split('?')[0] || (isImage ? 'image.jpg' : 'document.pdf');
+  let fileName = m.media_name || m.filename || finalUrl.split('/').pop().split('?')[0] || '';
+  if (!fileName || /^\d+$/.test(fileName)) {
+    fileName = isImage ? 'Photo Attachment' : (isPdf ? 'Document Attachment' : 'Media Attachment');
+  }
 
   if (isImage) {
     return `

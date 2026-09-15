@@ -1,18 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="te">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>గణేష్ ఉత్సవ సమితి - నమోదు పత్రం | VGK4U</title>
-    <meta name="description" content="Register your community for the VGK4U Community Seva Program. Get dynamic banners, referral benefits, and automated commission payouts.">
-    <!-- Google Fonts -->
+    <meta name="description" content="గణేష్ ఉత్సవ సమితి - సామూహిక గణేష్ ఉత్సవాలు జరుపుకొనుటకు నమోదు పత్రం">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- FontAwesome icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Leaflet OpenStreetMap Interactive Maps -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <style>
+<style>
         :root {
             --primary: #0d9488;
             --primary-dark: #0f766e;
@@ -1681,300 +1678,60 @@
             text-align: center;
         }
     </style>
+<style>
+    body {
+        background: linear-gradient(135deg, #fef3c7 0%, #ffffff 50%, #fed7aa 100%) !important;
+        min-height: 100vh;
+        color: #1e293b;
+    }
+    .registration-form-panel {
+        background: transparent !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        max-width: 100% !important;
+    }
+    @media (max-width: 767px) {
+        header {
+            flex-direction: column;
+            gap: 10px;
+            padding: 12px 16px;
+        }
+    }
+</style>
 </head>
-<body>
+<body class="festive">
 
     <!-- Loading screen -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="spinner"></div>
-        <div style="font-weight:700;font-size:15px;letter-spacing:0.5px">Submitting Registration...</div>
+        <div style="font-weight:700;font-size:15px;letter-spacing:0.5px;color:#fff;">Submitting Registration...</div>
     </div>
 
     <!-- Header -->
-    <header>
+    <header style="background:rgba(255,255,255,0.95); border-bottom:1px solid rgba(217,119,6,0.2); position:sticky; top:0; z-index:100; backdrop-filter:blur(10px); padding:12px 24px; display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex;align-items:center;gap:15px">
-            <a href="/vgk/dashboard" class="logo">
-                <i class="fas fa-handshake-angle"></i>VGK4U <span>Community</span>
+            <a href="/vgk/dashboard" class="logo" style="text-decoration:none; color:#0f172a; font-weight:900; font-size:18px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-handshake-angle" style="color:#d97706;"></i>VGK4U <span style="color:#b45309; font-weight:600; font-size:14px;">గణేష్ ఉత్సవ సమితి</span>
             </a>
-            <div id="headerCampaignBannerContainer" style="display:flex;align-items:center"></div>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
-            <div id="headerLiveCounterContainer"></div>
-            <a href="/" class="header-home-btn">
-                <i class="fas fa-home"></i>Home
+            <a href="/" class="header-home-btn" style="text-decoration:none; padding:6px 14px; border-radius:20px; border:1px solid #cbd5e1; color:#334155; font-size:12.5px; font-weight:700;">
+                <i class="fas fa-home me-1"></i>Home
             </a>
-            <a href="/vgk/login" class="header-signin-btn">
-                <i class="fas fa-sign-in-alt"></i>Sign In
+            <a href="/comgan" class="header-home-btn" style="text-decoration:none; padding:6px 14px; border-radius:20px; border:1px solid #f59e0b; color:#b45309; font-size:12.5px; font-weight:700; background:#fffbeb;">
+                <i class="fas fa-leaf me-1"></i>Green Ganesha
             </a>
-            <a href="javascript:void(0)" onclick="scrollToSection('section-registration')" class="header-signup-btn">
-                <i class="fas fa-user-plus"></i>Register Seva
+            <a href="/vgk/login" class="header-signin-btn" style="text-decoration:none; padding:6px 14px; border-radius:20px; border:1px solid #cbd5e1; color:#334155; font-size:12.5px; font-weight:700;">
+                <i class="fas fa-sign-in-alt me-1"></i>Sign In
             </a>
-            <div style="font-size:12.5px;color:var(--text-muted);font-weight:600" class="secure-portal-label">
-                <i class="fas fa-shield-alt me-1"></i>Secure Portal
+            <div style="font-size:12px;color:#64748b;font-weight:700;" class="secure-portal-label">
+                <i class="fas fa-shield-alt me-1 text-success"></i>Official Portal
             </div>
         </div>
     </header>
 
-    <!-- SECTION 1: Full-screen cinematic hero (100vh) -->
-    <section id="section-hero" class="cinematic-section hero-section">
-        <div class="parallax-backdrop" id="heroBackdrop"></div>
-        <div class="section-overlay"></div>
-        <div class="hero-center-content">
-            <div class="campaign-tag-badge" id="heroBadge">Active Seva</div>
-            <h1 class="cinematic-title" id="heroTitle">Campaign Title</h1>
-            <p class="cinematic-tagline" id="heroTagline">Tagline</p>
-            <div class="hero-dates-meta">
-                <span id="heroStartDate"><i class="fas fa-calendar-alt"></i>Starts: -</span>
-                <span id="heroEndDate"><i class="fas fa-calendar-check"></i>Ends: -</span>
-            </div>
-            <div class="scroll-indicator-wrap" onclick="scrollToSection('section-story')">
-                <span class="scroll-text">Explore the Campaign</span>
-                <div class="scroll-arrow"><i class="fas fa-chevron-down"></i></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 2: Campaign Story -->
-    <section id="section-story" class="cinematic-section story-section">
-        <div class="split-container">
-            <div class="split-image-panel" style="background-image: url('https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1000&q=80');">
-                <div class="panel-glow"></div>
-            </div>
-            <div class="split-content-panel">
-                <div class="story-card">
-                    <span class="story-badge">The Mission</span>
-                    <h2 class="section-heading">Our Campaign Story</h2>
-                    <p class="story-text" id="storyParagraph">
-                        The Ganesh Green Seva program connects traditional cultural celebration with modern sustainable living. By facilitating clean solar energy installations for households within the community, we generate direct cash donations to local welfare associations and mandapams.
-                    </p>
-                    <div class="story-cta-box" onclick="scrollToSection('section-registration')">
-                        <span>Join the Green Revolution</span>
-                        <i class="fas fa-arrow-right-long"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 3: How ₹5,000 reaches the Mandapam -->
-    <section id="section-how-it-works" class="cinematic-section infographic-section">
-        <div class="section-backdrop" style="background-image: url('https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&w=1200&q=80'); opacity: 0.12;"></div>
-        <div class="infographic-container">
-            <h2 class="section-heading text-center">How ₹5,000 Reaches the Mandapam</h2>
-            <p class="section-subtitle text-center" style="margin-bottom: 30px; opacity:0.8;">A transparent, automated community contribution flow</p>
-            
-            <div class="infographic-grid">
-                <div class="info-step-card">
-                    <div class="step-badge">01</div>
-                    <i class="fas fa-building-user step-icon"></i>
-                    <h3>Enrollment</h3>
-                    <p>Register your local Seva Mandapam or community association on our secure portal.</p>
-                </div>
-                <div class="info-step-card">
-                    <div class="step-badge">02</div>
-                    <i class="fas fa-file-invoice-dollar step-icon"></i>
-                    <h3>Referral</h3>
-                    <p>Submit electricity bills of homeowners interested in solar energy adoption.</p>
-                </div>
-                <div class="info-step-card">
-                    <div class="step-badge">03</div>
-                    <i class="fas fa-screwdriver-wrench step-icon"></i>
-                    <h3>Installation</h3>
-                    <p>VGK technical experts audit, certify, and successfully install the rooftop solar array.</p>
-                </div>
-                <div class="info-step-card">
-                    <div class="step-badge">04</div>
-                    <i class="fas fa-circle-check step-icon"></i>
-                    <h3>Contribution</h3>
-                    <p>Upon installation approval, ₹5,000 is directly credited to your Mandapam account.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 4: Benefits -->
-    <section id="section-benefits" class="cinematic-section benefits-section">
-        <div class="benefits-container">
-            <h2 class="section-heading text-center">Campaign Benefits</h2>
-            <p class="section-subtitle text-center" style="margin-bottom:30px; opacity:0.8;">Designed for modern green living and community empowerment</p>
-            
-            <div class="benefits-grid">
-                <!-- Card 1: For Customers -->
-                <div class="benefit-card-large" style="background-image: url('https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=600&q=80');">
-                    <div class="benefit-overlay"></div>
-                    <div class="benefit-card-content">
-                        <i class="fas fa-users-viewfinder benefit-card-icon"></i>
-                        <h3>For Customers</h3>
-                        <p id="benefitCustomersText">Up to 40% immediate discount on monthly electric bills, zero upfront installation options, and free subsidy application assistance.</p>
-                    </div>
-                </div>
-                <!-- Card 2: For Community -->
-                <div class="benefit-card-large" style="background-image: url('https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?auto=format&fit=crop&w=600&q=80');">
-                    <div class="benefit-overlay"></div>
-                    <div class="benefit-card-content">
-                        <i class="fas fa-hand-holding-dollar benefit-card-icon"></i>
-                        <h3>For Community</h3>
-                        <p id="benefitCommunityText">A direct contribution of ₹5,000 per solar transition, free solar installation for common temple/society halls, and sustainable green credentials.</p>
-                    </div>
-                </div>
-                <!-- Card 3: For VGK Members -->
-                <div class="benefit-card-large" style="background-image: url('https://images.unsplash.com/photo-1521791136368-1a8519007b57?auto=format&fit=crop&w=600&q=80');">
-                    <div class="benefit-overlay"></div>
-                    <div class="benefit-card-content">
-                        <i class="fas fa-award benefit-card-icon"></i>
-                        <h3>For VGK Members</h3>
-                        <p id="benefitPartnersText">L1, L2, L5 upline partner commission structures, automated lead updates via CRM, and premium seasonal marketing kits.</p>
-                    </div>
-                </div>
-                <!-- Card 4: Campaign Rules -->
-                <div class="benefit-card-large" style="background-image: url('https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=80');">
-                    <div class="benefit-overlay"></div>
-                    <div class="benefit-card-content">
-                        <i class="fas fa-gavel benefit-card-icon"></i>
-                        <h3>Campaign Rules</h3>
-                        <p id="benefitRulesText">Applicable for approved solar installations within designated zones. Payouts processed automatically upon installation approval.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 5: Campaign Journey -->
-    <section id="section-journey" class="cinematic-section journey-section">
-        <div class="section-backdrop" style="background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80'); opacity: 0.12;"></div>
-        <div class="journey-container">
-            <h2 class="section-heading text-center">Campaign Journey</h2>
-            <p class="section-subtitle text-center" style="margin-bottom:30px; opacity:0.8;">Track your progress from registration to direct bank payout</p>
-            
-            <div class="timeline-track-wrap">
-                <div class="timeline-line"></div>
-                <div class="timeline-step">
-                    <div class="timeline-number">01</div>
-                    <h4>Register Seva</h4>
-                    <p>Onboard your local committee / mandapam online</p>
-                </div>
-                <div class="timeline-step">
-                    <div class="timeline-number">02</div>
-                    <h4>Submit Leads</h4>
-                    <p>Enter local residential solar prospects</p>
-                </div>
-                <div class="timeline-step">
-                    <div class="timeline-number">03</div>
-                    <h4>Verify Site</h4>
-                    <p>VGK technical experts audit rooftop feasibility</p>
-                </div>
-                <div class="timeline-step">
-                    <div class="timeline-number">04</div>
-                    <h4>Install Solar</h4>
-                    <p>System installation and grid integration completed</p>
-                </div>
-                <div class="timeline-step">
-                    <div class="timeline-number">05</div>
-                    <h4>Direct Payout</h4>
-                    <p>₹5,000 Seva Donation is released directly</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 6: Gallery -->
-    <section id="section-gallery" class="cinematic-section gallery-section">
-        <div class="gallery-container">
-            <h2 class="section-heading text-center">Widescreen Photo Showcase</h2>
-            <p class="section-subtitle text-center" style="margin-bottom:30px; opacity:0.8;">Visual highlights from active green solar campaigns and local celebrations</p>
-            
-            <div class="widescreen-gallery-grid">
-                <div class="widescreen-gallery-card"><img src="https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=400&q=80" alt="Solar Panels"></div>
-                <div class="widescreen-gallery-card"><img src="https://images.unsplash.com/photo-1508514177221-188b1cf16e9d?auto=format&fit=crop&w=400&q=80" alt="Energy transition"></div>
-                <div class="widescreen-gallery-card"><img src="https://images.unsplash.com/photo-1620000617482-821324eb9a14?auto=format&fit=crop&w=400&q=80" alt="Solar roof"></div>
-                <div class="widescreen-gallery-card"><img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=400&q=80" alt="Sustainable energy"></div>
-                <div class="widescreen-gallery-card"><img src="https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=400&q=80" alt="Green lifestyle"></div>
-                <div class="widescreen-gallery-card"><img src="https://images.unsplash.com/photo-1466611653911-95081537e5b7?auto=format&fit=crop&w=400&q=80" alt="Wind & Solar"></div>
-                <div class="widescreen-gallery-card"><img src="https://images.unsplash.com/photo-1558449028-b53a39d100fc?auto=format&fit=crop&w=400&q=80" alt="Solar setup"></div>
-                <div class="widescreen-gallery-card"><img src="https://images.unsplash.com/photo-1569003339405-ea396a5a8a90?auto=format&fit=crop&w=400&q=80" alt="Eco green"></div>
-                <div class="widescreen-gallery-card"><img src="https://images.unsplash.com/photo-1532601124523-30b2c5dc4048?auto=format&fit=crop&w=400&q=80" alt="Solar grid"></div>
-                <div class="widescreen-gallery-card"><img src="https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&w=400&q=80" alt="Smart panel"></div>
-                <div class="widescreen-gallery-card"><img src="https://images.unsplash.com/photo-1592833159155-c62df1b65634?auto=format&fit=crop&w=400&q=80" alt="Green field"></div>
-                <div class="widescreen-gallery-card"><img src="https://images.unsplash.com/photo-1509391366360-2e959784a276?auto=format&fit=crop&w=400&q=80" alt="Solar home"></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 7: Community Impact -->
-    <section id="section-impact" class="cinematic-section impact-section" style="background-image: url('https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=1200&q=80');">
-        <div class="impact-overlay"></div>
-        <div class="impact-content">
-            <h2 class="section-heading text-center" style="color: #fff !important;">Our Community Impact</h2>
-            <p class="section-subtitle text-center" style="color: #cbd5e1 !important; margin-bottom:30px; opacity:0.8;">Real metrics achieved through joint social efforts</p>
-            
-            <div class="impact-metrics-grid">
-                <div class="metric-card">
-                    <span class="metric-number" id="metricProjects">18+</span>
-                    <span class="metric-label">Registered Projects</span>
-                </div>
-                <div class="metric-card">
-                    <span class="metric-number">₹2,50,000+</span>
-                    <span class="metric-label">Direct Seva Funds Distributed</span>
-                </div>
-                <div class="metric-card">
-                    <span class="metric-number">150kW+</span>
-                    <span class="metric-label">Green Solar Output Initiated</span>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 8: Video Section -->
-    <section id="section-video" class="cinematic-section video-section">
-        <div class="video-container-wrapper">
-            <h2 class="section-heading text-center">About this Campaign</h2>
-            <p class="section-subtitle text-center" style="margin-bottom:30px; opacity:0.8;">Watch our green campaign introductory film</p>
-            
-            <div class="cinematic-video-card">
-                <div class="video-cover-backdrop" style="background-image: url('https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?auto=format&fit=crop&w=800&q=80');">
-                    <div class="play-btn-circle" onclick="playMockVideo()">
-                        <i class="fas fa-play"></i>
-                    </div>
-                </div>
-                <div class="video-player-frame" id="mockVideoFrame" style="display:none; position: relative; width: 100%; height: 100%; min-height: 480px; background: #000; align-items:center; justify-content:center;">
-                    <div style="text-align:center;color:#fff">
-                        <i class="fas fa-spinner fa-spin fa-2x mb-3 text-teal"></i>
-                        <div>Loading Campaign Video Stream...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 9: Testimonials -->
-    <section id="section-testimonials" class="cinematic-section testimonials-section">
-        <div class="section-backdrop" style="background-image: url('https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=1200&q=80'); opacity: 0.08;"></div>
-        <div class="testimonials-container">
-            <h2 class="section-heading text-center">What Community Leaders Say</h2>
-            <p class="section-subtitle text-center" style="margin-bottom:30px; opacity:0.8;">Feedback from registered mandapams and participating associations</p>
-            
-            <div class="testimonial-slider-wrap">
-                <div class="testimonial-track" id="testimonialTrack">
-                    <!-- Slide 1 -->
-                    <div class="testimonial-slide active">
-                        <p class="testimonial-quote">"The Ganesh Green Seva program helped our mandapam receive a direct contribution of ₹25,000 this year by simply encouraging 5 residential rooftop installations. Highly professional!"</p>
-                        <div class="testimonial-author">
-                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80" alt="President">
-                            <div>
-                                <span class="author-name">R. K. Sharma</span>
-                                <span class="author-title">President, Ganesh Seva Samithi</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 10: Registration -->
-    <section id="section-registration" class="cinematic-section registration-section" style="background-image: url('https://images.unsplash.com/photo-1557804506-669a67965ba0?auto=format&fit=crop&w=1200&q=80');">
-        <div class="registration-dark-overlay"></div>
-        <div class="registration-form-panel">
+<main style="max-width: 960px; margin: 30px auto; padding: 0 16px 60px 16px;">
+<div class="registration-form-panel">
             <!-- SIGNUP FORM -->
             <div id="signupFormWrap">
                 <form id="registrationForm" onsubmit="submitForm(event)">
@@ -1989,7 +1746,7 @@
                     <input type="hidden" name="formatted_address" id="guc_formatted_address">
                     <input type="hidden" name="mandap_volunteers" id="guc_mandap_volunteers">
                     <input type="hidden" name="cultural_programs" id="guc_cultural_programs">
-                    <input type="hidden" name="registered_from" id="guc_registered_from" value="Green Ganesha">
+                    <input type="hidden" name="registered_from" id="guc_registered_from" value="Utsav Committee">
                     <input type="hidden" name="referral_type" id="referral_type" value="direct">
                     <input type="hidden" name="referral_code" id="referral_code">
 
@@ -2473,10 +2230,9 @@
                 </div>
             </div>
         </div>
-    </section>
+</main>
 
-    <!-- Location Picker Modal -->
-    <div id="locationPickerModal" class="location-picker-modal">
+<div id="locationPickerModal" class="location-picker-modal">
         <div class="location-picker-content">
             <div class="location-picker-header">
                 <h3><i class="fas fa-map-location-dot me-2 text-primary"></i>Choose Location</h3>
@@ -2501,92 +2257,11 @@
         </div>
     </div>
 
-    <!-- Recharge Modal -->
-    <div id="rechargeModal" class="recharge-modal">
-        <div class="recharge-content">
-            <div class="recharge-header">
-                <h3><i class="fas fa-mobile-screen text-primary me-2"></i>Utility Recharge Portal</h3>
-                <button type="button" class="recharge-close" onclick="closeRechargeModal()">&times;</button>
-            </div>
-            <div id="rechargeFormWrap">
-                <div class="recharge-form-group">
-                    <label>Mobile Number / VC Number</label>
-                    <input type="text" id="rechargeNum" placeholder="Enter 10-digit mobile or DTH VC number" maxlength="10">
-                </div>
-                <div class="recharge-form-group">
-                    <label>Operator / Circle</label>
-                    <select id="rechargeOperator">
-                        <option value="JIO">JIO Prepaid</option>
-                        <option value="AIRTEL">Airtel Mobile</option>
-                        <option value="VI">VI Prepaid</option>
-                        <option value="DISHTV">Dish TV (DTH)</option>
-                        <option value="TATAPLAY">Tata Play (DTH)</option>
-                    </select>
-                </div>
-                <div class="recharge-form-group">
-                    <label>Recharge Amount (₹)</label>
-                    <select id="rechargeAmount">
-                        <option value="239">₹239 (1.5GB/day - 28 Days)</option>
-                        <option value="299">₹299 (2GB/day - 28 Days)</option>
-                        <option value="666">₹666 (1.5GB/day - 84 Days)</option>
-                        <option value="749">₹749 (2GB/day - 90 Days)</option>
-                    </select>
-                </div>
-                <div style="font-size:12px;color:var(--text-muted);background:rgba(255,255,255,0.03);padding:10px;border-radius:8px;margin-bottom:15px;line-height:1.4">
-                    <i class="fas fa-calculator text-primary me-1"></i>Estimated Community Commission payout: <strong class="text-success" style="color:#10b981">₹8.50</strong>
-                </div>
-                <div class="map-btn-group">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="closeRechargeModal()" style="border:1px solid rgba(255,255,255,0.15);color:#fff;background:transparent;border-radius:6px;padding:6px 12px;font-size:12.5px;cursor:pointer">Cancel</button>
-                    <button type="button" class="btn btn-sm btn-primary" onclick="submitMockRecharge()" style="background:var(--primary);border:none;color:#fff;border-radius:6px;padding:6px 16px;font-size:12.5px;font-weight:700;cursor:pointer">Proceed to Recharge</button>
-                </div>
-            </div>
-            <div id="rechargeSuccessWrap" class="recharge-success-screen">
-                <div class="recharge-success-icon"><i class="fas fa-circle-check"></i></div>
-                <h4 style="color:#fff;font-weight:800;margin-bottom:8px">Recharge Successful!</h4>
-                <p style="font-size:13px;color:var(--text-muted);line-height:1.5;margin-bottom:15px">
-                    Recharge of <strong id="successRecAmt" style="color:#fff">₹239</strong> to <strong id="successRecNum" style="color:#fff">9876543210</strong> has been processed successfully. Community wallet has been credited with commissions.
-                </p>
-                <button type="button" class="btn btn-sm btn-primary" onclick="closeRechargeModal()" style="background:var(--primary);border:none;color:#fff;border-radius:6px;padding:6px 16px;font-size:12.5px;font-weight:700;cursor:pointer">Close</button>
-            </div>
-        </div>
-    </div>
+<footer style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:24px 20px;text-align:center;font-size:12.5px;color:#64748b;margin-top:40px;">
+    <div>&copy; 2026 గణేష్ ఉత్సవ సమితి | Powered by VGK4U Platform. All rights reserved.</div>
+</footer>
 
-    <!-- Footer -->
-    <footer style="background:var(--bg-dark);border-top:1px solid rgba(255,255,255,0.03);padding:40px 20px;text-align:center;font-size:13px;color:var(--text-muted)">
-        
-        <!-- Our Services Grid Widget -->
-        <div class="footer-services-wrap">
-            <div class="footer-services-title">Our Services & Business Verticals</div>
-            <div class="footer-services-grid">
-                <a href="/hargharsolar" class="footer-service-tile">
-                    <div class="footer-service-icon"><i class="fas fa-solar-panel"></i></div>
-                    <div class="footer-service-name">Solar Energy</div>
-                    <div class="footer-service-desc">Rooftop solar solutions & state subsidy options.</div>
-                </a>
-                <a href="/marketplace?category=EV" class="footer-service-tile">
-                    <div class="footer-service-icon"><i class="fas fa-charging-station"></i></div>
-                    <div class="footer-service-name">EV Mobility</div>
-                    <div class="footer-service-desc">Electric vehicles, chargers & eco fleets.</div>
-                </a>
-                <a href="/marketplace?category=Spares" class="footer-service-tile">
-                    <div class="footer-service-icon"><i class="fas fa-screwdriver-wrench"></i></div>
-                    <div class="footer-service-name">Genuine Spares</div>
-                    <div class="footer-service-desc">Quality spare parts & tooling accessories.</div>
-                </a>
-                <a href="javascript:void(0)" onclick="openRechargeModal()" class="footer-service-tile">
-                    <div class="footer-service-icon"><i class="fas fa-mobile-screen-button"></i></div>
-                    <div class="footer-service-name">Utility Recharge</div>
-                    <div class="footer-service-desc">Instant mobile, DTH & utility bill payments.</div>
-                </a>
-            </div>
-        </div>
-
-        <div style="margin-top:30px">
-            &copy; 2026 VGK4U Platform. All rights reserved. Registered under Universal Community Seva Protocols.
-        </div>
-    </footer>
-
-    <script>
+<script>
         const urlParams = new URLSearchParams(window.location.search);
         let shortName = urlParams.get('seva') || urlParams.get('service') || urlParams.get('short_name');
         if (!shortName) {
@@ -2596,7 +2271,7 @@
             }
         }
         if (!shortName || shortName === 'guc' || shortName === 'camgan') {
-            shortName = 'comgan'; // fallback
+            shortName = 'guc'; // fallback for guc page
         }
 
         // ── Dynamic Cascading Location Hierarchy (State -> District -> Constituency) ──
@@ -4130,11 +3805,6 @@
             document.getElementById('rechargeSuccessWrap').style.display = 'block';
         }
     </script>
-    <!-- Image Lightbox Modal -->
-    <div id="galleryLightbox" class="lightbox-modal" onclick="closeLightbox(event)">
-        <span class="lightbox-close" onclick="closeLightbox(event)">&times;</span>
-        <img class="lightbox-content" id="lightboxImage">
-        <div id="lightboxCaption" class="lightbox-caption"></div>
-    </div>
+
 </body>
 </html>
