@@ -785,11 +785,11 @@
                 const _staffName = document.getElementById('fvPartyName').value.trim();
                 text = _catLabel && _staffName
                     ? `${_catLabel} to ${_staffName}${modePart}${amtFmt ? ' | ' + amtFmt : ''}`
-                    : `Payment to ${crName || party}${drName ? ' from ' + drName : ''}${modePart}${amtFmt ? ' | ' + amtFmt : ''}`;
+                    : `Payment to ${drName || party}${crName ? ' from ' + crName : ''}${modePart}${amtFmt ? ' | ' + amtFmt : ''}`;
                 break;
             }
             case 'RECEIPT':
-                text = `Receipt from ${drName || party}${crName ? ' to ' + crName : ''}${modePart}${amtFmt ? ' | ' + amtFmt : ''}`;
+                text = `Receipt from ${crName || party}${drName ? ' into ' + drName : ''}${modePart}${amtFmt ? ' | ' + amtFmt : ''}`;
                 break;
             case 'CONTRA':
                 text = `Bank transfer ${drName} → ${crName}${amtFmt ? ' | ' + amtFmt : ''}`;
@@ -1660,6 +1660,17 @@
         if (!cr_account_name) { showError('Please enter the Credit account name.'); return; }
         if (!amount || amount <= 0) { showError('Please enter a valid amount.'); return; }
         if (!narration) { showError('Please enter a narration / description.'); return; }
+
+        // DC-JV-BANK-DIR-PREFLIGHT: Check bank/cash direction before posting to prevent 400 rejection
+        if (_vtype === 'PAYMENT' && ['BANK', 'CASH', 'UPI'].includes(dr_account_type)) {
+            showError('Accounting Rule (DC-JV-BANK-DIR-001): On a PAYMENT voucher, money leaves the account. Your ' + dr_account_type + ' (' + (dr_account_name || 'Bank') + ') must be on Credit (CR), and the expense / recipient must be on Debit (DR).');
+            return;
+        }
+        if (_vtype === 'RECEIPT' && ['BANK', 'CASH', 'UPI'].includes(cr_account_type)) {
+            showError('Accounting Rule (DC-JV-BANK-DIR-001): On a RECEIPT voucher, money arrives in the account. Your ' + cr_account_type + ' (' + (cr_account_name || 'Bank') + ') must be on Debit (DR), and the payer / customer must be on Credit (CR).');
+            return;
+        }
+
         // DC-PARTY-SIDE-TRACK-001: enforce dropdown selection for PARTY-type accounts.
         // Prevents free-text vendor names (no party_id) from causing ledger mis-attribution.
         // DC-RECEIPT-PARTY-FIX-001 (Jun 2026): RECEIPT payers are often ad-hoc customers
@@ -1739,17 +1750,53 @@
         }
     }
 
+    function showJvToast(msg, type = 'info') {
+        let toast = document.getElementById('jvFloatingToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'jvFloatingToast';
+            toast.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;padding:14px 20px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 10px 25px rgba(0,0,0,0.25);transition:all 0.3s ease;max-width:500px;display:flex;align-items:center;gap:12px;line-height:1.4;';
+            document.body.appendChild(toast);
+        }
+        if (type === 'error') {
+            toast.style.background = '#dc2626';
+            toast.style.color = '#ffffff';
+            toast.innerHTML = `<i class="fas fa-exclamation-circle" style="font-size:20px;flex-shrink:0"></i> <span>${msg}</span>`;
+        } else if (type === 'success') {
+            toast.style.background = '#16a34a';
+            toast.style.color = '#ffffff';
+            toast.innerHTML = `<i class="fas fa-check-circle" style="font-size:20px;flex-shrink:0"></i> <span>${msg}</span>`;
+        } else {
+            toast.style.background = '#1e293b';
+            toast.style.color = '#ffffff';
+            toast.innerHTML = `<i class="fas fa-info-circle" style="font-size:20px;flex-shrink:0"></i> <span>${msg}</span>`;
+        }
+        toast.style.display = 'flex';
+        toast.style.opacity = '1';
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => { toast.style.display = 'none'; }, 300);
+        }, 5500);
+    }
+
     function showError(msg) {
         const el = document.getElementById('formError');
-        document.getElementById('formErrorMsg').textContent = msg;
-        el.style.display = '';
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (el) {
+            document.getElementById('formErrorMsg').textContent = msg;
+            el.style.display = '';
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        showJvToast(msg, 'error');
     }
     function showSuccess(msg) {
         const el = document.getElementById('formSuccess');
-        document.getElementById('formSuccessMsg').textContent = msg;
-        el.style.display = '';
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (el) {
+            document.getElementById('formSuccessMsg').textContent = msg;
+            el.style.display = '';
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        showJvToast(msg, 'success');
     }
 
     // ══════════════════════════════════════════════════════════════════

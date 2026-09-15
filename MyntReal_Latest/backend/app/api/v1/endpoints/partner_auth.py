@@ -1782,7 +1782,15 @@ async def get_partner_updated_leads(
         conditions.append("cl.status = :status")
         params["status"] = status
     if search:
-        conditions.append("(cl.name ILIKE :search OR cl.phone ILIKE :search OR cl.email ILIKE :search)")
+        from app.services.crm_phone_sync_service import find_candidate_lead_ids_for_search
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=None, company_ids=None, search_term=search
+        )
+        if phone_lead_ids:
+            conditions.append("(cl.name ILIKE :search OR cl.phone ILIKE :search OR cl.email ILIKE :search OR cl.id = ANY(:phone_lead_ids))")
+            params["phone_lead_ids"] = phone_lead_ids
+        else:
+            conditions.append("(cl.name ILIKE :search OR cl.phone ILIKE :search OR cl.email ILIKE :search)")
         params["search"] = f"%{search}%"
 
     where = " AND ".join(conditions)
@@ -2430,7 +2438,25 @@ async def create_walkin(
             tags_list.append(f"Partner: {partner.partner_code}")
             tags_list.append("Walk-in Source")
 
-            company_id = partner.company_id or 4
+            if not partner.company_id:
+                raise HTTPException(status_code=403, detail="Partner has no assigned company")
+
+            company_id = partner.company_id
+            from app.models.staff_accounts import AssociatedCompany
+            comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == company_id).first()
+            if not comp or not comp.client_id:
+                raise HTTPException(status_code=403, detail="Partner company has no associated tenant")
+            resolved_tenant_id = comp.client_id
+
+            from app.services.crm_dedup_service import assert_no_phone_duplicate
+            assert_no_phone_duplicate(
+                db=db,
+                tenant_id=resolved_tenant_id,
+                company_id=company_id,
+                phone=data.customer_phone,
+                alternate_phone=data.alternate_phone,
+                with_lock=True
+            )
 
             # DC Protocol (Apr 2026): Map visit_purpose → signup_categories slug → category_id
             _PURPOSE_SLUG = {
@@ -2452,6 +2478,7 @@ async def create_walkin(
                     _category_id = _cat_row[0]
 
             new_lead = CRMLead(
+                tenant_id=resolved_tenant_id,
                 company_id=company_id,
                 name=data.customer_name,
                 phone=data.customer_phone,
@@ -2474,6 +2501,17 @@ async def create_walkin(
             db.add(new_lead)
             db.flush()
             crm_lead_id = new_lead.id
+
+            from app.services.crm_phone_sync_service import sync_lead_phone_identities
+            sync_lead_phone_identities(
+                db=db,
+                lead=new_lead,
+                phone_raw=new_lead.phone,
+                alternate_phone_raw=new_lead.alternate_phone,
+                source_channel='partner_walkin',
+                source_ref=f"walkin_{walkin_id}",
+                with_lock=True
+            )
 
             db.execute(sq_text(
                 "UPDATE partner_walkins SET crm_lead_id = :cid WHERE id = :wid"
@@ -2501,6 +2539,9 @@ async def create_walkin(
                     )
             except Exception as wa_err:
                 logger.warning(f"Partner walk-in lead welcome trigger exception for lead {new_lead.id}: {wa_err}")
+        except HTTPException:
+            db.rollback()
+            raise
         except Exception as e:
             db.rollback()
 
@@ -2835,32 +2876,69 @@ async def update_walkin(
     if _push_crm_update:
         try:
             wlk_row = db.execute(sq_text(
-                "SELECT customer_name, customer_phone, product_interest, notes, category_id FROM partner_walkins WHERE id=:wid"
+                "SELECT customer_name, customer_phone, product_interest, notes, category_id, alternate_phone FROM partner_walkins WHERE id=:wid"
             ), {"wid": walkin_id}).fetchone()
-            company_id = partner.company_id or 4
-            outcome_label = _new_outcome or "interested"
-            _cat_id = data.category_id if data.category_id is not None else (wlk_row[4] if wlk_row else None)
-            new_lead = CRMLead(
-                company_id=company_id,
-                name=wlk_row[0] if wlk_row else "Unknown",
-                phone=wlk_row[1] if wlk_row else None,
-                source="Walk-in",
-                source_details=f"Recorded by partner {partner.partner_code} ({partner.partner_name}). Outcome: {outcome_label}. Product interest: {wlk_row[2] if wlk_row and wlk_row[2] else 'Not specified'}",
-                source_ref_type="partner",
-                source_ref_id=str(partner.id),
-                source_ref_name=partner.partner_name,
-                status="new",
-                handler_type="unassigned",
-                associated_partner_id=partner.id,
-                category_id=_cat_id,
-                looking_for=wlk_row[2] if wlk_row else None,
-                description=wlk_row[3] if wlk_row else None,
-                tags=f"Partner: {partner.partner_code}, Walk-in Source, Outcome: {outcome_label}",
-            )
-            db.add(new_lead)
-            db.flush()
-            sets.append("crm_lead_id = :cid"); params["cid"] = new_lead.id
-        except Exception:
+            if not partner.company_id:
+                logger.warning(f"Partner {partner.id} has no assigned company, skipping CRM lead creation on walk-in update")
+            else:
+                company_id = partner.company_id
+                from app.models.staff_accounts import AssociatedCompany
+                comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == company_id).first()
+                if not comp or not comp.client_id:
+                    logger.warning(f"Partner company {company_id} has no associated tenant, skipping CRM lead creation")
+                else:
+                    resolved_tenant_id = comp.client_id
+                    w_phone = wlk_row[1] if wlk_row else None
+                    w_alt = wlk_row[5] if wlk_row and len(wlk_row) > 5 else None
+                    from app.services.crm_dedup_service import find_phone_duplicate
+                    dup = find_phone_duplicate(
+                        db=db,
+                        tenant_id=resolved_tenant_id,
+                        company_id=company_id,
+                        phone=w_phone,
+                        alternate_phone=w_alt,
+                        with_lock=True
+                    ) if (w_phone or w_alt) else None
+
+                    if dup:
+                        sets.append("crm_lead_id = :cid"); params["cid"] = dup.id
+                    else:
+                        outcome_label = _new_outcome or "interested"
+                        _cat_id = data.category_id if data.category_id is not None else (wlk_row[4] if wlk_row else None)
+                        new_lead = CRMLead(
+                            tenant_id=resolved_tenant_id,
+                            company_id=company_id,
+                            name=wlk_row[0] if wlk_row else "Unknown",
+                            phone=w_phone,
+                            alternate_phone=w_alt,
+                            source="Walk-in",
+                            source_details=f"Recorded by partner {partner.partner_code} ({partner.partner_name}). Outcome: {outcome_label}. Product interest: {wlk_row[2] if wlk_row and wlk_row[2] else 'Not specified'}",
+                            source_ref_type="partner",
+                            source_ref_id=str(partner.id),
+                            source_ref_name=partner.partner_name,
+                            status="new",
+                            handler_type="unassigned",
+                            associated_partner_id=partner.id,
+                            category_id=_cat_id,
+                            looking_for=wlk_row[2] if wlk_row else None,
+                            description=wlk_row[3] if wlk_row else None,
+                            tags=f"Partner: {partner.partner_code}, Walk-in Source, Outcome: {outcome_label}",
+                        )
+                        db.add(new_lead)
+                        db.flush()
+                        from app.services.crm_phone_sync_service import sync_lead_phone_identities
+                        sync_lead_phone_identities(
+                            db=db,
+                            lead=new_lead,
+                            phone_raw=new_lead.phone,
+                            alternate_phone_raw=new_lead.alternate_phone,
+                            source_channel='partner_walkin',
+                            source_ref=f"walkin_update_{walkin_id}",
+                            with_lock=True
+                        )
+                        sets.append("crm_lead_id = :cid"); params["cid"] = new_lead.id
+        except Exception as _wlk_crm_err:
+            logger.warning(f"Error creating/linking CRM lead for walk-in update {walkin_id}: {_wlk_crm_err}")
             db.rollback()
 
     if sets:
@@ -5273,8 +5351,15 @@ async def solar_vendor_leads(
     q = db.query(CRMLead).filter(CRMLead.vendor_id == vendor_ref_id)
 
     if search:
+        from app.services.crm_phone_sync_service import find_candidate_lead_ids_for_search
         _s = f"%{search}%"
-        q = q.filter(or_(CRMLead.name.ilike(_s), CRMLead.phone.ilike(_s)))
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=None, company_ids=None, search_term=search
+        )
+        _s_conds = [CRMLead.name.ilike(_s), CRMLead.phone.ilike(_s)]
+        if phone_lead_ids:
+            _s_conds.append(CRMLead.id.in_(phone_lead_ids))
+        q = q.filter(or_(*_s_conds))
 
     if pipeline_stage:
         q = q.filter(CRMLead.solar_pipeline_status == pipeline_stage)

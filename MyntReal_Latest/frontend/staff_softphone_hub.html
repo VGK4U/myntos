@@ -9,7 +9,7 @@
     <script src="/public/js/staff-token-manager.js"></script>
     <script src="/public/js/staff-fetch.js"></script>
     <script src="/public/js/nda-enforcement.js"></script>
-    <script src="/public/js/plivo-softphone.js?v=20260906_fix"></script>
+    <script src="/public/js/plivo-softphone.js?v=20260915_audiofix"></script>
     <style>
         /* High Contrast Theme & Visibility Fixes */
         :root {
@@ -357,10 +357,95 @@
             overflow: hidden;
             box-shadow: 0 4px 20px rgba(0,0,0,0.3);
         }
+
+        /* Dedicated Left-to-Right Horizontal Scroll Navigation Header */
+        .table-scroll-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            background: #131d2e;
+            border-bottom: 1px solid #334155;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .table-scroll-hint {
+            font-size: 12px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .table-scroll-hint .badge {
+            font-size: 11px;
+            letter-spacing: 0.3px;
+        }
+        .table-scroll-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .table-scroll-nav-btn {
+            background: #1e293b;
+            border: 1px solid #38bdf8;
+            color: #38bdf8;
+            border-radius: 6px;
+            padding: 5px 12px;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.15s ease;
+        }
+        .table-scroll-nav-btn:hover:not(:disabled) {
+            background: #0284c7;
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(56, 189, 248, 0.3);
+        }
+        .table-scroll-nav-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+            border-color: #475569;
+            color: #64748b;
+        }
+
+        /* High-Contrast Always-Visible Horizontal Scrollbar (The "left to right side bar") */
+        .table-responsive {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            scrollbar-width: thin !important;
+            scrollbar-color: #38bdf8 #0b1120 !important;
+            position: relative;
+        }
+        .table-responsive::-webkit-scrollbar {
+            height: 12px !important;
+            width: 12px !important;
+            display: block !important;
+            -webkit-appearance: none !important;
+        }
+        .table-responsive::-webkit-scrollbar-track {
+            background: #0b1120 !important;
+            border-top: 1px solid #334155 !important;
+            box-shadow: inset 0 0 6px rgba(0,0,0,0.6) !important;
+        }
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: linear-gradient(90deg, #2563eb 0%, #0284c7 50%, #38bdf8 100%) !important;
+            border-radius: 6px !important;
+            border: 2px solid #0b1120 !important;
+            min-width: 60px !important;
+        }
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(90deg, #3b82f6 0%, #38bdf8 50%, #7dd3fc 100%) !important;
+        }
+
         .table-custom table {
             margin-bottom: 0;
             color: #f8fafc !important;
             background-color: #1e293b !important;
+            min-width: 1360px;
+            width: 100%;
         }
         .table-custom th {
             background: #0f172a !important;
@@ -377,11 +462,43 @@
             background-color: #1e293b !important;
             color: #f8fafc !important;
             border-bottom: 1px solid #283548 !important;
-            padding: 14px 14px;
+            padding: 12px 14px;
             vertical-align: middle;
             font-size: 13px;
         }
         .table-custom tr:hover td {
+            background-color: #243248 !important;
+        }
+
+        /* Sticky Left Column: Handled By (Prevents cut-off on the left) */
+        .table-custom th.col-sticky-left,
+        .table-custom td.col-sticky-left {
+            position: sticky;
+            left: 0;
+            z-index: 10;
+            background: #0f172a !important;
+            box-shadow: 4px 0 10px rgba(0,0,0,0.45);
+        }
+        .table-custom td.col-sticky-left {
+            background-color: #162032 !important;
+        }
+        .table-custom tr:hover td.col-sticky-left {
+            background-color: #243248 !important;
+        }
+
+        /* Sticky Right Column: Actions (Prevents cut-off on the right) */
+        .table-custom th.col-sticky-right,
+        .table-custom td.col-sticky-right {
+            position: sticky;
+            right: 0;
+            z-index: 10;
+            background: #0f172a !important;
+            box-shadow: -4px 0 10px rgba(0,0,0,0.45);
+        }
+        .table-custom td.col-sticky-right {
+            background-color: #162032 !important;
+        }
+        .table-custom tr:hover td.col-sticky-right {
             background-color: #243248 !important;
         }
         .badge-type {
@@ -969,11 +1086,32 @@
 
             <!-- Table -->
             <div class="table-custom">
-                <div class="table-responsive">
+                <!-- Table Quick Horizontal Scroll Navigation -->
+                <div class="table-scroll-header">
+                    <div class="table-scroll-hint">
+                        <span class="badge bg-primary bg-opacity-25 text-info border border-primary border-opacity-50 px-2 py-1">
+                            <i class="fa-solid fa-arrows-left-right me-1"></i> Left-to-Right Scroll
+                        </span>
+                        <span class="small d-none d-sm-inline">Use the bright horizontal scrollbar below or quick navigation buttons:</span>
+                    </div>
+                    <div class="table-scroll-actions">
+                        <button type="button" class="table-scroll-nav-btn" id="btnScrollTableLeft" onclick="scrollCallsTable(-350)" title="Scroll Left (View earlier columns)">
+                            <i class="fa-solid fa-chevron-left"></i> Scroll Left
+                        </button>
+                        <button type="button" class="table-scroll-nav-btn" id="btnScrollTableRight" onclick="scrollCallsTable(350)" title="Scroll Right (View actions & recording)">
+                            Scroll Right <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                        <button type="button" class="table-scroll-nav-btn" onclick="scrollCallsTableReset()" title="Reset to start">
+                            <i class="fa-solid fa-rotate-left"></i> Reset
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive" id="callsTableResponsive">
                     <table class="table table-dark table-hover align-middle mb-0">
                         <thead>
                             <tr>
-                                <th>Handled By</th>
+                                <th class="col-sticky-left">Handled By</th>
                                 <th>Call From</th>
                                 <th>Date / Time (IST)</th>
                                 <th>Direction & Call Type</th>
@@ -982,7 +1120,7 @@
                                 <th>Source</th>
                                 <th>Duration</th>
                                 <th>Call Recording</th>
-                                <th class="text-end">Actions</th>
+                                <th class="text-end col-sticky-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="calls-table-body">
@@ -1198,6 +1336,13 @@
             const targetScope = validScopes.includes(initialScope) ? initialScope : 'dialer';
             switchScope(targetScope);
 
+            // Bind horizontal scroll listener to update Left/Right button states
+            const tableRespContainer = document.getElementById('callsTableResponsive');
+            if (tableRespContainer) {
+                tableRespContainer.addEventListener('scroll', updateScrollButtonsState, { passive: true });
+                updateScrollButtonsState();
+            }
+
             // Load initial recent 20 calls & metrics for Dialer
             loadRecentCallsDialer();
             loadTodayDialerMetrics();
@@ -1288,6 +1433,13 @@
                     if (teamCol) teamCol.style.display = 'none';
                     const sel = document.getElementById('filter-team-member');
                     if (sel) sel.value = '';
+                }
+
+                // Reset horizontal table scroll to start so the first columns are never cut off
+                const tableContainer = document.getElementById('callsTableResponsive');
+                if (tableContainer) {
+                    tableContainer.scrollLeft = 0;
+                    if (typeof updateScrollButtonsState === 'function') updateScrollButtonsState();
                 }
 
                 loadCalls(1);
@@ -1994,12 +2146,8 @@
                 return;
             }
 
-            const grouped = groupConsecutiveCalls(items);
-
-            tbody.innerHTML = grouped.map(group => {
-                const c = group.latestCall;
-                const count = group.count;
-
+            tbody.innerHTML = items.map(c => {
+                const count = c.call_count || 1;
                 // Direction Pill & Detailed Call Type Badges
                 const isIncoming = (c.direction === 'inbound') || ['inbound_answered', 'missed_by_staff', 'voicemail'].includes(c.computed_type);
                 const directionPill = isIncoming
@@ -2039,12 +2187,13 @@
                     </div>
                 `;
 
-                // Recording Audio Scrubber Player
+                // Recording Audio Scrubber Player with Truthful Duration Semantics
+                const recDurFormatted = c.recording_duration ? (Math.floor(c.recording_duration / 60).toString().padStart(2, '0') + 'm ' + (c.recording_duration % 60).toString().padStart(2, '0') + 's') : c.duration_formatted;
                 let recHtml = `<span class="badge bg-secondary bg-opacity-25 text-muted px-2 py-1" style="font-size:11px;" title="No recording available — Call was not answered (00m 00s duration)"><i class="fa-solid fa-microphone-slash me-1"></i>No Recording</span>`;
                 if ((c.has_recording || (c.duration_seconds && c.duration_seconds > 0)) && c.recording_url) {
                     recHtml = `
                         <div class="audio-scrubber-player" id="player-row-${c.id}">
-                            <button class="play-btn" id="pbtn-${c.id}" onclick="toggleAudio('${escapeHtml(c.recording_url)}', '${c.id}', '${escapeHtml(c.duration_formatted)}')" title="Play Call Recording">
+                            <button class="play-btn" id="pbtn-${c.id}" onclick="toggleAudio('${escapeHtml(c.recording_url)}', '${c.id}', '${escapeHtml(recDurFormatted)}')" title="Play Call Recording (${escapeHtml(recDurFormatted)})">
                                 <i class="fa-solid fa-play"></i>
                             </button>
                             <div class="scrubber-track-wrapper">
@@ -2052,13 +2201,13 @@
                                        oninput="seekAudio(this.value, '${c.id}')" 
                                        onchange="commitSeekAudio(this.value, '${c.id}')" 
                                        title="Drag cursor to seek">
-                                <div class="audio-time-label" id="timer-${c.id}">00:00 / ${escapeHtml(c.duration_formatted)}</div>
+                                <div class="audio-time-label" id="timer-${c.id}">00:00 / ${escapeHtml(recDurFormatted)}</div>
                             </div>
                         </div>
                     `;
                 }
 
-                const rawCustomerNum = c.raw_caller_number || c.customer_phone || c.customer_number || group.rawNumber || '';
+                const rawCustomerNum = c.raw_caller_number || c.customer_phone || c.customer_number || '';
                 const cleanPhoneNum = (rawCustomerNum || '').replace(/\D/g, '').slice(-10);
                 const safeCustName = c.customer_name || 'Guest Caller';
                 const safeLeadId = c.crm_lead_id || '';
@@ -2066,7 +2215,7 @@
                 // Action Taken Badge / Button for Missed Calls
                 let missedActionHtml = '';
                 if (c.computed_type === 'missed_by_staff') {
-                    if (group.hasActionTaken || c.action_taken) {
+                    if (c.action_taken) {
                         missedActionHtml = `
                             <span class="badge bg-success-subtle text-success border border-success-subtle btn-action-sm mt-1" title="Action by: ${escapeHtml(c.action_by || '')} (${escapeHtml(c.action_at || '')})\nNote: ${escapeHtml(c.action_notes || '')}">
                                 <i class="fa-solid fa-check-double"></i> Action Taken
@@ -2100,14 +2249,9 @@
                     `;
                 }
 
-                // Consecutive Call Count Badge
-                const countBadge = count > 1 
-                    ? `<span class="badge bg-primary bg-opacity-75 text-white rounded-pill px-2 py-0.5 ms-1 fw-bold shadow-sm" style="font-size:11px;letter-spacing:0.3px;" title="${count} consecutive calls">(${count})</span>` 
-                    : '';
-
                 return `
                     <tr>
-                        <td>
+                        <td class="col-sticky-left">
                             <div class="fw-bold text-white fs-6">${escapeHtml(c.operator_name)}</div>
                             <div class="small text-secondary" style="font-size:11.5px;">${escapeHtml(c.operator_emp_code)} · ${escapeHtml(c.operator_department)}</div>
                         </td>
@@ -2133,19 +2277,18 @@
                                  data-phone="${escapeHtml(cleanPhoneNum)}" 
                                  data-name="${escapeHtml(safeCustName)}" 
                                  onclick="triggerHistoryFromEl(this)" 
-                                 title="Click to view history for ${escapeHtml(safeCustName)} (${count} calls)">
+                                 title="Click to view history for ${escapeHtml(safeCustName)}">
                                 <div class="d-flex align-items-center">
                                     ${(c.caller_identity_source === 'unresolved_forwarded' || c.customer_phone_masked === 'Unknown / Not provided') ? `
                                         <span class="text-muted fst-italic" style="font-size:12px;"><i class="fa-solid fa-user-secret me-1 text-muted" style="font-size:11px;"></i>Unknown / Not provided</span>
                                     ` : `
                                         <span class="phone-masked"><i class="fa-solid fa-phone me-1 text-muted" style="font-size:11px;"></i>${escapeHtml(c.customer_phone_masked)}</span>
                                     `}
-                                    ${countBadge}
                                 </div>
                                 ${(c.forwarded_from_masked || c.forwarded_from_display || c.forwarded_from_number) ? `
                                     <div class="small mt-0.5" title="Call forwarded from operator number">
                                         <span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-50 px-1 py-0.5 font-monospace" style="font-size:9.5px;">
-                                            <i class="fa-solid fa-share me-1 text-warning"></i>Fwd From: ${escapeHtml(c.forwarded_from_masked || c.forwarded_from_display || c.forwarded_from_number)}
+                                             <i class="fa-solid fa-share me-1 text-warning"></i>Fwd From: ${escapeHtml(c.forwarded_from_masked || c.forwarded_from_display || c.forwarded_from_number)}
                                         </span>
                                     </div>
                                 ` : ''}
@@ -2173,7 +2316,7 @@
                             </span>
                         </td>
                         <td>${recHtml}</td>
-                        <td class="text-end">
+                        <td class="text-end col-sticky-right">
                             <div class="d-flex flex-column align-items-end gap-1">
                                 <div class="d-flex gap-1">
                                     ${(cleanPhoneNum && cleanPhoneNum !== 'unresolved' && cleanPhoneNum.length >= 6 && c.caller_identity_source !== 'unresolved_forwarded') ? `
@@ -2217,6 +2360,44 @@
                 pagHtml += `<button class="btn btn-sm btn-outline-secondary ${data.page === data.total_pages ? 'disabled' : ''}" onclick="loadCalls(${data.page + 1})"><i class="fa-solid fa-chevron-right"></i></button>`;
             }
             document.getElementById('pagination-controls').innerHTML = pagHtml;
+
+            // Auto-reset horizontal scroll to start so the first columns are never cut off
+            const tableContainer = document.getElementById('callsTableResponsive');
+            if (tableContainer) {
+                tableContainer.scrollLeft = 0;
+                updateScrollButtonsState();
+            }
+        }
+
+        // Horizontal Left-to-Right Scroll Helper Functions
+        function scrollCallsTable(offset) {
+            const el = document.getElementById('callsTableResponsive');
+            if (el) {
+                el.scrollBy({ left: offset, behavior: 'smooth' });
+                setTimeout(updateScrollButtonsState, 350);
+            }
+        }
+
+        function scrollCallsTableReset() {
+            const el = document.getElementById('callsTableResponsive');
+            if (el) {
+                el.scrollTo({ left: 0, behavior: 'smooth' });
+                setTimeout(updateScrollButtonsState, 350);
+            }
+        }
+
+        function updateScrollButtonsState() {
+            const el = document.getElementById('callsTableResponsive');
+            const btnLeft = document.getElementById('btnScrollTableLeft');
+            const btnRight = document.getElementById('btnScrollTableRight');
+            if (!el) return;
+            const maxScroll = el.scrollWidth - el.clientWidth;
+            if (btnLeft) {
+                btnLeft.disabled = el.scrollLeft <= 10;
+            }
+            if (btnRight) {
+                btnRight.disabled = el.scrollLeft >= maxScroll - 10;
+            }
         }
 
         function maskPhoneNumber(p) {
@@ -2410,12 +2591,13 @@
                     }
                     
                     let recAudio = '';
+                    const recDurLabel = h.recording_duration_formatted || (h.recording_duration ? (Math.floor(h.recording_duration/60).toString().padStart(2,'0') + 'm ' + (h.recording_duration%60).toString().padStart(2,'0') + 's') : h.duration_formatted);
                     if (h.has_recording && h.recording_url) {
                         const hId = 'dh_' + h.id;
                         recAudio = `
                             <div class="mt-2">
                                 <div class="audio-scrubber-player" id="player-row-${hId}">
-                                    <button class="play-btn" id="pbtn-${hId}" onclick="toggleAudio('${escapeHtml(h.recording_url)}', '${hId}', '${escapeHtml(h.duration_formatted)}')" title="Play Call Recording">
+                                    <button class="play-btn" id="pbtn-${hId}" onclick="toggleAudio('${escapeHtml(h.recording_url)}', '${hId}', '${escapeHtml(recDurLabel)}')" title="Play Call Recording (${escapeHtml(recDurLabel)})">
                                         <i class="fa-solid fa-play"></i>
                                     </button>
                                     <div class="scrubber-track-wrapper">
@@ -2423,7 +2605,7 @@
                                                oninput="seekAudio(this.value, '${hId}')" 
                                                onchange="commitSeekAudio(this.value, '${hId}')" 
                                                title="Drag cursor to seek">
-                                        <div class="audio-time-label" id="timer-${hId}">00:00 / ${escapeHtml(h.duration_formatted)}</div>
+                                        <div class="audio-time-label" id="timer-${hId}">00:00 / ${escapeHtml(recDurLabel)}</div>
                                     </div>
                                 </div>
                             </div>
@@ -2461,7 +2643,8 @@
                                 <div class="d-flex align-items-center gap-1.5 flex-wrap">
                                     ${directionPill}
                                     <span class="badge ${badgeClass} px-2 py-1" style="font-size:11.5px;font-weight:700;">${escapeHtml(h.type)}</span>
-                                    <span class="badge bg-dark border border-secondary text-warning font-monospace px-2 py-1" style="font-size:11.5px;">${escapeHtml(h.duration_formatted)}</span>
+                                    <span class="badge bg-dark border border-secondary text-warning font-monospace px-2 py-1" style="font-size:11.5px;" title="Total Call Duration"><i class="fa-solid fa-stopwatch text-info me-1"></i>${escapeHtml(h.duration_formatted)}</span>
+                                    ${h.recording_duration ? `<span class="badge bg-dark border border-secondary text-info font-monospace px-2 py-1" style="font-size:11.5px;" title="Recording Audio Duration"><i class="fa-solid fa-microphone text-warning me-1"></i>${escapeHtml(recDurLabel)}</span>` : ''}
                                 </div>
                                 <div class="text-end">
                                     <span class="badge bg-dark bg-opacity-75 text-light border border-secondary font-monospace px-2 py-1 shadow-sm" style="font-size:11px;letter-spacing:0.3px;">

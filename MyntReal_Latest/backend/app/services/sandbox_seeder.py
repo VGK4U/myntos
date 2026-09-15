@@ -246,6 +246,15 @@ def seed_sandbox_data(db: Session):
         )
         db.add(lead)
         db.flush()
+        from app.services.crm_phone_sync_service import sync_lead_phone_identities
+        sync_lead_phone_identities(
+            db=db,
+            lead=lead,
+            phone_raw=lead.phone,
+            source_channel='sandbox_seeder',
+            source_ref='seed_test_lead_01',
+            with_lock=False
+        )
         logger.info("Seeded TEST_LEAD_01 lead")
     else:
         lead.community_id = reg.id

@@ -220,12 +220,16 @@ async function renderApplications(){
       const mods = a.subscription?.requested_modules || [];
       const modsStr = mods.length ? mods.map(m => `<span class="pill muted" style="font-size:10.5px;margin:1px">${esc(m)}</span>`).join(' ') : '—';
       
+      const isApproved = (a.status === 'approved') || (a.status === 'pending' && inv);
+      const effectiveStatus = a.status === 'active' ? 'active' : isApproved ? 'approved' : a.status;
       let actions = '';
-      if (a.status === 'pending') {
-        actions = `<button class="primary small btn-approve" data-id="${a.client_id}">✓ Approve & Issue Invoice</button>
+      if (a.status === 'active') {
+        actions = `<span class="pill ok" style="font-size:11px">Active & Provisioned</span>`;
+      } else if (isApproved) {
+        actions = `<button class="primary small btn-pay" data-id="${a.client_id}" data-invid="${inv?.id||''}" data-total="${inv?.total||0}" data-curr="${inv?.currency||'INR'}">💰 Record Payment & Activate</button>
                    <button class="small btn-reject" data-id="${a.client_id}" style="color:#dc2626;margin-left:4px">✕ Reject</button>`;
-      } else if (a.status === 'approved') {
-        actions = `<span class="pill ok" style="font-size:11px">Approved & Invoiced</span>
+      } else if (a.status === 'pending') {
+        actions = `<button class="primary small btn-approve" data-id="${a.client_id}">✓ Approve & Issue Invoice</button>
                    <button class="small btn-reject" data-id="${a.client_id}" style="color:#dc2626;margin-left:4px">✕ Reject</button>`;
       }
 
@@ -235,7 +239,7 @@ async function renderApplications(){
         <td style="max-width:240px">${modsStr}</td>
         <td><b>${esc((a.subscription?.billing_cycle||'monthly').toUpperCase())}</b><br><small>${esc(a.subscription?.billing_currency||'INR')}</small></td>
         <td>${priceStr}</td>
-        <td><span class="pill ${a.status==='approved'?'ok':'warn'}">${esc(a.status)}</span></td>
+        <td><span class="pill ${effectiveStatus==='active'||effectiveStatus==='approved'?'ok':'warn'}">${esc(effectiveStatus)}</span></td>
         <td>${actions}</td>
       </tr>`;
     }).join('');
@@ -254,6 +258,45 @@ async function renderApplications(){
           alert('Approval failed: ' + err.message);
           btn.disabled = false; btn.textContent = '✓ Approve & Issue Invoice';
         }
+      };
+    });
+
+    // Wire Payment & Activation action
+    tb.querySelectorAll('.btn-pay').forEach(btn => {
+      btn.onclick = async () => {
+        const cid = Number(btn.dataset.id);
+        const invId = Number(btn.dataset.invid);
+        const total = Number(btn.dataset.total);
+        const curr = btn.dataset.curr || 'INR';
+        if (!invId) { alert('No pending invoice found for this client.'); return; }
+        modal(`Record Payment & Activate Tenant #${cid}`, [
+          { name: 'amount', label: 'Payment Amount ('+curr+')', type: 'number', value: total },
+          { name: 'method', label: 'Payment Method', type: 'select', value: 'manual',
+            options: [{v:'manual', l:'Manual Bank Transfer / NEFT'}, {v:'upi', l:'UPI / QR'}, {v:'card', l:'Credit / Debit Card'}, {v:'cash', l:'Cash'}] },
+          { name: 'reference', label: 'Transaction Reference / UTR', value: 'TXN_'+Date.now() },
+          { name: 'notes', label: 'Internal Notes', type: 'textarea', value: 'Verified payment received for SaaS onboarding.' }
+        ], async (v) => {
+          const res = await api('POST', '/payments', {
+            invoice_id: invId,
+            client_id: cid,
+            amount: v.amount,
+            currency: curr,
+            method: v.method,
+            reference: v.reference,
+            notes: v.notes
+          });
+          const adm = res.admin_provisioning || {};
+          alert(`Payment recorded! Tax Invoice #${res.tax_invoice_number} generated.\n\n` +
+                `TENANT ACTIVATED SUCCESSFULLY!\n` +
+                `----------------------------------------\n` +
+                `Tenant Admin Code: ${adm.emp_code || 'N/A'}\n` +
+                `Email: ${adm.email || 'N/A'}\n` +
+                `Temporary Password: ${adm.temp_password || 'N/A'}\n` +
+                `Membership ID: ${adm.membership_id || 'N/A'}\n` +
+                `----------------------------------------\n` +
+                `Share these credentials with the client administrator.`);
+          renderApplications();
+        });
       };
     });
 

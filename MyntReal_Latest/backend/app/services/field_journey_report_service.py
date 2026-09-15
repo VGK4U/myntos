@@ -43,9 +43,11 @@ def get_today_field_journey_stats(db: Session) -> Dict[str, Any]:
     date_str = ist_now.strftime("%Y-%m-%d")
     time_str = ist_now.strftime("%I:%M %p")
 
-    # Calculate IST bounds for today
+    # Calculate IST and UTC bounds for today
     start_of_today_ist = ist_now.replace(hour=0, minute=0, second=0, microsecond=0)
     end_of_today_ist = start_of_today_ist + timedelta(days=1)
+    start_of_today_utc = start_of_today_ist - timedelta(hours=5, minutes=30)
+    end_of_today_utc = end_of_today_ist - timedelta(hours=5, minutes=30)
 
     # Load ALL journeys for today (active, completed, paused, ended)
     rows = db.execute(text("""
@@ -488,15 +490,39 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(
     total_completed = stats.get("total_completed", 0)
     all_ended_sent = stats.get("all_ended_report_sent", False)
 
+    from app.services.automation_tracking_service import (
+        create_execution, record_dispatch, finalize_execution, get_job_targets
+    )
+
     # 1. Active staff check: For automated scheduler, skip sending if 0 staff active/logged journeys today
     if trigger_type == "AUTO_SCHEDULER" and total_participated == 0 and total_active == 0:
         logger.info("[FIELD-REPORT] No active field staff or journeys logged today. Skipping automated hourly report.")
+        exec_skip = create_execution(
+            db=db,
+            job_id="field_staff_journey_report",
+            job_name="Field Journey Performance & Leaderboard Report",
+            trigger_type=trigger_type,
+            triggered_by=triggered_by,
+            target_summary="Field Updates Group",
+            metadata={"reason": "no_active_journeys"}
+        )
+        record_dispatch(
+            db=db,
+            execution_id=exec_skip.id,
+            job_id="field_staff_journey_report",
+            recipient_type="GROUP",
+            recipient_identifier="120363428888306723@g.us",
+            recipient_name="Field Updates",
+            status="SKIPPED",
+            error_message="No active field staff or journeys today"
+        )
+        finalize_execution(db, exec_skip.id)
         log_wa_trigger_execution(
             job_id="field_staff_journey_report",
             job_name="Field Journey Performance & Leaderboard Report",
             trigger_type=trigger_type,
             triggered_by=triggered_by,
-            targets=[{"type": "group", "name": "Field Updates", "identifier": "BctONtnv8431uxxybKBEtS"}],
+            targets=[{"type": "group", "name": "Field Updates", "identifier": "120363428888306723@g.us"}],
             sent_count=0,
             failed_count=0,
             status="SKIPPED",
@@ -513,12 +539,32 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(
     # 2. Journeys ended check: Skip if all staff completed/ended their journeys for today and final report was already dispatched
     if trigger_type == "AUTO_SCHEDULER" and total_active == 0 and total_completed > 0 and all_ended_sent:
         logger.info("[FIELD-REPORT] All field journeys ended for today (%d completed). Final report already dispatched. Skipping automated hourly report.", total_completed)
+        exec_ended = create_execution(
+            db=db,
+            job_id="field_staff_journey_report",
+            job_name="Field Journey Performance & Leaderboard Report",
+            trigger_type=trigger_type,
+            triggered_by=triggered_by,
+            target_summary="Field Updates Group",
+            metadata={"reason": "all_journeys_ended", "total_completed": total_completed}
+        )
+        record_dispatch(
+            db=db,
+            execution_id=exec_ended.id,
+            job_id="field_staff_journey_report",
+            recipient_type="GROUP",
+            recipient_identifier="120363428888306723@g.us",
+            recipient_name="Field Updates",
+            status="SKIPPED",
+            error_message="All field journeys ended for today"
+        )
+        finalize_execution(db, exec_ended.id)
         log_wa_trigger_execution(
             job_id="field_staff_journey_report",
             job_name="Field Journey Performance & Leaderboard Report",
             trigger_type=trigger_type,
             triggered_by=triggered_by,
-            targets=[{"type": "group", "name": "Field Updates", "identifier": "BctONtnv8431uxxybKBEtS"}],
+            targets=[{"type": "group", "name": "Field Updates", "identifier": "120363428888306723@g.us"}],
             sent_count=0,
             failed_count=0,
             status="SKIPPED",
@@ -535,19 +581,62 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(
 
     report_msg = format_field_journey_whatsapp_message(stats)
 
-    # 1. Post to Target WhatsApp Group (Field Updates: 120363428888306723@g.us / BctONtnv8431uxxybKBEtS)
-    group_result = False
-    group_res = send_group_bot_message(
-        message_text=report_msg,
-        invite_code="BctONtnv8431uxxybKBEtS",
-        group_name="Field Updates",
-        group_id="120363428888306723@g.us"
-    )
-    if group_res.get("success"):
-        group_result = True
-        logger.info("[FIELD-REPORT] Successfully posted report to WhatsApp group BctONtnv8431uxxybKBEtS")
+    # Load configured group targets dynamically
+    conf_targets = get_job_targets(db, "field_staff_journey_report", company_id=1, active_only=True)
+    if not conf_targets:
+        target_list = [{"id": 0, "target_type": "group", "name": "Field Updates", "identifier": "120363428888306723@g.us"}]
     else:
-        logger.warning("[FIELD-REPORT] Group bot response: %s", group_res)
+        target_list = [{"id": t.id, "target_type": t.target_type, "name": t.name, "identifier": t.identifier} for t in conf_targets]
+
+    summary_str = ", ".join(t["name"] for t in target_list)
+    execution = create_execution(
+        db=db,
+        job_id="field_staff_journey_report",
+        job_name="Field Journey Performance & Leaderboard Report",
+        trigger_type=trigger_type,
+        triggered_by=triggered_by,
+        target_summary=summary_str,
+        metadata={"total_active": stats.get("total_active", 0)}
+    )
+
+    group_result = False
+    last_group_res = None
+    for tg in target_list:
+        ident = tg["identifier"]
+        is_jid = "@g.us" in ident
+        group_res = send_group_bot_message(
+            message_text=report_msg,
+            invite_code="" if is_jid else ident,
+            group_name=tg["name"],
+            group_id=ident if is_jid else None,
+            job_id="field_staff_journey_report",
+            job_name="Field Journey Performance & Leaderboard Report",
+            trigger_type=trigger_type,
+            db=db,
+            execution_id=execution.id
+        )
+        last_group_res = group_res
+        is_succ = isinstance(group_res, dict) and group_res.get("success") is True and not group_res.get("queued")
+        is_queued = isinstance(group_res, dict) and group_res.get("queued") is True
+        if is_succ:
+            group_result = True
+        d_status = "SENT" if is_succ else ("UNCERTAIN" if is_queued else "FAILED")
+        d_err = group_res.get("error") if not is_succ and not is_queued else None
+
+        record_dispatch(
+            db=db,
+            execution_id=execution.id,
+            job_id="field_staff_journey_report",
+            recipient_type=tg["target_type"].upper(),
+            recipient_identifier=ident,
+            recipient_name=tg["name"],
+            queue_id=group_res.get("queue_id"),
+            provider="BOT_GATEWAY",
+            provider_message_id=(group_res.get("data") or {}).get("messageId"),
+            status=d_status,
+            error_message=d_err,
+            payload_snapshot={"group_name": tg["name"]}
+        )
 
     try:
         from app.models.whatsapp import MessageLog
@@ -559,7 +648,9 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(
             message_body=report_msg[:500],
             initial_status="sent" if group_result else "failed",
             current_status="sent" if group_result else "failed",
-            sent_at=get_indian_time()
+            sent_at=get_indian_time(),
+            job_id="field_staff_journey_report",
+            execution_id=execution.id
         )
         db.add(log_entry)
         db.commit()
@@ -570,26 +661,31 @@ def dispatch_field_journey_whatsapp_reports_and_alerts(
     alerts_res = dispatch_field_journey_photo_inactivity_alerts_only(db)
     alerts_sent = alerts_res.get("alerts_sent", 0)
 
-    targets = [{"type": "group", "name": "Field Updates", "identifier": "BctONtnv8431uxxybKBEtS"}]
-    err_text = None if group_result else ((group_res or {}).get("error") or "WhatsApp Bot Gateway disconnected")
+    finalized = finalize_execution(db, execution.id)
 
-    log_wa_trigger_execution(
-        job_id="field_staff_journey_report",
-        job_name="Field Journey Performance & Leaderboard Report",
-        trigger_type=trigger_type,
-        triggered_by=triggered_by,
-        targets=targets,
-        sent_count=1 if group_result else 0,
-        failed_count=0 if group_result else 1,
-        status="SUCCESS" if group_result else "FAILED",
-        error_message=err_text,
-        detail_data={"group_posted": group_result, "alerts_sent": alerts_sent, "active_journeys": stats.get("total_active", 0)}
-    )
+    # Legacy audit mirror
+    err_text = None if group_result else ((last_group_res or {}).get("error") or "WhatsApp Bot Gateway disconnected")
+    try:
+        log_wa_trigger_execution(
+            job_id="field_staff_journey_report",
+            job_name="Field Journey Performance & Leaderboard Report",
+            trigger_type=trigger_type,
+            triggered_by=triggered_by,
+            targets=target_list,
+            sent_count=finalized.sent_count,
+            failed_count=finalized.failed_count,
+            status=finalized.status,
+            error_message=err_text,
+            detail_data={"group_posted": group_result, "alerts_sent": alerts_sent, "active_journeys": stats.get("total_active", 0)}
+        )
+    except Exception as e:
+        logger.warning(f"Legacy audit log note: {e}")
 
     return {
         "success": True,
+        "execution_id": execution.id,
         "group_posted": group_result,
-        "group_response": group_res,
+        "group_response": last_group_res,
         "alerts_sent": alerts_sent,
         "active_journeys_count": stats.get("total_active", 0)
     }

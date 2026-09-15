@@ -303,7 +303,7 @@
                     if (typeof window.Plivo === 'function') {
                         this.sdk = new window.Plivo({
                             allowMultipleIncomingCalls: true,
-                            enableNoiseReduction: true, // Issue #2: Plivo Native Noise Reduction
+                            enableNoiseReduction: false, // Use native browser WebRTC DSP (avoids AudioWorklet one-way audio)
                             audioConstraints: audioConstraints,
                             audioElementOption: {
                                 remoteAudioId: 'plivoRemoteAudio'
@@ -312,7 +312,7 @@
                         this.client = this.sdk.client || this.sdk;
                     } else if (window.Plivo.Client) {
                         this.client = new window.Plivo.Client({
-                            enableNoiseReduction: true, // Issue #2: Plivo Native Noise Reduction
+                            enableNoiseReduction: false, // Use native browser WebRTC DSP (avoids AudioWorklet one-way audio)
                             audioConstraints: audioConstraints
                         });
                     }
@@ -599,6 +599,7 @@
 
         openCallDialer(intent) {
             if (!intent) return;
+            this.unlockAudioOnUserGesture();
             const phone = (typeof intent === 'string' ? intent : (intent.phoneNumber || intent.phone || '')).trim();
             const name = (typeof intent === 'object' ? (intent.name || intent.contactName || '') : '') || 'Contact Lead';
             const entityId = typeof intent === 'object' ? (intent.entityId || intent.leadId || null) : null;
@@ -1014,7 +1015,12 @@
                     if (resp.ok) {
                         const data = await resp.json();
                         if (data && data.success) {
-                            if (data.is_terminal === true || ['ended', 'completed', 'failed', 'busy', 'no-answer', 'rejected', 'canceled'].includes(data.status)) {
+                            const isConnectedLocal = this.isCallConnected && !!this.callConnectedTime;
+                            const isTerminalState = data.is_terminal === true || ['ended', 'completed', 'failed', 'busy', 'no-answer', 'rejected', 'canceled'].includes(data.status);
+                            // If call is already connected locally, pre-answer transient states (busy/no-answer) must not abort the healthy call
+                            const shouldTerminate = isTerminalState && (!isConnectedLocal || ['ended', 'completed', 'hangup', 'canceled', 'failed'].includes(data.status));
+
+                            if (shouldTerminate) {
                                 console.log(`[PLIVO-SOFTPHONE] Carrier session closed ${sessionId} (Status: ${data.status}, Duration: ${data.duration_seconds}s)`);
                                 this.stopSessionWatcher();
                                 this.onCallTerminated();
@@ -1340,76 +1346,10 @@
         }
 
         async applyModestMicBoost() {
-            try {
-                if (this._isMicBoostApplied) return;
-                const pc = this.getActivePeerConnection();
-                if (!pc || typeof pc.getSenders !== 'function') {
-                    console.log('[PLIVO-MIC-BOOST] No active RTCPeerConnection available for mic boost.');
-                    return;
-                }
-
-                const senders = pc.getSenders();
-                const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
-                if (!audioSender || !audioSender.track) {
-                    console.log('[PLIVO-MIC-BOOST] No audio sender track found.');
-                    return;
-                }
-
-                const originalTrack = audioSender.track;
-                if (originalTrack === this._boostedMicTrack) return;
-
-                const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-                if (!AudioCtxClass) {
-                    console.warn('[PLIVO-MIC-BOOST] AudioContext not supported in this browser.');
-                    return;
-                }
-
-                console.log('[PLIVO-MIC-BOOST] Applying modest mic volume improvement (+2.5 dB / 1.33x with limiter)...');
-                this._micBoostCtx = new AudioCtxClass();
-                if (this._micBoostCtx.state === 'suspended') {
-                    await this._micBoostCtx.resume();
-                }
-                if (this._micBoostCtx.state !== 'running') {
-                    console.warn('[PLIVO-MIC-BOOST] AudioContext is not running (state:', this._micBoostCtx.state, '). Skipping mic boost to preserve audio.');
-                    return;
-                }
-
-                const inputStream = new MediaStream([originalTrack]);
-                const sourceNode = this._micBoostCtx.createMediaStreamSource(inputStream);
-
-                // Modest gain increase: +2.5 dB (factor of ~1.33)
-                const gainNode = this._micBoostCtx.createGain();
-                gainNode.gain.setValueAtTime(1.33, this._micBoostCtx.currentTime);
-
-                // DynamicsCompressor limiter to prevent distortion and clipping
-                const compressor = this._micBoostCtx.createDynamicsCompressor();
-                compressor.threshold.setValueAtTime(-14, this._micBoostCtx.currentTime);
-                compressor.knee.setValueAtTime(6, this._micBoostCtx.currentTime);
-                compressor.ratio.setValueAtTime(4, this._micBoostCtx.currentTime);
-                compressor.attack.setValueAtTime(0.003, this._micBoostCtx.currentTime);
-                compressor.release.setValueAtTime(0.05, this._micBoostCtx.currentTime);
-
-                const destNode = this._micBoostCtx.createMediaStreamDestination();
-                sourceNode.connect(gainNode);
-                gainNode.connect(compressor);
-                compressor.connect(destNode);
-
-                const boostedTracks = destNode.stream.getAudioTracks();
-                if (boostedTracks.length === 0) {
-                    console.warn('[PLIVO-MIC-BOOST] Could not obtain processed audio track.');
-                    return;
-                }
-
-                const boostedTrack = boostedTracks[0];
-                this._originalMicTrack = originalTrack;
-                this._boostedMicTrack = boostedTrack;
-
-                await audioSender.replaceTrack(boostedTrack);
-                this._isMicBoostApplied = true;
-                console.log('[PLIVO-MIC-BOOST] Modest mic boost successfully applied (+2.5 dB / 1.33x with limiter).');
-            } catch (err) {
-                console.warn('[PLIVO-MIC-BOOST] Error applying modest mic boost; original track preserved:', err);
-            }
+            // Preserves uncompressed, pristine native WebRTC audio.
+            // Bypasses WebAudio DynamicsCompressor and track-replacement to prevent double-compression,
+            // acoustic artifacts, and browser sample-rate resampling mismatches.
+            console.log('[PLIVO-MIC-BOOST] Native high-fidelity WebRTC audio pipeline active (WebAudio track-replacement bypassed).');
         }
 
         _cleanupMicBoost() {
@@ -1436,7 +1376,7 @@
                 isCallConnected: this.isCallConnected,
                 isMuted: this.isMuted,
                 isSpeakerOn: this.isSpeakerOn,
-                noiseReductionEnabled: true,
+                noiseReductionEnabled: false,
                 micBoost: {
                     applied: this._isMicBoostApplied,
                     gainDb: 2.5,

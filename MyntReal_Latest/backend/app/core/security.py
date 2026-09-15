@@ -511,8 +511,16 @@ async def get_current_user_hybrid(
                 detail="Authentication database service temporarily unavailable. Please try again."
             )
         
-        # DC Protocol: StaffEmployee uses 'status' column, not 'is_active'
-        if staff and staff.status == 'active':
+        # DC Protocol / Stage 2A: StaffEmployee live status and token_version verification
+        if staff and staff.status == 'active' and not getattr(staff, 'is_deleted', False):
+            tok_ver = payload.get("token_version")
+            db_tok_ver = getattr(staff, "token_version", 1) or 1
+            if tok_ver is not None and int(tok_ver) != db_tok_ver:
+                logger.warning(f"[TOKEN-REVOKED] Staff {staff.emp_code}: token_version {tok_ver} != db {db_tok_ver}")
+                return None
+            if tok_ver is None and db_tok_ver > 1:
+                logger.warning(f"[TOKEN-REVOKED] Staff {staff.emp_code}: legacy token without token_version while db token_version={db_tok_ver}")
+                return None
             return staff
         return None
     

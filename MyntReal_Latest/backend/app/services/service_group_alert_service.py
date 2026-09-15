@@ -116,6 +116,21 @@ def send_daily_service_summary_report(
     """
     from app.models.ticket import ServiceTicket
     from app.services.whatsapp_audit_service import log_wa_trigger_execution
+    from app.services.automation_tracking_service import (
+        create_execution,
+        record_dispatch,
+        finalize_execution,
+        get_job_targets
+    )
+
+    exec_rec = create_execution(
+        db=db,
+        job_id="service_summary",
+        job_name="Daily 7:30 PM Service Ticket Summary",
+        trigger_type=trigger_type,
+        triggered_by=triggered_by,
+        company_id=1
+    )
 
     ist_now = datetime.datetime.utcnow() + datetime.timedelta(hours=5, minutes=30)
     start_of_today_utc = (ist_now.replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(hours=5, minutes=30))
@@ -141,21 +156,79 @@ def send_daily_service_summary_report(
         f"Great dedication today team! Thank you for delivering excellent customer support! 🌟"
     )
 
-    res = send_service_group_bot_message(msg)
-    is_succ = isinstance(res, dict) and res.get("success") is True
+    db_targets = get_job_targets(db, "service_summary", company_id=1)
+    if db_targets:
+        targets = [
+            {"type": t.get("recipient_type", "GROUP"), "name": t.get("recipient_name"), "identifier": t.get("recipient_identifier")}
+            for t in db_targets if t.get("is_active", True)
+        ]
+    else:
+        targets = [{"type": "GROUP", "name": "Service & Maintenance Team", "identifier": SERVICE_GROUP_INVITE_CODE}]
 
-    targets = [{"type": "group", "name": "Service & Maintenance Team", "identifier": SERVICE_GROUP_INVITE_CODE}]
+    results = []
+    success_count = 0
+    failed_count = 0
+
+    for tgt in targets:
+        code_or_name = tgt.get("identifier") or SERVICE_GROUP_INVITE_CODE
+        res = send_service_group_bot_message(msg)
+        is_succ = isinstance(res, dict) and res.get("success") is True
+        results.append(res)
+        if is_succ:
+            success_count += 1
+        else:
+            failed_count += 1
+
+        log_id = None
+        if is_succ:
+            try:
+                from app.models.whatsapp import MessageLog
+                import uuid
+                log_entry = MessageLog(
+                    message_sid=f"srv_{uuid.uuid4().hex[:12]}",
+                    mobile_number=f"GROUP:{code_or_name[:40]}",
+                    message_type="service_summary",
+                    message_body=msg[:500],
+                    initial_status="sent",
+                    current_status="sent",
+                    sent_at=datetime.datetime.utcnow(),
+                    job_id="service_summary",
+                    execution_id=exec_rec.id
+                )
+                db.add(log_entry)
+                db.commit()
+                log_id = log_entry.id
+            except Exception as log_e:
+                logger.warning("[SERVICE-SUMMARY] Failed to write MessageLog: %s", log_e)
+
+        record_dispatch(
+            db=db,
+            execution_id=exec_rec.id,
+            job_id="service_summary",
+            recipient_type=tgt.get("type", "GROUP"),
+            recipient_identifier=code_or_name,
+            recipient_name=tgt.get("name", "Service Team"),
+            message_log_id=log_id,
+            status="SENT" if is_succ else "FAILED",
+            error_message=res.get("error") if not is_succ else None,
+            payload_snapshot={"open_tickets": open_total, "new_tickets": new_today}
+        )
+
+    overall_success = success_count > 0 and failed_count == 0
+    exec_status = "COMPLETED" if overall_success else ("PARTIAL" if success_count > 0 else "FAILED")
+    finalize_execution(db, exec_rec.id, exec_status)
+
     log_wa_trigger_execution(
         job_id="service_summary",
         job_name="Daily 7:30 PM Service Ticket Summary",
         trigger_type=trigger_type,
         triggered_by=triggered_by,
         targets=targets,
-        sent_count=1 if is_succ else 0,
-        failed_count=0 if is_succ else 1,
-        status="SUCCESS" if is_succ else "FAILED",
-        error_message=res.get("error") if not is_succ else None,
-        detail_data=res
+        sent_count=success_count,
+        failed_count=failed_count,
+        status="SUCCESS" if overall_success else "FAILED",
+        error_message=None if overall_success else f"Failed {failed_count} targets",
+        detail_data={"results": results}
     )
 
-    return res
+    return {"success": overall_success, "dispatched": success_count, "failed": failed_count}

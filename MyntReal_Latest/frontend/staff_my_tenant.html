@@ -67,13 +67,13 @@ async function api(p){ const r=await fetch('/api/v1/platform-b2b'+p,{headers:{'A
 function esc(s){ return s==null?'':String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
 document.addEventListener('DOMContentLoaded', async function() {
-  if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
+  loadTenant();
+  if (typeof StaffSidebar !== 'undefined') StaffSidebar.init().catch(e => console.warn(e));
   if (typeof StaffHeader !== 'undefined') {
     StaffHeader.inject('All Tenants — VGK SaaS', 'fas fa-layer-group');
     StaffHeader.init();
   }
   if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
-  await loadTenant();
 });
 
 async function loadTenant() {

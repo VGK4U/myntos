@@ -2332,7 +2332,7 @@ async function loadTopPartnersTable(page = 1) {
           <span style="font-weight:800;color:#7c3aed;background:#ede9fe;padding:2px 7px;border-radius:6px;font-size:10.5px;white-space:nowrap"><i class="fas fa-user-tie me-1" style="color:#7c3aed"></i>${(p.career_designation || p.current_designation || p.rank_display || 'Channel Partner').replace(/[★*]/g, '').trim()}</span>
         </td>
         <td style="padding:10px 8px;text-align:center;background:#f5f3ff">
-          <span style="font-weight:800;color:#059669;background:#dcfce7;padding:2px 7px;border-radius:6px;font-size:10.5px">${(p.rank_slab_pct||5.0).toFixed(2)}%</span>
+          ${(p.effective_personal_producer_rate !== undefined ? p.effective_personal_producer_rate : (p.rank_slab_pct || 0)) > 0 ? `<span style="font-weight:800;color:#059669;background:#dcfce7;padding:2px 7px;border-radius:6px;font-size:10.5px">${(p.effective_personal_producer_rate !== undefined ? p.effective_personal_producer_rate : p.rank_slab_pct).toFixed(2)}%</span>` : `<span style="font-weight:700;color:#6b7280;background:#f3f4f6;padding:2px 7px;border-radius:6px;font-size:10px">0.00% (Locked)</span>`}
         </td>
         <td style="padding:10px 8px;text-align:right;background:#f5f3ff">
           <strong style="color:${(p.overall_payout||0)>0?'#7c3aed':'#9ca3af'};font-size:11.5px">${(p.overall_payout||0)>0 ? inr(p.overall_payout) : '—'}</strong>
@@ -4728,7 +4728,7 @@ async function loadMembers(page = 1) {
           <td style="text-align:center">${historyHtml}</td>
           <td style="text-align:center">${contactedHtml}</td>
           <td style="white-space:nowrap;background:#f5f3ff"><span style="font-weight:800;color:#7c3aed;background:#ede9fe;padding:3px 8px;border-radius:6px;font-size:11px"><i class="fas fa-user-tie me-1" style="color:#7c3aed"></i>${(m.career_designation || m.current_designation || m.rank_display || 'Channel Partner').replace(/[★*]/g, '').trim()}</span></td>
-          <td style="white-space:nowrap;text-align:center;background:#f0fdf4"><span style="font-weight:800;color:#059669;background:#dcfce7;padding:3px 8px;border-radius:6px;font-size:11px">${(m.rank_slab_pct||5.0).toFixed(2)}%</span></td>
+          <td style="white-space:nowrap;text-align:center;background:#f0fdf4">${(m.effective_personal_producer_rate !== undefined ? m.effective_personal_producer_rate : (m.rank_slab_pct || 0)) > 0 ? `<span style="font-weight:800;color:#059669;background:#dcfce7;padding:3px 8px;border-radius:6px;font-size:11px">${(m.effective_personal_producer_rate !== undefined ? m.effective_personal_producer_rate : m.rank_slab_pct).toFixed(2)}%</span>` : `<span style="font-weight:700;color:#6b7280;background:#f3f4f6;padding:3px 8px;border-radius:6px;font-size:10.5px">0.00% (Locked)</span>`}</td>
           <td style="text-align:right;white-space:nowrap;background:#ecfdf5"><strong style="color:${cmEarnings>0?'#047857':'#9ca3af'};font-size:12px">${cmEarnings>0 ? fmtInr(cmEarnings) : '₹0'}</strong></td>
           <td style="text-align:center;white-space:nowrap;background:#fff7ed"><span style="font-weight:700;color:${(m.activated_team_cnt||m.activated_people||0)>0?'#c2410c':'#9ca3af'};background:${(m.activated_team_cnt||m.activated_people||0)>0?'#ffedd5':'#f3f4f6'};padding:3px 8px;border-radius:6px;font-size:11px">${(m.activated_team_cnt !== undefined ? m.activated_team_cnt : (m.activated_people||0))} Member${(m.activated_team_cnt||m.activated_people||0)===1?'':'s'}</span></td>
           <td style="text-align:center;white-space:nowrap;background:#eff6ff"><span style="font-weight:800;color:#1e40af;background:#dbeafe;padding:3px 8px;border-radius:6px;font-size:11px" title="Installed: ${m.eligible_files_installed || 0} / Total: ${m.eligible_files_total || 0}"><i class="fas fa-check-circle me-1" style="color:#10b981"></i>${m.eligible_files_installed || 0} / ${m.eligible_files_total || 0} Files</span></td>
@@ -4867,7 +4867,8 @@ function fvSearch() {
       const activeLbl = node.is_active ? 'Active' : 'Inactive';
       const directCount = node.children ? node.children.length : 0;
       const rankBadge = `<span style="padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:800;background:#ede9fe;color:#7c3aed;white-space:nowrap"><i class="fas fa-user-tie me-1" style="color:#7c3aed"></i>${(node.career_designation || node.current_designation || node.rank_display || 'Channel Partner').replace(/[★*]/g, '').trim()}</span>`;
-      const slabBadge = `<span style="padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:800;background:#dcfce7;color:#059669">${(node.rank_slab_pct || 5.0).toFixed(2)}%</span>`;
+      const nodeRate = (node.effective_personal_producer_rate !== undefined) ? node.effective_personal_producer_rate : (node.rank_slab_pct !== undefined ? node.rank_slab_pct : 0.0);
+      const slabBadge = nodeRate > 0 ? `<span style="padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:800;background:#dcfce7;color:#059669">${nodeRate.toFixed(2)}%</span>` : `<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;background:#f3f4f6;color:#6b7280">0.00% (Locked)</span>`;
       const payoutBadge = (node.current_month_earning || 0) > 0 ? `<span style="padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:800;background:#ecfdf5;color:#047857"><i class="fas fa-rupee-sign me-1"></i>${inr(node.current_month_earning)}</span>` : '';
       const filesBadge = `<span style="padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:800;background:#eff6ff;color:#1e40af;white-space:nowrap" title="Installed: ${node.eligible_files_installed||0} / Total: ${node.eligible_files_total||0}"><i class="fas fa-check-circle me-1" style="color:#10b981"></i>${node.eligible_files_installed || 0} / ${node.eligible_files_total || 0} Files</span>`;
 
@@ -4922,7 +4923,8 @@ function renderFvTreeNode(node, level) {
 
     // Performance metrics badges
     const rankBadge = `<span style="padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:800;background:#ede9fe;color:#7c3aed;white-space:nowrap"><i class="fas fa-user-tie me-1" style="color:#7c3aed"></i>${(c.career_designation || c.current_designation || c.rank_display || 'Channel Partner').replace(/[★*]/g, '').trim()}</span>`;
-    const slabBadge = `<span style="padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:800;background:#dcfce7;color:#059669">${(c.rank_slab_pct || 5.0).toFixed(2)}%</span>`;
+    const cRate = (c.effective_personal_producer_rate !== undefined) ? c.effective_personal_producer_rate : (c.rank_slab_pct !== undefined ? c.rank_slab_pct : 0.0);
+    const slabBadge = cRate > 0 ? `<span style="padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:800;background:#dcfce7;color:#059669">${cRate.toFixed(2)}%</span>` : `<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700;background:#f3f4f6;color:#6b7280">0.00% (Locked)</span>`;
     const payoutBadge = (c.current_month_earning || 0) > 0 ? `<span style="padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:800;background:#ecfdf5;color:#047857"><i class="fas fa-rupee-sign me-1"></i>${inr(c.current_month_earning)}</span>` : '';
     const filesBadge = `<span style="padding:2px 7px;border-radius:6px;font-size:10.5px;font-weight:800;background:#eff6ff;color:#1e40af;white-space:nowrap" title="Installed Files: ${c.eligible_files_installed||0} / Total Files: ${c.eligible_files_total||0}"><i class="fas fa-check-circle me-1" style="color:#10b981"></i>${c.eligible_files_installed || 0} / ${c.eligible_files_total || 0} Files</span>`;
 
@@ -4962,21 +4964,25 @@ function openFullViewModal() {
     rankTag.innerHTML = (memberData.career_designation || memberData.current_designation || memberData.rank_display || 'CHANNEL PARTNER').replace(/[★*]/g, '').trim().toUpperCase();
   }
   document.getElementById('fvTitle').textContent = `${m.partner_name} (${m.partner_code})`;
-  document.getElementById('fvSubtitle').innerHTML = `<strong>Current Slab:</strong> ${(memberData.rank_slab_pct || 5.0).toFixed(2)}% &nbsp;|&nbsp; <strong>This Month Payout:</strong> ${inr(memberData.current_month_earning || 0)} &nbsp;|&nbsp; <strong>Eligibility Files:</strong> ${memberData.eligible_files_installed || 0} / ${memberData.eligible_files_total || 0} Files`;
+  const mbRate = (memberData.effective_personal_producer_rate !== undefined) ? memberData.effective_personal_producer_rate : (memberData.rank_slab_pct !== undefined ? memberData.rank_slab_pct : 0.0);
+  document.getElementById('fvSubtitle').innerHTML = `<strong>Current Slab:</strong> ${mbRate > 0 ? mbRate.toFixed(2) + '%' : '0.00% (Locked)'} &nbsp;|&nbsp; <strong>This Month Payout:</strong> ${inr(memberData.current_month_earning || 0)} &nbsp;|&nbsp; <strong>Eligibility Files:</strong> ${memberData.eligible_files_installed || 0} / ${memberData.eligible_files_total || 0} Files`;
 
   // Upline
   const uplineEl = document.getElementById('fvUpline');
   if (treeD.success && treeD.data.upline && treeD.data.upline.length) {
-    uplineEl.innerHTML = treeD.data.upline.map((u, i) => `
+    uplineEl.innerHTML = treeD.data.upline.map((u, i) => {
+      const uRate = (u.effective_personal_producer_rate !== undefined) ? u.effective_personal_producer_rate : (u.rank_slab_pct !== undefined ? u.rank_slab_pct : 0.0);
+      return `
       <div style="display:flex;align-items:center;gap:7px;padding:6px 0;border-bottom:1px solid #ede9fe;flex-wrap:wrap">
         <span style="font-size:10px;color:#7c3aed;font-weight:700">L${i+1}</span>
         <i class="fas fa-arrow-up" style="color:#7c3aed;font-size:11px"></i>
         <strong style="font-size:12.5px">${u.partner_code}</strong>
         <span style="font-size:12.5px;color:#374151">${u.partner_name}</span>
         <span style="font-size:10px;padding:1px 6px;border-radius:6px;background:#ede9fe;color:#7c3aed;font-weight:800"><i class="fas fa-user-tie me-1" style="color:#7c3aed"></i>${(u.career_designation || u.current_designation || u.rank_display || 'Channel Partner').replace(/[★*]/g, '').trim()}</span>
-        <span style="font-size:10px;padding:1px 6px;border-radius:6px;background:#dcfce7;color:#059669;font-weight:800">${(u.rank_slab_pct || 5.0).toFixed(2)}%</span>
+        <span style="font-size:10px;padding:1px 6px;border-radius:6px;background:${uRate > 0 ? '#dcfce7' : '#f3f4f6'};color:${uRate > 0 ? '#059669' : '#6b7280'};font-weight:800">${uRate > 0 ? uRate.toFixed(2) + '%' : '0.00%'}</span>
         <span style="font-size:10px;padding:1px 6px;border-radius:20px;background:${u.is_active?'#d1fae5':'#fee2e2'};color:${u.is_active?'#065f46':'#991b1b'};font-weight:700">${u.is_active?'A':'I'}</span>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   } else {
     uplineEl.innerHTML = '<p style="color:#9ca3af;font-size:12px">No upline — root member</p>';
   }

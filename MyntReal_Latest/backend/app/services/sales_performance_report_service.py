@@ -458,57 +458,109 @@ def dispatch_bi_hourly_sales_performance_report(
     triggered_by: str = "System Cron"
 ) -> Dict[str, Any]:
     """
-    Generates and dispatches the bi-hourly performance report to Sales WhatsApp Group.
+    Generates and dispatches the bi-hourly performance report to configured Sales WhatsApp Groups.
+    Integrates canonically with automation_execution and automation_dispatch.
     """
     from app.services.whatsapp_group_alert_service import send_group_bot_message
     from app.services.whatsapp_audit_service import log_wa_trigger_execution
+    from app.services.automation_tracking_service import (
+        create_execution, record_dispatch, finalize_execution, get_job_targets
+    )
 
     msg = generate_bi_hourly_performance_message(db, slot_name=slot_name)
     logger.info(f"📊 Dispatching sales performance update for slot {slot_name}...")
-    res = send_group_bot_message(
-        msg,
-        invite_code="LfX8mGootXa7SpwNIz7P5C",
-        group_name="Mynt Sales New",
-        group_id="120363410784518818@g.us",
-        job_id="wa_bihourly_sales_perf_report",
-        job_name="Sales Team 2-Hour Report & Leaderboard",
-        trigger_type=trigger_type,
-        db=db
-    )
-    is_succ = isinstance(res, dict) and (res.get("success") is True or res.get("queued") is True)
 
-    targets = [
-        {"id": "t1", "type": "group", "name": "Mynt Sales New", "identifier": "120363410784518818@g.us"}
-    ]
+    # Load targets dynamically from persistent relational target store
+    targets = get_job_targets(db, "wa_bihourly_sales_perf_report", company_id=1, active_only=True)
+    if not targets:
+        # Fallback default target
+        target_list = [{"id": 0, "target_type": "group", "name": "Mynt Sales New", "identifier": "120363410784518818@g.us"}]
+    else:
+        target_list = [{"id": t.id, "target_type": t.target_type, "name": t.name, "identifier": t.identifier} for t in targets]
 
-    log_wa_trigger_execution(
+    summary_str = ", ".join(t["name"] for t in target_list)
+    execution = create_execution(
+        db=db,
         job_id="wa_bihourly_sales_perf_report",
         job_name="Sales Team 2-Hour Report & Leaderboard",
         trigger_type=trigger_type,
         triggered_by=triggered_by,
-        targets=targets,
-        sent_count=1 if is_succ else 0,
-        failed_count=0 if is_succ else 1,
-        status="SUCCESS" if is_succ else "FAILED",
-        error_message=res.get("error") if not is_succ else None,
-        detail_data=res
+        target_summary=summary_str,
+        metadata={"slot_name": slot_name}
     )
 
-    # Durable unified MessageLog audit entry for parity with manual trigger
+    last_res = None
+    for tg in target_list:
+        ident = tg["identifier"]
+        is_jid = "@g.us" in ident
+        res = send_group_bot_message(
+            message_text=msg,
+            invite_code="" if is_jid else ident,
+            group_name=tg["name"],
+            group_id=ident if is_jid else None,
+            job_id="wa_bihourly_sales_perf_report",
+            job_name="Sales Team 2-Hour Report & Leaderboard",
+            trigger_type=trigger_type,
+            db=db,
+            execution_id=execution.id
+        )
+        last_res = res
+        is_succ = isinstance(res, dict) and res.get("success") is True and not res.get("queued")
+        is_queued = isinstance(res, dict) and res.get("queued") is True
+        d_status = "SENT" if is_succ else ("UNCERTAIN" if is_queued else "FAILED")
+        d_err = res.get("error") if not is_succ and not is_queued else None
+
+        record_dispatch(
+            db=db,
+            execution_id=execution.id,
+            job_id="wa_bihourly_sales_perf_report",
+            recipient_type=tg["target_type"].upper(),
+            recipient_identifier=ident,
+            recipient_name=tg["name"],
+            queue_id=res.get("queue_id"),
+            provider="BOT_GATEWAY",
+            provider_message_id=(res.get("data") or {}).get("messageId"),
+            status=d_status,
+            error_message=d_err,
+            payload_snapshot={"slot_name": slot_name, "group_name": tg["name"]}
+        )
+
+    finalized_exec = finalize_execution(db, execution.id)
+
+    # Legacy audit mirror
+    try:
+        log_wa_trigger_execution(
+            job_id="wa_bihourly_sales_perf_report",
+            job_name="Sales Team 2-Hour Report & Leaderboard",
+            trigger_type=trigger_type,
+            triggered_by=triggered_by,
+            targets=target_list,
+            sent_count=finalized_exec.sent_count,
+            failed_count=finalized_exec.failed_count,
+            status=finalized_exec.status,
+            error_message=finalized_exec.error_message,
+            detail_data=last_res or {}
+        )
+    except Exception as e:
+        logger.warning(f"Legacy audit log note: {e}")
+
+    # MessageLog audit entry linked with execution_id
     try:
         from app.models.whatsapp import MessageLog
         import uuid
         log_entry = MessageLog(
-            message_sid=f"wamid_sched_{uuid.uuid4().hex[:12]}",
+            message_sid=f"sales_perf_{uuid.uuid4().hex[:12]}",
             mobile_number="GROUP:sales_perf"[:20],
             user_name=f"{triggered_by}"[:100],
             sent_by_name=f"{triggered_by}"[:100],
             sender_type="system" if trigger_type == "AUTO_SCHEDULER" else "staff",
             message_type="sales_performance",
             message_body=f"Sales Performance Report ({slot_name} by {triggered_by})",
-            initial_status="sent" if is_succ else "failed",
-            current_status="sent" if is_succ else "failed",
-            sent_at=datetime.utcnow()
+            initial_status="sent" if finalized_exec.sent_count > 0 else "failed",
+            current_status="sent" if finalized_exec.sent_count > 0 else "failed",
+            sent_at=datetime.utcnow(),
+            job_id="wa_bihourly_sales_perf_report",
+            execution_id=execution.id
         )
         db.add(log_entry)
         db.commit()
@@ -516,4 +568,12 @@ def dispatch_bi_hourly_sales_performance_report(
         db.rollback()
         logger.warning("[SALES-PERF] Failed to write MessageLog: %s", log_e)
 
-    return res
+    return {
+        "success": finalized_exec.status in ("SUCCESS", "PARTIAL_SUCCESS"),
+        "execution_id": execution.id,
+        "sent_count": finalized_exec.sent_count,
+        "uncertain_count": finalized_exec.uncertain_count,
+        "failed_count": finalized_exec.failed_count,
+        "status": finalized_exec.status,
+        "data": last_res
+    }

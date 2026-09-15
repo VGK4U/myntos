@@ -488,7 +488,8 @@ def _log_message(db: Session, phone: str, message: str, result: Dict, event_key:
                  lead_id: Optional[int] = None, staff_id: Optional[int] = None,
                  template_id: Optional[int] = None,
                  sent_by_name: Optional[str] = None, sender_type: Optional[str] = None,
-                 message_type: Optional[str] = None):
+                 message_type: Optional[str] = None,
+                 job_id: Optional[str] = None, execution_id: Optional[str] = None):
     """Log auto-send to message_log table with genuine WAMID only."""
     try:
         from app.models.whatsapp import MessageLog
@@ -534,6 +535,8 @@ def _log_message(db: Session, phone: str, message: str, result: Dict, event_key:
             sent_by_staff_id=staff_id,
             sent_by_name=sent_by_name,
             sender_type=sender_type,
+            job_id=job_id,
+            execution_id=execution_id
         )
         db.add(log)
 
@@ -544,8 +547,8 @@ def _log_message(db: Session, phone: str, message: str, result: Dict, event_key:
                 inbox_item = WAInbox(
                     wamid=wamid,
                     from_phone=clean_phone,
-                    from_name=sent_by_name,
-                    message_type='outbound',
+                    from_name=sent_by_name or "System Outbound",
+                    message_type="outbound",
                     body_text=message,
                     is_read=True,
                     received_at=now_utc,
@@ -557,9 +560,11 @@ def _log_message(db: Session, phone: str, message: str, result: Dict, event_key:
                 logger.warning("[WA-AUTO] Dual-write wa_inbox error: %s", str(_ie))
 
         db.commit()
+        return log.id
     except Exception as e:
         logger.error("[WA-AUTO] Log exception: %s", str(e))
         db.rollback()
+        return None
 
 
 def _log_to_crm_note(db: Session, lead_id: int, message: str, event_key: str,
@@ -697,10 +702,12 @@ def send_direct_whatsapp(
     staff_id: Optional[int] = None,
     campaign_log_id: Optional[int] = None,
     context: Optional[Dict[str, Any]] = None,
+    job_id: Optional[str] = None,
+    execution_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
-    Directly send a WhatsApp message (test page, CRM button, campaign).
-    Returns result dict. Logs to message_log and CRM note if lead_id provided.
+    Directly send a WhatsApp message (test page, CRM button, campaign, automation).
+    Returns result dict with message_log_id. Logs to message_log and CRM note if lead_id provided.
     """
     if _is_paused(db):
         return {"success": False, "reason": "WhatsApp is paused by VGK control"}
@@ -735,9 +742,13 @@ def send_direct_whatsapp(
 
     result = _send_meta(phone, message, template, db=db, context=context)
 
-    # Log with sender info
-    _log_message(db, phone, message, result, "direct_send", lead_id, staff_id, template_id,
-                 sender_type="staff" if staff_id else "system")
+    # Log with sender info and automation linkage
+    ml_id = _log_message(db, phone, message, result, "direct_send", lead_id, staff_id, template_id,
+                         sender_type="staff" if staff_id else "system",
+                         job_id=job_id, execution_id=execution_id)
+    if ml_id:
+        result["message_log_id"] = ml_id
+
     if lead_id and result.get("success"):
         _log_to_crm_note(db, lead_id, message, "direct_send", staff_id, result.get("wamid"))
 

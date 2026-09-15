@@ -112,7 +112,7 @@ INSERT INTO vgk4u_category_commission_configs
     (version_label, effective_from, category_slug, category_name, max_network_pool_pct, producer_base_pct, manager_diff_pct, gm_diff_pct, rm_diff_pct, support_journey_pct, support_end_to_end_pct, showroom_pct, unallocated_balance_pct, admin_charge_pct, tds_pct, is_active)
 VALUES
     ('v2_sep2026', '2026-09-08 00:00:00', 'solar', 'Solar Energy Systems', 9.00, 6.00, 1.50, 1.00, 0.50, 0.75, 1.50, 3.50, 0.00, 8.00, 2.00, TRUE),
-    ('v2_sep2026', '2026-09-08 00:00:00', 'ev', 'Electric Vehicles (EV)', 22.00, 5.00, 2.50, 1.50, 0.50, 1.50, 3.00, 0.00, 9.50, 8.00, 2.00, TRUE),
+    ('v2_sep2026', '2026-09-08 00:00:00', 'ev', 'Electric Vehicles (EV)', 10.00, 5.00, 2.50, 1.50, 0.50, 0.75, 1.50, 0.00, 0.50, 8.00, 2.00, TRUE),
     ('v2_sep2026', '2026-09-08 00:00:00', 'etc-training', 'ETC Training & Skills', 11.00, 5.00, 2.50, 2.00, 1.50, 0.00, 0.00, 0.00, 0.00, 8.00, 2.00, TRUE),
     ('v2_sep2026', '2026-09-08 00:00:00', 'real-dreams', 'Real Dreams (Real Estate)', 6.00, 3.00, 1.50, 1.00, 0.50, 0.00, 0.00, 0.00, 0.00, 8.00, 2.00, TRUE),
     ('v2_sep2026', '2026-09-08 00:00:00', 'insurance', 'Insurance Services', 11.00, 5.00, 2.50, 2.00, 1.50, 0.00, 0.00, 0.00, 0.00, 8.00, 2.00, TRUE)

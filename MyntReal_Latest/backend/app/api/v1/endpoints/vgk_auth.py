@@ -289,6 +289,8 @@ def vgk_me(current_member: OfficialPartner = Depends(get_current_vgk_member), db
     d['rank_display']          = c_desig
     d['personal_prod_qualification'] = rpos.get('personal_prod_qualification', 'None')
     d['effective_personal_producer_rate'] = rpos.get('effective_personal_producer_rate', 0.0)
+    d['own_qualifying_files']  = rpos.get('own_qualifying_files', getattr(current_member, 'vgk4u_own_qualifying_files', 0) or 0)
+    d['active_team_legs']       = rpos.get('active_team_legs', getattr(current_member, 'vgk4u_active_team_count', 0) or 0)
     d['rank_slab_pct']         = rpos.get('rank_slab_pct', 5.00)
     d['activated_team_cnt']    = rpos.get('activated_team', 0)
     d['next_rank']             = rpos.get('next_rank')
@@ -1154,13 +1156,20 @@ def vgk_my_leads(
     if priority:
         query = query.filter(CRMLead.priority == priority)
     if search:
+        from app.services.crm_phone_sync_service import find_candidate_lead_ids_for_search
         term = "%" + search + "%"
-        query = query.filter(or_(
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=None, company_ids=None, search_term=search
+        )
+        _s_conds = [
             CRMLead.name.ilike(term),
             CRMLead.phone.ilike(term),
             CRMLead.email.ilike(term),
             CRMLead.city.ilike(term),
-        ))
+        ]
+        if phone_lead_ids:
+            _s_conds.append(CRMLead.id.in_(phone_lead_ids))
+        query = query.filter(or_(*_s_conds))
     if followup_filter == 'today':
         from sqlalchemy import func as sqlfunc
         query = query.filter(
@@ -2747,8 +2756,27 @@ def vgk_submit_lead(
         else:
             staff_not_found_warning = f"Staff ID {req.handler_staff_id} not found or inactive — lead created without staff assignment."
 
+    if not current_member.company_id:
+        raise HTTPException(status_code=403, detail="Current member has no assigned company")
+
+    from app.models.staff_accounts import AssociatedCompany
+    comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == current_member.company_id).first()
+    if not comp or not comp.client_id:
+        raise HTTPException(status_code=403, detail="Member company has no associated tenant")
+    resolved_tenant_id = comp.client_id
+
+    from app.services.crm_dedup_service import assert_no_phone_duplicate
+    assert_no_phone_duplicate(
+        db=db,
+        tenant_id=resolved_tenant_id,
+        company_id=current_member.company_id,
+        phone=req.customer_phone.strip(),
+        with_lock=True
+    )
+
     lead = CRMLead(
-        company_id=current_member.company_id or 4,
+        tenant_id=resolved_tenant_id,
+        company_id=current_member.company_id,
         name=req.customer_name.strip(),
         phone=req.customer_phone.strip(),
         status='new',
@@ -2761,6 +2789,16 @@ def vgk_submit_lead(
         field_staff_id=handler_staff.id if handler_staff else None,
     )
     db.add(lead)
+    db.flush()
+    from app.services.crm_phone_sync_service import sync_lead_phone_identities
+    sync_lead_phone_identities(
+        db=db,
+        lead=lead,
+        phone_raw=lead.phone,
+        source_channel='vgk4u_member',
+        source_ref=f"member_{current_member.id}",
+        with_lock=True
+    )
     db.commit()
     db.refresh(lead)
     logger.info("[DC-VGK-LEAD-SUBMIT] Lead #%s created by %s product=%s staff=%s", lead.id, current_member.partner_code, pt, handler_staff.id if handler_staff else None)

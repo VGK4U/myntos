@@ -211,19 +211,7 @@ def sync_browser_call_event(
         return {"success": False, "error": "Call session not found"}
 
     # Tenant & Operator authorization
-    is_supreme = getattr(current_user, 'is_supreme', False)
-    user_company_id = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None) or 1
-    allowed_company_ids = {user_company_id}
-    if getattr(current_user, 'data_companies', None):
-        comps = current_user.data_companies if isinstance(current_user.data_companies, list) else []
-        allowed_company_ids.update(comps)
-
-    is_operator_owner = (
-        (session.operator_id is not None and getattr(current_user, 'id', None) == session.operator_id) or
-        (session.operator_user_ref is not None and getattr(current_user, 'emp_code', None) == session.operator_user_ref)
-    )
-
-    if not is_supreme and not is_operator_owner and session.company_id and session.company_id not in allowed_company_ids:
+    if not VoIPCallService.authorize_session_access(session, current_user):
         return {"success": False, "error": "Unauthorized access to call session"}
 
     state_map = {
@@ -592,8 +580,8 @@ async def handle_plivo_ivr_gather(
     from app.services.telephony.flow_interpreter import CallFlowInterpreter
 
     digits = ""
-    caller_phone = ""
-    called_did = ""
+    call_uuid = ""
+    session_id = request.query_params.get("session_id")
 
     if request.method == "POST":
         try:
@@ -601,6 +589,9 @@ async def handle_plivo_ivr_gather(
             digits = form_data.get("Digits", "")
             caller_phone = form_data.get("From", "")
             called_did = form_data.get("To", "")
+            call_uuid = form_data.get("CallUUID", "")
+            if not session_id:
+                session_id = form_data.get("session_id")
             if not lang or lang == "en":
                 lang = form_data.get("lang") or lang
         except Exception:
@@ -612,6 +603,8 @@ async def handle_plivo_ivr_gather(
         caller_phone = request.query_params.get("From", "")
     if not called_did:
         called_did = request.query_params.get("To", "")
+    if not call_uuid:
+        call_uuid = request.query_params.get("CallUUID", "")
     if not lang:
         lang = request.query_params.get("lang", "en")
 
@@ -621,7 +614,9 @@ async def handle_plivo_ivr_gather(
         called_did=called_did,
         digits=digits,
         menu_type=menu,
-        lang=lang or "en"
+        lang=lang or "en",
+        session_id=session_id,
+        call_uuid=call_uuid
     )
     return Response(content=xml_response, media_type="application/xml")
 

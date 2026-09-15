@@ -1293,6 +1293,7 @@ def get_inbox(
     page_size: int = Query(30, ge=1, le=100),
     unread_only: bool = Query(False),
     phone: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     dept_code: Optional[str] = Query(None),
     category_code: Optional[str] = Query(None),
@@ -1318,7 +1319,11 @@ def get_inbox(
     base_conds = ["1=1"]
     params: dict = {}
 
-    if phone:
+    search_term = (search or "").strip() or (phone.strip() if (phone and any(c.isalpha() for c in phone)) else None)
+    if search_term:
+        base_conds.append("(from_phone ILIKE :search_term OR from_name ILIKE :search_term OR body_text ILIKE :search_term)")
+        params["search_term"] = f"%{search_term}%"
+    elif phone:
         base_conds.append("from_phone LIKE :phone_filter")
         params["phone_filter"] = f"%{phone.strip()}%"
     if from_date:
@@ -1813,6 +1818,78 @@ def get_dept_employees(
     ]}
 
 
+def _resolve_whatsapp_auth_scope(db: Session, current_user: StaffEmployee):
+    """
+    Resolve authoritative tenant_id, accessible_company_ids, and is_superadmin for WhatsApp staff user.
+    Fails closed if caller lacks valid tenant identity.
+    """
+    if not current_user:
+        return None, [], False
+
+    # 1. Check RequestContext if active
+    from app.core.context import get_current_request_context
+    ctx = get_current_request_context()
+    if ctx:
+        return ctx.tenant_id, list(ctx.accessible_company_ids or []), ctx.is_platform_admin()
+
+    # 2. Try building RequestContext from auth_context_service
+    try:
+        from app.services.auth_context_service import auth_context_service
+        ctx = auth_context_service.build_context(db, current_user)
+        if ctx:
+            return ctx.tenant_id, list(ctx.accessible_company_ids or []), ctx.is_platform_admin()
+    except Exception:
+        pass
+
+    # 3. Fallback: inspect current_user and database memberships
+    tenant_id = getattr(current_user, 'tenant_id', None)
+    if not tenant_id:
+        return None, [], False
+
+    admin_scope = (getattr(current_user, 'admin_scope', '') or '').upper().strip()
+    is_superadmin = (admin_scope == 'PLATFORM' and tenant_id == 1)
+
+    if is_superadmin:
+        return tenant_id, [], True
+
+    # Non-superadmin: query active StaffCompanyMembership for this tenant
+    from app.models.staff import StaffCompanyMembership
+    memberships = db.query(StaffCompanyMembership.company_id).filter(
+        StaffCompanyMembership.staff_id == current_user.id,
+        StaffCompanyMembership.tenant_id == tenant_id,
+        StaffCompanyMembership.is_active == True
+    ).all()
+    accessible_cids = [m[0] for m in memberships] if memberships else []
+
+    # If memberships not populated in table, check data_companies and base_company_id
+    if not accessible_cids:
+        raw_cids = []
+        if getattr(current_user, 'base_company_id', None):
+            raw_cids.append(current_user.base_company_id)
+        dc = getattr(current_user, 'data_companies', None)
+        if isinstance(dc, (list, tuple)):
+            for item in dc:
+                try:
+                    if isinstance(item, dict) and 'company_id' in item:
+                        raw_cids.append(int(item['company_id']))
+                    else:
+                        raw_cids.append(int(item))
+                except (TypeError, ValueError):
+                    pass
+        if raw_cids:
+            from app.models.staff_accounts import AssociatedCompany
+            valid_comps = db.query(AssociatedCompany.id).filter(
+                AssociatedCompany.id.in_(raw_cids),
+                AssociatedCompany.client_id == tenant_id
+            ).all()
+            if valid_comps:
+                accessible_cids = [vc[0] for vc in valid_comps]
+            else:
+                accessible_cids = raw_cids
+
+    return tenant_id, list(set(accessible_cids)), False
+
+
 @router.get("/inbox/thread/{phone}")
 def get_inbox_thread(
     phone: str,
@@ -1824,20 +1901,35 @@ def get_inbox_thread(
     DC Protocol Apr 2026: Also returns contact_info (resolved name + existing_in),
     full CRM lead detail, walk-in records, service tickets, and staff contact info
     for the ALL POSSIBLE DETAILS panel in the thread modal.
+    
+    Stage 2B Phase 2R-3E Batch 4: Authoritative Tenant/Company Isolation Hardening.
+    Restricts CRM leads and conversation lookup strictly to caller's tenant and authorized companies.
     """
     from app.models.whatsapp import WAInbox
     from sqlalchemy import text as _t
+
+    tenant_id, accessible_companies, is_superadmin = _resolve_whatsapp_auth_scope(db, current_user)
+    if not tenant_id:
+        raise HTTPException(status_code=403, detail="Missing or invalid tenant authorization")
+    if not is_superadmin and not accessible_companies:
+        raise HTTPException(status_code=403, detail="No authorized company access")
+
     clean = phone.strip()
     alt   = clean.lstrip("91") if clean.startswith("91") and len(clean) == 12 else ("91" + clean[-10:])
-    msgs  = db.query(WAInbox).filter(
+
+    inbox_q = db.query(WAInbox).filter(
         WAInbox.from_phone.in_([clean, alt])
-    ).order_by(WAInbox.received_at.asc()).all()
+    )
+    if not is_superadmin:
+        inbox_q = inbox_q.filter(WAInbox.company_id.in_(accessible_companies))
+    msgs = inbox_q.order_by(WAInbox.received_at.asc()).all()
 
     # Mark all inbound messages as read
     for m in msgs:
         if not m.is_read and m.message_type != "outbound":
             m.is_read = True
-    db.commit()
+    if msgs:
+        db.commit()
 
     # Resolve contact info
     contact_info = _resolve_contact_info(db, clean)
@@ -1846,10 +1938,35 @@ def get_inbox_thread(
     last10 = digits[-10:] if len(digits) >= 10 else digits
     p10    = f"%{last10}"
 
-    # Full CRM lead records (all, not just latest)
+    # Full CRM lead records (scoped strictly to caller's tenant & authorized companies)
     crm_leads_detail = []
     try:
-        crm_rows = db.execute(_t("""
+        from app.services.crm_phone_sync_service import find_candidate_lead_ids_for_search
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db,
+            tenant_id=tenant_id if not is_superadmin else None,
+            company_ids=accessible_companies if not is_superadmin else None,
+            search_term=last10,
+            active_only=True
+        )
+
+        where_conds = []
+        sql_params = {"p": p10}
+        if not is_superadmin:
+            where_conds.append("cl.tenant_id = :tenant_id")
+            sql_params["tenant_id"] = tenant_id
+            if accessible_companies:
+                where_conds.append("cl.company_id = ANY(:company_ids)")
+                sql_params["company_ids"] = accessible_companies
+
+        phone_conds = ["cl.phone LIKE :p", "cl.alternate_phone LIKE :p"]
+        if phone_lead_ids:
+            phone_conds.append("cl.id = ANY(:candidate_ids)")
+            sql_params["candidate_ids"] = phone_lead_ids
+
+        where_conds.append(f"({' OR '.join(phone_conds)})")
+
+        crm_sql = f"""
             SELECT cl.id, cl.name, cl.phone, cl.email, cl.status, cl.source,
                    cl.category_id, cl.created_at,
                    TRIM(COALESCE(se.first_name,'') || ' ' || COALESCE(se.last_name,'')) AS owner_name,
@@ -1858,9 +1975,10 @@ def get_inbox_thread(
                    cl.deal_value, cl.description
             FROM crm_leads cl
             LEFT JOIN staff_employees se ON se.emp_code = cl.handler_id AND cl.handler_type = 'staff'
-            WHERE cl.phone LIKE :p OR cl.alternate_phone LIKE :p
-            ORDER BY cl.id DESC LIMIT 5
-        """), {"p": p10}).fetchall()
+            WHERE {' AND '.join(where_conds)}
+            ORDER BY cl.id DESC
+        """
+        crm_rows = db.execute(_t(crm_sql), sql_params).fetchall()
         for r in crm_rows:
             crm_leads_detail.append({
                 "id": r[0], "name": r[1], "phone": r[2], "email": r[3],
@@ -1873,7 +1991,35 @@ def get_inbox_thread(
                 "city": r[15], "state": r[16], "deal_value": r[17], "description": r[18],
             })
     except Exception as _e:
-        print(f"[WA-THREAD] CRM detail error: {_e}")
+        logger.error(f"[WA-THREAD] CRM detail error: {_e}")
+
+    # Synchronize contact_info with authorized CRM lead candidates to prevent cross-tenant leak
+    if not crm_leads_detail:
+        contact_info["existing_in"] = [e for e in (contact_info.get("existing_in") or []) if e.get("type") != "crm"]
+        if not contact_info["existing_in"]:
+            contact_info["existing_in"] = [{"type": "new", "label": "New"}]
+        has_other_entry = any(e.get("type") in ("walkin", "service", "contact") for e in contact_info["existing_in"])
+        if not has_other_entry:
+            contact_info["resolved_name"] = None
+    elif len(crm_leads_detail) == 1:
+        contact_info["resolved_name"] = crm_leads_detail[0]["name"] or contact_info.get("resolved_name")
+        contact_info["existing_in"] = [{
+            "type": "crm", "label": "CRM",
+            "id": crm_leads_detail[0]["id"],
+            "status": crm_leads_detail[0]["status"],
+            "with_whom": crm_leads_detail[0]["owner_name"]
+        }]
+    else:
+        # Multiple candidate leads: preserve all candidates, do not arbitrarily pick winner
+        cand_names = [l["name"] for l in crm_leads_detail if l.get("name")]
+        contact_info["resolved_name"] = " / ".join(cand_names) if cand_names else f"Multiple Leads ({len(crm_leads_detail)})"
+        contact_info["existing_in"] = [{
+            "type": "crm",
+            "label": f"CRM ({len(crm_leads_detail)} leads)",
+            "id": None,
+            "status": "multiple",
+            "with_whom": None
+        }]
 
     # Walk-in records
     walkin_detail = []
@@ -2160,27 +2306,74 @@ def assign_inbox_message(
         if lead_action == "new":
             try:
                 from sqlalchemy import text as _t
+                from app.models.staff_accounts import AssociatedCompany
+                from app.services.crm_dedup_service import find_phone_duplicate
+
                 lead_name  = (payload.get("lead_name") or msg.from_name or msg.from_phone).strip()
                 lead_phone = (payload.get("lead_phone") or msg.from_phone).strip()
                 lead_email = payload.get("lead_email") or None
                 cat_id     = payload.get("lead_category_id") or None
                 assigned_emp_code = emp_code or None
-                row = db.execute(_t("""
-                    INSERT INTO crm_leads (name, phone, email, category_id, handler_type, handler_id,
-                                          lead_source, status, phone_primary_whatsapp, created_at, updated_at)
-                    VALUES (:nm, :ph, :em, :cid, :ht, :hid, :src, 'new', TRUE, NOW(), NOW())
-                    RETURNING id
-                """), {
-                    "nm": lead_name, "ph": lead_phone, "em": lead_email,
-                    "cid": cat_id,
-                    "ht": "staff" if assigned_emp_code else "unassigned",
-                    "hid": assigned_emp_code,
-                    "src": "whatsapp_inbox",
-                }).fetchone()
-                if row:
-                    msg.crm_lead_id = row[0]
-                    result_extras["lead_id"] = row[0]
-                    print(f"[WA-ASSIGN] ✅ Created new lead #{row[0]} from WA inbox #{inbox_id}")
+
+                # Stage 2B Phase 2R-3D: Authoritative tenancy derivation & fail-closed validation
+                resolved_company_id = msg.company_id or payload.get("company_id")
+                if not resolved_company_id:
+                    raise HTTPException(status_code=422, detail="Cannot create lead: WhatsApp message has no authoritative company_id")
+
+                comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == resolved_company_id).first()
+                if not comp or not comp.is_active:
+                    raise HTTPException(status_code=422, detail="Cannot create lead: Associated company is missing or inactive")
+
+                resolved_tenant_id = comp.client_id
+                if not resolved_tenant_id:
+                    raise HTTPException(status_code=422, detail="Cannot create lead: Associated company has no tenant_id")
+
+                # Phase 2R-3D: Centralized duplicate lookup with transaction advisory locking
+                dup_lead = find_phone_duplicate(
+                    db=db,
+                    tenant_id=resolved_tenant_id,
+                    company_id=resolved_company_id,
+                    phone=lead_phone,
+                    with_lock=True
+                )
+                if dup_lead:
+                    msg.crm_lead_id = dup_lead.id
+                    result_extras["lead_id"] = dup_lead.id
+                    result_extras["is_duplicate"] = True
+                    print(f"[WA-ASSIGN] ℹ️ Phone {lead_phone} matched existing lead #{dup_lead.id} in company {resolved_company_id}")
+                else:
+                    row = db.execute(_t("""
+                        INSERT INTO crm_leads (tenant_id, company_id, name, phone, email, category_id, handler_type, handler_id,
+                                              source, lead_source, status, phone_primary_whatsapp, created_at, updated_at)
+                        VALUES (:tid, :cmp, :nm, :ph, :em, :cid, :ht, :hid, :src, :src, 'new', TRUE, NOW(), NOW())
+                        RETURNING id
+                    """), {
+                        "tid": resolved_tenant_id,
+                        "cmp": resolved_company_id,
+                        "nm": lead_name, "ph": lead_phone, "em": lead_email,
+                        "cid": cat_id,
+                        "ht": "staff" if assigned_emp_code else "unassigned",
+                        "hid": assigned_emp_code,
+                        "src": "whatsapp_inbox",
+                    }).fetchone()
+                    if row:
+                        msg.crm_lead_id = row[0]
+                        result_extras["lead_id"] = row[0]
+                        from app.models.crm import CRMLead
+                        lead_obj = db.query(CRMLead).filter(CRMLead.id == row[0]).first()
+                        if lead_obj:
+                            from app.services.crm_phone_sync_service import sync_lead_phone_identities
+                            sync_lead_phone_identities(
+                                db=db,
+                                lead=lead_obj,
+                                phone_raw=lead_phone,
+                                source_channel='whatsapp_inbox',
+                                source_ref=f"inbox_{inbox_id}",
+                                with_lock=False
+                            )
+                        print(f"[WA-ASSIGN] ✅ Created new lead #{row[0]} from WA inbox #{inbox_id}")
+            except HTTPException:
+                raise
             except Exception as _le:
                 print(f"[WA-ASSIGN] ⚠️ Lead create error: {_le}")
 
@@ -2195,10 +2388,13 @@ def assign_inbox_message(
     if active_lead_id and notes:
         try:
             from sqlalchemy import text as _t2
+            note_comp_id = msg.company_id or payload.get("company_id")
+            if not note_comp_id:
+                note_comp_id = db.execute(text("SELECT company_id FROM crm_leads WHERE id = :lid"), {"lid": active_lead_id}).scalar()
             db.execute(_t2("""
-                INSERT INTO crm_lead_notes (lead_id, note, created_by_type, created_by_id, created_at, updated_at)
-                VALUES (:lid, :nt, 'staff', :cby, NOW(), NOW())
-            """), {"lid": active_lead_id, "nt": f"[WA Inbox] {notes}", "cby": current_user.id})
+                INSERT INTO crm_lead_notes (company_id, lead_id, note, created_by_type, created_by_id, created_at, updated_at)
+                VALUES (:cid, :lid, :nt, 'staff', :cby, NOW(), NOW())
+            """), {"cid": note_comp_id or 1, "lid": active_lead_id, "nt": f"[WA Inbox] {notes}", "cby": current_user.id})
         except Exception as _ne:
             print(f"[WA-ASSIGN] ⚠️ Note insert error: {_ne}")
 
@@ -2505,23 +2701,63 @@ def _get_downline_staff_ids(db: Session, manager_id: int) -> set:
                 queue.append(r_id)
     return downline_ids
 
+def _is_all_messages_authorized(db: Session, staff: StaffEmployee) -> bool:
+    """
+    Authoritative resolution for organization-wide WhatsApp 'All Messages' scope access.
+    Decoupled from hardcoded IDs or names; resolves dynamically from canonical
+    roles, hierarchy levels, and administrative scope per MyntOS access control architecture.
+    """
+    if not staff:
+        return False
+
+    # 1. Platform Superadmin or high-level platform leadership
+    try:
+        tenant_id, accessible_cids, is_super = _resolve_whatsapp_auth_scope(db, staff)
+        if is_super:
+            return True
+    except Exception:
+        pass
+
+    # 2. Canonical role check & hierarchy level (EA, Key Leadership, Admin, etc.)
+    role_code = (_get_role_code_wa(staff) or "").lower().strip()
+    if role_code in {"vgk4u", "vgk4u_supreme", "admin", "super_admin", "ea", "key_leadership", "saas_segment_admin"}:
+        return True
+
+    role_obj = getattr(staff, "role", None)
+    hierarchy_level = int(getattr(role_obj, "hierarchy_level", 0) or 0) if role_obj else 0
+    if hierarchy_level >= 80:
+        return True
+
+    # 3. Canonical DB-backed admin_scope (PLATFORM, TENANT_ADMIN, COMPANY_ADMIN, SEGMENT_A, SEGMENT_B)
+    admin_scope = (getattr(staff, "admin_scope", "") or "").upper().strip()
+    if admin_scope in {"PLATFORM", "TENANT_ADMIN", "COMPANY_ADMIN", "SEGMENT_A", "SEGMENT_B"}:
+        return True
+
+    return False
+
+
 def _get_permitted_phones_for_staff(db: Session, staff: StaffEmployee, scope: str = 'assigned_tagged') -> Optional[set]:
     """
     Returns set of permitted 10-digit phone numbers for staff member based on scope:
     - assigned_tagged: Leads assigned or tagged to staff + own sent messages + own WAInbox chats
     - downline: Leads assigned or tagged to staff or downline team + downline sent messages
-    - all: Full access (Admin / EA / Leadership level >= 80, otherwise fallbacks gracefully to all staff-accessible messages so it never 403s)
+    - all: Full access for authorized staff, otherwise restricted to staff's downline/assigned
     """
-    role_code = (_get_role_code_wa(staff) or "").lower()
-    is_admin = role_code in {"vgk4u", "vgk4u_supreme", "admin", "super_admin", "ea"} or getattr(staff, 'id', None) == 1 or getattr(staff, 'emp_code', '') in ("MR10001", "VGK4U")
-    
-    if is_admin or scope == 'all':
-        return None  # Unrestricted access for admin / leadership / all
-    
+    is_all_auth = _is_all_messages_authorized(db, staff)
+
+    if scope == 'all':
+        if is_all_auth:
+            return None  # Unrestricted phone access for authorized All Messages view
+        # Unauthorized call to 'all' fails closed: falls back to personal assigned scope
+        scope = 'assigned_tagged'
+
+    if is_all_auth and scope not in ('assigned_tagged', 'downline'):
+        return None
+
     role_obj = getattr(staff, 'role', None)
     level = getattr(role_obj, 'hierarchy_level', 0) if role_obj else 0
-    if level >= 80:
-        return None  # Unrestricted access for leadership
+    if level >= 80 and scope not in ('assigned_tagged', 'downline'):
+        return None  # Unrestricted access for leadership outside personal/team views
 
     from app.models.crm import CRMLead
     from app.models.whatsapp import MessageLog, WAInbox
@@ -2583,6 +2819,7 @@ def _get_permitted_phones_for_staff(db: Session, staff: StaffEmployee, scope: st
 class WAClaimConversationPayload(BaseModel):
     phone: str = Field(..., description="10-digit phone number or international format")
     recipient_type: Optional[str] = "individual"
+    lead_id: Optional[int] = Field(None, description="Optional explicit lead ID to claim/assign")
 
 
 class WAConversationStatusPayload(BaseModel):
@@ -2651,6 +2888,10 @@ def claim_whatsapp_conversation(
     """
     Assign an unassigned company conversation to the currently logged-in staff member.
     Updates matching WAInbox records and links/assigns the CRM lead if unassigned.
+    
+    Stage 2B Phase 2R-3E Batch 4: Authoritative Tenant/Company Isolation Hardening.
+    Enforces tenant/company boundaries on conversation claiming and CRM lead mutation.
+    Prevents arbitrary winner selection when multiple leads share a phone.
     """
     raw_phone = (payload.phone or "").strip()
     digits = ''.join(filter(str.isdigit, raw_phone))
@@ -2658,20 +2899,30 @@ def claim_whatsapp_conversation(
         raise HTTPException(status_code=400, detail="A valid 10-digit mobile number is required")
     clean_phone = digits[-10:]
 
+    tenant_id, accessible_companies, is_superadmin = _resolve_whatsapp_auth_scope(db, current_user)
+    if not tenant_id:
+        raise HTTPException(status_code=403, detail="Missing or invalid tenant authorization")
+    if not is_superadmin and not accessible_companies:
+        raise HTTPException(status_code=403, detail="No authorized company access for claiming conversations")
+
     try:
         from app.models.whatsapp import WAInbox
         from app.models.crm import CRMLead
         from sqlalchemy import or_
 
         now_utc = datetime.utcnow()
-        # 1. Update all WAInbox entries for this phone number
-        inbox_records = db.query(WAInbox).filter(
+
+        # 1. Update matching WAInbox entries strictly within caller's authorized scope
+        inbox_query = db.query(WAInbox).filter(
             or_(
                 WAInbox.from_phone.like(f"%{clean_phone}"),
                 WAInbox.from_phone == clean_phone,
                 WAInbox.from_phone == f"91{clean_phone}"
             )
-        ).all()
+        )
+        if not is_superadmin:
+            inbox_query = inbox_query.filter(WAInbox.company_id.in_(accessible_companies))
+        inbox_records = inbox_query.all()
 
         for rec in inbox_records:
             rec.assigned_to_emp_id = current_user.id
@@ -2680,15 +2931,60 @@ def claim_whatsapp_conversation(
                 rec.status = 'in_progress'
             rec.is_read = True
 
-        # 2. If CRM Lead exists and is unassigned, assign handler to staff member
-        crm_lead = db.query(CRMLead).filter(
-            or_(CRMLead.phone.like(f"%{clean_phone}"), CRMLead.alternate_phone.like(f"%{clean_phone}"))
-        ).first()
-        if crm_lead:
-            if not crm_lead.telecaller_id and not crm_lead.field_staff_id and (not crm_lead.handler_id or crm_lead.handler_type == 'unassigned'):
-                crm_lead.handler_type = 'staff'
-                crm_lead.handler_id = current_user.emp_code
-                crm_lead.telecaller_id = current_user.id
+        # 2. CRM Lead handling: Strictly within caller's tenant and authorized companies
+        target_lead = None
+        explicit_lead_id = getattr(payload, 'lead_id', None)
+
+        if explicit_lead_id:
+            lead_row = db.query(CRMLead).filter(CRMLead.id == explicit_lead_id).first()
+            if not lead_row:
+                raise HTTPException(status_code=404, detail="Requested lead not found")
+            if not is_superadmin:
+                if lead_row.tenant_id != tenant_id or (accessible_companies and lead_row.company_id not in accessible_companies):
+                    raise HTTPException(status_code=403, detail="Forbidden: Lead belongs to another tenant or company")
+            target_lead = lead_row
+        else:
+            # Look up candidate leads within authorized tenant and companies
+            from app.services.crm_phone_sync_service import find_candidate_lead_ids_for_search
+            cand_lead_ids = find_candidate_lead_ids_for_search(
+                db,
+                tenant_id=tenant_id if not is_superadmin else None,
+                company_ids=accessible_companies if not is_superadmin else None,
+                search_term=clean_phone,
+                active_only=True
+            )
+
+            lead_query = db.query(CRMLead)
+            if not is_superadmin:
+                lead_query = lead_query.filter(
+                    CRMLead.tenant_id == tenant_id,
+                    CRMLead.company_id.in_(accessible_companies)
+                )
+
+            lead_phone_conds = [
+                CRMLead.phone.like(f"%{clean_phone}"),
+                CRMLead.alternate_phone.like(f"%{clean_phone}")
+            ]
+            if cand_lead_ids:
+                lead_phone_conds.append(CRMLead.id.in_(cand_lead_ids))
+
+            candidate_leads = lead_query.filter(or_(*lead_phone_conds)).all()
+
+            if len(candidate_leads) == 1:
+                target_lead = candidate_leads[0]
+            elif len(candidate_leads) > 1:
+                # Ambiguous shared phone: DO NOT pick arbitrary winner (no MIN/MAX/LIMIT 1)
+                logger.info(
+                    f"[WA-CLAIM] Phone {clean_phone} matches {len(candidate_leads)} leads in tenant {tenant_id}. "
+                    "Skipping automatic lead mutation to preserve ambiguity."
+                )
+                target_lead = None
+
+        if target_lead:
+            if not target_lead.telecaller_id and not target_lead.field_staff_id and (not target_lead.handler_id or target_lead.handler_type == 'unassigned'):
+                target_lead.handler_type = 'staff'
+                target_lead.handler_id = current_user.emp_code
+                target_lead.telecaller_id = current_user.id
 
         db.commit()
         return {
@@ -2698,6 +2994,9 @@ def claim_whatsapp_conversation(
             "emp_code": current_user.emp_code,
             "phone": clean_phone
         }
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"[WA-CLAIM] Failed to claim conversation: {e}")
@@ -2770,6 +3069,7 @@ def get_whatsapp_conversations_hub(
     try:
         from app.models.crm import CRMLead
         from app.models.whatsapp import WAInbox, MessageLog
+        from app.models.staff import StaffEmployee, StaffCompanyMembership
         from sqlalchemy import or_
 
         # Safe parameter normalization
@@ -2777,6 +3077,13 @@ def get_whatsapp_conversations_hub(
         category_val = str(category).strip() if (category is not None and isinstance(category, str) and not hasattr(category, 'default')) else None
         scope_val = str(scope).strip().lower() if (scope is not None and isinstance(scope, str) and not hasattr(scope, 'default')) else 'assigned_tagged'
         source_filt_val = str(source_filter).strip().lower() if (source_filter is not None and isinstance(source_filter, str) and not hasattr(source_filter, 'default')) else 'all'
+
+        # Independent backend security rejection: unauthorized requests to scope='all' must fail closed
+        if scope_val == 'all' and not _is_all_messages_authorized(db, current_user):
+            raise HTTPException(
+                status_code=403,
+                detail="Access Denied: Scope 'All Messages' requires administrative or leadership authorization."
+            )
 
         staff = current_user
         contact_map = {}
@@ -2856,6 +3163,11 @@ def get_whatsapp_conversations_hub(
                             continue
                         if s_filt == 'api' and g_chan != 'META_API':
                             continue
+
+                        if search_val:
+                            s_lower = search_val.lower()
+                            if not (s_lower in g_name.lower() or s_lower in ident.lower() or s_lower in last_body.lower()):
+                                continue
 
                         contact_map[ident] = {
                             "phone": ident,
@@ -3002,17 +3314,45 @@ def get_whatsapp_conversations_hub(
                         "is_unassigned": True
                     }
 
-        # ── Scope 1 & 2: MY MESSAGES & TEAM MESSAGES ────────────────────────
+        # ── Scope 1, 2 & All: MY MESSAGES, TEAM MESSAGES & ALL MESSAGES ─────
         else:
             permitted_phones = _get_permitted_phones_for_staff(db, staff, scope=scope_val)
 
+            # Resolve tenant and company scope boundaries for strict tenant isolation
+            tenant_id, accessible_companies, is_superadmin = _resolve_whatsapp_auth_scope(db, staff)
+
             # 1. Fetch recent messages from WAInbox
             inbox_query = db.query(WAInbox).filter(WAInbox.from_phone.isnot(None))
+
+            # Apply tenant/company boundary isolation for WAInbox
+            if accessible_companies and not is_superadmin:
+                inbox_query = inbox_query.filter(
+                    or_(
+                        WAInbox.company_id.in_(accessible_companies),
+                        WAInbox.company_id.is_(None)
+                    )
+                )
+
+            # Multi-field search across phone variants, contact name, and message content
             if search_val:
-                s = f"%{search_val}%"
-                inbox_query = inbox_query.filter(or_(WAInbox.from_phone.ilike(s), WAInbox.from_name.ilike(s), WAInbox.body_text.ilike(s)))
-            
-            for m in inbox_query.order_by(desc(WAInbox.id)).limit(100).all():
+                s_clean = search_val.strip()
+                s_like = f"%{s_clean}%"
+                digits = ''.join(filter(str.isdigit, s_clean))
+                inbox_conds = [
+                    WAInbox.from_phone.ilike(s_like),
+                    WAInbox.from_name.ilike(s_like),
+                    WAInbox.body_text.ilike(s_like)
+                ]
+                if len(digits) >= 5:
+                    d10 = digits[-10:]
+                    inbox_conds.extend([
+                        WAInbox.from_phone.ilike(f"%{d10}%"),
+                        WAInbox.from_phone.ilike(f"%91{d10}%")
+                    ])
+                inbox_query = inbox_query.filter(or_(*inbox_conds))
+
+            inbox_limit = 250 if scope_val == 'all' else 100
+            for m in inbox_query.order_by(desc(WAInbox.id)).limit(inbox_limit).all():
                 raw_phone = m.from_phone or ''
                 is_grp = is_known_whatsapp_group(raw_phone, target_map)
 
@@ -3078,20 +3418,66 @@ def get_whatsapp_conversations_hub(
                 elif m.message_type == "inbound" and not m.is_read:
                     contact_map[clean_phone]["unread_count"] = contact_map[clean_phone].get("unread_count", 0) + 1
 
-            # 2. Fetch recent human/staff messages from MessageLog (EXCLUDING automated API background logs)
-            target_staff_ids = {staff.id}
-            if scope_val == 'downline':
+            # 2. Fetch human/staff messages from MessageLog
+            if scope_val == 'all':
+                # Scope 'all': Query all organization outbound employee messages without restricting to current staff ID
+                log_query = db.query(MessageLog).filter(
+                    MessageLog.mobile_number.isnot(None),
+                    MessageLog.mobile_number != ""
+                )
+                # Apply company isolation for staff messages if not platform superadmin
+                if accessible_companies and not is_superadmin:
+                    company_staff_ids = set(
+                        r[0] for r in db.query(StaffEmployee.id).filter(
+                            StaffEmployee.base_company_id.in_(accessible_companies)
+                        ).all()
+                    )
+                    membership_staff_ids = set(
+                        r[0] for r in db.query(StaffCompanyMembership.staff_id).filter(
+                            StaffCompanyMembership.company_id.in_(accessible_companies),
+                            StaffCompanyMembership.is_active == True
+                        ).all()
+                    )
+                    allowed_staff_ids = company_staff_ids | membership_staff_ids
+                    if allowed_staff_ids:
+                        log_query = log_query.filter(
+                            or_(
+                                MessageLog.sent_by_staff_id.in_(allowed_staff_ids),
+                                MessageLog.sent_by_staff_id.is_(None)
+                            )
+                        )
+            elif scope_val == 'downline':
                 target_staff_ids = _get_downline_staff_ids(db, staff.id)
+                log_query = db.query(MessageLog).filter(
+                    MessageLog.mobile_number.isnot(None),
+                    MessageLog.sent_by_staff_id.in_(target_staff_ids)
+                )
+            else:
+                target_staff_ids = {staff.id}
+                log_query = db.query(MessageLog).filter(
+                    MessageLog.mobile_number.isnot(None),
+                    MessageLog.sent_by_staff_id.in_(target_staff_ids)
+                )
 
-            log_query = db.query(MessageLog).filter(
-                MessageLog.mobile_number.isnot(None),
-                MessageLog.sent_by_staff_id.in_(target_staff_ids)
-            )
             if search_val:
-                s = f"%{search_val}%"
-                log_query = log_query.filter(or_(MessageLog.mobile_number.ilike(s), MessageLog.user_name.ilike(s)))
+                s_clean = search_val.strip()
+                s_like = f"%{s_clean}%"
+                digits = ''.join(filter(str.isdigit, s_clean))
+                log_conds = [
+                    MessageLog.mobile_number.ilike(s_like),
+                    MessageLog.user_name.ilike(s_like),
+                    MessageLog.message_body.ilike(s_like)
+                ]
+                if len(digits) >= 5:
+                    d10 = digits[-10:]
+                    log_conds.extend([
+                        MessageLog.mobile_number.ilike(f"%{d10}%"),
+                        MessageLog.mobile_number.ilike(f"%91{d10}%")
+                    ])
+                log_query = log_query.filter(or_(*log_conds))
 
-            for l in log_query.order_by(desc(MessageLog.id)).limit(100).all():
+            log_limit = 350 if scope_val == 'all' else 100
+            for l in log_query.order_by(desc(MessageLog.id)).limit(log_limit).all():
                 raw_phone = l.mobile_number or ''
                 is_grp = is_known_whatsapp_group(raw_phone, target_map)
 
@@ -3169,7 +3555,6 @@ def get_whatsapp_conversations_hub(
 
         # 3. Enhanced Identity Resolution: Query matching phone names
         from app.models.crm import CRMLead
-        from app.models.staff import StaffEmployee
         from app.models.user import User
 
         contact_phones_10 = [p for p in contact_map.keys() if len(p) == 10 and contact_map[p].get("contact_type") not in ("GROUP", "CHANNEL")][:25]
@@ -3233,12 +3618,43 @@ def get_whatsapp_conversations_hub(
             if "contact_type" not in info:
                 info["contact_type"] = "CONTACT"
 
+        # If searching, supplement with matching CRM leads so staff can initiate conversations directly
+        if search_val and len(contact_map) < 30:
+            s_lead_term = f"%{search_val}%"
+            matching_leads = db.query(CRMLead).filter(
+                CRMLead.phone.isnot(None),
+                CRMLead.phone != '',
+                or_(CRMLead.name.ilike(s_lead_term), CRMLead.phone.ilike(s_lead_term))
+            ).limit(15).all()
+            for ml in matching_leads:
+                m_ph = ''.join(filter(str.isdigit, ml.phone or ''))[-10:]
+                if m_ph and len(m_ph) == 10 and m_ph not in contact_map:
+                    contact_map[m_ph] = {
+                        "phone": m_ph,
+                        "name": ml.name or f"Customer (+91 {m_ph})",
+                        "recipient_type": "individual",
+                        "contact_type": "CONTACT",
+                        "status": ml.status or "Active",
+                        "category": "Direct Messages",
+                        "last_message": "Click to start conversation",
+                        "last_time": "—",
+                        "last_timestamp": datetime.min,
+                        "message_type": "text",
+                        "delivery_status": "none",
+                        "unread_count": 0,
+                        "channel": "META_API",
+                        "badge": "CRM Lead",
+                        "is_unassigned": False
+                    }
+
         sorted_contacts = sorted(contact_map.values(), key=lambda x: str(x["last_timestamp"]), reverse=True)
 
         if category_val and category_val != 'all':
             sorted_contacts = [c for c in sorted_contacts if category_val.lower() in c["category"].lower()]
 
         return {"success": True, "total": len(sorted_contacts), "conversations": sorted_contacts}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("[WA-CONVERSATIONS-HUB] Error: %s", str(e))
         return {"success": False, "conversations": [], "error": str(e)}
@@ -3911,10 +4327,16 @@ async def upload_staff_whatsapp_media(
 
     filename = f"{uuid.uuid4().hex}.{norm_ext}"
     storage_dir = Path(__file__).resolve().parents[5] / "frontend" / "storage" / "wa_media"
+    backend_storage_dir = Path(__file__).resolve().parents[4] / "storage" / "wa_media"
     storage_dir.mkdir(parents=True, exist_ok=True)
+    backend_storage_dir.mkdir(parents=True, exist_ok=True)
 
     local_file = storage_dir / filename
     local_file.write_bytes(data)
+    try:
+        (backend_storage_dir / filename).write_bytes(data)
+    except Exception:
+        pass
 
     try:
         from app.services.object_storage import storage_service
@@ -4300,7 +4722,16 @@ def search_whatsapp_contacts(
     if not type_filter or type_filter.upper() in ("CONTACT", "ALL", "INDIVIDUAL"):
         lead_q = db.query(CRMLead).filter(CRMLead.phone.isnot(None), CRMLead.phone != '')
         if q:
-            lead_q = lead_q.filter(or_(CRMLead.name.ilike(s_term), CRMLead.phone.ilike(s_term)))
+            from app.services.crm_phone_sync_service import find_candidate_lead_ids_for_search
+            phone_lead_ids = find_candidate_lead_ids_for_search(
+                db, tenant_id=getattr(current_user, 'tenant_id', None),
+                company_ids=getattr(current_user, 'data_companies', None) or ([current_user.base_company_id] if getattr(current_user, 'base_company_id', None) else None),
+                search_term=q
+            )
+            _s_conds = [CRMLead.name.ilike(s_term), CRMLead.phone.ilike(s_term)]
+            if phone_lead_ids:
+                _s_conds.append(CRMLead.id.in_(phone_lead_ids))
+            lead_q = lead_q.filter(or_(*_s_conds))
         for l in lead_q.limit(50).all():
             digits = ''.join(filter(str.isdigit, l.phone or ''))[-10:]
             if len(digits) == 10:
@@ -4392,7 +4823,7 @@ def search_whatsapp_contacts(
                         "details": "Direct Mobile Number • Start WhatsApp Conversation"
                     })
 
-    return {"success": True, "total": len(results), "contacts": results}
+    return {"success": True, "total": len(results), "contacts": results, "results": results}
 
 
 # ── DC_WA_SCHEDULER_TRACKER_001: Live Scheduler Tracker & Target Group Management Endpoints ───
@@ -4424,6 +4855,26 @@ DEFAULT_JOB_TARGETS = {
 TARGETS_FILE_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "wa_job_targets.json")
 
 def _load_targets_from_db(db: Session = None) -> dict:
+    if db:
+        try:
+            from app.models.automation import AutomationTargetConfig
+            rows = db.query(AutomationTargetConfig).filter(AutomationTargetConfig.is_active == True).all()
+            if rows:
+                res = {}
+                for r in rows:
+                    if r.job_id not in res:
+                        res[r.job_id] = []
+                    res[r.job_id].append({
+                        "id": str(r.id),
+                        "type": (r.recipient_type or "group").lower(),
+                        "name": r.recipient_name,
+                        "identifier": r.recipient_identifier,
+                        "target_role": r.target_role or "PRIMARY"
+                    })
+                return res
+        except Exception as e:
+            logger.warning(f"Could not load targets from automation_target_config: {e}")
+
     try:
         if os.path.exists(TARGETS_FILE_PATH):
             with open(TARGETS_FILE_PATH, "r") as f:
@@ -4457,12 +4908,60 @@ async def _require_staff_optional(request: Request, db: Session = Depends(get_db
 
 @router.get("/trigger-logs")
 def get_wa_trigger_execution_logs(
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(100, ge=1, le=500),
     job_id: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user=Depends(_require_staff_optional)
 ):
-    """Returns historical trigger execution audit logs."""
+    """Returns historical trigger execution audit logs from PostgreSQL relational store."""
+    try:
+        from app.models.automation import AutomationExecution
+        q = db.query(AutomationExecution)
+        if job_id:
+            q = q.filter(AutomationExecution.job_id == job_id)
+        if status and status.upper() != "ALL":
+            q = q.filter(AutomationExecution.status == status.upper())
+        if search:
+            s = f"%{search.strip()}%"
+            q = q.filter(or_(
+                AutomationExecution.job_name.ilike(s),
+                AutomationExecution.job_id.ilike(s),
+                AutomationExecution.trigger_type.ilike(s),
+                AutomationExecution.triggered_by.ilike(s),
+                AutomationExecution.error_message.ilike(s)
+            ))
+
+        rows = q.order_by(AutomationExecution.started_at.desc(), AutomationExecution.id.desc()).limit(limit).all()
+        if rows:
+            logs = []
+            for r in rows:
+                ts_str = r.started_at.strftime('%d %b %Y, %I:%M:%S %p IST') if r.started_at else '—'
+                iso_ts = r.started_at.isoformat() if r.started_at else ''
+                logs.append({
+                    "id": r.id,
+                    "job_id": r.job_id,
+                    "job_name": r.job_name,
+                    "trigger_type": r.trigger_type,
+                    "triggered_by": r.triggered_by,
+                    "status": r.status,
+                    "dispatched_count": r.dispatched_count,
+                    "sent_count": r.sent_count,
+                    "failed_count": r.failed_count,
+                    "skipped_count": r.skipped_count,
+                    "error_message": r.error_message,
+                    "timestamp": ts_str,
+                    "iso_timestamp": iso_ts,
+                    "is_legacy": r.is_legacy,
+                    "payload": r.metadata_json or {},
+                    "detail_data": r.metadata_json or {}
+                })
+            return {"success": True, "total": len(logs), "logs": logs}
+    except Exception as exc:
+        logger.warning(f"Could not query AutomationExecution: {exc}")
+
+    # Fallback to JSON file if db query fails
     try:
         if os.path.exists(EXEC_LOGS_FILE_PATH):
             with open(EXEC_LOGS_FILE_PATH, "r") as f:
@@ -4470,15 +4969,10 @@ def get_wa_trigger_execution_logs(
                 if isinstance(logs, list):
                     if job_id:
                         logs = [l for l in logs if l.get("job_id") == job_id]
-                    # Ensure latest trigger is always on top
                     logs.sort(key=lambda x: x.get("iso_timestamp", ""), reverse=True)
-                    return {
-                        "success": True,
-                        "total": len(logs),
-                        "logs": logs[:limit]
-                    }
+                    return {"success": True, "total": len(logs), "logs": logs[:limit]}
     except Exception as e:
-        logger.warning(f"Could not read execution logs: {e}")
+        logger.warning(f"Could not read execution logs JSON: {e}")
 
     return {"success": True, "total": 0, "logs": []}
 
@@ -4489,6 +4983,7 @@ def get_wa_scheduler_status(
 ):
     """
     Returns live execution status, 3-day history matrix, target recipients, and next run times for all scheduled jobs.
+    Derived truthfully from persistent relational records in PostgreSQL (AutomationExecution & AutomationTargetConfig).
     """
     from datetime import datetime, timedelta
     import pytz
@@ -4503,306 +4998,131 @@ def get_wa_scheduler_status(
     d1_lbl = (now_ist - timedelta(days=1)).strftime('%d %b (Yesterday)')
     d2_lbl = (now_ist - timedelta(days=2)).strftime('%d %b')
 
-    # Pre-load execution logs JSON once to avoid repetitive disk reads
-    cached_exec_logs = []
-    log_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "wa_execution_logs.json")
-    if os.path.exists(log_file):
-        try:
-            with open(log_file, 'r', encoding='utf-8') as f:
-                cached_exec_logs = json.load(f)
-                if not isinstance(cached_exec_logs, list):
-                    cached_exec_logs = []
-        except Exception:
-            cached_exec_logs = []
+    from app.models.automation import AutomationExecution
+    from app.services.automation_tracking_service import get_job_targets
 
-    # Authoritative queue records for last 3 days
-    from sqlalchemy import text, func
-    ml_counts_map = {}
+    # Pre-fetch recent executions for last 3 days
+    d2_dt = datetime.strptime(d2_str, '%Y-%m-%d')
+    recent_execs = []
     try:
-        d2_start_dt = datetime.strptime(d2_str, '%Y-%m-%d')
-        ml_rows = db.query(
-            MessageLog.message_type,
-            func.date(MessageLog.sent_at).label('sdate'),
-            func.count(MessageLog.id).label('cnt')
-        ).filter(
-            MessageLog.sent_at >= d2_start_dt
-        ).group_by(
-            MessageLog.message_type,
-            func.date(MessageLog.sent_at)
-        ).all()
+        recent_execs = db.query(AutomationExecution).filter(AutomationExecution.started_at >= d2_dt).all()
+    except Exception as _re_err:
+        logger.warning(f"Could not query recent executions: {_re_err}")
 
-        for mtype, sdate, cnt in ml_rows:
-            ml_counts_map[(mtype, str(sdate))] = cnt
-    except Exception:
-        pass
-
-    # Dynamic queue aggregation
-    q_stats_map = {}
-    latest_job_record_map = {}
+    # Pre-fetch latest execution per job_id
+    latest_by_job = {}
     try:
-        d2_start_dt = datetime.strptime(d2_str, '%Y-%m-%d')
-        q_rows = db.execute(text("""
-            SELECT id, target_jid, message, status, result_payload, created_at, sent_at,
-                   to_char(COALESCE(sent_at, created_at), 'YYYY-MM-DD') AS sdate,
-                   to_char(COALESCE(sent_at, created_at), 'DD Mon YYYY, HH12:MI:SS AM IST') AS sts
-            FROM whatsapp_bot_queue
-            WHERE created_at >= :d2_start OR sent_at >= :d2_start
-            ORDER BY id ASC
-        """), {"d2_start": d2_start_dt - timedelta(days=1)}).fetchall()
-
-        now_utc = datetime.utcnow()
-        for qr in q_rows:
-            qid = qr[0]
-            target = qr[1] or ""
-            msg = qr[2] or ""
-            raw_status = qr[3] or "pending"
-            rp = qr[4] or {}
-            if not isinstance(rp, dict):
-                rp = {}
-            c_at = qr[5]
-            s_at = qr[6]
-
-            jid = (rp.get("job_id") or "").strip()
-            if not jid:
-                if target == "120363410784518818@g.us" or ("SALES TEAM" in msg and "UPDATE" in msg) or ("LEADERBOARD" in msg and "STAFF" in msg):
-                    jid = "wa_bihourly_sales_perf_report"
-                elif "FIELD JOURNEY" in msg or "Field Journey" in msg:
-                    jid = "field_staff_journey_report"
-                elif "Morning Wish" in msg or "Good morning" in msg:
-                    jid = "wa_daily_morning_wish"
-                elif "VGK4U" in msg or "COMMUNITY" in msg:
-                    jid = "vgk4u_morning_wish"
-
-            if not jid:
-                continue
-
-            date_str = qr[7] if len(qr) > 7 and qr[7] else None
-            ts_str = qr[8] if len(qr) > 8 and qr[8] else None
-            if not date_str:
-                ref_dt = s_at or c_at or now_utc
-                date_str = ref_dt.strftime("%Y-%m-%d")
-                ts_str = ref_dt.strftime("%d %b %Y, %I:%M:%S %p IST")
-
-            eff_status = raw_status
-            if raw_status == "processing":
-                claimed_str = rp.get("claimed_at")
-                claimed_dt = None
-                if claimed_str:
-                    try:
-                        claimed_dt = datetime.fromisoformat(claimed_str)
-                    except Exception:
-                        pass
-                c_age = (now_utc - (claimed_dt or c_at or now_utc)).total_seconds()
-                send_entered = rp.get("send_boundary_entered") is True or rp.get("send_attempted") is True or rp.get("dispatch_stage") == "send_boundary_entered"
-                if qid == 69 or (c_age > 60 and send_entered):
-                    eff_status = "dispatch_uncertain"
-                elif c_age > 60:
-                    eff_status = "pending"
-            elif raw_status == "completed":
-                eff_status = "sent"
-
-            key = (jid, date_str)
-            if key not in q_stats_map:
-                q_stats_map[key] = {"sent": 0, "failed": 0, "uncertain": 0, "processing": 0, "pending": 0, "total": 0, "latest_ts": None}
-
-            q_stats_map[key]["total"] += 1
-            if eff_status == "sent":
-                q_stats_map[key]["sent"] += 1
-            elif eff_status == "dispatch_uncertain":
-                q_stats_map[key]["uncertain"] += 1
-            elif eff_status == "failed":
-                q_stats_map[key]["failed"] += 1
-            elif eff_status == "processing":
-                q_stats_map[key]["processing"] += 1
-            elif eff_status == "pending":
-                q_stats_map[key]["pending"] += 1
-
-            q_stats_map[key]["latest_ts"] = ts_str
-
-            latest_job_record_map[jid] = {
-                "total": q_stats_map[key]["total"],
-                "sent": q_stats_map[key]["sent"],
-                "uncertain": q_stats_map[key]["uncertain"],
-                "failed": q_stats_map[key]["failed"],
-                "last_trigger": ts_str
+        latest_exec_rows = db.execute(text("""
+            SELECT DISTINCT ON (job_id) 
+                id, job_id, job_name, status, dispatched_count, sent_count, failed_count, skipped_count, started_at
+            FROM automation_execution
+            ORDER BY job_id, started_at DESC, id DESC
+        """)).fetchall()
+        for lr in latest_exec_rows:
+            latest_by_job[lr[1]] = {
+                "id": lr[0],
+                "job_id": lr[1],
+                "job_name": lr[2],
+                "status": lr[3],
+                "dispatched_count": lr[4] or 0,
+                "sent_count": lr[5] or 0,
+                "failed_count": lr[6] or 0,
+                "skipped_count": lr[7] or 0,
+                "started_at": lr[8]
             }
-    except Exception as q_err:
-        logger.warning(f"[SCHEDULER-STATUS] Queue batch query note: {q_err}")
+    except Exception as _le_err:
+        logger.warning(f"Could not query latest executions: {_le_err}")
 
-    def _get_job_day_status(arg1, arg2, arg3=None):
-        if arg3 is None:
-            job_id_key = ""
-            msg_types = arg1
-            date_str = arg2
-        else:
-            job_id_key = arg1
-            msg_types = arg2
-            date_str = arg3
-
-        if isinstance(msg_types, str):
-            msg_types = [msg_types]
-        if job_id_key and job_id_key not in msg_types:
-            msg_types.append(job_id_key)
-
-        # 1. First priority: Authoritative PostgreSQL whatsapp_bot_queue stats
-        q_stat = q_stats_map.get((job_id_key, date_str))
-        if q_stat and q_stat["total"] > 0:
-            s_cnt = q_stat["sent"]
-            u_cnt = q_stat["uncertain"]
-            f_cnt = q_stat["failed"]
-            tot_cnt = q_stat["total"]
-
-            if s_cnt > 0 and u_cnt > 0:
-                lbl = f"⚠️ {s_cnt} Sent · {u_cnt} Uncertain"
-                st = "EXECUTED"
-            elif s_cnt > 0 and f_cnt > 0:
-                lbl = f"⚠️ {s_cnt} Sent · {f_cnt} Failed"
-                st = "EXECUTED"
-            elif s_cnt > 0:
-                lbl = f"✅ {s_cnt} Sent"
-                st = "EXECUTED"
-            elif u_cnt > 0:
-                lbl = f"⚠️ {u_cnt} Uncertain"
-                st = "UNCERTAIN"
-            elif f_cnt > 0:
-                lbl = f"❌ {f_cnt} Failed"
-                st = "FAILED"
-            else:
-                lbl = "⏳ Scheduled / Pending"
-                st = "PENDING"
-
+    def _get_job_day_status(job_id_key: str, date_str: str) -> dict:
+        day_execs = [
+            e for e in recent_execs 
+            if e.job_id == job_id_key and e.started_at and e.started_at.strftime('%Y-%m-%d') == date_str
+        ]
+        if not day_execs:
             return {
-                "status": st,
-                "count": s_cnt,
-                "total_count": tot_cnt,
-                "sent_count": s_cnt,
-                "uncertain_count": u_cnt,
-                "failed_count": f_cnt,
-                "label": lbl
-            }
-
-        # 2. Second priority: Check MessageLog table batch counts map
-        ml_count = sum(ml_counts_map.get((mt, date_str), 0) for mt in msg_types)
-        if ml_count > 0:
-            return {
-                "status": "EXECUTED",
-                "count": ml_count,
-                "total_count": ml_count,
-                "sent_count": ml_count,
+                "status": "PENDING",
+                "count": 0,
+                "total_count": 0,
+                "sent_count": 0,
                 "uncertain_count": 0,
                 "failed_count": 0,
-                "label": f"✅ {ml_count} Sent"
+                "label": "⏳ Scheduled / Pending"
             }
 
-        # 3. Third priority: Check cached execution logs in memory
-        el_sent = 0
-        el_failed = 0
-        el_uncertain = 0
-        has_el = False
-        for el in cached_exec_logs:
-            if el.get("job_id") == job_id_key:
-                ts = el.get("timestamp") or el.get("iso_timestamp") or ""
-                dt_match = False
-                if ts.startswith(date_str):
-                    dt_match = True
-                else:
-                    try:
-                        d_obj = datetime.strptime(date_str, "%Y-%m-%d")
-                        if d_obj.strftime("%d %b %Y") in ts:
-                            dt_match = True
-                    except Exception:
-                        pass
-                if dt_match:
-                    has_el = True
-                    el_sent += el.get("sent_count") or (1 if el.get("status") in ("SUCCESS", "EXECUTED") else 0)
-                    el_failed += el.get("failed_count", 0)
-                    if el.get("status") in ("UNCERTAIN", "DISPATCH_UNCERTAIN"):
-                        el_uncertain += 1
+        s_cnt = sum(e.sent_count for e in day_execs)
+        f_cnt = sum(e.failed_count for e in day_execs)
+        tot_cnt = sum(e.dispatched_count for e in day_execs)
 
-        if has_el and (el_sent > 0 or el_uncertain > 0 or el_failed > 0):
-            if el_sent > 0 and el_uncertain > 0:
-                lbl = f"⚠️ {el_sent} Sent · {el_uncertain} Uncertain"
-                st = "EXECUTED"
-            elif el_sent > 0 and el_failed > 0:
-                lbl = f"⚠️ {el_sent} Sent · {el_failed} Failed"
-                st = "EXECUTED"
-            elif el_sent > 0:
-                lbl = f"✅ {el_sent} Sent"
-                st = "EXECUTED"
-            elif el_uncertain > 0:
-                lbl = f"⚠️ {el_uncertain} Uncertain"
-                st = "UNCERTAIN"
-            else:
-                lbl = f"❌ {el_failed} Failed"
-                st = "FAILED"
-
-            return {
-                "status": st,
-                "count": el_sent,
-                "total_count": el_sent + el_failed + el_uncertain,
-                "sent_count": el_sent,
-                "uncertain_count": el_uncertain,
-                "failed_count": el_failed,
-                "label": lbl
-            }
+        if s_cnt > 0 and f_cnt > 0:
+            lbl = f"⚠️ {s_cnt} Sent · {f_cnt} Failed"
+            st = "EXECUTED"
+        elif s_cnt > 0:
+            lbl = f"✅ {s_cnt} Sent"
+            st = "EXECUTED"
+        elif f_cnt > 0:
+            lbl = f"❌ {f_cnt} Failed"
+            st = "FAILED"
+        else:
+            lbl = f"⏳ {tot_cnt} Dispatched"
+            st = "EXECUTED" if tot_cnt > 0 else "PENDING"
 
         return {
-            "status": "PENDING",
-            "count": 0,
-            "total_count": 0,
+            "status": st,
+            "count": s_cnt,
+            "total_count": tot_cnt,
+            "sent_count": s_cnt,
+            "uncertain_count": 0,
+            "failed_count": f_cnt,
+            "label": lbl
+        }
+
+    def _get_latest_job_stats(job_id_key: str) -> dict:
+        lr = latest_by_job.get(job_id_key)
+        if lr:
+            ts_str = lr["started_at"].strftime('%d %b %Y, %I:%M %p IST') if lr["started_at"] else None
+            return {
+                "total_messages": lr["dispatched_count"],
+                "sent_count": lr["sent_count"],
+                "uncertain_count": 0,
+                "failed_count": lr["failed_count"],
+                "skipped_count": lr["skipped_count"],
+                "last_trigger": ts_str
+            }
+        
+        targets = get_job_targets(db, job_id_key, company_id=1)
+        return {
+            "total_messages": len(targets) if targets else 0,
             "sent_count": 0,
             "uncertain_count": 0,
             "failed_count": 0,
-            "label": "⏳ Scheduled / Pending"
+            "skipped_count": 0,
+            "last_trigger": None
         }
 
-    def _get_latest_job_stats(job_id: str) -> dict:
-        # Priority 1: Check dynamic latest_job_record_map from queue
-        if job_id in latest_job_record_map:
-            rec = latest_job_record_map[job_id]
-            return {
-                "total_messages": rec["total"],
-                "sent_count": rec["sent"],
-                "uncertain_count": rec.get("uncertain", 0),
-                "failed_count": rec["failed"],
-                "last_trigger": rec.get("last_trigger")
-            }
-
-        # Priority 2: Check execution logs JSON
-        for entry in cached_exec_logs:
-            if entry.get("job_id") == job_id or (isinstance(job_id, list) and entry.get("job_id") in job_id):
-                payload = entry.get("payload", {})
-                total = payload.get("qualifying_members_count") or payload.get("total_eligible") or payload.get("total_eligible_leads") or payload.get("total_targets") or payload.get("total_count") or entry.get("sent_count") or 1
-                sent = payload.get("dispatched_count") or payload.get("sent_count") or (1 if entry.get("status") in ("SUCCESS", "EXECUTED") else 0)
-                failed = payload.get("failed_count", 0)
-                if job_id == "wa_daily_morning_wish" and total == 1:
-                    total = 4013
-                    sent = 4013
-                return {
-                    "total_messages": total,
-                    "sent_count": sent,
-                    "uncertain_count": 0,
-                    "failed_count": failed,
-                    "last_trigger": entry.get("timestamp")
-                }
-
-        # Priority 3: Fallback based on job target configuration
-        if job_id == "wa_daily_morning_wish":
-            return {"total_messages": 4013, "sent_count": 0, "uncertain_count": 0, "failed_count": 0}
-        elif job_id == "vgk_member_morning_statement":
-            return {"total_messages": 24, "sent_count": 0, "uncertain_count": 0, "failed_count": 0}
-        elif job_id == "vgk_member_zero_lead_motivational":
-            return {"total_messages": 11, "sent_count": 0, "uncertain_count": 0, "failed_count": 0}
-        rec_list = active_targets.get(job_id, [])
-        return {"total_messages": len(rec_list) if rec_list else 1, "sent_count": 0, "uncertain_count": 0, "failed_count": 0}
-
     active_targets = _load_targets_from_db(db)
+
+    def _build_job_recipients(jid: str):
+        db_tgts = get_job_targets(db, jid, company_id=1)
+        if db_tgts:
+            return [
+                {
+                    "id": str(t["id"]),
+                    "name": t["recipient_name"],
+                    "type": (t["recipient_type"] or "group").lower(),
+                    "identifier": t["recipient_identifier"],
+                    "target_role": t.get("target_role", "PRIMARY"),
+                    "is_active": t.get("is_active", True)
+                }
+                for t in db_tgts if t.get("is_active", True)
+            ]
+        return active_targets.get(jid, [])
 
     jobs = [
         {
             "job_id": "wa_bihourly_sales_perf_report",
             "name": "Sales Team 2-Hour Report & Leaderboard",
             "category": "Sales Reporting",
+            "archetype": "static_group",
             "schedule": "Every 2 Hours (9:30 AM - 7:30 PM IST)",
             "next_run": (
                 "Today 09:30 AM IST" if now_ist.hour < 9 or (now_ist.hour == 9 and now_ist.minute < 30) else
@@ -4813,10 +5133,10 @@ def get_wa_scheduler_status(
                 "Today 07:30 PM IST" if now_ist.hour < 19 or (now_ist.hour == 19 and now_ist.minute < 30) else
                 "Tomorrow 09:30 AM IST"
             ),
-            "recipients": active_targets.get("wa_bihourly_sales_perf_report", []),
-            "day_2_ago": _get_job_day_status("wa_bihourly_sales_perf_report", ["sales_perf_report", "auto_sales_perf_report", "sales_performance_report"], d2_str),
-            "yesterday": _get_job_day_status("wa_bihourly_sales_perf_report", ["sales_perf_report", "auto_sales_perf_report", "sales_performance_report"], d1_str),
-            "today": _get_job_day_status("wa_bihourly_sales_perf_report", ["sales_perf_report", "auto_sales_perf_report", "sales_performance_report"], d0_str),
+            "recipients": _build_job_recipients("wa_bihourly_sales_perf_report"),
+            "day_2_ago": _get_job_day_status("wa_bihourly_sales_perf_report", d2_str),
+            "yesterday": _get_job_day_status("wa_bihourly_sales_perf_report", d1_str),
+            "today": _get_job_day_status("wa_bihourly_sales_perf_report", d0_str),
             "latest_stats": _get_latest_job_stats("wa_bihourly_sales_perf_report"),
             "is_active": True
         },
@@ -4824,12 +5144,13 @@ def get_wa_scheduler_status(
             "job_id": "field_staff_journey_report",
             "name": "Field Journey Performance & Leaderboard Report",
             "category": "Field Operations",
+            "archetype": "static_group",
             "schedule": "Every 1 Hour (09:00 AM - 08:00 PM IST / Active)",
             "next_run": f"Today {((now_ist.hour % 12) + 1):02d}:00 {'PM' if (now_ist.hour + 1) >= 12 else 'AM'} IST" if now_ist.hour < 20 else "Tomorrow 09:00 AM IST",
-            "recipients": active_targets.get("field_staff_journey_report", []),
-            "day_2_ago": _get_job_day_status("field_staff_journey_report", ["field_journey", "field_staff_journey", "auto_field_journey"], d2_str),
-            "yesterday": _get_job_day_status("field_staff_journey_report", ["field_journey", "field_staff_journey", "auto_field_journey"], d1_str),
-            "today": _get_job_day_status("field_staff_journey_report", ["field_journey", "field_staff_journey", "auto_field_journey"], d0_str),
+            "recipients": _build_job_recipients("field_staff_journey_report"),
+            "day_2_ago": _get_job_day_status("field_staff_journey_report", d2_str),
+            "yesterday": _get_job_day_status("field_staff_journey_report", d1_str),
+            "today": _get_job_day_status("field_staff_journey_report", d0_str),
             "latest_stats": _get_latest_job_stats("field_staff_journey_report"),
             "is_active": True
         },
@@ -4837,25 +5158,29 @@ def get_wa_scheduler_status(
             "job_id": "missed_call_ack",
             "name": "Instant Missed Call Auto-ACK",
             "category": "Customer Support",
+            "archetype": "dynamic_segment",
+            "segment_description": "Inbound callers with missed calls (unanswered), deduplicated per 24 hours",
             "schedule": "Real-time / Every 30 mins auto-sync",
             "next_run": "Continuous / Instant",
-            "recipients": active_targets.get("missed_call_ack", []),
-            "day_2_ago": _get_job_day_status("missed_call_ack", ["missed_call_ack"], d2_str),
-            "yesterday": _get_job_day_status("missed_call_ack", ["missed_call_ack"], d1_str),
-            "today": _get_job_day_status("missed_call_ack", ["missed_call_ack"], d0_str),
+            "recipients": _build_job_recipients("missed_call_ack"),
+            "day_2_ago": _get_job_day_status("missed_call_ack", d2_str),
+            "yesterday": _get_job_day_status("missed_call_ack", d1_str),
+            "today": _get_job_day_status("missed_call_ack", d0_str),
             "latest_stats": _get_latest_job_stats("missed_call_ack"),
             "is_active": True
         },
         {
             "job_id": "wa_daily_morning_wish",
             "name": "WhatsApp 8 AM Morning Wish Dispatch",
-            "category": "Team Engagement",
+            "category": "Customer Engagement",
+            "archetype": "dynamic_segment",
+            "segment_description": "Active customer leads (status == 'New' or uncontacted >20 days) + CC targets",
             "schedule": "Daily 08:00 AM IST",
             "next_run": "Tomorrow 08:00 AM IST" if now_ist.hour >= 8 else "Today 08:00 AM IST",
-            "recipients": active_targets.get("wa_daily_morning_wish", []),
-            "day_2_ago": _get_job_day_status("wa_daily_morning_wish", ["morning_wish", "auto_staff_morning_leadership", "wa_daily_morning_wish"], d2_str),
-            "yesterday": _get_job_day_status("wa_daily_morning_wish", ["morning_wish", "auto_staff_morning_leadership", "wa_daily_morning_wish"], d1_str),
-            "today": _get_job_day_status("wa_daily_morning_wish", ["morning_wish", "auto_staff_morning_leadership", "wa_daily_morning_wish"], d0_str),
+            "recipients": _build_job_recipients("wa_daily_morning_wish"),
+            "day_2_ago": _get_job_day_status("wa_daily_morning_wish", d2_str),
+            "yesterday": _get_job_day_status("wa_daily_morning_wish", d1_str),
+            "today": _get_job_day_status("wa_daily_morning_wish", d0_str),
             "latest_stats": _get_latest_job_stats("wa_daily_morning_wish"),
             "is_active": True
         },
@@ -4863,12 +5188,13 @@ def get_wa_scheduler_status(
             "job_id": "vgk4u_morning_wish",
             "name": "VGK4U Elite Community Morning Wish",
             "category": "Community Outreach",
+            "archetype": "static_group",
             "schedule": "Daily 08:00 AM IST",
             "next_run": "Tomorrow 08:00 AM IST" if now_ist.hour >= 8 else "Today 08:00 AM IST",
-            "recipients": active_targets.get("vgk4u_morning_wish", []),
-            "day_2_ago": _get_job_day_status("vgk4u_morning_wish", ["vgk4u_wish", "vgk4u_morning_wish", "auto_community_approved"], d2_str),
-            "yesterday": _get_job_day_status("vgk4u_morning_wish", ["vgk4u_wish", "vgk4u_morning_wish", "auto_community_approved"], d1_str),
-            "today": _get_job_day_status("vgk4u_morning_wish", ["vgk4u_wish", "vgk4u_morning_wish", "auto_community_approved"], d0_str),
+            "recipients": _build_job_recipients("vgk4u_morning_wish"),
+            "day_2_ago": _get_job_day_status("vgk4u_morning_wish", d2_str),
+            "yesterday": _get_job_day_status("vgk4u_morning_wish", d1_str),
+            "today": _get_job_day_status("vgk4u_morning_wish", d0_str),
             "latest_stats": _get_latest_job_stats("vgk4u_morning_wish"),
             "is_active": True
         },
@@ -4876,12 +5202,14 @@ def get_wa_scheduler_status(
             "job_id": "vgk_member_morning_statement",
             "name": "VGK Members Daily 7:30 AM Revenue Statement",
             "category": "Partner Engagement",
+            "archetype": "dynamic_segment",
+            "segment_description": "Active VGK Channel Partners with ≥1 lead + Supplementary CC recipients",
             "schedule": "Daily 07:30 AM IST",
             "next_run": "Tomorrow 07:30 AM IST" if (now_ist.hour > 7 or (now_ist.hour == 7 and now_ist.minute >= 30)) else "Today 07:30 AM IST",
-            "recipients": [{"name": "Active VGK Members (≥1 Lead)", "type": "group", "identifier": "vgk_members"}],
-            "day_2_ago": _get_job_day_status("vgk_member_morning_statement", ["vgk_member_morning_statement", "wa_daily_vgk_member_statement_730am"], d2_str),
-            "yesterday": _get_job_day_status("vgk_member_morning_statement", ["vgk_member_morning_statement", "wa_daily_vgk_member_statement_730am"], d1_str),
-            "today": _get_job_day_status("vgk_member_morning_statement", ["vgk_member_morning_statement", "wa_daily_vgk_member_statement_730am"], d0_str),
+            "recipients": _build_job_recipients("vgk_member_morning_statement") or [{"name": "Active VGK Members (≥1 Lead)", "type": "group", "identifier": "vgk_members"}],
+            "day_2_ago": _get_job_day_status("vgk_member_morning_statement", d2_str),
+            "yesterday": _get_job_day_status("vgk_member_morning_statement", d1_str),
+            "today": _get_job_day_status("vgk_member_morning_statement", d0_str),
             "latest_stats": _get_latest_job_stats("vgk_member_morning_statement"),
             "is_active": True
         },
@@ -4889,12 +5217,14 @@ def get_wa_scheduler_status(
             "job_id": "vgk_member_zero_lead_motivational",
             "name": "VGK 0-Lead Members Daily 7:30 AM Motivational Dispatch",
             "category": "Partner Activation",
+            "archetype": "dynamic_segment",
+            "segment_description": "Active VGK Channel Partners with 0 leads + Supplementary CC recipients",
             "schedule": "Daily 07:30 AM IST",
             "next_run": "Tomorrow 07:30 AM IST" if (now_ist.hour > 7 or (now_ist.hour == 7 and now_ist.minute >= 30)) else "Today 07:30 AM IST",
-            "recipients": [{"name": "Active VGK Members (0 Leads)", "type": "group", "identifier": "vgk_zero_lead_members"}],
-            "day_2_ago": _get_job_day_status("vgk_member_zero_lead_motivational", ["wa_daily_vgk_zero_lead_motivational_730am"], d2_str),
-            "yesterday": _get_job_day_status("vgk_member_zero_lead_motivational", ["wa_daily_vgk_zero_lead_motivational_730am"], d1_str),
-            "today": _get_job_day_status("vgk_member_zero_lead_motivational", ["wa_daily_vgk_zero_lead_motivational_730am"], d0_str),
+            "recipients": _build_job_recipients("vgk_member_zero_lead_motivational") or [{"name": "Active VGK Members (0 Leads)", "type": "group", "identifier": "vgk_zero_lead_members"}],
+            "day_2_ago": _get_job_day_status("vgk_member_zero_lead_motivational", d2_str),
+            "yesterday": _get_job_day_status("vgk_member_zero_lead_motivational", d1_str),
+            "today": _get_job_day_status("vgk_member_zero_lead_motivational", d0_str),
             "latest_stats": _get_latest_job_stats("vgk_member_zero_lead_motivational"),
             "is_active": True
         },
@@ -4902,12 +5232,13 @@ def get_wa_scheduler_status(
             "job_id": "service_summary",
             "name": "Daily 7:30 PM Service Ticket Summary",
             "category": "Service & Maintenance",
+            "archetype": "static_group",
             "schedule": "Daily 07:30 PM IST",
             "next_run": "Today 07:30 PM IST" if now_ist.hour < 19 or (now_ist.hour == 19 and now_ist.minute < 30) else "Tomorrow 07:30 PM IST",
-            "recipients": active_targets.get("service_summary", []),
-            "day_2_ago": _get_job_day_status(["service_summary", "auto_ticket_created_customer", "auto_ticket_closed_customer"], d2_str),
-            "yesterday": _get_job_day_status(["service_summary", "auto_ticket_created_customer", "auto_ticket_closed_customer"], d1_str),
-            "today": _get_job_day_status(["service_summary", "auto_ticket_created_customer", "auto_ticket_closed_customer"], d0_str),
+            "recipients": _build_job_recipients("service_summary"),
+            "day_2_ago": _get_job_day_status("service_summary", d2_str),
+            "yesterday": _get_job_day_status("service_summary", d1_str),
+            "today": _get_job_day_status("service_summary", d0_str),
             "latest_stats": _get_latest_job_stats("service_summary"),
             "is_active": True
         }
@@ -4921,18 +5252,34 @@ def get_wa_scheduler_status(
         "jobs": jobs
     }
 
-
 @router.get("/job-targets")
 def get_wa_job_targets(
     job_id: str = Query(...),
     db: Session = Depends(get_db),
     current_user=Depends(_require_staff_optional)
 ):
-    """Returns currently configured target groups and numbers for a job."""
-    active_targets = _load_targets_from_db(db)
-    targets = active_targets.get(job_id, [])
-    return {"success": True, "job_id": job_id, "recipients": targets}
-
+    """Returns currently configured target groups and numbers for a job from database."""
+    from app.services.automation_tracking_service import get_job_targets
+    company_id = getattr(current_user, 'base_company_id', 1) or 1
+    db_targets = get_job_targets(db, job_id, company_id=company_id)
+    recipients = [
+        {
+            "id": t["id"],
+            "type": (t["recipient_type"] or "group").lower(),
+            "name": t["recipient_name"],
+            "identifier": t["recipient_identifier"],
+            "target_role": t.get("target_role", "PRIMARY"),
+            "is_active": t.get("is_active", True)
+        }
+        for t in db_targets
+    ]
+    is_dynamic = job_id in ('missed_call_ack', 'wa_daily_morning_wish', 'vgk_member_morning_statement', 'vgk_member_zero_lead_motivational')
+    return {
+        "success": True,
+        "job_id": job_id,
+        "archetype": "dynamic_segment" if is_dynamic else "static_group",
+        "recipients": recipients
+    }
 
 @router.post("/job-targets")
 def update_wa_job_targets(
@@ -4941,33 +5288,138 @@ def update_wa_job_targets(
     current_user=Depends(_require_staff_optional)
 ):
     """Adds or removes a target recipient group or custom number for a job."""
+    from app.services.automation_tracking_service import add_job_target, remove_job_target, get_job_targets
     job_id = payload.get("job_id")
     action = payload.get("action")  # 'add' or 'remove'
     if not job_id or not action:
         raise HTTPException(status_code=400, detail="job_id and action required")
 
-    active_targets = _load_targets_from_db(db)
-
-    if job_id not in active_targets:
-        active_targets[job_id] = []
+    company_id = getattr(current_user, 'base_company_id', 1) or 1
 
     if action == "add":
-        name = payload.get("name", "New Group")
+        name = payload.get("name", "New Target")
         identifier = payload.get("identifier", "")
-        target_type = payload.get("type", "group")
-        import uuid
-        new_target = {"id": f"t_{uuid.uuid4().hex[:6]}", "type": target_type, "name": name, "identifier": identifier}
-        active_targets[job_id].append(new_target)
-        _save_targets_to_db(db, active_targets)
-        return {"success": True, "message": f"Added target '{name}'", "recipients": active_targets[job_id]}
+        target_type = payload.get("type", "group").upper()
+        target_role = payload.get("target_role", "PRIMARY").upper()
+        t = add_job_target(
+            db=db,
+            company_id=company_id,
+            job_id=job_id,
+            recipient_type=target_type,
+            recipient_identifier=identifier,
+            recipient_name=name,
+            target_role=target_role
+        )
+        recipients = get_job_targets(db, job_id, company_id=company_id)
+        return {"success": True, "message": f"Added target '{name}'", "recipients": recipients}
 
     elif action == "remove":
         target_id = payload.get("target_id")
-        active_targets[job_id] = [t for t in active_targets[job_id] if t.get("id") != target_id]
-        _save_targets_to_db(db, active_targets)
-        return {"success": True, "message": "Target removed successfully", "recipients": active_targets[job_id]}
+        try:
+            tid = int(target_id)
+            remove_job_target(db=db, target_id=tid, company_id=company_id)
+        except (ValueError, TypeError):
+            # Fallback for string IDs in legacy JSON
+            active_targets = _load_targets_from_db(db)
+            active_targets[job_id] = [t for t in active_targets.get(job_id, []) if t.get("id") != target_id]
+            _save_targets_to_db(db, active_targets)
+
+        recipients = get_job_targets(db, job_id, company_id=company_id)
+        return {"success": True, "message": "Target removed successfully", "recipients": recipients}
 
     raise HTTPException(status_code=400, detail=f"Invalid action: {action}")
+
+@router.get("/jobs/{job_id}/targets")
+def get_job_targets_rest(
+    job_id: str,
+    db: Session = Depends(get_db),
+    current_user=Depends(_require_staff_optional)
+):
+    return get_wa_job_targets(job_id=job_id, db=db, current_user=current_user)
+
+@router.post("/jobs/{job_id}/targets")
+def add_job_target_rest(
+    job_id: str,
+    payload: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(_require_staff_optional)
+):
+    payload["job_id"] = job_id
+    payload["action"] = "add"
+    return update_wa_job_targets(payload=payload, db=db, current_user=current_user)
+
+@router.delete("/jobs/{job_id}/targets/{target_id}")
+def delete_job_target_rest(
+    job_id: str,
+    target_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(_require_staff_optional)
+):
+    return update_wa_job_targets(payload={"job_id": job_id, "action": "remove", "target_id": target_id}, db=db, current_user=current_user)
+
+@router.get("/executions/{execution_id}/dispatches")
+def get_execution_dispatches(
+    execution_id: str,
+    search: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+    current_user=Depends(_require_staff_optional)
+):
+    """Returns child dispatches for a specific automation execution."""
+    from app.models.automation import AutomationExecution, AutomationDispatch
+    exec_row = db.query(AutomationExecution).filter(AutomationExecution.id == execution_id).first()
+    if not exec_row:
+        return {"success": False, "error": "Execution not found", "dispatches": []}
+
+    q = db.query(AutomationDispatch).filter(AutomationDispatch.execution_id == execution_id)
+    if status and status.upper() != "ALL":
+        q = q.filter(AutomationDispatch.status == status.upper())
+    if search:
+        s = f"%{search.strip()}%"
+        q = q.filter(or_(
+            AutomationDispatch.recipient_name.ilike(s),
+            AutomationDispatch.recipient_identifier.ilike(s),
+            AutomationDispatch.provider_message_id.ilike(s),
+            AutomationDispatch.error_message.ilike(s)
+        ))
+
+    items = q.order_by(AutomationDispatch.id.asc()).limit(limit).all()
+    results = []
+    for d in items:
+        results.append({
+            "id": d.id,
+            "execution_id": d.execution_id,
+            "job_id": d.job_id,
+            "recipient_type": d.recipient_type,
+            "recipient_identifier": d.recipient_identifier,
+            "recipient_name": d.recipient_name,
+            "status": d.status,
+            "message_log_id": d.message_log_id,
+            "queue_id": d.queue_id,
+            "provider_message_id": d.provider_message_id,
+            "error_message": d.error_message,
+            "created_at": d.created_at.strftime('%d %b %Y, %I:%M:%S %p') if d.created_at else '—',
+            "is_legacy": d.is_legacy
+        })
+
+    return {
+        "success": True,
+        "execution": {
+            "id": exec_row.id,
+            "job_id": exec_row.job_id,
+            "job_name": exec_row.job_name,
+            "status": exec_row.status,
+            "dispatched_count": exec_row.dispatched_count,
+            "sent_count": exec_row.sent_count,
+            "failed_count": exec_row.failed_count,
+            "skipped_count": exec_row.skipped_count,
+            "is_legacy": exec_row.is_legacy,
+            "started_at": exec_row.started_at.strftime('%d %b %Y, %I:%M:%S %p') if exec_row.started_at else '—'
+        },
+        "total": len(results),
+        "dispatches": results
+    }
 
 
 def _record_job_trigger_audit_log(db: Session, job_id: str, job_name: str, res: dict, staff_label: str):
@@ -5447,13 +5899,21 @@ def search_recipients(
 
     # 1. Search CRM Leads
     try:
-        leads = db.query(CRMLead).filter(
-            or_(
-                CRMLead.name.ilike(search_filter),
-                CRMLead.phone.ilike(phone_filter),
-                CRMLead.lead_code.ilike(search_filter) if hasattr(CRMLead, 'lead_code') else False
-            )
-        ).limit(15).all()
+        from app.services.crm_phone_sync_service import find_candidate_lead_ids_for_search
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=getattr(current_user, 'tenant_id', None),
+            company_ids=getattr(current_user, 'data_companies', None) or ([current_user.base_company_id] if getattr(current_user, 'base_company_id', None) else None),
+            search_term=term
+        )
+        lead_conds = [
+            CRMLead.name.ilike(search_filter),
+            CRMLead.phone.ilike(phone_filter),
+        ]
+        if phone_lead_ids:
+            lead_conds.append(CRMLead.id.in_(phone_lead_ids))
+        if hasattr(CRMLead, 'lead_code'):
+            lead_conds.append(CRMLead.lead_code.ilike(search_filter))
+        leads = db.query(CRMLead).filter(or_(*lead_conds)).limit(15).all()
 
         for lead in leads:
             p_val = getattr(lead, 'phone', '') or ''
@@ -6385,13 +6845,13 @@ def check_bot_queue(queue_id: int = Query(...), db: Session = Depends(get_db)):
 
 
 @router.get("/search-contacts")
-def search_whatsapp_contacts(
+def search_directory_contacts(
     q: str = Query("", min_length=1),
     db: Session = Depends(get_db),
     current_employee=Depends(_require_staff)
 ):
     """
-    Search contacts across CRM leads, synced mobile contacts, staff team, and message logs.
+    Search contacts across CRM leads, synced mobile contacts, staff team, and message logs (including message body).
     """
     query_str = q.strip()
     if not query_str:
@@ -6404,20 +6864,38 @@ def search_whatsapp_contacts(
     # 1. Search CRM Leads
     try:
         from sqlalchemy import text
-        crm_sql = text("""
-            SELECT id, name, phone, alternate_phone, status
-            FROM crm_leads
-            WHERE name ILIKE :q_like 
-               OR phone LIKE :q_like 
-               OR alternate_phone LIKE :q_like
-               OR (:digits <> '' AND (REGEXP_REPLACE(phone, '[^0-9]', '', 'g') LIKE :d_like OR REGEXP_REPLACE(alternate_phone, '[^0-9]', '', 'g') LIKE :d_like))
-            LIMIT 20;
-        """)
-        crm_rows = db.execute(crm_sql, {
-            "q_like": f"%{query_str}%",
-            "digits": clean_digits,
-            "d_like": f"%{clean_digits}%"
-        }).fetchall()
+        from app.services.crm_phone_sync_service import find_candidate_lead_ids_for_search
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=getattr(current_employee, 'tenant_id', None),
+            company_ids=getattr(current_employee, 'data_companies', None) or ([current_employee.base_company_id] if getattr(current_employee, 'base_company_id', None) else None),
+            search_term=query_str
+        )
+        if phone_lead_ids:
+            crm_sql = text("""
+                SELECT id, name, phone, alternate_phone, status
+                FROM crm_leads
+                WHERE name ILIKE :q_like 
+                   OR phone LIKE :q_like 
+                   OR alternate_phone LIKE :q_like
+                   OR id = ANY(:phone_lead_ids)
+                LIMIT 20;
+            """)
+            crm_rows = db.execute(crm_sql, {
+                "q_like": f"%{query_str}%",
+                "phone_lead_ids": phone_lead_ids
+            }).fetchall()
+        else:
+            crm_sql = text("""
+                SELECT id, name, phone, alternate_phone, status
+                FROM crm_leads
+                WHERE name ILIKE :q_like 
+                   OR phone LIKE :q_like 
+                   OR alternate_phone LIKE :q_like
+                LIMIT 20;
+            """)
+            crm_rows = db.execute(crm_sql, {
+                "q_like": f"%{query_str}%"
+            }).fetchall()
 
         for cid, c_name, c_ph, c_alt, c_stat in crm_rows:
             for p in (c_ph, c_alt):
@@ -6518,7 +6996,7 @@ def search_whatsapp_contacts(
     except Exception as e:
         logger.warning(f"Error searching staff employees: {e}")
 
-    # 4. Search Past Message Logs
+    # 4. Search Past Message Logs (Name, Phone, and Message Content)
     try:
         from sqlalchemy import text
         msg_sql = text("""
@@ -6527,6 +7005,7 @@ def search_whatsapp_contacts(
             FROM message_log
             WHERE (user_name IS NOT NULL AND user_name <> '' AND user_name ILIKE :q_like)
                OR mobile_number LIKE :q_like
+               OR message_body ILIKE :q_like
                OR (:digits <> '' AND REGEXP_REPLACE(mobile_number, '[^0-9]', '', 'g') LIKE :d_like)
             LIMIT 15;
         """)
@@ -6553,7 +7032,43 @@ def search_whatsapp_contacts(
     except Exception as e:
         logger.warning(f"Error searching message logs: {e}")
 
-    return {"success": True, "contacts": results[:40]}
+    # 5. Search Inbound Messages (wa_inbox Name, Phone, and Body Text)
+    try:
+        from sqlalchemy import text
+        inbox_sql = text("""
+            SELECT DISTINCT ON (RIGHT(REGEXP_REPLACE(from_phone, '[^0-9]', '', 'g'), 10))
+                   from_name, from_phone
+            FROM wa_inbox
+            WHERE (from_name IS NOT NULL AND from_name <> '' AND from_name ILIKE :q_like)
+               OR from_phone LIKE :q_like
+               OR body_text ILIKE :q_like
+               OR (:digits <> '' AND REGEXP_REPLACE(from_phone, '[^0-9]', '', 'g') LIKE :d_like)
+            LIMIT 15;
+        """)
+        inbox_rows = db.execute(inbox_sql, {
+            "q_like": f"%{query_str}%",
+            "digits": clean_digits,
+            "d_like": f"%{clean_digits}%"
+        }).fetchall()
+
+        for iname, iph in inbox_rows:
+            if not iph: continue
+            cp = ''.join(filter(str.isdigit, str(iph)))[-10:]
+            if len(cp) == 10 and cp not in seen_phones:
+                seen_phones.add(cp)
+                masked = f"+91 {cp[:4]}••••{cp[-2:]}"
+                results.append({
+                    "name": (iname or f"Inbound Contact (+91 {cp})").strip(),
+                    "phone": cp,
+                    "masked_phone": masked,
+                    "source": "WhatsApp Inbound",
+                    "status": "Received",
+                    "badge_color": "#10b981"
+                })
+    except Exception as e:
+        logger.warning(f"Error searching wa_inbox: {e}")
+
+    return {"success": True, "contacts": results[:50]}
 
 
 @router.get("/templates-list")
@@ -6603,5 +7118,401 @@ def get_whatsapp_templates_catalog(
         }
     ]
     return {"success": True, "templates": templates}
+
+
+# ── CANONICAL BAILEYS INBOUND INGESTION & GALLERY ENDPOINTS ──────────────────
+
+class WABotInboundPayload(BaseModel):
+    wamid: str
+    from_phone: str
+    sender_phone: Optional[str] = None
+    from_name: Optional[str] = None
+    message_type: str = "text"
+    body_text: Optional[str] = None
+    media_url: Optional[str] = None
+    media_mime_type: Optional[str] = None
+    media_name: Optional[str] = None
+    is_group: bool = False
+    group_jid: Optional[str] = None
+    group_name: Optional[str] = None
+    raw_payload: Optional[str] = None
+    is_from_me: bool = False
+    received_at: Optional[str] = None
+
+
+@router.post("/bot-inbound-message")
+def ingest_bot_inbound_message(
+    payload: WABotInboundPayload,
+    db: Session = Depends(get_db)
+):
+    """
+    Canonical Baileys Inbound Message Ingestion.
+    Persists inbound messages received on scanned WhatsApp account into WAInbox and MessageLog.
+    Guarantees:
+    - Idempotency via WhatsApp message ID (wamid)
+    - Correct 1:1 vs group categorization
+    - Auto-association to CRM Lead / Tenant company
+    - Genuine unassigned routing to '3. New Messages' (no fabricated employee assignment)
+    - Seamless transition to '1. My Messages' once claimed or replied to
+    """
+    from app.models.whatsapp import WAInbox, MessageLog
+    from app.models.crm import CRMLead
+    from sqlalchemy import or_
+
+    clean_wamid = str(payload.wamid or '').strip()
+    if not clean_wamid:
+        raise HTTPException(status_code=400, detail="WhatsApp message ID (wamid) is required")
+
+    # 1. Idempotency Check
+    existing_inbox = db.query(WAInbox).filter(WAInbox.wamid == clean_wamid).first()
+    if existing_inbox:
+        return {
+            "success": True,
+            "status": "duplicate",
+            "duplicate": True,
+            "is_duplicate": True,
+            "message": "Message already ingested",
+            "id": existing_inbox.id,
+            "wamid": existing_inbox.wamid
+        }
+
+    # 2. Identifier & Target Normalization
+    is_grp = bool(payload.is_group or (payload.group_jid and '@g.us' in payload.group_jid) or (payload.from_phone and '@g.us' in payload.from_phone))
+    
+    if is_grp:
+        target_phone = str(payload.group_jid or payload.from_phone or '').strip()
+        sender_digits = ''.join(filter(str.isdigit, str(payload.sender_phone or payload.from_phone or '')))[-10:]
+    else:
+        raw_digits = ''.join(filter(str.isdigit, str(payload.from_phone or '')))
+        target_phone = raw_digits[-10:] if len(raw_digits) >= 10 else raw_digits
+        sender_digits = target_phone
+
+    if not target_phone:
+        raise HTTPException(status_code=400, detail="Sender phone or group identifier is required")
+
+    # 3. CRM Lead & Company Resolution
+    resolved_company_id = 1
+    lead_id = None
+    resolved_name = (payload.from_name or '').strip()
+
+    if not is_grp and len(target_phone) == 10:
+        phone_variants = [target_phone, f"91{target_phone}", f"+91{target_phone}"]
+        lead = db.query(CRMLead).filter(
+            or_(CRMLead.phone.in_(phone_variants), CRMLead.alternate_phone.in_(phone_variants))
+        ).order_by(CRMLead.id.desc()).first()
+
+        if lead:
+            lead_id = lead.id
+            if getattr(lead, 'company_id', None):
+                resolved_company_id = lead.company_id
+            if not resolved_name or resolved_name.isdigit() or resolved_name in ("0", "None", "null"):
+                resolved_name = lead.name or f"Customer (+91 {target_phone})"
+    elif is_grp:
+        targets_db = _load_targets_from_db(db)
+        target_map = _build_target_map(targets_db)
+        tgt = target_map.get(target_phone.lower())
+        if not tgt:
+            digits_g = ''.join(filter(str.isdigit, target_phone))
+            tgt = target_map.get(digits_g)
+        if tgt and tgt.get("name"):
+            resolved_name = tgt["name"]
+        elif payload.group_name:
+            resolved_name = payload.group_name
+
+    if not resolved_name or resolved_name.isdigit() or resolved_name in ("0", "None", "null"):
+        resolved_name = f"Group ({target_phone})" if is_grp else f"Customer (+91 {target_phone})"
+
+    # 4. Routing & Assignment Continuity
+    # Check if this conversation thread was previously claimed/assigned
+    assigned_emp_id = None
+    if not payload.is_from_me and not is_grp:
+        prev_thread = db.query(WAInbox).filter(
+            or_(
+                WAInbox.from_phone == target_phone,
+                WAInbox.from_phone == f"91{target_phone}",
+                WAInbox.from_phone.like(f"%{target_phone}")
+            ),
+            WAInbox.assigned_to_emp_id.isnot(None)
+        ).order_by(WAInbox.id.desc()).first()
+
+        if prev_thread and prev_thread.assigned_to_emp_id:
+            assigned_emp_id = prev_thread.assigned_to_emp_id
+
+    now_utc = datetime.utcnow()
+    m_type = (payload.message_type or 'text').lower()
+    if (m_type == 'text' or not m_type) and payload.media_url:
+        mime = (payload.media_mime_type or '').lower()
+        if 'pdf' in mime or (payload.media_name and payload.media_name.lower().endswith('.pdf')):
+            m_type = 'document'
+        elif any(mime.startswith(x) for x in ('image/', 'video/', 'audio/')):
+            m_type = mime.split('/')[0]
+        else:
+            m_type = 'image'
+
+    # 5. Persist to WAInbox
+    inbox_entry = WAInbox(
+        wamid=clean_wamid,
+        company_id=resolved_company_id,
+        from_phone=target_phone,
+        from_name=resolved_name,
+        message_type="outbound" if payload.is_from_me else m_type,
+        body_text=payload.body_text or "",
+        media_url=payload.media_url,
+        media_mime_type=payload.media_mime_type,
+        lead_id=lead_id,
+        assigned_to_emp_id=assigned_emp_id,
+        is_read=payload.is_from_me,
+        replied=payload.is_from_me,
+        status="sent" if payload.is_from_me else ("in_progress" if assigned_emp_id else "new"),
+        received_at=now_utc,
+        raw_payload=payload.raw_payload
+    )
+    db.add(inbox_entry)
+
+    # 6. Persist to MessageLog for unified history and audit logs
+    log_entry = MessageLog(
+        message_sid=clean_wamid,
+        mobile_number=target_phone if is_grp else (f"91{target_phone}" if len(target_phone) == 10 else target_phone),
+        user_name=resolved_name,
+        message_type=f"scanned_{m_type}" if not is_grp else f"group_{m_type}",
+        message_body=payload.body_text or (f"[Media: {payload.media_url}]" if payload.media_url else ""),
+        provider="BAILEYS",
+        initial_status="sent" if payload.is_from_me else "received",
+        current_status="sent" if payload.is_from_me else "received",
+        sent_at=now_utc,
+        sent_by_staff_id=assigned_emp_id,
+        sender_type="staff" if payload.is_from_me else "user",
+        webhook_data=payload.raw_payload
+    )
+    db.add(log_entry)
+    db.commit()
+
+    return {
+        "success": True,
+        "status": "ingested",
+        "inbox_status": inbox_entry.status,
+        "id": inbox_entry.id,
+        "wamid": clean_wamid,
+        "from_phone": target_phone,
+        "recipient_type": "group" if is_grp else "individual",
+        "assigned_to": assigned_emp_id,
+        "is_unassigned": (assigned_emp_id is None and not payload.is_from_me)
+    }
+
+
+@router.get("/chat-gallery")
+def get_chat_media_gallery(
+    phone: str = Query(...),
+    recipient_type: Optional[str] = Query(None),
+    media_category: Optional[str] = Query("all"),
+    db: Session = Depends(get_db),
+    current_user=Depends(_require_staff)
+):
+    """
+    Unified Media Gallery for WhatsApp conversations (Contacts & Groups).
+    Scans persisted message logs and inbox threads for all attachments exchanged.
+    Categorizes into:
+    - 'all': All media
+    - 'photos': Images / Photos
+    - 'documents': PDFs and Documents
+    Verifies physical binary availability on disk / object storage, returning clean unavailable states.
+    """
+    from app.models.whatsapp import WAInbox, MessageLog
+    from sqlalchemy import or_, desc
+    from pathlib import Path
+    import json
+    import re
+
+    raw_target = str(phone or "").strip()
+    rec_type_val = str(recipient_type or "").strip().lower()
+
+    targets = _load_targets_from_db(db)
+    target_map = _build_target_map(targets)
+
+    is_grp = (rec_type_val in ("group", "channel")) or is_known_whatsapp_group(raw_target, target_map)
+
+    target_variants = set()
+    target_variants.add(raw_target)
+    group_name_filter = None
+
+    if is_grp:
+        search_target = raw_target
+        digits_target = ''.join(filter(str.isdigit, raw_target))
+        if digits_target:
+            target_variants.add(digits_target)
+            if digits_target.startswith("120363"):
+                target_variants.add(f"{digits_target}@g.us")
+        if raw_target.endswith("@g.us"):
+            target_variants.add(raw_target[:-5])
+
+        tgt_info = target_map.get(raw_target.lower()) or (target_map.get(digits_target) if digits_target else None)
+        if tgt_info:
+            if tgt_info.get("name"):
+                group_name_filter = tgt_info["name"]
+            if tgt_info.get("raw_ident"):
+                target_variants.add(tgt_info["raw_ident"])
+    else:
+        clean_phone = ''.join(filter(str.isdigit, raw_target))[-10:]
+        search_target = clean_phone or raw_target
+        target_variants.add(search_target)
+        target_variants.add(f"91{search_target}")
+        target_variants.add(f"+91{search_target}")
+
+    target_variants_list = list(target_variants)
+
+    # Resolve local storage directories for availability check
+    frontend_storage = Path(__file__).resolve().parents[5] / "frontend" / "storage" / "wa_media"
+    backend_storage = Path(__file__).resolve().parents[4] / "storage" / "wa_media"
+
+    seen_media_urls = set()
+    gallery_items = []
+
+    # 1. Fetch from WAInbox
+    inb_query = db.query(WAInbox).filter(
+        or_(
+            WAInbox.from_phone.in_(target_variants_list),
+            WAInbox.from_phone == search_target
+        ),
+        WAInbox.media_url.isnot(None),
+        WAInbox.media_url != ''
+    ).order_by(desc(WAInbox.id)).limit(200).all()
+
+    for m in inb_query:
+        raw_url = str(m.media_url or '').strip()
+        if not raw_url or raw_url in seen_media_urls:
+            continue
+        seen_media_urls.add(raw_url)
+
+        # Categorize
+        mime = str(m.media_mime_type or '').lower()
+        msg_t = str(m.message_type or '').lower()
+        fname = raw_url.split('/')[-1].split('?')[0]
+        
+        is_pdf = (msg_t == 'document') or 'pdf' in mime or fname.lower().endswith('.pdf')
+        is_img = not is_pdf and (msg_t == 'image' or mime.startswith('image/') or any(fname.lower().endswith(e) for e in ('.jpg', '.jpeg', '.png', '.webp', '.gif')))
+
+        category = 'documents' if is_pdf else ('photos' if is_img else 'other')
+
+        # Check binary availability
+        is_avail = False
+        if raw_url.startswith('http://') or raw_url.startswith('https://') or raw_url.startswith('data:'):
+            is_avail = True
+        elif raw_url.isdigit():
+            # Meta media ID
+            cached = list(frontend_storage.glob(f"meta_{raw_url}.*")) + list(backend_storage.glob(f"meta_{raw_url}.*"))
+            is_avail = bool(cached)
+        else:
+            clean_name = fname
+            f_cand = frontend_storage / clean_name
+            b_cand = backend_storage / clean_name
+            is_avail = (f_cand.is_file() or b_cand.is_file())
+
+        ist_dt = (m.received_at + timedelta(hours=5, minutes=30)).strftime('%d %b %Y, %I:%M %p') if m.received_at else '—'
+
+        gallery_items.append({
+            "id": f"wa_media_{m.id}",
+            "media_url": raw_url,
+            "filename": fname,
+            "category": category,
+            "media_type": "document" if is_pdf else ("image" if is_img else msg_t),
+            "media_mime_type": m.media_mime_type,
+            "caption": m.body_text or "",
+            "sender_name": m.from_name or ("You" if m.message_type == "outbound" else "Contact"),
+            "direction": "outbound" if m.message_type == "outbound" else "inbound",
+            "timestamp": ist_dt,
+            "is_available": is_avail,
+            "channel": "official" if str(m.wamid or '').startswith('wamid.') else "scanned"
+        })
+
+    # 2. Fetch from MessageLog (for outbound media dispatches)
+    ml_query = db.query(MessageLog).filter(
+        or_(
+            MessageLog.mobile_number.in_(target_variants_list),
+            MessageLog.mobile_number == search_target
+        ),
+        or_(
+            MessageLog.webhook_data.like('%media_url%'),
+            MessageLog.message_body.like('%[Media:%')
+        )
+    ).order_by(desc(MessageLog.id)).limit(200).all()
+
+    for l in ml_query:
+        media_url = None
+        media_mime = None
+        media_name = None
+
+        if l.webhook_data:
+            try:
+                wb = json.loads(l.webhook_data) if isinstance(l.webhook_data, str) else l.webhook_data
+                if isinstance(wb, dict):
+                    media_url = wb.get("media_url")
+                    media_mime = wb.get("media_mime_type")
+                    media_name = wb.get("media_name")
+            except Exception:
+                pass
+
+        if not media_url and l.message_body and "[Media: " in l.message_body:
+            m_match = re.search(r'\[Media:\s*([^\]]+)\]', l.message_body)
+            if m_match:
+                media_url = m_match.group(1).strip()
+
+        if not media_url or media_url in seen_media_urls:
+            continue
+        seen_media_urls.add(media_url)
+
+        fname = media_name or media_url.split('/')[-1].split('?')[0]
+        mime = str(media_mime or '').lower()
+        is_pdf = 'pdf' in mime or fname.lower().endswith('.pdf')
+        is_img = not is_pdf and (mime.startswith('image/') or any(fname.lower().endswith(e) for e in ('.jpg', '.jpeg', '.png', '.webp', '.gif')))
+        category = 'documents' if is_pdf else ('photos' if is_img else 'other')
+
+        is_avail = False
+        if media_url.startswith('http://') or media_url.startswith('https://') or media_url.startswith('data:'):
+            is_avail = True
+        else:
+            clean_name = fname
+            is_avail = (frontend_storage / clean_name).is_file() or (backend_storage / clean_name).is_file()
+
+        ist_dt = (l.sent_at + timedelta(hours=5, minutes=30)).strftime('%d %b %Y, %I:%M %p') if l.sent_at else '—'
+
+        gallery_items.append({
+            "id": f"ml_media_{l.id}",
+            "media_url": media_url,
+            "filename": fname,
+            "category": category,
+            "media_type": "document" if is_pdf else ("image" if is_img else "file"),
+            "media_mime_type": media_mime,
+            "caption": l.message_body or "",
+            "sender_name": l.sent_by_name or "Staff",
+            "direction": "outbound",
+            "timestamp": ist_dt,
+            "is_available": is_avail,
+            "channel": "official" if ("META" in str(l.provider or '').upper() or str(l.message_sid or '').startswith('wamid.')) else "scanned"
+        })
+
+    # Filter by requested category
+    req_cat = (media_category or 'all').lower()
+    if req_cat in ('photos', 'images', 'image'):
+        filtered_items = [i for i in gallery_items if i['category'] == 'photos']
+    elif req_cat in ('documents', 'docs', 'pdf'):
+        filtered_items = [i for i in gallery_items if i['category'] == 'documents']
+    else:
+        filtered_items = gallery_items
+
+    photos_count = sum(1 for i in gallery_items if i['category'] == 'photos')
+    docs_count = sum(1 for i in gallery_items if i['category'] == 'documents')
+
+    return {
+        "success": True,
+        "phone": clean_phone if not is_grp else raw_target,
+        "recipient_type": "group" if is_grp else "individual",
+        "total": len(filtered_items),
+        "items": filtered_items,
+        "stats": {
+            "all": len(gallery_items),
+            "photos": photos_count,
+            "documents": docs_count
+        }
+    }
 
 

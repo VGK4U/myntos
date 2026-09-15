@@ -1702,12 +1702,16 @@
                         
                         // Revenue Analytics (3-part deal value system)
                         if (stats.revenue) {
-                            document.getElementById('revenueTotalAll').textContent = formatCurrency(stats.revenue.total);
-                            document.getElementById('revenueReceivedAll').textContent = formatCurrency(stats.revenue.received);
-                            document.getElementById('revenueBalanceAll').textContent = formatCurrency(stats.revenue.balance);
+                            const elTot = document.getElementById('revenueTotalAll');
+                            if (elTot) elTot.textContent = formatCurrency(stats.revenue.total);
+                            const elRec = document.getElementById('revenueReceivedAll');
+                            if (elRec) elRec.textContent = formatCurrency(stats.revenue.received);
+                            const elBal = document.getElementById('revenueBalanceAll');
+                            if (elBal) elBal.textContent = formatCurrency(stats.revenue.balance);
                         }
                         if (stats.revenue_this_month) {
-                            document.getElementById('revenueThisMonth').textContent = formatCurrency(stats.revenue_this_month.total);
+                            const elMon = document.getElementById('revenueThisMonth');
+                            if (elMon) elMon.textContent = formatCurrency(stats.revenue_this_month.total);
                         }
                     }
                 }

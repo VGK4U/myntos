@@ -513,3 +513,10 @@ from app.models.telephony_call_flow import (
     TelephonyPlivoEndpoint,
     TelephonyFlowExecutionLog
 )
+
+# Persistent Relational Automation Models (Sep 2026)
+from app.models.automation import (
+    AutomationExecution,
+    AutomationDispatch,
+    AutomationTargetConfig
+)

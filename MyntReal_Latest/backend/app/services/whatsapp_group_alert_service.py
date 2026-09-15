@@ -34,7 +34,8 @@ def send_group_bot_message(
     job_id: Optional[str] = None,
     job_name: Optional[str] = None,
     trigger_type: Optional[str] = None,
-    db: Optional[Session] = None
+    db: Optional[Session] = None,
+    execution_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Sends message payload to WhatsApp Web Group Bot Gateway with IPv4/IPv6 & env-var fallback.
@@ -56,6 +57,8 @@ def send_group_bot_message(
         payload["job_name"] = job_name
     if trigger_type:
         payload["trigger_type"] = trigger_type
+    if execution_id:
+        payload["execution_id"] = execution_id
 
     env_url = os.getenv("WHATSAPP_BOT_URL") or os.getenv("WA_BOT_URL") or os.getenv("WA_GROUP_BOT_URL")
     urls = []
@@ -88,16 +91,18 @@ def send_group_bot_message(
             from sqlalchemy import text
             import json
             target_jid = group_id or clean_code or invite_code or "120363410784518818@g.us"
-            rp = {"job_id": job_id, "job_name": job_name, "trigger_type": trigger_type}
+            rp = {"job_id": job_id, "job_name": job_name, "trigger_type": trigger_type, "execution_id": execution_id}
             clean_rp = {k: v for k, v in rp.items() if v is not None}
             res = db.execute(text("""
-                INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, status, created_at, result_payload)
-                VALUES ('group', :target_jid, :msg, 'pending', NOW(), CAST(:rp AS jsonb))
+                INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, status, created_at, result_payload, job_id, execution_id)
+                VALUES ('group', :target_jid, :msg, 'pending', NOW(), CAST(:rp AS jsonb), :job_id, :execution_id)
                 RETURNING id
             """), {
                 "target_jid": target_jid,
                 "msg": message_text,
-                "rp": json.dumps(clean_rp) if clean_rp else None
+                "rp": json.dumps(clean_rp) if clean_rp else None,
+                "job_id": job_id,
+                "execution_id": execution_id
             })
             db.commit()
             queue_id = res.fetchone()[0]

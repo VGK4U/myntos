@@ -572,19 +572,20 @@ class CallFlowInterpreter:
         direct_routing_options = cls._get_published_direct_routing_options(db, company_id, called_did)
         if direct_routing_options:
             logger.info(f"[FLOW-INTERPRETER] Presenting Direct Routing Extension Prompt ({len(direct_routing_options)} options) to non-sticky caller {caller_phone}")
-            return cls._get_direct_routing_menu_xml(db, company_id, called_did, direct_routing_options, lang="en")
+            return cls._get_direct_routing_menu_xml(db, company_id, called_did, direct_routing_options, lang="en", session_id=session_id)
 
         # Gate 4d: CRM Lead Language Check
         known_lang = cls._detect_crm_caller_language(db, caller_phone)
         if known_lang in ('te', 'telugu'):
             logger.info(f"[FLOW-INTERPRETER] Recognized Telugu caller {caller_phone} from CRM lead record.")
-            return cls._get_department_menu_xml(db, company_id, called_did, lang="te")
+            return cls._get_department_menu_xml(db, company_id, called_did, lang="te", session_id=session_id)
         elif known_lang in ('en', 'english'):
             logger.info(f"[FLOW-INTERPRETER] Recognized English caller {caller_phone} from CRM lead record.")
-            return cls._get_department_menu_xml(db, company_id, called_did, lang="en")
+            return cls._get_department_menu_xml(db, company_id, called_did, lang="en", session_id=session_id)
 
         # Gate 4e: Bilingual Language Selection Gate (Telugu / English)
-        lang_gather_url = "https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=lang"
+        sess_suffix = f"&amp;session_id={session_id}" if session_id else ""
+        lang_gather_url = f"https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=lang{sess_suffix}"
         lang_prompt = "Welcome to Mynt Real. తెలుగు కొరకు 1 నొక్కండి. For English, press 2."
         logger.info(f"[FLOW-INTERPRETER] Presenting Bilingual Language Selection Gate to {caller_phone}")
         return cls._generate_xml_response([
@@ -836,15 +837,17 @@ class CallFlowInterpreter:
         company_id: int,
         called_did: str,
         options: List[Dict[str, Any]],
-        lang: str = "en"
+        lang: str = "en",
+        session_id: Optional[str] = None
     ) -> str:
         """
         Generates initial Direct Routing Menu XML with 5-second timeout.
         If no DTMF within 5 seconds, falls through directly to Main IVR without unavailable message.
         """
-        gather_url = "https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=direct_routing"
+        sess_suffix = f"&amp;session_id={session_id}" if session_id else ""
+        gather_url = f"https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=direct_routing{sess_suffix}"
         prompt = cls._build_direct_routing_prompt(options)
-        dept_elements = cls._get_department_menu_elements(db, company_id, called_did, lang=lang)
+        dept_elements = cls._get_department_menu_elements(db, company_id, called_did, lang=lang, session_id=session_id)
 
         return cls._generate_xml_response([
             f'<GetDigits action="{gather_url}" method="POST" numDigits="1" timeout="5" retries="1">',
@@ -854,10 +857,11 @@ class CallFlowInterpreter:
         ])
 
     @classmethod
-    def _get_department_menu_elements(cls, db: Session, company_id: int, called_did: str, lang: str = "te") -> List[str]:
+    def _get_department_menu_elements(cls, db: Session, company_id: int, called_did: str, lang: str = "te", session_id: Optional[str] = None) -> List[str]:
         """Generates full 8-option IVR menu elements in Telugu or English."""
         selected_lang = 'te' if lang in ('te', 'telugu') else 'en'
-        gather_url = f"https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=dept&amp;lang={selected_lang}"
+        sess_suffix = f"&amp;session_id={session_id}" if session_id else ""
+        gather_url = f"https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=dept&amp;lang={selected_lang}{sess_suffix}"
         if selected_lang == "te":
             dept_prompt = (
                 "మైంట్ రియల్‌కి స్వాగతం. "
@@ -894,9 +898,9 @@ class CallFlowInterpreter:
         ]
 
     @classmethod
-    def _get_department_menu_xml(cls, db: Session, company_id: int, called_did: str, lang: str = "te") -> str:
+    def _get_department_menu_xml(cls, db: Session, company_id: int, called_did: str, lang: str = "te", session_id: Optional[str] = None) -> str:
         """Generates full 8-option IVR menu XML in Telugu or English."""
-        return cls._generate_xml_response(cls._get_department_menu_elements(db, company_id, called_did, lang=lang))
+        return cls._generate_xml_response(cls._get_department_menu_elements(db, company_id, called_did, lang=lang, session_id=session_id))
 
     @classmethod
     def handle_flow_step(
@@ -1658,7 +1662,9 @@ class CallFlowInterpreter:
         called_did: str,
         digits: str,
         menu_type: str = "main",
-        lang: str = "en"
+        lang: str = "en",
+        session_id: Optional[str] = None,
+        call_uuid: Optional[str] = None
     ) -> str:
         """
         Authoritative Sales IVR Keypad Router (Bilingual Telugu & English):
@@ -1680,14 +1686,14 @@ class CallFlowInterpreter:
         menu = str(menu_type or 'main').strip().lower()
         selected_lang = 'te' if lang in ('te', 'telugu') else 'en'
 
-        logger.info(f"[SALES-IVR-GATHER] Inbound call from {caller_phone} selected DTMF: '{d}' (Menu: {menu}, Lang: {selected_lang})")
+        logger.info(f"[SALES-IVR-GATHER] Inbound call from {caller_phone} selected DTMF: '{d}' (Menu: {menu}, Lang: {selected_lang}, Session: {session_id}, CallUUID: {call_uuid})")
 
         # 0. Handle Direct Routing Menu (First-Stage Inbound IVR)
         if menu in ("direct_routing", "agent"):
             # Case A: If no digits entered within 5-second timeout -> directly transition to Main IVR without unavailable prompt
             if not d:
                 logger.info(f"[DIRECT-ROUTING] 5-second timeout with no selection from {caller_phone}. Transitioning to Main IVR.")
-                return cls._get_department_menu_xml(db, company_id, called_did, lang=selected_lang)
+                return cls._get_department_menu_xml(db, company_id, called_did, lang=selected_lang, session_id=session_id)
 
             resolution = cls.resolve_extension_destination(
                 db=db,
@@ -1703,7 +1709,7 @@ class CallFlowInterpreter:
             # Invalid or inactive extension -> seamlessly route to Main IVR
             if res_status in ("invalid_extension", "inactive_extension"):
                 logger.warning(f"[DIRECT-ROUTING] Extension '{d}' ({res_status}) entered by {caller_phone}. Seamlessly routing to Main IVR.")
-                return cls._get_department_menu_xml(db, company_id, called_did, lang=selected_lang)
+                return cls._get_department_menu_xml(db, company_id, called_did, lang=selected_lang, session_id=session_id)
 
             # Invalid destination, tenant mismatch, offline, or busy -> unavailable prompt + Main IVR
             if res_status in ("invalid_destination", "tenant_mismatch", "offline", "busy"):
@@ -1711,7 +1717,7 @@ class CallFlowInterpreter:
                 logger.info(f"[DIRECT-ROUTING] Extension '{d}' cannot be connected ({res_status}: {reason}). Routing to Customer Care.")
                 return cls._generate_xml_response([
                     f'<Speak voice="Polly.Aditi" language="en-IN">{unavailable_prompt}</Speak>',
-                    *cls._get_department_menu_elements(db, company_id, called_did, lang=selected_lang)
+                    *cls._get_department_menu_elements(db, company_id, called_did, lang=selected_lang, session_id=session_id)
                 ])
 
             # Target is AVAILABLE
@@ -1723,13 +1729,20 @@ class CallFlowInterpreter:
                     ring_timeout = resolution.get("ring_timeout", 20)
                     display_name = resolution.get("display_name") or f"Option {d}"
 
-                    # Record operator_id to session
+                    # Record operator_id to session strictly by session_id / CallUUID
                     clean_caller = re.sub(r'[^\d]', '', str(caller_phone or ''))[-10:]
                     try:
-                        v_sess = db.query(VoIPCallSession).filter(
-                            VoIPCallSession.customer_phone.ilike(f"%{clean_caller}%"),
-                            VoIPCallSession.direction == 'inbound'
-                        ).order_by(VoIPCallSession.id.desc()).first()
+                        v_sess = None
+                        if session_id:
+                            v_sess = db.query(VoIPCallSession).filter(VoIPCallSession.call_session_id == session_id).first()
+                        if not v_sess and call_uuid:
+                            v_sess = db.query(VoIPCallSession).filter(VoIPCallSession.provider_call_id == call_uuid).first()
+                        if not v_sess and clean_caller:
+                            v_sess = db.query(VoIPCallSession).filter(
+                                VoIPCallSession.customer_phone.ilike(f"%{clean_caller}%"),
+                                VoIPCallSession.direction == 'inbound'
+                            ).order_by(VoIPCallSession.id.desc()).first()
+
                         if v_sess:
                             v_sess.operator_id = emp.id
                             v_sess.operator_name = emp.full_name or f"{emp.first_name or ''} {emp.last_name or ''}".strip() or emp.emp_code
@@ -1766,19 +1779,20 @@ class CallFlowInterpreter:
 
             return cls._generate_xml_response([
                 f'<Speak voice="Polly.Aditi" language="en-IN">{unavailable_prompt}</Speak>',
-                *cls._get_department_menu_elements(db, company_id, called_did, lang=selected_lang)
+                *cls._get_department_menu_elements(db, company_id, called_did, lang=selected_lang, session_id=session_id)
             ])
 
         # 1. Handle Language Selection Gate
         if menu == "lang":
             if d == "1":
                 logger.info(f"[SALES-IVR-GATHER] Caller {caller_phone} selected Telugu.")
-                return cls._get_department_menu_xml(db, company_id, called_did, lang="te")
+                return cls._get_department_menu_xml(db, company_id, called_did, lang="te", session_id=session_id)
             elif d == "2":
                 logger.info(f"[SALES-IVR-GATHER] Caller {caller_phone} selected English.")
-                return cls._get_department_menu_xml(db, company_id, called_did, lang="en")
+                return cls._get_department_menu_xml(db, company_id, called_did, lang="en", session_id=session_id)
             else:
-                lang_gather_url = "https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=lang"
+                sess_suffix = f"&amp;session_id={session_id}" if session_id else ""
+                lang_gather_url = f"https://www.myntreal.com/api/v1/telephony/plivo/ivr/gather?menu=lang{sess_suffix}"
                 return cls._generate_xml_response([
                     f'<Speak voice="Polly.Aditi" language="en-IN">Invalid selection. తెలుగు కొరకు 1 నొక్కండి. For English, press 2.</Speak>',
                     f'<GetDigits action="{lang_gather_url}" method="POST" numDigits="1" timeout="7" retries="1">',
@@ -1800,13 +1814,20 @@ class CallFlowInterpreter:
         }
         selected_label = opt_map.get(d, f"Option {d}")
 
-        # Persist DTMF Selection into VoIPCallSession
+        # Persist DTMF Selection strictly into THIS VoIPCallSession
         clean_caller = re.sub(r'[^\d]', '', str(caller_phone or ''))[-10:]
         try:
-            session = db.query(VoIPCallSession).filter(
-                VoIPCallSession.customer_phone.ilike(f"%{clean_caller}%"),
-                VoIPCallSession.direction == 'inbound'
-            ).order_by(VoIPCallSession.id.desc()).first()
+            session = None
+            if session_id:
+                session = db.query(VoIPCallSession).filter(VoIPCallSession.call_session_id == session_id).first()
+            if not session and call_uuid:
+                session = db.query(VoIPCallSession).filter(VoIPCallSession.provider_call_id == call_uuid).first()
+            if not session and clean_caller:
+                session = db.query(VoIPCallSession).filter(
+                    VoIPCallSession.customer_phone.ilike(f"%{clean_caller}%"),
+                    VoIPCallSession.direction == 'inbound'
+                ).order_by(VoIPCallSession.id.desc()).first()
+
             if session:
                 meta = {}
                 if session.metadata_json:
@@ -1815,18 +1836,21 @@ class CallFlowInterpreter:
                     except Exception:
                         pass
                 selections = meta.get("ivr_selections", [])
-                selections.append({
+                new_sel = {
                     "digit": d,
                     "label": selected_label,
                     "lang": selected_lang,
                     "time": get_indian_time().strftime('%H:%M:%S')
-                })
+                }
+                # Prevent duplicate DTMF bounce on same digit in same session
+                if not selections or selections[-1].get("digit") != d or selections[-1].get("label") != selected_label:
+                    selections.append(new_sel)
                 meta["ivr_selections"] = selections
                 meta["latest_selection"] = selected_label
                 meta["preferred_language"] = selected_lang
                 session.metadata_json = json.dumps(meta)
                 db.commit()
-                logger.info(f"[IVR-GATHER] Recorded selection '{selected_label}' ({selected_lang}) to VoIPCallSession #{session.id}")
+                logger.info(f"[IVR-GATHER] Recorded selection '{selected_label}' ({selected_lang}) to VoIPCallSession #{session.id} ({session.call_session_id})")
         except Exception as e:
             logger.warning(f"[IVR-GATHER] Error persisting DTMF selection: {e}")
 

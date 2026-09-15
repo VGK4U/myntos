@@ -27,6 +27,7 @@ from typing import Optional, Dict, Any, List
 import pytz
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from app.services.crm_phone_sync_service import sync_lead_phone_identities
 
 logger = logging.getLogger(__name__)
 GRAPH_API_VERSION = "v24.0"
@@ -716,7 +717,13 @@ class FacebookLeadsService:
             logger.warning(f"[META-WEBHOOK-REJECT] Lead dropped: Invalid company_id={target_company_id}")
             return None
 
+        # Stage 2B Phase 2R-3D: Derive tenant_id from associated_companies
+        from app.models.staff_accounts import AssociatedCompany
+        comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == target_company_id).first() if db else None
+        target_tenant_id = comp.client_id if comp else None
+
         crm = {
+            'tenant_id':           target_tenant_id,
             'company_id':          target_company_id,
             'category_id':         target_category_id,
             'name':                name[:200],
@@ -729,7 +736,7 @@ class FacebookLeadsService:
             'handler_type':        'unassigned',
             'city':                city[:100]  if city  else None,
             'state':               state[:100] if state else None,
-            'pincode':             pincode[:20] if pincode else None,
+            'pincode':             pincode[:10] if pincode else None,
             'description':         '\n'.join(desc_parts)[:2000],
             'looking_for':         looking[:500]             if looking else None,
             'requirements':        req[:1000]                if req    else None,
@@ -794,11 +801,59 @@ class FacebookLeadsService:
             logger.warning(f"[META-REJECT] Lead {lead_id} mapping returned empty data.")
             return None
 
+        # 2.5 Stage 2B Phase 2R-3D: Phone Deduplication with Advisory Locking
+        from app.services.crm_dedup_service import find_phone_duplicate
+
+        target_tenant_id = crm_data.get('tenant_id')
+        target_company_id = crm_data.get('company_id')
+        target_phone = crm_data.get('phone')
+        target_alt_phone = crm_data.get('alternate_phone')
+
+        if target_tenant_id and target_company_id and (target_phone or target_alt_phone):
+            existing_lead = find_phone_duplicate(
+                db=db,
+                tenant_id=target_tenant_id,
+                company_id=target_company_id,
+                phone=target_phone,
+                alternate_phone=target_alt_phone,
+                with_lock=True
+            )
+            if existing_lead:
+                logger.info(f"[META-DEDUP] Phone {target_phone} matched existing lead #{existing_lead.id} in company {target_company_id}. Linking attribution to existing lead.")
+                try:
+                    attribution = MetaLeadsAttribution(
+                        company_id=existing_lead.company_id,
+                        lead_id=existing_lead.id,
+                        meta_lead_id=str(lead_id),
+                        meta_campaign_id=str(lead_data.get('campaign_id') or '') or None,
+                        meta_campaign_name=str(lead_data.get('campaign_name') or '') or None,
+                        meta_adset_id=str(lead_data.get('adset_id') or '') or None,
+                        meta_adset_name=str(lead_data.get('adset_name') or '') or None,
+                        meta_ad_id=str(lead_data.get('ad_id') or '') or None,
+                        meta_ad_name=str(lead_data.get('ad_name') or '') or None,
+                        meta_form_id=str(resolved_form_id or '') or None,
+                        meta_form_name=str(page_name) if page_name else None
+                    )
+                    db.add(attribution)
+                    db.commit()
+                except IntegrityError:
+                    db.rollback()
+                return existing_lead
+
         # 3. Single Atomic Transaction: CRMLead + MetaLeadsAttribution
         try:
             crm_lead = CRMLead(**crm_data)
             db.add(crm_lead)
             db.flush()  # Generates crm_lead.id within active transaction
+
+            sync_lead_phone_identities(
+                db=db,
+                lead=crm_lead,
+                phone_raw=crm_lead.phone,
+                source_channel='meta_lead_ads',
+                source_ref=str(lead_id),
+                with_lock=True
+            )
 
             attribution = MetaLeadsAttribution(
                 company_id=crm_lead.company_id,

@@ -28,6 +28,7 @@ import logging
 import json
 
 from app.core.database import get_db
+from app.services.crm_phone_sync_service import sync_lead_phone_identities
 from app.models.crm import CRMLead
 from app.models.meta_attribution import MetaLeadsAttribution
 from app.models.staff import StaffEmployee
@@ -247,8 +248,21 @@ async def create_test_lead(
     
     if not company:
         raise HTTPException(status_code=404, detail="Company not found")
-    
+
+    if not company.client_id:
+        raise HTTPException(status_code=422, detail="Company has no associated tenant_id")
+
+    from app.services.crm_dedup_service import assert_no_phone_duplicate
+    assert_no_phone_duplicate(
+        db=db,
+        tenant_id=company.client_id,
+        company_id=data.company_id,
+        phone=data.phone,
+        with_lock=True
+    )
+
     test_lead_data = {
+        'tenant_id': company.client_id,
         'company_id': data.company_id,
         'name': data.name,
         'email': data.email,
@@ -273,6 +287,15 @@ async def create_test_lead(
     
     crm_lead = CRMLead(**test_lead_data)
     db.add(crm_lead)
+    db.flush()
+    sync_lead_phone_identities(
+        db=db,
+        lead=crm_lead,
+        phone_raw=crm_lead.phone,
+        source_channel='meta_lead_ads',
+        source_ref=f"test_{crm_lead.id}",
+        with_lock=True
+    )
     db.commit()
     db.refresh(crm_lead)
     

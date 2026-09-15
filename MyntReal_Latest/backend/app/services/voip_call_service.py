@@ -8,7 +8,7 @@ import os
 import re
 import json
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Set
 from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, desc
@@ -35,6 +35,92 @@ class VoIPCallService:
     Orchestrates telephony providers, enforces tenant isolation, handles call state transitions,
     and manages authoritative recording pipelines.
     """
+
+    @classmethod
+    def resolve_allowed_company_ids(cls, current_user: Any) -> Set[int]:
+        """
+        Authoritatively resolves all company IDs accessible to the current user,
+        handling base_company_id, company_id, and data_companies (both integers and dicts like {'company_id': 4}).
+        """
+        allowed: Set[int] = set()
+        user_cid = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None)
+        if user_cid is not None:
+            try:
+                allowed.add(int(user_cid))
+            except (ValueError, TypeError):
+                pass
+        if not allowed:
+            allowed.add(1)
+
+        raw_comps = getattr(current_user, 'data_companies', None)
+        if raw_comps and isinstance(raw_comps, (list, tuple, set)):
+            for cid in raw_comps:
+                if isinstance(cid, dict) and 'company_id' in cid:
+                    cid = cid['company_id']
+                try:
+                    if cid is not None and str(cid).strip() != '':
+                        allowed.add(int(cid))
+                except (ValueError, TypeError):
+                    pass
+        return allowed
+
+    @classmethod
+    def is_supreme_user(cls, current_user: Any) -> bool:
+        """
+        Authoritatively checks whether the user possesses supreme/super-admin privileges,
+        aligning with CRM, VGK4U, and staff authorization rules.
+        """
+        is_sup = getattr(current_user, 'is_supreme', False)
+        if is_sup is True or (isinstance(is_sup, (bool, int)) and bool(is_sup)):
+            return True
+        staff_type = str(getattr(current_user, 'staff_type', '') or '').strip()
+        if staff_type in ('VGK4U', 'VGK4U Supreme'):
+            return True
+        if str(getattr(current_user, 'emp_code', '') or '').strip() == 'MR10001':
+            return True
+        return False
+
+    @classmethod
+    def is_operator_owner(cls, session: VoIPCallSession, current_user: Any) -> bool:
+        """
+        Authoritatively checks whether current_user is the operator/owner who originated this call session.
+        Matches by numeric ID (user.id == session.operator_id) or canonical reference string (emp_code / user_id).
+        """
+        user_id = getattr(current_user, 'id', None)
+        user_emp = getattr(current_user, 'emp_code', None)
+
+        if session.operator_id is not None and user_id is not None and user_id == session.operator_id:
+            return True
+
+        if session.operator_user_ref is not None:
+            s_ref = str(session.operator_user_ref).strip()
+            if user_emp is not None and str(user_emp).strip() == s_ref:
+                return True
+            if user_id is not None and str(user_id).strip() == s_ref:
+                return True
+
+        return False
+
+    @classmethod
+    def authorize_session_access(cls, session: VoIPCallSession, current_user: Any) -> bool:
+        """
+        Authoritatively checks if current_user is permitted to access, modify, or terminate the call session.
+        Permitted if:
+        1. User is supreme / super-admin.
+        2. User is the originating operator/owner of the call session.
+        3. Session company_id matches the user's accessible company scope (tenant isolation).
+        """
+        if cls.is_supreme_user(current_user):
+            return True
+
+        if cls.is_operator_owner(session, current_user):
+            return True
+
+        allowed_companies = cls.resolve_allowed_company_ids(current_user)
+        if session.company_id and session.company_id in allowed_companies:
+            return True
+
+        return False
 
     @staticmethod
     def normalize_phone_e164(phone: str) -> str:
@@ -71,6 +157,20 @@ class VoIPCallService:
         - Dispatches call via provider-agnostic telephony adapter (if dispatch_provider_call=True)
         - Idempotently links OperatorCall & CRM Lead history
         """
+        # Lead ID type-safety normalization:
+        # Valid numeric values become int; empty strings, whitespace, None, or invalid text become None.
+        clean_lead_id: Optional[int] = None
+        if lead_id is not None:
+            if isinstance(lead_id, int):
+                clean_lead_id = lead_id
+            else:
+                s_lead = str(lead_id).strip()
+                if s_lead and s_lead.isdigit():
+                    try:
+                        clean_lead_id = int(s_lead)
+                    except (ValueError, TypeError):
+                        clean_lead_id = None
+
         # 1. Resolve Operator Identity & Company ID
         is_staff = hasattr(current_user, 'emp_code')
         operator_id = current_user.id if is_staff else None
@@ -83,32 +183,16 @@ class VoIPCallService:
         # 2. Normalize customer phone number
         dest_e164 = cls.normalize_phone_e164(customer_phone)
 
-        # Resolve accessible companies for the operator based on CRM authorization model
-        allowed_company_ids = []
-        if company_id:
-            allowed_company_ids.append(company_id)
-        if is_staff:
-            try:
-                for cid in (getattr(current_user, 'data_companies', []) or []):
-                    if isinstance(cid, dict) and 'company_id' in cid:
-                        cid = cid['company_id']
-                    if cid and int(cid) not in allowed_company_ids:
-                        allowed_company_ids.append(int(cid))
-            except Exception:
-                pass
+        # Resolve accessible companies for the operator based on authoritative CRM authorization model
+        allowed_company_ids = cls.resolve_allowed_company_ids(current_user)
+        is_supreme = cls.is_supreme_user(current_user)
 
-        is_supreme = (
-            getattr(current_user, 'is_supreme', False) or
-            getattr(current_user, 'staff_type', '') in ('VGK4U', 'VGK4U Supreme') or
-            getattr(current_user, 'emp_code', '') == 'MR10001'
-        )
-
-        # 3. Validate Lead & Tenant Isolation (if lead_id supplied)
+        # 3. Validate Lead & Tenant Isolation (if clean_lead_id supplied)
         lead = None
-        if lead_id:
-            lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
+        if clean_lead_id:
+            lead = db.query(CRMLead).filter(CRMLead.id == clean_lead_id).first()
             if not lead:
-                raise HTTPException(status_code=404, detail=f"Lead with ID {lead_id} not found")
+                raise HTTPException(status_code=404, detail=f"Lead with ID {clean_lead_id} not found")
             
             # Tenant check: Ensure lead belongs to operator's accessible companies or user is supreme
             if lead.company_id and not is_supreme and lead.company_id not in allowed_company_ids:
@@ -156,7 +240,7 @@ class VoIPCallService:
             call_session_id=call_session_id,
             company_id=company_id,
             branch_id=branch_id,
-            lead_id=lead_id,
+            lead_id=clean_lead_id,
             operator_id=operator_id,
             operator_user_ref=operator_user_ref,
             operator_name=operator_name,
@@ -185,7 +269,7 @@ class VoIPCallService:
                 "company_id": company_id
             }
             metadata = {
-                "lead_id": lead_id,
+                "lead_id": clean_lead_id,
                 "company_id": company_id,
                 "branch_id": branch_id
             }
@@ -301,19 +385,7 @@ class VoIPCallService:
             raise HTTPException(status_code=404, detail=f"Call session '{call_session_id}' not found")
 
         # Tenant & Operator authorization
-        is_supreme = getattr(current_user, 'is_supreme', False)
-        user_company_id = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None) or 1
-        allowed_company_ids = {user_company_id}
-        if getattr(current_user, 'data_companies', None):
-            comps = current_user.data_companies if isinstance(current_user.data_companies, list) else []
-            allowed_company_ids.update(comps)
-
-        is_operator_owner = (
-            (session.operator_id is not None and getattr(current_user, 'id', None) == session.operator_id) or
-            (session.operator_user_ref is not None and getattr(current_user, 'emp_code', None) == session.operator_user_ref)
-        )
-
-        if not is_supreme and not is_operator_owner and session.company_id and session.company_id not in allowed_company_ids:
+        if not cls.authorize_session_access(session, current_user):
             raise HTTPException(status_code=403, detail="Unauthorized access to this call session")
 
         # If already terminal, return directly (idempotent)
@@ -601,10 +673,8 @@ class VoIPCallService:
         if not session:
             raise HTTPException(status_code=404, detail="Call session not found")
 
-        # Tenant isolation
-        user_company_id = getattr(current_user, 'base_company_id', None) or getattr(current_user, 'company_id', None) or 1
-        is_supreme = getattr(current_user, 'is_supreme', False)
-        if not is_supreme and session.company_id and session.company_id != user_company_id:
+        # Tenant and operator authorization
+        if not cls.authorize_session_access(session, current_user):
             raise HTTPException(status_code=403, detail="Unauthorized access to this call recording")
 
         if session.recording_status != RecordingStatusEnum.AVAILABLE.value or not session.recording_storage_key:

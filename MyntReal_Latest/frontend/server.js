@@ -8171,21 +8171,27 @@ const server = http.createServer(async (req, res) => {
   if (url.startsWith('/storage/')) {
     try {
       const cleanPath = decodeURIComponent(url.split('?')[0].replace('/storage/', ''));
-      const localFilePath = path.join(__dirname, '../backend/storage', cleanPath);
-      if (fs.existsSync(localFilePath) && fs.statSync(localFilePath).isFile()) {
-        const ext = path.extname(localFilePath).toLowerCase();
-        const mimeTypes = {
-          '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-          '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
-          '.pdf': 'application/pdf'
-        };
-        const contentType = mimeTypes[ext] || 'image/jpeg';
-        res.writeHead(200, {
-          'Content-Type': contentType,
-          'Access-Control-Allow-Origin': '*',
-          'Cache-Control': 'public, max-age=86400'
-        });
-        return fs.createReadStream(localFilePath).pipe(res);
+      const candidatePaths = [
+        path.join(__dirname, 'storage', cleanPath),
+        path.join(__dirname, '../backend/storage', cleanPath),
+        path.join(__dirname, '../storage', cleanPath)
+      ];
+      for (const localFilePath of candidatePaths) {
+        if (fs.existsSync(localFilePath) && fs.statSync(localFilePath).isFile()) {
+          const ext = path.extname(localFilePath).toLowerCase();
+          const mimeTypes = {
+            '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+            '.pdf': 'application/pdf'
+          };
+          const contentType = mimeTypes[ext] || 'image/jpeg';
+          res.writeHead(200, {
+            'Content-Type': contentType,
+            'Access-Control-Allow-Origin': '*',
+            'Cache-Control': 'public, max-age=86400'
+          });
+          return fs.createReadStream(localFilePath).pipe(res);
+        }
       }
     } catch (e) {}
 
@@ -18842,9 +18848,14 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     });
     return;
   } else if (url.startsWith('/staff/my-tenant')) {
-    // Redirect legacy single-tenant URL to Master Companies / Tenant Onboarding
-    res.writeHead(302, { 'Location': '/staff/accounts/companies' });
-    res.end();
+    // DC_SAAS_CONSOLE_001: VGK SaaS → My Tenant / All Tenants (B2B)
+    const filePath = path.join(__dirname, 'staff_my_tenant.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(html);
+    });
     return;
   } else if (url.startsWith('/staff/b2b-clients')) {
     // DC_SAAS_CONSOLE_001: VGK SaaS → Platform Clients (B2B)

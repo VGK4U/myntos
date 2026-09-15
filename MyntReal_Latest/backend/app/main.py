@@ -17428,6 +17428,18 @@ async def serve_storage_file(request: Request, file_path: str):
                 pass
 
     if file_data is None:
+        if "wa_media" in file_path.lower():
+            if content_type.startswith("image/"):
+                svg_placeholder = f"""<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">
+                  <rect width="300" height="200" fill="#1e293b" rx="12"/>
+                  <text x="150" y="90" font-size="32" text-anchor="middle" fill="#94a3b8">📎</text>
+                  <text x="150" y="125" font-family="system-ui, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#f8fafc">WhatsApp Attachment</text>
+                  <text x="150" y="145" font-family="system-ui, sans-serif" font-size="10" text-anchor="middle" fill="#94a3b8">Attachment Unavailable / Archived</text>
+                </svg>"""
+                return Response(content=svg_placeholder, media_type="image/svg+xml", status_code=200, headers={"Cache-Control": "public, max-age=3600"})
+            elif content_type == "application/pdf":
+                html_card = f"""<!DOCTYPE html><html><head><meta charset="utf-8"><title>Attachment Unavailable</title><style>body{{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#f8fafc;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;}} .card{{background:#1e293b;padding:32px;border-radius:12px;border:1px solid #334155;max-width:420px;text-align:center;box-shadow:0 10px 25px rgba(0,0,0,0.4);}} h3{{margin:0 0 8px 0;font-size:18px;}} p{{color:#94a3b8;font-size:13px;line-height:1.5;}}</style></head><body><div class="card"><div style="font-size:36px;margin-bottom:12px;">📄</div><h3>Document Unavailable</h3><p>The requested WhatsApp document (<code>{filename}</code>) is no longer available in temporary local storage or has been archived.</p><button onclick="window.close()" style="background:#059669;color:#fff;border:none;padding:8px 18px;border-radius:6px;cursor:pointer;font-weight:600;font-size:12px;margin-top:10px;">Close Window</button></div></body></html>"""
+                return Response(content=html_card, media_type="text/html", status_code=200, headers={"Cache-Control": "public, max-age=3600"})
         raise HTTPException(status_code=404, detail="File not found")
 
     file_size = len(file_data)

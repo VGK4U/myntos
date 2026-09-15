@@ -16,7 +16,8 @@ const {
     useMultiFileAuthState,
     DisconnectReason,
     fetchLatestBaileysVersion,
-    Browsers
+    Browsers,
+    downloadMediaMessage
 } = require('@whiskeysockets/baileys');
 
 const app = express();
@@ -512,6 +513,11 @@ async function startWhatsAppBot() {
     sock.ev.on('connection.update', async (update) => {
         await processConnectionUpdate(thisGen, update);
     });
+
+    sock.ev.on('messages.upsert', async (chatUpdate) => {
+        if (thisGen !== clientGen) return;
+        await processInboundMessagesUpsert(chatUpdate);
+    });
 }
 
 async function processConnectionUpdate(thisGen, update) {
@@ -655,6 +661,149 @@ async function logoutBotSession() {
     } catch (err) {
         console.error("❌ Logout error:", err);
         return { success: false, error: err.message || String(err) };
+    }
+}
+
+// ── CANONICAL BAILEYS INBOUND MESSAGE INGESTION ──────────────────────────────
+async function processInboundMessagesUpsert(chatUpdate) {
+    if (!chatUpdate || !chatUpdate.messages || !Array.isArray(chatUpdate.messages)) return;
+
+    for (const msg of chatUpdate.messages) {
+        try {
+            if (!msg || !msg.key) continue;
+            const remoteJid = msg.key.remoteJid || '';
+            if (!remoteJid || remoteJid === 'status@broadcast') continue;
+
+            const wamid = msg.key.id;
+            if (!wamid) continue;
+
+            const isFromMe = Boolean(msg.key.fromMe);
+            const isGroup = remoteJid.endsWith('@g.us');
+            const pushName = msg.pushName || '';
+
+            let senderPhone = '';
+            let fromPhone = '';
+
+            if (isGroup) {
+                const participantJid = msg.key.participant || msg.participant || '';
+                senderPhone = participantJid ? participantJid.replace(/@.*$/, '').replace(/\D/g, '') : '';
+                fromPhone = remoteJid;
+            } else {
+                senderPhone = remoteJid.replace(/@.*$/, '').replace(/\D/g, '');
+                fromPhone = senderPhone;
+            }
+
+            // Unfold viewOnce/ephemeral/documentWithCaption wrappers
+            let msgContent = msg.message;
+            if (msgContent?.viewOnceMessage?.message) msgContent = msgContent.viewOnceMessage.message;
+            if (msgContent?.viewOnceMessageV2?.message) msgContent = msgContent.viewOnceMessageV2.message;
+            if (msgContent?.ephemeralMessage?.message) msgContent = msgContent.ephemeralMessage.message;
+            if (msgContent?.documentWithCaptionMessage?.message) msgContent = msgContent.documentWithCaptionMessage.message;
+
+            if (!msgContent) continue;
+
+            // Skip protocol/reaction messages unless they have actual content
+            if (msgContent.protocolMessage || msgContent.reactionMessage) continue;
+
+            let messageType = 'text';
+            let bodyText = '';
+            let mediaUrl = null;
+            let mediaMimeType = null;
+            let mediaName = null;
+
+            if (msgContent.conversation) {
+                messageType = 'text';
+                bodyText = msgContent.conversation;
+            } else if (msgContent.extendedTextMessage?.text) {
+                messageType = 'text';
+                bodyText = msgContent.extendedTextMessage.text;
+            } else if (msgContent.imageMessage) {
+                messageType = 'image';
+                bodyText = msgContent.imageMessage.caption || '';
+                mediaMimeType = msgContent.imageMessage.mimetype || 'image/jpeg';
+            } else if (msgContent.videoMessage) {
+                messageType = 'video';
+                bodyText = msgContent.videoMessage.caption || '';
+                mediaMimeType = msgContent.videoMessage.mimetype || 'video/mp4';
+            } else if (msgContent.audioMessage) {
+                messageType = 'audio';
+                mediaMimeType = msgContent.audioMessage.mimetype || 'audio/ogg';
+            } else if (msgContent.documentMessage) {
+                messageType = 'document';
+                bodyText = msgContent.documentMessage.caption || msgContent.documentMessage.title || '';
+                mediaName = msgContent.documentMessage.fileName || 'document.pdf';
+                mediaMimeType = msgContent.documentMessage.mimetype || 'application/pdf';
+            }
+
+            // Download media binary if media message
+            if (['image', 'video', 'audio', 'document'].includes(messageType) && typeof downloadMediaMessage === 'function') {
+                try {
+                    const buffer = await downloadMediaMessage(msg, 'buffer', {});
+                    if (buffer && buffer.length > 0) {
+                        const extMap = {
+                            'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+                            'application/pdf': 'pdf', 'audio/ogg': 'ogg', 'audio/mp4': 'm4a', 'video/mp4': 'mp4'
+                        };
+                        const ext = extMap[mediaMimeType] || (mediaName ? mediaName.split('.').pop() : 'bin');
+                        const filename = `scanned_${wamid}.${ext}`;
+
+                        const frontDir = path.join(__dirname, '../../frontend/storage/wa_media');
+                        const backDir = path.join(__dirname, '../storage/wa_media');
+                        try {
+                            if (!fs.existsSync(frontDir)) fs.mkdirSync(frontDir, { recursive: true });
+                            fs.writeFileSync(path.join(frontDir, filename), buffer);
+                        } catch (e) {}
+                        try {
+                            if (!fs.existsSync(backDir)) fs.mkdirSync(backDir, { recursive: true });
+                            fs.writeFileSync(path.join(backDir, filename), buffer);
+                        } catch (e) {}
+
+                        mediaUrl = `/storage/wa_media/${filename}`;
+                        if (!mediaName) mediaName = filename;
+                    }
+                } catch (mediaErr) {
+                    console.warn(`[WA-BOT-INBOUND] Media download note for ${wamid}:`, mediaErr.message);
+                }
+            }
+
+            const inboundPayload = {
+                wamid: wamid,
+                from_phone: fromPhone,
+                sender_phone: senderPhone,
+                from_name: pushName,
+                message_type: messageType,
+                body_text: bodyText,
+                media_url: mediaUrl,
+                media_mime_type: mediaMimeType,
+                media_name: mediaName,
+                is_group: isGroup,
+                group_jid: isGroup ? remoteJid : null,
+                group_name: isGroup ? pushName : null,
+                raw_payload: JSON.stringify({
+                    key: msg.key,
+                    pushName: msg.pushName,
+                    messageTimestamp: msg.messageTimestamp,
+                    status: msg.status
+                }),
+                is_from_me: isFromMe,
+                received_at: new Date().toISOString()
+            };
+
+            const postResp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-inbound-message`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(inboundPayload)
+            });
+
+            if (postResp.ok) {
+                const resData = await postResp.json();
+                console.log(`[WA-BOT-INBOUND] ✅ Persisted ${messageType} from ${fromPhone} (wamid: ${wamid}, dup: ${!!resData.duplicate})`);
+            } else {
+                console.warn(`[WA-BOT-INBOUND] ⚠️ Backend returned ${postResp.status} for message ${wamid}`);
+            }
+        } catch (msgErr) {
+            console.error('[WA-BOT-INBOUND] Error processing single message:', msgErr.message);
+        }
     }
 }
 
@@ -1319,22 +1468,7 @@ app.post('/api/send-group-message', async (req, res) => {
                 continue;
             }
 
-            let contentPayload = { text: message || '' };
-            const mediaSrc = mediaSource;
-            if (mediaSrc) {
-                let imgBuffer = null;
-                if (typeof mediaSrc === 'string' && (mediaSrc.startsWith('http://') || mediaSrc.startsWith('https://'))) {
-                    imgBuffer = { url: mediaSrc };
-                } else if (typeof mediaSrc === 'string' && mediaSrc.includes(';base64,')) {
-                    const base64Data = mediaSrc.split(';base64,').pop().replace(/\s/g, '');
-                    imgBuffer = Buffer.from(base64Data, 'base64');
-                } else if (typeof mediaSrc === 'string' && fs.existsSync(mediaSrc)) {
-                    imgBuffer = fs.readFileSync(mediaSrc);
-                }
-                if (imgBuffer) {
-                    contentPayload = { image: imgBuffer, caption: message || '', mimetype: 'image/png' };
-                }
-            }
+            let contentPayload = resolveMediaBufferAndPayload(mediaSource, message, req.body.filename);
 
             const sendOptions = {};
             const replyWamid = req.body.quoted_message_id || req.body.reply_to_wamid || req.body.reply_to_id;
@@ -1534,22 +1668,51 @@ app.post('/api/send-message', async (req, res) => {
             });
         }
 
-        let contentPayload = { text: message || '' };
-        const mediaSrc = mediaSource;
-        if (mediaSrc) {
-            let imgBuffer = null;
-            if (typeof mediaSrc === 'string' && (mediaSrc.startsWith('http://') || mediaSrc.startsWith('https://'))) {
-                imgBuffer = { url: mediaSrc };
-            } else if (typeof mediaSrc === 'string' && mediaSrc.includes(';base64,')) {
-                const base64Data = mediaSrc.split(';base64,').pop().replace(/\s/g, '');
-                imgBuffer = Buffer.from(base64Data, 'base64');
-            } else if (typeof mediaSrc === 'string' && fs.existsSync(mediaSrc)) {
-                imgBuffer = fs.readFileSync(mediaSrc);
-            }
-            if (imgBuffer) {
-                contentPayload = (message && message.trim()) ? { image: imgBuffer, caption: message.trim(), mimetype: 'image/png' } : { image: imgBuffer, mimetype: 'image/png' };
-            }
+function resolveMediaBufferAndPayload(mediaSource, message, defaultFilename) {
+    if (!mediaSource) return { text: message || '' };
+
+    let imgBuffer = null;
+    let resolvedPath = mediaSource;
+
+    if (typeof mediaSource === 'string' && (mediaSource.startsWith('http://') || mediaSource.startsWith('https://'))) {
+        imgBuffer = { url: mediaSource };
+    } else if (typeof mediaSource === 'string' && mediaSource.includes(';base64,')) {
+        const base64Data = mediaSource.split(';base64,').pop().replace(/\s/g, '');
+        imgBuffer = Buffer.from(base64Data, 'base64');
+    } else if (typeof mediaSource === 'string') {
+        if (mediaSource.startsWith('/storage/')) {
+            const relPath = mediaSource.replace(/^\/storage\//, '');
+            const cand1 = path.join(__dirname, '../../frontend/storage', relPath);
+            const cand2 = path.join(__dirname, '../storage', relPath);
+            if (fs.existsSync(cand1)) resolvedPath = cand1;
+            else if (fs.existsSync(cand2)) resolvedPath = cand2;
         }
+        if (fs.existsSync(resolvedPath)) {
+            imgBuffer = fs.readFileSync(resolvedPath);
+        }
+    }
+
+    if (!imgBuffer) {
+        return { text: message || '' };
+    }
+
+    const isPdf = (typeof mediaSource === 'string' && mediaSource.toLowerCase().endsWith('.pdf'));
+    if (isPdf) {
+        const fileName = defaultFilename || (typeof mediaSource === 'string' ? path.basename(mediaSource) : 'document.pdf');
+        return {
+            document: imgBuffer,
+            mimetype: 'application/pdf',
+            fileName: fileName,
+            caption: message || ''
+        };
+    }
+
+    return (message && message.trim())
+        ? { image: imgBuffer, caption: message.trim(), mimetype: 'image/png' }
+        : { image: imgBuffer, mimetype: 'image/png' };
+}
+
+        let contentPayload = resolveMediaBufferAndPayload(mediaSource, message, req.body.filename);
 
         const sendOptions = {};
         const replyWamid = req.body.quoted_message_id || req.body.reply_to_wamid || req.body.reply_to_id;

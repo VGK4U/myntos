@@ -98,7 +98,23 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
     """
     Dispatches dynamic 7:30 AM motivational messages to all active VGK Channel Partners with 0 leads.
     """
+    from app.services.automation_tracking_service import (
+        create_execution,
+        record_dispatch,
+        finalize_execution,
+        get_job_targets
+    )
+
     logger.info("🌅 [VGK-0LEAD-MOTIVATION] Starting daily 7:30 AM 0-lead partner motivational dispatch...")
+
+    exec_rec = create_execution(
+        db=db,
+        job_id="vgk_member_zero_lead_motivational",
+        job_name="VGK Members Daily 7:30 AM 0-Lead Motivational Dispatch",
+        trigger_type=trigger_type,
+        triggered_by=triggered_by,
+        company_id=1
+    )
 
     # 1. Fetch community proof stats
     stats_query = text("""
@@ -143,7 +159,7 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
     logger.info(f"📊 [VGK-0LEAD-MOTIVATION] Found {len(zero_lead_partners)} active partners with 0 leads.")
 
     # 3. Determine today's rotating theme
-    weekday = datetime.datetime.now().weekday()
+    weekday = datetime.now().weekday()
     theme_idx = (weekday + 1) % 7 # 0=Sunday
     theme = next((t for t in ROTATING_MOTIVATIONAL_THEMES if t["day"] == theme_idx), ROTATING_MOTIVATIONAL_THEMES[1])
 
@@ -151,8 +167,6 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
     skipped_count = 0
     failed_count = 0
     results = []
-
-    bot_url = "http://localhost:5002/api/send-message"
 
     # Support template customization override if stored
     from app.services.wa_template_storage_service import get_job_template
@@ -172,7 +186,7 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
                 if len(cp) == 10:
                     sent_today_numbers.add(cp)
 
-        inbox_rows = db.execute(text("SELECT from_phone FROM wa_inbox WHERE received_at >= :t"), {"t": start_of_today_utc}).fetchall()
+        inbox_rows = db.execute(text("SELECT from_phone FROM wa_inbox WHERE received_at >= :t"), {"t": start_of_today_ist}).fetchall()
         for r in inbox_rows:
             if r[0]:
                 cp = ''.join(c for c in str(r[0]) if c.isdigit())[-10:]
@@ -190,6 +204,18 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
 
         if not clean_phone or len(clean_phone) < 10:
             failed_count += 1
+            record_dispatch(
+                db=db,
+                execution_id=exec_rec.id,
+                job_id="vgk_member_zero_lead_motivational",
+                recipient_type="PARTNER",
+                recipient_identifier=phone,
+                recipient_name=p_name,
+                target_entity_type="official_partners",
+                target_entity_id=p_id,
+                status="FAILED",
+                error_message="Invalid phone format"
+            )
             results.append({"member_id": p_id, "name": p_name, "status": "FAILED", "error": "Invalid phone"})
             continue
 
@@ -197,6 +223,18 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
         if trigger_type == "SCHEDULED" and clean_10 in sent_today_numbers:
             logger.info(f"⏩ Zero-lead member {p_name} ({clean_10}) already received a message today. Skipping.")
             skipped_count += 1
+            record_dispatch(
+                db=db,
+                execution_id=exec_rec.id,
+                job_id="vgk_member_zero_lead_motivational",
+                recipient_type="PARTNER",
+                recipient_identifier=clean_phone,
+                recipient_name=p_name,
+                target_entity_type="official_partners",
+                target_entity_id=p_id,
+                status="SKIPPED",
+                error_message="Already sent today"
+            )
             results.append({"member_id": p_id, "name": p_name, "status": "SKIPPED", "reason": "Already sent today"})
             continue
 
@@ -235,18 +273,96 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
 
         try:
             from app.services.whatsapp_auto_service import send_direct_whatsapp
-            wa_res = send_direct_whatsapp(db=db, phone=clean_phone, message=msg_text)
+            wa_res = send_direct_whatsapp(
+                db=db,
+                phone=clean_phone,
+                message=msg_text,
+                job_id="vgk_member_zero_lead_motivational",
+                execution_id=exec_rec.id
+            )
 
             if wa_res.get("success"):
                 dispatched_count += 1
+                record_dispatch(
+                    db=db,
+                    execution_id=exec_rec.id,
+                    job_id="vgk_member_zero_lead_motivational",
+                    recipient_type="PARTNER",
+                    recipient_identifier=clean_phone,
+                    recipient_name=p_name,
+                    target_entity_type="official_partners",
+                    target_entity_id=p_id,
+                    message_log_id=wa_res.get("message_log_id"),
+                    provider_message_id=wa_res.get("message_sid"),
+                    status="SENT",
+                    payload_snapshot={"member_code": p_code}
+                )
                 results.append({"member_id": p_id, "name": p_name, "status": "SUCCESS", "phone": clean_phone})
             else:
                 failed_count += 1
                 err_text = wa_res.get("error") or wa_res.get("reason") or "Dispatch failed"
+                record_dispatch(
+                    db=db,
+                    execution_id=exec_rec.id,
+                    job_id="vgk_member_zero_lead_motivational",
+                    recipient_type="PARTNER",
+                    recipient_identifier=clean_phone,
+                    recipient_name=p_name,
+                    target_entity_type="official_partners",
+                    target_entity_id=p_id,
+                    status="FAILED",
+                    error_message=err_text
+                )
                 results.append({"member_id": p_id, "name": p_name, "status": "FAILED", "error": err_text})
         except Exception as exc:
             failed_count += 1
+            record_dispatch(
+                db=db,
+                execution_id=exec_rec.id,
+                job_id="vgk_member_zero_lead_motivational",
+                recipient_type="PARTNER",
+                recipient_identifier=clean_phone,
+                recipient_name=p_name,
+                target_entity_type="official_partners",
+                target_entity_id=p_id,
+                status="FAILED",
+                error_message=str(exc)
+            )
             results.append({"member_id": p_id, "name": p_name, "status": "FAILED", "error": str(exc)})
+
+    # Supplementary targets if any configured
+    supp_targets = get_job_targets(db, "vgk_member_zero_lead_motivational", company_id=1)
+    for tgt in supp_targets:
+        if not tgt.get("is_active", True):
+            continue
+        tgt_phone = tgt.get("recipient_identifier")
+        if not tgt_phone:
+            continue
+        from app.services.whatsapp_auto_service import send_direct_whatsapp
+        cc_res = send_direct_whatsapp(
+            db=db,
+            phone=tgt_phone,
+            message=f"📊 [CC Notification] 0-Lead Motivational dispatch finished for {dispatched_count} partners.",
+            job_id="vgk_member_zero_lead_motivational",
+            execution_id=exec_rec.id
+        )
+        cc_ok = cc_res.get("success", False)
+        record_dispatch(
+            db=db,
+            execution_id=exec_rec.id,
+            job_id="vgk_member_zero_lead_motivational",
+            recipient_type=tgt.get("recipient_type", "PHONE_NUMBER"),
+            recipient_identifier=tgt_phone,
+            recipient_name=tgt.get("recipient_name", "CC Target"),
+            message_log_id=cc_res.get("message_log_id"),
+            provider_message_id=cc_res.get("message_sid"),
+            status="SENT" if cc_ok else "FAILED",
+            error_message=cc_res.get("error") if not cc_ok else None,
+            payload_snapshot={"is_cc": True}
+        )
+
+    exec_status = "COMPLETED" if (failed_count == 0 and (dispatched_count > 0 or len(zero_lead_partners) == 0)) else ("PARTIAL" if dispatched_count > 0 else "FAILED")
+    finalize_execution(db, exec_rec.id, exec_status)
 
     payload = {
         "total_count": len(zero_lead_partners),
@@ -261,7 +377,7 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
     }
 
     _record_audit_log(
-        job_id="wa_daily_vgk_zero_lead_motivational_730am",
+        job_id="vgk_member_zero_lead_motivational",
         job_name="VGK Members Daily 7:30 AM 0-Lead Motivational Dispatch",
         payload=payload,
         triggered_by=triggered_by,

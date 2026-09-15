@@ -6,7 +6,7 @@ Separate authentication system for staff members
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Any, List, Dict, Union
 from pydantic import BaseModel, EmailStr, Field
 import pyotp
 
@@ -153,6 +153,16 @@ def get_current_staff_user(request: Request, db: Session = Depends(get_db)) -> S
                 detail=f"Staff account is {employee.status}. Access denied."
             )
         
+        # Stage 2A: Live token_version revocation verification
+        tok_ver = payload.get("token_version")
+        db_tok_ver = getattr(employee, "token_version", 1) or 1
+        if tok_ver is not None and int(tok_ver) != db_tok_ver:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session has been revoked or expired. Please log in again.",
+                headers={"WWW-Authenticate": "Bearer", "X-Token-Revoked": "true"}
+            )
+        
         # DC Protocol (Dec 05, 2025): NDA Enforcement Middleware
         # Block ALL endpoints except NDA-related ones until NDA is accepted
         request_path = request.url.path.lower()
@@ -270,29 +280,173 @@ def get_current_staff_user_hybrid(request: Request, db: Session = Depends(get_db
     }
 
 
-def resolve_tenant_company_for_request(current_user, requested_company_id: Optional[int] = None) -> int:
+def resolve_tenant_company_for_request(
+    current_user: Any,
+    requested_company_id: Optional[int] = None,
+    db: Optional[Session] = None
+) -> int:
     """
-    Authoritatively resolve target company_id for an authenticated staff request.
-    - If user is Super Admin / Platform Admin: permits explicit requested_company_id if provided.
-    - If user is Tenant Staff / Tenant Admin: strictly enforces current_user.base_company_id.
-      If a conflicting requested_company_id is provided, raises HTTP 403 Forbidden.
+    Authoritatively resolve target company_id for an authenticated staff request (Stage 2B).
+    
+    Architecture Standards:
+    - Never uses base_company_id as operational authorization (Rule #4).
+    - Uses RequestContext and active staff_company_memberships (ctx.accessible_company_ids).
+    - Permits active secondary memberships if caller requested that company.
+    - Defaults to the primary operational membership when no company is requested.
+    - Multiple primary memberships fail safely with HTTP 403 unless explicitly selected.
+    - Inactive or non-existent memberships are denied with HTTP 403.
+    - Cross-tenant company requests are strictly denied with HTTP 403.
+    - Platform Superadmin is allowed cross-company / cross-tenant scope with DB existence check.
     """
-    staff_cid = getattr(current_user, "base_company_id", None) or getattr(current_user, "company_id", None)
-    if not staff_cid:
-        raise HTTPException(status_code=403, detail="Unresolved tenant context for staff user")
+    from app.core.context import RequestContext, AdminScope, get_current_request_context
+    from app.services.auth_context_service import resolve_admin_scope
+    from app.models.staff import StaffCompanyMembership
+    from app.models.staff_accounts import AssociatedCompany
 
-    role_code = (current_user.role.role_code.lower() if hasattr(current_user, "role") and current_user.role and getattr(current_user.role, "role_code", None) else "")
-    is_super = getattr(current_user, "is_super_admin", False) or role_code in {"super_admin", "vgk4u", "vgk4u_supreme"}
+    # Normalize requested_company_id (sanitize 0, negative, empty string)
+    req_cid: Optional[int] = None
+    if requested_company_id is not None:
+        try:
+            val = int(requested_company_id)
+            if val > 0:
+                req_cid = val
+        except (ValueError, TypeError):
+            pass
 
-    if requested_company_id is not None and requested_company_id != staff_cid:
-        if not is_super:
+    # 1. Check if current_user is already a RequestContext
+    if isinstance(current_user, RequestContext):
+        ctx = current_user
+        if req_cid is not None:
+            if ctx.is_platform_admin():
+                return req_cid
+            if req_cid in ctx.accessible_company_ids:
+                return req_cid
             raise HTTPException(
-                status_code=403,
-                detail="Cross-tenant access forbidden. You cannot specify another tenant's company_id."
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied to company #{req_cid}. Not an active member or cross-tenant company."
             )
-        return int(requested_company_id)
+        # Default when no company explicitly requested
+        return ctx.active_company_id
 
-    return int(staff_cid)
+    # 2. Check if a RequestContext is bound in the current async task ContextVar
+    bound_ctx = get_current_request_context()
+    if bound_ctx is not None and (
+        getattr(current_user, "id", None) == bound_ctx.staff_id or
+        getattr(current_user, "emp_code", None) == bound_ctx.emp_code
+    ):
+        if req_cid is not None:
+            if bound_ctx.is_platform_admin():
+                return req_cid
+            if req_cid in bound_ctx.accessible_company_ids:
+                return req_cid
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Access denied to company #{req_cid}. Not an active member or cross-tenant company."
+            )
+        return bound_ctx.active_company_id
+
+    # 3. Direct DB-backed resolution (fallback for background tasks / direct model calls)
+    tenant_id = getattr(current_user, "tenant_id", None)
+    if tenant_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Staff employee has no associated tenant context."
+        )
+
+    # Verify active account status
+    staff_status = getattr(current_user, "status", "active")
+    if staff_status != "active" or getattr(current_user, "is_deleted", False):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Staff account is {staff_status}. Access denied."
+        )
+
+    if db is None:
+        from sqlalchemy.orm import object_session
+        db = object_session(current_user)
+    if db is None:
+        from app.core.database import SessionLocal
+        local_db = SessionLocal()
+        try:
+            return resolve_tenant_company_for_request(current_user, requested_company_id, db=local_db)
+        finally:
+            local_db.close()
+
+    admin_scope = resolve_admin_scope(current_user)
+    is_platform_super = (admin_scope == AdminScope.PLATFORM_SUPERADMIN)
+
+    # Query active operational memberships in staff_company_memberships
+    active_memberships = db.query(StaffCompanyMembership).filter(
+        StaffCompanyMembership.staff_id == current_user.id,
+        StaffCompanyMembership.tenant_id == tenant_id,
+        StaffCompanyMembership.is_active == True
+    ).all()
+
+    accessible_cids = [m.company_id for m in active_memberships]
+
+    # Explicit company requested
+    if req_cid is not None:
+        if is_platform_super:
+            comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == req_cid).first()
+            if not comp:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Company #{req_cid} not found.")
+            return req_cid
+
+        if req_cid in accessible_cids:
+            # Verify company belongs to authenticated tenant (anti-cross-tenant check)
+            comp = db.query(AssociatedCompany).filter(
+                AssociatedCompany.id == req_cid,
+                AssociatedCompany.client_id == tenant_id
+            ).first()
+            if not comp:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Cross-tenant access forbidden. Company #{req_cid} does not belong to tenant #{tenant_id}."
+                )
+            return req_cid
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access denied to company #{req_cid}. No active operational membership."
+        )
+
+    # No company explicitly requested: default to single active primary membership
+    if not accessible_cids:
+        if is_platform_super:
+            platform_comp = db.query(AssociatedCompany).filter(AssociatedCompany.client_id == 1).first()
+            return platform_comp.id if platform_comp else 1
+        # Rule #4: base_company_id alone cannot grant access
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No operational company access. Staff employee has no active company memberships."
+        )
+
+    primary_memberships = [m for m in active_memberships if m.is_primary]
+    if len(primary_memberships) == 1:
+        prim_cid = primary_memberships[0].company_id
+        if not is_platform_super:
+            comp = db.query(AssociatedCompany).filter(
+                AssociatedCompany.id == prim_cid,
+                AssociatedCompany.client_id == tenant_id
+            ).first()
+            if not comp:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Primary company #{prim_cid} does not belong to tenant #{tenant_id}."
+                )
+        return prim_cid
+
+    if len(primary_memberships) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Multiple primary company memberships found. Ambiguous primary company context."
+        )
+
+    # 0 primary memberships
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="No primary company membership resolved. Explicit company selection required."
+    )
 
 
 def require_module_entitlement(module_code: str):
@@ -572,6 +726,8 @@ def staff_login(
             "staff_type": getattr(employee, "staff_type", "MN_STAFF"),
             "admin_scope": getattr(employee, "admin_scope", "CLIENT_SPECIFIC"),
             "base_company_id": employee.base_company_id,
+            "tenant_id": getattr(employee, "tenant_id", 1) or 1,
+            "token_version": getattr(employee, "token_version", 1) or 1,
             "team_tag": employee.team_tag,
             "user_type": "staff"
         },
@@ -589,6 +745,13 @@ def staff_login(
     
     # Extract employee data dictionary safely
     employee_data = employee.to_dict()
+    try:
+        from app.services.auth_context_service import resolve_staff_memberships
+        acc_cids, prim_cid = resolve_staff_memberships(db, employee.id, getattr(employee, "tenant_id", 1) or 1)
+        employee_data["accessible_company_ids"] = acc_cids
+        employee_data["primary_company_id"] = prim_cid
+    except Exception:
+        pass
     try:
         from app.services.telephony.flow_interpreter import CallFlowInterpreter
         employee_data["extension"] = CallFlowInterpreter.get_staff_configured_extension(
@@ -733,6 +896,12 @@ async def staff_logout(
     Staff logout endpoint
     DC: Logs logout action for audit trail
     """
+    # Stage 2A: Bump token_version to immediately revoke all existing JWTs
+    current_user.token_version = (getattr(current_user, "token_version", 1) or 1) + 1
+    
+    from app.services.auth_context_service import invalidate_auth_cache
+    invalidate_auth_cache(current_user.id)
+    
     log_staff_audit(db, current_user.id, "LOGOUT", "auth",
                    ip_address=request.client.host if request.client else None)
     db.commit()
@@ -920,6 +1089,11 @@ async def change_staff_password(
     
     current_user.password_hash = SecurityManager.get_password_hash(new_password)
     current_user.last_password_change = datetime.utcnow()
+    # Stage 2A: Bump token_version to immediately revoke all existing sessions
+    current_user.token_version = (getattr(current_user, "token_version", 1) or 1) + 1
+    
+    from app.services.auth_context_service import invalidate_auth_cache
+    invalidate_auth_cache(current_user.id)
     
     log_staff_audit(db, current_user.id, "PASSWORD_CHANGED", "employee", 
                    resource_id=current_user.id,

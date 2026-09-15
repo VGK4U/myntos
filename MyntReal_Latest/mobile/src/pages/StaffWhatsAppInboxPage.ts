@@ -17,7 +17,7 @@ import { callController } from '../services/call-controller';
 
 export class StaffWhatsAppInboxPage {
   private container: HTMLElement;
-  private activeTab: 'messenger' | 'team' | 'inbox' | 'templates' | 'automations' | 'audit' = 'messenger';
+  private activeTab: 'messenger' | 'team' | 'company' | 'all' | 'broadcasts' | 'inbox' | 'templates' | 'automations' | 'audit' = 'messenger';
 
   // ── Gateway & QR State ─────────────────────────────────────────────────────
   private gatewayConnected: boolean = true;
@@ -43,7 +43,7 @@ export class StaffWhatsAppInboxPage {
   private activeChatPhone: string | null = null;
   private activeChatName: string = '';
   private activeScope: string = 'assigned_tagged';
-  private chatOriginTab: 'messenger' | 'team' | 'inbox' = 'messenger';
+  private chatOriginTab: 'messenger' | 'team' | 'company' | 'all' | 'broadcasts' | 'inbox' = 'messenger';
   private fMsgSearch: string = '';
   private chatHistory: any[] = [];
   private chatLoading: boolean = false;
@@ -102,6 +102,29 @@ export class StaffWhatsAppInboxPage {
            name.includes('yaswanth') || name.includes('jagannadh');
   }
 
+  private isAllMessagesAuthorized(): boolean {
+    try {
+      const authState = authService.getAuthState();
+      const user = authState.user || {};
+      const roleCode = (user.role_code || user.role?.role_code || '').toLowerCase().trim();
+      const roleName = (user.role_name || user.role?.role_name || user.designation || '').toUpperCase().trim();
+      const adminScope = (user.admin_scope || '').toUpperCase().trim();
+      const staffType = (user.staff_type || '').toUpperCase().trim();
+      const level = parseInt(user.hierarchy_level || user.role?.hierarchy_level || '0', 10);
+
+      // Canonical check: Admin scope, Leadership role, or Hierarchy Level >= 80
+      if (['PLATFORM', 'TENANT_ADMIN', 'COMPANY_ADMIN', 'SEGMENT_A', 'SEGMENT_B'].includes(adminScope)) return true;
+      if (['vgk4u', 'vgk4u_supreme', 'admin', 'super_admin', 'ea', 'key_leadership', 'saas_segment_admin'].includes(roleCode)) return true;
+      if (['VGK4U', 'VGK4U SUPREME', 'KEY LEADERSHIP', 'EA', 'SUPER_ADMIN', 'ADMIN'].includes(roleName)) return true;
+      if (['VGK4U_SUPREME', 'KEY_LEADERSHIP', 'SUPER_ADMIN', 'SAAS_SEGMENT_ADMIN'].includes(staffType)) return true;
+      if (level >= 80) return true;
+
+      return this.isWhatsAppAdmin();
+    } catch {
+      return false;
+    }
+  }
+
   private async checkGatewayStatus(): Promise<void> {
     try {
       const res = await apiService.get<any>('/whatsapp/bot-status');
@@ -158,6 +181,15 @@ export class StaffWhatsAppInboxPage {
     } else if (this.activeTab === 'team') {
       this.activeScope = 'downline';
       await this.loadMessenger();
+    } else if (this.activeTab === 'company') {
+      this.activeScope = 'company';
+      await this.loadMessenger();
+    } else if (this.activeTab === 'all') {
+      this.activeScope = 'all';
+      await this.loadMessenger();
+    } else if (this.activeTab === 'broadcasts') {
+      this.activeScope = 'broadcasts';
+      await this.loadMessenger();
     } else if (this.activeTab === 'inbox') {
       await this.loadInbox();
     } else if (this.activeTab === 'templates') {
@@ -174,6 +206,7 @@ export class StaffWhatsAppInboxPage {
   private render(): void {
     const isAdmin = this.isWhatsAppAdmin();
     const isKeyLeadership = this.isKeyLeadershipOrAdmin();
+    const isAllAuthorized = this.isAllMessagesAuthorized();
 
     let statusPillText = '● Disconnected';
     let statusPillBg = 'rgba(239,68,68,0.2)';
@@ -225,6 +258,9 @@ export class StaffWhatsAppInboxPage {
               <span style="background: ${statusPillBg}; border: 1px solid ${statusPillBorder}; color: ${statusPillCol}; border-radius: 20px; padding: 3px 8px; font-size: 11px; font-weight: 700;">
                 ${statusPillText}
               </span>
+              <button id="waBannerRefreshBtn" title="Refresh WhatsApp Center" style="background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); border-radius: 16px; padding: 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                <i class="fas fa-sync-alt" id="waBannerRefreshIcon"></i>
+              </button>
               <button id="waNewMsgBtn" style="background: #25d366; color: #0f172a; border: none; border-radius: 16px; padding: 5px 12px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;">
                 <i class="fas fa-plus"></i> New Message
               </button>
@@ -248,7 +284,7 @@ export class StaffWhatsAppInboxPage {
           </div>
         ` : ''}
 
-        <!-- Navigation Tabs: Tab 1 My Messages, Tab 2 Team Messages, Tab 3 WhatsApp API Bot (Key Leadership/Admin), Tabs 4-6 Admin Only -->
+        <!-- Navigation Tabs: Complete Parity with Web (Tabs 1 to 9) -->
         <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; -webkit-overflow-scrolling: touch;">
           <button class="wa-nav-tab ${this.activeTab === 'messenger' ? 'active' : ''}" data-tab="messenger" style="${this.getTabBtnStyle(this.activeTab === 'messenger')}">
             <i class="fas fa-comments"></i> 1. My Messages
@@ -256,27 +292,38 @@ export class StaffWhatsAppInboxPage {
           <button class="wa-nav-tab ${this.activeTab === 'team' ? 'active' : ''}" data-tab="team" style="${this.getTabBtnStyle(this.activeTab === 'team')}">
             <i class="fas fa-users"></i> 2. Team Messages
           </button>
+          <button class="wa-nav-tab ${this.activeTab === 'company' ? 'active' : ''}" data-tab="company" style="${this.getTabBtnStyle(this.activeTab === 'company')}">
+            <i class="fas fa-envelope-open-text"></i> 3. New Messages
+          </button>
+          ${isAllAuthorized ? `
+            <button class="wa-nav-tab ${this.activeTab === 'all' ? 'active' : ''}" data-tab="all" style="${this.getTabBtnStyle(this.activeTab === 'all')}">
+              <i class="fas fa-globe"></i> 4. All Messages
+            </button>
+          ` : ''}
+          <button class="wa-nav-tab ${this.activeTab === 'broadcasts' ? 'active' : ''}" data-tab="broadcasts" style="${this.getTabBtnStyle(this.activeTab === 'broadcasts')}">
+            <i class="fas fa-bullhorn"></i> 5. Broadcasts & Dispatches
+          </button>
           ${isKeyLeadership ? `
             <button class="wa-nav-tab ${this.activeTab === 'inbox' ? 'active' : ''}" data-tab="inbox" style="${this.getTabBtnStyle(this.activeTab === 'inbox')}">
-              <i class="fas fa-robot"></i> 3. WhatsApp API Bot
+              <i class="fas fa-robot"></i> 6. WhatsApp API Bot
               ${this.inboxStats.unread > 0 ? `<span style="background:#ef4444;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px;">${this.inboxStats.unread}</span>` : ''}
             </button>
           ` : ''}
           ${isAdmin ? `
             <button class="wa-nav-tab ${this.activeTab === 'templates' ? 'active' : ''}" data-tab="templates" style="${this.getTabBtnStyle(this.activeTab === 'templates')}">
-              <i class="fas fa-file-alt"></i> 4. Templates
+              <i class="fas fa-file-alt"></i> 7. Templates
             </button>
             <button class="wa-nav-tab ${this.activeTab === 'automations' ? 'active' : ''}" data-tab="automations" style="${this.getTabBtnStyle(this.activeTab === 'automations')}">
-              <i class="fas fa-cogs"></i> 5. Automations
+              <i class="fas fa-cogs"></i> 8. Automations
             </button>
             <button class="wa-nav-tab ${this.activeTab === 'audit' ? 'active' : ''}" data-tab="audit" style="${this.getTabBtnStyle(this.activeTab === 'audit')}">
-              <i class="fas fa-shield-alt"></i> 6. Audit Log
+              <i class="fas fa-shield-alt"></i> 9. Audit Log
             </button>
           ` : ''}
         </div>
 
         <!-- Tab Content Panes -->
-        ${(this.activeTab === 'messenger' || this.activeTab === 'team') ? this.renderMessengerTab() : ''}
+        ${(this.activeTab === 'messenger' || this.activeTab === 'team' || this.activeTab === 'company' || this.activeTab === 'all' || this.activeTab === 'broadcasts') ? this.renderMessengerTab() : ''}
         ${this.activeTab === 'inbox' ? this.renderInboxTab() : ''}
         ${this.activeTab === 'templates' && isAdmin ? this.renderTemplatesTab() : ''}
         ${this.activeTab === 'automations' && isAdmin ? this.renderAutomationsTab() : ''}
@@ -311,6 +358,42 @@ export class StaffWhatsAppInboxPage {
 
   private renderMessengerTab(): string {
     const isTeam = this.activeTab === 'team';
+    const isCompany = this.activeTab === 'company';
+    const isAll = this.activeTab === 'all';
+    const isBroadcasts = this.activeTab === 'broadcasts';
+
+    let headerIcon = 'fas fa-comments';
+    let headerTitle = 'My Sent Messages & Assigned Leads';
+    let searchPlaceholder = 'Search my messages / phone...';
+    let emptyTitle = 'No personal conversations found.';
+    let emptySubtitle = 'Tap "+ New Message" above to start a conversation.';
+
+    if (isTeam) {
+      headerIcon = 'fas fa-users';
+      headerTitle = 'Downline Team Conversations';
+      searchPlaceholder = 'Search team messages / phone...';
+      emptyTitle = 'No downline team conversations found.';
+      emptySubtitle = 'Team members assigned to you will appear here.';
+    } else if (isCompany) {
+      headerIcon = 'fas fa-envelope-open-text';
+      headerTitle = 'New Messages & Unassigned Inquiries';
+      searchPlaceholder = 'Search new messages / phone...';
+      emptyTitle = 'No unassigned company messages found.';
+      emptySubtitle = 'All incoming customer inquiries are assigned.';
+    } else if (isAll) {
+      headerIcon = 'fas fa-globe';
+      headerTitle = 'All Organization Messages (Master View)';
+      searchPlaceholder = 'Search all messages / phone / contact / body...';
+      emptyTitle = 'No messages found in organization archive.';
+      emptySubtitle = 'All organization outbound dispatches and conversations appear here.';
+    } else if (isBroadcasts) {
+      headerIcon = 'fas fa-bullhorn';
+      headerTitle = 'Broadcasts & Dispatches';
+      searchPlaceholder = 'Search broadcast dispatches / phone...';
+      emptyTitle = 'No broadcast dispatches found.';
+      emptySubtitle = 'Campaign and blast dispatches appear here.';
+    }
+
     return `
       <div style="background: #1e293b; border-radius: 12px; border: 1px solid #334155; overflow: hidden; display: flex; flex-direction: column; min-height: 520px;">
         
@@ -318,7 +401,7 @@ export class StaffWhatsAppInboxPage {
         <div style="padding: 10px; background: #0f172a; border-bottom: 1px solid #334155; display: flex; flex-direction: column; gap: 8px;">
           <div style="display: flex; align-items: center; justify-content: space-between;">
             <div style="font-size: 12px; font-weight: 700; color: #38bdf8;">
-              <i class="${isTeam ? 'fas fa-users' : 'fas fa-comments'}"></i> ${isTeam ? 'Downline Team Conversations' : 'My Sent Messages & Assigned Leads'}
+              <i class="${headerIcon}"></i> ${headerTitle}
             </div>
             <div style="font-size: 11px; color: #94a3b8;">
               ${this.convsList.length} conversation${this.convsList.length === 1 ? '' : 's'}
@@ -329,7 +412,7 @@ export class StaffWhatsAppInboxPage {
             <input 
               type="text" 
               id="waMsgSearchInput" 
-              placeholder="${isTeam ? 'Search team messages / phone...' : 'Search my messages / phone...'}" 
+              placeholder="${searchPlaceholder}" 
               value="${this.escapeAttr(this.fMsgSearch)}"
               style="width: 100%; box-sizing: border-box; padding: 7px 10px 7px 30px; border-radius: 8px; background: #1e293b; border: 1px solid #334155; color: #fff; font-size: 12px; outline: none;"
             />
@@ -348,9 +431,9 @@ export class StaffWhatsAppInboxPage {
 
             ${!this.convsLoading && this.convsList.length === 0 ? `
               <div style="text-align: center; padding: 40px 20px; color: #64748b;">
-                <i class="fas fa-comments" style="font-size: 36px; margin-bottom: 8px;"></i>
-                <div>${isTeam ? 'No downline team conversations found.' : 'No personal conversations found.'}</div>
-                <div style="font-size: 11.5px; color: #475569; margin-top: 4px;">Tap "+ New Message" above to start a conversation.</div>
+                <i class="${headerIcon}" style="font-size: 36px; margin-bottom: 8px;"></i>
+                <div>${emptyTitle}</div>
+                <div style="font-size: 11.5px; color: #475569; margin-top: 4px;">${emptySubtitle}</div>
               </div>
             ` : ''}
 
@@ -378,7 +461,7 @@ export class StaffWhatsAppInboxPage {
     const hasRealName = rawName && rawName !== '0' && rawName !== 'None' && rawName !== 'null' && !/^\d+$/.test(rawName) && !rawName.startsWith('Customer (+91') && !rawName.startsWith('Contact (+91');
     
     const displayName = isGroup ? (c.name || rawName || phone) : (hasRealName ? rawName : `Customer (${this.maskPhone(cleanPhone)})`);
-    const initial = isGroup ? '👥' : (displayName.charAt(0) || 'C').toUpperCase();
+    const initial = isGroup ? '👥' : (this.activeScope === 'all' ? '🌐' : (this.activeScope === 'company' ? '🏢' : (this.activeScope === 'broadcasts' ? '📡' : (displayName.charAt(0) || 'C').toUpperCase())));
     const msg = c.last_message || c.snippet || 'No messages';
     const time = c.last_time || '';
 
@@ -436,6 +519,9 @@ export class StaffWhatsAppInboxPage {
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 6px;">
+            <button id="waChatGalleryBtn" title="Media & Attachments Gallery" style="width: 32px; height: 32px; border-radius: 50%; background: #1e3a8a; border: 1px solid #60a5fa; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 13px; cursor: pointer;">
+              <i class="fas fa-images"></i>
+            </button>
             ${!isGroup && cleanPhone ? `
               <button id="waHeaderSoftphoneBtn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(headerTitle || '')}" title="Call via Softphone" style="width: 32px; height: 32px; border-radius: 50%; background: #15803d; border: 1px solid #86efac; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer;">
                 <i class="fas fa-phone-alt"></i>
@@ -695,7 +781,7 @@ export class StaffWhatsAppInboxPage {
               <i class="fas fa-reply"></i>
             </button>
             <button class="wa-bubble-fwd-btn" data-msg="${this.escapeAttr(text)}" style="background: none; border: none; color: #a7f3d0; cursor: pointer; font-size: 10px; padding: 2px 4px; display: inline-flex; align-items: center;" title="Forward message">
-              <i class="fas fa-share" style="transform: scaleX(-1);"></i>
+              <i class="fas fa-share"></i>
             </button>
             <span>${timeStr}</span>
             <span style="font-size: 10px; color: #a7f3d0;">${ticks}</span>
@@ -714,7 +800,7 @@ export class StaffWhatsAppInboxPage {
             <i class="fas fa-reply"></i>
           </button>
           <button class="wa-bubble-fwd-btn" data-msg="${this.escapeAttr(text)}" style="background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 10px; padding: 2px 4px; display: inline-flex; align-items: center;" title="Forward message">
-            <i class="fas fa-share" style="transform: scaleX(-1);"></i>
+            <i class="fas fa-share"></i>
           </button>
           <span>${timeStr}</span>
         </div>
@@ -936,7 +1022,7 @@ export class StaffWhatsAppInboxPage {
             ⚡ Active WhatsApp Bot Automations
           </div>
           <div style="font-size: 12px; color: #94a3b8;">
-            Automated event triggers, instant lead greetings, and campaign dispatches.
+            Truthful background dispatch counts, live relational scheduler status, and 3-day history matrix.
           </div>
         </div>
 
@@ -947,20 +1033,48 @@ export class StaffWhatsAppInboxPage {
           </div>
         ` : ''}
 
-        ${this.automationsList.map(a => `
-          <div style="background: #1e293b; border-radius: 10px; padding: 12px; border: 1px solid #334155;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <span style="font-size: 13px; font-weight: 700; color: #38bdf8;">${a.title || a.name || 'Automation Rule'}</span>
-              <span style="font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: #065f46; color: #a7f3d0;">ACTIVE</span>
-            </div>
-            <div style="font-size: 12px; color: #cbd5e1; margin-bottom: 6px;">
-              ${a.description || 'Dispatches automatic WhatsApp alert to customer / group'}
-            </div>
-            <div style="font-size: 11px; color: #94a3b8;">
-              Trigger: <strong style="color:#e2e8f0;">${a.trigger_event || 'On Lead Created'}</strong>
-            </div>
+        ${!this.subLoading && this.automationsList.length === 0 ? `
+          <div style="text-align: center; padding: 30px 20px; background: #1e293b; border-radius: 12px; border: 1px solid #334155;">
+            <i class="fas fa-robot" style="font-size: 32px; color: #64748b; margin-bottom: 8px;"></i>
+            <div style="font-size: 14px; font-weight: 600;">No Automations Found</div>
           </div>
-        `).join('')}
+        ` : ''}
+
+        ${this.automationsList.map(a => {
+          const st = a.latest_stats || { total_messages: 0, sent_count: 0, failed_count: 0, uncertain_count: 0 };
+          const isDynamic = a.archetype === 'dynamic_segment';
+          return `
+            <div style="background: #1e293b; border-radius: 10px; padding: 12px; border: 1px solid #334155;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-size: 13px; font-weight: 700; color: #38bdf8;">${this.escapeHtml(a.name || a.title || a.job_id || 'Automation Rule')}</span>
+                <span style="font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; background: ${isDynamic ? '#78350f' : '#065f46'}; color: ${isDynamic ? '#fef3c7' : '#a7f3d0'};">
+                  ${isDynamic ? 'DYNAMIC' : 'STATIC'}
+                </span>
+              </div>
+              <div style="font-size: 11.5px; color: #cbd5e1; margin-bottom: 6px;">
+                Category: <strong>${this.escapeHtml(a.category || 'Automated')}</strong> • Schedule: <strong>${this.escapeHtml(a.schedule || 'Daily')}</strong>
+              </div>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px;">
+                <span style="font-size: 10.5px; background: #0f172a; color: #a7f3d0; padding: 2px 6px; border-radius: 4px; border: 1px solid #059669;">
+                  <i class="fas fa-check-circle"></i> ${st.sent_count || 0} Sent
+                </span>
+                ${st.uncertain_count > 0 ? `
+                  <span style="font-size: 10.5px; background: #0f172a; color: #fde68a; padding: 2px 6px; border-radius: 4px; border: 1px solid #d97706;">
+                    <i class="fas fa-exclamation-triangle"></i> ${st.uncertain_count} Uncertain
+                  </span>
+                ` : ''}
+                ${st.failed_count > 0 ? `
+                  <span style="font-size: 10.5px; background: #0f172a; color: #fecaca; padding: 2px 6px; border-radius: 4px; border: 1px solid #dc2626;">
+                    <i class="fas fa-times-circle"></i> ${st.failed_count} Failed
+                  </span>
+                ` : ''}
+              </div>
+              <div style="font-size: 10.5px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center;">
+                <span>Next Run: <strong style="color:#a7f3d0;">${this.escapeHtml(a.next_run || 'Scheduled')}</strong></span>
+              </div>
+            </div>
+          `;
+        }).join('')}
       </div>
     `;
   }
@@ -1072,11 +1186,11 @@ export class StaffWhatsAppInboxPage {
     }
   }
 
-  private async loadChat(phone: string, name: string, originTab?: 'messenger' | 'team' | 'inbox'): Promise<void> {
+  private async loadChat(phone: string, name: string, originTab?: 'messenger' | 'team' | 'company' | 'all' | 'broadcasts' | 'inbox'): Promise<void> {
     if (originTab) {
       this.chatOriginTab = originTab;
-    } else if (this.activeTab === 'team' || this.activeTab === 'inbox' || this.activeTab === 'messenger') {
-      this.chatOriginTab = this.activeTab;
+    } else if (['team', 'inbox', 'messenger', 'company', 'all', 'broadcasts'].includes(this.activeTab)) {
+      this.chatOriginTab = this.activeTab as any;
     }
 
     const isGroup = (phone && (phone.includes('@g.us') || phone.startsWith('120363') || phone.length > 14));
@@ -1120,19 +1234,36 @@ export class StaffWhatsAppInboxPage {
     this.render();
 
     try {
-      const res = await apiService.get<any>('/whatsapp/scheduler-templates/1');
-      if (res.success && res.data) {
-        this.templatesList = res.data.templates || [
-          { name: 'lead_welcome_instant', category: 'MARKETING', status: 'APPROVED', body: 'Namaskaram! Welcome to MyntReal Real Estate. We received your inquiry and our advisor will connect shortly.' },
-          { name: 'brochure_and_pricing_share', category: 'UTILITY', status: 'APPROVED', body: 'Dear Customer, thank you for your interest in our premium venture. Please find the project details attached.' },
-          { name: 'call_followup_reminder', category: 'UTILITY', status: 'APPROVED', body: 'Hello, this is a quick reminder regarding your scheduled site visit with MyntReal.' }
-        ];
+      const res = await apiService.get<any>('/whatsapp-config/templates');
+      if (res.success && res.data && res.data.templates) {
+        this.templatesList = res.data.templates.map((t: any) => ({
+          name: t.name || t.template_name || 'Template',
+          category: t.category || t.segment || 'UTILITY',
+          status: t.status || 'APPROVED',
+          body: t.body_text || t.content || t.body || ''
+        }));
+      } else if (res.templates) {
+        this.templatesList = res.templates.map((t: any) => ({
+          name: t.name || t.template_name || 'Template',
+          category: t.category || t.segment || 'UTILITY',
+          status: t.status || 'APPROVED',
+          body: t.body_text || t.content || t.body || ''
+        }));
+      } else {
+        const fallback = await apiService.get<any>('/whatsapp/scheduler-templates/1');
+        if (fallback.success && fallback.data && fallback.data.templates) {
+          this.templatesList = fallback.data.templates;
+        }
       }
     } catch {
-      this.templatesList = [
-        { name: 'lead_welcome_instant', category: 'MARKETING', status: 'APPROVED', body: 'Namaskaram! Welcome to MyntReal Real Estate. We received your inquiry and our advisor will connect shortly.' },
-        { name: 'brochure_and_pricing_share', category: 'UTILITY', status: 'APPROVED', body: 'Dear Customer, thank you for your interest in our premium venture. Please find the project details attached.' }
-      ];
+      try {
+        const fallback = await apiService.get<any>('/whatsapp/scheduler-templates/1');
+        if (fallback.success && fallback.data && fallback.data.templates) {
+          this.templatesList = fallback.data.templates;
+        }
+      } catch {
+        this.templatesList = [];
+      }
     } finally {
       this.subLoading = false;
       this.render();
@@ -1144,11 +1275,16 @@ export class StaffWhatsAppInboxPage {
     this.render();
 
     try {
-      this.automationsList = [
-        { name: 'Instant Welcome Message', trigger_event: 'CRM Lead Creation', description: 'Sends automated Telugu / English greeting via Meta Cloud API on new lead arrival.' },
-        { name: 'Missed Call Acknowledgment', trigger_event: 'Missed Operator Call', description: 'Sends instant WhatsApp message acknowledging caller with telecaller contact info.' },
-        { name: 'Site Visit Follow-up Dispatch', trigger_event: 'Lead Status = Site Visit', description: 'Dispatches project location pin and advisor phone number to customer.' }
-      ];
+      const res = await apiService.get<any>('/whatsapp/scheduler-status');
+      if (res.success && res.data && res.data.jobs) {
+        this.automationsList = res.data.jobs;
+      } else if (res.jobs) {
+        this.automationsList = res.jobs;
+      } else {
+        this.automationsList = [];
+      }
+    } catch {
+      this.automationsList = [];
     } finally {
       this.subLoading = false;
       this.render();
@@ -1195,6 +1331,14 @@ export class StaffWhatsAppInboxPage {
     // New Message Button
     document.getElementById('waNewMsgBtn')?.addEventListener('click', () => {
       this.openNewMessageModal();
+    });
+
+    // Center Banner Refresh Button
+    document.getElementById('waBannerRefreshBtn')?.addEventListener('click', async () => {
+      const icon = document.getElementById('waBannerRefreshIcon');
+      if (icon) icon.classList.add('fa-spin');
+      await this.loadCurrentTab();
+      if (icon) icon.classList.remove('fa-spin');
     });
 
     // Messenger & Team Messages Live Search
@@ -1308,7 +1452,7 @@ export class StaffWhatsAppInboxPage {
         if (target.closest('.wa-card-call-btn')) return;
         const phone = (card as HTMLElement).dataset.phone || '';
         const name = (card as HTMLElement).dataset.name || 'Customer';
-        this.loadChat(phone, name, this.activeTab === 'team' ? 'team' : 'messenger');
+        this.loadChat(phone, name, this.activeTab as any);
       });
     });
 
@@ -1325,6 +1469,11 @@ export class StaffWhatsAppInboxPage {
           });
         }
       });
+    });
+
+    // Chat Media Gallery Button
+    document.getElementById('waChatGalleryBtn')?.addEventListener('click', () => {
+      this.openChatGalleryModal();
     });
 
     // Back to conversation list preserving origin tab
@@ -2457,6 +2606,199 @@ export class StaffWhatsAppInboxPage {
     });
   }
 
+  private async openChatGalleryModal(): Promise<void> {
+    if (!this.activeChatPhone) return;
+    const modalWrap = document.getElementById('waCenterModalContainer');
+    if (!modalWrap) return;
+
+    const isGroup = (this.activeChatPhone && (this.activeChatPhone.includes('@g.us') || this.activeChatPhone.startsWith('120363') || this.activeChatPhone.length > 14));
+    let activeCat = 'all';
+    let galleryItems: any[] = [];
+
+    const renderGalleryView = () => {
+      const filtered = activeCat === 'all' ? galleryItems : galleryItems.filter(it => it.category === activeCat);
+      const counts = {
+        all: galleryItems.length,
+        photos: galleryItems.filter(it => it.category === 'photos').length,
+        documents: galleryItems.filter(it => it.category === 'documents').length,
+        videos: galleryItems.filter(it => it.category === 'videos').length
+      };
+
+      const itemsHtml = filtered.length === 0 ? `
+        <div style="padding: 40px 16px; text-align: center; color: #94a3b8;">
+          <i class="far fa-folder-open" style="font-size: 32px; opacity: 0.5; margin-bottom: 8px;"></i>
+          <div>No ${activeCat === 'all' ? 'attachments' : activeCat} found.</div>
+        </div>
+      ` : `
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 4px;">
+          ${filtered.map(it => {
+            const isAvail = it.is_available !== false;
+            const url = it.file_url || '';
+            const dlUrl = url.includes('?') ? `${url}&download=1` : `${url}?download=1`;
+            const fname = it.file_name || 'Attachment';
+            const isOut = it.direction === 'outbound';
+            const dirBadge = isOut 
+              ? '<span style="font-size: 9px; background: #1e3a8a; color: #93c5fd; padding: 2px 5px; border-radius: 4px; font-weight: 700;">📤 Sent</span>' 
+              : '<span style="font-size: 9px; background: #064e3b; color: #a7f3d0; padding: 2px 5px; border-radius: 4px; font-weight: 700;">📥 Recv</span>';
+            const timeStr = it.timestamp ? new Date(it.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true }) : '';
+
+            if (it.category === 'photos') {
+              return `
+                <div style="background: #0f172a; border-radius: 8px; border: 1px solid #334155; overflow: hidden; display: flex; flex-direction: column;">
+                  <div style="height: 100px; background: #1e293b; display: flex; align-items: center; justify-content: center; position: relative;">
+                    ${isAvail ? `
+                      <a href="${url}" target="_blank" style="width: 100%; height: 100%; display: block;">
+                        <img src="${url}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.onerror=null;this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:11px\\'><i class=\\'fas fa-image\\'></i></div>'"/>
+                      </a>
+                    ` : `
+                      <div style="padding: 8px; text-align: center; color: #64748b; font-size: 10px;">
+                        <i class="fas fa-cloud-download-alt" style="font-size: 20px; color: #94a3b8; margin-bottom: 4px;"></i><br>
+                        <span>Archive File</span>
+                      </div>
+                    `}
+                  </div>
+                  <div style="padding: 6px; font-size: 10.5px; display: flex; flex-direction: column; justify-content: space-between; flex: 1;">
+                    <div>
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                        ${dirBadge}
+                        <span style="font-size: 9px; color: #64748b;">${timeStr}</span>
+                      </div>
+                      <div style="font-weight: 600; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${this.escapeAttr(fname)}">${this.escapeHtml(fname)}</div>
+                    </div>
+                    ${isAvail ? `
+                      <div style="margin-top: 4px; text-align: right;">
+                        <a href="${dlUrl}" download="${this.escapeAttr(fname)}" style="font-size: 10px; color: #34d399; font-weight: 700; text-decoration: none;"><i class="fas fa-download"></i> Save</a>
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>
+              `;
+            } else if (it.category === 'documents') {
+              return `
+                <div style="background: #0f172a; border-radius: 8px; border: 1px solid #334155; padding: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                      ${dirBadge}
+                      <span style="font-size: 9px; color: #64748b;">${timeStr}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                      <i class="fas fa-file-pdf" style="font-size: 20px; color: #ef4444; flex-shrink: 0;"></i>
+                      <div style="min-width: 0;">
+                        <div style="font-weight: 600; font-size: 11px; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${this.escapeAttr(fname)}">${this.escapeHtml(fname)}</div>
+                        <div style="font-size: 9px; color: #94a3b8;">Document</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="margin-top: 6px; display: flex; justify-content: space-between; align-items: center;">
+                    ${isAvail ? `
+                      <a href="${url}" target="_blank" style="font-size: 10px; color: #38bdf8; font-weight: 600; text-decoration: none;">View</a>
+                      <a href="${dlUrl}" download="${this.escapeAttr(fname)}" style="font-size: 10px; color: #34d399; font-weight: 700; text-decoration: none;"><i class="fas fa-download"></i> Save</a>
+                    ` : `<span style="font-size: 9px; color: #64748b; font-style: italic;">Historical</span>`}
+                  </div>
+                </div>
+              `;
+            } else {
+              return `
+                <div style="background: #0f172a; border-radius: 8px; border: 1px solid #334155; padding: 8px; display: flex; flex-direction: column; justify-content: space-between;">
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                      ${dirBadge}
+                      <span style="font-size: 9px; color: #64748b;">${timeStr}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                      <i class="fas fa-video" style="font-size: 18px; color: #a855f7; flex-shrink: 0;"></i>
+                      <div style="min-width: 0;">
+                        <div style="font-weight: 600; font-size: 11px; color: #f8fafc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${this.escapeAttr(fname)}">${this.escapeHtml(fname)}</div>
+                        <div style="font-size: 9px; color: #94a3b8;">Media</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="margin-top: 6px; text-align: right;">
+                    ${isAvail ? `
+                      <a href="${url}" target="_blank" style="font-size: 10px; color: #38bdf8; font-weight: 600; text-decoration: none;">Open</a>
+                    ` : `<span style="font-size: 9px; color: #64748b; font-style: italic;">Historical</span>`}
+                  </div>
+                </div>
+              `;
+            }
+          }).join('')}
+        </div>
+      `;
+
+      modalWrap.innerHTML = `
+        <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; align-items: flex-end; justify-content: center;">
+          <div style="background: #1e293b; border-radius: 16px 16px 0 0; padding: 16px; width: 100%; max-width: 480px; max-height: 85vh; display: flex; flex-direction: column; border-top: 1px solid #334155;">
+            <!-- Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <div style="font-size: 14px; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-images" style="color: #38bdf8;"></i> Media Gallery
+              </div>
+              <button id="waGalleryCloseBtn" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer; padding: 4px;">✕</button>
+            </div>
+
+            <!-- Filter Pills -->
+            <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px;">
+              <button class="wa-gal-cat-btn" data-cat="all" style="padding: 5px 10px; border-radius: 14px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; white-space: nowrap; ${activeCat === 'all' ? 'background: #2563eb; color: #fff;' : 'background: #0f172a; color: #94a3b8;'}">
+                All (${counts.all})
+              </button>
+              <button class="wa-gal-cat-btn" data-cat="photos" style="padding: 5px 10px; border-radius: 14px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; white-space: nowrap; ${activeCat === 'photos' ? 'background: #2563eb; color: #fff;' : 'background: #0f172a; color: #94a3b8;'}">
+                🖼️ Photos (${counts.photos})
+              </button>
+              <button class="wa-gal-cat-btn" data-cat="documents" style="padding: 5px 10px; border-radius: 14px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; white-space: nowrap; ${activeCat === 'documents' ? 'background: #2563eb; color: #fff;' : 'background: #0f172a; color: #94a3b8;'}">
+                📄 Documents (${counts.documents})
+              </button>
+              <button class="wa-gal-cat-btn" data-cat="videos" style="padding: 5px 10px; border-radius: 14px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; white-space: nowrap; ${activeCat === 'videos' ? 'background: #2563eb; color: #fff;' : 'background: #0f172a; color: #94a3b8;'}">
+                🎬 Videos (${counts.videos})
+              </button>
+            </div>
+
+            <!-- Content Area -->
+            <div style="flex: 1; overflow-y: auto; max-height: 60vh;">
+              ${itemsHtml}
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('waGalleryCloseBtn')?.addEventListener('click', () => {
+        modalWrap.innerHTML = '';
+      });
+
+      modalWrap.querySelectorAll('.wa-gal-cat-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          activeCat = (e.currentTarget as HTMLElement).dataset.cat || 'all';
+          renderGalleryView();
+        });
+      });
+    };
+
+    // Show initial loading
+    modalWrap.innerHTML = `
+      <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; align-items: flex-end; justify-content: center;">
+        <div style="background: #1e293b; border-radius: 16px 16px 0 0; padding: 24px; width: 100%; max-width: 480px; text-align: center; color: #94a3b8;">
+          <i class="fas fa-spinner fa-spin" style="font-size: 24px; color: #38bdf8; margin-bottom: 8px;"></i>
+          <div>Loading media gallery...</div>
+        </div>
+      </div>
+    `;
+
+    try {
+      const res = await apiService.get<any>(`/whatsapp/chat-gallery?phone=${encodeURIComponent(this.activeChatPhone)}&recipient_type=${isGroup ? 'group' : 'individual'}&category=all`);
+      galleryItems = res?.items || [];
+      renderGalleryView();
+    } catch(err: any) {
+      modalWrap.innerHTML = `
+        <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 10000; display: flex; align-items: flex-end; justify-content: center;">
+          <div style="background: #1e293b; border-radius: 16px 16px 0 0; padding: 20px; width: 100%; max-width: 480px; text-align: center; color: #ef4444;">
+            <div>Failed to load gallery: ${this.escapeHtml(err?.message || 'Error')}</div>
+            <button id="waGalErrClose" style="margin-top: 12px; padding: 6px 16px; background: #334155; color: #fff; border: none; border-radius: 6px; cursor: pointer;">Close</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('waGalErrClose')?.addEventListener('click', () => { modalWrap.innerHTML = ''; });
+    }
+  }
+
   private openForwardModal(msgText: string, mediaUrl?: string): void {
     const modalWrap = document.getElementById('waCenterModalContainer');
     if (!modalWrap) return;
@@ -2471,7 +2813,7 @@ export class StaffWhatsAppInboxPage {
           <!-- Header -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div style="font-size: 15px; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
-              <i class="fas fa-share" style="color: #25d366; transform: scaleX(-1);"></i> Forward Message
+              <i class="fas fa-share" style="color: #25d366;"></i> Forward Message
             </div>
             <button id="waForwardCloseBtn" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer; padding: 4px;">✕</button>
           </div>
@@ -2586,7 +2928,7 @@ export class StaffWhatsAppInboxPage {
         try {
           if (listEl) listEl.innerHTML = '<div style="padding: 16px; text-align: center; color: #94a3b8; font-size: 11px;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
           const res = await apiService.get<any>(`/whatsapp/contacts-search?query=${encodeURIComponent(q)}&scope=all`);
-          renderList(res?.results || []);
+          renderList(res?.contacts || res?.results || []);
         } catch {
           if (listEl) listEl.innerHTML = '<div style="padding: 16px; text-align: center; color: #ef4444; font-size: 11px;">Search failed.</div>';
         }
@@ -2619,9 +2961,11 @@ export class StaffWhatsAppInboxPage {
         if (res && (res.success || res.status === 200 || (res.data && (res.data.success || res.data.status === 'sent')))) {
           alert(`Message forwarded to ${selectedTarget.name}!`);
           closeModal();
-          if (this.activeChatPhone && this.activeChatPhone.slice(-10) === selectedTarget.phone.slice(-10)) {
-            this.loadChat(this.activeChatPhone, selectedTarget.name);
-          }
+          // Switch to forwarded recipient conversation
+          this.activeChatPhone = selectedTarget.phone;
+          this.activeChatName = selectedTarget.name;
+          this.renderSkeleton();
+          await this.loadChat(selectedTarget.phone, selectedTarget.name);
         } else {
           alert((res && (res.message || res.error)) || 'Failed to forward message');
           submitBtn.disabled = false;

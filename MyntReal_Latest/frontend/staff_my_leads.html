@@ -3238,8 +3238,8 @@
                     document.getElementById('pincodeStatus').innerHTML = '';
                     
                     if (lead.next_followup_date) {
-                        const dt = new Date(lead.next_followup_date);
-                        document.getElementById('leadNextFollowupDate').value = dt.toISOString().slice(0, 16);
+                        const s = String(lead.next_followup_date).replace(' ', 'T');
+                        document.getElementById('leadNextFollowupDate').value = s.slice(0, 16);
                     } else {
                         document.getElementById('leadNextFollowupDate').value = '';
                     }
@@ -3910,7 +3910,7 @@
                 state: document.getElementById('leadState').value || null,
                 looking_for: document.getElementById('leadLookingFor').value || null,
                 recent_comments: document.getElementById('leadRecentComments').value || null,
-                next_followup_date: nextFollowup ? new Date(nextFollowup).toISOString() : null,
+                next_followup_date: nextFollowup ? (nextFollowup.includes('T') ? nextFollowup.replace('T', ' ') : nextFollowup) : null,
                 depends_on_staff_id: document.getElementById('leadDependsOnStaffId').value || null,
                 description: document.getElementById('leadDescription').value || null,
                 ...CRMHandlerConfirm.getValues(),
@@ -4374,7 +4374,9 @@
                     document.getElementById('detailEmail').textContent = lead.email || '-';
                     const rawP = lead.phone || '';
                     const cleanP10 = rawP.replace(/\D/g, '').slice(-10);
-                    const callBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-primary btn-call-direct ms-2" onclick="triggerLeadCall('${cleanP10}', '${(lead.name || '').replace(/'/g, "\\'")}', ${lead.id})" title="Softphone WebRTC Call"><i class="fas fa-phone-alt me-1"></i> Call</button>` : '';
+                    const safeLeadName = (lead.name || '').replace(/'/g, "\\'");
+                    const callBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-primary btn-call-direct ms-2" onclick="triggerLeadCall('${cleanP10}', '${safeLeadName}', ${lead.id})" title="Softphone WebRTC Call"><i class="fas fa-phone-alt me-1"></i> Call</button>` : '';
+                    const waBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-success btn-whatsapp-direct ms-1" onclick="openLeadWAModal('${lead.id}', '${cleanP10}', '${safeLeadName}', '${lead.company_id || effectiveCompanyId}')" title="WhatsApp Chat & Scanned Bot"><i class="fab fa-whatsapp me-1"></i> Chat</button>` : '';
                     const detailPhoneEl = document.getElementById('detailPhone');
                     if (detailPhoneEl) {
                         detailPhoneEl.dataset.rawPhone = rawP;

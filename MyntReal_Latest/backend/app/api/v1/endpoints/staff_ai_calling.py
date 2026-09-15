@@ -5188,18 +5188,38 @@ async def webhook_status(
     else:
         # ── No lead_id — try to find by phone, or create a new lead ──────────
         # (This happens for manual test calls that weren't tied to a CRM lead)
-        phone_from_log = db.execute(text(
-            "SELECT l.phone_dialed FROM ai_call_logs l WHERE l.id = :lid"
-        ), {"lid": log_id}).scalar()
+        log_row = db.execute(text(
+            "SELECT l.phone_dialed, l.company_id, l.campaign_id FROM ai_call_logs l WHERE l.id = :lid"
+        ), {"lid": log_id}).fetchone()
+        phone_from_log = log_row[0] if log_row else None
+        call_company_id = log_row[1] if log_row else None
+        call_campaign_id = log_row[2] if log_row else None
+
+        if not call_company_id and call_campaign_id:
+            call_company_id = db.execute(text(
+                "SELECT company_id FROM ai_campaigns WHERE id = :cid"
+            ), {"cid": call_campaign_id}).scalar()
+
         phone_to_use = a_phone or phone_from_log
 
-        if phone_to_use:
-            existing = db.execute(text(
-                "SELECT id FROM crm_leads WHERE phone = :ph AND company_id = :cid LIMIT 1"
-            ), {"ph": phone_to_use, "cid": 4}).fetchone()
+        call_tenant_id = None
+        if call_company_id:
+            call_tenant_id = db.execute(text(
+                "SELECT client_id FROM associated_companies WHERE id = :cid"
+            ), {"cid": call_company_id}).scalar()
 
-            if existing:
-                lead_id = existing[0]
+        if phone_to_use and call_company_id and call_tenant_id:
+            from app.services.crm_dedup_service import find_phone_duplicate
+            dup_lead = find_phone_duplicate(
+                db=db,
+                tenant_id=call_tenant_id,
+                company_id=call_company_id,
+                phone=phone_to_use,
+                with_lock=True
+            )
+
+            if dup_lead:
+                lead_id = dup_lead.id
                 phone_status_clause = (
                     "status = CASE WHEN status NOT IN ('won','qualified','proposal','loan_process') THEN :new_crm_status ELSE status END,"
                     if new_crm_status else ""
@@ -5245,21 +5265,22 @@ async def webhook_status(
                                     detected_lang, duration, a_followup, rich_comment)
 
             elif outcome in QUALIFIED_OUTCOMES or (a_interest and a_interest in ("high", "medium")):
-                # Only auto-create a new lead if there's genuine interest
+                # Only auto-create a new lead if there's genuine interest and valid tenancy
                 new_lead = db.execute(text("""
                     INSERT INTO crm_leads
-                        (company_id, name, phone, email, city, looking_for, requirements,
+                        (tenant_id, company_id, name, phone, email, city, looking_for, requirements,
                          budget_min, budget_max, source, status, priority, description,
                          ai_status, ai_summary, ai_language, ai_last_called_at, ai_call_count,
                          next_followup_date, last_contact_date, recent_comments,
                          created_at, updated_at)
                     VALUES
-                        (4, :aname, :phone, :aemail, :acity, :aloc, :areq,
+                        (:tid, :cid, :aname, :phone, :aemail, :acity, :aloc, :areq,
                          :abmin, :abmax, 'AI Call', 'New', 'medium',
                          :desc, :outcome, :summary, :lang, NOW(), 1,
                          :afollowup, NOW(), :rcomment, NOW(), NOW())
                     RETURNING id
                 """), {
+                    "tid": call_tenant_id, "cid": call_company_id,
                     "aname": a_name or "Unknown", "phone": phone_to_use,
                     "aemail": a_email, "acity": a_city,
                     "aloc": (f"{a_loc} | {a_prop}" if a_loc and a_prop else a_loc or a_prop),
@@ -5272,11 +5293,24 @@ async def webhook_status(
                     db.execute(text("UPDATE ai_call_logs SET lead_id=:lid WHERE id=:log"),
                                {"lid": new_lead[0], "log": log_id})
                     logger.info(f"[STATUS] ✅ New CRM lead created id={new_lead[0]} log={log_id}")
+                    lead_obj = db.query(CRMLead).filter(CRMLead.id == new_lead[0]).first()
+                    if lead_obj:
+                        from app.services.crm_phone_sync_service import sync_lead_phone_identities
+                        sync_lead_phone_identities(
+                            db=db,
+                            lead=lead_obj,
+                            phone_raw=phone_to_use,
+                            source_channel='ai_calling',
+                            source_ref=f"ai_call_log_{log_id}",
+                            with_lock=False
+                        )
                     # Write CRM note for the new lead
                     _agent_n = _get_agent_name_for_log(log_id)
                     _write_ai_call_note(new_lead[0], _agent_n, outcome or "no_answer", summary,
                                         None, "contacted", detected_lang, duration,
                                         a_followup, rich_comment)
+        elif not call_company_id or not call_tenant_id:
+            logger.warning(f"[STATUS] Skipped auto CRM lead creation for log {log_id}: Missing company_id or tenant_id (fail closed)")
 
     if campaign_id:
         db.execute(text("""

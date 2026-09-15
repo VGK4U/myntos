@@ -1025,7 +1025,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
         window.PlivoSoftphoneLoaded = true;
         const softphoneScript = document.createElement('script');
         softphoneScript.id = 'plivoSoftphoneScript';
-        softphoneScript.src = '/public/js/plivo-softphone.js?v=20260906_fix';
+        softphoneScript.src = '/public/js/plivo-softphone.js?v=20260915_audiofix';
         softphoneScript.async = true;
         document.head.appendChild(softphoneScript);
     }
@@ -1033,6 +1033,9 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     // Universal Softphone Trigger — opens centralized softphone dialer modal in-place
     window.openCallDialer = function(intent) {
         if (!intent) return;
+        if (window.PlivoSoftphone && typeof window.PlivoSoftphone.unlockAudioOnUserGesture === 'function') {
+            window.PlivoSoftphone.unlockAudioOnUserGesture();
+        }
         if (window.PlivoSoftphone && typeof window.PlivoSoftphone.openCallDialer === 'function') {
             window.PlivoSoftphone.openCallDialer(intent);
         } else {
@@ -1046,6 +1049,9 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
 
     window.triggerLeadCall = function(phone, name, leadId) {
         if (!phone) return;
+        if (window.PlivoSoftphone && typeof window.PlivoSoftphone.unlockAudioOnUserGesture === 'function') {
+            window.PlivoSoftphone.unlockAudioOnUserGesture();
+        }
         const rawDigits = String(phone).replace(/\D/g, '');
         if (rawDigits.length < 10) {
             console.warn('[triggerLeadCall] Phone number is invalid (fewer than 10 digits):', phone);

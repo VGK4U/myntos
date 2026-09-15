@@ -5,7 +5,7 @@ Supports leads from any category: Real Estate, EV, Solar, Distributorship, etc.
 Handlers can be: Staff Employees, Official Partners, or MNR Members
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Date, Text, ForeignKey, Enum, Float, Index, UniqueConstraint, Numeric, text
+from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, Date, Text, ForeignKey, Enum, Float, Index, UniqueConstraint, Numeric, text
 from sqlalchemy.orm import relationship
 from app.models.base import BaseModel
 from datetime import datetime
@@ -87,6 +87,7 @@ class CRMLead(BaseModel):
     )
     
     id = Column(Integer, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey('platform_clients.id', ondelete='SET NULL'), nullable=True, index=True)
     company_id = Column(Integer, ForeignKey('associated_companies.id'), nullable=False, index=True)
     
     name = Column(String(200), nullable=False)
@@ -319,6 +320,7 @@ class CRMLead(BaseModel):
     def to_dict(self):
         return {
             'id': self.id,
+            'tenant_id': self.tenant_id,
             'company_id': self.company_id,
             'name': self.name,
             'email': self.email,
@@ -966,3 +968,56 @@ PAYMENT_MODES = [
     {'value': 'dd', 'label': 'Demand Draft'},
     {'value': 'other', 'label': 'Other'},
 ]
+
+
+class CRMLeadPhone(BaseModel):
+    """
+    CRM Phone Identity Association Layer (Stage 2B Phase 2R-3E-I).
+    Maps canonical normalized phone identities to leads within company scope.
+    Invariant: UNIQUE(tenant_id, company_id, lead_id, phone_norm).
+    """
+    __tablename__ = 'crm_lead_phones'
+    __table_args__ = (
+        UniqueConstraint('tenant_id', 'company_id', 'lead_id', 'phone_norm', name='uq_crm_lead_phones_association'),
+        Index('idx_crm_lead_phones_lookup', 'tenant_id', 'company_id', 'phone_norm'),
+        Index('idx_crm_lead_phones_lead_id', 'lead_id'),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    tenant_id = Column(Integer, ForeignKey('platform_clients.id', ondelete='RESTRICT'), nullable=False)
+    company_id = Column(Integer, nullable=False)
+    lead_id = Column(Integer, ForeignKey('crm_leads.id', ondelete='CASCADE'), nullable=False, index=True)
+    phone_norm = Column(String(15), nullable=False)
+    phone_role = Column(String(30), default='PRIMARY', nullable=False)
+    is_primary = Column(Boolean, default=True, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    verification_status = Column(String(30), default='UNVERIFIED', nullable=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    lead = relationship('CRMLead', backref='phone_associations')
+    provenances = relationship('CRMLeadPhoneProvenance', backref='association', cascade='all, delete-orphan')
+
+
+class CRMLeadPhoneProvenance(BaseModel):
+    """
+    CRM Phone Provenance Layer (Stage 2B Phase 2R-3E-I).
+    Tracks where a phone association originated and what source representations produced it over time.
+    """
+    __tablename__ = 'crm_lead_phone_provenances'
+    __table_args__ = (
+        Index('idx_crm_lead_phone_prov_assoc', 'phone_association_id'),
+        Index('idx_crm_lead_phone_prov_lead', 'lead_id'),
+    )
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    phone_association_id = Column(BigInteger, ForeignKey('crm_lead_phones.id', ondelete='CASCADE'), nullable=False)
+    tenant_id = Column(Integer, nullable=False)
+    company_id = Column(Integer, nullable=False)
+    lead_id = Column(Integer, ForeignKey('crm_leads.id', ondelete='CASCADE'), nullable=False)
+    source_field = Column(String(50), nullable=False)
+    raw_value = Column(String(100), nullable=True)
+    source_channel = Column(String(50), default='manual', nullable=False)
+    source_ref = Column(Text, nullable=True)
+    captured_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+

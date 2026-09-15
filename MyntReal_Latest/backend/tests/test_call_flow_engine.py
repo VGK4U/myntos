@@ -391,7 +391,8 @@ class TestCallFlowEngine(unittest.TestCase):
             caller_phone="+919703118501",
             called_did="+918031728899",
             provider_call_id="plivo_call_uuid_12345",
-            base_api_url="https://api.myntreal.com"
+            base_api_url="https://api.myntreal.com",
+            now_dt=datetime(2026, 9, 2, 22, 30, 0)
         )
 
         self.assertTrue(xml_output.startswith("<Response>"))

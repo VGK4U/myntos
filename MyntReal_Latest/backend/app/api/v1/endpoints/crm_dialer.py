@@ -39,6 +39,28 @@ router = APIRouter()
 
 IST = pytz.timezone('Asia/Kolkata')
 
+def _parse_followup_to_ist_naive(nfd_val: Any) -> Optional[datetime]:
+    """[DC-DIALER-FOLLOWUP-NORM] Parse incoming next_followup_date, converting any UTC offset to IST naive."""
+    if not nfd_val:
+        return None
+    if isinstance(nfd_val, datetime):
+        if nfd_val.tzinfo is not None:
+            return nfd_val.astimezone(IST).replace(tzinfo=None)
+        return nfd_val
+    s = str(nfd_val).strip()
+    if not s or s.lower() in ('null', 'none', '—', '-'):
+        return None
+    if s.endswith('Z') or s.endswith('z'):
+        s = s[:-1] + '+00:00'
+    try:
+        dt = datetime.fromisoformat(s)
+    except Exception:
+        import dateutil.parser
+        dt = dateutil.parser.parse(s)
+    if dt.tzinfo is not None:
+        dt = dt.astimezone(IST).replace(tzinfo=None)
+    return dt
+
 # ── DC_DIALER_WS: In-memory registry + single shared PG LISTEN per worker process ──
 # Maps user_ref (str) -> asyncio.Queue for pushing messages to the WS handler
 _dialer_ws_registry: Dict[str, asyncio.Queue] = {}
@@ -425,22 +447,31 @@ def get_lead_redial_cooldown(
     cutoff_1h = now - timedelta(hours=1)
     phone_clean = re.sub(r'[^\d]', '', str(phone or ''))[-10:] if phone else None
 
-    # Check recent attempts within 24h
+    # Check recent attempts within 24h across target lead and any candidate leads sharing this phone
+    target_lids = {lead_id} if lead_id else set()
+    if phone_clean:
+        from app.services.crm_phone_sync_service import find_candidate_lead_ids_for_search
+        t_id, c_id = None, None
+        if lead_id:
+            lead_row = db.query(CRMLead.tenant_id, CRMLead.company_id).filter(CRMLead.id == lead_id).first()
+            if lead_row:
+                t_id, c_id = lead_row[0], lead_row[1]
+        assoc_lids = find_candidate_lead_ids_for_search(
+            db, tenant_id=t_id, company_ids=[c_id] if c_id else None, search_term=phone_clean, active_only=False
+        )
+        target_lids.update(assoc_lids)
+
+    if not target_lids:
+        return False, None
+
     query = """
         SELECT a.id, a.lead_id, a.call_outcome, a.duration_seconds, a.dialed_at, a.created_at, a.user_ref, a.portal
         FROM crm_dialer_attempts a
-        LEFT JOIN crm_leads l ON a.lead_id = l.id
-        WHERE (
-            a.lead_id = :lid
-            OR (:phone IS NOT NULL AND (
-                RIGHT(REGEXP_REPLACE(COALESCE(l.phone, ''), '[^0-9]', '', 'g'), 10) = :phone
-                OR RIGHT(REGEXP_REPLACE(COALESCE(l.alternate_phone, ''), '[^0-9]', '', 'g'), 10) = :phone
-            ))
-        )
+        WHERE a.lead_id = ANY(:lids)
         AND COALESCE(a.dialed_at, a.created_at) >= :cutoff_24h
         ORDER BY COALESCE(a.dialed_at, a.created_at) DESC
     """
-    rows = db.execute(text(query), {"lid": lead_id, "phone": phone_clean, "cutoff_24h": cutoff_24h}).fetchall()
+    rows = db.execute(text(query), {"lids": list(target_lids), "cutoff_24h": cutoff_24h}).fetchall()
     
     for row in rows:
         att_id, a_lid, outcome, duration, dialed_at, created_at, u_ref, portal = row
@@ -739,19 +770,10 @@ def _get_dialer_suppression_data(
 
     # 1. 24h connected attempts by other staff
     other_conn_rows = db.execute(text("""
-        SELECT DISTINCT RIGHT(REGEXP_REPLACE(COALESCE(l.phone, ''), '[^0-9]', '', 'g'), 10) AS clean_phone
+        SELECT DISTINCT COALESCE(lp.phone_norm, RIGHT(REGEXP_REPLACE(l.phone, '[^0-9]', '', 'g'), 10)) AS clean_phone
         FROM crm_dialer_attempts a
         JOIN crm_leads l ON a.lead_id = l.id
-        WHERE COALESCE(a.dialed_at, a.created_at) >= :cutoff_24h
-          AND (
-              a.duration_seconds > 0
-              OR LOWER(COALESCE(a.call_outcome, '')) IN ('answered', 'connected', 'completed', 'interested', 'callback', 'callback_scheduled', 'meeting_fixed', 'meeting_scheduled', 'site_visit_scheduled', 'proposal_sent', 'converted')
-          )
-          AND (a.user_ref != :user_ref OR a.portal != :portal)
-        UNION
-        SELECT DISTINCT RIGHT(REGEXP_REPLACE(COALESCE(l.alternate_phone, ''), '[^0-9]', '', 'g'), 10) AS clean_phone
-        FROM crm_dialer_attempts a
-        JOIN crm_leads l ON a.lead_id = l.id
+        LEFT JOIN crm_lead_phones lp ON a.lead_id = lp.lead_id AND lp.is_active = true
         WHERE COALESCE(a.dialed_at, a.created_at) >= :cutoff_24h
           AND (
               a.duration_seconds > 0
@@ -772,18 +794,10 @@ def _get_dialer_suppression_data(
 
     # 2. 1-hour non-connected cooldown across all staff (Rule 14)
     non_conn_rows = db.execute(text("""
-        SELECT DISTINCT RIGHT(REGEXP_REPLACE(COALESCE(l.phone, ''), '[^0-9]', '', 'g'), 10) AS clean_phone
+        SELECT DISTINCT COALESCE(lp.phone_norm, RIGHT(REGEXP_REPLACE(l.phone, '[^0-9]', '', 'g'), 10)) AS clean_phone
         FROM crm_dialer_attempts a
         JOIN crm_leads l ON a.lead_id = l.id
-        WHERE COALESCE(a.dialed_at, a.created_at) >= :cutoff_1h
-          AND (
-              LOWER(a.call_outcome) IN ('no_answer', 'not_connected', 'busy', 'switched_off', 'failed', 'rejected', 'cancelled', 'canceled', 'ringing_timeout', 'timeout', 'zero_duration', 'unanswered', 'missed', 'wrong_number', 'call_failed')
-              OR (COALESCE(a.duration_seconds, 0) = 0 AND LOWER(COALESCE(a.call_outcome, '')) NOT IN ('answered', 'connected', 'completed'))
-          )
-        UNION
-        SELECT DISTINCT RIGHT(REGEXP_REPLACE(COALESCE(l.alternate_phone, ''), '[^0-9]', '', 'g'), 10) AS clean_phone
-        FROM crm_dialer_attempts a
-        JOIN crm_leads l ON a.lead_id = l.id
+        LEFT JOIN crm_lead_phones lp ON a.lead_id = lp.lead_id AND lp.is_active = true
         WHERE COALESCE(a.dialed_at, a.created_at) >= :cutoff_1h
           AND (
               LOWER(a.call_outcome) IN ('no_answer', 'not_connected', 'busy', 'switched_off', 'failed', 'rejected', 'cancelled', 'canceled', 'ringing_timeout', 'timeout', 'zero_duration', 'unanswered', 'missed', 'wrong_number', 'call_failed')
@@ -794,21 +808,10 @@ def _get_dialer_suppression_data(
     # 3. Connected calls by THIS user in rolling 24h where NO follow-up is scheduled and due
     # (Prevents customer from immediately reappearing in Staff A's queue after a call, Test 1)
     self_conn_rows = db.execute(text("""
-        SELECT DISTINCT RIGHT(REGEXP_REPLACE(COALESCE(l.phone, ''), '[^0-9]', '', 'g'), 10) AS clean_phone
+        SELECT DISTINCT COALESCE(lp.phone_norm, RIGHT(REGEXP_REPLACE(l.phone, '[^0-9]', '', 'g'), 10)) AS clean_phone
         FROM crm_dialer_attempts a
         JOIN crm_leads l ON a.lead_id = l.id
-        WHERE COALESCE(a.dialed_at, a.created_at) >= :cutoff_24h
-          AND (
-              a.duration_seconds > 0
-              OR LOWER(COALESCE(a.call_outcome, '')) IN ('answered', 'connected', 'completed', 'interested', 'callback', 'callback_scheduled', 'meeting_fixed', 'meeting_scheduled', 'site_visit_scheduled', 'proposal_sent', 'converted')
-          )
-          AND a.user_ref = :user_ref
-          AND a.portal = :portal
-          AND (l.next_followup_date IS NULL OR l.next_followup_date > :now)
-        UNION
-        SELECT DISTINCT RIGHT(REGEXP_REPLACE(COALESCE(l.alternate_phone, ''), '[^0-9]', '', 'g'), 10) AS clean_phone
-        FROM crm_dialer_attempts a
-        JOIN crm_leads l ON a.lead_id = l.id
+        LEFT JOIN crm_lead_phones lp ON a.lead_id = lp.lead_id AND lp.is_active = true
         WHERE COALESCE(a.dialed_at, a.created_at) >= :cutoff_24h
           AND (
               a.duration_seconds > 0
@@ -1911,6 +1914,26 @@ async def get_current_session(
     # DC_RESUME_FIX: Include saved queue order so client can anchor to the right lead
     queue_lead_ids = json.loads(session_dict.get('queue_data') or '[]')
 
+    # DC_DIALER_FUTURE_EXCLUDE: Dynamically filter cached queue so leads deferred into future
+    # (e.g. marked after 16th) or terminal status are purged from active/paused session
+    if queue_lead_ids:
+        _now = get_ist_now()
+        invalid_ids = set(
+            db.execute(
+                text("""
+                    SELECT id FROM crm_leads
+                    WHERE id = ANY(:lids)
+                      AND (next_followup_date > :now OR LOWER(COALESCE(status, '')) IN ('won', 'completed', 'do_not_call', 'unresponsive'))
+                """),
+                {"lids": queue_lead_ids, "now": _now}
+            ).scalars().all()
+        )
+        if invalid_ids:
+            queue_lead_ids = [lid for lid in queue_lead_ids if lid not in invalid_ids]
+            session_dict['queue_data'] = json.dumps(queue_lead_ids)
+            db.execute(text("UPDATE crm_dialer_sessions SET queue_data = :q WHERE id = :id"), {"q": json.dumps(queue_lead_ids), "id": session_dict['id']})
+            db.commit()
+
     # DC_GHOST_SESSION_HEAL: If an active/paused session has 0 leads in queue_data, auto-close it
     # so the agent immediately receives their fresh live queue instead of getting stuck in 'Queue Complete'
     if len(queue_lead_ids) == 0:
@@ -2063,9 +2086,10 @@ async def log_dialer_attempt(
         # Auto-create follow-up record if next_followup_date provided (Rules 3, 4)
         if next_followup_date and not do_not_call:
             try:
-                nfd_dt = datetime.fromisoformat(next_followup_date.replace('Z', ''))
-                lead.next_followup_date = nfd_dt  # Authoritative datetime assignment
-                fu = CRMLeadFollowUp(
+                nfd_dt = _parse_followup_to_ist_naive(next_followup_date)
+                if nfd_dt:
+                    lead.next_followup_date = nfd_dt  # Authoritative datetime assignment
+                    fu = CRMLeadFollowUp(
                     company_id=lead.company_id,
                     lead_id=lead.id,
                     followup_type='call',
@@ -2747,14 +2771,21 @@ async def dialer_search(
         user_ref = str(staff.id)
         staff_id = staff.id
         _search_now = get_ist_now()
+        from app.services.crm_phone_sync_service import find_candidate_lead_ids_for_search
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=getattr(staff, 'tenant_id', None), company_ids=search_company_ids, search_term=q
+        )
+        _s_conds = [
+            CRMLead.name.ilike(term),
+            CRMLead.phone.ilike(term),
+            CRMLead.alternate_phone.ilike(term),
+        ]
+        if phone_lead_ids:
+            _s_conds.append(CRMLead.id.in_(phone_lead_ids))
         leads = db.query(CRMLead).filter(
             CRMLead.company_id.in_(search_company_ids),
             _dialer_active_filter(_search_now),
-            or_(
-                CRMLead.name.ilike(term),
-                CRMLead.phone.ilike(term),
-                CRMLead.alternate_phone.ilike(term),
-            )
+            or_(*_s_conds)
         ).order_by(CRMLead.name).limit(12).all()
     else:
         user_ref = str(current_user.id)
@@ -2763,14 +2794,21 @@ async def dialer_search(
         if not company_ids:
             return {"success": True, "results": []}
         _search_now = get_ist_now()
+        from app.services.crm_phone_sync_service import find_candidate_lead_ids_for_search
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=getattr(current_user, 'tenant_id', None), company_ids=company_ids, search_term=q
+        )
+        _s_conds = [
+            CRMLead.name.ilike(term),
+            CRMLead.phone.ilike(term),
+            CRMLead.alternate_phone.ilike(term),
+        ]
+        if phone_lead_ids:
+            _s_conds.append(CRMLead.id.in_(phone_lead_ids))
         leads = db.query(CRMLead).filter(
             CRMLead.company_id.in_(company_ids),
             _dialer_active_filter(_search_now),
-            or_(
-                CRMLead.name.ilike(term),
-                CRMLead.phone.ilike(term),
-                CRMLead.alternate_phone.ilike(term),
-            )
+            or_(*_s_conds)
         ).order_by(CRMLead.name).limit(12).all()
 
     # Check which leads were already dialed today
@@ -3291,7 +3329,8 @@ async def get_call_history(
                     COALESCE(scl.has_recording, false) AS has_recording,
                     scl.recording_id,
                     scl.staff_id,
-                    e.first_name, e.last_name, e.emp_code
+                    e.first_name, e.last_name, e.emp_code,
+                    scl.id AS entry_id
                 FROM staff_call_logs scl
                 LEFT JOIN crm_leads l ON scl.matched_lead_id = l.id
                 LEFT JOIN staff_employees e ON scl.staff_id = e.id
@@ -3312,7 +3351,8 @@ async def get_call_history(
                     false AS has_recording,
                     NULL AS recording_id,
                     CAST(NULLIF(regexp_replace(a.user_ref, '[^0-9]', '', 'g'), '') AS INTEGER) AS staff_id,
-                    e.first_name, e.last_name, e.emp_code
+                    e.first_name, e.last_name, e.emp_code,
+                    a.id AS entry_id
                 FROM crm_dialer_attempts a
                 LEFT JOIN crm_leads l ON a.lead_id = l.id
                 LEFT JOIN staff_employees e ON CAST(NULLIF(regexp_replace(a.user_ref, '[^0-9]', '', 'g'), '') AS INTEGER) = e.id
@@ -3326,7 +3366,7 @@ async def get_call_history(
                   )
             )
             SELECT * FROM combined_calls
-            ORDER BY call_datetime DESC
+            ORDER BY call_datetime DESC, entry_id DESC
             LIMIT :lim OFFSET :off
         """), params).fetchall()
 

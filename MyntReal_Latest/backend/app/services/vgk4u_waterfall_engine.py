@@ -101,6 +101,7 @@ class VGK4UWaterfallEngine:
         support_partner_id: Optional[int] = None,
         support_journey_count: int = 0,
         is_end_to_end_support: bool = False,
+        is_staff_involved: bool = False,
         showroom_partner_id: Optional[int] = None,
         version_label: str = DEFAULT_VERSION,
     ) -> Dict[str, Any]:
@@ -137,116 +138,6 @@ class VGK4UWaterfallEngine:
         rm_diff_rate = Decimal(str(cfg.rm_diff_pct))
         sponsor_rate_cfg = Decimal(str(getattr(cfg, 'sponsor_override_pct', Decimal('0.00')) or Decimal('0.00')))
         max_network_pool = Decimal(str(cfg.max_network_pool_pct))
-
-        # Inactive/Suspended Producer Gate (VGK4U Phase 3E.2):
-        if not is_producer_active:
-            apex_gross = (deal_val * (max_network_pool / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            apex_info = career_status_map.get(ROOT_APEX_PARTNER_ID, {
-                'partner_code': ROOT_APEX_PARTNER_CODE,
-                'partner_name': 'VGK Support',
-                'career_designation': DESIGNATION_APEX_NODE,
-                'personal_prod_qualification': None,
-            })
-            allocations = [
-                {
-                    'role': 'PRODUCER',
-                    'level': 1,
-                    'partner_id': producer_partner_id,
-                    'partner_code': producer_status['partner_code'],
-                    'partner_name': producer_status['partner_name'],
-                    'career_designation': producer_career,
-                    'personal_prod_qualification': producer_prod_qual,
-                    'commission_pct': Decimal('0.00'),
-                    'commission_amount': Decimal('0.00'),
-                    'admin_charges': Decimal('0.00'),
-                    'tds_amount': Decimal('0.00'),
-                    'net_payout': Decimal('0.00'),
-                    'is_differential': False,
-                    'notes': 'Producer Inactive/Suspended - Personal Commission Forfeited (0.00%)'
-                },
-                {
-                    'role': 'APEX_REMAINDER',
-                    'level': 0,
-                    'partner_id': ROOT_APEX_PARTNER_ID,
-                    'partner_code': apex_info.get('partner_code', ROOT_APEX_PARTNER_CODE),
-                    'partner_name': apex_info.get('partner_name', 'VGK Support'),
-                    'career_designation': apex_info.get('career_designation', DESIGNATION_APEX_NODE),
-                    'personal_prod_qualification': apex_info.get('personal_prod_qualification', None),
-                    'commission_pct': max_network_pool,
-                    'commission_amount': apex_gross,
-                    'admin_charges': Decimal('0.00'),
-                    'tds_amount': Decimal('0.00'),
-                    'net_payout': apex_gross,
-                    'is_differential': False,
-                    'notes': f'Apex Corporate Remainder (Inactive Producer Forfeiture {max_network_pool}%)'
-                }
-            ]
-
-            # Operational Field Support & Showroom are outside network pool:
-            if support_partner_id and support_partner_id in career_status_map:
-                sup_info = career_status_map[support_partner_id]
-                if is_end_to_end_support:
-                    sup_pct = Decimal(str(cfg.support_end_to_end_pct))
-                elif support_journey_count >= 2:
-                    sup_pct = Decimal(str(cfg.support_journey_pct))
-                else:
-                    sup_pct = Decimal('0.00')
-
-                if sup_pct > Decimal('0.00'):
-                    sup_gross = (deal_val * (sup_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                    sup_ded = cls.compute_deductions(sup_gross)
-                    allocations.append({
-                        'role': 'FIELD_SUPPORT',
-                        'level': 5,
-                        'partner_id': support_partner_id,
-                        'partner_code': sup_info['partner_code'],
-                        'partner_name': sup_info['partner_name'],
-                        'career_designation': sup_info['career_designation'],
-                        'personal_prod_qualification': sup_info['personal_prod_qualification'],
-                        'commission_pct': sup_pct,
-                        'commission_amount': sup_gross,
-                        'admin_charges': sup_ded['admin'],
-                        'tds_amount': sup_ded['tds'],
-                        'net_payout': sup_ded['net'],
-                        'is_differential': False,
-                        'notes': f'Field Support Fee ({sup_pct}% outside network pool)'
-                    })
-
-            if showroom_partner_id and showroom_partner_id in career_status_map:
-                if showroom_partner_id not in (producer_partner_id, support_partner_id):
-                    sh_info = career_status_map[showroom_partner_id]
-                    sh_pct = Decimal(str(cfg.showroom_pct))
-                    if sh_pct > Decimal('0.00'):
-                        sh_gross = (deal_val * (sh_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                        sh_ded = cls.compute_deductions(sh_gross)
-                        allocations.append({
-                            'role': 'SHOWROOM',
-                            'level': 6,
-                            'partner_id': showroom_partner_id,
-                            'partner_code': sh_info['partner_code'],
-                            'partner_name': sh_info['partner_name'],
-                            'career_designation': sh_info['career_designation'],
-                            'personal_prod_qualification': sh_info['personal_prod_qualification'],
-                            'commission_pct': sh_pct,
-                            'commission_amount': sh_gross,
-                            'admin_charges': sh_ded['admin'],
-                            'tds_amount': sh_ded['tds'],
-                            'net_payout': sh_ded['net'],
-                            'is_differential': False,
-                            'notes': f'Showroom Override Fee ({sh_pct}% outside network pool)'
-                        })
-
-            return {
-                'success': True,
-                'deal_value': deal_val,
-                'category_slug': category_slug,
-                'version_label': version_label,
-                'max_network_pool_pct': max_network_pool,
-                'total_network_pct': max_network_pool,
-                'total_network_gross': apex_gross,
-                'producer_rate_pct': Decimal('0.00'),
-                'allocations': allocations,
-            }
 
 
         # Career tier base rates
@@ -324,8 +215,7 @@ class VGK4UWaterfallEngine:
 
         is_sponsor_valid = (
             sponsor_info is not None and
-            resolved_sponsor_id != producer_partner_id and
-            sponsor_info.get('is_active', False) is True
+            resolved_sponsor_id != producer_partner_id
         )
 
         sponsor_visited = set()
@@ -457,11 +347,6 @@ class VGK4UWaterfallEngine:
                 break
 
             parent_career = parent_info['career_designation']
-            parent_is_active = parent_info.get('is_active', False) is True
-
-            if not parent_is_active:
-                curr_parent_id = parent_info.get('parent_partner_id')
-                continue
 
             # 1. Residual Manager Differential
             if not manager_allocated and not manager_layer_absorbed:
@@ -578,18 +463,24 @@ class VGK4UWaterfallEngine:
             })
 
         # 5. Operational Field Support (Outside Network Pool)
+        support_pct = Decimal('0.00')
+        full_support_pct = Decimal('0.00')
+
         if support_partner_id and support_partner_id in career_status_map:
             sup_info = career_status_map[support_partner_id]
-            # Semantic fix: end-to-end gets 1.50%; journey support (>= 2 visits) gets 0.75%; else 0.00%
-            if is_end_to_end_support:
-                sup_pct = Decimal(str(cfg.support_end_to_end_pct))
-            elif support_journey_count >= 2:
-                sup_pct = Decimal(str(cfg.support_journey_pct))
-            else:
-                sup_pct = Decimal('0.00')
+            is_self_support = (support_partner_id == producer_partner_id)
 
-            if sup_pct > Decimal('0.00'):
-                sup_gross = (deal_val * (sup_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            # Base support (+0.75%)
+            support_pct = Decimal(str(cfg.support_journey_pct))
+
+            # Full support (+0.75%) only when is_end_to_end_support and NOT is_staff_involved
+            if is_end_to_end_support and not is_staff_involved:
+                full_support_pct = Decimal(str(cfg.support_end_to_end_pct)) - support_pct
+            else:
+                full_support_pct = Decimal('0.00')
+
+            if support_pct > Decimal('0.00'):
+                sup_gross = (deal_val * (support_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 sup_ded = cls.compute_deductions(sup_gross)
                 allocations.append({
                     'role': 'FIELD_SUPPORT',
@@ -599,13 +490,33 @@ class VGK4UWaterfallEngine:
                     'partner_name': sup_info['partner_name'],
                     'career_designation': sup_info['career_designation'],
                     'personal_prod_qualification': sup_info['personal_prod_qualification'],
-                    'commission_pct': sup_pct,
+                    'commission_pct': support_pct,
                     'commission_amount': sup_gross,
                     'admin_charges': sup_ded['admin'],
                     'tds_amount': sup_ded['tds'],
                     'net_payout': sup_ded['net'],
                     'is_differential': False,
-                    'notes': f'Field Support Fee ({sup_pct}% outside network pool)'
+                    'notes': f'{"Direct " if is_self_support else "Field "}Support Fee ({support_pct}% outside network pool)'
+                })
+
+            if full_support_pct > Decimal('0.00'):
+                full_gross = (deal_val * (full_support_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                full_ded = cls.compute_deductions(full_gross)
+                allocations.append({
+                    'role': 'FULL_SUPPORT',
+                    'level': 7,
+                    'partner_id': support_partner_id,
+                    'partner_code': sup_info['partner_code'],
+                    'partner_name': sup_info['partner_name'],
+                    'career_designation': sup_info['career_designation'],
+                    'personal_prod_qualification': sup_info['personal_prod_qualification'],
+                    'commission_pct': full_support_pct,
+                    'commission_amount': full_gross,
+                    'admin_charges': full_ded['admin'],
+                    'tds_amount': full_ded['tds'],
+                    'net_payout': full_ded['net'],
+                    'is_differential': False,
+                    'notes': f'{"Direct Full-Service Closing Incentive" if is_self_support else "Full Closing Incentive"} ({full_support_pct}% outside network pool)'
                 })
 
         # 6. Showroom Override (Outside Network Pool)
@@ -649,5 +560,9 @@ class VGK4UWaterfallEngine:
             'total_network_pct': total_network_pct,
             'total_network_gross': total_network_gross,
             'producer_rate_pct': effective_producer_pct,
+            'support_pct': support_pct,
+            'full_support_pct': full_support_pct,
+            'total_support_pct': support_pct + full_support_pct,
+            'is_staff_involved': is_staff_involved,
             'allocations': allocations,
         }

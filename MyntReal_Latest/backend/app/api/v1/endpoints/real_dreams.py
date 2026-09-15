@@ -4257,8 +4257,23 @@ async def submit_property_enquiry(
     
     if company_id and prop.company_id != company_id:
         raise HTTPException(status_code=400, detail="Company ID mismatch")
+
+    comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == effective_company_id).first()
+    if not comp or not comp.client_id:
+        raise HTTPException(status_code=422, detail="Property company has no associated tenant")
+    resolved_tenant_id = comp.client_id
+
+    from app.services.crm_dedup_service import assert_no_phone_duplicate
+    assert_no_phone_duplicate(
+        db=db,
+        tenant_id=resolved_tenant_id,
+        company_id=effective_company_id,
+        phone=mobile,
+        with_lock=True
+    )
     
     lead = CRMLead(
+        tenant_id=resolved_tenant_id,
         company_id=effective_company_id,
         name=name,
         phone=mobile,
@@ -4273,6 +4288,16 @@ async def submit_property_enquiry(
     
     db.add(lead)
     db.flush()
+    
+    from app.services.crm_phone_sync_service import sync_lead_phone_identities
+    sync_lead_phone_identities(
+        db=db,
+        lead=lead,
+        phone_raw=lead.phone,
+        source_channel='real_dreams_marketplace',
+        source_ref=f"property_{property_id}",
+        with_lock=True
+    )
     
     property_link = RDPropertyCRMLink(
         company_id=effective_company_id,

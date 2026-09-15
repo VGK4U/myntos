@@ -93,7 +93,9 @@ class WhatsAppCanonicalService:
         lead_id: Optional[int] = None,
         company_id: Optional[int] = 1,
         idempotency_key: Optional[str] = None,
-        raw_body_fallback: Optional[str] = None
+        raw_body_fallback: Optional[str] = None,
+        job_id: Optional[str] = None,
+        execution_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Authoritative template dispatch via Meta Cloud API.
@@ -138,11 +140,13 @@ class WhatsAppCanonicalService:
                 sent_at=now_utc,
                 sent_by_staff_id=staff_id,
                 sent_by_name=sent_by_name or "System",
-                sender_type=sender_type or "system"
+                sender_type=sender_type or "system",
+                job_id=job_id,
+                execution_id=execution_id
             )
             db.add(log_entry)
             db.commit()
-            return {"success": True, "wamid": log_entry.message_sid, "status": "sent", "mode": "mock"}
+            return {"success": True, "wamid": log_entry.message_sid, "message_log_id": log_entry.id, "status": "sent", "mode": "mock"}
 
         # 5. Build Meta Graph API Template Payload
         meta_url = f"https://graph.facebook.com/v21.0/{phone_number_id}/messages"
@@ -193,11 +197,13 @@ class WhatsAppCanonicalService:
                         failure_reason="Meta returned 200 without WAMID in messages array",
                         sent_by_staff_id=staff_id,
                         sent_by_name=sent_by_name or "System",
-                        sender_type=sender_type or "system"
+                        sender_type=sender_type or "system",
+                        job_id=job_id,
+                        execution_id=execution_id
                     )
                     db.add(log_entry)
                     db.commit()
-                    return {"success": False, "reason": "Missing WAMID in Meta response", "error_code": "NO_WAMID", "status": "failed"}
+                    return {"success": False, "reason": "Missing WAMID in Meta response", "error_code": "NO_WAMID", "status": "failed", "message_log_id": log_entry.id}
 
                 # Mark Dedup
                 _in_memory_dedup[dedup_k] = now_utc
@@ -218,7 +224,9 @@ class WhatsAppCanonicalService:
                     sent_at=now_utc,
                     sent_by_staff_id=staff_id,
                     sent_by_name=sent_by_name or "System",
-                    sender_type=sender_type or "system"
+                    sender_type=sender_type or "system",
+                    job_id=job_id,
+                    execution_id=execution_id
                 )
                 db.add(log_entry)
 
@@ -242,7 +250,7 @@ class WhatsAppCanonicalService:
 
                 db.commit()
                 logger.info(f"[WA-CANONICAL] Outbound SUCCESS wamid={wamid} recipient={recipient} template={template_name}")
-                return {"success": True, "wamid": wamid, "status": "sent"}
+                return {"success": True, "wamid": wamid, "message_log_id": log_entry.id, "status": "sent"}
 
             else:
                 # Meta API Error Handling
@@ -269,11 +277,13 @@ class WhatsAppCanonicalService:
                     failure_reason=full_reason[:95],
                     sent_by_staff_id=staff_id,
                     sent_by_name=sent_by_name or "System",
-                    sender_type=sender_type or "system"
+                    sender_type=sender_type or "system",
+                    job_id=job_id,
+                    execution_id=execution_id
                 )
                 db.add(log_entry)
                 db.commit()
-                return {"success": False, "error_code": err_code, "reason": full_reason, "status": "failed"}
+                return {"success": False, "error_code": err_code, "reason": full_reason, "status": "failed", "message_log_id": log_entry.id}
 
         except Exception as exc:
             logger.error(f"[WA-CANONICAL] Network/Exception during Meta send: {exc}")
@@ -292,11 +302,13 @@ class WhatsAppCanonicalService:
                 failure_reason=str(exc)[:95],
                 sent_by_staff_id=staff_id,
                 sent_by_name=sent_by_name or "System",
-                sender_type=sender_type or "system"
+                sender_type=sender_type or "system",
+                job_id=job_id,
+                execution_id=execution_id
             )
             db.add(log_entry)
             db.commit()
-            return {"success": False, "reason": str(exc), "error_code": "NET_ERR", "status": "failed"}
+            return {"success": False, "reason": str(exc), "error_code": "NET_ERR", "status": "failed", "message_log_id": log_entry.id}
 
     @classmethod
     def send_auto_trigger_by_template(

@@ -16899,7 +16899,7 @@ async def get_journal_voucher_detail(
 
         company_name = None
         try:
-            from app.models.associated_company import AssociatedCompany as _AC
+            from app.models.staff_accounts import AssociatedCompany as _AC
             ac = db.query(_AC).filter(_AC.id == jv.company_id).first()
             company_name = ac.name if ac else None
         except Exception:

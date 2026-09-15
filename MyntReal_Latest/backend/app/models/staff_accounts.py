@@ -128,9 +128,16 @@ class AssociatedCompany(BaseModel):
     def __repr__(self):
         return f'<AssociatedCompany {self.company_code}: {self.company_name}>'
     
+    @property
+    def tenant_id(self):
+        """Dynamic alias mapping client_id to tenant_id for multi-tenant isolation."""
+        return self.client_id
+
     def to_dict(self):
         return {
             'id': self.id,
+            'client_id': self.client_id,
+            'tenant_id': self.client_id,
             'company_code': self.company_code,
             'company_name': self.company_name,
             'company_type': self.company_type,

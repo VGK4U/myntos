@@ -1,0 +1,36 @@
+{
+  "test_customer": {
+    "company_name": "Zenith Solar Dynamics 6EF8C4",
+    "contact_name": "Vikram Malhotra",
+    "contact_email": "admin_zenith_6ef8c4@zenithsolar.test",
+    "contact_phone": "+919876543210",
+    "pan_number": "TESTZ6EF8F",
+    "pincode": "500081",
+    "city_state": "Hyderabad, Telangana"
+  },
+  "screenshots": {
+    "step1_signup": "/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/phase5_screenshots/phase5_01_signup_success.png",
+    "step2_admin_approve": "/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/phase5_screenshots/phase5_02_admin_approved.png",
+    "step3_admin_activated": "/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/phase5_screenshots/phase5_03_admin_activated.png",
+    "step4_tenant_login": "/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/phase5_screenshots/phase5_04_tenant_login.png",
+    "step5_password_changed": "/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/phase5_screenshots/phase5_05_password_changed_login.png",
+    "step6_tenant_cockpit": "/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/phase5_screenshots/phase5_06_tenant_cockpit.png",
+    "step7_crm_lead": "/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/phase5_screenshots/phase5_07_crm_lead_created.png",
+    "step8_crm_dashboard": "/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/phase5_screenshots/phase5_08_crm_dashboard.png",
+    "step8_whatsapp_config": "/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/phase5_screenshots/phase5_09_whatsapp_config.png",
+    "step8_meta_settings": "/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/phase5_screenshots/phase5_10_meta_settings.png",
+    "step8_staff_employees": "/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/phase5_screenshots/phase5_11_staff_employees.png",
+    "step9_security": "/Users/viswanathkari/Documents/Mynt OS/MyntReal_Latest/phase5_screenshots/phase5_12_security_verified.png"
+  },
+  "created_entities": {
+    "client_code": "ZENITH-SOLAR-DYN-583B597C",
+    "admin_code": "ADM0203",
+    "temp_password": "zLWmLp2lt51z5I5c",
+    "membership_id": 1109,
+    "platform_client_id": 203,
+    "associated_company_id": 139,
+    "staff_employee_id": 1234,
+    "crm_lead_id": 11700
+  },
+  "steps": {}
+}

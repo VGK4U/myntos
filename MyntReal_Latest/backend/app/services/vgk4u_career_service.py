@@ -269,3 +269,62 @@ class VGK4UCareerService:
         """
         bulk_res = cls.get_bulk_partner_career_status(db, partner_ids=[partner_id])
         return bulk_res.get(partner_id)
+
+    @classmethod
+    def sync_partner_career_status_to_db(cls, db: Session, partner_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Synchronize dynamic career status and qualification to official_partners read-cache columns
+        for a single partner.
+        """
+        if not partner_id:
+            return None
+        res = cls.get_partner_career_status(db, partner_id)
+        if not res:
+            return None
+
+        db.execute(text("""
+            UPDATE official_partners
+            SET vgk4u_current_designation = :desig,
+                vgk4u_personal_prod_qualification = :prod_qual,
+                vgk4u_own_qualifying_files = :files,
+                vgk4u_active_team_count = :active_legs,
+                vgk4u_designation_updated_at = NOW()
+            WHERE id = :pid
+        """), {
+            'desig': res['career_designation'],
+            'prod_qual': res['personal_prod_qualification'],
+            'files': res['own_qualifying_files'],
+            'active_legs': res['active_team_legs'],
+            'pid': partner_id,
+        })
+        db.flush()
+        return res
+
+    @classmethod
+    def sync_bulk_career_status_to_db(cls, db: Session, partner_ids: Optional[List[int]] = None) -> int:
+        """
+        Batch synchronize dynamic career status and qualification to official_partners
+        for all or specified partners.
+        """
+        bulk_res = cls.get_bulk_partner_career_status(db, partner_ids=partner_ids)
+        if not bulk_res:
+            return 0
+
+        for pid, res in bulk_res.items():
+            db.execute(text("""
+                UPDATE official_partners
+                SET vgk4u_current_designation = :desig,
+                    vgk4u_personal_prod_qualification = :prod_qual,
+                    vgk4u_own_qualifying_files = :files,
+                    vgk4u_active_team_count = :active_legs,
+                    vgk4u_designation_updated_at = NOW()
+                WHERE id = :pid
+            """), {
+                'desig': res['career_designation'],
+                'prod_qual': res['personal_prod_qualification'],
+                'files': res['own_qualifying_files'],
+                'active_legs': res['active_team_legs'],
+                'pid': pid,
+            })
+        db.flush()
+        return len(bulk_res)

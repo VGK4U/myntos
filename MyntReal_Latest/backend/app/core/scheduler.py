@@ -4312,7 +4312,7 @@ def run_overdue_wa_alerts():
             yesterday = (today_ist - __import__('datetime').timedelta(days=1)).date()
             overdue_kras = db.execute(text("""
                 SELECT ki.id, ki.instance_date, ki.completion_status,
-                       kt.title as kra_name, kt.target_value,
+                       kt.title as kra_name, COALESCE(kt.target_time, '') as target_value,
                        e.full_name, e.phone, e.id as emp_id
                 FROM staff_kra_daily_instances ki
                 JOIN staff_kra_templates kt ON kt.id = ki.kra_template_id

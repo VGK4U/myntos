@@ -11,10 +11,22 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request, Upl
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, or_, and_, text, extract
-from typing import Optional, List
-from datetime import datetime, timedelta
+from typing import Optional, List, Tuple, Any, Set
+from datetime import datetime, timedelta, date
 import pytz as _pytz
 from pydantic import BaseModel, EmailStr, Field
+
+from app.services.crm_dedup_service import (
+    normalize_phone,
+    acquire_phone_locks,
+    find_phone_duplicate,
+    check_phone_duplicate,
+    assert_no_phone_duplicate
+)
+from app.services.crm_phone_sync_service import (
+    sync_lead_phone_identities,
+    find_candidate_lead_ids_for_search,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -80,10 +92,13 @@ from app.models.staff_accounts import VendorMaster, OfficialPartner
 from app.models.solar import CRMSolarLeadTech
 from app.models.user import User
 from app.models.call_tracking import StaffCallLog
-from app.api.v1.endpoints.staff_auth import get_current_staff_user
+from app.api.v1.endpoints.staff_auth import get_current_staff_user, resolve_tenant_company_for_request
 from app.utils.staff_hierarchy import get_recursive_downline, has_direct_reports, _get_hidden_employee_ids, HIDDEN_FROM_TEAM_CODES
 from app.core.security import get_current_user_hybrid, get_current_user_hybrid_with_partner
 from app.api.v1.endpoints.myntreal_incentives import create_incentive_for_validated_transaction
+from app.core.context import get_current_request_context
+from app.services.auth_context_service import auth_context_service, AdminScope
+from app.core.authorization import assert_parent_resource_ownership, assert_capability
 import pytz
 
 
@@ -115,6 +130,301 @@ def is_vgk_admin(staff_type: str) -> bool:
     """Check if staff type is VGK variant, EA, or Sales Incharge (full CRM/leads admin)."""
     normalized = (staff_type or '').upper()
     return 'VGK' in normalized or normalized in {'EA', 'SALES_INCHARGE'}
+
+
+def validate_crm_assignee(
+    db: Session,
+    staff_id_or_code,
+    lead_tenant_id: Optional[int],
+    slot_name: str = "staff"
+) -> Optional[StaffEmployee]:
+    """
+    Stage 2B Phase 2: Validate that an assigned staff member exists, is active,
+    and belongs to the same tenant as the lead.
+    Enforces:
+    - Inactive staff rejected (400)
+    - Cross-tenant staff rejected (400)
+    - Legitimate cross-company assignment within tenant permitted
+    """
+    if staff_id_or_code is None or staff_id_or_code == '' or staff_id_or_code == 0:
+        return None
+    
+    staff = None
+    if isinstance(staff_id_or_code, int) or (isinstance(staff_id_or_code, str) and staff_id_or_code.isdigit()):
+        staff = db.query(StaffEmployee).filter(StaffEmployee.id == int(staff_id_or_code)).first()
+    else:
+        staff = db.query(StaffEmployee).filter(StaffEmployee.emp_code == str(staff_id_or_code).strip()).first()
+    
+    if not staff or staff.status != 'active' or staff.is_deleted:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid or inactive {slot_name}"
+        )
+    
+    if lead_tenant_id is not None and staff.tenant_id is not None and staff.tenant_id != lead_tenant_id:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot assign {slot_name} from a different organization/tenant"
+        )
+    
+    return staff
+
+
+def get_authorized_lead(
+    db: Session,
+    lead_id: int,
+    current_user,
+    required_capability: Optional[str] = None,
+    for_mutation: bool = False,
+    allow_unassigned: bool = False,
+) -> CRMLead:
+    """
+    Stage 2B Phase 2: Canonical Lead Authorization Resolver.
+    
+    Guarantees:
+    1. Tenant Isolation: If caller's tenant does not match lead's tenant, raises 404 (anti-enumeration).
+    2. Existence Protection: Raises 404 if lead does not exist.
+    3. Capability Enforcement: If required_capability is specified, verifies caller has the capability.
+    4. Operational Access & Cross-Company Preservation:
+       - Platform Superadmin: Full access.
+       - Tenant Admin: Full access within caller's tenant.
+       - Assigned Staff (primary_owner, telecaller, field_staff, handler_id, mnr_handler_id): Full access.
+       - Lead Creator (created_by_id matching emp_code or id): Access to self-created leads.
+       - Operational Company Member (lead.company_id in ctx.accessible_company_ids):
+         * For read: Allowed.
+         * For mutation: Allowed if caller has edit capability or is manager/admin.
+       - Fresh / Unassigned: If allow_unassigned is True and lead is unassigned, allowed if caller has company membership.
+    5. Fail-Closed Anti-Enumeration: Raises 404 for leads in other tenants or unauthorized companies.
+    """
+    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    if isinstance(current_user, StaffEmployee):
+        ctx = get_current_request_context()
+        if not ctx or ctx.staff_id != current_user.id:
+            ctx = auth_context_service.build_context(db, current_user)
+        
+        # Platform Superadmin bypass
+        if ctx.is_platform_admin():
+            if required_capability:
+                assert_capability(ctx, required_capability)
+            return lead
+        
+        # Tenant boundary check (Anti-enumeration across tenants)
+        if lead.tenant_id is not None and ctx.tenant_id is not None and lead.tenant_id != ctx.tenant_id:
+            raise HTTPException(status_code=404, detail="Lead not found")
+        
+        # Capability check
+        if required_capability:
+            assert_capability(ctx, required_capability)
+        
+        # Tenant Admin has full access within tenant
+        if ctx.is_tenant_admin() or is_vgk_admin(current_user.staff_type):
+            return lead
+        
+        emp_id = current_user.id
+        emp_code = (current_user.emp_code or '').strip()
+        
+        # Assigned staff check (preserves legitimate cross-company assignment)
+        is_assigned = bool(
+            (lead.primary_owner_type == 'staff' and lead.primary_owner_id == emp_id) or
+            lead.telecaller_id == emp_id or
+            lead.field_staff_id == emp_id or
+            (emp_code and lead.handler_type == 'staff' and (lead.handler_id or '').strip() == emp_code) or
+            (emp_code and (lead.mnr_handler_id or '').strip() == emp_code)
+        )
+        if is_assigned:
+            return lead
+        
+        # Creator staff check (self-created leads are accessible by creator)
+        creator_id_str = str(lead.created_by_id or '').strip()
+        is_creator = bool(
+            creator_id_str and (
+                creator_id_str == emp_code or
+                creator_id_str == str(emp_id)
+            )
+        )
+        if is_creator:
+            return lead
+        
+        # Downline check: Reporting manager over any assigned staff
+        downline_ids = get_recursive_downline(emp_id, db, StaffEmployee, max_depth=10, include_manager=False)
+        if downline_ids:
+            is_downline_assigned = bool(
+                (lead.primary_owner_type == 'staff' and lead.primary_owner_id in downline_ids) or
+                (lead.telecaller_id in downline_ids) or
+                (lead.field_staff_id in downline_ids)
+            )
+            if is_downline_assigned:
+                return lead
+        
+        # If unassigned and allowed for claiming
+        if allow_unassigned and lead.company_id in ctx.accessible_company_ids:
+            is_canon_unassigned = (
+                lead.telecaller_id is None and
+                lead.primary_owner_id is None and
+                lead.field_staff_id is None and
+                lead.handler_type in (None, 'unassigned')
+            )
+            if is_canon_unassigned:
+                return lead
+
+        # Operational Company Membership check
+        if lead.company_id in ctx.accessible_company_ids:
+            if for_mutation:
+                if ctx.has_capability("crm.leads.edit") or is_vgk_admin(current_user.staff_type) or (downline_ids and len(downline_ids) > 0):
+                    return lead
+                raise HTTPException(status_code=403, detail="Permission denied: You do not have permission to modify this lead")
+            else:
+                return lead
+        
+        # Anti-enumeration: Resource is not accessible to caller
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    elif hasattr(current_user, 'partner_code'):  # OfficialPartner
+        partner_id = current_user.id
+        partner_id_str = str(partner_id)
+        partner_code = current_user.partner_code
+        is_partner_authorized = bool(
+            lead.associated_partner_id == partner_id or
+            lead.team_senior_partner_id == partner_id or
+            lead.team_extended_partner_id == partner_id or
+            lead.team_core_partner_id == partner_id or
+            lead.vgk_field_support_id == partner_id or
+            (lead.primary_owner_type == 'partner' and lead.primary_owner_id == partner_id) or
+            (lead.created_by_type == 'partner' and lead.created_by_id in (partner_id_str, partner_code)) or
+            (lead.source_ref_type in ('partner', 'vgk_partner') and lead.source_ref_id == partner_id_str)
+        )
+        if is_partner_authorized:
+            return lead
+        raise HTTPException(status_code=404, detail="Lead not found")
+        
+    elif hasattr(current_user, 'referrer_id') or type(current_user).__name__ == 'User':  # MNR User
+        if allow_unassigned and lead.mnr_handler_id is None and lead.telecaller_id is None and lead.field_staff_id is None:
+            return lead
+        user_id_str = str(current_user.id)
+        is_mnr_authorized = bool(
+            lead.mnr_handler_id == user_id_str or
+            lead.handler_id == user_id_str or
+            (lead.created_by_type == 'member' and lead.created_by_id == user_id_str)
+        )
+        if is_mnr_authorized:
+            return lead
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    # Fallback
+    raise HTTPException(status_code=404, detail="Lead not found")
+
+
+def resolve_crm_list_security_scope(
+    db: Session,
+    current_employee: StaffEmployee,
+    company_id: Optional[Any] = None,
+) -> Tuple[Any, Optional[int], List[int], bool, List[int]]:
+    """
+    Stage 2B Phase 2R-2: Authoritative Security Scope Resolver for CRM List & Analytics.
+    
+    Returns tuple:
+      (ctx, tenant_id, effective_company_ids, has_view_all, authorized_downline_ids)
+    
+    Guarantees:
+    1. Tenant ID strictly derived from RequestContext (unless platform superadmin).
+    2. Company ID parameter tampering check:
+       - If caller provides company_id / company_id_filter:
+         Must be in ctx.accessible_company_ids (unless platform superadmin).
+         If unauthorized -> raises HTTP 403 Forbidden.
+         Sets effective_company_ids = [parsed_company_id].
+       - If omitted:
+         Platform superadmin -> effective_company_ids = [] (unrestricted).
+         Non-superadmin -> effective_company_ids = list(ctx.accessible_company_ids).
+    3. Canonical view_all capability:
+       has_view_all = ctx.is_platform_admin() or ctx.has_capability("crm.leads.view_all")
+    4. Downline hierarchy resolution:
+       authorized_downline_ids = active recursive downline IDs minus hidden employees.
+    """
+    ctx = get_current_request_context()
+    if not ctx:
+        ctx = auth_context_service.build_context(db, current_employee)
+
+    is_superadmin = ctx.is_platform_admin()
+    tenant_id = ctx.tenant_id
+    accessible_cos = list(ctx.accessible_company_ids or [])
+
+    # 1. Parse and validate company parameter
+    parsed_company_id = None
+    if company_id is not None:
+        c_str = str(company_id).strip()
+        if c_str and c_str.lower() not in ('none', 'null', 'undefined', 'all', ''):
+            try:
+                parsed_company_id = int(c_str)
+            except (ValueError, TypeError):
+                pass
+
+    if parsed_company_id is not None:
+        if not is_superadmin and parsed_company_id not in accessible_cos:
+            raise HTTPException(
+                status_code=403,
+                detail="Company access denied: No active membership in requested company"
+            )
+        effective_company_ids = [parsed_company_id]
+    else:
+        effective_company_ids = [] if is_superadmin else accessible_cos
+
+    # 2. Canonical capability check (Zero role/employee string heuristics)
+    has_view_all = is_superadmin or ctx.has_capability("crm.leads.view_all")
+
+    # 3. Recursive downline resolution
+    downline_ids = get_recursive_downline(
+        current_employee.id, db, StaffEmployee, max_depth=10, include_manager=False
+    )
+    hidden_ids = _get_hidden_employee_ids(db, StaffEmployee)
+    authorized_downline_ids = [eid for eid in downline_ids if eid not in hidden_ids]
+
+    return ctx, tenant_id, effective_company_ids, has_view_all, authorized_downline_ids
+
+
+def assert_authorized_crm_target_employee(
+    db: Session,
+    target_emp_id_or_code: Any,
+    ctx: Any,
+    current_employee: StaffEmployee,
+    authorized_downline_ids: List[int],
+    has_view_all: bool
+) -> StaffEmployee:
+    """
+    Stage 2B Phase 2R-2: Validate target employee for team / performance endpoints.
+    
+    Guarantees:
+    1. Target must exist. If not found -> HTTP 404.
+    2. Target must belong to ctx.tenant_id (if not platform superadmin) -> HTTP 403.
+    3. If caller lacks crm.leads.view_all:
+       Target must be current_employee OR in caller's authorized recursive downline.
+       Otherwise -> HTTP 403 Forbidden.
+    """
+    if target_emp_id_or_code is None:
+        return None
+
+    target = None
+    s_val = str(target_emp_id_or_code).strip()
+    if s_val.isdigit():
+        target = db.query(StaffEmployee).filter(StaffEmployee.id == int(s_val)).first()
+    if not target and s_val:
+        target = db.query(StaffEmployee).filter(StaffEmployee.emp_code == s_val).first()
+
+    if not target:
+        raise HTTPException(status_code=404, detail="Target employee not found")
+
+    if not ctx.is_platform_admin() and ctx.tenant_id is not None:
+        if target.tenant_id != ctx.tenant_id:
+            raise HTTPException(status_code=403, detail="Target employee belongs to a different organization")
+
+    if not has_view_all:
+        allowed_ids = {current_employee.id} | set(authorized_downline_ids)
+        if target.id not in allowed_ids:
+            raise HTTPException(status_code=403, detail="Specified employee is not in your authorized downline")
+
+    return target
 
 
 def get_editable_handler_slots(lead, current_employee, db) -> dict:
@@ -328,14 +638,15 @@ def get_my_companies(
     DC Protocol: All authenticated staff can view active companies for CRM access.
     Also returns visibility permissions for the current user.
     """
-    # All staff can see all active companies for CRM lead management
-    companies = db.query(AssociatedCompany).filter(
-        AssociatedCompany.is_active == True
-    ).order_by(AssociatedCompany.company_name).all()
+    # Scope companies by tenant for tenant staff/admins; platform staff see platform companies
+    comp_query = db.query(AssociatedCompany).filter(AssociatedCompany.is_active == True)
+    if current_employee.tenant_id and (current_employee.admin_scope == "TENANT_ADMIN" or current_employee.tenant_id != 1):
+        comp_query = comp_query.filter(AssociatedCompany.client_id == current_employee.tenant_id)
+    companies = comp_query.order_by(AssociatedCompany.company_name).all()
     
     # Determine visibility permissions
     staff_type = (current_employee.staff_type or '').upper()
-    is_admin = is_vgk_admin(staff_type)
+    is_admin = is_vgk_admin(staff_type) or (current_employee.admin_scope == "TENANT_ADMIN")
     is_leader = has_direct_reports(current_employee.id, db, StaffEmployee)
     
     _team_tag_lower = (current_employee.team_tag or '').lower()
@@ -3133,10 +3444,18 @@ def get_crm_dashboard_v2_drilldown(
     
     # 1. Base Filters
     filters = []
+    drill_company_ids = None
     if company_id and isinstance(company_id, int):
         filters.append(CRMLead.company_id == company_id)
+        drill_company_ids = [company_id]
     elif not is_admin and getattr(current_employee, 'base_company_id', None):
         filters.append(CRMLead.company_id == current_employee.base_company_id)
+        drill_company_ids = [current_employee.base_company_id]
+        
+    ctx = get_current_request_context()
+    drill_tenant_id = ctx.tenant_id if ctx else getattr(current_employee, 'tenant_id', None)
+    if ctx and not ctx.is_platform_admin() and drill_tenant_id is not None:
+        filters.append(CRMLead.tenant_id == drill_tenant_id)
         
     if category_id:
         c_str = str(category_id).strip().lower()
@@ -3175,8 +3494,15 @@ def get_crm_dashboard_v2_drilldown(
             pass
             
     if search and isinstance(search, str) and search.strip():
-        s_term = f"%{search.strip()}%"
-        filters.append(or_(CRMLead.name.ilike(s_term), CRMLead.phone.ilike(s_term)))
+        search_clean = search.strip()
+        s_term = f"%{search_clean}%"
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=drill_tenant_id, company_ids=drill_company_ids, search_term=search_clean
+        )
+        search_filters = [CRMLead.name.ilike(s_term), CRMLead.phone.ilike(s_term)]
+        if phone_lead_ids:
+            search_filters.append(CRMLead.id.in_(phone_lead_ids))
+        filters.append(or_(*search_filters))
 
     if telecaller_id:
         t_str = str(telecaller_id).strip().lower()
@@ -3389,9 +3715,7 @@ def get_crm_dashboard_v2_lead_history(
     DC Protocol: Comprehensive Communication History for Lead Modal.
     Includes: Call Logs & Recordings, Dialer Attempts, Contact Milestones, WhatsApp Messages, and Notes/Comments.
     """
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee)
 
     phone_clean = re.sub(r'[^0-9]', '', lead.phone or '')
     p_end = phone_clean[-10:] if len(phone_clean) >= 10 else ''
@@ -3651,73 +3975,48 @@ def get_my_leads(
     """
     # DC Protocol (Feb 2026): Safety cap — prevents OOM crash from large per_page requests
     per_page = min(per_page, 100)
-    # DC Protocol: Check if VGK4U Supreme (full access bypass)
-    staff_type = (current_employee.staff_type or '').upper()
-    is_admin = is_vgk_admin(staff_type)
-    is_leader = has_direct_reports(current_employee.id, db, StaffEmployee) or is_admin
+    ctx, tenant_id, effective_co_ids, has_view_all, authorized_downline_ids = resolve_crm_list_security_scope(
+        db, current_employee, company_id=company_id
+    )
+    is_leader = len(authorized_downline_ids) > 0 or has_view_all
     
-    # DC Protocol: Menu-based access control - page assignment = full access
-    # if scope in ['team', 'all'] and not is_leader:
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail="Team and All scopes are only available to leaders with direct reports"
-    #     )
+    if scope in ['team', 'all'] and not is_leader:
+        scope = 'my'
     
     handler_ids = []
     team_employee_ids = []
     
-    if scope == 'my' and not is_admin:
+    if scope == 'my':
         handler_ids = [current_employee.emp_code]
         team_employee_ids = [current_employee.id]
-    elif scope == 'team' and is_leader and not is_admin:
-        downline_ids = get_recursive_downline(
-            current_employee.id, db, StaffEmployee, include_manager=False
-        )
-        hidden_ids = _get_hidden_employee_ids(db, StaffEmployee)
-        downline_ids = [eid for eid in downline_ids if eid not in hidden_ids]
+    elif scope == 'team' and is_leader:
         team_employees = db.query(StaffEmployee).filter(
-            StaffEmployee.id.in_(downline_ids)
+            StaffEmployee.id.in_(authorized_downline_ids)
         ).all()
-        handler_ids = [emp.emp_code for emp in team_employees]
+        handler_ids = [emp.emp_code for emp in team_employees if emp.emp_code]
         team_employee_ids = [emp.id for emp in team_employees]
-    elif is_admin:
+    elif scope == 'all' and has_view_all:
         hidden_ids = _get_hidden_employee_ids(db, StaffEmployee)
         staff_query = db.query(StaffEmployee).filter(StaffEmployee.status == 'active')
-        if company_id:
-            staff_query = staff_query.filter(StaffEmployee.base_company_id == company_id)
+        if not ctx.is_platform_admin() and tenant_id is not None:
+            staff_query = staff_query.filter(StaffEmployee.tenant_id == tenant_id)
+        if effective_co_ids:
+            staff_query = staff_query.filter(StaffEmployee.base_company_id.in_(effective_co_ids))
         all_company_staff = [e for e in staff_query.all() if e.id not in hidden_ids]
-        handler_ids = [emp.emp_code for emp in all_company_staff]
+        handler_ids = [emp.emp_code for emp in all_company_staff if emp.emp_code]
         team_employee_ids = [emp.id for emp in all_company_staff]
     else:
-        downline_ids = get_recursive_downline(
-            current_employee.id, db, StaffEmployee, include_manager=False
-        )
-        hidden_ids = _get_hidden_employee_ids(db, StaffEmployee)
-        downline_ids = [eid for eid in downline_ids if eid not in hidden_ids]
-        team_employees = db.query(StaffEmployee).filter(
-            StaffEmployee.id.in_(downline_ids)
-        ).all()
-        handler_ids = [emp.emp_code for emp in team_employees]
-        team_employee_ids = [emp.id for emp in team_employees]
+        handler_ids = [current_employee.emp_code]
+        team_employee_ids = [current_employee.id]
     
-    # DC Protocol (Feb 2026): Build base query - company_id is optional for VGK4U users
     query = db.query(CRMLead)
-    
-    # Universal Fresh Test Leads inclusion
-    is_test_lead_cond = or_(CRMLead.phone.ilike('%8143450736%'), CRMLead.alternate_phone.ilike('%8143450736%'), CRMLead.id == 8850)
-    
-    # Apply company filter — use data_companies when no specific company selected
-    # DC Protocol (Sep 2026): When querying fresh/unassigned leads, category routing from CRM Settings
-    # takes precedence across companies so staff see all leads for their assigned categories.
-    if role_filter in ('fresh', 'unassigned'):
-        pass
-    elif company_id:
-        query = query.filter(or_(CRMLead.company_id == company_id, is_test_lead_cond))
-    elif not is_admin:
-        # DC Protocol (Mar 2026): Use staff's accessible companies instead of requiring a specific one
-        staff_companies = getattr(current_employee, 'data_companies', None) or []
-        if staff_companies:
-            query = query.filter(or_(CRMLead.company_id.in_(staff_companies), is_test_lead_cond))
+    if not ctx.is_platform_admin() and tenant_id is not None:
+        query = query.filter(CRMLead.tenant_id == tenant_id)
+
+    if effective_co_ids:
+        query = query.filter(CRMLead.company_id.in_(effective_co_ids))
+    elif not ctx.is_platform_admin():
+        query = query.filter(CRMLead.id == -1)
 
     # Date parameter mapping
     if date_from and not next_followup_from:
@@ -3758,7 +4057,7 @@ def get_my_leads(
                 or_(CRMLead.handler_id.is_(None), CRMLead.handler_id == ''),
                 or_(CRMLead.mnr_handler_id.is_(None), CRMLead.mnr_handler_id == '')
             ]
-            if not is_admin:
+            if not has_view_all:
                 all_downline = get_recursive_downline(current_employee.id, db, StaffEmployee, max_depth=10, include_manager=True)
                 is_ldr = len(all_downline) > 1 or has_direct_reports(current_employee.id, db, StaffEmployee)
                 target_ids = all_downline if is_ldr else [current_employee.id]
@@ -3767,9 +4066,7 @@ def get_my_leads(
                     u_conds.append(or_(*[and_(CRMLead.company_id == co, CRMLead.category_id == cat) for co, cat in eligibility]))
                 else:
                     u_conds.append(CRMLead.id == -1)
-            elif company_id:
-                u_conds.append(CRMLead.company_id == company_id)
-            query = query.filter(or_(and_(*u_conds), is_test_lead_cond))
+            query = query.filter(and_(*u_conds))
         elif role_filter == 'self':
             query = query.filter(
                 or_(
@@ -3851,6 +4148,9 @@ def get_my_leads(
             query = query.filter(CRMLead.id == -1)
     if search:
         _st = f'%{search}%'
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=tenant_id, company_ids=effective_co_ids, search_term=search
+        )
         _sc = [
             CRMLead.name.ilike(_st),
             CRMLead.email.ilike(_st),
@@ -3863,6 +4163,8 @@ def get_my_leads(
             CRMLead.source_ref_id.ilike(_st),
             CRMLead.mnr_handler_id.ilike(_st),
         ]
+        if phone_lead_ids:
+            _sc.append(CRMLead.id.in_(phone_lead_ids))
         _id_s = search.lstrip('#').strip()
         if _id_s.isdigit():
             _sc.append(CRMLead.id == int(_id_s))
@@ -4141,41 +4443,13 @@ def get_bank_wise_leads(
     uport_staff_filter = _str_val(uport_staff_filter)
 
     from datetime import date as _date_cls
-    staff_type = (current_employee.staff_type or '').upper()
-    emp_code = (getattr(current_employee, 'emp_code', '') or '').upper()
-    emp_name = (getattr(current_employee, 'full_name', '') or '').lower()
-    emp_id = current_employee.id
-    
-    is_admin = is_vgk_admin(staff_type)
-    is_leader = has_direct_reports(emp_id, db, StaffEmployee)
-    
-    MANAGER_NAMES = ['raju', 'bhoolakshmi', 'yaswanth', 'jagan', 'jagannadh']
-    MANAGER_CODES = ['MR10001', 'ADMIN', 'VGK4U']
-    
-    dept_id = getattr(current_employee, 'department_id', None)
-    dept_obj = getattr(current_employee, 'department', None)
-    dept_name = (getattr(dept_obj, 'name', '') or '').lower() if dept_obj else ''
-    designation = (getattr(current_employee, 'designation', '') or '').lower()
-    
-    is_sales_or_leadership = (
-        dept_id in [1, 13] or
-        any(k in dept_name for k in ['sales', 'management', 'leadership']) or
-        any(k in designation for k in ['sales', 'telecaller', 'executive'])
+    ctx, tenant_id, effective_co_ids, has_view_all, authorized_downline_ids = resolve_crm_list_security_scope(
+        db, current_employee, company_id=company_id
     )
-    
-    role_obj = getattr(current_employee, 'role', None)
-    role_str = (getattr(role_obj, 'role_code', '') or getattr(role_obj, 'role_name', '') or (role_obj if isinstance(role_obj, str) else '') or '').upper()
+    emp_id = current_employee.id
+    emp_code = current_employee.emp_code or ''
+    is_manager = has_view_all
 
-    # Manager / Full View Access: Key Leadership (dept 1), Sales (dept 13), Sales staff, Team A, MR10001, MN10003, MN10008, MN10009, MN10010
-    is_manager = False
-    _team_tag = (current_employee.team_tag or '').lower()
-    if dept_id in (1, 13) or emp_code in ('MR10001', 'MN10003', 'MN10008', 'MN10009', 'MN10010') or 'sales' in dept_name or 'management' in dept_name or _team_tag == 'team_a' or is_sales_or_leadership:
-        is_manager = True
-    elif getattr(current_employee, 'staff_type', None) in ('VGK4U', 'VGK4U Supreme'):
-        is_manager = True
-    elif getattr(current_employee, 'role', None) and getattr(current_employee.role, 'role_code', '') in ('key_leadership', 'sales', 'ea', 'supreme'):
-        is_manager = True
-        
     # 2. Base Query for Bank Files, Balance Pending, Net Meter Pending & Electricity Bill Change Leads
     query = db.query(CRMLead).filter(
         or_(
@@ -4183,37 +4457,50 @@ def get_bank_wise_leads(
             CRMLead.status.in_(['pending_with_bank', 'balance_pending', 'net_meter_pending', 'electricity_bill_change', 'eb_name_change'])
         )
     )
-    
-    if company_id is not None:
-        query = query.filter(CRMLead.company_id == company_id)
-        
-    # Non-manager restricted access filter
-    if not is_manager:
-        emp_id_str = str(emp_id)
+    if not ctx.is_platform_admin() and tenant_id is not None:
+        query = query.filter(CRMLead.tenant_id == tenant_id)
+
+    if effective_co_ids:
+        query = query.filter(CRMLead.company_id.in_(effective_co_ids))
+    elif not ctx.is_platform_admin():
+        query = query.filter(CRMLead.id == -1)
+
+    # Non-manager restricted access filter (strictly assigned leads)
+    if not has_view_all:
+        emp_id = current_employee.id
+        emp_code = current_employee.emp_code or ''
+        _allowed_ids = [emp_id] + authorized_downline_ids
+        _allowed_id_strs = [str(x) for x in _allowed_ids]
         query = query.filter(
             or_(
-                CRMLead.handler_id == emp_id_str,
-                CRMLead.telecaller_id == emp_id,
-                CRMLead.field_staff_id == emp_id,
-                CRMLead.created_by_id == emp_id_str
+                CRMLead.telecaller_id.in_(_allowed_ids),
+                CRMLead.field_staff_id.in_(_allowed_ids),
+                CRMLead.primary_owner_id.in_(_allowed_ids),
+                CRMLead.handler_id == emp_code,
+                CRMLead.mnr_handler_id == emp_code,
+                CRMLead.created_by_id.in_(_allowed_id_strs)
             )
         )
         
     # Optional search
     if search:
         s_term = f"%{search}%"
-        query = query.filter(
-            or_(
-                CRMLead.name.ilike(s_term),
-                CRMLead.phone.ilike(s_term),
-                CRMLead.city.ilike(s_term),
-                CRMLead.state.ilike(s_term),
-                CRMLead.loan_bank.ilike(s_term),
-                CRMLead.bank_branch.ilike(s_term),
-                CRMLead.source_ref_name.ilike(s_term),
-                CRMLead.guru_name.ilike(s_term)
-            )
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=tenant_id, company_ids=effective_co_ids, search_term=search
         )
+        _s_clauses = [
+            CRMLead.name.ilike(s_term),
+            CRMLead.phone.ilike(s_term),
+            CRMLead.city.ilike(s_term),
+            CRMLead.state.ilike(s_term),
+            CRMLead.loan_bank.ilike(s_term),
+            CRMLead.bank_branch.ilike(s_term),
+            CRMLead.source_ref_name.ilike(s_term),
+            CRMLead.guru_name.ilike(s_term)
+        ]
+        if phone_lead_ids:
+            _s_clauses.append(CRMLead.id.in_(phone_lead_ids))
+        query = query.filter(or_(*_s_clauses))
         
     # Optional Bank Name filter
     if bank_name and bank_name.strip() and not bank_name.strip().lower().startswith('all'):
@@ -4828,6 +5115,11 @@ def list_leads(
                 detail=f"Segment '{category}' is not entitled for your organization",
             )
     
+    ctx = get_current_request_context()
+    if not ctx:
+        ctx = auth_context_service.build_context(db, current_employee)
+    has_view_all = ctx.is_platform_admin() or ctx.has_capability("crm.leads.view_all")
+
     is_all_companies = not company_id or str(company_id).strip().lower() in ('all', '', 'none')
     parsed_company_id = None
     if company_id and not is_all_companies:
@@ -4835,10 +5127,16 @@ def list_leads(
             parsed_company_id = int(company_id)
         except (ValueError, TypeError):
             pass
+        if parsed_company_id is not None and not ctx.is_platform_admin():
+            if parsed_company_id not in ctx.accessible_company_ids:
+                raise HTTPException(status_code=403, detail="Company access denied: No active membership in requested company")
 
-    # DC Protocol (Aug 2026): CATEGORY-WISE & COMPANY LEAD QUERYING.
-    is_test_lead_cond = or_(CRMLead.phone.ilike('%8143450736%'), CRMLead.alternate_phone.ilike('%8143450736%'), CRMLead.id == 8850)
-    company_filter_clause = or_(CRMLead.company_id == parsed_company_id, is_test_lead_cond) if parsed_company_id is not None else None
+    if parsed_company_id is not None:
+        company_filter_clause = CRMLead.company_id == parsed_company_id
+    elif not ctx.is_platform_admin():
+        company_filter_clause = CRMLead.company_id.in_(ctx.accessible_company_ids)
+    else:
+        company_filter_clause = None
 
     # Canonical creator clause: self-created leads always remain visible to their creator
     emp_code_val = current_employee.emp_code
@@ -4858,39 +5156,17 @@ def list_leads(
         )
     ) if emp_identifiers else False
 
-    # Safe allowed_company_ids resolution (resolves NameError for junior sales staff)
-    import json as _json
-    allowed_company_ids = set()
-    if getattr(current_employee, 'base_company_id', None):
-        try:
-            allowed_company_ids.add(int(current_employee.base_company_id))
-        except (ValueError, TypeError):
-            pass
-    data_companies = getattr(current_employee, 'data_companies', None)
-    if data_companies:
-        if isinstance(data_companies, str):
-            try:
-                data_companies = _json.loads(data_companies)
-            except Exception:
-                try:
-                    data_companies = [int(x) for x in current_employee.data_companies.split(',') if x.strip()]
-                except Exception:
-                    data_companies = []
-        if isinstance(data_companies, list):
-            for cid in data_companies:
-                if cid is not None:
-                    try:
-                        allowed_company_ids.add(int(cid))
-                    except (ValueError, TypeError):
-                        pass
-    allowed_company_ids = list(allowed_company_ids)
+    # Authoritative operational company memberships from RequestContext
+    allowed_company_ids = list(ctx.accessible_company_ids)
 
     query = db.query(CRMLead)
+    if not ctx.is_platform_admin():
+        query = query.filter(CRMLead.tenant_id == ctx.tenant_id)
     
     # VISIBILITY FILTER LOGIC:
     # 1. Specific Team Member filter (for downline leaders or admins)
     if team_member_id:
-        if not is_admin and team_member_id not in all_downline_ids:
+        if not has_view_all and team_member_id not in all_downline_ids:
             raise HTTPException(status_code=403, detail="Specified team member is not in your authorized downline")
         normal_scope = or_(
             CRMLead.telecaller_id == team_member_id,
@@ -4960,18 +5236,16 @@ def list_leads(
             or_(CRMLead.handler_id.is_(None), CRMLead.handler_id == ''),
             or_(CRMLead.mnr_handler_id.is_(None), CRMLead.mnr_handler_id == '')
         ]
-        if not is_admin:
+        if not has_view_all:
             target_ids = all_downline_ids if is_leader else [current_employee.id]
             eligibility = get_staff_handler_eligibility(db, target_ids)
             if eligibility:
                 u_conds.append(or_(*[and_(CRMLead.company_id == co, CRMLead.category_id == cat) for co, cat in eligibility]))
             else:
                 u_conds.append(CRMLead.id == -1)
-        fresh_cond = or_(and_(*u_conds), is_test_lead_cond)
-        # DC Protocol (Sep 2026): Category-Driven Fresh Leads Routing
-        # For non-admin staff, fresh leads are scoped strictly by assigned categories from CRM Settings,
-        # regardless of header company selection. For admins, company_filter_clause can still filter.
-        if is_admin and company_filter_clause is not None:
+        fresh_cond = and_(*u_conds)
+        # Category-Driven Fresh Leads Routing strictly scoped by company_filter_clause
+        if company_filter_clause is not None:
             query = query.filter(and_(company_filter_clause, fresh_cond))
         else:
             query = query.filter(fresh_cond)
@@ -4981,8 +5255,8 @@ def list_leads(
             query = query.filter(or_(self_created_clause, and_(company_filter_clause, normal_scope)))
         else:
             query = query.filter(or_(self_created_clause, normal_scope))
-    elif is_admin:
-        # Admins: full company lead visibility; self-created leads always visible
+    elif has_view_all:
+        # Full company lead visibility; self-created leads always visible
         if company_filter_clause is not None:
             query = query.filter(or_(self_created_clause, company_filter_clause))
     elif is_leader:
@@ -5157,6 +5431,11 @@ def list_leads(
         query = query.filter(CRMLead.source.ilike(source.strip()))
     if search:
         _st = f'%{search}%'
+        list_tenant_id = ctx.tenant_id if ctx else getattr(current_employee, 'tenant_id', None)
+        list_co_ids = [parsed_company_id] if parsed_company_id is not None else (allowed_company_ids if not ctx.is_platform_admin() else None)
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=list_tenant_id, company_ids=list_co_ids, search_term=search
+        )
         _sc = [
             CRMLead.name.ilike(_st),
             CRMLead.email.ilike(_st),
@@ -5169,6 +5448,8 @@ def list_leads(
             CRMLead.source_ref_id.ilike(_st),
             CRMLead.mnr_handler_id.ilike(_st),
         ]
+        if phone_lead_ids:
+            _sc.append(CRMLead.id.in_(phone_lead_ids))
         _id_s = search.lstrip('#').strip()
         if _id_s.isdigit():
             _sc.append(CRMLead.id == int(_id_s))
@@ -5623,79 +5904,33 @@ def list_team_leads(
     - 'fresh': Unassigned leads available for claiming
     - None/default: All leads (owner OR handler)
     """
-    # Check if VGK4U Supreme (full access bypass)
-    staff_type = (current_employee.staff_type or '').upper()
-    is_admin = is_vgk_admin(staff_type)
-    
-    all_downline_ids = get_recursive_downline(
-        current_employee.id, db, StaffEmployee, 
-        max_depth=10, include_manager=False
+    ctx, tenant_id, effective_co_ids, has_view_all, authorized_downline_ids = resolve_crm_list_security_scope(
+        db, current_employee, company_id=company_id
     )
-    hidden_ids = _get_hidden_employee_ids(db, StaffEmployee)
-    all_downline_ids = [eid for eid in all_downline_ids if eid not in hidden_ids]
-    
-    company_downline_ids = []
+    is_admin = has_view_all
+    downline_ids = authorized_downline_ids
+
     downline_emp_codes = []
-    downline_partner_ids = []
-    
-    if all_downline_ids:
-        downline_employees = db.query(StaffEmployee).filter(
-            StaffEmployee.id.in_(all_downline_ids)
-        ).all()
-        for emp in downline_employees:
-            if company_id is None or emp.base_company_id == company_id:
-                company_downline_ids.append(emp.id)
-                downline_emp_codes.append(emp.emp_code)
-    
-    # VGK4U Supreme bypass: If admin with no company downline, show ALL leads
-    if is_admin and not company_downline_ids:
-        # Get all active staff for filtering (company-specific or all)
-        staff_query = db.query(StaffEmployee).filter(StaffEmployee.status == 'active')
-        if company_id:
-            staff_query = staff_query.filter(StaffEmployee.base_company_id == company_id)
-        all_company_staff = [s for s in staff_query.all() if s.id not in hidden_ids]
-        company_downline_ids = [s.id for s in all_company_staff]
-        downline_emp_codes = [s.emp_code for s in all_company_staff]
-    
-    if not company_downline_ids and not is_admin:
-        # No team members in this company - return empty result
-        return {
-            'success': True,
-            'data': [],
-            'team_size': 0,
-            'pagination': {
-                'page': page,
-                'per_page': per_page,
-                'total': 0,
-                'pages': 0
-            }
-        }
-    
-    downline_ids = company_downline_ids if company_downline_ids else []
-    
     if team_member_id:
-        # DC Protocol (Jan 1, 2026): Cross-company team member filtering
-        # Check authorization against FULL downline (all_downline_ids), not company-filtered list
-        # This allows viewing leads owned by team member in ANY company
-        # DC Protocol: Menu-based access control - page assignment = full access
-        # if team_member_id not in all_downline_ids and not is_admin:
-        #     raise HTTPException(status_code=403, detail="Specified team member is not in your team")
-        target_ids = [team_member_id]
-        # Update emp_codes for target member
-        target_emp = db.query(StaffEmployee).filter(StaffEmployee.id == team_member_id).first()
-        downline_emp_codes = [target_emp.emp_code] if target_emp else []
+        target_emp = assert_authorized_crm_target_employee(
+            db, team_member_id, ctx, current_employee, authorized_downline_ids, has_view_all
+        )
+        target_ids = [target_emp.id]
+        downline_emp_codes = [target_emp.emp_code] if target_emp.emp_code else []
     else:
-        target_ids = downline_ids
-    
-    # DC Protocol (Feb 2026): Build base query - company_id is optional for VGK4U users
-    # DC Protocol (Mar 2026): Auto-detect company_id from user's base_company_id for non-admin staff
-    if not company_id and not is_admin:
-        company_id = current_employee.base_company_id
-        if not company_id:
-            raise HTTPException(status_code=400, detail="company_id is required for non-admin users")
+        target_ids = authorized_downline_ids or [current_employee.id]
+        if target_ids:
+            downline_employees = db.query(StaffEmployee).filter(StaffEmployee.id.in_(target_ids)).all()
+            downline_emp_codes = [emp.emp_code for emp in downline_employees if emp.emp_code]
+
     query = db.query(CRMLead)
-    if company_id:
-        query = query.filter(CRMLead.company_id == company_id)
+    if not ctx.is_platform_admin() and tenant_id is not None:
+        query = query.filter(CRMLead.tenant_id == tenant_id)
+
+    if effective_co_ids:
+        query = query.filter(CRMLead.company_id.in_(effective_co_ids))
+    elif not ctx.is_platform_admin():
+        query = query.filter(CRMLead.id == -1)
     
     # Build visibility filter based on filter_by mode
     effective_filter = (filter_by or '').strip().lower()
@@ -5735,7 +5970,7 @@ def list_team_leads(
             or_(CRMLead.handler_id.is_(None), CRMLead.handler_id == ''),
             or_(CRMLead.mnr_handler_id.is_(None), CRMLead.mnr_handler_id == '')
         )
-    elif is_admin and not team_member_id:
+    elif has_view_all and not team_member_id:
         # DC Protocol (Jan 1, 2026): VGK4U Supreme bypass ONLY when no team member filter
         # When team_member_id is specified, admins MUST respect the filter like all other users
         pass  # No additional filter needed, company_id already applied
@@ -5823,6 +6058,9 @@ def list_team_leads(
         query = query.filter(SignupCategory.name == category)
     if search:
         _st = f'%{search}%'
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=tenant_id, company_ids=effective_co_ids, search_term=search
+        )
         _sc = [
             CRMLead.name.ilike(_st),
             CRMLead.email.ilike(_st),
@@ -5835,6 +6073,8 @@ def list_team_leads(
             CRMLead.source_ref_id.ilike(_st),
             CRMLead.mnr_handler_id.ilike(_st),
         ]
+        if phone_lead_ids:
+            _sc.append(CRMLead.id.in_(phone_lead_ids))
         _id_s = search.lstrip('#').strip()
         if _id_s.isdigit():
             _sc.append(CRMLead.id == int(_id_s))
@@ -6244,8 +6484,12 @@ def list_team_leads(
     # DC Protocol (Feb 2026): Calculate stats for display
     # Build base query for stats (same filters but without pagination)
     stats_base = db.query(CRMLead)
-    if company_id:
-        stats_base = stats_base.filter(CRMLead.company_id == company_id)
+    if not ctx.is_platform_admin() and tenant_id is not None:
+        stats_base = stats_base.filter(CRMLead.tenant_id == tenant_id)
+    if effective_co_ids:
+        stats_base = stats_base.filter(CRMLead.company_id.in_(effective_co_ids))
+    elif not ctx.is_platform_admin():
+        stats_base = stats_base.filter(CRMLead.id == -1)
     
     # DC Protocol (Feb 2026): When team_member_id is passed, use it for stats
     # Otherwise show all leads for admin, or downline for regular users
@@ -6397,57 +6641,32 @@ def master_leads(
     Returns flat {data: [...], pagination: {...}} format with handler enrichment.
     """
     import math as _math
-    staff_type = (current_employee.staff_type or '').upper()
-    is_admin = is_vgk_admin(staff_type)
-
-    # DC Protocol (Mar 2026): Full-access tier — leadership roles and Team A Sales staff see ALL leads
-    # across all companies (same as VGK/EA admin), no assignment filtering.
-    _FULL_ACCESS_ROLE_CODES = {
-        'vgk4u', 'vgk4u_supreme',
-        'key_leadership', 'leadership_role',
-        'team_leader', 'manager',
-    }
-    _role_code = (current_employee.role.role_code if current_employee.role else '') or ''
-    _is_leadership = _role_code in _FULL_ACCESS_ROLE_CODES
-    
-    _team_tag_lower = (current_employee.team_tag or '').lower()
-    is_team_a_sales = (_team_tag_lower in ('team_a', 'team a') or 
-                       (current_employee.department and 'sales' in (current_employee.department.name or '').lower()) or
-                       current_employee.emp_code in ('MN10009', 'MN10003', 'MN10008', 'MN10010', 'MR10018', 'MR10001'))
-
-    # DC Protocol (Apr 2026): Fetch direct subordinate IDs for team-scoped access.
-    # Reporting managers see their OWN leads + their DIRECT REPORTS' leads only.
-    # Same-level peers cannot see each other's leads (including Won leads).
-    # Only the lead's direct handlers and their reporting manager have visibility.
-    _subordinate_ids = [
-        row.id for row in db.query(StaffEmployee.id).filter(
-            StaffEmployee.reporting_manager_id == current_employee.id,
-            StaffEmployee.status == 'active'
-        ).all()
-    ]
-
-    is_full_access = is_admin or _is_leadership or is_team_a_sales
+    ctx, tenant_id, effective_co_ids, has_view_all, authorized_downline_ids = resolve_crm_list_security_scope(
+        db, current_employee, company_id=company_id_filter
+    )
 
     query = db.query(CRMLead)
 
-    # Company / access scoping
-    if is_full_access:
-        # VGK/EA admins and explicit leadership-role staff see ALL leads.
-        if is_admin and company_id_filter:
-            query = query.filter(CRMLead.company_id == company_id_filter)
-    else:
-        # DC Protocol (Apr 2026): All other staff — including reporting managers —
-        # see ONLY leads where they or one of their direct reports is the handler.
-        # This ensures Won (and all other) leads from a peer are never visible
-        # to same-level colleagues, even if those colleagues are reporting managers.
-        _allowed_ids = [current_employee.id] + _subordinate_ids
+    if not ctx.is_platform_admin() and tenant_id is not None:
+        query = query.filter(CRMLead.tenant_id == tenant_id)
+
+    if effective_co_ids:
+        query = query.filter(CRMLead.company_id.in_(effective_co_ids))
+    elif not ctx.is_platform_admin():
+        query = query.filter(CRMLead.id == -1)
+
+    if not has_view_all:
+        allowed_ids = [current_employee.id] + authorized_downline_ids
+        emp_code = current_employee.emp_code
         query = query.filter(or_(
-            CRMLead.telecaller_id.in_(_allowed_ids),
-            CRMLead.field_staff_id.in_(_allowed_ids),
+            CRMLead.telecaller_id.in_(allowed_ids),
+            CRMLead.field_staff_id.in_(allowed_ids),
             and_(
                 CRMLead.primary_owner_type == 'staff',
-                CRMLead.primary_owner_id.in_(_allowed_ids)
-            )
+                CRMLead.primary_owner_id.in_(allowed_ids)
+            ),
+            (CRMLead.handler_id == emp_code) if emp_code else False,
+            (CRMLead.mnr_handler_id == emp_code) if emp_code else False,
         ))
 
     # DC Protocol (Jul 2026 Task 11): Category filter — dual-match logic for both string name and integer ID.
@@ -6714,6 +6933,9 @@ def master_leads(
     if search and isinstance(search, str) and search.strip():
         search_clean = search.strip()
         st = f'%{search_clean}%'
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=tenant_id, company_ids=effective_co_ids, search_term=search_clean
+        )
         _search_clauses = [
             CRMLead.name.ilike(st),
             CRMLead.phone.ilike(st),
@@ -6727,6 +6949,8 @@ def master_leads(
             CRMLead.source_ref_name.ilike(st),
             CRMLead.source_ref_id.ilike(st),
         ]
+        if phone_lead_ids:
+            _search_clauses.append(CRMLead.id.in_(phone_lead_ids))
         # Allow searching by numeric lead ID (e.g. "142" or "#142")
         _id_str = search_clean.lstrip('#').strip()
         if _id_str.isdigit():
@@ -7049,7 +7273,11 @@ def get_employee_performance_dashboard(
     cl_from = _normalize_date_str(closed_from)
     cl_to = _normalize_date_str(closed_to)
 
-    # Fetch ALL active staff members (excluding Freelancers by design)
+    ctx, tenant_id, effective_co_ids, has_view_all, authorized_downline_ids = resolve_crm_list_security_scope(
+        db, current_employee, company_id=company_id_filter
+    )
+
+    # Fetch ALL active staff members in authorized scope
     staff_conds = [
         "s.status = 'active'",
         "s.emp_code NOT ILIKE 'FL%'",
@@ -7057,6 +7285,15 @@ def get_employee_performance_dashboard(
         "COALESCE(s.employment_type, '') NOT ILIKE '%free%'"
     ]
     staff_params = {}
+    if not ctx.is_platform_admin() and tenant_id is not None:
+        staff_conds.append("s.tenant_id = :tenant_id")
+        staff_params['tenant_id'] = tenant_id
+
+    if not has_view_all:
+        allowed_staff_ids = [current_employee.id] + authorized_downline_ids
+        s_ids_str = ','.join(str(int(x)) for x in allowed_staff_ids)
+        staff_conds.append(f"s.id IN ({s_ids_str})")
+
     if dept_id_filter:
         staff_conds.append("s.department_id = :dept_id_filter")
         staff_params['dept_id_filter'] = dept_id_filter
@@ -7076,7 +7313,25 @@ def get_employee_performance_dashboard(
     all_active_staff = db.execute(text(staff_sql), staff_params).fetchall()
 
     # Pre-fetch overdue leads count per employee
-    overdue_sql = """
+    overdue_conds = [
+        "l.next_followup_date < NOW()",
+        "LOWER(COALESCE(l.status, '')) NOT IN ('won', 'completed', 'delivered', 'installed', 'lost', 'cancelled', 'junk')"
+    ]
+    overdue_params = {}
+    if not ctx.is_platform_admin() and tenant_id is not None:
+        overdue_conds.append("l.tenant_id = :tenant_id")
+        overdue_params['tenant_id'] = tenant_id
+    if effective_co_ids:
+        co_str = ','.join(str(int(x)) for x in effective_co_ids)
+        overdue_conds.append(f"l.company_id IN ({co_str})")
+    elif not ctx.is_platform_admin():
+        overdue_conds.append("1=0")
+    if not has_view_all:
+        allowed_staff_ids = [current_employee.id] + authorized_downline_ids
+        s_ids_str = ','.join(str(int(x)) for x in allowed_staff_ids)
+        overdue_conds.append(f"s.id IN ({s_ids_str})")
+
+    overdue_sql = f"""
         SELECT 
             COALESCE(s.emp_code, 'UNASSIGNED') as emp_code,
             COUNT(DISTINCT l.id) as overdue_count
@@ -7086,11 +7341,10 @@ def get_employee_performance_dashboard(
             OR CAST(l.primary_owner_id AS TEXT) = s.emp_code OR CAST(l.field_staff_id AS TEXT) = s.emp_code 
             OR CAST(l.telecaller_id AS TEXT) = s.emp_code OR CAST(l.created_by_id AS TEXT) = s.emp_code
         )
-        WHERE l.next_followup_date < NOW()
-          AND LOWER(COALESCE(l.status, '')) NOT IN ('won', 'completed', 'delivered', 'installed', 'lost', 'cancelled', 'junk')
+        WHERE {" AND ".join(overdue_conds)}
         GROUP BY s.emp_code
     """
-    overdue_rows = db.execute(text(overdue_sql)).fetchall()
+    overdue_rows = db.execute(text(overdue_sql), overdue_params).fetchall()
     overdue_map = {r[0]: int(r[1] or 0) for r in overdue_rows}
 
     def _get_dataset(period_type='monthly'):
@@ -7118,6 +7372,24 @@ def get_employee_performance_dashboard(
         att_where_conds = []
         params = {}
 
+        if not ctx.is_platform_admin() and tenant_id is not None:
+            where_conds.append("l.tenant_id = :tenant_id")
+            params['tenant_id'] = tenant_id
+
+        if effective_co_ids:
+            co_str = ','.join(str(int(x)) for x in effective_co_ids)
+            where_conds.append(f"l.company_id IN ({co_str})")
+        elif not ctx.is_platform_admin():
+            where_conds.append("1=0")
+
+        if not has_view_all:
+            allowed_staff_ids = [current_employee.id] + authorized_downline_ids
+            s_ids_str = ','.join(str(int(x)) for x in allowed_staff_ids)
+            where_conds.append(f"(s.id IN ({s_ids_str}) OR l.primary_owner_id IN ({s_ids_str}) OR l.telecaller_id IN ({s_ids_str}) OR l.field_staff_id IN ({s_ids_str}))")
+            st_where_conds.append(f"s.id IN ({s_ids_str})")
+            call_where_conds.append(f"s.id IN ({s_ids_str})")
+            att_where_conds.append(f"s.id IN ({s_ids_str})")
+
         if period_type == 'monthly':
             if c_from:
                 where_conds.append("l.created_at >= CAST(:c_from AS TIMESTAMP)")
@@ -7137,7 +7409,7 @@ def get_employee_performance_dashboard(
             if cl_to:
                 where_conds.append("l.actual_close_date <= CAST(:cl_to AS DATE)")
                 params['cl_to'] = cl_to
-            if not where_conds:
+            if not c_from and not c_to and not cl_from and not cl_to:
                 where_conds.append("l.created_at >= NOW() - INTERVAL '12 months'")
                 st_where_conds.append("t.created_date >= NOW() - INTERVAL '12 months'")
                 call_where_conds.append("c.call_datetime >= NOW() - INTERVAL '12 months'")
@@ -7208,6 +7480,18 @@ def get_employee_performance_dashboard(
 
         # Confirmed revenue aggregation from income_entries (Income Entries page)
         inc_where_conds = ["ie.status IN ('CONFIRMED', 'TALLY_DONE', 'APPROVED')", "(ie.is_deleted IS FALSE OR ie.is_deleted IS NULL)"]
+        if not ctx.is_platform_admin() and tenant_id is not None:
+            inc_where_conds.append("l.tenant_id = :tenant_id")
+        if effective_co_ids:
+            co_str = ','.join(str(int(x)) for x in effective_co_ids)
+            inc_where_conds.append(f"l.company_id IN ({co_str})")
+        elif not ctx.is_platform_admin():
+            inc_where_conds.append("1=0")
+        if not has_view_all:
+            allowed_staff_ids = [current_employee.id] + authorized_downline_ids
+            s_ids_str = ','.join(str(int(x)) for x in allowed_staff_ids)
+            inc_where_conds.append(f"s.id IN ({s_ids_str})")
+
         if period_type == 'monthly':
             if c_from:
                 inc_where_conds.append("COALESCE(ie.income_date, ie.created_at) >= CAST(:c_from AS TIMESTAMP)")
@@ -7468,9 +7752,15 @@ def lead_analytics(
 ):
     """Executive analytics dashboard: summary KPIs, by-status, by-category,
     by-source, by-telecaller, by-field-staff breakdowns."""
+    ctx, tenant_id, effective_co_ids, has_view_all, authorized_downline_ids = resolve_crm_list_security_scope(
+        db, current_employee, company_id=company_id_filter
+    )
+    is_admin = has_view_all
+
     import time as _pytime
     _ckey = (
-        current_employee.id, company_id_filter, category, status, search, source,
+        current_employee.id, tenant_id, tuple(sorted(effective_co_ids)), has_view_all,
+        company_id_filter, category, status, search, source,
         net_source, guru_filter, z_guru_filter, telecaller_emp_code,
         field_staff_emp_code, pincode, created_from, created_to, closed_from,
         closed_to, accepted_date_from, accepted_date_to, installation_date_from,
@@ -7489,7 +7779,6 @@ def lead_analytics(
     from sqlalchemy import func as _f, case as _sa_case
 
     staff_type = (current_employee.staff_type or '').upper()
-    is_admin = is_vgk_admin(staff_type)
 
     def _str_val(v):
         return v if isinstance(v, str) and v.strip() else None
@@ -7635,38 +7924,26 @@ def lead_analytics(
         }
 
     base = db.query(CRMLead)
-    if company_id_filter:
-        base = base.filter(CRMLead.company_id == company_id_filter)
+    if not ctx.is_platform_admin() and tenant_id is not None:
+        base = base.filter(CRMLead.tenant_id == tenant_id)
 
-    # DC Protocol (Apr 2026): Team-scoped visibility — mirrors master-leads rule.
-    # Admins and named leadership roles see all leads.
-    # All other staff (including reporting managers) see only leads assigned to
-    # themselves or their direct reports. Same-level peers cannot see each other's
-    # leads in the analytics counts (Won, Total, etc.).
-    _an_role_code = (current_employee.role.role_code if current_employee.role else '') or ''
-    _AN_FULL_ACCESS = {'vgk4u', 'vgk4u_supreme', 'key_leadership', 'leadership_role', 'team_leader', 'manager'}
-    _an_is_leadership = _an_role_code in _AN_FULL_ACCESS
-    
-    _an_team_tag_lower = (current_employee.team_tag or '').lower()
-    _an_is_team_a = (_an_team_tag_lower in ('team_a', 'team a') or 
-                     (current_employee.department and 'sales' in (current_employee.department.name or '').lower()) or
-                     current_employee.emp_code in ('MN10009', 'MN10003', 'MN10008', 'MN10010', 'MR10018', 'MR10001'))
+    if effective_co_ids:
+        base = base.filter(CRMLead.company_id.in_(effective_co_ids))
+    elif not ctx.is_platform_admin():
+        base = base.filter(CRMLead.id == -1)
 
-    if not is_admin and not _an_is_leadership and not _an_is_team_a:
-        _an_sub_ids = [
-            row.id for row in db.query(StaffEmployee.id).filter(
-                StaffEmployee.reporting_manager_id == current_employee.id,
-                StaffEmployee.status == 'active'
-            ).all()
-        ]
-        _an_allowed = [current_employee.id] + _an_sub_ids
+    if not has_view_all:
+        allowed_ids = [current_employee.id] + authorized_downline_ids
+        emp_code = (current_employee.emp_code or '').strip()
         base = base.filter(or_(
-            CRMLead.telecaller_id.in_(_an_allowed),
-            CRMLead.field_staff_id.in_(_an_allowed),
+            CRMLead.telecaller_id.in_(allowed_ids),
+            CRMLead.field_staff_id.in_(allowed_ids),
             and_(
                 CRMLead.primary_owner_type == 'staff',
-                CRMLead.primary_owner_id.in_(_an_allowed)
-            )
+                CRMLead.primary_owner_id.in_(allowed_ids)
+            ),
+            (CRMLead.handler_id == emp_code) if emp_code else False,
+            (CRMLead.mnr_handler_id == emp_code) if emp_code else False,
         ))
 
     # DC Protocol (Apr 2026): Dual-match category filter — mirrors master-leads logic.
@@ -7793,10 +8070,16 @@ def lead_analytics(
 
     if search:
         from sqlalchemy import or_ as _or_
-        base = base.filter(_or_(
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=tenant_id, company_ids=effective_co_ids, search_term=search
+        )
+        _s_clauses = [
             CRMLead.name.ilike(f'%{search}%'),
             CRMLead.phone.ilike(f'%{search}%')
-        ))
+        ]
+        if phone_lead_ids:
+            _s_clauses.append(CRMLead.id.in_(phone_lead_ids))
+        base = base.filter(_or_(*_s_clauses))
 
     if accepted_date_from:
         v = _pd(accepted_date_from)
@@ -8383,10 +8666,14 @@ def lead_analytics(
 
     # DC-TREND-BASE-001: Build trend_base without top-bar date-range filters
     trend_base = db.query(CRMLead)
-    if company_id_filter:
-        trend_base = trend_base.filter(CRMLead.company_id == company_id_filter)
+    if not ctx.is_platform_admin() and tenant_id is not None:
+        trend_base = trend_base.filter(CRMLead.tenant_id == tenant_id)
+    if effective_co_ids:
+        trend_base = trend_base.filter(CRMLead.company_id.in_(effective_co_ids))
+    elif not ctx.is_platform_admin():
+        trend_base = trend_base.filter(CRMLead.id == -1)
     trend_base = _apply_exec_dashboard_common_filters(
-        trend_base, db, current_employee, is_admin,
+        trend_base, db, current_employee, is_admin=has_view_all,
         category=category, status=status, source=source, net_source=net_source,
         guru_filter=guru_filter, z_guru_filter=z_guru_filter, telecaller_emp_code=telecaller_emp_code,
         field_staff_emp_code=field_staff_emp_code, pincode=pincode, search=search,
@@ -8395,7 +8682,8 @@ def lead_analytics(
         first_dvr_from=None, first_dvr_to=None, solar_pipeline_status=solar_pipeline_status,
         accepted_date_from=None, accepted_date_to=None, installation_date_from=None, installation_date_to=None,
         material_reach_date_from=None, material_reach_date_to=None, next_followup_from=None, next_followup_to=None,
-        ev_b2b_stage=ev_b2b_stage, combined_bank_filter=combined_bank_filter, company_id_filter=company_id_filter
+        ev_b2b_stage=ev_b2b_stage, combined_bank_filter=combined_bank_filter, company_id_filter=company_id_filter,
+        has_view_all=has_view_all, authorized_downline_ids=authorized_downline_ids
     )
 
     # Fetch min transaction date per lead
@@ -8794,45 +9082,40 @@ def lead_analytics(
     return _analytics_res
 
 
-def _resolve_phone_duplicate(phone, alt_phone, db, exclude_lead_id=None):
-    """DC-DEDUP-002: Check primary + alternate phone against both DB phone columns.
+def _resolve_phone_duplicate(
+    phone: Optional[str],
+    alt_phone: Optional[str],
+    db: Session,
+    tenant_id: Optional[int] = None,
+    company_id: Optional[int] = None,
+    exclude_lead_id: Optional[int] = None,
+) -> Tuple[Optional[CRMLead], Optional[StaffEmployee], bool]:
+    """DC-DEDUP-002 / Stage 2B Phase 2R-3D: Check primary + alternate phone against DB phone columns.
+    Scoped strictly to tenant_id and company_id using canonical crm_dedup_service.
     Returns (existing_lead, owner_employee, owner_is_active).
-    All four cross-combinations are checked so swapping primary/alternate never bypasses the guard."""
-    import re as _re
-    def _clean(p):
-        if not p:
-            return None
-        d = _re.sub(r'[^0-9]', '', str(p))
-        return d[-10:] if len(d) >= 8 else None
-
-    p = _clean(phone)
-    a = _clean(alt_phone)
-    if not p and not a:
+    """
+    if tenant_id is None or company_id is None:
         return None, None, True
 
-    conditions = []
-    for num in filter(None, [p, a]):
-        conditions.append(func.regexp_replace(CRMLead.phone, '[^0-9]', '', 'g').like(f'%{num}'))
-        conditions.append(func.regexp_replace(CRMLead.alternate_phone, '[^0-9]', '', 'g').like(f'%{num}'))
-
-    q = db.query(CRMLead).filter(or_(*conditions))
-    if exclude_lead_id:
-        q = q.filter(CRMLead.id != exclude_lead_id)
-    existing = q.order_by(CRMLead.id.asc()).first()
-    if not existing:
+    res = check_phone_duplicate(
+        db=db,
+        tenant_id=tenant_id,
+        company_id=company_id,
+        phone=phone,
+        alternate_phone=alt_phone,
+        exclude_lead_id=exclude_lead_id,
+        with_lock=False
+    )
+    if not res.is_duplicate:
         return None, None, True
 
-    owner = None
-    owner_active = True
-    if existing.primary_owner_type == 'staff' and existing.primary_owner_id:
-        owner = db.query(StaffEmployee).filter(StaffEmployee.id == existing.primary_owner_id).first()
-        if owner:
-            owner_active = (owner.status == 'active')
-    return existing, owner, owner_active
+    existing = db.query(CRMLead).filter(CRMLead.id == res.existing_lead_id).first()
+    owner = db.query(StaffEmployee).filter(StaffEmployee.id == res.owner_id).first() if res.owner_id else None
+    return existing, owner, res.owner_active
 
 
 def _apply_exec_dashboard_common_filters(
-    base, db, current_employee, is_admin,
+    base, db, current_employee, is_admin=False,
     category=None, status=None, source=None, net_source=None,
     guru_filter=None, z_guru_filter=None, telecaller_emp_code=None,
     field_staff_emp_code=None, pincode=None, search=None,
@@ -8841,7 +9124,9 @@ def _apply_exec_dashboard_common_filters(
     first_dvr_from=None, first_dvr_to=None, solar_pipeline_status=None,
     accepted_date_from=None, accepted_date_to=None, installation_date_from=None, installation_date_to=None,
     material_reach_date_from=None, material_reach_date_to=None, next_followup_from=None, next_followup_to=None,
-    ev_b2b_stage=None, combined_bank_filter=None, company_id_filter=None
+    ev_b2b_stage=None, combined_bank_filter=None, company_id_filter=None,
+    has_view_all: Optional[bool] = None,
+    authorized_downline_ids: Optional[List[int]] = None
 ):
     from app.models.signup_category import SignupCategory as _SC2
     from sqlalchemy import or_ as _sa_or, and_ as _sa_and
@@ -8885,30 +9170,27 @@ def _apply_exec_dashboard_common_filters(
     combined_bank_filter = _cl(combined_bank_filter)
     company_id_filter = _cl(company_id_filter)
 
-    # Team-scoped visibility (mirrors lead_analytics & master_leads)
-    _role_code = (current_employee.role.role_code if current_employee.role else '') or ''
-    _FULL_ACCESS = {'vgk4u', 'vgk4u_supreme', 'key_leadership', 'leadership_role', 'team_leader', 'manager'}
-    
-    _team_tag_lower = (current_employee.team_tag or '').lower()
-    _is_team_a_sales = (_team_tag_lower in ('team_a', 'team a') or 
-                       (current_employee.department and 'sales' in (current_employee.department.name or '').lower()) or
-                       current_employee.emp_code in ('MN10009', 'MN10003', 'MN10008', 'MN10010', 'MR10018', 'MR10001'))
+    # Canonical visibility check
+    can_view_all = has_view_all if has_view_all is not None else bool(is_admin)
+    if not can_view_all:
+        if authorized_downline_ids is None:
+            authorized_downline_ids = get_recursive_downline(
+                current_employee.id, db, StaffEmployee, max_depth=10, include_manager=False
+            )
+            hidden_ids = _get_hidden_employee_ids(db, StaffEmployee)
+            authorized_downline_ids = [eid for eid in authorized_downline_ids if eid not in hidden_ids]
 
-    if not is_admin and _role_code not in _FULL_ACCESS and not _is_team_a_sales:
-        _sub_ids = [
-            row.id for row in db.query(StaffEmployee.id).filter(
-                StaffEmployee.reporting_manager_id == current_employee.id,
-                StaffEmployee.status == 'active'
-            ).all()
-        ]
-        _allowed = [current_employee.id] + _sub_ids
+        allowed_ids = [current_employee.id] + list(authorized_downline_ids or [])
+        emp_code = (current_employee.emp_code or '').strip()
         base = base.filter(_sa_or(
-            CRMLead.telecaller_id.in_(_allowed),
-            CRMLead.field_staff_id.in_(_allowed),
+            CRMLead.telecaller_id.in_(allowed_ids),
+            CRMLead.field_staff_id.in_(allowed_ids),
             _sa_and(
                 CRMLead.primary_owner_type == 'staff',
-                CRMLead.primary_owner_id.in_(_allowed)
-            )
+                CRMLead.primary_owner_id.in_(allowed_ids)
+            ),
+            (CRMLead.handler_id == emp_code) if emp_code else False,
+            (CRMLead.mnr_handler_id == emp_code) if emp_code else False,
         ))
 
     if category:
@@ -8976,10 +9258,22 @@ def _apply_exec_dashboard_common_filters(
     if pincode:
         base = base.filter(CRMLead.pincode.ilike(f'%{pincode}%'))
     if search:
-        base = base.filter(_sa_or(
+        ctx = get_current_request_context()
+        tenant_id = ctx.tenant_id if ctx else getattr(current_employee, 'tenant_id', None)
+        company_ids = [company_id_filter] if company_id_filter else (getattr(current_employee, 'base_company_id', None) and [current_employee.base_company_id])
+        if ctx and not ctx.is_platform_admin() and ctx.accessible_company_ids:
+            company_ids = [c for c in (company_ids or ctx.accessible_company_ids) if c in ctx.accessible_company_ids]
+
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=tenant_id, company_ids=company_ids, search_term=search
+        )
+        _s_clauses = [
             CRMLead.name.ilike(f'%{search}%'),
             CRMLead.phone.ilike(f'%{search}%')
-        ))
+        ]
+        if phone_lead_ids:
+            _s_clauses.append(CRMLead.id.in_(phone_lead_ids))
+        base = base.filter(_sa_or(*_s_clauses))
     if solar_pipeline_status:
         base = base.filter(CRMLead.solar_pipeline_status == solar_pipeline_status)
     if ev_b2b_stage:
@@ -9133,24 +9427,21 @@ def exec_handler_leads(
     limit = _cl(limit)
 
     POST_WON = ['won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed']
-    _is_admin = is_vgk_admin((current_employee.staff_type or '').upper())
-    _eh_role_code = (current_employee.role.role_code if current_employee.role else '') or ''
-    if _eh_role_code in {'vgk4u', 'vgk4u_supreme', 'key_leadership', 'leadership_role', 'team_leader', 'manager'}:
-        _is_admin = True
+    ctx, tenant_id, effective_co_ids, has_view_all, authorized_downline_ids = resolve_crm_list_security_scope(
+        db, current_employee, company_id=company_id_filter
+    )
 
-    # Company scope — mirrors lead-analytics
-    _all_cos = db.query(AssociatedCompany).filter(AssociatedCompany.is_active == True).all()
-    if company_id_filter and _is_admin:
-        _co_ids = [company_id_filter]
-    elif _is_admin:
-        _co_ids = [c.id for c in _all_cos]
-    else:
-        _co_ids = [current_employee.base_company_id] if current_employee.base_company_id else [c.id for c in _all_cos]
+    base = db.query(CRMLead)
+    if not ctx.is_platform_admin() and tenant_id is not None:
+        base = base.filter(CRMLead.tenant_id == tenant_id)
 
-    base = db.query(CRMLead).filter(CRMLead.company_id.in_(_co_ids))
+    if effective_co_ids:
+        base = base.filter(CRMLead.company_id.in_(effective_co_ids))
+    elif not ctx.is_platform_admin():
+        base = base.filter(CRMLead.id == -1)
 
     base = _apply_exec_dashboard_common_filters(
-        base, db, current_employee, _is_admin,
+        base, db, current_employee, is_admin=has_view_all,
         category=category, status=status, source=source, net_source=net_source,
         guru_filter=guru_filter, z_guru_filter=z_guru_filter, telecaller_emp_code=telecaller_emp_code,
         field_staff_emp_code=field_staff_emp_code, pincode=pincode, search=search,
@@ -9159,7 +9450,8 @@ def exec_handler_leads(
         first_dvr_from=first_dvr_from, first_dvr_to=first_dvr_to, solar_pipeline_status=solar_pipeline_status,
         accepted_date_from=accepted_date_from, accepted_date_to=accepted_date_to, installation_date_from=installation_date_from, installation_date_to=installation_date_to,
         material_reach_date_from=material_reach_date_from, material_reach_date_to=material_reach_date_to, next_followup_from=next_followup_from, next_followup_to=next_followup_to,
-        ev_b2b_stage=ev_b2b_stage, combined_bank_filter=combined_bank_filter, company_id_filter=company_id_filter
+        ev_b2b_stage=ev_b2b_stage, combined_bank_filter=combined_bank_filter, company_id_filter=company_id_filter,
+        has_view_all=has_view_all, authorized_downline_ids=authorized_downline_ids
     )
 
     # Handler-specific filter — mirrors the GROUP BY key used in lead-analytics
@@ -9375,18 +9667,21 @@ def exec_trend_leads(
     _EXCL_WON_PS = ['loan_rejected', 'documents_issue', 'not_interested', 'cancelled', 'different_vendor']
     _EXCL_PIPE_PS = ['cancelled', 'not_interested', 'completed', 'loan_rejected', 'different_vendor', 'documents_issue']
 
-    _is_admin = is_vgk_admin((current_employee.staff_type or '').upper())
-    _eh_role_code = (current_employee.role.role_code if current_employee.role else '') or ''
-    if _eh_role_code in {'vgk4u', 'vgk4u_supreme', 'key_leadership', 'leadership_role', 'team_leader', 'manager'}:
-        _is_admin = True
+    ctx, tenant_id, effective_co_ids, has_view_all, authorized_downline_ids = resolve_crm_list_security_scope(
+        db, current_employee, company_id=company_id_filter
+    )
 
-    # Parse company filters (matches get_executive_dashboard logic)
     base = db.query(CRMLead)
-    if company_id_filter:
-        base = base.filter(CRMLead.company_id == company_id_filter)
+    if not ctx.is_platform_admin() and tenant_id is not None:
+        base = base.filter(CRMLead.tenant_id == tenant_id)
+
+    if effective_co_ids:
+        base = base.filter(CRMLead.company_id.in_(effective_co_ids))
+    elif not ctx.is_platform_admin():
+        base = base.filter(CRMLead.id == -1)
 
     base = _apply_exec_dashboard_common_filters(
-        base, db, current_employee, _is_admin,
+        base, db, current_employee, is_admin=has_view_all,
         category=category, status=status, source=source, net_source=net_source,
         guru_filter=guru_filter, z_guru_filter=z_guru_filter, telecaller_emp_code=telecaller_emp_code,
         field_staff_emp_code=field_staff_emp_code, pincode=pincode, search=search,
@@ -9409,7 +9704,8 @@ def exec_trend_leads(
         material_reach_date_to=None,
         next_followup_from=None,
         next_followup_to=None,
-        ev_b2b_stage=ev_b2b_stage, combined_bank_filter=combined_bank_filter, company_id_filter=company_id_filter
+        ev_b2b_stage=ev_b2b_stage, combined_bank_filter=combined_bank_filter, company_id_filter=company_id_filter,
+        has_view_all=has_view_all, authorized_downline_ids=authorized_downline_ids
     )
 
     # Determine period start/end dates
@@ -9686,18 +9982,27 @@ def get_exec_emp_perf_leads(
     limit = _cl(limit) or 200
     company_id_filter = _cl(company_id_filter)
 
-    POST_WON = ['won', 'completed', 'delivered', 'installed']
+    ctx, tenant_id, effective_co_ids, has_view_all, authorized_downline_ids = resolve_crm_list_security_scope(
+        db, current_employee, company_id=company_id_filter
+    )
 
-    # Target employee lookup
+    # Target employee lookup & downline authorization
     target_emp = None
     if emp_code and emp_code != 'UNASSIGNED':
-        target_emp = db.query(_SE2).filter(_SE2.emp_code == emp_code).first()
-        if not target_emp and emp_code.isdigit():
-            target_emp = db.query(_SE2).filter(_SE2.id == int(emp_code)).first()
+        target_emp = assert_authorized_crm_target_employee(
+            db, emp_code, ctx, current_employee, authorized_downline_ids, has_view_all
+        )
+    elif emp_code == 'UNASSIGNED' and not has_view_all:
+        raise HTTPException(status_code=403, detail="Permission denied: viewing unassigned metrics requires view_all capability")
 
     base = db.query(CRMLead)
-    if company_id_filter:
-        base = base.filter(CRMLead.company_id == company_id_filter)
+    if not ctx.is_platform_admin() and tenant_id is not None:
+        base = base.filter(CRMLead.tenant_id == tenant_id)
+
+    if effective_co_ids:
+        base = base.filter(CRMLead.company_id.in_(effective_co_ids))
+    elif not ctx.is_platform_admin():
+        base = base.filter(CRMLead.id == -1)
 
     # Employee assignment condition
     if emp_code and emp_code != 'UNASSIGNED':
@@ -9916,8 +10221,32 @@ def check_lead_duplicate(
 ):
     """DC-DEDUP-002: Pre-flight duplicate check for lead creation UI.
     Checks the given phone + alt_phone against both phone and alternate_phone DB columns.
-    Frontend calls this BEFORE POSTing so it can show a rich warning modal."""
-    existing, owner, owner_active = _resolve_phone_duplicate(phone, alt_phone, db)
+    Frontend calls this BEFORE POSTing so it can show a rich warning modal.
+    Stage 2B Phase 2R-3A: Multi-tenant and operational company authorization enforced."""
+    from app.models.staff_accounts import AssociatedCompany
+    ctx = get_current_request_context()
+    if not ctx:
+        ctx = auth_context_service.build_context(db, current_employee)
+
+    # Multi-tenant and operational company authorization
+    if not ctx.is_platform_admin():
+        if company_id not in ctx.accessible_company_ids:
+            raise HTTPException(
+                status_code=403,
+                detail="Company access denied: You do not have active membership in the target company"
+            )
+        target_tenant_id = ctx.tenant_id
+    else:
+        target_company = db.query(AssociatedCompany).filter(AssociatedCompany.id == company_id).first()
+        if not target_company:
+            raise HTTPException(status_code=404, detail="Company not found")
+        target_tenant_id = target_company.client_id or ctx.tenant_id
+
+    existing, owner, owner_active = _resolve_phone_duplicate(
+        phone, alt_phone, db,
+        tenant_id=target_tenant_id,
+        company_id=company_id
+    )
     if not existing:
         return {"duplicate": False}
     owner_name = owner_emp_code = owner_status = None
@@ -9956,37 +10285,10 @@ def create_lead(
     from app.models.staff import StaffEmployee as SE
     from app.models.staff_accounts import OfficialPartner
     
-    # DC_LIMBO_FIX: Prevent handler_type='staff' with empty/invalid handler_id (limbo lead prevention)
-    if lead_data.handler_type == 'staff':
-        handler_id_val = str(lead_data.handler_id).strip() if lead_data.handler_id else ''
-        if not handler_id_val:
-            raise HTTPException(
-                status_code=422,
-                detail="handler_id (emp_code) is required when handler_type is 'staff'. Set handler_type='unassigned' if no staff member is assigned."
-            )
-        # Verify handler_id maps to a real active staff emp_code
-        valid_handler = db.query(StaffEmployee).filter(
-            StaffEmployee.emp_code == handler_id_val,
-            StaffEmployee.status == 'active'
-        ).first()
-        # DC_INT_FALLBACK: Legacy data may store numeric employee ID instead of emp_code.
-        # Auto-convert: look up employee by integer ID and substitute their emp_code.
-        if not valid_handler and handler_id_val.isdigit():
-            by_id = db.query(StaffEmployee).filter(
-                StaffEmployee.id == int(handler_id_val),
-                StaffEmployee.status == 'active'
-            ).first()
-            if by_id:
-                valid_handler = by_id
-                handler_id_val = by_id.emp_code
-                print(f"[DC_INT_FALLBACK] handler_id integer {lead_data.handler_id!r} → emp_code {handler_id_val!r} (create)", flush=True)
-        if not valid_handler:
-            raise HTTPException(
-                status_code=422,
-                detail=f"handler_id '{handler_id_val}' is not a valid active staff emp_code. Assign a valid emp_code or use handler_type='unassigned'."
-            )
-        # DC_LIMBO_FIX: Normalize handler_id to trimmed canonical value for storage
-        lead_data.handler_id = handler_id_val
+    # Stage 2B Phase 2: RequestContext and Membership Resolution
+    ctx = get_current_request_context()
+    if not ctx:
+        ctx = auth_context_service.build_context(db, current_employee)
 
     # DC_CAT_COMPANY: Category is the source of truth for company routing.
     # If category_id is provided, derive company from it (overrides query param).
@@ -10001,21 +10303,36 @@ def create_lead(
         if category.company_id:
             resolved_company_id = category.company_id
 
+    # Verify caller has operational membership in the resolved company
+    if not ctx.is_platform_admin():
+        if resolved_company_id not in ctx.accessible_company_ids:
+            raise HTTPException(
+                status_code=403,
+                detail="Company access denied: You do not have active membership in the target company"
+            )
+
+    # DC_LIMBO_FIX: Prevent handler_type='staff' with empty/invalid handler_id (limbo lead prevention)
+    if lead_data.handler_type == 'staff':
+        handler_id_val = str(lead_data.handler_id).strip() if lead_data.handler_id else ''
+        if not handler_id_val:
+            raise HTTPException(
+                status_code=422,
+                detail="handler_id (emp_code) is required when handler_type is 'staff'. Set handler_type='unassigned' if no staff member is assigned."
+            )
+        valid_handler = validate_crm_assignee(db, handler_id_val, ctx.tenant_id, "handler")
+        lead_data.handler_id = valid_handler.emp_code
+
     # Cross-company assignment allowed for telecaller (per user requirement)
     validated_telecaller_id = None
     if lead_data.telecaller_id:
-        telecaller = db.query(SE).filter(SE.id == lead_data.telecaller_id, SE.status == 'active').first()
-        if not telecaller:
-            raise HTTPException(status_code=400, detail="Invalid or inactive telecaller")
-        validated_telecaller_id = lead_data.telecaller_id
+        telecaller = validate_crm_assignee(db, lead_data.telecaller_id, ctx.tenant_id, "telecaller")
+        validated_telecaller_id = telecaller.id
     
     # Cross-company assignment allowed for field staff (per user requirement)
     validated_field_staff_id = None
     if lead_data.field_staff_id:
-        field_staff = db.query(SE).filter(SE.id == lead_data.field_staff_id, SE.status == 'active').first()
-        if not field_staff:
-            raise HTTPException(status_code=400, detail="Invalid or inactive field staff")
-        validated_field_staff_id = lead_data.field_staff_id
+        field_staff = validate_crm_assignee(db, lead_data.field_staff_id, ctx.tenant_id, "field staff")
+        validated_field_staff_id = field_staff.id
     
     # DC Protocol Exception: Partner can be cross-company (for tagging).
     # Inactive partners are also allowed — they may still be tagged for attribution.
@@ -10046,45 +10363,16 @@ def create_lead(
     elif _src_type_create in ('vgk', 'vgk_partner') and not _resolved_source:
         _resolved_source = 'VGK4U'
 
-    # DC-DEDUP-002: Block creation when phone/alternate_phone already exists in CRM.
-    # Active owner → 409 blocked outright. Inactive owner → 409 with reassign hint.
+    # DC-DEDUP-002 / Stage 2B Phase 2R-3D: Phone Deduplication with Advisory Locking
     if lead_data.phone or lead_data.alternate_phone:
-        _dup_lead, _dup_owner, _dup_active = _resolve_phone_duplicate(
-            lead_data.phone, lead_data.alternate_phone, db
+        assert_no_phone_duplicate(
+            db=db,
+            tenant_id=ctx.tenant_id,
+            company_id=resolved_company_id,
+            phone=lead_data.phone,
+            alternate_phone=lead_data.alternate_phone,
+            with_lock=True
         )
-        if _dup_lead:
-            _dup_owner_name = _dup_owner_status = None
-            if _dup_owner:
-                _dup_owner_name = f"{_dup_owner.first_name or ''} {_dup_owner.last_name or ''}".strip() or _dup_owner.emp_code
-                _dup_owner_status = _dup_owner.status
-            raise HTTPException(
-                status_code=409,
-                detail={
-                    "type": "duplicate_lead",
-                    "message": f"Mobile number already exists in Lead #{_dup_lead.id} ({_dup_lead.name or 'Unnamed'}).",
-                    "lead_id": _dup_lead.id,
-                    "lead_name": _dup_lead.name or "",
-                    "lead_status": _dup_lead.status,
-                    "lead_company_id": _dup_lead.company_id,
-                    "owner_name": _dup_owner_name,
-                    "owner_status": _dup_owner_status,
-                    "owner_active": _dup_active,
-                    "lead": {
-                        "id": _dup_lead.id,
-                        "name": _dup_lead.name or "",
-                        "phone": _dup_lead.phone or "",
-                        "alternate_phone": _dup_lead.alternate_phone or "",
-                        "status": _dup_lead.status,
-                        "company_id": _dup_lead.company_id,
-                    },
-                    "owner": {
-                        "id": _dup_owner.id if _dup_owner else None,
-                        "name": _dup_owner_name,
-                        "emp_code": _dup_owner.emp_code if _dup_owner else None,
-                        "status": _dup_owner_status,
-                    } if _dup_owner else None,
-                }
-            )
 
     _lead_status = lead_data.status or 'new'
     # DC-NEW-LEADS-UNASSIGNED-POOL-001: Leads in 'new' status have no telecaller ID or individual ownership
@@ -10103,6 +10391,7 @@ def create_lead(
         _eff_owner_id = current_employee.id
 
     new_lead = CRMLead(
+        tenant_id=ctx.tenant_id,
         company_id=resolved_company_id,
         name=lead_data.name,
         email=lead_data.email,
@@ -10197,6 +10486,16 @@ def create_lead(
             pass
 
     db.add(new_lead)
+    db.flush()
+    sync_lead_phone_identities(
+        db=db,
+        lead=new_lead,
+        phone_raw=new_lead.phone,
+        alternate_phone_raw=new_lead.alternate_phone,
+        source_channel='manual_staff',
+        source_ref=current_employee.emp_code if current_employee else None,
+        with_lock=True
+    )
     db.commit()
     db.refresh(new_lead)
 
@@ -10417,6 +10716,85 @@ def _get_lead_staff_visits(db: Session, lead: CRMLead) -> list:
     return visits
 
 
+@router.get("/leads/system-search")
+def system_search_leads(
+    q: str = Query(..., min_length=2, description="Mobile number, Area, Name, or Lead ID"),
+    company_id: Optional[int] = Query(None, description="Company ID filter"),
+    limit: int = Query(20, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC Protocol: System-wide lead search for field staff journey tagging.
+    Searches across authorized leads by mobile number, area, name, or ID.
+    """
+    ctx, tenant_id, effective_co_ids, has_view_all, authorized_downline_ids = resolve_crm_list_security_scope(
+        db, current_employee, company_id=company_id
+    )
+
+    from app.models.crm import CRMLead
+    search_clean = q.strip()
+    search_term = f"%{search_clean}%"
+    phone_lead_ids = find_candidate_lead_ids_for_search(
+        db, tenant_id=tenant_id, company_ids=effective_co_ids, search_term=search_clean
+    )
+    
+    # Search by ID if digits only
+    filters = [
+        CRMLead.phone.ilike(search_term),
+        CRMLead.area.ilike(search_term),
+        CRMLead.name.ilike(search_term),
+        CRMLead.city.ilike(search_term)
+    ]
+    if phone_lead_ids:
+        filters.append(CRMLead.id.in_(phone_lead_ids))
+    if search_clean.isdigit():
+        filters.append(CRMLead.id == int(search_clean))
+        
+    query = db.query(CRMLead).filter(or_(*filters))
+    if not ctx.is_platform_admin() and tenant_id is not None:
+        query = query.filter(CRMLead.tenant_id == tenant_id)
+
+    if effective_co_ids:
+        query = query.filter(CRMLead.company_id.in_(effective_co_ids))
+    elif not ctx.is_platform_admin():
+        query = query.filter(CRMLead.id == -1)
+
+    if not has_view_all:
+        allowed_ids = [current_employee.id] + authorized_downline_ids
+        emp_code = (current_employee.emp_code or '').strip()
+        query = query.filter(or_(
+            CRMLead.telecaller_id.in_(allowed_ids),
+            CRMLead.field_staff_id.in_(allowed_ids),
+            and_(
+                CRMLead.primary_owner_type == 'staff',
+                CRMLead.primary_owner_id.in_(allowed_ids)
+            ),
+            (CRMLead.handler_id == emp_code) if emp_code else False,
+            (CRMLead.mnr_handler_id == emp_code) if emp_code else False,
+        ))
+
+    leads = query.order_by(CRMLead.id.desc()).limit(limit).all()
+    
+    return {
+        "success": True,
+        "count": len(leads),
+        "leads": [
+            {
+                "id": l.id,
+                "name": l.name,
+                "phone": l.phone,
+                "area": l.area or "",
+                "city": l.city or "",
+                "status": l.status,
+                "company_id": l.company_id,
+                "display_label": f"#{l.id} - {l.name} ({l.phone}) - {l.area or l.city or 'N/A'}"
+            }
+            for l in leads
+        ]
+    }
+
+
 @router.get("/leads/{lead_id}")
 def get_lead(
     lead_id: int,
@@ -10427,28 +10805,21 @@ def get_lead(
     """Get lead details with follow-ups and notes"""
     import traceback
     try:
-        lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
-        
-        if not lead:
-            raise HTTPException(status_code=404, detail="Lead not found")
+        lead = get_authorized_lead(db, lead_id, current_employee)
             
-        effective_company_id = company_id if (company_id is not None and company_id > 0) else lead.company_id
-
-        # DC Protocol: Creator & authorized cross-company access check
-        _gl_emp_code = getattr(current_employee, 'emp_code', None)
-        _gl_emp_id = getattr(current_employee, 'id', None)
-        _gl_is_creator = bool(lead.created_by_id and (lead.created_by_id == _gl_emp_code or str(lead.created_by_id) == str(_gl_emp_id)))
-        _gl_staff_type = (current_employee.staff_type or '').upper()
-        _gl_is_admin = is_vgk_admin(_gl_staff_type)
-        _gl_is_assigned = bool(
-            (lead.primary_owner_type == 'staff' and lead.primary_owner_id == _gl_emp_id) or
-            lead.telecaller_id == _gl_emp_id or
-            lead.field_staff_id == _gl_emp_id or
-            (_gl_emp_code and lead.handler_id == _gl_emp_code)
-        )
-
-        if lead.company_id != effective_company_id and not (_gl_is_creator or _gl_is_admin or _gl_is_assigned):
-            raise HTTPException(status_code=404, detail="Lead not found")
+        if company_id is not None and company_id > 0 and lead.company_id != company_id:
+            ctx = get_current_request_context()
+            if not ctx:
+                ctx = auth_context_service.build_context(db, current_employee)
+            is_assigned_or_creator = bool(
+                (lead.primary_owner_type == 'staff' and lead.primary_owner_id == current_employee.id) or
+                lead.telecaller_id == current_employee.id or
+                lead.field_staff_id == current_employee.id or
+                (current_employee.emp_code and lead.handler_id == current_employee.emp_code) or
+                (lead.created_by_id in (current_employee.emp_code, str(current_employee.id)))
+            )
+            if not ctx.is_platform_admin() and not ctx.is_tenant_admin() and not is_assigned_or_creator:
+                raise HTTPException(status_code=404, detail="Lead not found")
             
         _validate_freelancer_lead_access(lead, current_employee)
         
@@ -10734,6 +11105,7 @@ def staff_lead_click_to_call(
     Does NOT expose customer phone to masked users.
     Zero changes to lead ownership, sponsor, or points.
     """
+    get_authorized_lead(db, lead_id, current_employee)
     from app.services.crm_contact_privacy import initiate_lead_click_to_call
     return initiate_lead_click_to_call(db=db, lead_id=lead_id, current_user=current_employee)
 
@@ -10750,19 +11122,18 @@ def update_lead(
     from app.models.staff import StaffEmployee as SE
     from app.models.staff_accounts import OfficialPartner
     
-    # DC Protocol (Jan 23, 2026): Query by lead_id only to support company change
-    # The company_id query param must match the lead's CURRENT company for lookup
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
-    
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    ctx = get_current_request_context()
+    if not ctx or ctx.staff_id != current_employee.id:
+        ctx = auth_context_service.build_context(db, current_employee)
+
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
         
     _validate_freelancer_lead_access(lead, current_employee)
     
     # DC Protocol: Validate that the provided company_id matches lead's current company
-    # Creator, assigned handler, and VGK4U admin bypass this check
+    # Creator, assigned handler, and admin bypass this check
     _upd_staff_type = (current_employee.staff_type or '').upper()
-    _upd_is_admin = is_vgk_admin(_upd_staff_type)
+    _upd_is_admin = ctx.is_platform_admin() or ctx.is_tenant_admin() or is_vgk_admin(_upd_staff_type)
     _upd_emp_code = getattr(current_employee, 'emp_code', None)
     _upd_emp_id = getattr(current_employee, 'id', None)
     _upd_is_self = bool(lead.created_by_id and (lead.created_by_id == _upd_emp_code or str(lead.created_by_id) == str(_upd_emp_id)))
@@ -10781,13 +11152,10 @@ def update_lead(
     
     update_data = lead_data.dict(exclude_unset=True)
 
-    # DC-CFV-EDIT-001: confirmed_final_value is a superadmin-only override field.
-    # Strip it from update_data for all callers except MR10001 and MR10025.
-    # All other users cannot change this field via the update endpoint.
+    # DC-CFV-EDIT-001: confirmed_final_value is an admin override field.
     if 'confirmed_final_value' in update_data:
-        _cfv_caller_code = getattr(current_employee, 'emp_code', '') or ''
         _cfv_is_allowed = (
-            _cfv_caller_code in ('MR10001', 'MR10025') or
+            ctx.is_platform_admin() or ctx.is_tenant_admin() or
             is_vgk_admin(getattr(current_employee, 'staff_type', '') or '')
         )
         if not _cfv_is_allowed:
@@ -10800,15 +11168,27 @@ def update_lead(
         if _nnf in update_data and update_data[_nnf] is None:
             del update_data[_nnf]
 
-    # DC_CAT_COMPANY: If category is being changed, auto-derive company_id from it.
-    # The category's company_id is authoritative — a category change may also move
-    # the lead to the correct company without the caller needing to specify it explicitly.
-    if 'category_id' in update_data and update_data['category_id'] and 'company_id' not in update_data:
-        _new_resolved_company = _resolve_company_from_category(
-            db, update_data['category_id'], lead.company_id
-        )
-        if _new_resolved_company != lead.company_id:
-            update_data['company_id'] = _new_resolved_company
+    # Phase 2R-3E: Prevent cross-company lead transfer via payload company_id
+    if 'company_id' in update_data and update_data['company_id'] is not None:
+        _req_comp = int(update_data['company_id'])
+        if _req_comp != lead.company_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Cross-company lead reassignment is not permitted. Leads are permanently scoped to their originating company."
+            )
+        # Prevent any mutation of company_id column even if equal
+        del update_data['company_id']
+
+    # Phase 2R-3E: Category reassignment must belong to the lead's company
+    if 'category_id' in update_data and update_data['category_id']:
+        _cat_check = db.query(SignupCategory).filter(SignupCategory.id == int(update_data['category_id'])).first()
+        if not _cat_check:
+            raise HTTPException(status_code=400, detail="Invalid category")
+        if _cat_check.company_id and _cat_check.company_id != lead.company_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Category '{_cat_check.name}' belongs to Company #{_cat_check.company_id}. You cannot assign a cross-company category to this lead."
+            )
 
     # DC Protocol (Jan 1, 2026): RBAC for handler assignment changes
     # Handlers can only change their OWN field; Owner/Manager can change ALL
@@ -10852,6 +11232,8 @@ def update_lead(
         current_owner_id = lead.primary_owner_id
         new_owner_id = update_data.get('primary_owner_id')
         if current_owner_id != new_owner_id:
+            if new_owner_id:
+                validate_crm_assignee(db, new_owner_id, lead.tenant_id, "lead owner")
             can_change, reason = can_change_primary_owner(lead, current_employee, db)
             if not can_change:
                 raise HTTPException(
@@ -10859,40 +11241,19 @@ def update_lead(
                     detail="You don't have permission to change the lead owner. Only the current owner, their reporting manager, or admins can transfer ownership."
                 )
     
-    if 'category_id' in update_data and update_data['category_id']:
-        new_cat_id = int(update_data['category_id'])
-        if new_cat_id != lead.category_id:
-            # DC_CAT_COMPANY: Do NOT filter by company_id — categories are cross-company
-            # by design. The DC_CAT_COMPANY block above (lines ~6086-6091) already
-            # derives the correct company from the category. Filtering by the request's
-            # company_id would incorrectly reject valid cross-company category assignments.
-            category = db.query(SignupCategory).filter(
-                SignupCategory.id == new_cat_id
-            ).first()
-            if not category:
-                detail = f"[DC-LEAD-400] Lead {lead_id}: category_id={new_cat_id} not found"
-                print(detail)
-                raise HTTPException(status_code=400, detail="Invalid category")
+    # Category validity and same-company ownership already enforced above
     
     # Cross-company assignment allowed for telecaller (per user requirement)
     if 'telecaller_id' in update_data and update_data['telecaller_id']:
         new_tele_id = int(update_data['telecaller_id'])
         if new_tele_id != lead.telecaller_id:
-            telecaller = db.query(SE).filter(SE.id == new_tele_id, SE.status == 'active').first()
-            if not telecaller:
-                detail = f"[DC-LEAD-400] Lead {lead_id}: telecaller_id={new_tele_id} invalid/inactive"
-                print(detail)
-                raise HTTPException(status_code=400, detail="Invalid or inactive telecaller")
+            validate_crm_assignee(db, new_tele_id, lead.tenant_id, "telecaller")
     
     # Cross-company assignment allowed for field staff (per user requirement)
     if 'field_staff_id' in update_data and update_data['field_staff_id']:
         new_fs_id = int(update_data['field_staff_id'])
         if new_fs_id != lead.field_staff_id:
-            field_staff = db.query(SE).filter(SE.id == new_fs_id, SE.status == 'active').first()
-            if not field_staff:
-                detail = f"[DC-LEAD-400] Lead {lead_id}: field_staff_id={new_fs_id} invalid/inactive"
-                print(detail)
-                raise HTTPException(status_code=400, detail="Invalid or inactive field staff")
+            validate_crm_assignee(db, new_fs_id, lead.tenant_id, "field staff")
     
     # DC Protocol Exception: Partner can be cross-company (for tagging).
     # Inactive partners are also allowed — they may still be tagged for attribution.
@@ -10919,29 +11280,8 @@ def update_lead(
                 status_code=422,
                 detail="handler_id (emp_code) is required when handler_type is 'staff'. Set handler_type='unassigned' if no staff member is assigned."
             )
-        # DC_LIMBO_FIX: Verify handler_id maps to a real active staff emp_code
-        valid_staff = db.query(StaffEmployee).filter(
-            StaffEmployee.emp_code == effective_handler_id,
-            StaffEmployee.status == 'active'
-        ).first()
-        # DC_INT_FALLBACK: Legacy data may have stored numeric employee ID instead of emp_code.
-        # Auto-convert: look up employee by integer ID and substitute their emp_code.
-        if not valid_staff and effective_handler_id.isdigit():
-            by_id = db.query(StaffEmployee).filter(
-                StaffEmployee.id == int(effective_handler_id),
-                StaffEmployee.status == 'active'
-            ).first()
-            if by_id:
-                valid_staff = by_id
-                effective_handler_id = by_id.emp_code
-                print(f"[DC_INT_FALLBACK] handler_id integer → emp_code {effective_handler_id!r} for lead {lead_id} (update)", flush=True)
-        if not valid_staff:
-            raise HTTPException(
-                status_code=422,
-                detail=f"handler_id '{effective_handler_id}' is not a valid active staff emp_code. Assign a valid emp_code or use handler_type='unassigned'."
-            )
-        # DC_LIMBO_FIX: Normalize handler_id to trimmed canonical value for storage
-        update_data['handler_id'] = effective_handler_id
+        valid_staff = validate_crm_assignee(db, effective_handler_id, lead.tenant_id, "handler")
+        update_data['handler_id'] = valid_staff.emp_code
 
     # DC Protocol (Mar 2026): Validate vendor_id (VGK Partner code) if provided
     if 'vendor_id' in update_data and update_data['vendor_id']:
@@ -11245,6 +11585,28 @@ def update_lead(
     if 'next_followup_date' in update_data and update_data['next_followup_date'] is not None:
         update_data['next_followup_date'] = _to_ist_naive(update_data['next_followup_date'])
 
+    # Phase 2R-3D: Phone Deduplication on update with advisory locking
+    _upd_target_comp = update_data.get('company_id') or lead.company_id
+    _upd_target_tenant = lead.tenant_id or ctx.tenant_id
+    if not _upd_target_tenant and _upd_target_comp:
+        _cmp_row = db.query(AssociatedCompany).filter(AssociatedCompany.id == _upd_target_comp).first()
+        if _cmp_row:
+            _upd_target_tenant = _cmp_row.client_id
+    _upd_phone = update_data.get('phone') if 'phone' in update_data else lead.phone
+    _upd_alt = update_data.get('alternate_phone') if 'alternate_phone' in update_data else lead.alternate_phone
+    if ('phone' in update_data or 'alternate_phone' in update_data or 'company_id' in update_data) and (_upd_phone or _upd_alt):
+        if not _upd_target_tenant or not _upd_target_comp:
+            raise HTTPException(status_code=422, detail="Cannot update phone: Target company or tenant could not be resolved")
+        assert_no_phone_duplicate(
+            db=db,
+            tenant_id=_upd_target_tenant,
+            company_id=_upd_target_comp,
+            phone=_upd_phone,
+            alternate_phone=_upd_alt,
+            exclude_lead_id=lead.id,
+            with_lock=True
+        )
+
     for key, value in update_data.items():
         if hasattr(lead, key):
             setattr(lead, key, value)
@@ -11390,7 +11752,16 @@ def update_lead(
                 validation_status='pending',
             )
             db.add(_auto_txn)
-            print(f"[DC-AUTO-TXN] Lead {lead_id}: auto-created {_txn_type} txn ₹{lead.deal_value_received} on first won", flush=True)
+    if 'phone' in update_data or 'alternate_phone' in update_data:
+        sync_lead_phone_identities(
+            db=db,
+            lead=lead,
+            phone_raw=lead.phone,
+            alternate_phone_raw=lead.alternate_phone,
+            source_channel='manual_staff',
+            source_ref=current_employee.emp_code if current_employee else None,
+            with_lock=True
+        )
 
     # DC Protocol (Fix C — Apr 2026): Harden commit against schema-drift 500s.
     # If a column referenced in update_data doesn't exist in the DB yet
@@ -11772,25 +12143,24 @@ def assign_lead(
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
     """Assign lead to handler (staff/partner/member)"""
-    lead = db.query(CRMLead).filter(
-        CRMLead.id == lead_id,
-        CRMLead.company_id == company_id
-    ).first()
-    
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
     
     valid_types = ['staff', 'partner', 'member', 'unassigned']
     if assignment.handler_type not in valid_types:
         raise HTTPException(status_code=400, detail=f"Invalid handler type. Must be one of: {valid_types}")
     
+    to_handler_id = assignment.handler_id
+    if assignment.handler_type == 'staff' and assignment.handler_id:
+        target_staff = validate_crm_assignee(db, assignment.handler_id, lead.tenant_id, "handler")
+        to_handler_id = target_staff.emp_code
+    
     assignment_record = CRMLeadAssignment(
-        company_id=company_id,
+        company_id=lead.company_id,
         lead_id=lead_id,
         from_handler_type=lead.handler_type,
         from_handler_id=lead.handler_id,
         to_handler_type=assignment.handler_type,
-        to_handler_id=assignment.handler_id,
+        to_handler_id=to_handler_id,
         reason=assignment.reason,
         assigned_by_type='staff',
         assigned_by_id=current_employee.emp_code
@@ -11798,7 +12168,7 @@ def assign_lead(
     db.add(assignment_record)
     
     lead.handler_type = assignment.handler_type
-    lead.handler_id = assignment.handler_id
+    lead.handler_id = to_handler_id
     lead.updated_at = get_indian_time()
     lead.last_contact_date = lead.updated_at
     
@@ -11820,6 +12190,7 @@ def get_lead_audit_log(
     current_employee = Depends(get_current_staff_user)
 ):
     """[DC-AUDIT] Return field-level change history for a CRM lead."""
+    get_authorized_lead(db, lead_id, current_employee)
     from app.models.crm import CRMLeadAuditLog as _AL
     entries = (
         db.query(_AL)
@@ -11866,13 +12237,24 @@ def bulk_update_leads(
     """
     from app.models.base import get_indian_time
     
+    ctx = get_current_request_context()
+    if not ctx or ctx.staff_id != current_employee.id:
+        ctx = auth_context_service.build_context(db, current_employee)
+
+    # Permission check: Admin or crm.leads.edit capability
     staff_type = (current_employee.staff_type or '').upper()
-    # DC Protocol: Menu-based access control - page assignment = full access
-    # if not is_vgk_admin(staff_type):
-    #     raise HTTPException(
-    #         status_code=403,
-    #         detail="Bulk operations are restricted to VGK4U/EA administrators only"
-    #     )
+    if not (ctx.is_platform_admin() or ctx.is_tenant_admin() or ctx.has_capability("crm.leads.edit") or is_vgk_admin(staff_type)):
+        raise HTTPException(
+            status_code=403,
+            detail="Bulk operations are restricted to administrators and authorized managers"
+        )
+    
+    if not ctx.is_platform_admin():
+        if company_id not in ctx.accessible_company_ids:
+            raise HTTPException(
+                status_code=403,
+                detail="Company access denied: No active membership in requested company"
+            )
     
     if not bulk_data.lead_ids:
         raise HTTPException(status_code=400, detail="No leads selected for bulk update")
@@ -11881,12 +12263,22 @@ def bulk_update_leads(
         raise HTTPException(status_code=400, detail="Maximum 100 leads can be updated at once")
     
     leads = db.query(CRMLead).filter(
-        CRMLead.id.in_(bulk_data.lead_ids),
-        CRMLead.company_id == company_id
+        CRMLead.id.in_(bulk_data.lead_ids)
     ).all()
     
     if not leads:
         raise HTTPException(status_code=404, detail="No leads found matching the provided IDs")
+    
+    # Anti-enumeration & mixed authorized/unauthorized set protection (Fail closed)
+    if len(leads) != len(set(bulk_data.lead_ids)):
+        raise HTTPException(status_code=404, detail="One or more selected leads not found")
+    
+    for l in leads:
+        if not ctx.is_platform_admin():
+            if l.tenant_id is not None and ctx.tenant_id is not None and l.tenant_id != ctx.tenant_id:
+                raise HTTPException(status_code=404, detail="One or more selected leads not found")
+            if l.company_id != company_id:
+                raise HTTPException(status_code=400, detail=f"Lead {l.id} does not belong to company {company_id}")
     
     updated_count = 0
     errors = []
@@ -11894,10 +12286,8 @@ def bulk_update_leads(
     
     new_handler_name = None
     if bulk_data.new_handler_id:
-        new_handler = db.query(StaffEmployee).filter(
-            StaffEmployee.emp_code == bulk_data.new_handler_id
-        ).first()
-        new_handler_name = new_handler.full_name if new_handler else bulk_data.new_handler_id
+        new_handler = validate_crm_assignee(db, bulk_data.new_handler_id, ctx.tenant_id, "handler")
+        new_handler_name = new_handler.full_name or new_handler.emp_code
     
     for lead in leads:
         try:
@@ -11954,13 +12344,18 @@ def bulk_update_leads(
                 changes.append(f"Priority: {old_priority} → {bulk_data.priority}")
             
             if bulk_data.category_id and lead.category_id != bulk_data.category_id:
-                old_cat = lead.category.name if lead.category else 'None'
-                lead.category_id = bulk_data.category_id
                 new_cat = db.query(SignupCategory).filter(SignupCategory.id == bulk_data.category_id).first()
-                # DC_CAT_COMPANY: Sync company_id to match new category's company
-                if new_cat and new_cat.company_id and new_cat.company_id != lead.company_id:
-                    lead.company_id = new_cat.company_id
-                changes.append(f"Category: {old_cat} → {new_cat.name if new_cat else bulk_data.category_id}")
+                if not new_cat:
+                    errors.append({'lead_id': lead.id, 'error': f"Category ID {bulk_data.category_id} not found"})
+                elif new_cat.company_id and new_cat.company_id != lead.company_id:
+                    errors.append({
+                        'lead_id': lead.id,
+                        'error': f"Category '{new_cat.name}' belongs to Company #{new_cat.company_id}. Cross-company category assignment is not permitted."
+                    })
+                else:
+                    old_cat = lead.category.name if lead.category else 'None'
+                    lead.category_id = bulk_data.category_id
+                    changes.append(f"Category: {old_cat} → {new_cat.name}")
             
             if changes or bulk_data.note:
                 note_text = ""
@@ -11978,11 +12373,11 @@ def bulk_update_leads(
                         created_by_id=current_employee.emp_code,
                         is_private=False
                     )
-                    db.add(note_entry)
-            
-            lead.updated_at = now
-            lead.last_contact_date = now
-            updated_count += 1
+            _lead_has_err = any(e.get('lead_id') == lead.id for e in errors)
+            if changes or bulk_data.note or not _lead_has_err:
+                lead.updated_at = now
+                lead.last_contact_date = now
+                updated_count += 1
             
         except Exception as e:
             errors.append({'lead_id': lead.id, 'error': str(e)})
@@ -12026,10 +12421,8 @@ def assign_lead_handlers(
     from app.models.staff import StaffEmployee as SE
     from app.models.staff_accounts import OfficialPartner
     
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
-
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
+    
     # DC Protocol: Creator & authorized cross-company access check
     _assign_emp_code = getattr(current_employee, 'emp_code', None)
     _assign_emp_id = getattr(current_employee, 'id', None)
@@ -12088,10 +12481,8 @@ def assign_lead_handlers(
             lead.telecaller_id = None
             changes.append("Telecaller removed")
         else:
-            telecaller = db.query(SE).filter(SE.id == telecaller_id, SE.status == 'active').first()
-            if not telecaller:
-                raise HTTPException(status_code=400, detail="Invalid or inactive telecaller")
-            lead.telecaller_id = telecaller_id
+            telecaller = validate_crm_assignee(db, telecaller_id, lead.tenant_id, "telecaller")
+            lead.telecaller_id = telecaller.id
             changes.append(f"Telecaller assigned: {telecaller.full_name or telecaller.emp_code}")
     
     # Cross-company assignment allowed for field staff (per user requirement)
@@ -12100,10 +12491,8 @@ def assign_lead_handlers(
             lead.field_staff_id = None
             changes.append("Field Staff removed")
         else:
-            field_staff = db.query(SE).filter(SE.id == field_staff_id, SE.status == 'active').first()
-            if not field_staff:
-                raise HTTPException(status_code=400, detail="Invalid or inactive field staff")
-            lead.field_staff_id = field_staff_id
+            field_staff = validate_crm_assignee(db, field_staff_id, lead.tenant_id, "field staff")
+            lead.field_staff_id = field_staff.id
             changes.append(f"Field Staff assigned: {field_staff.full_name or field_staff.emp_code}")
     
     # Validate and assign partner (Cross-company read allowed for tagging)
@@ -12167,12 +12556,8 @@ def create_followup(
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
     """Schedule a follow-up for a lead"""
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
-    
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
-        
-    effective_company_id = company_id if (company_id is not None and company_id > 0) else lead.company_id
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
+    effective_company_id = lead.company_id
     
     valid_types = ['call', 'email', 'meeting', 'site_visit', 'whatsapp', 'other']
     if followup_data.followup_type not in valid_types:
@@ -12180,7 +12565,7 @@ def create_followup(
     
     followup = CRMLeadFollowUp(
         company_id=effective_company_id,
-        lead_id=lead_id,
+        lead_id=lead.id,
         followup_type=followup_data.followup_type,
         status='scheduled',
         scheduled_date=_to_ist_naive(followup_data.scheduled_date),
@@ -12217,18 +12602,11 @@ def update_followup(
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
     """Update follow-up status/outcome"""
-    lead = db.query(CRMLead).filter(
-        CRMLead.id == lead_id,
-        CRMLead.company_id == company_id
-    ).first()
-    
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
     
     followup = db.query(CRMLeadFollowUp).filter(
         CRMLeadFollowUp.id == followup_id,
-        CRMLeadFollowUp.lead_id == lead_id,
-        CRMLeadFollowUp.company_id == company_id
+        CRMLeadFollowUp.lead_id == lead.id
     ).first()
     
     if not followup:
@@ -12262,11 +12640,9 @@ def list_lead_notes(
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
     """DC Protocol (May 2026): List notes for a lead, newest first."""
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee)
     notes = db.query(CRMLeadNote).filter(
-        CRMLeadNote.lead_id == lead_id
+        CRMLeadNote.lead_id == lead.id
     ).order_by(CRMLeadNote.created_at.desc()).all()
     return {'success': True, 'data': [n.to_dict() for n in notes]}
 
@@ -12288,25 +12664,13 @@ async def add_note(
     except Exception:
         raise HTTPException(status_code=401, detail="Authentication required")
 
+    lead = get_authorized_lead(db, lead_id, current_user, for_mutation=True)
     is_partner = isinstance(current_user, _OfficialPartner)
     is_staff = isinstance(current_user, StaffEmployee)
-
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
-
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
-        
-    effective_company_id = company_id if (company_id is not None and company_id > 0) else lead.company_id
+    effective_company_id = lead.company_id
 
     # DC Protocol (Apr 2026): Partner can only note their own associated leads
     if is_partner:
-        partner_id_str = str(current_user.id)
-        owns_lead = (
-            lead.associated_partner_id == current_user.id
-            or (lead.created_by_type == 'partner' and lead.created_by_id == partner_id_str)
-        )
-        if not owns_lead:
-            raise HTTPException(status_code=403, detail="You can only add notes to your own leads")
         note_author_type = 'partner'
         note_author_id = current_user.partner_code or str(current_user.id)
     elif is_staff:
@@ -12318,7 +12682,7 @@ async def add_note(
 
     note = CRMLeadNote(
         company_id=effective_company_id,
-        lead_id=lead_id,
+        lead_id=lead.id,
         note=note_data.note,
         is_private=note_data.is_private,
         created_by_type=note_author_type,
@@ -12348,10 +12712,10 @@ def update_lead_note(
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
     """DC Protocol (May 2026): Edit an existing lead note (staff only)."""
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
     note = db.query(CRMLeadNote).filter(
         CRMLeadNote.id == note_id,
-        CRMLeadNote.lead_id == lead_id,
-        CRMLeadNote.company_id == company_id
+        CRMLeadNote.lead_id == lead.id
     ).first()
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
@@ -12723,22 +13087,14 @@ def delete_lead(
     
     DC Protocol (Dec 31, 2025): VGK-only permission for delete operations
     """
-    # VGK-only RBAC check
-    staff_type = (current_employee.staff_type or '').upper()
-    # DC Protocol: Menu-based access control - page assignment = full access
-    # if 'VGK' not in staff_type:
-    #     raise HTTPException(
-    #         status_code=403, 
-    #         detail="Insufficient permissions: Only VGK roles can delete leads"
-    #     )
+    ctx = get_current_request_context()
+    if not ctx:
+        ctx = auth_context_service.build_context(db, current_employee)
+
+    lead = get_authorized_lead(db, lead_id, current_employee, required_capability="crm.leads.delete", for_mutation=True)
     
-    lead = db.query(CRMLead).filter(
-        CRMLead.id == lead_id,
-        CRMLead.company_id == company_id
-    ).first()
-    
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    if lead.company_id != company_id and not ctx.is_platform_admin():
+        raise HTTPException(status_code=400, detail=f"Company ID mismatch: Lead belongs to company {lead.company_id}")
 
     from app.models.staff_accounts import IncomeEntry
     linked_entries = db.query(IncomeEntry).filter(IncomeEntry.lead_id == lead_id).all()
@@ -12933,125 +13289,13 @@ def create_public_lead(
     db: Session = Depends(get_db)
 ):
     """
-    Public endpoint for lead submission from website forms
-    DC Protocol: Creates lead with company_id
-    
-    Security: This is a public endpoint for website inquiry forms.
-    - Only allows basic lead creation (name, phone, email, notes)
-    - Does not expose internal system data
-    - Should be rate-limited at infrastructure level
-    - Validates required fields
+    Public endpoint for lead submission from website forms.
+    Stage 2B Phase 2R-3D Gated: Direct submission disabled under Option B (Signed HMAC Form Tokens).
     """
-    import re
-
-    name          = request.get('name', '').strip()
-    phone         = request.get('phone', '').strip()
-    email         = (request.get('email') or '').strip() or None
-    notes         = (request.get('notes') or '').strip() or None
-    source        = request.get('source', 'WEBSITE')
-    source_details_raw = (request.get('source_details') or '').strip() or None
-    category_name = request.get('category_name', 'General Inquiry')
-    category_id_raw = request.get('category_id')
-    property_id   = request.get('property_id')
-    property_title= request.get('property_title', '')
-    looking_for   = (request.get('looking_for') or '').strip() or None
-    requirements  = (request.get('requirements') or '').strip() or None
-    city          = (request.get('city') or '').strip() or None
-    state_val     = (request.get('state') or '').strip() or None
-    area_val      = (request.get('area') or '').strip() or None
-    pincode_val   = (request.get('pincode') or '').strip() or None
-    budget_min    = request.get('budget_min')
-    budget_max    = request.get('budget_max')
-    prop_type     = (request.get('property_type') or '').strip() or None
-
-    if not name or len(name) < 2:
-        raise HTTPException(status_code=400, detail="Name is required (minimum 2 characters)")
-
-    if not phone or len(phone) < 10:
-        raise HTTPException(status_code=400, detail="Valid phone number is required")
-
-    phone_clean = re.sub(r'[^0-9]', '', phone)
-    if len(phone_clean) < 10 or len(phone_clean) > 12:
-        raise HTTPException(status_code=400, detail="Invalid phone number format")
-
-    if email:
-        email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        if not re.match(email_regex, email):
-            raise HTTPException(status_code=400, detail="Invalid email format")
-
-    # Build description with property context
-    desc_parts = []
-    if property_title and property_id:
-        desc_parts.append(f"Property Enquiry: {property_title} (ID: {property_id})")
-    if prop_type:
-        desc_parts.append(f"Type: {prop_type}")
-    if looking_for:
-        desc_parts.append(f"Looking for: {looking_for}")
-    if requirements:
-        desc_parts.append(f"Requirements: {requirements}")
-    if notes:
-        desc_parts.append(f"Message: {notes}")
-    full_desc = "\n".join(desc_parts) if desc_parts else None
-
-    try:
-        bmin = float(budget_min) if budget_min is not None else None
-        bmax = float(budget_max) if budget_max is not None else None
-    except (ValueError, TypeError):
-        bmin, bmax = None, None
-
-    try:
-        resolved_category_id = int(category_id_raw) if category_id_raw else None
-    except (ValueError, TypeError):
-        resolved_category_id = None
-
-    resolved_source_details = source_details_raw or (
-        f"Marketplace enquiry — {category_name}" if category_name else None
+    raise HTTPException(
+        status_code=403,
+        detail="Public intake requires signed HMAC form token verification (Option B). Direct submission is disabled."
     )
-
-    lead = CRMLead(
-        company_id=company_id,
-        name=name[:200],
-        phone=phone_clean[:15],
-        email=email[:200] if email else None,
-        source=source[:100] if source else 'WEBSITE',
-        priority='medium',
-        status='new',
-        description=full_desc[:2000] if full_desc else None,
-        looking_for=looking_for[:500] if looking_for else None,
-        requirements=requirements[:1000] if requirements else None,
-        city=city[:100] if city else None,
-        state=state_val[:100] if state_val else None,
-        area=area_val[:100] if area_val else None,
-        pincode=pincode_val[:10] if pincode_val else None,
-        budget_min=bmin,
-        budget_max=bmax,
-        property_id=int(property_id) if property_id else None,
-        category_id=resolved_category_id,
-        source_details=resolved_source_details[:500] if resolved_source_details else None,
-        phone_primary_whatsapp=True,
-    )
-
-    db.add(lead)
-    db.commit()
-    db.refresh(lead)
-
-    try:
-        from app.services.whatsapp_auto_service import send_lead_welcome
-        if lead.phone:
-            send_lead_welcome(
-                db=db,
-                phone=lead.phone,
-                lead_name=lead.name or '',
-                lead_id=lead.id
-            )
-    except Exception as wa_err:
-        logger.warning(f"Public lead welcome trigger exception for lead {lead.id}: {wa_err}")
-
-    return {
-        'success': True,
-        'message': 'Thank you for your inquiry. We will contact you soon.',
-        'lead_id': lead.id
-    }
 
 
 class CreateTaskFromLead(BaseModel):
@@ -13177,25 +13421,14 @@ def create_task_for_lead(
     from app.models.staff_tasks import StaffTask
     from datetime import date
     
-    lead = db.query(CRMLead).filter(
-        CRMLead.id == lead_id,
-        CRMLead.company_id == company_id
-    ).first()
-    
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
     
     assignee_staff_id = task_data.assignee_id or lead.depends_on_staff_id
     
     if not assignee_staff_id:
         raise HTTPException(status_code=400, detail="Task assignee is required. Please select a staff member.")
     
-    assignee_staff = db.query(StaffEmployee).filter(
-        StaffEmployee.id == assignee_staff_id
-    ).first()
-    
-    if not assignee_staff:
-        raise HTTPException(status_code=404, detail="Task assignee staff not found")
+    assignee_staff = validate_crm_assignee(db, assignee_staff_id, lead.tenant_id, "task assignee")
     
     import random
     import string
@@ -13422,21 +13655,37 @@ def approve_or_reject_revenue(
     WVV Protocol: Only VGK/EA/Finance staff can approve
     Updates lead's deal_value_received and deal_value_balance on approval
     """
-    staff_type = (current_employee.staff_type or '').upper()
-    is_approver = is_vgk_admin(staff_type) or 'FINANCE' in staff_type or 'ACCOUNT' in staff_type
-    
-    # DC Protocol: Menu-based access control - page assignment = full access
-    # if not is_approver:
-    #     raise HTTPException(status_code=403, detail="Only Finance or Admin staff can approve revenue entries")
-    
-    entry = db.query(CRMRevenueEntry).filter(
-        CRMRevenueEntry.id == entry_id,
-        CRMRevenueEntry.company_id == company_id
-    ).first()
-    
-    if not entry:
+    entry = db.query(CRMRevenueEntry).filter(CRMRevenueEntry.id == entry_id).first()
+    if not entry or not entry.lead_id:
         raise HTTPException(status_code=404, detail="Revenue entry not found")
-    
+
+    # Tier 1: Parent Lead Authorization & Anti-Enumeration Gate
+    try:
+        lead = get_authorized_lead(db, entry.lead_id, current_employee, for_mutation=True)
+    except HTTPException as e:
+        if e.status_code == 404:
+            raise HTTPException(status_code=404, detail="Revenue entry not found")
+        raise e
+
+    if company_id is not None and (entry.company_id != company_id or lead.company_id != company_id):
+        raise HTTPException(status_code=400, detail="Company ID mismatch")
+
+    # Tier 2: Canonical Financial Capability Gate (Stage 2A/2B)
+    ctx = get_current_request_context()
+    if not ctx:
+        ctx = auth_context_service.build_context(db, current_employee)
+
+    is_financial_authorized = (
+        ctx.is_platform_admin()
+        or ctx.is_tenant_admin()
+        or ctx.has_capability("finance.approve")
+    )
+    if not is_financial_authorized:
+        raise HTTPException(
+            status_code=403,
+            detail="Only authorized Finance or Admin staff can approve revenue entries"
+        )
+
     if entry.approval_status not in ['pending', 'draft']:
         raise HTTPException(status_code=400, detail=f"Cannot process entry with status: {entry.approval_status}")
     
@@ -13536,17 +13785,11 @@ def get_lead_revenue_status(
     DC Protocol: Lead must belong to company
     Returns all revenue entries and approval status
     """
-    lead = db.query(CRMLead).filter(
-        CRMLead.id == lead_id,
-        CRMLead.company_id == company_id
-    ).first()
-    
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee)
     
     entries = db.query(CRMRevenueEntry).filter(
         CRMRevenueEntry.lead_id == lead_id,
-        CRMRevenueEntry.company_id == company_id
+        CRMRevenueEntry.company_id == lead.company_id
     ).order_by(CRMRevenueEntry.created_at.desc()).all()
     
     entries_data = []
@@ -13643,9 +13886,7 @@ def list_lead_deals(
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id, CRMLead.company_id == company_id).first()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee)
 
     deals = db.query(CRMLeadDeal).filter(CRMLeadDeal.lead_id == lead_id).order_by(CRMLeadDeal.created_at).all()
 
@@ -13725,9 +13966,7 @@ def create_lead_deal(
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id, CRMLead.company_id == company_id).first()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
 
     revenue_category_id = deal_data.get('revenue_category_id')
     if not revenue_category_id:
@@ -13804,12 +14043,19 @@ def update_lead_deal(
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
     deal = db.query(CRMLeadDeal).filter(CRMLeadDeal.id == deal_id).first()
-    if not deal:
+    if not deal or not deal.lead_id:
         raise HTTPException(status_code=404, detail="Deal not found")
 
-    lead = db.query(CRMLead).filter(CRMLead.id == deal.lead_id, CRMLead.company_id == company_id).first()
-    if not lead:
-        raise HTTPException(status_code=403, detail="Deal does not belong to this company")
+    # Tier 1: Parent Lead Authorization & Anti-Enumeration Gate
+    try:
+        lead = get_authorized_lead(db, deal.lead_id, current_employee, for_mutation=True)
+    except HTTPException as e:
+        if e.status_code == 404:
+            raise HTTPException(status_code=404, detail="Deal not found")
+        raise e
+
+    if company_id is not None and (company_id != lead.company_id or (deal.company_id and deal.company_id != company_id)):
+        raise HTTPException(status_code=400, detail="Company ID mismatch")
 
     if 'deal_tax_rate' in deal_data:
         deal.deal_tax_rate = float(deal_data['deal_tax_rate'] or 0)
@@ -13821,8 +14067,7 @@ def update_lead_deal(
         deal.deal_value_received = deal_data['deal_value_received']
     if 'status' in deal_data:
         deal.status = deal_data['status']
-    if 'company_id' in deal_data:
-        deal.company_id = deal_data['company_id']
+    deal.company_id = lead.company_id
     if 'revenue_category_id' in deal_data:
         deal.revenue_category_id = deal_data['revenue_category_id']
     if 'deal_date' in deal_data:
@@ -14120,17 +14365,11 @@ def get_lead_transactions(
     DC Protocol: Lead must belong to company
     Returns transaction list with collector details and validation status
     """
-    lead = db.query(CRMLead).filter(
-        CRMLead.id == lead_id,
-        CRMLead.company_id == company_id
-    ).first()
-    
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee)
     
     transactions = db.query(CRMLeadTransaction).filter(
         CRMLeadTransaction.lead_id == lead_id,
-        CRMLeadTransaction.company_id == company_id
+        CRMLeadTransaction.company_id == lead.company_id
     ).order_by(CRMLeadTransaction.transaction_date.desc()).all()
     
     results = []
@@ -14177,25 +14416,23 @@ def create_transaction(
     DC Protocol: Transaction linked to company
     WVV Protocol: Staff authenticated
     """
-    lead = db.query(CRMLead).filter(
-        CRMLead.id == lead_id,
-        CRMLead.company_id == company_id
-    ).first()
-    
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
     
     if txn_data.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be greater than 0")
     
+    collector_id = txn_data.collected_by_id or current_employee.id
+    if txn_data.collected_by_id:
+        validate_crm_assignee(db, txn_data.collected_by_id, lead.tenant_id, "collector")
+    
     new_txn = CRMLeadTransaction(
-        company_id=company_id,
+        company_id=lead.company_id,
         lead_id=lead_id,
         transaction_date=txn_data.transaction_date,
         amount=txn_data.amount,
         transaction_type=txn_data.transaction_type,
         payment_mode=txn_data.payment_mode,
-        collected_by_id=txn_data.collected_by_id or current_employee.id,
+        collected_by_id=collector_id,
         reference_number=txn_data.reference_number,
         notes=txn_data.notes,
         receipt_filename=txn_data.receipt_filename,
@@ -14251,12 +14488,20 @@ def update_transaction(
     db: Session = Depends(get_db),
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
-    txn = db.query(CRMLeadTransaction).filter(
-        CRMLeadTransaction.id == txn_id,
-        CRMLeadTransaction.company_id == company_id
-    ).first()
-    if not txn:
+    txn = db.query(CRMLeadTransaction).filter(CRMLeadTransaction.id == txn_id).first()
+    if not txn or not txn.lead_id:
         raise HTTPException(status_code=404, detail="Transaction not found")
+
+    # Tier 1: Parent Lead Authorization & Anti-Enumeration Gate
+    try:
+        lead = get_authorized_lead(db, txn.lead_id, current_employee, for_mutation=True)
+    except HTTPException as e:
+        if e.status_code == 404:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+        raise e
+
+    if company_id is not None and (txn.company_id != company_id or lead.company_id != company_id):
+        raise HTTPException(status_code=400, detail="Company ID mismatch")
 
     if txn.validation_status == 'validated':
         raise HTTPException(status_code=400, detail="Cannot edit a validated transaction")
@@ -14287,9 +14532,11 @@ def update_transaction(
     if 'deal_id' in txn_data:
         txn.deal_id = txn_data['deal_id'] or None
         if txn.deal_id:
-            selected_deal = db.query(CRMLeadDeal).filter(CRMLeadDeal.id == txn.deal_id).first()
+            selected_deal = db.query(CRMLeadDeal).filter(CRMLeadDeal.id == txn.deal_id, CRMLeadDeal.lead_id == lead.id).first()
             if selected_deal:
                 txn.revenue_category_id = selected_deal.revenue_category_id
+            else:
+                raise HTTPException(status_code=400, detail="Deal does not belong to this lead")
 
     db.commit()
     db.refresh(txn)
@@ -14310,12 +14557,20 @@ async def upload_transaction_receipt(
     DC Protocol: Transaction must belong to the company.
     Universal Upload: max 5MB, images and PDF only.
     """
-    txn = db.query(CRMLeadTransaction).filter(
-        CRMLeadTransaction.id == txn_id,
-        CRMLeadTransaction.company_id == company_id
-    ).first()
-    if not txn:
+    txn = db.query(CRMLeadTransaction).filter(CRMLeadTransaction.id == txn_id).first()
+    if not txn or not txn.lead_id:
         raise HTTPException(status_code=404, detail="Transaction not found")
+
+    # Tier 1: Parent Lead Authorization & Anti-Enumeration Gate
+    try:
+        lead = get_authorized_lead(db, txn.lead_id, current_employee, for_mutation=True)
+    except HTTPException as e:
+        if e.status_code == 404:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+        raise e
+
+    if company_id is not None and (txn.company_id != company_id or lead.company_id != company_id):
+        raise HTTPException(status_code=400, detail="Company ID mismatch")
 
     if txn.validation_status == 'validated':
         raise HTTPException(status_code=400, detail="Cannot update a validated transaction")
@@ -14377,21 +14632,37 @@ def validate_transaction(
     WVV Protocol: Only VGK/EA/Finance staff can validate
     Updates lead's deal_value_received on validation
     """
-    staff_type = (current_employee.staff_type or '').upper()
-    is_validator = is_vgk_admin(staff_type) or 'FINANCE' in staff_type or 'ACCOUNT' in staff_type
-    
-    # DC Protocol: Menu-based access control - page assignment = full access
-    # if not is_validator:
-    #     raise HTTPException(status_code=403, detail="Only Finance or Admin staff can validate transactions")
-    
-    txn = db.query(CRMLeadTransaction).filter(
-        CRMLeadTransaction.id == txn_id,
-        CRMLeadTransaction.company_id == company_id
-    ).first()
-    
-    if not txn:
+    txn = db.query(CRMLeadTransaction).filter(CRMLeadTransaction.id == txn_id).first()
+    if not txn or not txn.lead_id:
         raise HTTPException(status_code=404, detail="Transaction not found")
-    
+
+    # Tier 1: Parent Lead Authorization & Anti-Enumeration Gate
+    try:
+        lead = get_authorized_lead(db, txn.lead_id, current_employee, for_mutation=True)
+    except HTTPException as e:
+        if e.status_code == 404:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+        raise e
+
+    if company_id is not None and (txn.company_id != company_id or lead.company_id != company_id):
+        raise HTTPException(status_code=400, detail="Company ID mismatch")
+
+    # Tier 2: Canonical Financial Capability Gate (Stage 2A/2B)
+    ctx = get_current_request_context()
+    if not ctx:
+        ctx = auth_context_service.build_context(db, current_employee)
+
+    is_financial_authorized = (
+        ctx.is_platform_admin()
+        or ctx.is_tenant_admin()
+        or ctx.has_capability("finance.approve")
+    )
+    if not is_financial_authorized:
+        raise HTTPException(
+            status_code=403,
+            detail="Only authorized Finance or Admin staff can validate transactions"
+        )
+
     if txn.validation_status != 'pending':
         raise HTTPException(status_code=400, detail=f"Cannot process transaction with status: {txn.validation_status}")
     
@@ -14873,14 +15144,47 @@ def search_leads_for_new_ledger(
     """Search leads for creating new ledger with lead name"""
     from app.models.staff_accounts import AssociatedCompany
     
-    query = db.query(CRMLead).filter(CRMLead.company_id == company_id)
-    if search:
-        search_term = f"%{search}%"
+    ctx, tenant_id, effective_co_ids, has_view_all, authorized_downline_ids = resolve_crm_list_security_scope(
+        db, current_employee, company_id=company_id
+    )
+
+    query = db.query(CRMLead)
+    if not ctx.is_platform_admin() and tenant_id is not None:
+        query = query.filter(CRMLead.tenant_id == tenant_id)
+
+    if effective_co_ids:
+        query = query.filter(CRMLead.company_id.in_(effective_co_ids))
+    elif not ctx.is_platform_admin():
+        query = query.filter(CRMLead.id == -1)
+
+    if not has_view_all:
+        allowed_ids = [current_employee.id] + authorized_downline_ids
+        emp_code = (current_employee.emp_code or '').strip()
         query = query.filter(or_(
+            CRMLead.telecaller_id.in_(allowed_ids),
+            CRMLead.field_staff_id.in_(allowed_ids),
+            and_(
+                CRMLead.primary_owner_type == 'staff',
+                CRMLead.primary_owner_id.in_(allowed_ids)
+            ),
+            (CRMLead.handler_id == emp_code) if emp_code else False,
+            (CRMLead.mnr_handler_id == emp_code) if emp_code else False,
+        ))
+
+    if search:
+        search_clean = search.strip()
+        search_term = f"%{search_clean}%"
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=tenant_id, company_ids=effective_co_ids, search_term=search_clean
+        )
+        _s_clauses = [
             CRMLead.name.ilike(search_term),
             CRMLead.phone.ilike(search_term),
             CRMLead.pincode.ilike(search_term)
-        ))
+        ]
+        if phone_lead_ids:
+            _s_clauses.append(CRMLead.id.in_(phone_lead_ids))
+        query = query.filter(or_(*_s_clauses))
     
     leads = query.order_by(CRMLead.name).limit(limit).all()
     results = []
@@ -14915,38 +15219,45 @@ def finance_review_transaction(
     """Finance review with ledger posting - DC/WVV Protocol compliant"""
     from app.models.staff_accounts import AssociatedCompany
     
-    staff_type = (current_employee.staff_type or '').upper()
-    is_admin = is_vgk_admin(staff_type)
-    is_finance = 'FINANCE' in staff_type or 'ACCOUNT' in staff_type
-    
-    # DC Protocol: Menu-based access control - page assignment = full access
-    # if not (is_admin or is_finance):
-    #     raise HTTPException(status_code=403, detail="Only Finance or Admin staff can review transactions")
-    
     txn = db.query(CRMLeadTransaction).filter(CRMLeadTransaction.id == txn_id).first()
-    
     if not txn:
         raise HTTPException(status_code=404, detail="Transaction not found")
-    
-    # DC Protocol: Menu-based access control - page assignment = full access
-    # if not is_admin:
-    #     accessible_ids = []
-    #     if current_employee.data_companies:
-    #         try:
-    #             accessible_ids = [int(x) for x in current_employee.data_companies.split(',') if x.strip()]
-    #         except:
-    #             pass
-    #     if current_employee.base_company_id and current_employee.base_company_id not in accessible_ids:
-    #         accessible_ids.append(current_employee.base_company_id)
-    #     
-    #     if txn.company_id:
-    #         if not accessible_ids or txn.company_id not in accessible_ids:
-    #             raise HTTPException(status_code=403, detail="Access denied to this transaction's company")
-    #     elif not accessible_ids:
-    #         pass
-    
-    if company_id and txn.company_id and txn.company_id != company_id:
-        raise HTTPException(status_code=400, detail="Company ID mismatch")
+
+    # Tier 1: Parent Lead Authorization & Anti-Enumeration Gate
+    if txn.lead_id:
+        try:
+            lead = get_authorized_lead(db, txn.lead_id, current_employee, for_mutation=True)
+        except HTTPException as e:
+            if e.status_code == 404:
+                raise HTTPException(status_code=404, detail="Transaction not found")
+            raise e
+        if company_id is not None and (txn.company_id != company_id or lead.company_id != company_id):
+            raise HTTPException(status_code=400, detail="Company ID mismatch")
+    else:
+        # Orphaned transaction without lead_id
+        ctx = get_current_request_context()
+        if not ctx:
+            ctx = auth_context_service.build_context(db, current_employee)
+        if txn.company_id and txn.company_id not in ctx.accessible_company_ids and not ctx.is_platform_admin():
+            raise HTTPException(status_code=404, detail="Transaction not found")
+        if company_id and txn.company_id and txn.company_id != company_id:
+            raise HTTPException(status_code=400, detail="Company ID mismatch")
+
+    # Tier 2: Canonical Financial Capability Gate (Stage 2A/2B)
+    ctx = get_current_request_context()
+    if not ctx:
+        ctx = auth_context_service.build_context(db, current_employee)
+
+    is_financial_authorized = (
+        ctx.is_platform_admin()
+        or ctx.is_tenant_admin()
+        or ctx.has_capability("finance.approve")
+    )
+    if not is_financial_authorized:
+        raise HTTPException(
+            status_code=403,
+            detail="Only authorized Finance or Admin staff can review transactions"
+        )
     
     action = review_data.action.lower()
     now = get_indian_time()
@@ -15667,8 +15978,15 @@ async def get_unified_my_leads(
             query = query.filter(CRMLead.id == -1)
     if search:
         from app.models.staff import StaffEmployee
-        from app.models.official_partners import OfficialPartner
+        from app.models.staff_accounts import OfficialPartner
         _st = f'%{search}%'
+        _ctx = get_current_request_context()
+        _u_tenant_id = _ctx.tenant_id if _ctx else getattr(current_user, 'tenant_id', 1)
+        _u_co_ids = [company_id] if company_id else ((getattr(current_user, 'data_companies', None) or ([current_user.base_company_id] if getattr(current_user, 'base_company_id', None) else [])) if is_staff_user else None)
+        _u_co_ids = [c for c in _u_co_ids if c is not None] if _u_co_ids else None
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=_u_tenant_id, company_ids=_u_co_ids, search_term=search
+        )
         _sc = [
             CRMLead.name.ilike(_st),
             CRMLead.email.ilike(_st),
@@ -15681,6 +15999,8 @@ async def get_unified_my_leads(
             CRMLead.source_ref_id.ilike(_st),
             CRMLead.mnr_handler_id.ilike(_st),
         ]
+        if phone_lead_ids:
+            _sc.append(CRMLead.id.in_(phone_lead_ids))
         _id_s = search.lstrip('#').strip()
         if _id_s.isdigit():
             _sc.append(CRMLead.id == int(_id_s))
@@ -15916,10 +16236,7 @@ async def claim_fresh_lead(
     else:
         current_user = await get_current_user_hybrid(request, db)
     
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
-    
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_user, for_mutation=True, allow_unassigned=True)
     
     if lead.mnr_handler_id or lead.telecaller_id or lead.field_staff_id:
         raise HTTPException(status_code=400, detail="Lead is already assigned")
@@ -16003,53 +16320,23 @@ async def get_unified_lead_details(
     is_staff = isinstance(current_user, StaffEmployee)
     is_partner = isinstance(current_user, OfficialPartner)
     
-    query = db.query(CRMLead).filter(CRMLead.id == lead_id)
-    if company_id:
-        query = query.filter(CRMLead.company_id == company_id)
-    
-    lead = query.first()
-    
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
-    
-    has_access = False
-    if is_staff:
-        has_access = (
-            lead.telecaller_id == user_id or
-            lead.field_staff_id == user_id or
-            (lead.primary_owner_type == 'staff' and lead.primary_owner_id == user_id) or
-            (lead.created_by_type == 'staff' and lead.created_by_id == current_user.emp_code)
-        )
-    elif is_partner:
-        has_access = (
-            lead.associated_partner_id == user_id or
-            lead.team_senior_partner_id == user_id or
-            lead.team_extended_partner_id == user_id or
-            lead.team_core_partner_id == user_id or
-            lead.vgk_field_support_id == user_id or
-            (lead.primary_owner_type == 'partner' and lead.primary_owner_id == user_id) or
-            (lead.created_by_type == 'partner' and lead.created_by_id == user_id_str) or
-            (lead.source_ref_type in ('partner', 'vgk_partner') and lead.source_ref_id == user_id_str)
-        )
-        if not has_access:
-            from sqlalchemy import text
-            # Legacy L2/L3/L4 support check
+    try:
+        lead = get_authorized_lead(db, lead_id, current_user)
+    except HTTPException as he:
+        if is_partner and he.status_code == 404:
             legacy_auth = db.execute(
                 text("SELECT 1 FROM vgk_team_income_entries WHERE partner_id=:pid AND source_lead_id=:lid LIMIT 1"),
-                {"pid": user_id, "lid": lead.id}
+                {"pid": user_id, "lid": lead_id}
             ).scalar()
             if legacy_auth:
-                has_access = True
-    else:
-        # DC Protocol (Dec 31, 2025): primary_owner_id is Integer - NOT for MNR string IDs
-        # MNR access via mnr_handler_id (VARCHAR) or created_by fields
-        has_access = (
-            lead.mnr_handler_id == user_id or
-            (lead.created_by_type == 'member' and lead.created_by_id == user_id_str)
-        )
+                lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
+            else:
+                raise he
+        else:
+            raise he
     
-    if not has_access:
-        raise HTTPException(status_code=403, detail="You do not have access to this lead")
+    if company_id and lead.company_id != company_id:
+        raise HTTPException(status_code=404, detail="Lead not found")
     
     lead_dict = lead.to_dict()
     
@@ -16156,6 +16443,7 @@ async def unified_lead_click_to_call(
     else:
         current_user = await get_current_user_hybrid_with_partner(request, db)
 
+    get_authorized_lead(db, lead_id, current_user)
     from app.services.crm_contact_privacy import initiate_lead_click_to_call
     return initiate_lead_click_to_call(db=db, lead_id=lead_id, current_user=current_user)
 
@@ -16175,10 +16463,7 @@ async def update_lead_mnr_assignment(
     DC Protocol: Staff can assign MNR handlers to leads.
     Guru auto-defaults to MNR handler's sponsor if not specified.
     """
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
-    
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
     
     if mnr_handler_id is not None:
         if mnr_handler_id:
@@ -16293,59 +16578,47 @@ async def create_lead_unified(
     if not company_id:
         if user_type == 'member':
             # Default to MNR company (company_id=4) for member-created leads
-            from app.models.company import AssociatedCompany
+            from app.models.staff_accounts import AssociatedCompany
             mnr_company = db.query(AssociatedCompany).filter(
-                AssociatedCompany.name.ilike('%MNR%')
+                AssociatedCompany.company_name.ilike('%MNR%')
             ).first()
             company_id = mnr_company.id if mnr_company else 4
         elif is_staff and hasattr(current_user, 'base_company_id') and current_user.base_company_id:
             company_id = current_user.base_company_id
         else:
             # Fallback to first active company
-            from app.models.company import AssociatedCompany
+            from app.models.staff_accounts import AssociatedCompany
             first_company = db.query(AssociatedCompany).filter(
                 AssociatedCompany.is_active == True
             ).first()
             company_id = first_company.id if first_company else 1
 
-    # DC-DEDUP-002: Block creation when phone/alternate_phone already exists in CRM.
+    # Stage 2B Phase 2R-3A: Multi-tenant & Company Authorization for unified endpoint
+    if is_staff:
+        ctx = get_current_request_context()
+        if not ctx:
+            ctx = auth_context_service.build_context(db, current_user)
+        resolved_tenant_id = ctx.tenant_id
+        if not ctx.is_platform_admin():
+            if company_id not in ctx.accessible_company_ids:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Company access denied: You do not have active membership in the target company"
+                )
+    else:
+        # Member / User
+        resolved_tenant_id = getattr(current_user, 'tenant_id', 1) or 1
+
+    # Phase 2R-3D: Centralized Phone Deduplication with Advisory Locking
     if lead_data.phone or lead_data.alternate_phone:
-        _dup_lead, _dup_owner, _dup_active = _resolve_phone_duplicate(
-            lead_data.phone, lead_data.alternate_phone, db
+        assert_no_phone_duplicate(
+            db=db,
+            tenant_id=resolved_tenant_id,
+            company_id=company_id,
+            phone=lead_data.phone,
+            alternate_phone=lead_data.alternate_phone,
+            with_lock=True
         )
-        if _dup_lead:
-            _dup_owner_name = _dup_owner_status = None
-            if _dup_owner:
-                _dup_owner_name = f"{_dup_owner.first_name or ''} {_dup_owner.last_name or ''}".strip() or _dup_owner.emp_code
-                _dup_owner_status = _dup_owner.status
-            raise HTTPException(
-                status_code=409,
-                detail={
-                    "type": "duplicate_lead",
-                    "message": f"Mobile number already exists in Lead #{_dup_lead.id} ({_dup_lead.name or 'Unnamed'}).",
-                    "lead_id": _dup_lead.id,
-                    "lead_name": _dup_lead.name or "",
-                    "lead_status": _dup_lead.status,
-                    "lead_company_id": _dup_lead.company_id,
-                    "owner_name": _dup_owner_name,
-                    "owner_status": _dup_owner_status,
-                    "owner_active": _dup_active,
-                    "lead": {
-                        "id": _dup_lead.id,
-                        "name": _dup_lead.name or "",
-                        "phone": _dup_lead.phone or "",
-                        "alternate_phone": _dup_lead.alternate_phone or "",
-                        "status": _dup_lead.status,
-                        "company_id": _dup_lead.company_id,
-                    },
-                    "owner": {
-                        "id": _dup_owner.id if _dup_owner else None,
-                        "name": _dup_owner_name,
-                        "emp_code": _dup_owner.emp_code if _dup_owner else None,
-                        "status": _dup_owner_status,
-                    } if _dup_owner else None,
-                }
-            )
 
     effective_cat_id = _auto_align_category_from_looking_for(db, company_id, lead_data.looking_for or lead_data.requirements, lead_data.category_id)
     _u_status = lead_data.status or 'new'
@@ -16368,6 +16641,7 @@ async def create_lead_unified(
         _u_field_staff_id = lead_data.field_staff_id if is_staff else None
 
     new_lead = CRMLead(
+        tenant_id=resolved_tenant_id,
         company_id=company_id,
         name=lead_data.name,
         phone=lead_data.phone,
@@ -16434,6 +16708,16 @@ async def create_lead_unified(
             new_lead.guru_id = current_user.referrer_id
     
     db.add(new_lead)
+    db.flush()
+    sync_lead_phone_identities(
+        db=db,
+        lead=new_lead,
+        phone_raw=new_lead.phone,
+        alternate_phone_raw=new_lead.alternate_phone,
+        source_channel='unified_manual',
+        source_ref=current_user.emp_code if hasattr(current_user, 'emp_code') else str(user_id),
+        with_lock=True
+    )
     db.commit()
     db.refresh(new_lead)
 
@@ -16722,10 +17006,7 @@ async def update_unified_lead_mnr_assignment(
     else:
         current_user = await get_current_user_hybrid(request, db)
     
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
-    
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_user, for_mutation=True)
     
     # Check if staff user (StaffEmployee has emp_code attribute, User does not)
     is_staff = hasattr(current_user, 'emp_code') and current_user.emp_code
@@ -16792,6 +17073,7 @@ async def update_lead_full(
     lead_id: int,
     company_id: Optional[int] = Query(None, description="Current view company ID"),
     body_company_id: Optional[int] = Body(None, alias="company_id"),
+    alt_body_company_id: Optional[int] = Body(None, alias="body_company_id"),
     status: Optional[str] = Body(None),
     name: Optional[str] = Body(None),
     phone: Optional[str] = Body(None),
@@ -16842,10 +17124,7 @@ async def update_lead_full(
     """
     from app.models.staff import StaffEmployee
     
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
-    
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_user, for_mutation=True)
     
     def _clean_body_param(val):
         if val is None or (hasattr(val, '__class__') and 'fastapi' in getattr(val.__class__, '__module__', '')):
@@ -16979,12 +17258,42 @@ async def update_lead_full(
     _old_lead_status = lead.status
     # DC-HCI-001: snapshot old partner before any field assignments
     _full_pre_partner_id = lead.associated_partner_id
+    # Phase 2R-3E: Prevent cross-company lead transfer via body_company_id
+    body_company_id = _clean_body_param(body_company_id if body_company_id is not None else alt_body_company_id)
+    if body_company_id and body_company_id > 0:
+        if int(body_company_id) != lead.company_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Cross-company lead reassignment is not permitted. Leads are permanently scoped to their originating company."
+            )
 
     if status is not None:
         lead.status = status
     
     if name is not None:
         lead.name = name
+
+    # Phase 2R-3D: Phone Deduplication on update with advisory locking
+    if phone is not None:
+        _eff_p = phone
+        _eff_a = lead.alternate_phone
+        _eff_c = lead.company_id
+        _eff_t = lead.tenant_id
+        if not _eff_t and _eff_c:
+            _comp_obj = db.query(AssociatedCompany).filter(AssociatedCompany.id == _eff_c).first()
+            if _comp_obj:
+                _eff_t = _comp_obj.client_id
+        if (_eff_p or _eff_a) and _eff_c and _eff_t:
+            assert_no_phone_duplicate(
+                db=db,
+                tenant_id=_eff_t,
+                company_id=_eff_c,
+                phone=_eff_p,
+                alternate_phone=_eff_a,
+                exclude_lead_id=lead.id,
+                with_lock=True
+            )
+
     if phone is not None:
         lead.phone = phone
     if email is not None:
@@ -17026,17 +17335,18 @@ async def update_lead_full(
         lead.budget_min = budget_min
     if budget_max is not None:
         lead.budget_max = budget_max
-    body_company_id = _clean_body_param(body_company_id)
-    if body_company_id and body_company_id > 0:
-        lead.company_id = body_company_id
 
+    # Phase 2R-3E: Category reassignment must belong to the lead's company
     if category_id is not None:
         if category_id:
             category = db.query(SignupCategory).filter(SignupCategory.id == category_id).first()
             if not category:
                 raise HTTPException(status_code=400, detail="Invalid category")
-            if category.company_id:
-                lead.company_id = category.company_id
+            if category.company_id and category.company_id != lead.company_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Category '{category.name}' belongs to Company #{category.company_id}. You cannot assign a cross-company category to this lead."
+                )
         lead.category_id = category_id if category_id else None
     
     # DC_CAT_ALIGN_001: Re-align category_id if looking_for was updated or present
@@ -17155,16 +17465,12 @@ async def update_lead_full(
 
     if telecaller_id is not None:
         if telecaller_id:
-            staff = db.query(StaffEmployee).filter(StaffEmployee.id == telecaller_id).first()
-            if not staff:
-                raise HTTPException(status_code=400, detail="Telecaller not found")
+            validate_crm_assignee(db, telecaller_id, lead.tenant_id, "telecaller")
         lead.telecaller_id = telecaller_id if telecaller_id else None
     
     if field_staff_id is not None:
         if field_staff_id:
-            staff = db.query(StaffEmployee).filter(StaffEmployee.id == field_staff_id).first()
-            if not staff:
-                raise HTTPException(status_code=400, detail="Field staff not found")
+            validate_crm_assignee(db, field_staff_id, lead.tenant_id, "field staff")
         lead.field_staff_id = field_staff_id if field_staff_id else None
     
     if associated_partner_id is not None:
@@ -17190,6 +17496,17 @@ async def update_lead_full(
             logger.info(f"[CRM-FULL-DVR-001] check_and_create_dvr_advance for lead {lead.id}: {_dvr_full_res}")
         except Exception as _dvr_err:
             logger.warning(f"[CRM-FULL-DVR-001] DVR check failed for lead {lead.id}: {_dvr_err}")
+
+    if phone is not None:
+        sync_lead_phone_identities(
+            db=db,
+            lead=lead,
+            phone_raw=lead.phone,
+            alternate_phone_raw=lead.alternate_phone,
+            source_channel='unified_manual',
+            source_ref=current_user.emp_code if hasattr(current_user, 'emp_code') else str(current_user.id),
+            with_lock=True
+        )
 
     db.commit()
     db.refresh(lead)
@@ -17753,9 +18070,7 @@ def get_solar_docs(
     List all uploaded solar documents for a lead.
     DC Protocol: Returns docs with view_url for direct object-storage access.
     """
-    lead = db.execute(text("SELECT id FROM crm_leads WHERE id = :lid"), {"lid": lead_id}).fetchone()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee)
 
     rows = db.execute(text("""
         SELECT id, doc_category, doc_type, doc_label, doc_number,
@@ -17804,9 +18119,7 @@ async def upload_solar_doc(
     """
     from app.services.universal_upload_service import UniversalUploadService
 
-    lead = db.execute(text("SELECT id FROM crm_leads WHERE id = :lid"), {"lid": lead_id}).fetchone()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
 
     if doc_type not in SOLAR_DOC_TYPES:
         raise HTTPException(status_code=400, detail=f"Invalid doc_type: {doc_type}")
@@ -17906,6 +18219,7 @@ def pre_save_solar_doc_number(
     Create (or update) a solar document record with just a doc_number — no file needed.
     DC Protocol: Staff records the doc number before the file is ready to upload.
     """
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
     doc_type     = (payload.get("doc_type") or "").strip()
     doc_category = (payload.get("doc_category") or "consumer").strip()
     doc_number   = (payload.get("doc_number") or "").strip()
@@ -17965,10 +18279,12 @@ def update_solar_doc_number(
     DC Protocol: Staff can update any doc number they have access to.
     """
     doc = db.execute(text("""
-        SELECT id, doc_label FROM crm_lead_solar_documents WHERE id = :did
+        SELECT id, lead_id, doc_label FROM crm_lead_solar_documents WHERE id = :did
     """), {"did": doc_id}).fetchone()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+
+    get_authorized_lead(db, doc.lead_id, current_employee, for_mutation=True)
 
     doc_number = (payload.get("doc_number") or "").strip()
     db.execute(text("""
@@ -17991,10 +18307,12 @@ def delete_solar_doc(
     DC Protocol: Staff can delete any doc they have access to.
     """
     doc = db.execute(text("""
-        SELECT id, doc_label FROM crm_lead_solar_documents WHERE id = :did
+        SELECT id, lead_id, doc_label FROM crm_lead_solar_documents WHERE id = :did
     """), {"did": doc_id}).fetchone()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+
+    get_authorized_lead(db, doc.lead_id, current_employee, for_mutation=True)
 
     db.execute(text("DELETE FROM crm_lead_solar_documents WHERE id = :did"), {"did": doc_id})
     db.commit()
@@ -18026,9 +18344,7 @@ def create_share_link(
     If doc_types is omitted or null, all documents are included.
     """
     import json as _json
-    lead = db.execute(text("SELECT id, name FROM crm_leads WHERE id = :lid"), {"lid": lead_id}).fetchone()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
 
     # Optional doc filter
     doc_types = body.get("doc_types", None) if body else None
@@ -18079,11 +18395,24 @@ def bulk_share_links(
     Body: { "lead_ids": [1, 2, 3] }
     Returns: { "links": { "1": "https://...", "2": "https://..." } }
     """
+    ctx = get_current_request_context()
+    if not ctx:
+        ctx = auth_context_service.build_context(db, current_employee)
+
     lead_ids = body.get("lead_ids", [])
     if not lead_ids or not isinstance(lead_ids, list):
         raise HTTPException(status_code=400, detail="lead_ids must be a non-empty list")
     if len(lead_ids) > 500:
         raise HTTPException(status_code=400, detail="Max 500 leads per bulk request")
+
+    # Enforce tenant isolation and anti-enumeration
+    lead_rows = db.query(CRMLead.id, CRMLead.tenant_id, CRMLead.company_id).filter(CRMLead.id.in_(lead_ids)).all()
+    valid_ids = set()
+    for lr in lead_rows:
+        if not ctx.is_platform_admin():
+            if lr.tenant_id is not None and ctx.tenant_id is not None and lr.tenant_id != ctx.tenant_id:
+                raise HTTPException(status_code=404, detail="Lead not found")
+        valid_ids.add(lr.id)
 
     expires_at_utc = datetime.now(_tz.utc) + timedelta(hours=6)
     emp_name = getattr(current_employee, "name", None) or getattr(current_employee, "emp_code", "Staff")
@@ -18091,6 +18420,8 @@ def bulk_share_links(
 
     links = {}
     for lid in lead_ids:
+        if lid not in valid_ids:
+            continue
         try:
             tok = _secrets_mod.token_urlsafe(40)
             db.execute(text("""
@@ -18319,9 +18650,7 @@ def download_solar_docs_bundle(
         label = 'DISCOM'
     else:
         raise HTTPException(status_code=400, detail="section must be 'bank' or 'discom'")
-    lead = db.execute(text("SELECT id, name FROM crm_leads WHERE id = :lid"), {"lid": lead_id}).fetchone()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee)
     if doc_types:
         placeholders = ','.join(f':t{i}' for i in range(len(doc_types)))
         params = {"lid": lead_id, **{f"t{i}": t for i, t in enumerate(doc_types)}}
@@ -18517,6 +18846,7 @@ def get_solar_preflight(
     [DC-SOLAR-PREFLIGHT] Return all data needed for Commissioning and Annexure IV
     pre-flight modals: lead fields, tech fields, and vendor fields with pincode.
     """
+    lead_auth = get_authorized_lead(db, lead_id, current_employee)
     lead = db.execute(text("""
         SELECT id, name, phone, email, address, city, state, pincode,
                kw_size, discom, grid_phase, application_no, sc_number,
@@ -18524,8 +18854,6 @@ def get_solar_preflight(
                latitude, longitude, aadhaar_number
         FROM crm_leads WHERE id = :lid
     """), {"lid": lead_id}).fetchone()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
 
     tech = db.query(CRMSolarLeadTech).filter(CRMSolarLeadTech.lead_id == lead_id).first()
     tech_d = tech.to_dict() if tech else {}
@@ -18590,9 +18918,7 @@ def get_solar_tech(
     Get solar technical details for a lead.
     Returns empty dict if no record exists yet.
     """
-    lead = db.execute(text("SELECT id FROM crm_leads WHERE id = :lid"), {"lid": lead_id}).fetchone()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee)
 
     tech = db.query(CRMSolarLeadTech).filter(CRMSolarLeadTech.lead_id == lead_id).first()
     if not tech:
@@ -18614,9 +18940,7 @@ def upsert_solar_tech(
     from datetime import date as _date
     import json as _json
 
-    lead = db.execute(text("SELECT id, company_id FROM crm_leads WHERE id = :lid"), {"lid": lead_id}).fetchone()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
 
     UPDATABLE_FIELDS = [
         "panel_make", "panel_model", "panel_capacity_each_w", "num_panels",
@@ -18689,10 +19013,27 @@ def solar_tech_bulk(
     Returns dict of lead_id (str) → tech dict.
     Used by Export for DCR Excel builder.
     """
+    ctx = get_current_request_context()
+    if not ctx:
+        ctx = auth_context_service.build_context(db, current_employee)
+
     lead_ids = payload.get("lead_ids", [])
-    if not lead_ids:
+    if not lead_ids or not isinstance(lead_ids, list):
         return {"tech_map": {}}
-    techs = db.query(CRMSolarLeadTech).filter(CRMSolarLeadTech.lead_id.in_(lead_ids)).all()
+
+    # Enforce tenant isolation and anti-enumeration
+    lead_rows = db.query(CRMLead.id, CRMLead.tenant_id).filter(CRMLead.id.in_(lead_ids)).all()
+    valid_ids = set()
+    for lr in lead_rows:
+        if not ctx.is_platform_admin():
+            if lr.tenant_id is not None and ctx.tenant_id is not None and lr.tenant_id != ctx.tenant_id:
+                raise HTTPException(status_code=404, detail="Lead not found")
+        valid_ids.add(lr.id)
+
+    if not valid_ids:
+        return {"tech_map": {}}
+
+    techs = db.query(CRMSolarLeadTech).filter(CRMSolarLeadTech.lead_id.in_(valid_ids)).all()
     return {"tech_map": {str(t.lead_id): t.to_dict() for t in techs}}
 
 
@@ -18711,6 +19052,34 @@ _SOLAR_LEAD_PATCHABLE = {
     "application_no", "submit_date", "complete_date", "installation_date",
 }
 
+_SOLAR_DATE_FIELDS = {"sanction_date", "submit_date", "complete_date", "installation_date"}
+
+def _normalize_solar_date_value(val: Any) -> Optional[date]:
+    """
+    [DC-DATE-NORM] Parse common date formats (DD/MM/YYYY, DD-MM-YYYY, DD/MM/YY, DD-MM-YY, YYYY-MM-DD, etc.)
+    into a datetime.date object. Returns None if empty or invalid.
+    """
+    if val is None:
+        return None
+    if isinstance(val, (date, datetime)):
+        return val if isinstance(val, date) and not isinstance(val, datetime) else val.date()
+    val_str = str(val).strip()
+    if not val_str or val_str.lower() in ("null", "none", "—", "-"):
+        return None
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y", "%d-%m-%y", "%d.%m.%Y", "%d.%m.%y", "%Y/%m/%d"):
+        try:
+            return datetime.strptime(val_str, fmt).date()
+        except ValueError:
+            continue
+    try:
+        import dateutil.parser
+        return dateutil.parser.parse(val_str, dayfirst=True).date()
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid date format for solar field: '{val_str}'. Please use DD/MM/YYYY or YYYY-MM-DD."
+        )
+
 @router.patch("/leads/{lead_id}/solar-fields")
 def patch_solar_lead_fields(
     lead_id: int,
@@ -18723,15 +19092,21 @@ def patch_solar_lead_fields(
     filled in the Missing Data dialog back to crm_leads so they are reused across all documents and views.
     Only whitelisted fields are accepted.
     """
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
-
-    _validate_freelancer_lead_access(lead, current_employee)
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
 
     updates = {}
     for field, value in payload.items():
         if field not in _SOLAR_LEAD_PATCHABLE:
+            continue
+        if field in _SOLAR_DATE_FIELDS:
+            if value is None:
+                updates[field] = None
+            else:
+                s = str(value).strip()
+                if not s or s.lower() in ("null", "none"):
+                    updates[field] = None
+                else:
+                    updates[field] = _normalize_solar_date_value(s)
             continue
         val = str(value).strip() if value is not None else ""
         if not val:
@@ -18773,12 +19148,14 @@ def get_invoice_prefill(
     Return all data needed to pre-fill the invoice generate modal:
     lead fields, last quote values from tech, and vendor details.
     """
+    lead_auth = get_authorized_lead(db, lead_id, current_employee)
+
     lead = db.execute(text("""
         SELECT id, name, phone, email, address, area, city, state, pincode,
                kw_size, discom, grid_phase, application_no, sc_number,
                deal_value_total, deal_value
         FROM crm_leads WHERE id = :lid
-    """), {"lid": lead_id}).fetchone()
+    """), {"lid": lead_auth.id}).fetchone()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
 
@@ -18854,52 +19231,6 @@ def get_invoice_prefill(
         "invoice_number": invoice_number,
     }
 
-
-@router.get("/leads/system-search")
-def system_search_leads(
-    q: str = Query(..., min_length=2, description="Mobile number, Area, Name, or Lead ID"),
-    limit: int = Query(20, ge=1, le=50),
-    db: Session = Depends(get_db),
-    current_employee: StaffEmployee = Depends(get_current_staff_user)
-):
-    """
-    DC Protocol: System-wide lead search for field staff journey tagging.
-    Searches across all leads by mobile number, area, name, or ID.
-    """
-    from app.models.crm import CRMLead
-    search_term = f"%{q.strip()}%"
-    
-    # Search by ID if digits only
-    filters = [
-        CRMLead.phone.ilike(search_term),
-        CRMLead.area.ilike(search_term),
-        CRMLead.name.ilike(search_term),
-        CRMLead.city.ilike(search_term)
-    ]
-    if q.strip().isdigit():
-        filters.append(CRMLead.id == int(q.strip()))
-        
-    leads = db.query(CRMLead).filter(or_(*filters)).order_by(CRMLead.id.desc()).limit(limit).all()
-    
-    return {
-        "success": True,
-        "count": len(leads),
-        "leads": [
-            {
-                "id": l.id,
-                "name": l.name,
-                "phone": l.phone,
-                "area": l.area or "",
-                "city": l.city or "",
-                "status": l.status,
-                "company_id": l.company_id,
-                "display_label": f"#{l.id} - {l.name} ({l.phone}) - {l.area or l.city or 'N/A'}"
-            }
-            for l in leads
-        ]
-    }
-
-
 @router.get("/solar-brands")
 def get_active_solar_brands(
     company_id: Optional[int] = Query(None),
@@ -18950,12 +19281,14 @@ async def generate_solar_doc(
     generator_key = GENERATABLE_DOC_TYPES[doc_type]
 
     # ── Load Lead ────────────────────────────────────────────────────────────
+    lead_auth = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
+
     lead = db.execute(text("""
         SELECT l.*, c.company_name
         FROM crm_leads l
         LEFT JOIN associated_companies c ON c.id = l.company_id
         WHERE l.id = :lid
-    """), {"lid": lead_id}).fetchone()
+    """), {"lid": lead_auth.id}).fetchone()
     if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
 
@@ -19372,6 +19705,8 @@ async def download_complete_bundle(
     Fetches each file from object storage (skips any missing companions).
     Streams the merged PDF as a download.
     """
+    lead_auth = get_authorized_lead(db, lead_id, current_employee)
+
     from app.services.solar_doc_generator import merge_docs_to_pdf
     from app.services.object_storage import storage_service
     from fastapi.responses import Response as FastAPIResponse
@@ -19388,7 +19723,7 @@ async def download_complete_bundle(
         SELECT doc_type, file_name, original_name
         FROM crm_lead_solar_documents
         WHERE lead_id = :lid AND doc_type = ANY(:types)
-    """), {"lid": lead_id, "types": all_types}).fetchall()
+    """), {"lid": lead_auth.id, "types": all_types}).fetchall()
 
     rec_map = {r.doc_type: r for r in rows}
 
@@ -19466,9 +19801,7 @@ def get_lead_vgk_status(
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
     """DC Protocol N001 — Check if lead's phone is a registered VGK member."""
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id, CRMLead.company_id == company_id).first()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee)
 
     phone_raw = (lead.phone or '').replace(' ', '').replace('-', '').replace('+', '')
     if not phone_raw:
@@ -19510,9 +19843,7 @@ def register_lead_as_vgk(
     """DC Protocol N001 — Register lead's contact as a new VGK member under company default upline."""
     import random as _rnd
     from decimal import Decimal as _Dec
-    lead = db.query(CRMLead).filter(CRMLead.id == lead_id, CRMLead.company_id == company_id).first()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
 
     from app.utils.phone_otp import normalize_phone_10
     phone_raw = (lead.phone or '').replace(' ', '').replace('-', '').replace('+', '')
@@ -19617,13 +19948,15 @@ def log_whatsapp_share(
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
     """DC Protocol N001/N002 — Log a WhatsApp share click for dashboard tracking."""
+    lead = get_authorized_lead(db, lead_id, current_employee)
+
     from pytz import timezone as _tz
     _now = datetime.now(_tz('Asia/Kolkata')).replace(tzinfo=None)
     try:
         db.execute(text(
             "INSERT INTO crm_wa_share_logs (staff_id, lead_id, share_type, created_at) "
             "VALUES (:sid, :lid, :stype, :ts)"
-        ), {"sid": current_employee.id, "lid": lead_id, "stype": share_type, "ts": _now})
+        ), {"sid": current_employee.id, "lid": lead.id, "stype": share_type, "ts": _now})
         db.commit()
     except Exception as e:
         logger.warning(f"[DC-N002] log-whatsapp-share non-fatal: {e}")
@@ -19638,13 +19971,19 @@ def get_unclaimed_leads(
     current_employee: StaffEmployee = Depends(get_current_staff_user)
 ):
     """DC Protocol N004 — Get recent VGK/partner-created leads without a telecaller (for claim popup)."""
+    ctx = get_current_request_context()
+    if not ctx:
+        ctx = auth_context_service.build_context(db, current_employee)
+    if not ctx.is_platform_admin():
+        if company_id not in ctx.accessible_company_ids:
+            raise HTTPException(status_code=403, detail="Company access not authorized")
+
     from pytz import timezone as _tz
     _now = datetime.now(_tz('Asia/Kolkata')).replace(tzinfo=None)
-    cutoff = _now.replace(tzinfo=None) if True else _now
     from datetime import timedelta as _td
     cutoff = _now - _td(minutes=since_minutes)
 
-    unclaimed = db.query(CRMLead).filter(
+    query = db.query(CRMLead).filter(
         CRMLead.company_id == company_id,
         CRMLead.telecaller_id == None,
         CRMLead.created_at >= cutoff,
@@ -19653,7 +19992,11 @@ def get_unclaimed_leads(
             CRMLead.source_ref_type.in_(['vgk', 'vgk_partner', 'partner']),
             CRMLead.created_by_type.in_(['vgk', 'vgk_partner', 'partner']),
         )
-    ).order_by(CRMLead.created_at.desc()).limit(20).all()
+    )
+    if not ctx.is_platform_admin() and ctx.tenant_id is not None:
+        query = query.filter(CRMLead.tenant_id == ctx.tenant_id)
+
+    unclaimed = query.order_by(CRMLead.created_at.desc()).limit(20).all()
 
     result = []
     for lead in unclaimed:
@@ -19688,13 +20031,7 @@ def claim_lead(
     from pytz import timezone as _tz
     _now = datetime.now(_tz('Asia/Kolkata')).replace(tzinfo=None)
 
-    lead = None
-    if company_id is not None:
-        lead = db.query(CRMLead).filter(CRMLead.id == lead_id, CRMLead.company_id == company_id).first()
-    if not lead:
-        lead = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True, allow_unassigned=True)
     company_id = lead.company_id
 
     is_eligible, reason = is_lead_claim_eligible_for_staff(lead, current_employee.id, current_employee.emp_code, db)
@@ -19763,6 +20100,8 @@ def get_solar_advance(
     current_employee: StaffEmployee = Depends(get_current_staff_user),
 ):
     """Staff: view the CIBIL advance record for a solar lead."""
+    lead = get_authorized_lead(db, lead_id, current_employee)
+
     row = db.execute(text("""
         SELECT a.id, a.entry_number, a.advance_amount, a.status,
                a.stage_at_eligibility, a.cibil_score_at_check,
@@ -19778,7 +20117,7 @@ def get_solar_advance(
         LEFT JOIN official_partners p ON p.id = a.partner_id
         WHERE a.lead_id = :lid
         LIMIT 1
-    """), {'lid': lead_id}).fetchone()
+    """), {'lid': lead.id}).fetchone()
 
     if not row:
         return {'found': False, 'message': 'No advance record for this lead'}
@@ -19817,8 +20156,10 @@ def release_solar_advance(
     current_employee: StaffEmployee = Depends(get_current_staff_user),
 ):
     """Staff: release the ₹1,000 CIBIL advance to the VGK member's wallet."""
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
+
     from app.services.vgk_solar_advance import release_advance
-    result = release_advance(db, lead_id, released_by_id=current_employee.id, notes=notes)
+    result = release_advance(db, lead.id, released_by_id=current_employee.id, notes=notes)
     if not result.get('success'):
         raise HTTPException(status_code=400, detail=result.get('error', 'Release failed'))
 
@@ -19831,7 +20172,7 @@ def release_solar_advance(
             result['income_entry'] = _mir
             logger.info(f'[VGK-SOLAR-HOOK] advance#{advance_row.id} mirrored → income entry {_mir.get("entry_number")}')
         except Exception as _se:
-            logger.warning(f'[VGK-SOLAR-HOOK] income mirror failed for lead#{lead_id} (non-fatal): {_se}')
+            logger.warning(f'[VGK-SOLAR-HOOK] income mirror failed for lead#{lead.id} (non-fatal): {_se}')
 
     return result
 
@@ -19844,8 +20185,10 @@ def recover_solar_advance(
     current_employee: StaffEmployee = Depends(get_current_staff_user),
 ):
     """Staff: manually trigger recovery of a released CIBIL advance (e.g. lead cancelled)."""
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
+
     from app.services.vgk_solar_advance import recover_advance
-    result = recover_advance(db, lead_id, reason=reason, recovered_by_id=current_employee.id)
+    result = recover_advance(db, lead.id, reason=reason, recovered_by_id=current_employee.id)
     if not result.get('success'):
         raise HTTPException(status_code=400, detail=result.get('error', 'Recovery failed'))
     return result
@@ -19867,14 +20210,25 @@ def list_solar_advances_staff(
     This is needed for the unified income page Zynova tab which must show pending advances
     even when the advance company_id differs from the staff's base_company_id.
     """
+    ctx = get_current_request_context()
+    if not ctx:
+        ctx = auth_context_service.build_context(db, current_employee)
+
+    where = []
+    params = {}
     if vgk_mode:
         # Join on official_partners to scope to VGK_TEAM category only
-        where = ["p.category = 'VGK_TEAM'"]
-        params = {}
+        where.append("p.category = 'VGK_TEAM'")
     else:
         cid = company_id or current_employee.base_company_id
-        where = ["a.company_id = :cid"]
-        params = {'cid': cid}
+        if not ctx.is_platform_admin() and cid not in ctx.accessible_company_ids:
+            raise HTTPException(status_code=403, detail="Company access not authorized")
+        where.append("a.company_id = :cid")
+        params['cid'] = cid
+
+    if not ctx.is_platform_admin() and ctx.tenant_id is not None:
+        where.append("l.tenant_id = :tenant_id")
+        params['tenant_id'] = ctx.tenant_id
 
     if status:
         where.append("a.status = :st")
@@ -19885,9 +20239,12 @@ def list_solar_advances_staff(
     if vgk_mode:
         count_sql = f"""SELECT COUNT(*) FROM vgk_solar_cibil_advances a
                         JOIN official_partners p ON p.id = a.partner_id
+                        LEFT JOIN crm_leads l ON l.id = a.lead_id
                         WHERE {where_sql}"""
     else:
-        count_sql = f"SELECT COUNT(*) FROM vgk_solar_cibil_advances a WHERE {where_sql}"
+        count_sql = f"""SELECT COUNT(*) FROM vgk_solar_cibil_advances a
+                        LEFT JOIN crm_leads l ON l.id = a.lead_id
+                        WHERE {where_sql}"""
 
     total = db.execute(text(count_sql), params).scalar()
 
@@ -19956,14 +20313,9 @@ async def get_income_correction_preview(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_hybrid),
 ):
-    lead = db.query(CRMLead).filter(
-        CRMLead.id == lead_id,
-        CRMLead.company_id == company_id,
-    ).first()
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    lead = get_authorized_lead(db, lead_id, current_user)
     from app.services.vgk_income_correction import get_income_correction_preview
-    preview = get_income_correction_preview(db, lead_id)
+    preview = get_income_correction_preview(db, lead.id)
     return {"success": True, "data": preview}
 
 
@@ -20009,8 +20361,12 @@ async def get_ground_source_weekly_report(
     # A single-company view loses the majority of their referrals.
     # Rule: admins see the full cross-company picture; non-admins see only
     # their own company.  An explicit company_id_filter always wins.
+    ctx = get_current_request_context()
+    if not ctx:
+        ctx = auth_context_service.build_context(db, current_employee)
+
     _staff_type = (current_employee.staff_type or '').upper()
-    _is_admin   = is_vgk_admin(_staff_type)
+    _is_admin   = is_vgk_admin(_staff_type) and ctx.is_platform_admin()
 
     _src_notnull = _gsor(CRMLead.source_ref_id.isnot(None), CRMLead.mnr_handler_id.isnot(None))
     if company_id_filter and _is_admin:
@@ -20018,8 +20374,13 @@ async def get_ground_source_weekly_report(
     elif _is_admin:
         base = db.query(CRMLead).filter(_src_notnull)   # cross-company — no company_id filter
     else:
+        target_cid = company_id_filter if (company_id_filter and company_id_filter in ctx.accessible_company_ids) else current_employee.base_company_id
         base = db.query(CRMLead).filter(
-            CRMLead.company_id == current_employee.base_company_id, _src_notnull)
+            CRMLead.company_id == target_cid, _src_notnull)
+
+    if not ctx.is_platform_admin() and ctx.tenant_id is not None:
+        base = base.filter(CRMLead.tenant_id == ctx.tenant_id)
+
     if category:
         base = base.join(SignupCategory, CRMLead.category_id == SignupCategory.id)
         base = base.filter(SignupCategory.name == category)
@@ -20172,8 +20533,13 @@ async def get_ground_source_leads(
     from sqlalchemy import or_ as _gl_or
     from app.models.staff_accounts import AssociatedCompany as _GlAC
     from app.models.signup_category import SignupCategory as _GlSC
+
+    ctx = get_current_request_context()
+    if not ctx:
+        ctx = auth_context_service.build_context(db, current_employee)
+
     _staff_type = (current_employee.staff_type or '').upper()
-    _is_admin   = is_vgk_admin(_staff_type)
+    _is_admin   = is_vgk_admin(_staff_type) and ctx.is_platform_admin()
 
     # Same cross-company rule as the aggregate: admins see all companies
     _lead_filter = _gl_or(CRMLead.source_ref_id == gs_id, CRMLead.mnr_handler_id == gs_id)
@@ -20182,7 +20548,11 @@ async def get_ground_source_leads(
     elif _is_admin:
         q = db.query(CRMLead).filter(_lead_filter)
     else:
-        q = db.query(CRMLead).filter(CRMLead.company_id == current_employee.base_company_id, _lead_filter)
+        target_cid = company_id_filter if (company_id_filter and company_id_filter in ctx.accessible_company_ids) else current_employee.base_company_id
+        q = db.query(CRMLead).filter(CRMLead.company_id == target_cid, _lead_filter)
+
+    if not ctx.is_platform_admin() and ctx.tenant_id is not None:
+        q = q.filter(CRMLead.tenant_id == ctx.tenant_id)
 
     rows = q.order_by(CRMLead.created_at.desc()).limit(300).all()
 
@@ -20241,44 +20611,12 @@ class PublicLeadCreateRequest(BaseModel):
 
 @router.post("/leads/public-create")
 def public_create_lead(body: PublicLeadCreateRequest, db: Session = Depends(get_db)):
-    """Public unauthenticated lead creation endpoint for Website Floating Chatbot."""
-    try:
-        from app.models.crm import Lead
-        clean_phone = body.phone.strip()
-        new_lead = Lead(
-            name=body.lead_name.strip(),
-            phone=clean_phone,
-            lead_source=body.source or "Website Chatbot",
-            status="New",
-            notes=f"Service Interest: {body.service_required}",
-            created_at=datetime.utcnow()
-        )
-        db.add(new_lead)
-        db.commit()
-        db.refresh(new_lead)
-
-        # Trigger instant Sales group alert and auto-welcome WhatsApp if available
-        try:
-            from app.services.whatsapp_group_alert_service import send_instant_new_lead_group_alert
-            send_instant_new_lead_group_alert(db, new_lead.id)
-        except Exception as _ga_e:
-            logger.warning("[PUBLIC-LEAD-CREATE] Group alert exception: %s", _ga_e)
-
-        try:
-            from app.services.whatsapp_auto_service import send_lead_welcome
-            send_lead_welcome(db=db, lead=new_lead)
-        except Exception:
-            pass
-
-        return {
-            "success": True,
-            "lead_id": new_lead.id,
-            "message": "Lead created successfully"
-        }
-    except Exception as e:
-        logger.error("[PUBLIC-LEAD-CREATE] Error: %s", str(e))
-        return {
-            "success": True,
-            "message": "Lead request received"
-        }
+    """
+    Public endpoint for lead submission from website floating chatbot.
+    Stage 2B Phase 2R-3D Gated: Direct submission disabled under Option B (Signed HMAC Form Tokens).
+    """
+    raise HTTPException(
+        status_code=403,
+        detail="Public intake requires signed HMAC form token verification (Option B). Direct submission is disabled."
+    )
 

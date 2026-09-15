@@ -32,6 +32,7 @@ from app.core.security import get_current_user_hybrid
 from app.models.operator_calls import OperatorCall
 from app.models.crm import CRMLead, CRMLeadFollowUp, CRMLeadNote
 from app.models.staff import StaffEmployee
+from app.services.crm_phone_sync_service import sync_lead_phone_identities
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -72,17 +73,15 @@ def normalize_phone(phone: str) -> Optional[str]:
 
 
 def _match_lead(db: Session, phone: str, company_id: Optional[int] = None) -> Optional[CRMLead]:
-    norm = normalize_phone(phone)
-    if not norm or not company_id:
+    if not phone or not company_id:
         return None
-    lead = db.query(CRMLead).filter(
-        or_(
-            CRMLead.phone.like(f'%{norm}'),
-            CRMLead.alternate_phone.like(f'%{norm}')
-        ),
-        CRMLead.company_id == company_id
-    ).order_by(CRMLead.created_at.desc()).first()
-    return lead
+    from app.models.staff_accounts import AssociatedCompany
+    from app.services.crm_dedup_service import find_phone_duplicate
+    comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == company_id).first()
+    tenant_id = comp.client_id if comp else None
+    if not tenant_id:
+        return None
+    return find_phone_duplicate(db, tenant_id=tenant_id, company_id=company_id, phone=phone, with_lock=False)
 
 
 def _lead_summary(db: Session, lead_id: int, company_id: Optional[int] = None) -> Optional[dict]:
@@ -451,7 +450,7 @@ async def operator_call_webhook(
             followup = _create_auto_followup(db, call)
             try:
                 from app.services.whatsapp_missed_call_service import handle_missed_call_whatsapp_ack
-                handle_missed_call_whatsapp_ack(db, call.caller_number, call.handled_by, call.crm_lead_id, call_type=call.call_type)
+                handle_missed_call_whatsapp_ack(db, call.caller_number, call.handled_by, call.crm_lead_id, call_type=call.call_type, company_id=call.company_id)
             except Exception as _mc_e:
                 logger.warning(f"[OPERATOR_WEBHOOK] Could not send missed call WA ACK: {_mc_e}")
 
@@ -1109,10 +1108,46 @@ async def convert_to_lead(
                 "lead": existing.to_dict()
             }
 
+    from app.models.staff_accounts import AssociatedCompany
+    from app.services.crm_dedup_service import find_phone_duplicate
+
+    comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == call.company_id).first()
+    if not comp or not comp.client_id:
+        raise HTTPException(status_code=422, detail="Call company has no associated tenant")
+    resolved_tenant_id = comp.client_id
+
+    dup = find_phone_duplicate(
+        db=db,
+        tenant_id=resolved_tenant_id,
+        company_id=call.company_id,
+        phone=call.caller_number,
+        with_lock=True
+    )
+    if dup:
+        call.crm_lead_id = dup.id
+        call.lead_matched = True
+        if call.recording_url:
+            note = CRMLeadNote(
+                company_id=dup.company_id,
+                lead_id=dup.id,
+                note=f'Operator call recording: {call.recording_url}',
+                created_by_type='system',
+                created_by_id='operator_calls',
+            )
+            db.add(note)
+        db.commit()
+        return {
+            "success": True,
+            "lead_id": dup.id,
+            "message": "Matched existing lead by phone",
+            "lead": dup.to_dict()
+        }
+
     name = body.get('name') or f'Caller {call.caller_number}'
     handler_id = body.get('handler_id')
     handler_type = 'staff' if handler_id else 'unassigned'
     lead = CRMLead(
+        tenant_id=resolved_tenant_id,
         company_id=call.company_id,
         name=name,
         phone=call.caller_number,
@@ -1127,6 +1162,15 @@ async def convert_to_lead(
     )
     db.add(lead)
     db.flush()
+
+    sync_lead_phone_identities(
+        db=db,
+        lead=lead,
+        phone_raw=lead.phone,
+        source_channel='operator_calls',
+        source_ref=str(call.call_id),
+        with_lock=True
+    )
 
     call.crm_lead_id = lead.id
     call.lead_matched = True
@@ -1274,23 +1318,46 @@ async def create_followup(
             call.crm_lead_id = lead.id
             call.lead_matched = True
         else:
-            name = body.get('lead_name') or f'Caller {call.caller_number}'
-            lead = CRMLead(
+            comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == call.company_id).first()
+            resolved_tenant_id = comp.client_id if comp else None
+            from app.services.crm_dedup_service import find_phone_duplicate
+            dup = find_phone_duplicate(
+                db=db,
+                tenant_id=resolved_tenant_id,
                 company_id=call.company_id,
-                name=name,
                 phone=call.caller_number,
-                source='Operator Call',
-                source_details=f'Auto-created for follow-up from call {call.call_id}',
-                status='new',
-                priority='medium',
-                handler_type='unassigned',
-                created_by_type='staff',
-                created_by_id=str(current_user.id),
-            )
-            db.add(lead)
-            db.flush()
-            call.crm_lead_id = lead.id
-            call.lead_matched = True
+                with_lock=True
+            ) if resolved_tenant_id else None
+            if dup:
+                call.crm_lead_id = dup.id
+                call.lead_matched = True
+            else:
+                name = body.get('lead_name') or f'Caller {call.caller_number}'
+                lead = CRMLead(
+                    tenant_id=resolved_tenant_id,
+                    company_id=call.company_id,
+                    name=name,
+                    phone=call.caller_number,
+                    source='Operator Call',
+                    source_details=f'Auto-created for follow-up from call {call.call_id}',
+                    status='new',
+                    priority='medium',
+                    handler_type='unassigned',
+                    created_by_type='staff',
+                    created_by_id=str(current_user.id),
+                )
+                db.add(lead)
+                db.flush()
+                sync_lead_phone_identities(
+                    db=db,
+                    lead=lead,
+                    phone_raw=lead.phone,
+                    source_channel='operator_calls',
+                    source_ref=f"followup_{call.call_id}",
+                    with_lock=True
+                )
+                call.crm_lead_id = lead.id
+                call.lead_matched = True
 
     lead = db.query(CRMLead).filter(CRMLead.id == call.crm_lead_id, CRMLead.company_id.in_(company_ids)).first()
     if not lead:

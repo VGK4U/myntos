@@ -4374,7 +4374,9 @@
                     document.getElementById('detailEmail').textContent = lead.email || '-';
                     const rawP = lead.phone || '';
                     const cleanP10 = rawP.replace(/\D/g, '').slice(-10);
-                    const callBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-primary btn-call-direct ms-2" onclick="triggerLeadCall('${cleanP10}', '${(lead.name || '').replace(/'/g, "\\'")}', ${lead.id})" title="Softphone WebRTC Call"><i class="fas fa-phone-alt me-1"></i> Call</button>` : '';
+                    const safeLeadName = (lead.name || '').replace(/'/g, "\\'");
+                    const callBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-primary btn-call-direct ms-2" onclick="triggerLeadCall('${cleanP10}', '${safeLeadName}', ${lead.id})" title="Softphone WebRTC Call"><i class="fas fa-phone-alt me-1"></i> Call</button>` : '';
+                    const waBtnHtml = cleanP10 ? `<button type="button" class="btn btn-sm btn-outline-success btn-whatsapp-direct ms-1" onclick="openLeadWAModal('${lead.id}', '${cleanP10}', '${safeLeadName}', '${lead.company_id || effectiveCompanyId}')" title="WhatsApp Chat & Scanned Bot"><i class="fab fa-whatsapp me-1"></i> Chat</button>` : '';
                     const detailPhoneEl = document.getElementById('detailPhone');
                     if (detailPhoneEl) {
                         detailPhoneEl.dataset.rawPhone = rawP;

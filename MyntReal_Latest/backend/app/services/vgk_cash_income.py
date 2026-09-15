@@ -180,7 +180,14 @@ def _generate_vgk4u_waterfall_income_drafts(db: Session, lead) -> int:
     showroom_id = raw_showroom_id if raw_showroom_id and raw_showroom_id not in (lead.associated_partner_id, support_id) else None
 
     # Execute Waterfall Engine
-    is_e2e = bool(getattr(lead, 'vgk_field_support_id', None) and not getattr(l1, 'is_loyal_coupon', False))
+    is_e2e = bool(support_id)
+    is_staff_involved = bool(
+        getattr(lead, 'support_staff_id', None) or
+        getattr(lead, 'technical_staff1_id', None) or
+        getattr(lead, 'technical_id', None) or
+        getattr(lead, 'mnr_handler_id', None) or
+        (tagged_visits_count > 0)
+    )
     result = VGK4UWaterfallEngine.calculate_commission_structure(
         db=db,
         producer_partner_id=lead.associated_partner_id,
@@ -190,6 +197,7 @@ def _generate_vgk4u_waterfall_income_drafts(db: Session, lead) -> int:
         support_partner_id=support_id,
         support_journey_count=tagged_visits_count,
         is_end_to_end_support=is_e2e,
+        is_staff_involved=is_staff_involved,
         showroom_partner_id=showroom_id,
         version_label='v2_sep2026',
     )
@@ -205,6 +213,7 @@ def _generate_vgk4u_waterfall_income_drafts(db: Session, lead) -> int:
         'GM_DIFFERENTIAL': 3,
         'RM_DIFFERENTIAL': 4,
         'FIELD_SUPPORT': 5,
+        'FULL_SUPPORT': 7,
         'SHOWROOM': 6,
         'APEX_REMAINDER': 0,
     }
@@ -457,8 +466,21 @@ def generate_vgk_cash_income_drafts(db: Session, lead) -> int:
         logger.warning(f"[VGK-SELF-BUSINESS-PTS] Hook failed for lead {getattr(lead, 'id', None)}: {_sbp_e}")
 
     if is_vgk4u:
-        return _generate_vgk4u_waterfall_income_drafts(db, lead)
-    return _generate_legacy_cash_income_drafts(db, lead)
+        res = _generate_vgk4u_waterfall_income_drafts(db, lead)
+    else:
+        res = _generate_legacy_cash_income_drafts(db, lead)
+
+    # Career Projection Synchronization Hook: synchronize cached career columns
+    try:
+        from app.services.vgk4u_career_service import VGK4UCareerService
+        if getattr(lead, 'associated_partner_id', None):
+            VGK4UCareerService.sync_partner_career_status_to_db(db, lead.associated_partner_id)
+        if getattr(lead, 'team_senior_partner_id', None):
+            VGK4UCareerService.sync_partner_career_status_to_db(db, lead.team_senior_partner_id)
+    except Exception as _sync_e:
+        logger.warning(f"[VGK4U-CAREER-SYNC] Failed to sync partner career status: {_sync_e}")
+
+    return res
 
 
 def _generate_legacy_cash_income_drafts(db: Session, lead) -> int:

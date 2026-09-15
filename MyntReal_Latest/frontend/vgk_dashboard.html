@@ -2930,7 +2930,8 @@
                 if (data.rank_position) {
                     const rp = data.rank_position;
                     const elR = document.getElementById('vgkCurrentRankDisplay'); if (elR) elR.textContent = (rp.career_designation || rp.current_designation || rp.rank_display || 'Channel Partner').replace(/[★*]/g, '').trim();
-                    const elS = document.getElementById('vgkRankSlabPctDisplay'); if (elS) elS.textContent = (rp.rank_slab_pct || 5.0).toFixed(2) + '%';
+                    const rpRate = (rp.effective_personal_producer_rate !== undefined) ? rp.effective_personal_producer_rate : (rp.rank_slab_pct !== undefined ? rp.rank_slab_pct : 0.0);
+                    const elS = document.getElementById('vgkRankSlabPctDisplay'); if (elS) elS.textContent = rpRate > 0 ? (rpRate.toFixed(2) + '%') : '0.00% (Locked)';
                     const elA = document.getElementById('vgkActivatedTeamCount'); if (elA) elA.textContent = rp.activated_team || 0;
                     const elV = document.getElementById('vgkActiveTeamCount'); if (elV) elV.textContent = rp.active_team || 0;
                     const elN = document.getElementById('vgkNextRankDisplay'); if (elN) elN.textContent = (rp.next_career || rp.next_rank || 'Regional Manager (Max Career)').replace(/[★*]/g, '').trim();
@@ -5097,7 +5098,7 @@
                         ['Display Name', escHtml(p.partner_name||'—')],
                         ['Designation', `<strong style="color:#7c3aed;font-size:16px"><i class="fas fa-award text-warning me-1"></i>${escHtml((p.career_designation || p.current_designation || p.designation_label || 'Channel Partner').replace(/[★*]/g, '').trim())}</strong>`],
                         ['Career Designation', `<span style="background:linear-gradient(135deg,#7c3aed,#4c1d95);color:#fff;border-radius:20px;padding:4px 14px;font-size:13px;font-weight:800;display:inline-flex;align-items:center;gap:6px"><i class="fas fa-user-tie text-warning"></i>${escHtml((p.career_designation || p.current_designation || p.rank_display || 'Channel Partner').replace(/[★*]/g, '').trim())}</span>`],
-                        ['Incentive Slab', `<strong style="color:#059669;font-size:15px">${Number(p.rank_slab_pct || 5.0).toFixed(2)}%</strong> <span style="background:#059669;color:#fff;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700;margin-left:6px">Permanent Rank</span>`],
+                        ['Incentive Slab', `${Number((p.effective_personal_producer_rate !== undefined ? p.effective_personal_producer_rate : (p.rank_slab_pct !== undefined ? p.rank_slab_pct : 0.0))) > 0 ? `<strong style="color:#059669;font-size:15px">${Number(p.effective_personal_producer_rate !== undefined ? p.effective_personal_producer_rate : p.rank_slab_pct).toFixed(2)}%</strong> <span style="background:#059669;color:#fff;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700;margin-left:6px">Permanent Rank</span>` : `<strong style="color:#6b7280;font-size:14px">0.00% (Locked)</strong>`}`],
                         ['Activated Team', `<strong style="color:#4c1d95;font-size:16px">${p.activated_team_cnt || 0} Members</strong> <span style="font-size:11px;color:#6b7280">(≥3 paid files)</span>`],
                         ['Title', escHtml(p.name_title||'—')],
                         ['First Name', escHtml(p.first_name||'—')],
@@ -9121,12 +9122,13 @@
         }
         
         document.getElementById('mycardCoupons').textContent   = d.coupons_used || 0;
-        document.getElementById('mycardRevenue').textContent   = (storedPartner.rank_slab_pct ? storedPartner.rank_slab_pct.toFixed(2) + '%' : '6.00%');
+        const mycardRate = (storedPartner.effective_personal_producer_rate !== undefined) ? storedPartner.effective_personal_producer_rate : (storedPartner.rank_slab_pct !== undefined ? storedPartner.rank_slab_pct : 0.0);
+        document.getElementById('mycardRevenue').textContent   = mycardRate > 0 ? (mycardRate.toFixed(2) + '%') : '0.00% (Locked)';
         document.getElementById('mycardActivated').textContent = memberActivatedCnt;
 
         // Authoritative VGK4U Career Progression Ladder
         const rankTiers = [
-            { rankNum: 0, name: 'Member', icon: '👤', slab: 'Standard', reqText: 'Default Joining (0 Files)', isUnlocked: true, color: '#6b7280' },
+            { rankNum: 0, name: 'Member', icon: '👤', slab: '0.00% (Locked)', reqText: 'Default Joining (0 Files)', isUnlocked: true, color: '#6b7280' },
             { rankNum: 1, name: 'Channel Partner', icon: 'CP', slab: '6.00%', reqText: '1 Own File', isUnlocked: memberStars >= 1, color: '#6b7280' },
             { rankNum: 2, name: 'Manager', icon: 'M', slab: '7.50%', reqText: '1 Active Leg (1 Own File)', isUnlocked: memberStars >= 2, color: '#7c3aed' },
             { rankNum: 3, name: 'General Manager', icon: 'GM', slab: '8.50%', reqText: '5 Active Legs (1 Own File)', isUnlocked: memberStars >= 3, color: '#2563eb' },

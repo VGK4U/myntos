@@ -303,15 +303,31 @@ def dispatch_daily_morning_wishes(
     from app.services.whatsapp_auto_service import _is_valid_phone
     from app.services.wa_credentials import get_wa_credentials
     from app.services.whatsapp_audit_service import log_wa_trigger_execution
+    from app.services.automation_tracking_service import (
+        create_execution,
+        record_dispatch,
+        finalize_execution,
+        get_job_targets
+    )
 
     current_rot = get_current_rotation_template(db)
     rot_index = current_rot["rot_index"]
     template_slug = current_rot["template_slug"]
     meta_template_name = template_slug
+    tdef = next((t for t in MORNING_WISH_TEMPLATES if t["rot_index"] == rot_index), MORNING_WISH_TEMPLATES[0])
 
     creds = get_wa_credentials(db)
     access_token = creds.get("access_token") or ""
     phone_id = creds.get("phone_number_id") or ""
+
+    exec_record = create_execution(
+        db=db,
+        job_id="wa_daily_morning_wish",
+        job_name="WhatsApp 8 AM Morning Wish Dispatch",
+        trigger_type=trigger_type,
+        triggered_by=triggered_by,
+        company_id=1
+    )
 
     leads = get_eligible_leads_for_morning_wish(db)
     if limit_count and limit_count > 0:
@@ -345,6 +361,18 @@ def dispatch_daily_morning_wishes(
         raw_phone = getattr(lead, 'phone', '') or ''
         if not _is_valid_phone(raw_phone):
             skipped_count += 1
+            record_dispatch(
+                db=db,
+                execution_id=exec_record.id,
+                job_id="wa_daily_morning_wish",
+                recipient_type="CUSTOMER_LEAD",
+                recipient_identifier=raw_phone,
+                recipient_name=(getattr(lead, 'first_name', '') or getattr(lead, 'name', '') or 'Friend').strip(),
+                target_entity_type="crm_lead",
+                target_entity_id=lead.id,
+                status="SKIPPED",
+                error_message="Invalid phone format"
+            )
             continue
 
         # Recipient phone formatting
@@ -355,15 +383,39 @@ def dispatch_daily_morning_wishes(
             phone_formatted = phone_digits
         else:
             skipped_count += 1
+            record_dispatch(
+                db=db,
+                execution_id=exec_record.id,
+                job_id="wa_daily_morning_wish",
+                recipient_type="CUSTOMER_LEAD",
+                recipient_identifier=raw_phone,
+                recipient_name=(getattr(lead, 'first_name', '') or getattr(lead, 'name', '') or 'Friend').strip(),
+                target_entity_type="crm_lead",
+                target_entity_id=lead.id,
+                status="SKIPPED",
+                error_message="Unsupported phone length"
+            )
             continue
+
+        lead_name = (getattr(lead, 'first_name', '') or getattr(lead, 'name', '') or 'Friend').strip()
 
         # Check if already sent today (instant O(1) set lookup)
         clean_10 = phone_digits[-10:]
         if (clean_10 in sent_today_numbers or phone_formatted in sent_today_numbers) and not force_test:
             skipped_count += 1
+            record_dispatch(
+                db=db,
+                execution_id=exec_record.id,
+                job_id="wa_daily_morning_wish",
+                recipient_type="CUSTOMER_LEAD",
+                recipient_identifier=phone_formatted,
+                recipient_name=lead_name,
+                target_entity_type="crm_lead",
+                target_entity_id=lead.id,
+                status="SKIPPED",
+                error_message="Already sent or interacted today"
+            )
             continue
-
-        lead_name = (getattr(lead, 'first_name', '') or getattr(lead, 'name', '') or 'Friend').strip()
 
         # Build Meta WhatsApp API Payload
         sent_success = False
@@ -394,7 +446,9 @@ def dispatch_daily_morning_wishes(
             user_name=safe_lead_name,
             sender_type="bot",
             idempotency_key=f"morning_wish:{phone_formatted}:{get_indian_time().strftime('%Y%m%d')}",
-            raw_body_fallback=wish_body
+            raw_body_fallback=wish_body,
+            job_id="wa_daily_morning_wish",
+            execution_id=exec_record.id
         )
 
         sent_success = res.get("success", False)
@@ -405,6 +459,22 @@ def dispatch_daily_morning_wishes(
         else:
             failed_count += 1
 
+        record_dispatch(
+            db=db,
+            execution_id=exec_record.id,
+            job_id="wa_daily_morning_wish",
+            recipient_type="CUSTOMER_LEAD",
+            recipient_identifier=phone_formatted,
+            recipient_name=safe_lead_name,
+            target_entity_type="crm_lead",
+            target_entity_id=lead.id,
+            message_log_id=res.get("message_log_id"),
+            provider_message_id=res.get("wamid"),
+            status="SENT" if sent_success else "FAILED",
+            error_message=error_msg,
+            payload_snapshot={"template": meta_template_name, "rotation": rot_index}
+        )
+
         details.append({
             "lead_id": lead.id,
             "lead_name": lead_name,
@@ -413,6 +483,62 @@ def dispatch_daily_morning_wishes(
             "wamid": res.get("wamid"),
             "error": error_msg
         })
+
+    # Supplementary targets if any configured
+    supp_targets = get_job_targets(db, "wa_daily_morning_wish", company_id=1)
+    for tgt in supp_targets:
+        if not tgt.get("is_active", True):
+            continue
+        tgt_phone = tgt.get("recipient_identifier")
+        if not tgt_phone:
+            continue
+        tgt_digits = ''.join(c for c in tgt_phone if c.isdigit())
+        if len(tgt_digits) == 10:
+            tgt_formatted = f"91{tgt_digits}"
+        elif len(tgt_digits) == 12 and tgt_digits.startswith("91"):
+            tgt_formatted = tgt_digits
+        else:
+            continue
+
+        from app.services.whatsapp_canonical_service import WhatsAppCanonicalService
+        tgt_name = tgt.get("recipient_name") or "Team Member"
+        tgt_wish_body = tdef.get("body_text", "🌅 Good Morning!").replace("{{1}}", tgt_name)
+        tgt_components = [{"type": "body", "parameters": [{"type": "text", "text": tgt_name}]}]
+        res = WhatsAppCanonicalService.send_meta_template_message(
+            db=db,
+            phone=tgt_formatted,
+            template_name=meta_template_name,
+            language_code="en",
+            components=tgt_components,
+            message_type="template",
+            user_name=tgt_name,
+            sender_type="bot",
+            idempotency_key=f"morning_wish_cc:{tgt_formatted}:{get_indian_time().strftime('%Y%m%d')}",
+            raw_body_fallback=tgt_wish_body,
+            job_id="wa_daily_morning_wish",
+            execution_id=exec_record.id
+        )
+        t_ok = res.get("success", False)
+        if t_ok:
+            sent_count += 1
+        else:
+            failed_count += 1
+        record_dispatch(
+            db=db,
+            execution_id=exec_record.id,
+            job_id="wa_daily_morning_wish",
+            recipient_type=tgt.get("recipient_type", "PHONE_NUMBER"),
+            recipient_identifier=tgt_formatted,
+            recipient_name=tgt_name,
+            message_log_id=res.get("message_log_id"),
+            provider_message_id=res.get("wamid"),
+            status="SENT" if t_ok else "FAILED",
+            error_message=res.get("reason") if not t_ok else None,
+            payload_snapshot={"template": meta_template_name, "is_cc": True}
+        )
+
+    exec_status = "COMPLETED" if (failed_count == 0 and (sent_count > 0 or len(leads) == 0)) else ("PARTIAL" if sent_count > 0 else "FAILED")
+    finalize_execution(db, exec_record.id, exec_status)
 
     is_overall_success = (sent_count > 0 or len(leads) == 0) and failed_count == 0
     log_wa_trigger_execution(

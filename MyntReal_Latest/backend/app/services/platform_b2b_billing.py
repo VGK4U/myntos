@@ -29,7 +29,7 @@ from app.models.platform_b2b import (
 from app.models.platform_b2b_billing import (
     PlatformInvoice, PlatformInvoiceLine, PlatformPayment,
 )
-from app.models.staff import StaffEmployee, StaffRole
+from app.models.staff import StaffEmployee, StaffRole, StaffCompanyMembership
 from app.models.staff_accounts import AssociatedCompany
 from app.models.base import get_indian_time
 
@@ -325,11 +325,28 @@ def provision_tenant_admin(
     ).first()
 
     if existing_admin:
+        # Phase 3 Architectural Fix: Ensure existing admin has authoritative operational membership
+        existing_mem = db.query(StaffCompanyMembership).filter_by(
+            staff_id=existing_admin.id,
+            company_id=company.id,
+        ).first()
+        if not existing_mem:
+            existing_mem = StaffCompanyMembership(
+                staff_id=existing_admin.id,
+                company_id=company.id,
+                tenant_id=client.id,
+                is_primary=True,
+                is_active=True,
+                role_id=existing_admin.role_id,
+            )
+            db.add(existing_mem)
+            db.flush()
         return {
             "status": "already_exists",
             "employee_id": existing_admin.id,
             "emp_code": existing_admin.emp_code,
             "email": existing_admin.email,
+            "membership_id": existing_mem.id,
         }
 
     # Also check by email to prevent duplicate employee identity across same tenant
@@ -341,13 +358,33 @@ def provision_tenant_admin(
             if company.id not in (email_match.data_companies or []):
                 comps = list(email_match.data_companies or [])
                 comps.append(company.id)
-                email_match.data_companies = comps
+            if not email_match.tenant_id or email_match.tenant_id == 1:
+                email_match.tenant_id = client.id
+            if not email_match.admin_scope:
+                email_match.admin_scope = "TENANT_ADMIN"
             db.flush()
+            # Phase 3 Architectural Fix: Ensure existing matched employee has authoritative membership
+            email_mem = db.query(StaffCompanyMembership).filter_by(
+                staff_id=email_match.id,
+                company_id=company.id,
+            ).first()
+            if not email_mem:
+                email_mem = StaffCompanyMembership(
+                    staff_id=email_match.id,
+                    company_id=company.id,
+                    tenant_id=client.id,
+                    is_primary=True,
+                    is_active=True,
+                    role_id=email_match.role_id,
+                )
+                db.add(email_mem)
+                db.flush()
             return {
                 "status": "already_exists",
                 "employee_id": email_match.id,
                 "emp_code": email_match.emp_code,
                 "email": email_match.email,
+                "membership_id": email_mem.id,
             }
 
     # 3. Resolve role for Tenant Administrator
@@ -380,6 +417,8 @@ def provision_tenant_admin(
     new_emp = StaffEmployee(
         emp_code=emp_code,
         staff_type="MN_EMPLOYEE",
+        tenant_id=client.id,
+        admin_scope="TENANT_ADMIN",
         full_name=client.contact_name or f"{client.client_name} Admin",
         email=client.contact_email,
         phone=client.contact_phone,
@@ -395,6 +434,18 @@ def provision_tenant_admin(
     db.add(new_emp)
     db.flush()
 
+    # 6. Create Authoritative StaffCompanyMembership (Phase 3 Architectural Fix)
+    membership = StaffCompanyMembership(
+        staff_id=new_emp.id,
+        company_id=company.id,
+        tenant_id=client.id,
+        is_primary=True,
+        is_active=True,
+        role_id=role.id,
+    )
+    db.add(membership)
+    db.flush()
+
     try:
         db.add(PlatformAuditLog(
             actor_staff_id=None,
@@ -402,7 +453,13 @@ def provision_tenant_admin(
             entity="STAFF-EMP",
             action="CREATE",
             entity_id=new_emp.id,
-            after_json={"emp_code": emp_code, "email": client.contact_email, "role": role.role_code},
+            after_json={
+                "emp_code": emp_code,
+                "email": client.contact_email,
+                "role": role.role_code,
+                "membership_id": membership.id,
+                "company_id": company.id,
+            },
             created_at=get_indian_time(),
         ))
     except Exception:
@@ -414,6 +471,7 @@ def provision_tenant_admin(
         "emp_code": emp_code,
         "email": client.contact_email,
         "temp_password": temp_password,
+        "membership_id": membership.id,
     }
 
 

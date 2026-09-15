@@ -52,8 +52,23 @@ def run_vgk_member_daily_morning_statement_dispatch(db: Session, trigger_type: s
     """
     from app.api.v1.endpoints.vgk_cash_income import get_member_executive_summary
     from unittest.mock import MagicMock
+    from app.services.automation_tracking_service import (
+        create_execution,
+        record_dispatch,
+        finalize_execution,
+        get_job_targets
+    )
 
     logger.info("🌅 [VGK-MEMBER-STATEMENT] Starting daily 8 AM member revenue statement dispatch...")
+
+    exec_rec = create_execution(
+        db=db,
+        job_id="vgk_member_morning_statement",
+        job_name="VGK Members Daily 8 AM Revenue Statement",
+        trigger_type=trigger_type,
+        triggered_by=triggered_by,
+        company_id=1
+    )
 
     query = text("""
         SELECT p.id, p.partner_name, p.partner_code, p.phone, p.whatsapp_number, COUNT(c.id) AS lead_count
@@ -97,8 +112,6 @@ def run_vgk_member_daily_morning_statement_dispatch(db: Session, trigger_type: s
     failed_count = 0
     results = []
 
-    bot_url = "http://localhost:5002/api/send-message"
-
     for m in qualifying_members:
         p_id = m[0]
         p_name = m[1] or "Channel Partner"
@@ -109,6 +122,18 @@ def run_vgk_member_daily_morning_statement_dispatch(db: Session, trigger_type: s
         if not clean_phone or len(clean_phone) < 10:
             logger.warning(f"⚠️ Member {p_name} ({p_code}) has no valid phone: {phone}")
             failed_count += 1
+            record_dispatch(
+                db=db,
+                execution_id=exec_rec.id,
+                job_id="vgk_member_morning_statement",
+                recipient_type="PARTNER",
+                recipient_identifier=phone,
+                recipient_name=p_name,
+                target_entity_type="official_partners",
+                target_entity_id=p_id,
+                status="FAILED",
+                error_message="Invalid phone format"
+            )
             results.append({"member_id": p_id, "name": p_name, "status": "FAILED", "error": "Invalid phone"})
             continue
 
@@ -116,6 +141,18 @@ def run_vgk_member_daily_morning_statement_dispatch(db: Session, trigger_type: s
         if trigger_type == "SCHEDULED" and clean_10 in sent_today_numbers:
             logger.info(f"⏩ Member {p_name} ({clean_10}) already received a message today. Skipping.")
             skipped_count += 1
+            record_dispatch(
+                db=db,
+                execution_id=exec_rec.id,
+                job_id="vgk_member_morning_statement",
+                recipient_type="PARTNER",
+                recipient_identifier=clean_phone,
+                recipient_name=p_name,
+                target_entity_type="official_partners",
+                target_entity_id=p_id,
+                status="SKIPPED",
+                error_message="Already sent today"
+            )
             results.append({"member_id": p_id, "name": p_name, "status": "SKIPPED", "reason": "Already sent today"})
             continue
 
@@ -157,20 +194,98 @@ def run_vgk_member_daily_morning_statement_dispatch(db: Session, trigger_type: s
             )
 
             from app.services.whatsapp_auto_service import send_direct_whatsapp
-            wa_res = send_direct_whatsapp(db=db, phone=clean_phone, message=msg_text)
+            wa_res = send_direct_whatsapp(
+                db=db,
+                phone=clean_phone,
+                message=msg_text,
+                job_id="vgk_member_morning_statement",
+                execution_id=exec_rec.id
+            )
 
             if wa_res.get("success"):
                 dispatched_count += 1
+                record_dispatch(
+                    db=db,
+                    execution_id=exec_rec.id,
+                    job_id="vgk_member_morning_statement",
+                    recipient_type="PARTNER",
+                    recipient_identifier=clean_phone,
+                    recipient_name=p_name,
+                    target_entity_type="official_partners",
+                    target_entity_id=p_id,
+                    message_log_id=wa_res.get("message_log_id"),
+                    provider_message_id=wa_res.get("message_sid"),
+                    status="SENT",
+                    payload_snapshot={"member_code": p_code}
+                )
                 results.append({"member_id": p_id, "name": p_name, "status": "SUCCESS", "phone": clean_phone})
             else:
                 failed_count += 1
                 err_text = wa_res.get("error") or wa_res.get("reason") or "Dispatch failed"
+                record_dispatch(
+                    db=db,
+                    execution_id=exec_rec.id,
+                    job_id="vgk_member_morning_statement",
+                    recipient_type="PARTNER",
+                    recipient_identifier=clean_phone,
+                    recipient_name=p_name,
+                    target_entity_type="official_partners",
+                    target_entity_id=p_id,
+                    status="FAILED",
+                    error_message=err_text
+                )
                 results.append({"member_id": p_id, "name": p_name, "status": "FAILED", "error": err_text})
 
         except Exception as exc:
             logger.error(f"❌ Error dispatching morning statement to {p_name}: {exc}")
             failed_count += 1
+            record_dispatch(
+                db=db,
+                execution_id=exec_rec.id,
+                job_id="vgk_member_morning_statement",
+                recipient_type="PARTNER",
+                recipient_identifier=clean_phone,
+                recipient_name=p_name,
+                target_entity_type="official_partners",
+                target_entity_id=p_id,
+                status="FAILED",
+                error_message=str(exc)
+            )
             results.append({"member_id": p_id, "name": p_name, "status": "FAILED", "error": str(exc)})
+
+    # Supplementary targets if any configured
+    supp_targets = get_job_targets(db, "vgk_member_morning_statement", company_id=1)
+    for tgt in supp_targets:
+        if not tgt.get("is_active", True):
+            continue
+        tgt_phone = tgt.get("recipient_identifier")
+        if not tgt_phone:
+            continue
+        from app.services.whatsapp_auto_service import send_direct_whatsapp
+        cc_res = send_direct_whatsapp(
+            db=db,
+            phone=tgt_phone,
+            message=f"📊 [CC Notification] Morning Statement dispatch finished for {dispatched_count} active partners.",
+            job_id="vgk_member_morning_statement",
+            execution_id=exec_rec.id
+        )
+        cc_ok = cc_res.get("success", False)
+        record_dispatch(
+            db=db,
+            execution_id=exec_rec.id,
+            job_id="vgk_member_morning_statement",
+            recipient_type=tgt.get("recipient_type", "PHONE_NUMBER"),
+            recipient_identifier=tgt_phone,
+            recipient_name=tgt.get("recipient_name", "CC Target"),
+            message_log_id=cc_res.get("message_log_id"),
+            provider_message_id=cc_res.get("message_sid"),
+            status="SENT" if cc_ok else "FAILED",
+            error_message=cc_res.get("error") if not cc_ok else None,
+            payload_snapshot={"is_cc": True}
+        )
+
+    exec_status = "COMPLETED" if (failed_count == 0 and (dispatched_count > 0 or len(qualifying_members) == 0)) else ("PARTIAL" if dispatched_count > 0 else "FAILED")
+    finalize_execution(db, exec_rec.id, exec_status)
 
     payload = {
         "qualifying_members_count": len(qualifying_members),

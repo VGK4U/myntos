@@ -133,15 +133,75 @@ def dispatch_daily_vgk4u_morning_wish(
     """
     from app.api.v1.endpoints.whatsapp import _load_targets_from_db
     from app.services.whatsapp_audit_service import log_wa_trigger_execution
+    from app.services.automation_tracking_service import (
+        create_execution,
+        record_dispatch,
+        finalize_execution,
+        get_job_targets
+    )
 
     quote = get_dynamic_time_wish_quote()
     logger.info("🌅 Dispatching dynamic VGK4U time-of-day wish...")
 
-    active_targets = _load_targets_from_db(db)
-    target_groups = active_targets.get("vgk4u_morning_wish", [])
+    exec_rec = create_execution(
+        db=db,
+        job_id="vgk4u_morning_wish",
+        job_name="VGK4U Elite Community Morning Wish",
+        trigger_type=trigger_type,
+        triggered_by=triggered_by,
+        company_id=1
+    )
+
+    db_targets = get_job_targets(db, "vgk4u_morning_wish", company_id=1)
+    if db_targets:
+        target_groups = [
+            {"type": t.get("recipient_type", "GROUP"), "name": t.get("recipient_name"), "identifier": t.get("recipient_identifier")}
+            for t in db_targets if t.get("is_active", True)
+        ]
+    else:
+        active_targets = _load_targets_from_db(db)
+        target_groups = active_targets.get("vgk4u_morning_wish", [])
+
     if not target_groups:
         res = send_vgk4u_group_bot_message(quote, invite_code=invite_code, image_path=None)
         is_succ = res.get("success") is True
+
+        log_id = None
+        if is_succ:
+            try:
+                from app.models.whatsapp import MessageLog
+                import uuid
+                log_entry = MessageLog(
+                    message_sid=f"vgk4u_{uuid.uuid4().hex[:12]}",
+                    mobile_number="GROUP:VGK4U",
+                    message_type="vgk4u_wish",
+                    message_body=quote[:500],
+                    initial_status="sent",
+                    current_status="sent",
+                    sent_at=datetime.datetime.utcnow(),
+                    job_id="vgk4u_morning_wish",
+                    execution_id=exec_rec.id
+                )
+                db.add(log_entry)
+                db.commit()
+                log_id = log_entry.id
+            except Exception as log_e:
+                logger.warning("[VGK4U-WISH] Failed to write MessageLog: %s", log_e)
+
+        record_dispatch(
+            db=db,
+            execution_id=exec_rec.id,
+            job_id="vgk4u_morning_wish",
+            recipient_type="GROUP",
+            recipient_identifier=invite_code,
+            recipient_name="VGK4u Community Group",
+            message_log_id=log_id,
+            status="SENT" if is_succ else "FAILED",
+            error_message=res.get("error") if not is_succ else None,
+            payload_snapshot={"invite_code": invite_code}
+        )
+        finalize_execution(db, exec_rec.id, "COMPLETED" if is_succ else "FAILED")
+
         log_wa_trigger_execution(
             job_id="vgk4u_morning_wish",
             job_name="VGK4U Elite Community Morning Wish",
@@ -169,30 +229,50 @@ def dispatch_daily_vgk4u_morning_wish(
         code_or_name = clean_code or ident or t_name
         res = send_vgk4u_group_bot_message(quote, invite_code=code_or_name)
         results.append(res)
-        if res.get("success"):
+        is_ok = bool(res.get("success"))
+        if is_ok:
             success_count += 1
         else:
             failed_count += 1
 
-    overall_success = success_count > 0 and failed_count == 0
+        log_id = None
+        if is_ok:
+            try:
+                from app.models.whatsapp import MessageLog
+                import uuid
+                log_entry = MessageLog(
+                    message_sid=f"vgk4u_{uuid.uuid4().hex[:12]}",
+                    mobile_number=f"GROUP:{code_or_name[:40]}",
+                    message_type="vgk4u_wish",
+                    message_body=quote[:500],
+                    initial_status="sent",
+                    current_status="sent",
+                    sent_at=datetime.datetime.utcnow(),
+                    job_id="vgk4u_morning_wish",
+                    execution_id=exec_rec.id
+                )
+                db.add(log_entry)
+                db.commit()
+                log_id = log_entry.id
+            except Exception as log_e:
+                logger.warning("[VGK4U-WISH] Failed to write MessageLog: %s", log_e)
 
-    if success_count > 0:
-        try:
-            from app.models.whatsapp import MessageLog
-            import uuid
-            log_entry = MessageLog(
-                message_sid=f"vgk4u_{uuid.uuid4().hex[:12]}",
-                mobile_number="GROUP:VGK4U",
-                message_type="vgk4u_wish",
-                message_body=quote[:500],
-                initial_status="sent",
-                current_status="sent" if overall_success else "partial_failed",
-                sent_at=datetime.datetime.utcnow()
-            )
-            db.add(log_entry)
-            db.commit()
-        except Exception as log_e:
-            logger.warning("[VGK4U-WISH] Failed to write MessageLog: %s", log_e)
+        record_dispatch(
+            db=db,
+            execution_id=exec_rec.id,
+            job_id="vgk4u_morning_wish",
+            recipient_type=tg.get("type", "GROUP"),
+            recipient_identifier=code_or_name,
+            recipient_name=t_name or code_or_name,
+            message_log_id=log_id,
+            status="SENT" if is_ok else "FAILED",
+            error_message=res.get("error") if not is_ok else None,
+            payload_snapshot={"quote_head": quote[:100]}
+        )
+
+    overall_success = success_count > 0 and failed_count == 0
+    exec_status = "COMPLETED" if overall_success else ("PARTIAL" if success_count > 0 else "FAILED")
+    finalize_execution(db, exec_rec.id, exec_status)
 
     err_msg = None
     if not overall_success:

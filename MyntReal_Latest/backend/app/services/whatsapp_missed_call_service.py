@@ -151,7 +151,9 @@ def handle_missed_call_whatsapp_ack(
     caller_phone: str,
     caller_name: Optional[str] = None,
     lead_id: Optional[int] = None,
-    call_type: Optional[str] = "inbound"
+    call_type: Optional[str] = "inbound",
+    company_id: Optional[int] = None,
+    execution_id: Optional[str] = None
 ) -> Dict[str, Any]:
     """
     Triggers instant WhatsApp ACK for a missed call:
@@ -159,7 +161,7 @@ def handle_missed_call_whatsapp_ack(
     - Guard 1: Inbound Calls Only Guard (skips outbound dialer attempts)
     - Guard 2: 24-Hour Deduplication Window Guard (max 1 ACK per 24 hours per caller)
     - Guard 3: Already Contacted Today Guard (skips if staff already spoke to caller today)
-    - Matches or auto-creates CRM lead
+    - Matches or auto-creates CRM lead with scoped tenancy and locking
     - Dispatches missed_call_ack_v1 template
     """
     from app.models.crm import CRMLead
@@ -171,9 +173,33 @@ def handle_missed_call_whatsapp_ack(
     # ── Guard 1: Inbound Calls Only Guard ──────────────────────────────────────
     if call_type and str(call_type).lower() in ('outbound', 'outgoing'):
         logger.info(f"⏭️ Skipping missed call ACK for {caller_phone} — Outbound call attempt.")
+        if execution_id:
+            from app.services.automation_tracking_service import record_dispatch
+            record_dispatch(
+                db=db,
+                execution_id=execution_id,
+                job_id="missed_call_ack",
+                recipient_type="CUSTOMER_LEAD",
+                recipient_identifier=caller_phone,
+                recipient_name=caller_name or "Valued Customer",
+                status="SKIPPED",
+                error_message="Outbound call attempt"
+            )
         return {"success": True, "reason": "skipped_outbound_call", "phone": caller_phone}
 
     if not caller_phone or not _is_valid_phone(caller_phone):
+        if execution_id:
+            from app.services.automation_tracking_service import record_dispatch
+            record_dispatch(
+                db=db,
+                execution_id=execution_id,
+                job_id="missed_call_ack",
+                recipient_type="CUSTOMER_LEAD",
+                recipient_identifier=caller_phone or "",
+                recipient_name=caller_name or "Valued Customer",
+                status="FAILED",
+                error_message="invalid_phone"
+            )
         return {"success": False, "reason": "invalid_phone", "phone": caller_phone}
 
     phone_digits = ''.join(c for c in caller_phone if c.isdigit())
@@ -182,6 +208,18 @@ def handle_missed_call_whatsapp_ack(
     elif len(phone_digits) == 12 and phone_digits.startswith("91"):
         phone_formatted = phone_digits
     else:
+        if execution_id:
+            from app.services.automation_tracking_service import record_dispatch
+            record_dispatch(
+                db=db,
+                execution_id=execution_id,
+                job_id="missed_call_ack",
+                recipient_type="CUSTOMER_LEAD",
+                recipient_identifier=caller_phone,
+                recipient_name=caller_name or "Valued Customer",
+                status="FAILED",
+                error_message="unsupported_phone_format"
+            )
         return {"success": False, "reason": "unsupported_phone_format", "phone": caller_phone}
 
     phone_core = phone_digits[-10:]
@@ -199,6 +237,18 @@ def handle_missed_call_whatsapp_ack(
 
     if recent_ack:
         logger.info(f"⏭️ Skipping missed call ACK for {phone_formatted} — ACK already sent within 24 hours.")
+        if execution_id:
+            from app.services.automation_tracking_service import record_dispatch
+            record_dispatch(
+                db=db,
+                execution_id=execution_id,
+                job_id="missed_call_ack",
+                recipient_type="CUSTOMER_LEAD",
+                recipient_identifier=phone_formatted,
+                recipient_name=caller_name or "Valued Customer",
+                status="SKIPPED",
+                error_message="ACK already sent within 24 hours"
+            )
         return {"success": True, "reason": "skipped_dedup_24h", "phone": phone_formatted}
 
     # ── Guard 3: Already Spoken / Contacted Today Guard ───────────────────────
@@ -210,6 +260,18 @@ def handle_missed_call_whatsapp_ack(
 
     if answered_today:
         logger.info(f"⏭️ Skipping missed call ACK for {phone_formatted} — Staff already spoke with caller today.")
+        if execution_id:
+            from app.services.automation_tracking_service import record_dispatch
+            record_dispatch(
+                db=db,
+                execution_id=execution_id,
+                job_id="missed_call_ack",
+                recipient_type="CUSTOMER_LEAD",
+                recipient_identifier=phone_formatted,
+                recipient_name=caller_name or "Valued Customer",
+                status="SKIPPED",
+                error_message="Staff already spoke with caller today"
+            )
         return {"success": True, "reason": "skipped_already_contacted_today", "phone": phone_formatted}
 
     # ── Lead Match or Auto-Create ─────────────────────────────────────────
@@ -217,28 +279,72 @@ def handle_missed_call_whatsapp_ack(
     if lead_id:
         lead = db.query(CRMLead).get(lead_id)
 
-    if not lead:
-        lead = db.query(CRMLead).filter(CRMLead.phone.like(f"%{phone_core}")).first()
+    if not lead and company_id:
+        from app.models.staff_accounts import AssociatedCompany
+        from app.services.crm_dedup_service import find_phone_duplicate
+        comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == company_id).first()
+        tenant_id = comp.client_id if comp else None
+        if tenant_id:
+            lead = find_phone_duplicate(
+                db=db,
+                tenant_id=tenant_id,
+                company_id=company_id,
+                phone=phone_formatted,
+                with_lock=True
+            )
 
     if lead and lead.last_contact_date and lead.last_contact_date >= start_of_today_ist:
         logger.info(f"⏭️ Skipping missed call ACK for {phone_formatted} — Lead contacted today in CRM.")
+        if execution_id:
+            from app.services.automation_tracking_service import record_dispatch
+            record_dispatch(
+                db=db,
+                execution_id=execution_id,
+                job_id="missed_call_ack",
+                recipient_type="CUSTOMER_LEAD",
+                recipient_identifier=phone_formatted,
+                recipient_name=caller_name or "Valued Customer",
+                target_entity_type="crm_lead",
+                target_entity_id=lead.id,
+                status="SKIPPED",
+                error_message="Lead contacted today in CRM"
+            )
         return {"success": True, "reason": "skipped_already_contacted_today", "phone": phone_formatted}
 
-    if not lead:
-        # Auto-create new lead from missed call
-        lead_display_name = (caller_name or f"Missed Call {phone_core}").strip()
-        lead = CRMLead(
-            name=lead_display_name,
-            phone=phone_formatted,
-            company_id=4,
-            status="New",
-            source="Missed Call (MyOperator)",
-            created_at=ist_now,
-            updated_at=ist_now
-        )
-        db.add(lead)
-        db.commit()
-        db.refresh(lead)
+    if not lead and company_id:
+        from app.models.staff_accounts import AssociatedCompany
+        comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == company_id).first()
+        tenant_id = comp.client_id if comp else None
+        if tenant_id:
+            # Auto-create new lead from missed call with explicit tenant_id and company_id
+            lead_display_name = (caller_name or f"Missed Call {phone_core}").strip()
+            lead = CRMLead(
+                tenant_id=tenant_id,
+                company_id=company_id,
+                name=lead_display_name,
+                phone=phone_formatted,
+                status="New",
+                source="Missed Call (MyOperator)",
+                created_at=ist_now,
+                updated_at=ist_now
+            )
+            db.add(lead)
+            db.flush()
+            from app.services.crm_phone_sync_service import sync_lead_phone_identities
+            sync_lead_phone_identities(
+                db=db,
+                lead=lead,
+                phone_raw=lead.phone,
+                source_channel='whatsapp_missed_call',
+                source_ref=f"missed_call_{phone_core}",
+                with_lock=True
+            )
+            db.commit()
+            db.refresh(lead)
+        else:
+            logger.warning(f"⏭️ Skipped auto-create lead for missed call {phone_formatted}: Company {company_id} has no tenant_id")
+    elif not lead:
+        logger.warning(f"⏭️ Skipped auto-create lead for missed call {phone_formatted}: No authoritative company_id provided (fail closed)")
 
     display_name = (getattr(lead, 'first_name', '') or getattr(lead, 'name', '') or caller_name or 'Valued Customer').strip()
     if display_name.lower().startswith('missed call'):
@@ -267,16 +373,37 @@ def handle_missed_call_whatsapp_ack(
         sender_type="auto",
         company_id=4,
         idempotency_key=f"missed_call_ack:{phone_formatted}:{int(ist_now.timestamp() // 21600)}",
-        raw_body_fallback=MISSED_CALL_TEMPLATE["body_text"].replace("{{name}}", display_name)
+        raw_body_fallback=MISSED_CALL_TEMPLATE["body_text"].replace("{{name}}", display_name),
+        job_id="missed_call_ack",
+        execution_id=execution_id
     )
 
     sent_success = res.get("success", False)
     error_msg = res.get("reason") if not sent_success else None
 
+    if execution_id:
+        from app.services.automation_tracking_service import record_dispatch
+        record_dispatch(
+            db=db,
+            execution_id=execution_id,
+            job_id="missed_call_ack",
+            recipient_type="CUSTOMER_LEAD",
+            recipient_identifier=phone_formatted,
+            recipient_name=display_name,
+            target_entity_type="crm_lead" if lead else None,
+            target_entity_id=lead.id if lead else None,
+            message_log_id=res.get("message_log_id"),
+            provider_message_id=res.get("wamid"),
+            status="SENT" if sent_success else "FAILED",
+            error_message=error_msg,
+            payload_snapshot={"template": "missed_call_ack_v1"}
+        )
+
     return {
         "success": sent_success,
         "wamid": res.get("wamid"),
-        "lead_id": lead.id,
+        "message_log_id": res.get("message_log_id"),
+        "lead_id": lead.id if lead else None,
         "phone": phone_formatted,
         "recipient_name": display_name,
         "error": error_msg

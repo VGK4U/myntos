@@ -143,8 +143,28 @@ def is_test_or_dummy_lead(name: Optional[str], phone: Optional[str],
             return True
     return False
 
+_company_tenant_cache: Dict[int, Optional[int]] = {}
+
+def _resolve_company_tenant_id(db: Any, company_id: Optional[int]) -> Optional[int]:
+    """Resolve tenant_id from associated_companies.client_id for multi-tenant isolation."""
+    if not company_id or not db:
+        return None
+    if company_id in _company_tenant_cache:
+        return _company_tenant_cache[company_id]
+    try:
+        from sqlalchemy import text
+        row = db.execute(text("SELECT client_id FROM associated_companies WHERE id = :cid"), {"cid": company_id}).fetchone()
+        t_id = row[0] if row else None
+        _company_tenant_cache[company_id] = t_id
+        return t_id
+    except Exception as e:
+        logger.warning(f"[SHEETS-IMPORT] Failed to resolve tenant_id for company {company_id}: {e}")
+        return None
+
+
 def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
-                    company_id: int, source_tag: str = 'Google Sheets') -> Optional[Dict[str, Any]]:
+                    company_id: int, source_tag: str = 'Google Sheets',
+                    db: Optional[Any] = None) -> Optional[Dict[str, Any]]:
     """Convert a sheet row into a CRM lead dict."""
 
     def get(field: str) -> str:
@@ -260,7 +280,10 @@ def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
         target_company_id = 4
         target_category_id = 6
 
+    tenant_id = _resolve_company_tenant_id(db, target_company_id) if db else None
+
     return {
+        'tenant_id':            tenant_id,
         'company_id':           target_company_id,
         'category_id':          target_category_id,
         'name':                 name[:200],
@@ -284,7 +307,9 @@ def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
     }
 
 def is_duplicate(phone: Optional[str], email: Optional[str],
-                 fb_lead_id: Optional[str], db) -> bool:
+                 fb_lead_id: Optional[str], db,
+                 tenant_id: Optional[int] = None,
+                 company_id: Optional[int] = None) -> bool:
     """Check if this lead already exists in CRM by phone, email, or FB lead_id."""
     from sqlalchemy import text
     try:
@@ -295,10 +320,12 @@ def is_duplicate(phone: Optional[str], email: Optional[str],
             # 1. Check meta_leads_attribution table
             try:
                 from app.models.meta_attribution import MetaLeadsAttribution
-                att = db.query(MetaLeadsAttribution.id).filter(
+                att_q = db.query(MetaLeadsAttribution.id).filter(
                     MetaLeadsAttribution.meta_lead_id.in_([clean_id, f"l:{clean_id}", raw_id])
-                ).first()
-                if att:
+                )
+                if company_id:
+                    att_q = att_q.filter(MetaLeadsAttribution.company_id == company_id)
+                if att_q.first():
                     return True
             except Exception as att_err:
                 logger.warning(f"Attribution check error in is_duplicate: {att_err}")
@@ -308,17 +335,31 @@ def is_duplicate(phone: Optional[str], email: Optional[str],
                     pass
 
             # 2. Check crm_leads source_details
-            row = db.execute(text(
-                "SELECT id FROM crm_leads WHERE (source_details LIKE :p1 OR source_details LIKE :p2) LIMIT 1"
-            ), {'p1': f"%'lead_id': '{clean_id}'%", 'p2': f"%'lead_id': 'l:{clean_id}'%"}).fetchone()
+            query = "SELECT id FROM crm_leads WHERE (source_details LIKE :p1 OR source_details LIKE :p2)"
+            params = {'p1': f"%'lead_id': '{clean_id}'%", 'p2': f"%'lead_id': 'l:{clean_id}'%"}
+            if tenant_id and company_id:
+                query += " AND tenant_id = :tid AND company_id = :cid"
+                params['tid'] = tenant_id
+                params['cid'] = company_id
+            row = db.execute(text(query + " LIMIT 1"), params).fetchone()
             if row:
                 return True
 
-        if phone and len(str(phone).strip()) >= 8:
+        if phone and tenant_id and company_id:
+            from app.services.crm_dedup_service import find_phone_duplicate
+            dup = find_phone_duplicate(
+                db=db,
+                tenant_id=tenant_id,
+                company_id=company_id,
+                phone=phone,
+                with_lock=True
+            )
+            if dup:
+                return True
+        elif phone and len(str(phone).strip()) >= 8 and not (tenant_id and company_id):
             clean_phone = re.sub(r'^[pP]:\s*', '', str(phone).strip())
             clean_phone = re.sub(r'[^0-9]', '', clean_phone)[-10:]
             if len(clean_phone) >= 8:
-                # DC-DEDUP-002: Check given phone against BOTH phone and alternate_phone columns
                 row = db.execute(text(
                     "SELECT id FROM crm_leads WHERE "
                     "regexp_replace(phone, '[^0-9]', '', 'g') LIKE :ph "
@@ -522,10 +563,13 @@ def _import_rows_to_crm(
             result['skipped_empty'] += 1
             continue
 
-        lead_data = row_to_crm_lead(row, col_map, company_id, source_tag)
+        lead_data = row_to_crm_lead(row, col_map, company_id, source_tag, db=db)
         if not lead_data:
             result['skipped_empty'] += 1
             continue
+
+        if not lead_data.get('tenant_id'):
+            lead_data['tenant_id'] = _resolve_company_tenant_id(db, lead_data.get('company_id'))
 
         # DC Protocol Apr 2026: Capture ALL unmapped columns into description
         # so no form field is ever silently dropped regardless of future form changes
@@ -544,13 +588,23 @@ def _import_rows_to_crm(
 
         if skip_duplicates:
             fb_id = row[col_map['lead_id']] if 'lead_id' in col_map and col_map['lead_id'] < len(row) else None
-            if is_duplicate(lead_data.get('phone'), lead_data.get('email'), fb_id, db):
+            if is_duplicate(lead_data.get('phone'), lead_data.get('email'), fb_id, db, tenant_id=lead_data.get('tenant_id'), company_id=lead_data.get('company_id')):
                 result['skipped_duplicates'] += 1
                 continue
 
         try:
             crm_lead = CRMLead(**lead_data)
             db.add(crm_lead)
+            db.flush()
+            from app.services.crm_phone_sync_service import sync_lead_phone_identities
+            sync_lead_phone_identities(
+                db=db,
+                lead=crm_lead,
+                phone_raw=crm_lead.phone,
+                source_channel='google_sheets_import',
+                source_ref=f"sheet_import_{crm_lead.company_id}",
+                with_lock=True
+            )
             db.commit()
             result['imported'] += 1
 

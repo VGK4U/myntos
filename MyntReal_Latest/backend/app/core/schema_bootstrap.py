@@ -2247,6 +2247,7 @@ def run_schema_bootstrap():
     Run all schema bootstrap operations
     Called on application startup
     """
+    from app.core.database import SessionLocal
     logger.info("[SCHEMA BOOTSTRAP] Starting schema bootstrap...")
     bootstrap_background_jobs_schema()
     backfill_job_handler_metadata()
@@ -2480,6 +2481,13 @@ def run_schema_bootstrap():
     except Exception as _void_err:
         logger.warning(f"[DC_VOID_FIELDS_20260618] Non-fatal: {_void_err}")
 
+    # Persistent Relational Automation Execution & Dispatch Schema (Sep 2026)
+    try:
+        bootstrap_automation_relational_schema()
+    except Exception as _auto_err:
+        logger.error(f"[AUTOMATION-SCHEMA] Bootstrap error: {_auto_err}")
+        raise
+
     logger.info("[SCHEMA BOOTSTRAP] ✅ Schema bootstrap complete")
 
 
@@ -2520,6 +2528,120 @@ def bootstrap_community_association_name():
             _db.close()
     except Exception as e:
         logger.warning(f"[DC-COMMUNITY-ASSOCIATION-NAME-001] Non-fatal: {e}")
+
+
+def bootstrap_automation_relational_schema():
+    """
+    Persistent Relational Automation Execution, Dispatch, and Target Configuration Schema Bootstrap.
+    Idempotently creates:
+    - automation_execution table
+    - automation_dispatch table
+    - automation_target_config table
+    - adds job_id, execution_id to message_log
+    - adds job_id, execution_id to whatsapp_bot_queue
+    Enforces local statement/lock timeouts.
+    """
+    _db = SessionLocal()
+    try:
+        _db.execute(text("SET LOCAL lock_timeout = '2s'"))
+        _db.execute(text("SET LOCAL statement_timeout = '10s'"))
+
+        # 1. automation_execution
+        _db.execute(text("""
+            CREATE TABLE IF NOT EXISTS automation_execution (
+                id VARCHAR(64) PRIMARY KEY,
+                job_id VARCHAR(100) NOT NULL,
+                job_name VARCHAR(200) NOT NULL,
+                trigger_type VARCHAR(50) NOT NULL DEFAULT 'SCHEDULED',
+                triggered_by VARCHAR(100) NOT NULL DEFAULT 'System Cron',
+                triggered_by_staff_id INTEGER REFERENCES staff_employees(id),
+                company_id INTEGER NOT NULL DEFAULT 1,
+                status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+                target_summary VARCHAR(500),
+                total_targets INTEGER NOT NULL DEFAULT 0,
+                sent_count INTEGER NOT NULL DEFAULT 0,
+                uncertain_count INTEGER NOT NULL DEFAULT 0,
+                failed_count INTEGER NOT NULL DEFAULT 0,
+                skipped_count INTEGER NOT NULL DEFAULT 0,
+                started_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC'),
+                completed_at TIMESTAMP WITHOUT TIME ZONE,
+                error_message TEXT,
+                is_legacy BOOLEAN NOT NULL DEFAULT FALSE,
+                execution_metadata JSONB
+            )
+        """))
+        _db.execute(text("CREATE INDEX IF NOT EXISTS idx_ae_job_started ON automation_execution(job_id, started_at)"))
+        _db.execute(text("CREATE INDEX IF NOT EXISTS idx_ae_status ON automation_execution(status)"))
+        _db.execute(text("CREATE INDEX IF NOT EXISTS idx_ae_legacy ON automation_execution(is_legacy)"))
+
+        # 2. automation_dispatch
+        _db.execute(text("""
+            CREATE TABLE IF NOT EXISTS automation_dispatch (
+                id BIGSERIAL PRIMARY KEY,
+                execution_id VARCHAR(64) NOT NULL REFERENCES automation_execution(id) ON DELETE CASCADE,
+                job_id VARCHAR(100) NOT NULL,
+                recipient_type VARCHAR(50) NOT NULL,
+                recipient_identifier VARCHAR(255) NOT NULL,
+                recipient_name VARCHAR(200),
+                target_entity_type VARCHAR(50),
+                target_entity_id INTEGER,
+                queue_id BIGINT,
+                message_log_id INTEGER,
+                provider VARCHAR(50) NOT NULL DEFAULT 'META_WHATSAPP',
+                provider_message_id VARCHAR(500),
+                status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+                sent_at TIMESTAMP WITHOUT TIME ZONE,
+                delivered_at TIMESTAMP WITHOUT TIME ZONE,
+                failed_at TIMESTAMP WITHOUT TIME ZONE,
+                error_code VARCHAR(100),
+                error_message TEXT,
+                payload_snapshot JSONB
+            )
+        """))
+        _db.execute(text("CREATE INDEX IF NOT EXISTS idx_ad_exec ON automation_dispatch(execution_id)"))
+        _db.execute(text("CREATE INDEX IF NOT EXISTS idx_ad_job_recipient ON automation_dispatch(job_id, recipient_identifier)"))
+        _db.execute(text("CREATE INDEX IF NOT EXISTS idx_ad_status ON automation_dispatch(status)"))
+        _db.execute(text("CREATE INDEX IF NOT EXISTS idx_ad_wamid ON automation_dispatch(provider_message_id)"))
+        _db.execute(text("CREATE INDEX IF NOT EXISTS idx_ad_ml_id ON automation_dispatch(message_log_id)"))
+        _db.execute(text("CREATE INDEX IF NOT EXISTS idx_ad_queue_id ON automation_dispatch(queue_id)"))
+
+        # 3. automation_target_config
+        _db.execute(text("""
+            CREATE TABLE IF NOT EXISTS automation_target_config (
+                id SERIAL PRIMARY KEY,
+                job_id VARCHAR(100) NOT NULL,
+                company_id INTEGER NOT NULL DEFAULT 1,
+                target_type VARCHAR(50) NOT NULL,
+                name VARCHAR(200) NOT NULL,
+                identifier VARCHAR(255) NOT NULL,
+                target_role VARCHAR(50) DEFAULT 'PRIMARY',
+                is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                created_by_staff_id INTEGER REFERENCES staff_employees(id),
+                created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC'),
+                updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT (NOW() AT TIME ZONE 'UTC')
+            )
+        """))
+        _db.execute(text("ALTER TABLE automation_target_config ADD COLUMN IF NOT EXISTS target_role VARCHAR(50) DEFAULT 'PRIMARY'"))
+        _db.execute(text("CREATE INDEX IF NOT EXISTS idx_atc_job_active ON automation_target_config(job_id, is_active)"))
+
+        # 4. message_log column additions
+        _db.execute(text("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS job_id VARCHAR(100)"))
+        _db.execute(text("ALTER TABLE message_log ADD COLUMN IF NOT EXISTS execution_id VARCHAR(64)"))
+        _db.execute(text("CREATE INDEX IF NOT EXISTS idx_ml_job_exec ON message_log(job_id, execution_id)"))
+
+        # 5. whatsapp_bot_queue column additions
+        _db.execute(text("ALTER TABLE whatsapp_bot_queue ADD COLUMN IF NOT EXISTS job_id VARCHAR(100)"))
+        _db.execute(text("ALTER TABLE whatsapp_bot_queue ADD COLUMN IF NOT EXISTS execution_id VARCHAR(64)"))
+        _db.execute(text("CREATE INDEX IF NOT EXISTS idx_wbq_job_exec ON whatsapp_bot_queue(job_id, execution_id)"))
+
+        _db.commit()
+        logger.info("[SCHEMA BOOTSTRAP] ✅ Persistent relational automation schema successfully bootstrapped")
+    except Exception as e:
+        _db.rollback()
+        logger.error(f"[SCHEMA BOOTSTRAP] ❌ Error bootstrapping automation schema: {e}")
+        raise
+    finally:
+        _db.close()
 
 
 # DC Protocol (ARCHITECTURAL FIX - Sep 2026):

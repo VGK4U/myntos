@@ -1752,6 +1752,17 @@ def _resolve_ist_iso(dt_val: Optional[datetime], created_fallback: Optional[date
     return dt.isoformat() if hasattr(dt, 'isoformat') and callable(dt.isoformat) else (str(dt) if dt else None)
 
 
+def _call_sort_key(x: Dict[str, Any]):
+    """
+    Deterministic composite sorting key for unified calls:
+    Primary: started_at (string timestamp or date)
+    Secondary: id (integer tie-breaker)
+    """
+    started_str = str(x.get("started_at") or "")
+    cid = int(x.get("id") or 0)
+    return (started_str, cid)
+
+
 @router.get("/incoming-calls")
 @router.get("/call-history")
 def list_incoming_calls(
@@ -1878,7 +1889,7 @@ def list_incoming_calls(
                 (VoIPCallSession.destination_number.ilike(f"%{s_clean}%")) |
                 (VoIPCallSession.call_session_id.ilike(f"%{s_clean}%"))
             )
-        voip_items = query.order_by(VoIPCallSession.created_at.desc()).limit(300).all()
+        voip_items = query.order_by(VoIPCallSession.created_at.desc(), VoIPCallSession.id.desc()).limit(500).all()
         scl_items = []
         att_rows = []
         target_staff_ids = None
@@ -1996,7 +2007,7 @@ def list_incoming_calls(
                 (VoIPCallSession.provider_call_id.ilike(f"%{s_clean}%"))
             )
 
-        voip_items = voip_q.order_by(VoIPCallSession.created_at.desc()).limit(300).all()
+        voip_items = voip_q.order_by(VoIPCallSession.created_at.desc(), VoIPCallSession.id.desc()).limit(500).all()
 
         # 2. Source 2: StaffCallLog (Synced Mobile Calls, Direct Dials, Non-Softphone)
         scl_items = []
@@ -2048,7 +2059,7 @@ def list_incoming_calls(
                     )
                 )
 
-            scl_items = scl_q.order_by(StaffCallLog.call_datetime.desc()).limit(300).all()
+            scl_items = scl_q.order_by(StaffCallLog.call_datetime.desc(), StaffCallLog.id.desc()).limit(500).all()
 
         # 3. Source 3: crm_dialer_attempts (Standalone skipped/unconnected dialer attempts)
         att_rows = []
@@ -2080,7 +2091,7 @@ def list_incoming_calls(
                 att_sql += " AND (l.phone ILIKE :srch OR l.name ILIKE :srch)"
                 params["srch"] = f"%{s_clean}%"
 
-            att_sql += " ORDER BY a.dialed_at DESC LIMIT 200"
+            att_sql += " ORDER BY a.dialed_at DESC, a.id DESC LIMIT 500"
             try:
                 from sqlalchemy import text
                 att_rows = db.execute(text(att_sql), params).fetchall()
@@ -2634,15 +2645,15 @@ def list_incoming_calls(
         elif ls_lower in ('others', 'other', 'non_crm'):
             res_items = [item for item in res_items if item.get('lead_scope') == 'others']
 
-    # ── Sort All Unified Calls ────────────────────────────────────────────────
+    # ── Sort All Unified Calls (Deterministic with ID Tie-Breaker) ────────────
     if sort_by == "oldest":
-        res_items.sort(key=lambda x: str(x.get("started_at") or ""))
+        res_items.sort(key=_call_sort_key)
     elif sort_by == "duration_desc":
-        res_items.sort(key=lambda x: (int(x.get("duration_seconds") or 0), str(x.get("started_at") or "")), reverse=True)
+        res_items.sort(key=lambda x: (int(x.get("duration_seconds") or 0), _call_sort_key(x)), reverse=True)
     elif sort_by == "duration_asc":
-        res_items.sort(key=lambda x: (int(x.get("duration_seconds") or 0), str(x.get("started_at") or "")))
-    else: # newest
-        res_items.sort(key=lambda x: str(x.get("started_at") or ""), reverse=True)
+        res_items.sort(key=lambda x: (int(x.get("duration_seconds") or 0), _call_sort_key(x)))
+    else: # newest (default across all scopes)
+        res_items.sort(key=_call_sort_key, reverse=True)
 
     total_count = len(res_items)
     paginated_items = res_items[(page - 1) * page_size : page * page_size]
@@ -2915,6 +2926,12 @@ def get_customer_call_history(
         else:
             rec_url = None
 
+        rec_dur = meta.get("recording_duration_seconds") or meta.get("recording_duration")
+        if rec_dur is None and rec_url:
+            rec_dur = dur
+        rec_dur = int(rec_dur or 0)
+        rec_dur_formatted = f"{rec_dur // 60:02d}m {rec_dur % 60:02d}s" if rec_url else None
+
         history_items.append({
             "id": s.id,
             "call_session_id": s.call_session_id,
@@ -2926,6 +2943,8 @@ def get_customer_call_history(
             "ended_at": _resolve_ist_iso(s.ended_at, (s.created_at + timedelta(seconds=dur)) if s.created_at and dur else None),
             "duration_formatted": f"{dur // 60:02d}m {dur % 60:02d}s",
             "duration_seconds": dur,
+            "recording_duration": rec_dur,
+            "recording_duration_formatted": rec_dur_formatted,
             "operator_name": op_name,
             "recording_url": rec_url,
             "has_recording": bool(rec_url),

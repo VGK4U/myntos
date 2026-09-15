@@ -231,6 +231,10 @@ class StaffEmployee(Base):
     created_at = Column(DateTime, default=get_indian_time)
     updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)
     
+    # Stage 1 / Stage 2A SaaS Multi-Tenant Foundation
+    tenant_id = Column(Integer, ForeignKey('platform_clients.id', ondelete='RESTRICT'), nullable=False, default=1, index=True)
+    token_version = Column(Integer, nullable=False, default=1)
+    
     # Soft Delete (Dec 2025) - DC Protocol compliant with restore capability
     is_deleted = Column(Boolean, default=False, index=True)
     deleted_at = Column(DateTime, nullable=True)
@@ -263,6 +267,8 @@ class StaffEmployee(Base):
     base_company = relationship("AssociatedCompany", foreign_keys=[base_company_id])
     # DC Protocol (Dec 21, 2025): Additional departments relationship (many-to-many)
     additional_departments = relationship("StaffEmployeeDepartment", foreign_keys="[StaffEmployeeDepartment.employee_id]", cascade="all, delete-orphan")
+    # Stage 1 / Stage 2A: Company Memberships
+    company_memberships = relationship("StaffCompanyMembership", back_populates="staff", cascade="all, delete-orphan", foreign_keys="[StaffCompanyMembership.staff_id]")
     
     def to_dict(self, include_sensitive=False, company_lookup=None):
         # DC_RBAC_API_STRUCTURE_001: Build complete role object for frontend access control
@@ -324,6 +330,9 @@ class StaffEmployee(Base):
             "base_company_name": self.base_company.company_name if self.base_company else None,
             "base_company_code": self.base_company.company_code if self.base_company else None,
             "data_companies": self._get_data_companies_info(company_lookup=company_lookup),
+            # Stage 1 / Stage 2A Multi-Tenant Context
+            "tenant_id": getattr(self, 'tenant_id', 1) or 1,
+            "token_version": getattr(self, 'token_version', 1) or 1,
             # DC Protocol (Dec 21, 2025): Additional Departments (multi-department support)
             "additional_departments": self._get_additional_departments_info(),
             # DC Protocol (Jan 2026): Employment Type - Probation/Confirmed tracking
@@ -405,6 +414,50 @@ class StaffEmployee(Base):
         if not self.role or not target_employee.role:
             return False
         return self.role.hierarchy_level > target_employee.role.hierarchy_level
+
+
+class StaffCompanyMembership(Base):
+    """
+    Staff Company Membership (Stage 1 / Stage 2A Foundation)
+    Represents explicit operational company access for a staff member within a tenant.
+    """
+    __tablename__ = 'staff_company_memberships'
+
+    id = Column(Integer, primary_key=True, index=True)
+    staff_id = Column(Integer, ForeignKey('staff_employees.id', ondelete='CASCADE'), nullable=False, index=True)
+    tenant_id = Column(Integer, ForeignKey('platform_clients.id', ondelete='CASCADE'), nullable=False, index=True)
+    company_id = Column(Integer, ForeignKey('associated_companies.id', ondelete='CASCADE'), nullable=False, index=True)
+    is_primary = Column(Boolean, nullable=False, default=False)
+    is_active = Column(Boolean, nullable=False, default=True)
+    role_id = Column(Integer, ForeignKey('staff_roles.id', ondelete='SET NULL'), nullable=True)
+    segment_access = Column(JSONB, nullable=False, default=list)
+    created_at = Column(DateTime, default=get_indian_time)
+    updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)
+
+    staff = relationship("StaffEmployee", back_populates="company_memberships", foreign_keys=[staff_id])
+    company = relationship("AssociatedCompany", foreign_keys=[company_id])
+    role = relationship("StaffRole", foreign_keys=[role_id])
+
+    __table_args__ = (
+        UniqueConstraint('staff_id', 'company_id', name='uq_staff_company_membership'),
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "staff_id": self.staff_id,
+            "tenant_id": self.tenant_id,
+            "company_id": self.company_id,
+            "company_name": self.company.company_name if self.company else None,
+            "company_code": self.company.company_code if self.company else None,
+            "is_primary": self.is_primary,
+            "is_active": self.is_active,
+            "role_id": self.role_id,
+            "role_name": self.role.role_name if self.role else None,
+            "segment_access": self.segment_access or [],
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None
+        }
 
 
 class StaffEmployeeKyc(Base):

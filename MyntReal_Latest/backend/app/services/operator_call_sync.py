@@ -393,6 +393,8 @@ def sync_myoperator_logs(
     try:
         records = _fetch_myoperator_logs(ts_from, ts_to, db=db)
 
+        operator_sync_exec_id = None
+
         for rec in records:
             call_id = rec.get('call_id') or ''
             if not call_id:
@@ -445,8 +447,27 @@ def sync_myoperator_logs(
                     if existing.followup_created:
                         followups_created += 1
                     try:
+                        if not operator_sync_exec_id:
+                            from app.services.automation_tracking_service import create_execution
+                            _rec = create_execution(
+                                db=db,
+                                job_id="missed_call_ack",
+                                job_name="Instant Missed Call Auto-ACK",
+                                trigger_type=trigger_type,
+                                triggered_by=triggered_by,
+                                company_id=MYOPERATOR_COMPANY_ID
+                            )
+                            operator_sync_exec_id = _rec.id
                         from app.services.whatsapp_missed_call_service import handle_missed_call_whatsapp_ack
-                        handle_missed_call_whatsapp_ack(db, existing.caller_number, caller_name=None, lead_id=existing.crm_lead_id, call_type=existing.call_type)
+                        handle_missed_call_whatsapp_ack(
+                            db,
+                            existing.caller_number,
+                            caller_name=None,
+                            lead_id=existing.crm_lead_id,
+                            call_type=existing.call_type,
+                            company_id=existing.company_id,
+                            execution_id=operator_sync_exec_id
+                        )
                     except Exception as _mc_e:
                         logger.warning(f"[OPERATOR_SYNC] Could not send missed call WA ACK: {_mc_e}")
                 updated += 1
@@ -483,8 +504,27 @@ def sync_myoperator_logs(
                         if call.followup_created:
                             followups_created += 1
                         try:
+                            if not operator_sync_exec_id:
+                                from app.services.automation_tracking_service import create_execution
+                                _rec = create_execution(
+                                    db=db,
+                                    job_id="missed_call_ack",
+                                    job_name="Instant Missed Call Auto-ACK",
+                                    trigger_type=trigger_type,
+                                    triggered_by=triggered_by,
+                                    company_id=MYOPERATOR_COMPANY_ID
+                                )
+                                operator_sync_exec_id = _rec.id
                             from app.services.whatsapp_missed_call_service import handle_missed_call_whatsapp_ack
-                            handle_missed_call_whatsapp_ack(db, call.caller_number, caller_name=None, lead_id=call.crm_lead_id, call_type=call.call_type)
+                            handle_missed_call_whatsapp_ack(
+                                db,
+                                call.caller_number,
+                                caller_name=None,
+                                lead_id=call.crm_lead_id,
+                                call_type=call.call_type,
+                                company_id=call.company_id,
+                                execution_id=operator_sync_exec_id
+                            )
                         except Exception as _mc_e:
                             logger.warning(f"[OPERATOR_SYNC] Could not send missed call WA ACK: {_mc_e}")
                     created += 1
@@ -516,6 +556,14 @@ def sync_myoperator_logs(
             logger.warning('[OPERATOR_SYNC] Staff propagation error: %s', prop_err)
 
         db.commit()
+
+        if operator_sync_exec_id:
+            try:
+                from app.services.automation_tracking_service import finalize_execution
+                finalize_execution(db, operator_sync_exec_id, "COMPLETED")
+            except Exception as _fin_err:
+                logger.warning(f"[OPERATOR_SYNC] Could not finalize execution: {_fin_err}")
+
         logger.info('[OPERATOR_SYNC] Sync complete: %d total, %d created, %d updated, %d skipped, %d followups', synced, created, updated, skipped, followups_created)
         result = {
             'synced': synced,

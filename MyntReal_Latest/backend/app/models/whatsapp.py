@@ -52,7 +52,7 @@ class MessageLog(Base):
     message_type = Column(String(50), default='whatsapp_otp')
     
     # Recipient details
-    mobile_number = Column(String(15))
+    mobile_number = Column(String(100))
     user_name = Column(String(100))
     otp_code = Column(String(10))  # Store securely or hash if needed
     
@@ -84,6 +84,10 @@ class MessageLog(Base):
     sent_by_staff_id = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
     sent_by_name = Column(String(200), nullable=True)   # denormalized: "John (MR10001)" or "System/Auto"
     sender_type = Column(String(50), nullable=True)      # 'staff', 'partner', 'auto', 'system'
+
+    # Automation link — deterministic association to automation execution
+    job_id = Column(String(100), index=True, nullable=True)
+    execution_id = Column(String(64), index=True, nullable=True)
 
     # Relationship
     sent_by_staff = relationship('StaffEmployee', foreign_keys=[sent_by_staff_id])

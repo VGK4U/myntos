@@ -235,7 +235,7 @@ class TelephonyService {
               const sdk = new PlivoConstructor({
                 allowMultipleIncomingCalls: true,
                 enableDscp: true,
-                enableNoiseReduction: true,
+                enableNoiseReduction: false,
                 audioConstraints: audioConstraints,
                 audioElementOption: {
                   remoteAudioId: 'plivoRemoteAudio'
@@ -244,7 +244,7 @@ class TelephonyService {
               this.plivoClient = sdk.client || sdk;
             } else if (PlivoConstructor.Client) {
               this.plivoClient = new PlivoConstructor.Client({
-                enableNoiseReduction: true,
+                enableNoiseReduction: false,
                 audioConstraints: audioConstraints
               });
             }
@@ -912,68 +912,10 @@ class TelephonyService {
   }
 
   private async applyModestMicBoost(): Promise<void> {
-    try {
-      if (this.isMicBoostApplied) return;
-      const pc =
-        (typeof this.plivoClient?._getPeerConnection === 'function' ? this.plivoClient._getPeerConnection()?.pc : null) ||
-        this.plivoClient?._currentSession?.session?.connection ||
-        this.plivoClient?._currentSession?.session?._connection;
-
-      if (!pc || typeof pc.getSenders !== 'function') return;
-
-      const senders = pc.getSenders();
-      const audioSender = senders.find((s: any) => s.track && s.track.kind === 'audio');
-      if (!audioSender || !audioSender.track) return;
-
-      const originalTrack = audioSender.track;
-      if (originalTrack === this.boostedMicTrack) return;
-
-      const AudioCtxClass = (window as any).AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtxClass) return;
-
-      console.log('[TelephonyService] Applying modest mic boost (+2.5 dB / 1.33x with limiter)...');
-      const ctx: AudioContext = new AudioCtxClass();
-      this.micBoostCtx = ctx;
-      if (ctx.state === 'suspended') {
-        await ctx.resume();
-      }
-      if (ctx.state !== 'running') {
-        console.warn('[TelephonyService] AudioContext is not running (state:', ctx.state, '). Skipping mic boost to preserve audio.');
-        return;
-      }
-
-      const inputStream = new MediaStream([originalTrack]);
-      const sourceNode = ctx.createMediaStreamSource(inputStream);
-
-      // Gain +2.5 dB (1.33x factor)
-      const gainNode = ctx.createGain();
-      gainNode.gain.setValueAtTime(1.33, ctx.currentTime);
-
-      // Dynamics limiter
-      const compressor = ctx.createDynamicsCompressor();
-      compressor.threshold.setValueAtTime(-14, ctx.currentTime);
-      compressor.knee.setValueAtTime(6, ctx.currentTime);
-      compressor.ratio.setValueAtTime(4, ctx.currentTime);
-      compressor.attack.setValueAtTime(0.003, ctx.currentTime);
-      compressor.release.setValueAtTime(0.05, ctx.currentTime);
-
-      const destNode = ctx.createMediaStreamDestination();
-      sourceNode.connect(gainNode);
-      gainNode.connect(compressor);
-      compressor.connect(destNode);
-
-      const boostedTracks = destNode.stream.getAudioTracks();
-      if (boostedTracks.length === 0) return;
-
-      const boostedTrack = boostedTracks[0];
-      this.boostedMicTrack = boostedTrack;
-
-      await audioSender.replaceTrack(boostedTrack);
-      this.isMicBoostApplied = true;
-      console.log('[TelephonyService] Modest mic boost applied successfully (+2.5 dB / 1.33x).');
-    } catch (err) {
-      console.warn('[TelephonyService] Notice applying mic boost:', err);
-    }
+    // Preserves uncompressed, pristine native WebRTC audio across Android and iOS Capacitor webviews.
+    // Bypasses WebAudio DynamicsCompressor and track-replacement to prevent double-compression,
+    // acoustic artifacts, and browser sample-rate resampling mismatches.
+    console.log('[TelephonyService] Native high-fidelity WebRTC audio pipeline active (WebAudio track-replacement bypassed).');
   }
 
   private cleanupMicBoost(): void {

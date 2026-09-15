@@ -3196,12 +3196,17 @@ function openMissingFieldsModal(fields,payload){
     </div>`;
   }
   if(otherFields.length){
-    html+=otherFields.map(f=>`
+    html+=otherFields.map(f=>{
+      const isDate = (f.field && (f.field.endsWith('_date') || f.field.includes('date')));
+      const inputType = isDate ? 'date' : 'text';
+      const placeholder = isDate ? 'YYYY-MM-DD' : `Enter ${esc(f.label)}`;
+      return `
       <div style="margin-bottom:12px">
         <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px">${esc(f.label)}</label>
-        <input id="mf_${esc(f.field.replace(/\./g,'_'))}" type="text" placeholder="Enter ${esc(f.label)}"
+        <input id="mf_${esc(f.field.replace(/\./g,'_'))}" type="${inputType}" placeholder="${placeholder}"
           style="width:100%;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px"/>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
   body.innerHTML=html;
   document.getElementById('mfDocLabel').textContent=_genDocLabel;

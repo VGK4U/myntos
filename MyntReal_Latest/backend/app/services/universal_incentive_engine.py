@@ -157,8 +157,9 @@ def get_partner_current_position_v18(db: Session, partner_id: int) -> Dict[str, 
     cs = VGK4UCareerService.get_partner_career_status(db, partner_id) if partner_id else None
     canonical_desig = cs.get('career_designation') if cs else None
 
-    if not has_fp:
+    if not has_fp and (not cs or cs.get('own_qualifying_files', 0) == 0):
         effective_desig = canonical_desig or "Member"
+        eff_rate = cs.get('effective_personal_producer_rate', 0.0) if cs else 0.0
         return {
             "partner_id": partner_id,
             "rank_code": "RANK_0",
@@ -168,13 +169,15 @@ def get_partner_current_position_v18(db: Session, partner_id: int) -> Dict[str, 
             "career_designation": effective_desig,
             "rank_display": effective_desig,
             "personal_prod_qualification": cs.get('personal_prod_qualification', 'None') if cs else 'None',
-            "effective_personal_producer_rate": cs.get('effective_personal_producer_rate', 0.0) if cs else 0.0,
+            "effective_personal_producer_rate": eff_rate,
             "stars": 0,
-            "rate_pct": 5.00,
-            "rank_slab_pct": 5.00,
-            "base_amount": 10000.00,
+            "rate_pct": eff_rate,
+            "rank_slab_pct": eff_rate,
+            "base_amount": 0.00,
             "activated_team": 0,
             "active_team": active_team_cnt,
+            "own_qualifying_files": cs.get('own_qualifying_files', 0) if cs else 0,
+            "active_team_legs": cs.get('active_team_legs', 0) if cs else 0,
             "total_downline": total_downline,
             "next_rank": "Channel Partner",
             "next_rank_requirement": 1,
@@ -210,22 +213,29 @@ def get_partner_current_position_v18(db: Session, partner_id: int) -> Dict[str, 
         effective_desig = 'Manager'
     elif 'DIRECTOR' in effective_desig.upper():
         effective_desig = 'Regional Manager'
+
+    eff_rate = float(cs.get('effective_personal_producer_rate', float(pct))) if cs else float(pct)
+    resolved_stars = 4 if eff_rate >= 9.0 else 3 if eff_rate >= 8.5 else 2 if eff_rate >= 7.5 else 1 if eff_rate >= 6.0 else 0
+    resolved_amt = 18000.0 if eff_rate >= 9.0 else 17000.0 if eff_rate >= 8.5 else 15000.0 if eff_rate >= 7.5 else 12000.0 if eff_rate >= 6.0 else 0.0
+
     return {
         "partner_id": partner_id,
-        "rank_code": rank_code,
+        "rank_code": f'RANK_{resolved_stars}',
         "position": effective_desig,
         "current_rank": effective_desig,
         "current_designation": effective_desig,
         "career_designation": effective_desig,
         "rank_display": effective_desig,
         "personal_prod_qualification": cs.get('personal_prod_qualification', 'None') if cs else 'None',
-        "effective_personal_producer_rate": cs.get('effective_personal_producer_rate', float(pct)) if cs else float(pct),
-        "stars": stars,
-        "rate_pct": float(pct),
-        "rank_slab_pct": float(pct),
-        "base_amount": float(amt),
+        "effective_personal_producer_rate": eff_rate,
+        "stars": resolved_stars,
+        "rate_pct": eff_rate,
+        "rank_slab_pct": eff_rate,
+        "base_amount": resolved_amt,
         "activated_team": activated_team_cnt,
         "active_team": active_team_cnt,
+        "own_qualifying_files": cs.get('own_qualifying_files', 0) if cs else 0,
+        "active_team_legs": cs.get('active_team_legs', 0) if cs else 0,
         "total_downline": total_downline,
         "next_rank": next_rank,
         "next_rank_requirement": next_req,
@@ -334,8 +344,9 @@ def get_bulk_partner_current_positions_v26(db: Session, partner_ids: List[int]) 
         cs = career_map.get(partner_id, {})
         canonical_desig = cs.get('career_designation')
         
-        if not has_fp:
+        if not has_fp and (not cs or cs.get('own_qualifying_files', 0) == 0):
             effective_desig = canonical_desig or "Member"
+            eff_rate = cs.get('effective_personal_producer_rate', 0.0) if cs else 0.0
             results[partner_id] = {
                 "partner_id": partner_id,
                 "rank_code": "RANK_0",
@@ -345,13 +356,15 @@ def get_bulk_partner_current_positions_v26(db: Session, partner_ids: List[int]) 
                 "career_designation": effective_desig,
                 "rank_display": effective_desig,
                 "personal_prod_qualification": cs.get('personal_prod_qualification', 'None'),
-                "effective_personal_producer_rate": cs.get('effective_personal_producer_rate', 0.0),
+                "effective_personal_producer_rate": eff_rate,
                 "stars": 0,
-                "rate_pct": 5.00,
-                "rank_slab_pct": 5.00,
-                "base_amount": 10000.00,
+                "rate_pct": eff_rate,
+                "rank_slab_pct": eff_rate,
+                "base_amount": 0.00,
                 "activated_team": 0,
                 "active_team": active_team_cnt,
+                "own_qualifying_files": cs.get('own_qualifying_files', 0) if cs else 0,
+                "active_team_legs": cs.get('active_team_legs', 0) if cs else 0,
                 "total_downline": total_downline,
                 "next_rank": "Channel Partner",
                 "next_rank_requirement": 1,
@@ -388,22 +401,29 @@ def get_bulk_partner_current_positions_v26(db: Session, partner_ids: List[int]) 
             effective_desig = 'Manager'
         elif 'DIRECTOR' in effective_desig.upper():
             effective_desig = 'Regional Manager'
+
+        eff_rate = float(cs.get('effective_personal_producer_rate', float(pct))) if cs else float(pct)
+        resolved_stars = 4 if eff_rate >= 9.0 else 3 if eff_rate >= 8.5 else 2 if eff_rate >= 7.5 else 1 if eff_rate >= 6.0 else 0
+        resolved_amt = 18000.0 if eff_rate >= 9.0 else 17000.0 if eff_rate >= 8.5 else 15000.0 if eff_rate >= 7.5 else 12000.0 if eff_rate >= 6.0 else 0.0
+
         results[partner_id] = {
             "partner_id": partner_id,
-            "rank_code": rank_code,
+            "rank_code": f'RANK_{resolved_stars}',
             "position": effective_desig,
             "current_rank": effective_desig,
             "current_designation": effective_desig,
             "career_designation": effective_desig,
             "rank_display": effective_desig,
             "personal_prod_qualification": cs.get('personal_prod_qualification', 'None'),
-            "effective_personal_producer_rate": cs.get('effective_personal_producer_rate', float(pct)),
-            "stars": stars,
-            "rate_pct": float(pct),
-            "rank_slab_pct": float(pct),
-            "base_amount": float(amt),
+            "effective_personal_producer_rate": eff_rate,
+            "stars": resolved_stars,
+            "rate_pct": eff_rate,
+            "rank_slab_pct": eff_rate,
+            "base_amount": resolved_amt,
             "activated_team": activated_team_cnt,
             "active_team": active_team_cnt,
+            "own_qualifying_files": cs.get('own_qualifying_files', 0) if cs else 0,
+            "active_team_legs": cs.get('active_team_legs', 0) if cs else 0,
             "total_downline": total_downline,
             "next_rank": next_rank,
             "next_rank_requirement": next_req,

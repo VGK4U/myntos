@@ -35,6 +35,8 @@ LEVEL_LABELS = {
     3: 'Extended',
     4: 'Core',
     5: 'Support',
+    6: 'Showroom',
+    7: 'Full Support',
 }
 
 
@@ -356,7 +358,7 @@ def member_cash_income(
             -- VGK4U 6-Stream Categorization (Phase 4)
             SUM(CASE WHEN kind = 'COMMISSION' AND level = 1 THEN commission_amount ELSE 0 END)           AS personal_producer_total,
             SUM(CASE WHEN (kind = 'COMMISSION' AND level IN (2, 3, 4)) OR kind = 'SENIOR_COMM' THEN commission_amount ELSE 0 END) AS team_differential_total,
-            SUM(CASE WHEN kind = 'COMMISSION' AND level = 5 THEN commission_amount ELSE 0 END)           AS support_total,
+            SUM(CASE WHEN kind = 'COMMISSION' AND level IN (5, 7) THEN commission_amount ELSE 0 END)   AS support_total,
             SUM(CASE WHEN kind = 'COMMISSION' AND level = 6 THEN commission_amount ELSE 0 END)           AS showroom_total,
             SUM(CASE WHEN kind IN ('ADVANCE', 'DVR_ADVANCE', 'BRAND_ADVANCE', 'CIBIL_ADVANCE') THEN commission_amount ELSE 0 END) AS stage_advances_total,
             SUM(CASE WHEN kind IN ('SLAB_BONUS', 'EXTRA_COMMISSION', 'BRAND_COMMISSION') THEN commission_amount ELSE 0 END) AS stage_bonuses_total

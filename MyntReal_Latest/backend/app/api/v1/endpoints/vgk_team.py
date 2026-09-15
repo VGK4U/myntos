@@ -814,6 +814,8 @@ def list_vgk_members(
         d['rank_display']          = resolved_display
         d['personal_prod_qualification'] = rpos.get('personal_prod_qualification') or getattr(m, 'vgk4u_personal_prod_qualification', None) or 'None'
         d['effective_personal_producer_rate'] = rpos.get('effective_personal_producer_rate', 0.0)
+        d['own_qualifying_files'] = rpos.get('own_qualifying_files', getattr(m, 'vgk4u_own_qualifying_files', 0) or 0)
+        d['active_team_legs']      = rpos.get('active_team_legs', getattr(m, 'vgk4u_active_team_count', 0) or 0)
         d['rank_code']             = rpos.get('rank_code', f'RANK_{resolved_stars}')
         d['rank_num']              = resolved_stars
         d['rank_slab_pct']         = resolved_slab
@@ -5139,14 +5141,25 @@ def member_earnings_dashboard(
         ))
 
     # DC-VGK-CUST-SEARCH-001 (Jun 2026): filter members who have entries for leads matching customer name/phone
+    _cs_phone_ids = None
     if customer_search and isinstance(customer_search, str):
+        from app.services.crm_phone_sync_service import find_candidate_lead_ids_for_search
         _cs = customer_search.strip()
+        _cs_phone_ids = find_candidate_lead_ids_for_search(db, tenant_id=None, company_ids=None, search_term=_cs)
         try:
-            _cs_ids = db.execute(text(
-                "SELECT DISTINCT e.partner_id FROM vgk_cash_income_entries e "
-                "JOIN crm_leads cl ON cl.id = e.source_lead_id "
-                "WHERE cl.name ILIKE :cs OR cl.phone ILIKE :cs"
-            ), {"cs": f"%{_cs}%"}).scalars().all()
+            if _cs_phone_ids:
+                _cs_sql = (
+                    "SELECT DISTINCT e.partner_id FROM vgk_cash_income_entries e "
+                    "JOIN crm_leads cl ON cl.id = e.source_lead_id "
+                    "WHERE cl.name ILIKE :cs OR cl.phone ILIKE :cs OR cl.id = ANY(:phone_ids)"
+                )
+                _cs_ids = db.execute(text(_cs_sql), {"cs": f"%{_cs}%", "phone_ids": _cs_phone_ids}).scalars().all()
+            else:
+                _cs_ids = db.execute(text(
+                    "SELECT DISTINCT e.partner_id FROM vgk_cash_income_entries e "
+                    "JOIN crm_leads cl ON cl.id = e.source_lead_id "
+                    "WHERE cl.name ILIKE :cs OR cl.phone ILIKE :cs"
+                ), {"cs": f"%{_cs}%"}).scalars().all()
         except Exception:
             _cs_ids = []
         query = query.filter(OfficialPartner.id.in_(_cs_ids))
@@ -5168,7 +5181,11 @@ def member_earnings_dashboard(
     cust_join_sql = ""
     if customer_search and isinstance(customer_search, str):
         _csk = customer_search.strip()
-        cust_join_sql = "JOIN crm_leads _cl ON _cl.id = e.source_lead_id AND (_cl.name ILIKE :_cs OR _cl.phone ILIKE :_cs)"
+        if _cs_phone_ids:
+            cust_join_sql = "JOIN crm_leads _cl ON _cl.id = e.source_lead_id AND (_cl.name ILIKE :_cs OR _cl.phone ILIKE :_cs OR _cl.id = ANY(:_cs_pids))"
+            date_params['_cs_pids'] = _cs_phone_ids
+        else:
+            cust_join_sql = "JOIN crm_leads _cl ON _cl.id = e.source_lead_id AND (_cl.name ILIKE :_cs OR _cl.phone ILIKE :_cs)"
         date_params['_cs'] = f"%{_csk}%"
     # DC-VGK-EARN-DASH-001: segment + level filters (threaded into all income SQL)
     if category_id and isinstance(category_id, int):
@@ -6357,7 +6374,17 @@ def lead_earnings_dashboard(
     params: dict = {}
 
     if search and isinstance(search, str):
-        where_clauses.append("(cl.name ILIKE :search OR cl.phone ILIKE :search)")
+        from app.services.crm_phone_sync_service import find_candidate_lead_ids_for_search
+        _tenant_id = getattr(current_user, 'tenant_id', None)
+        _co_id = getattr(current_user, 'base_company_id', None)
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=_tenant_id, company_ids=[_co_id] if _co_id else None, search_term=search
+        )
+        if phone_lead_ids:
+            where_clauses.append("(cl.name ILIKE :search OR cl.phone ILIKE :search OR cl.id = ANY(:phone_lead_ids))")
+            params['phone_lead_ids'] = phone_lead_ids
+        else:
+            where_clauses.append("(cl.name ILIKE :search OR cl.phone ILIKE :search)")
         params['search'] = f"%{search.strip()}%"
     if date_from and isinstance(date_from, str):
         where_clauses.append("e.created_at::date >= :df")
@@ -7291,7 +7318,7 @@ def vgk_top_partners_leads(
         child_rows = db.execute(text("""
             SELECT op.id, op.partner_name, op.partner_code, op.phone, op.created_at, op.member_status,
                    (SELECT COUNT(*) FROM crm_leads cl WHERE cl.associated_partner_id = op.id) AS total_leads,
-                   (SELECT COUNT(*) FROM crm_leads cl WHERE cl.associated_partner_id = op.id AND (cl.solar_pipeline_status IN ('completed', 'completed_paid', 'subsidy_pending', 'subsidy_received', 'net_meter_done', 'installed') OR cl.installation_date IS NOT NULL OR cl.status = 'completed')) AS completed_leads
+                   (SELECT COUNT(*) FROM crm_leads cl WHERE cl.associated_partner_id = op.id AND (cl.status = 'completed' OR cl.solar_pipeline_status IN ('subsidy_pending', 'completed'))) AS completed_leads
             FROM official_partners op
             WHERE op.parent_partner_id = :pid
             ORDER BY op.partner_name ASC
@@ -7422,7 +7449,15 @@ def vgk_top_partners_leads(
             params["cat_name"] = f"%{str(category_id).strip()}%"
 
     if search:
-        where_clauses.append("(cl.name ILIKE :srch OR cl.phone ILIKE :srch)")
+        from app.services.crm_phone_sync_service import find_candidate_lead_ids_for_search
+        phone_lead_ids = find_candidate_lead_ids_for_search(
+            db, tenant_id=None, company_ids=[company_id] if company_id else None, search_term=search
+        )
+        if phone_lead_ids:
+            where_clauses.append("(cl.name ILIKE :srch OR cl.phone ILIKE :srch OR cl.id = ANY(:phone_lead_ids))")
+            params["phone_lead_ids"] = phone_lead_ids
+        else:
+            where_clauses.append("(cl.name ILIKE :srch OR cl.phone ILIKE :srch)")
         params["srch"] = f"%{search.strip()}%"
 
     where_sql = " AND ".join(where_clauses)

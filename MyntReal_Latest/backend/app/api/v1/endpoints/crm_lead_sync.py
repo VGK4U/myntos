@@ -19,7 +19,9 @@ from app.core.database import get_db
 from app.core.security import get_current_user_hybrid
 from app.models.crm import CRMLead, CRMLeadFollowUp
 from app.models.crm_lead_sync import CRMLeadSyncConfig, CRMLeadSyncRun
+from app.models.signup_category import SignupCategory
 from app.models.staff import StaffEmployee
+from app.models.staff_accounts import AssociatedCompany
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -51,17 +53,17 @@ COL_INVESTMENT_CAPACITY = None
 COL_PLANNING_TO_START   = None
 COL_FULL_TIME_BUSINESS  = None
 
-# Lead For → company_id + category_id + label
-# company_id=3 (MNR Mega Natural Resources) hosts all these CRM categories
+# Lead For → category_id + label
+# company_id and tenant_id are dynamically resolved via _resolve_category_and_tenant()
 LEAD_FOR_MAP = {
-    'to_setup_solar':                  {'company_id': 3, 'category_id': 6,    'label': 'Solar'},
-    'to_purchase_a_electric_scooter':  {'company_id': 3, 'category_id': 2,    'label': 'EV B2C'},
-    'to_set_up_ev_business':           {'company_id': 3, 'category_id': 1,    'label': 'EV B2B'},
-    'to_get_the_training_on_ev':       {'company_id': 3, 'category_id': 3,    'label': 'ETC Training'},
-    'to_set_up_service_centre':        {'company_id': 3, 'category_id': 1,    'label': 'EV B2B'},
-    'business_hub_/_franchise':        {'company_id': 3, 'category_id': 1,    'label': 'EV B2B'},
-    'anything':                        {'company_id': 3, 'category_id': None,  'label': 'General'},
-    '':                                {'company_id': 3, 'category_id': None,  'label': 'General'},
+    'to_setup_solar':                  {'category_id': 6,    'label': 'Solar'},
+    'to_purchase_a_electric_scooter':  {'category_id': 2,    'label': 'EV B2C'},
+    'to_set_up_ev_business':           {'category_id': 1,    'label': 'EV B2B'},
+    'to_get_the_training_on_ev':       {'category_id': 3,    'label': 'ETC Training'},
+    'to_set_up_service_centre':        {'category_id': 1,    'label': 'EV B2B'},
+    'business_hub_/_franchise':        {'category_id': 1,    'label': 'EV B2B'},
+    'anything':                        {'category_id': None, 'label': 'General'},
+    '':                                {'category_id': None, 'label': 'General'},
 }
 
 # Type fallback when Lead For is "Anything" or empty
@@ -88,7 +90,29 @@ STATUS_MAP = {
     'not interested':           'lost',
 }
 
-DEFAULT_COMPANY_ID = 3  # MNR Mega Natural Resources
+_category_tenant_cache: dict[int, tuple[int, int]] = {}
+
+def _resolve_category_and_tenant(db: Session, category_id: Optional[int]) -> tuple[Optional[int], Optional[int]]:
+    """
+    Resolve (company_id, tenant_id) from SignupCategory -> AssociatedCompany.
+    Fails closed (returns None, None) if category_id is missing, unknown, or associated company has no tenant_id.
+    """
+    if not category_id:
+        return None, None
+    if category_id in _category_tenant_cache:
+        return _category_tenant_cache[category_id]
+
+    row = db.query(SignupCategory.company_id, AssociatedCompany.client_id)\
+        .join(AssociatedCompany, AssociatedCompany.id == SignupCategory.company_id)\
+        .filter(SignupCategory.id == category_id)\
+        .first()
+
+    if row and row[0] and row[1]:
+        res = (row[0], row[1])
+        _category_tenant_cache[category_id] = res
+        return res
+
+    return None, None
 
 # Maps raw sheet source strings → standard CRMLeadSource names
 _SOURCE_NAME_MAP = {
@@ -143,7 +167,7 @@ def _clean_phone(raw: str) -> str:
 
 
 def _map_lead_for(lead_for: str, type_col: str) -> dict:
-    """Return {'company_id', 'category_id', 'label'} from Lead For (with Type fallback)."""
+    """Return {'category_id', 'label'} from Lead For (with Type fallback)."""
     lf_key = lead_for.strip().lower()
     match = LEAD_FOR_MAP.get(lf_key)
     if match and match['category_id'] is not None:
@@ -153,10 +177,10 @@ def _map_lead_for(lead_for: str, type_col: str) -> dict:
     type_key = type_col.strip().lower()
     type_match = TYPE_CATEGORY_MAP.get(type_key)
     if type_match:
-        return {'company_id': DEFAULT_COMPANY_ID, **type_match}
+        return type_match
 
     # Final default
-    return {'company_id': DEFAULT_COMPANY_ID, 'category_id': None, 'label': 'General'}
+    return {'category_id': None, 'label': 'General'}
 
 
 def _map_status(raw: str) -> str:
@@ -230,14 +254,35 @@ def _fetch_rows(sheet_url: str) -> tuple[list, list]:
     return header, data
 
 
-def _get_existing_phones(db: Session) -> set:
-    """Return set of all normalised phone numbers already in crm_leads."""
-    rows = db.execute(text("SELECT phone, alternate_phone FROM crm_leads WHERE phone IS NOT NULL")).fetchall()
+def _get_existing_phones(db: Session, tenant_id: Optional[int] = None, company_id: Optional[int] = None) -> set:
+    """Return set of canonical normalized phone numbers in crm_leads scoped strictly to tenant and company."""
+    if not tenant_id or not company_id:
+        return set()
+    sql = text("""
+        SELECT 
+            CASE 
+                WHEN LENGTH(REGEXP_REPLACE(phone, '[^0-9]', '', 'g')) >= 10 
+                    THEN RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10)
+                WHEN LENGTH(REGEXP_REPLACE(phone, '[^0-9]', '', 'g')) >= 8 
+                    THEN REGEXP_REPLACE(phone, '[^0-9]', '', 'g')
+                ELSE NULL 
+            END,
+            CASE 
+                WHEN LENGTH(REGEXP_REPLACE(alternate_phone, '[^0-9]', '', 'g')) >= 10 
+                    THEN RIGHT(REGEXP_REPLACE(alternate_phone, '[^0-9]', '', 'g'), 10)
+                WHEN LENGTH(REGEXP_REPLACE(alternate_phone, '[^0-9]', '', 'g')) >= 8 
+                    THEN REGEXP_REPLACE(alternate_phone, '[^0-9]', '', 'g')
+                ELSE NULL 
+            END
+        FROM crm_leads
+        WHERE tenant_id = :tenant_id AND company_id = :company_id
+          AND (phone IS NOT NULL OR alternate_phone IS NOT NULL)
+    """)
+    rows = db.execute(sql, {"tenant_id": tenant_id, "company_id": company_id}).fetchall()
     phones = set()
     for r in rows:
-        if r[0]: phones.add(_clean_phone(r[0]))
-        if r[1]: phones.add(_clean_phone(r[1]))
-    phones.discard('')
+        if r[0]: phones.add(r[0])
+        if r[1]: phones.add(r[1])
     return phones
 
 
@@ -400,7 +445,8 @@ def _do_sync(db: Session, config: CRMLeadSyncConfig, employees: list,
     header_row, data_rows = _fetch_rows(config.sheet_url)
     # DC Protocol (Mar 2026): Dynamic column detection — supports multiple sheets with different layouts
     C = _detect_columns(header_row)
-    existing_phones = _get_existing_phones(db)
+    from app.services.crm_dedup_service import normalize_phone
+    existing_phones = _get_existing_phones(db, tenant_id=config.tenant_id, company_id=config.company_id)
     emp_lookup = {e.id: e for e in employees}
 
     new_leads   = []
@@ -416,7 +462,7 @@ def _do_sync(db: Session, config: CRMLeadSyncConfig, employees: list,
         while len(row) < max(17, max_col):
             row.append('')
 
-        raw_phone = _clean_phone(row[C['mobile']])
+        raw_phone = normalize_phone(row[C['mobile']])
         raw_name  = row[C['name']].strip()
         if not raw_name and not raw_phone:
             continue
@@ -437,6 +483,26 @@ def _do_sync(db: Session, config: CRMLeadSyncConfig, employees: list,
 
         try:
             mapping  = _map_lead_for(row[C['lead_for']], row[C['type']])
+            cat_id   = mapping.get('category_id')
+            company_id, tenant_id = _resolve_category_and_tenant(db, cat_id)
+
+            if not company_id or not tenant_id:
+                logger.warning(
+                    "[DC_LEAD_SYNC] FAIL-CLOSED: cannot resolve company_id and tenant_id for category %s (row: %s / %s)",
+                    cat_id, raw_name, raw_phone
+                )
+                errors += 1
+                if preview_only:
+                    preview.append({
+                        'row_status': 'error',
+                        'name': raw_name,
+                        'phone': raw_phone,
+                        'area': row[C['area']].strip(),
+                        'lead_for': row[C['lead_for']].strip(),
+                        'error': f'Cannot resolve company/tenant isolation for category {cat_id}',
+                    })
+                continue
+
             status   = _map_status(row[C['status']])
             owner_nm = row[C['owner']].strip()
             emp_id   = _match_owner_to_employee(owner_nm, employees)
@@ -459,7 +525,8 @@ def _do_sync(db: Session, config: CRMLeadSyncConfig, employees: list,
                     'area': row[C['area']].strip(),
                     'lead_for': row[C['lead_for']].strip(),
                     'category_label': mapping['label'],
-                    'company_id': mapping['company_id'],
+                    'company_id': company_id,
+                    'tenant_id': tenant_id,
                     'status': status,
                     'owner': owner_nm,
                     'matched_employee': emp_name,
@@ -483,8 +550,9 @@ def _do_sync(db: Session, config: CRMLeadSyncConfig, employees: list,
             _ft_biz   = (row[C['full_time_business']].strip()  if C.get('full_time_business')  is not None else '') or None
 
             lead = CRMLead(
-                company_id          = mapping['company_id'],
-                category_id         = mapping['category_id'],
+                tenant_id           = tenant_id,
+                company_id          = company_id,
+                category_id         = cat_id,
                 name                = raw_name or 'Unknown',
                 phone               = raw_phone or None,
                 area                = raw_area or _loc.get('area') or None,
@@ -527,8 +595,21 @@ def _do_sync(db: Session, config: CRMLeadSyncConfig, employees: list,
             continue
 
     if not preview_only and new_leads:
+        from app.services.crm_dedup_service import acquire_phone_locks
+        acquire_phone_locks(db, config.tenant_id, config.company_id, [l.phone for l in new_leads if l.phone])
         db.add_all(new_leads)
         db.flush()
+
+        from app.services.crm_phone_sync_service import sync_lead_phone_identities
+        for lead in new_leads:
+            sync_lead_phone_identities(
+                db=db,
+                lead=lead,
+                phone_raw=lead.phone,
+                source_channel='google_sheets_sync',
+                source_ref=f"sync_config_{config.id}",
+                with_lock=False
+            )
 
         # Create followups
         for fup_item in new_fups:
@@ -751,11 +832,14 @@ def trigger_meta_sync(
     results = []
     for cfg_row in configs:
         cfg_id, cfg_name, sheet_url, source_tag, company_id = cfg_row
+        if not company_id:
+            logger.warning("[DC_LEAD_SYNC] FAIL-CLOSED: Skipping config %s (#%s) due to missing company_id", cfg_name, cfg_id)
+            continue
         try:
             res = sync_all_tabs(
                 sheet_url=sheet_url,
                 db=db,
-                company_id=company_id or 3,
+                company_id=company_id,
                 source_tag=source_tag or 'Online - M',
             )
             imported   = res.get('total_imported', 0)
@@ -819,143 +903,133 @@ def get_history(
 
 @router.post('/lead-sync/admin/cleanup-duplicates')
 def cleanup_duplicate_leads(
-    dry_run: bool = False,
+    dry_run: bool = True,
+    company_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_hybrid),
 ):
-    """DC Protocol (F4): Remove duplicate CRM leads caused by concurrent syncs.
-    Strategy: keep the LOWEST id per phone (first imported); reassign all child
-    records to the keeper before deleting duplicates.  Adds a unique index on
-    crm_leads.phone afterward to prevent future duplicates.
-    Pass ?dry_run=true to see counts without making changes."""
+    """
+    Stage 2B Phase 2R-3B: Scoped Duplicate Lead Discovery & Safety Verification.
+    
+    Identifies duplicate CRM leads strictly within the authenticated tenant and authorized company scope.
+    
+    CRITICAL ARCHITECTURAL SAFETY CONTROLS:
+    1. Authorization: Requires authoritative RequestContext with TENANT_ADMIN or PLATFORM_SUPERADMIN scope.
+       All legacy role-string checks ('vgk4u', 'hr', 'ea') are completely revoked.
+    2. Tenant & Company Isolation: Queries are strictly bound to CRMLead.tenant_id == ctx.tenant_id
+       and CRMLead.company_id == authorized_company_id. Global partitioning is strictly forbidden.
+    3. Runtime DDL Eradicated: All runtime schema and index creation statements have been permanently removed.
+    4. Destructive Mutations Disarmed: Destructive merge/delete (dry_run=False) is strictly blocked
+       pending approved business rules for survivor selection and 44-table child record reconciliation.
+    """
     _require_staff(current_user)
-    _admin_role_codes = {'vgk4u', 'vgk4u_supreme', 'key_leadership', 'leadership_role',
-                         'hr', 'hr_manager', 'ea', 'executive_admin'}
-    _user_role = getattr(current_user, 'role', None)
-    _role_code = (getattr(_user_role, 'role_code', '') or '').lower().strip()
-    if not (_role_code in _admin_role_codes or 'vgk4u' in _role_code):
-        raise HTTPException(status_code=403, detail='Admin access required for duplicate cleanup')
 
-    # DC Protocol: Deduplication SQL — partitions by clean 10-digit phone number
+    # 1. Authoritative RequestContext
+    from app.core.context import AdminScope, get_current_request_context
+    from app.services.auth_context_service import auth_context_service
+
+    ctx = get_current_request_context()
+    if not ctx:
+        ctx = auth_context_service.build_context(db, current_user)
+
+    # 2. Strict Administrative Scope (Tenant Admin or Platform Superadmin only)
+    if not (ctx.is_platform_admin() or ctx.admin_scope == AdminScope.TENANT_ADMIN):
+        logger.warning(
+            f"[CLEANUP-AUTHZ-DENIED] Staff {ctx.emp_code} (AdminScope: {ctx.admin_scope}) denied duplicate cleanup admin access."
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Tenant Admin or Platform Superadmin access required for duplicate cleanup"
+        )
+
+    # 3. Authoritative Company Scope Resolution & Membership Validation
+    target_company_id = company_id
+    if target_company_id is None:
+        if ctx.active_company_id and (ctx.is_platform_admin() or ctx.can_access_company(ctx.active_company_id)):
+            target_company_id = ctx.active_company_id
+        else:
+            raise HTTPException(status_code=400, detail="company_id parameter is required")
+
+    # Anti-tampering & Tenant Isolation check on company
+    if not ctx.is_platform_admin():
+        if not ctx.can_access_company(target_company_id):
+            raise HTTPException(status_code=403, detail="Company access not authorized")
+
+        comp = db.query(AssociatedCompany).filter(
+            AssociatedCompany.id == target_company_id,
+            AssociatedCompany.client_id == ctx.tenant_id
+        ).first()
+        if not comp:
+            raise HTTPException(status_code=403, detail="Company does not belong to authenticated tenant")
+        target_tenant_id = ctx.tenant_id
+    else:
+        comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == target_company_id).first()
+        if not comp:
+            raise HTTPException(status_code=404, detail="Company not found")
+        target_tenant_id = comp.client_id or 1
+
+    # 4. Destructive Mutations Disarmed (Stop Gate 1, 2, 3, 4)
+    if not dry_run:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Destructive duplicate cleanup is disabled. "
+                "Automated deletion and child reassignment cannot proceed without approved business rules "
+                "for survivor selection and multi-table child reconciliation across 44 dependent tables."
+            )
+        )
+
+    # 5. Scoped Candidate Discovery (dry_run=True)
     _KEEPER_CTE = """
         SELECT
             id AS dup_id,
+            tenant_id,
+            company_id,
+            RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10) AS clean_phone,
             MIN(id) OVER (
                 PARTITION BY RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10)
             ) AS keeper_id
         FROM crm_leads
-        WHERE phone IS NOT NULL 
+        WHERE tenant_id = :tenant_id
+          AND company_id = :company_id
+          AND phone IS NOT NULL 
           AND LENGTH(REGEXP_REPLACE(phone, '[^0-9]', '', 'g')) >= 10
     """
+    params = {'tenant_id': target_tenant_id, 'company_id': target_company_id}
 
-    try:
-        # ── Step 1: count duplicates ──────────────────────────────────────────
-        count_row = db.execute(text(f"""
-            SELECT COUNT(*) FROM ({_KEEPER_CTE}) t WHERE dup_id != keeper_id
-        """)).scalar()
+    count_row = db.execute(text(f"""
+        SELECT COUNT(*) FROM ({_KEEPER_CTE}) t WHERE dup_id != keeper_id
+    """), params).scalar() or 0
 
-        result = {
-            'duplicate_leads_found': count_row,
-            'dry_run': dry_run,
-        }
+    result = {
+        'tenant_id': target_tenant_id,
+        'company_id': target_company_id,
+        'duplicate_leads_found': count_row,
+        'dry_run': True,
+    }
 
-        if count_row == 0:
-            result['message'] = 'No duplicates found — database is clean.'
-            return {'success': True, **result}
-
-        if dry_run:
-            # Count child records that would be touched — no data changes
-            child_counts = {}
-            for table, col in [
-                ('crm_lead_followups',   'lead_id'),
-                ('crm_lead_notes',       'lead_id'),
-                ('crm_lead_assignments', 'lead_id'),
-                ('crm_lead_deals',       'lead_id'),
-                ('crm_revenue_entries',  'lead_id'),
-                ('crm_lead_transactions','lead_id'),
-            ]:
-                n = db.execute(text(f"""
-                    SELECT COUNT(*) FROM {table} t
-                    JOIN ({_KEEPER_CTE}) d ON t.{col} = d.dup_id
-                    WHERE d.dup_id != d.keeper_id
-                """)).scalar()
-                child_counts[table] = n
-            result.update({
-                'child_records_to_reassign': child_counts,
-                'message': 'Dry run complete — no changes made.',
-            })
-            return {'success': True, **result}
-
-        # ── Step 2: reassign child records using JOIN UPDATE ──────────────────
-        child_tables = [
-            ('crm_lead_followups',   'lead_id'),
-            ('crm_lead_notes',       'lead_id'),
-            ('crm_lead_assignments', 'lead_id'),
-            ('crm_lead_deals',       'lead_id'),
-            ('crm_revenue_entries',  'lead_id'),
-            ('crm_lead_transactions','lead_id'),
-        ]
-        reassign_counts = {}
-        for table, col in child_tables:
-            try:
-                r = db.execute(text(f"""
-                    UPDATE {table} t
-                    SET {col} = d.keeper_id
-                    FROM ({_KEEPER_CTE}) d
-                    WHERE t.{col} = d.dup_id AND d.dup_id != d.keeper_id
-                """))
-                reassign_counts[table] = r.rowcount
-            except Exception as te:
-                logger.warning(f'[DC_CLEANUP] Could not reassign {table}: {te}')
-                reassign_counts[table] = 0
-
-        db.flush()
-
-        # ── Step 3: delete duplicate leads (CASCADE handles any remaining child refs)
-        del_result = db.execute(text(f"""
-            DELETE FROM crm_leads
-            WHERE id IN (
-                SELECT dup_id FROM ({_KEEPER_CTE}) t WHERE dup_id != keeper_id
-            )
-        """))
-        deleted_count = del_result.rowcount
-        db.commit()
-
-        # ── Step 4: add unique partial index to prevent future duplicates ─────
-        index_created = False
-        index_error   = None
-        try:
-            db.execute(text("""
-                CREATE UNIQUE INDEX IF NOT EXISTS ux_crm_leads_phone
-                ON crm_leads (phone)
-                WHERE phone IS NOT NULL AND TRIM(phone) != ''
-            """))
-            db.commit()
-            index_created = True
-        except Exception as ie:
-            index_error = str(ie)
-            logger.warning(f'[DC_CLEANUP] Could not create unique index: {ie}')
-            try: db.rollback()
-            except: pass
-
-        result.update({
-            'duplicate_leads_deleted': deleted_count,
-            'child_records_reassigned': reassign_counts,
-            'unique_index_created': index_created,
-            'unique_index_error': index_error,
-            'message': (
-                f'Cleanup complete. {deleted_count} duplicate leads removed. '
-                f'Unique phone index {"added — future duplicates are now blocked at DB level" if index_created else "not added — see unique_index_error"}.'
-            ),
-        })
-        logger.info(
-            f'[DC_CLEANUP] Duplicate cleanup by {getattr(current_user,"emp_code","?")}:'
-            f' {deleted_count} deleted, reassigned={reassign_counts}'
-        )
+    if count_row == 0:
+        result['message'] = 'No duplicates found within authorized company scope.'
         return {'success': True, **result}
 
-    except Exception as e:
-        try: db.rollback()
-        except: pass
-        logger.error(f'[DC_CLEANUP] Cleanup failed: {e}')
-        raise HTTPException(status_code=500, detail=f'Cleanup failed: {e}')
+    child_counts = {}
+    for table, col in [
+        ('crm_lead_followups',   'lead_id'),
+        ('crm_lead_notes',       'lead_id'),
+        ('crm_lead_assignments', 'lead_id'),
+        ('crm_lead_deals',       'lead_id'),
+        ('crm_revenue_entries',  'lead_id'),
+        ('crm_lead_transactions','lead_id'),
+    ]:
+        n = db.execute(text(f"""
+            SELECT COUNT(*) FROM {table} t
+            JOIN ({_KEEPER_CTE}) d ON t.{col} = d.dup_id
+            WHERE d.dup_id != d.keeper_id
+        """), params).scalar() or 0
+        child_counts[table] = n
+
+    result.update({
+        'child_records_to_reassign': child_counts,
+        'message': 'Dry run complete within authorized scope — no changes made.',
+    })
+    return {'success': True, **result}
