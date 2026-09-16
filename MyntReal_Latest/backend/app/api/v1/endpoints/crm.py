@@ -12380,6 +12380,8 @@ def share_lead_details(
     softphone_link = f"https://www.myntreal.com/staff/softphone?lead_id={lead.id}&auto_dial=1"
     crm_link = f"https://www.myntreal.com/staff/leads?lead_id={lead.id}"
 
+    budget_line = f"💰 *Budget*: {budget_str}\n" if budget_str else ""
+
     wa_text = (
         f"📢 *LEAD DETAILS FOR SECONDARY FOLLOW-UP*\n\n"
         f"👤 *Customer*: {lead.name}\n"
@@ -12387,7 +12389,7 @@ def share_lead_details(
         f"📍 *Location*: {lead.area or lead.city or lead.address or 'N/A'}\n"
         f"🏷️ *Category*: {category_name}\n"
         f"📝 *Requirement*: {lead.requirements or lead.looking_for or 'Secondary consultation'}\n"
-        f"{f'💰 *Budget*: {budget_str}\n' if budget_str else ''}"
+        f"{budget_line}"
         f"💬 *Notes*: {payload.notes or 'Please follow up with customer directly.'}\n"
         f"👉 *Shared by*: {current_employee.full_name} ({current_employee.emp_code})\n\n"
         f"📞 *Call via Softphone*: {softphone_link}\n"
