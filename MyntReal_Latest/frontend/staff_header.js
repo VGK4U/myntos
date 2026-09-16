@@ -20,6 +20,47 @@
     }
 })();
 
+// DC Protocol: Global helper to check if current logged-in user is MR10001 (VGK Mentor / Supreme Admin)
+window.isMR10001 = function() {
+    try {
+        const stored = localStorage.getItem('staff_user') || sessionStorage.getItem('staff_user');
+        if (stored) {
+            const u = JSON.parse(stored);
+            const code = (u.emp_code || u.employee_code || u.username || '').toUpperCase().trim();
+            if (code === 'MR10001' || code.includes('MR10001')) return true;
+        }
+    } catch(e) {}
+    try {
+        const token = localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token');
+        if (token && token.includes('.')) {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const code = (payload.emp_code || payload.employee_code || payload.sub || '').toUpperCase().trim();
+            if (code === 'MR10001' || code.includes('MR10001')) return true;
+        }
+    } catch(e) {}
+    if (typeof globalRawData !== 'undefined' && globalRawData && globalRawData.current_user) {
+        const code = (globalRawData.current_user.emp_code || '').toUpperCase().trim();
+        if (code === 'MR10001' || code.includes('MR10001')) return true;
+    }
+    return false;
+};
+window.isUnmaskedStaff = window.isMR10001;
+
+// DC Protocol: Canonical phone formatter honoring MR10001 unmasked privacy rule
+window.formatPhoneWithPrivacy = function(p) {
+    if (!p || p === '—' || p === '-' || p === 'null') return '—';
+    const s = String(p).trim();
+    if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+    const digits = s.replace(/\D/g, '');
+    if (digits.length < 6) return s;
+    const clean10 = digits.slice(-10);
+    if (window.isMR10001()) {
+        return clean10.length === 10 ? `+91 ${clean10.slice(0, 5)} ${clean10.slice(5)}` : s;
+    }
+    return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+};
+window.maskPhone = window.formatPhoneWithPrivacy;
+
 // DC Protocol Apr 2026: Changed from `const StaffHeader` to window assignment to prevent
 // "Identifier already declared" SyntaxError when this file is loaded more than once
 // (server.js template injects it AND the page HTML includes it explicitly).
@@ -1016,7 +1057,8 @@ window.StaffHeader = window.StaffHeader || {
 };
 
 if (typeof document !== 'undefined' && !document.getElementById('staffHeaderStyles')) {
-    document.head.insertAdjacentHTML('beforeend', StaffHeader.headerStyles);
+    const shStyles = (typeof window !== 'undefined' && window.StaffHeader) ? window.StaffHeader.headerStyles : (typeof StaffHeader !== 'undefined' ? StaffHeader.headerStyles : '');
+    if (shStyles && document.head) document.head.insertAdjacentHTML('beforeend', shStyles);
 }
 
 // Universal Plivo Softphone Loader for Staff Portal
@@ -1259,5 +1301,5 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = StaffHeader;
+    module.exports = typeof StaffHeader !== 'undefined' ? StaffHeader : (typeof window !== 'undefined' ? window.StaffHeader : null);
 }

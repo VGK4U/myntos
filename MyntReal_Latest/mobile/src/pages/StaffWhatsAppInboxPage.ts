@@ -450,6 +450,9 @@ export class StaffWhatsAppInboxPage {
     const s = String(phone || '').trim();
     if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid') || s.startsWith('120363') || s.length > 14) return s;
     const clean = s.replace(/[^0-9]/g, '').slice(-10);
+    if (authService.isMR10001()) {
+      return clean.length === 10 ? `+91 ${clean.slice(0, 5)} ${clean.slice(5)}` : s;
+    }
     if (!clean || clean.length < 10) return '••••••••••';
     return `+91 ${clean.slice(0, 4)}••••${clean.slice(-2)}`;
   }

@@ -481,6 +481,9 @@ export class SoftphonePage {
     const s = String(p).trim();
     if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
     const digits = s.replace(/\D/g, '');
+    if (authService.isMR10001()) {
+      return digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : s;
+    }
     if (digits.length < 6) return s;
     const clean10 = digits.slice(-10);
     return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;

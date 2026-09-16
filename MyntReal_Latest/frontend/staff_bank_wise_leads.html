@@ -527,6 +527,31 @@
             }
         }
 
+        function isMR10001User() {
+            try {
+                if (typeof window !== 'undefined' && typeof window.isMR10001 === 'function' && window.isMR10001()) return true;
+                const stored = localStorage.getItem('staff_user') || sessionStorage.getItem('staff_user');
+                if (stored) {
+                    const u = JSON.parse(stored);
+                    const code = (u.emp_code || u.employee_code || u.username || '').toUpperCase().trim();
+                    if (code === 'MR10001' || code.includes('MR10001')) return true;
+                }
+            } catch(e) {}
+            try {
+                const token = localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token');
+                if (token && token.includes('.')) {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    const code = (payload.emp_code || payload.employee_code || payload.sub || '').toUpperCase().trim();
+                    if (code === 'MR10001' || code.includes('MR10001')) return true;
+                }
+            } catch(e) {}
+            if (typeof globalRawData !== 'undefined' && globalRawData && globalRawData.current_user) {
+                const code = (globalRawData.current_user.emp_code || '').toUpperCase().trim();
+                if (code === 'MR10001' || code.includes('MR10001')) return true;
+            }
+            return false;
+        }
+
         function maskPhone(p) {
             if (!p || p === '—' || p === '-' || p === 'null') return '—';
             const s = String(p).trim();
@@ -534,6 +559,12 @@
             const digits = s.replace(/\D/g, '');
             if (digits.length < 6) return s;
             const clean10 = digits.slice(-10);
+
+            // DC Protocol: Unmask phone numbers only for MR10001 (VGK Mentor / Supreme Admin)
+            if (isMR10001User()) {
+                return clean10.length === 10 ? `+91 ${clean10.slice(0, 5)} ${clean10.slice(5)}` : s;
+            }
+
             return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
         }
 

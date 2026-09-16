@@ -1385,6 +1385,9 @@
         function maskPhone(p) {
             if (!p) return '-';
             const digits = String(p).replace(/\D/g, '');
+            if (typeof window !== 'undefined' && typeof window.isMR10001 === 'function' && window.isMR10001()) {
+                return digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : String(p);
+            }
             if (digits.length >= 10) {
                 const last4 = digits.slice(-4);
                 const first2 = digits.slice(-10, -8);

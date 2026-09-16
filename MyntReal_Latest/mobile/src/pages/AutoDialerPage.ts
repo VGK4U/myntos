@@ -301,6 +301,9 @@ export class AutoDialerPage {
     if (!s) return '—';
     const clean = String(s).trim();
     const digits = clean.replace(/\D/g, '');
+    if (authService.isMR10001()) {
+      return digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : clean;
+    }
     if (digits.length < 6) return clean;
     const last10 = digits.slice(-10);
     return `+91 ${last10.slice(0, 2)}••••${last10.slice(-4)}`;

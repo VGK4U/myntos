@@ -1864,6 +1864,10 @@ export class StaffLeadsPage {
 
   private maskPhone(phone: string): string {
     if (!phone) return '-';
+    if (authService.isMR10001()) {
+      const digits = phone.replace(/\D/g, '');
+      return digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : phone;
+    }
     const clean = phone.replace(/\D/g, '');
     if (clean.length < 6) return phone;
     const first2 = clean.slice(0, 2);

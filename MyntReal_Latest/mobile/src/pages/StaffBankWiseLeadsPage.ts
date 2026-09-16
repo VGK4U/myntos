@@ -6,6 +6,7 @@
  */
 
 import { apiService } from '../services/api.service';
+import { authService } from '../services/auth.service';
 import { PageHeader } from '../components/PageHeader';
 import { routerService } from '../services/router.service';
 import { unifiedWAModal } from '../components/UnifiedWAModal';
@@ -184,17 +185,34 @@ export class StaffBankWiseLeadsPage {
   }
 
   /**
+   * DC Protocol: Checks if current authenticated staff is MR10001 (VGK Mentor / Supreme Admin)
+   */
+  private isMR10001User(): boolean {
+    try {
+      const codeFromRaw = this.rawData?.current_user?.emp_code;
+      if (codeFromRaw && String(codeFromRaw).trim().toUpperCase().includes('MR10001')) {
+        return true;
+      }
+      return authService.isMR10001();
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Masks a phone number (e.g., 9876543210 -> 98••••3210 or ••••••3210)
-   * unless unmasked by the user via the Eye icon toggle
+   * unless unmasked by the user via the Eye icon toggle, or if logged in as MR10001
    */
   private maskPhone(phone: string, phoneKey: string): { displayText: string; isRevealed: boolean } {
     if (!phone || phone.trim() === '' || phone === '—' || phone === 'null') {
       return { displayText: '—', isRevealed: false };
     }
     const clean = phone.replace(/[^0-9+]/g, '');
-    const isRevealed = this.revealedPhones.has(phoneKey);
+    const isRevealed = this.revealedPhones.has(phoneKey) || this.isMR10001User();
     if (isRevealed) {
-      return { displayText: phone, isRevealed: true };
+      const digits = phone.replace(/\D/g, '');
+      const formatted = digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : phone;
+      return { displayText: formatted, isRevealed: true };
     }
     if (clean.length <= 4) {
       return { displayText: '••••', isRevealed: false };

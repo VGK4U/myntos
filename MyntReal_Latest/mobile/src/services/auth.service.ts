@@ -549,6 +549,51 @@ class AuthService {
     mobileScheduler.cancel(SCHEDULER_SESSION_ID);
     this.sessionTimer = null;
   }
+
+  /**
+   * DC Protocol: Checks if current authenticated staff is MR10001 (VGK Mentor / Supreme Admin)
+   * MR10001 has unmasked contact visibility across all CRM views and pipelines.
+   */
+  isMR10001(): boolean {
+    try {
+      const u = this.authState.user;
+      if (u) {
+        const code = (u.emp_code || u.employee_code || u.username || '').toString().trim().toUpperCase();
+        if (code === 'MR10001' || code.includes('MR10001')) return true;
+      }
+      const raw = localStorage.getItem('staff_user') || sessionStorage.getItem('staff_user');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const code = (parsed.emp_code || parsed.employee_code || parsed.username || '').toString().trim().toUpperCase();
+        if (code === 'MR10001' || code.includes('MR10001')) return true;
+      }
+      const token = localStorage.getItem('staff_token') || sessionStorage.getItem('staff_token');
+      if (token && token.includes('.')) {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const code = (payload.emp_code || payload.employee_code || payload.sub || '').toString().trim().toUpperCase();
+        if (code === 'MR10001' || code.includes('MR10001')) return true;
+      }
+    } catch {}
+    return false;
+  }
 }
 
 export const authService = new AuthService();
+
+export function isMR10001Staff(): boolean {
+  return authService.isMR10001();
+}
+
+export function formatPhoneWithPrivacy(phone?: string | null): string {
+  if (!phone || phone.trim() === '' || phone === '—' || phone === 'null') return '—';
+  const clean = phone.replace(/[^0-9+]/g, '');
+  if (isMR10001Staff()) {
+    const digits = clean.replace(/\D/g, '');
+    return digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : phone;
+  }
+  if (clean.length <= 4) return '••••';
+  const last4 = clean.slice(-4);
+  const prefix = clean.length > 8 ? clean.slice(0, 2) : '';
+  return `${prefix}••••••${last4}`;
+}
+

@@ -534,6 +534,9 @@
             const digits = s.replace(/\D/g, '');
             if (digits.length < 6) return s;
             const clean10 = digits.slice(-10);
+            if (typeof window !== 'undefined' && typeof window.isMR10001 === 'function' && window.isMR10001()) {
+                return clean10.length === 10 ? `+91 ${clean10.slice(0, 5)} ${clean10.slice(5)}` : s;
+            }
             return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
         }
 
