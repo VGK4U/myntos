@@ -59,7 +59,7 @@ eb.create_application_version(
         'S3Bucket': S3_BUCKET,
         'S3Key': S3_KEY
     },
-    Description='MyntOS v2.4.7: WhatsApp CRM doc sharing & audit logs, Auto Dialer menu parity, DID/staff missed call guard, MR10001 contact privacy, 4-platform parity'[:190],
+    Description='MyntOS v2.4.7: CRM lead restoration & mutation guards, softphone auto-dial sync, sales alert category/comments, dialer string date fix, 4-platform parity'[:190],
     AutoCreateApplication=False
 )
 print("Application version created.")
