@@ -62,6 +62,17 @@ def get_staff_telephony_endpoint(
     return endpoint.to_dict()
 
 
+@router.get("/carrier-health")
+def get_plivo_carrier_health(
+    force_refresh: bool = Query(False, description="Force real-time refresh from Plivo API"),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Returns live carrier health and prepaid cash credits balance for proactive monitoring.
+    """
+    return PlivoJWTService.check_carrier_balance(force_refresh=force_refresh)
+
+
 @router.post("/browser/register")
 def register_browser_softphone_status(
     payload: Dict[str, Any] = Body(...),
@@ -99,6 +110,18 @@ def initiate_browser_outbound_call(
     Validates tenant ownership, prevents double-dialing, creates VoIPCallSession,
     and returns session ID and caller metadata to the client softphone.
     """
+    # Proactive Carrier Balance Check: Prevent phantom dialing if credits are confirmed depleted
+    carrier_health = PlivoJWTService.check_carrier_balance()
+    if carrier_health.get("status") == "depleted":
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "error": "carrier_balance_depleted",
+                "message": "Plivo telephony credits are depleted. Please recharge before dialing.",
+                "carrier_health": carrier_health
+            }
+        )
+
     destination_phone = payload.get("destination_phone")
     raw_lead_id = payload.get("lead_id")
     lead_id = None

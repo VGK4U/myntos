@@ -2280,6 +2280,7 @@ def run_schema_bootstrap():
     bootstrap_vgk_company_payouts()
     bootstrap_partner_cap_bypass()
     bootstrap_community_association_name()
+    bootstrap_community_idol_photo()
 
     # DC_CAPITAL_ACCOUNT_REGISTRY_001: Ensure Capital Account is in staff_menu_registry
     try:
@@ -2528,6 +2529,25 @@ def bootstrap_community_association_name():
             _db.close()
     except Exception as e:
         logger.warning(f"[DC-COMMUNITY-ASSOCIATION-NAME-001] Non-fatal: {e}")
+
+
+def bootstrap_community_idol_photo():
+    """
+    DC-COMMUNITY-IDOL-PHOTO-001: Add idol_photo column to community_registrations.
+    """
+    try:
+        _db = SessionLocal()
+        try:
+            _db.execute(text("""
+                ALTER TABLE community_registrations
+                ADD COLUMN IF NOT EXISTS idol_photo TEXT NULL
+            """))
+            _db.commit()
+            logger.info("[DC-COMMUNITY-IDOL-PHOTO-001] ✅ idol_photo added to community_registrations")
+        finally:
+            _db.close()
+    except Exception as e:
+        logger.warning(f"[DC-COMMUNITY-IDOL-PHOTO-001] Non-fatal: {e}")
 
 
 def bootstrap_automation_relational_schema():

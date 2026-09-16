@@ -222,6 +222,7 @@ async def register_community(
     police_permission: Optional[UploadFile] = File(None),
     cultural_pamphlet: Optional[UploadFile] = File(None),
     signature_upload: Optional[UploadFile] = File(None),
+    idol_photo: Optional[UploadFile] = File(None),
     files: Optional[List[UploadFile]] = File(None),
 
     # GUC / Ganesh Utsav Committee Dedicated Form Fields
@@ -550,6 +551,7 @@ async def register_community(
     kyc_paths = list(reg.kyc_uploads or [])
 
     upload_map = [
+        ("Ganesh Idol Photo", idol_photo),
         ("1st Contact Aadhaar Front", aadhar_first_front),
         ("1st Contact Aadhaar Back", aadhar_first_back),
         ("2nd Contact Aadhaar Front", aadhar_second_front),
@@ -574,7 +576,9 @@ async def register_community(
                 if upload_res.get("file_path"):
                     fpath = upload_res["file_path"]
                     kyc_paths.append(fpath)
-                    if label == "Applicant Signature" and not reg.applicant_signature:
+                    if label == "Ganesh Idol Photo":
+                        reg.idol_photo = fpath
+                    elif label == "Applicant Signature" and not reg.applicant_signature:
                         reg.applicant_signature = fpath
             except Exception as e:
                 logger.error("File upload error for %s: %s", label, e)

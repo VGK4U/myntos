@@ -460,6 +460,10 @@
                 if (data.success && data.access_token) {
                     this.jwtToken = data.access_token;
                     this.endpointInfo = data.endpoint;
+                    this.carrierHealth = data.carrier_health || null;
+                    if (this.carrierHealth) {
+                        this.updateTrunkHealthUI();
+                    }
                     console.log(`[PLIVO-SOFTPHONE] Acquired JWT for endpoint ${data.endpoint?.username}`);
 
                     // Login to Plivo WebRTC Gateway
@@ -908,6 +912,18 @@
                     })
                 });
 
+                if (resp.status === 402) {
+                    const errJson = await resp.json().catch(() => ({}));
+                    const errMsg = errJson?.detail?.message || 'Plivo telephony credits are depleted ($0.00). Please contact administration to recharge.';
+                    console.error('[PLIVO-SOFTPHONE] Outbound call blocked:', errMsg);
+                    this._isDialInProgress = false;
+                    this.isCallActive = false;
+                    this.stopRingback();
+                    this.hideCallInProgressUI();
+                    alert(`🚨 Outbound Call Blocked:\n\n${errMsg}`);
+                    return;
+                }
+
                 let sessData = null;
                 if (resp.ok) {
                     sessData = await resp.json();
@@ -1188,7 +1204,7 @@
             this.handleRemoteAnswered(callInfo);
         }
 
-        onCallTerminated() {
+        onCallTerminated(preserveFailureLabel = false) {
             console.log('[PLIVO-SOFTPHONE] Call terminated');
             this.stopRingback();
             const remoteAudio = document.getElementById('plivoRemoteAudio');
@@ -1222,13 +1238,15 @@
                 this.stopCallTimer();
             } catch (_) {}
 
-            try {
-                const statusLabel = document.getElementById('callStatusLabel');
-                if (statusLabel) {
-                    statusLabel.textContent = `Call Ended (${finalDuration})`;
-                    statusLabel.className = 'badge bg-danger px-2 py-1';
-                }
-            } catch (_) {}
+            if (!preserveFailureLabel) {
+                try {
+                    const statusLabel = document.getElementById('callStatusLabel');
+                    if (statusLabel) {
+                        statusLabel.textContent = `Call Ended (${finalDuration})`;
+                        statusLabel.className = 'badge bg-danger px-2 py-1';
+                    }
+                } catch (_) {}
+            }
 
             // Auto-submit quick disposition if selected
             try {
@@ -1299,7 +1317,8 @@
                 console.warn('[PLIVO-SOFTPHONE] Notice on terminal event dispatch:', e);
             }
 
-            // Gracefully close overlay after 1.8s, returning user untouched to their existing window
+            // Gracefully close overlay after 1.8s (or 4s if failure label displayed), returning user untouched to their existing window
+            const closeDelay = preserveFailureLabel ? 4000 : 1800;
             setTimeout(() => {
                 if (!this.isCallActive) {
                     try {
@@ -1307,19 +1326,25 @@
                         this.closeSoftphoneDock();
                     } catch (_) {}
                 }
-            }, 1800);
+            }, closeDelay);
         }
 
         onCallFailed(reason, callInfo) {
             console.warn('[PLIVO-SOFTPHONE] onCallFailed invoked:', reason, callInfo);
+            const rStr = String(reason || '').toLowerCase();
+            const isCreditError = rStr.includes('credit') || rStr.includes('1010') || rStr.includes('payment') || rStr.includes('declined') || rStr.includes('rejected');
+
             const statusLabel = document.getElementById('callStatusLabel');
             if (statusLabel) {
                 try {
-                    statusLabel.textContent = `Call Failed (${reason || 'Declined'})`;
+                    statusLabel.textContent = isCreditError ? 'Call Failed: Carrier Credits Depleted' : `Call Failed (${reason || 'Declined'})`;
                     statusLabel.className = 'badge bg-danger px-2 py-1';
                 } catch (_) {}
             }
-            this.onCallTerminated();
+            if (isCreditError) {
+                console.error('[PLIVO-SOFTPHONE] Carrier switch reported call failure / out of credits');
+            }
+            this.onCallTerminated(true);
         }
 
         getActivePeerConnection() {
@@ -1673,7 +1698,10 @@
                                     <i class="fa-solid fa-phone"></i>
                                 </div>
                                 <div>
-                                    <div style="font-weight: 700; font-size: 13.5px; line-height: 1.2;">MyntOS Softphone</div>
+                                    <div style="font-weight: 700; font-size: 13.5px; line-height: 1.2; display: flex; align-items: center; gap: 6px;">
+                                        MyntOS Softphone
+                                        <span id="softphoneTrunkHealthBadge" style="display: none; font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 10px; line-height: 1.3;"></span>
+                                    </div>
                                     <div id="softphoneHeaderLeadName" style="font-size: 11px; color: #38bdf8; font-weight: 600; display: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;"></div>
                                 </div>
                             </div>
@@ -2596,6 +2624,28 @@
         updateUIStatus(status, label) {
             const el = document.getElementById('softphoneStatusText');
             if (el) el.textContent = `Softphone (${label})`;
+        }
+
+        updateTrunkHealthUI() {
+            const badge = document.getElementById('softphoneTrunkHealthBadge');
+            if (!badge || !this.carrierHealth) return;
+            const status = this.carrierHealth.status;
+            const credits = this.carrierHealth.cash_credits !== null && this.carrierHealth.cash_credits !== undefined ? `$${this.carrierHealth.cash_credits}` : '';
+            if (status === 'low') {
+                badge.style.display = 'inline-block';
+                badge.style.background = '#fef08a';
+                badge.style.color = '#854d0e';
+                badge.textContent = `⚠️ Trunk: ${credits}`;
+                badge.title = `Plivo carrier balance is low (${credits}). Recharge recommended.`;
+            } else if (status === 'depleted') {
+                badge.style.display = 'inline-block';
+                badge.style.background = '#fecaca';
+                badge.style.color = '#991b1b';
+                badge.textContent = `🚨 Depleted: $0.00`;
+                badge.title = 'Plivo carrier credits depleted. Outbound calling suspended.';
+            } else {
+                badge.style.display = 'none';
+            }
         }
 
         setAgentStatus(status) {

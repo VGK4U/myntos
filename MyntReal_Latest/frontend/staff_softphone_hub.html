@@ -664,6 +664,7 @@
                     <p class="text-muted small mb-0 fw-medium">Unified Inbound & Outbound Calling, Live Softphone Dialer & Telephony Intelligence</p>
                 </div>
                 <div class="d-flex align-items-center gap-2">
+                    <div id="plivoCarrierTrunkBadge" class="d-none align-items-center rounded px-2 py-1 small fw-semibold" style="font-size: 11px;"></div>
                     <div class="d-flex align-items-center bg-dark border border-secondary rounded px-2 py-1">
                         <span class="text-muted small me-2"><i class="fa-solid fa-circle-dot text-success me-1"></i>Status:</span>
                         <select class="form-select form-select-sm bg-dark text-light border-0 py-0" id="headerAgentStatus" style="width: auto; cursor: pointer;" onchange="setGlobalAgentStatus(this.value)">
@@ -1346,6 +1347,7 @@
             // Load initial recent 20 calls & metrics for Dialer
             loadRecentCallsDialer();
             loadTodayDialerMetrics();
+            fetchCarrierHealth();
         });
 
         function setupTelephonyEventListeners() {
@@ -1471,7 +1473,39 @@
             return phone;
         }
 
+        async function fetchCarrierHealth() {
+            try {
+                const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
+                const res = await fetch('/api/v1/telephony/plivo/carrier-health', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    const badge = document.getElementById('plivoCarrierTrunkBadge');
+                    if (badge && data.success) {
+                        badge.classList.remove('d-none');
+                        badge.classList.add('d-flex');
+                        const credits = data.cash_credits !== null && data.cash_credits !== undefined ? `$${Number(data.cash_credits).toFixed(2)}` : '';
+                        if (data.status === 'healthy') {
+                            badge.className = 'd-flex align-items-center rounded px-2 py-1 small fw-semibold text-success bg-success bg-opacity-10 border border-success border-opacity-25';
+                            badge.innerHTML = `<i class="fa-solid fa-shield-halved me-1"></i> Trunk Active (${credits})`;
+                            badge.title = `Plivo carrier trunk connected and healthy (${credits} balance)`;
+                        } else if (data.status === 'low') {
+                            badge.className = 'd-flex align-items-center rounded px-2 py-1 small fw-semibold text-warning bg-warning bg-opacity-10 border border-warning border-opacity-25';
+                            badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1"></i> Trunk Low (${credits})`;
+                            badge.title = `Plivo carrier balance is low (${credits}). Recharge recommended.`;
+                        } else if (data.status === 'depleted') {
+                            badge.className = 'd-flex align-items-center rounded px-2 py-1 small fw-semibold text-danger bg-danger bg-opacity-10 border border-danger border-opacity-25';
+                            badge.innerHTML = `<i class="fa-solid fa-circle-exclamation me-1"></i> Trunk Depleted ($0.00)`;
+                            badge.title = 'Plivo carrier credits depleted. Outbound calling suspended.';
+                        }
+                    }
+                }
+            } catch (_) {}
+        }
+
         function handleRefreshClick() {
+            fetchCarrierHealth();
             if (currentScope === 'dialer') {
                 loadRecentCallsDialer();
                 loadTodayDialerMetrics();

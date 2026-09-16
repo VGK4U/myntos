@@ -604,6 +604,78 @@ class TestPlivoBrowserSoftphone(unittest.TestCase):
         finally:
             app.dependency_overrides.pop(get_current_staff_user, None)
 
+    def test_check_carrier_balance_caching_and_status(self):
+        """Verify check_carrier_balance categorizes balance properly and caches within TTL."""
+        # 1. Healthy balance
+        with patch('requests.get') as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = {"cash_credits": "25.00", "billing_mode": "prepaid", "auto_recharge": False}
+            mock_get.return_value = mock_resp
+
+            res = PlivoJWTService.check_carrier_balance(force_refresh=True)
+            self.assertTrue(res["success"])
+            self.assertEqual(res["status"], "healthy")
+            self.assertEqual(res["cash_credits"], 25.0)
+            self.assertIsNone(res["warning"])
+
+        # 2. Low balance
+        with patch('requests.get') as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = {"cash_credits": "1.50", "billing_mode": "prepaid", "auto_recharge": False}
+            mock_get.return_value = mock_resp
+
+            res = PlivoJWTService.check_carrier_balance(force_refresh=True)
+            self.assertEqual(res["status"], "low")
+            self.assertIn("low", res["warning"].lower())
+
+        # 3. Depleted balance
+        with patch('requests.get') as mock_get:
+            mock_resp = MagicMock()
+            mock_resp.status_code = 200
+            mock_resp.json.return_value = {"cash_credits": "0.00", "billing_mode": "prepaid", "auto_recharge": False}
+            mock_get.return_value = mock_resp
+
+            res = PlivoJWTService.check_carrier_balance(force_refresh=True)
+            self.assertEqual(res["status"], "depleted")
+            self.assertIn("depleted", res["warning"].lower())
+
+    def test_carrier_health_endpoint(self):
+        """Verify GET /api/v1/telephony/plivo/carrier-health returns status."""
+        client = TestClient(app)
+        app.dependency_overrides[get_current_staff_user] = lambda: self.staff_1
+        try:
+            resp = client.get("/api/v1/telephony/plivo/carrier-health")
+            self.assertEqual(resp.status_code, 200)
+            data = resp.json()
+            self.assertIn("status", data)
+            self.assertIn("cash_credits", data)
+        finally:
+            app.dependency_overrides.pop(get_current_staff_user, None)
+
+    def test_initiate_browser_call_blocked_when_balance_depleted(self):
+        """Verify initiate call returns HTTP 402 if carrier balance is depleted."""
+        client = TestClient(app)
+        app.dependency_overrides[get_current_staff_user] = lambda: self.staff_1
+        with patch.object(PlivoJWTService, 'check_carrier_balance') as mock_balance:
+            mock_balance.return_value = {
+                "success": True,
+                "status": "depleted",
+                "cash_credits": 0.0,
+                "warning": "Telephony trunk balance is depleted."
+            }
+            try:
+                resp = client.post(
+                    "/api/v1/telephony/plivo/browser/call/initiate",
+                    json={"destination_phone": "+919876543210"}
+                )
+                self.assertEqual(resp.status_code, 402)
+                err_detail = resp.json().get("detail", {})
+                self.assertEqual(err_detail.get("error"), "carrier_balance_depleted")
+            finally:
+                app.dependency_overrides.pop(get_current_staff_user, None)
+
 
 if __name__ == '__main__':
     unittest.main()

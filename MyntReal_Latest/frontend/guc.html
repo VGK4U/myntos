@@ -3,13 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>గణేష్ ఉత్సవ సమితి - నమోదు పత్రం | VGK4U</title>
-    <meta name="description" content="గణేష్ ఉత్సవ సమితి - సామూహిక గణేష్ ఉత్సవాలు జరుపుకొనుటకు నమోదు పత్రం">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <title>విశాఖపట్నం గణేష్ ఉత్సవ సమితి - నమోదు పత్రం</title>
+    <meta name="description" content="విశాఖపట్నం గణేష్ ఉత్సవ సమితి - సామూహిక గణేష్ ఉత్సవాలు జరుపుకొనుటకు నమోదు పత్రం">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://unpkg.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
+    <script>
+        // Suppress VGK Assistant & Chatbot on this standalone GUC page
+        window.__VGK_LOADED__ = true;
+        window.MyntWebsiteChatbot = true;
+    </script>
 <style>
+        /* Strictly hide VGK Assistant and Chatbot on /guc */
+        #vgkFab, #vgkOverlay, #vgkModal, .mynt-chatbot-btn, .mynt-chatbot-box {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
         :root {
             --primary: #0d9488;
             --primary-dark: #0f766e;
@@ -1680,7 +1695,7 @@
     </style>
 <style>
     body {
-        background: linear-gradient(135deg, #fef3c7 0%, #ffffff 50%, #fed7aa 100%) !important;
+        background: radial-gradient(circle at 50% 0%, #fed7aa 0%, #fef3c7 25%, #fffbeb 55%, #fff7ed 100%) !important;
         min-height: 100vh;
         color: #1e293b;
     }
@@ -1690,11 +1705,54 @@
         box-shadow: none !important;
         max-width: 100% !important;
     }
+    .guc-hero-banner-container {
+        position: relative;
+        width: 100%;
+        overflow: hidden;
+        background: #78350f;
+        border-bottom: 3px solid #f59e0b;
+    }
+    .guc-hero-banner-img {
+        width: 100%;
+        height: auto;
+        max-height: 320px;
+        object-fit: cover;
+        object-position: center 25%;
+        display: block;
+    }
+    .guc-hero-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 60%, transparent 100%);
+        padding: 20px 16px 12px 16px;
+        color: #fff;
+        text-align: center;
+    }
+    .guc-hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(220, 38, 38, 0.95);
+        color: #fff;
+        font-weight: 800;
+        font-size: 13px;
+        padding: 5px 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        margin-bottom: 6px;
+        letter-spacing: 0.5px;
+    }
     @media (max-width: 767px) {
         header {
             flex-direction: column;
             gap: 10px;
             padding: 12px 16px;
+        }
+        .guc-hero-banner-img {
+            max-height: 180px;
         }
     }
 </style>
@@ -1709,9 +1767,10 @@
 
     <!-- Header -->
     <header style="background:rgba(255,255,255,0.95); border-bottom:1px solid rgba(217,119,6,0.2); position:sticky; top:0; z-index:100; backdrop-filter:blur(10px); padding:12px 24px; display:flex; justify-content:space-between; align-items:center;">
-        <div style="display:flex;align-items:center;gap:15px">
-            <a href="/vgk/dashboard" class="logo" style="text-decoration:none; color:#0f172a; font-weight:900; font-size:18px; display:flex; align-items:center; gap:8px;">
-                <i class="fas fa-handshake-angle" style="color:#d97706;"></i>VGK4U <span style="color:#b45309; font-weight:600; font-size:14px;">గణేష్ ఉత్సవ సమితి</span>
+        <div style="display:flex;align-items:center;gap:10px">
+            <a href="/guc" class="logo" style="text-decoration:none; color:#92400e; font-weight:900; font-size:17px; display:flex; align-items:center; gap:8px; font-family:'Outfit', sans-serif;">
+                <span style="font-size:22px;">🪔</span>
+                <span>విశాఖపట్నం గణేష్ ఉత్సవ సమితి అనుబంధం</span>
             </a>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
@@ -1750,23 +1809,36 @@
                     <input type="hidden" name="referral_type" id="referral_type" value="direct">
                     <input type="hidden" name="referral_code" id="referral_code">
 
-                    <!-- GUC PHYSICAL FORM CONTAINER (Reproducing media_1789476344085.png) -->
-                    <div style="background:#fff; border-radius:14px; border:2px solid #f59e0b; overflow:hidden; box-shadow:0 10px 25px rgba(0,0,0,0.12); color:#1e293b;">
+                    <!-- GUC PHYSICAL FORM CONTAINER -->
+                    <div style="background:#fff; border-radius:16px; border:2px solid #f59e0b; overflow:hidden; box-shadow:0 15px 35px rgba(217, 119, 6, 0.18), 0 5px 15px rgba(0,0,0,0.08); color:#1e293b;">
                         
-                        <!-- Header Banner -->
-                        <div id="gucFormHeaderBanner" style="background:linear-gradient(135deg, #fef3c7 0%, #ffedd5 100%); padding:20px 16px; border-bottom:2px solid #f59e0b; text-align:center;">
-                            <div style="display:flex; justify-content:center; align-items:center; gap:12px; margin-bottom:6px;">
-                                <span style="font-size:28px;">🪔</span>
-                                <div>
-                                    <h2 id="gucFormMainHeading" style="margin:0; font-size:21px; font-weight:900; color:#92400e; font-family:'Outfit', sans-serif;">గణేష్ ఉత్సవ సమితి</h2>
-                                    <div id="gucFormSubHeading" style="font-size:14px; font-weight:800; color:#b45309; margin-top:2px;">(గణేష్ ఉత్సవ సమితి అనుబంధం)</div>
+                        <!-- Attractive Lord Ganesha Festive Hero Visual Banner -->
+                        <div class="guc-hero-banner-container">
+                            <img src="/public/images/ganesh_festival_banner.jpg" alt="శ్రీ గణేష్ ఉత్సవాలు" class="guc-hero-banner-img">
+                            <div class="guc-hero-overlay">
+                                <div class="guc-hero-badge">
+                                    <span>🕉️</span> శ్రీ వినాయక చవితి శుభాకాంక్షలు <span>🪔</span>
                                 </div>
-                                <span style="font-size:28px;">🕉️</span>
+                                <div style="font-size:13px; font-weight:800; color:#fef08a; text-shadow:0 2px 5px rgba(0,0,0,0.9); letter-spacing:0.3px;">
+                                    ॥ వక్రతుండ మహాకాయ సూర్యకోటి సమప్రభ । నిర్విఘ్నం కురు మే దేవ సర్వకార్యేషు సర్వదా ॥
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Header Banner -->
+                        <div id="gucFormHeaderBanner" style="background:linear-gradient(135deg, #fef3c7 0%, #ffedd5 100%); padding:22px 16px 18px 16px; border-bottom:2px solid #f59e0b; text-align:center;">
+                            <div style="display:flex; justify-content:center; align-items:center; gap:12px; margin-bottom:6px;">
+                                <span style="font-size:32px; filter:drop-shadow(0 2px 4px rgba(245,158,11,0.4));">🪔</span>
+                                <div>
+                                    <h2 id="gucFormMainHeading" style="margin:0; font-size:24px; font-weight:900; color:#92400e; font-family:'Outfit', sans-serif; letter-spacing:-0.2px;">విశాఖపట్నం గణేష్ ఉత్సవ సమితి</h2>
+                                    <div id="gucFormSubHeading" style="font-size:15px; font-weight:800; color:#b45309; margin-top:3px;">(ఆంధ్రప్రదేశ్ గణేష్ ఉత్సవ సమితి అనుబంధం)</div>
+                                </div>
+                                <span style="font-size:32px; filter:drop-shadow(0 2px 4px rgba(245,158,11,0.4));">🕉️</span>
                             </div>
                             
-                            <div id="gucFormBadge" style="display:inline-block; background:#dc2626; color:#fff; font-weight:800; font-size:13.5px; padding:6px 18px; border-radius:20px; margin-top:6px; box-shadow:0 3px 8px rgba(220,38,38,0.25);">
+                            <div id="gucFormBadge" style="display:inline-block; background:linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); color:#fff; font-weight:800; font-size:14px; padding:7px 22px; border-radius:22px; margin-top:8px; box-shadow:0 4px 12px rgba(220,38,38,0.3); border:1px solid rgba(255,255,255,0.35);">
                                 <span id="gucFormBadgeTitle">సామూహిక గణేష్ ఉత్సవాలు జరుపుకొనుటకు నమోదు పత్రం</span>
-                                <div id="gucFormBadgeSub" style="font-size:10.5px; font-weight:600; opacity:0.95;">Application Form for Organizing Collective Ganesh Utsav</div>
+                                <div id="gucFormBadgeSub" style="font-size:11px; font-weight:600; opacity:0.95;">Application Form for Organizing Collective Ganesh Utsav</div>
                             </div>
 
                             <!-- Top Row: Application No & Assembly Constituency Live Summary -->
@@ -1791,6 +1863,43 @@
 
                         <!-- Form Body Table Style Layout -->
                         <div style="padding:16px;">
+
+                            <!-- కొత్తగా చేర్చిన కాంటెస్ట్ & బహుమతుల సెక్షన్ (Contest & Prizes 2026) -->
+                            <div style="background:linear-gradient(135deg, #fff8f0 0%, #fff3e0 100%); border:1.5px solid #fed7aa; border-left:6px solid #e65100; border-radius:10px; padding:16px 18px; margin-bottom:20px; box-shadow:0 3px 10px rgba(230,81,0,0.08);">
+                                <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px;">
+                                    <span style="font-size:24px;">🏆</span>
+                                    <h3 style="margin:0; font-size:16px; font-weight:900; color:#c2410c;">నియోజకవర్గ స్థాయి గణేష్ ఉత్సవాల పోటీలు - 2026</h3>
+                                </div>
+                                <p style="font-size:12.5px; color:#431407; margin:0 0 12px 0; line-height:1.6;">
+                                    మండపాల్లో ఆధ్యాత్మిక, సాంస్కృతిక మరియు సామాజిక సేవా కార్యక్రమాలను క్రమశిక్షణతో నిర్వహించే కమిటీలకు అసెంబ్లీ నియోజకవర్గాల వారీగా ప్రత్యేక బహుమతులు అందించబడతాయి:
+                                </p>
+                                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; margin-bottom:12px;">
+                                    <div style="background:#fff; border:1px solid #fed7aa; border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                                        <span style="font-size:22px;">🥇</span>
+                                        <div>
+                                            <div style="font-size:12.5px; font-weight:800; color:#dc2626;">Top 1 (ప్రథమ బహుమతి)</div>
+                                            <div style="font-size:11px; color:#64748b;">అద్భుతమైన నిర్వహణ & సేవా కార్యక్రమాలు</div>
+                                        </div>
+                                    </div>
+                                    <div style="background:#fff; border:1px solid #fed7aa; border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                                        <span style="font-size:22px;">🥈</span>
+                                        <div>
+                                            <div style="font-size:12.5px; font-weight:800; color:#d97706;">Top 2 (ద్వితీయ బహుమతి)</div>
+                                            <div style="font-size:11px; color:#64748b;">ఉత్తమ క్రమశిక్షణ & భక్తి కార్యక్రమాలు</div>
+                                        </div>
+                                    </div>
+                                    <div style="background:#fff; border:1px solid #fed7aa; border-radius:8px; padding:10px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                                        <span style="font-size:22px;">🥉</span>
+                                        <div>
+                                            <div style="font-size:12.5px; font-weight:800; color:#ca8a04;">Top 3 (తృతీయ బహుమతి)</div>
+                                            <div style="font-size:11px; color:#64748b;">ఉత్తమ అలంకరణ & సాంస్కృతిక ప్రదర్శనలు</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="background:#fff1f2; border:1px solid #fecdd3; border-radius:8px; padding:10px 14px; font-size:12px; color:#991b1b; line-height:1.6;">
+                                    📢 <strong style="color:#b91c1c;">ముఖ్య గమనిక (విశేషించి పెందుర్తి నియోజకవర్గ నిర్వాహకులకు):</strong> మీ మండపంలో ప్రతిరోజు నిర్వహించే పూజలు, అన్నదానాలు, మరియు సాంస్కృతిక కార్యక్రమాల తాలూకు అప్డేట్లను క్రమం తప్పకుండా అధికారిక వాట్సాప్ గ్రూప్లో షేర్ చేస్తూ ఉండాలి. దీని ఆధారంగానే విజేతలను ఎంపిక చేయడం జరుగుతుంది!
+                                </div>
+                            </div>
 
                             <!-- SECTION A: స్థానిక గణేష్ ఉత్సవ కమిటీ పేరు మరియు చిరునామా -->
                             <div class="guc-section-block" style="margin-bottom:16px; border:1px solid #fed7aa; border-radius:10px; overflow:hidden;">
@@ -1945,6 +2054,48 @@
                                     <i class="fas fa-map-pin"></i>గణేష్ విగ్రహం ఉండే ప్రదేశం వివరములు (Ganesh Idol Location Details)
                                 </div>
                                 <div style="padding:12px; background:#fff;">
+
+                                    <!-- 1ST OPTION: విగ్రహం ఫోటో అప్లోడ్ (Upload Your Idol Photo - Highlighted, Not Mandatory) -->
+                                    <div id="guc_idol_photo_container" style="margin-bottom:14px; background:linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border:2px dashed #f59e0b; border-radius:10px; padding:12px 14px; position:relative;">
+                                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
+                                            <label for="guc_idol_photo" style="font-size:12.5px; font-weight:800; color:#b45309; margin:0; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                                                <i class="fas fa-camera-retro" style="font-size:15px; color:#d97706;"></i>
+                                                <span>మీ విగ్రహం ఫోటో అప్‌లోడ్ చేయండి (Upload Your Idol Photo / విగ్రహం ఫోటో)</span>
+                                            </label>
+                                            <span style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:12px; display:inline-flex; align-items:center; gap:4px;">
+                                                <i class="fas fa-circle-info" style="font-size:10px; color:#d97706;"></i>ఐచ్ఛికం / Optional (Not Mandatory)
+                                            </span>
+                                        </div>
+                                        <div style="font-size:11px; color:#78350f; margin-bottom:9px; line-height:1.4;">
+                                            మీ గణేష్ విగ్రహం లేదా మండపం ఫోటోను ఇక్కడ అప్‌లోడ్ చేయవచ్చు (ఇది తప్పనిసరి కాదు) / You can upload a photo of your Ganesh idol or mandap (Optional - Not mandatory).
+                                        </div>
+                                        <div id="guc_idol_photo_input_row" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                                            <input type="file" name="idol_photo" id="guc_idol_photo" accept="image/*" onchange="handleIdolPhotoSelect(this)" style="font-size:12px; color:#0f172a; background:#fff; border:1px solid #cbd5e1; border-radius:6px; padding:7px 10px; cursor:pointer; flex:1; min-width:220px;">
+                                            <button type="button" id="guc_idol_photo_clear" onclick="clearIdolPhoto()" style="display:none; background:#fee2e2; color:#b91c1c; border:1px solid #fca5a5; border-radius:6px; padding:7px 12px; font-size:11.5px; font-weight:700; cursor:pointer;">
+                                                <i class="fas fa-trash-alt me-1"></i>తొలగించు (Remove)
+                                            </button>
+                                        </div>
+                                        <!-- Selected Photo Live Preview -->
+                                        <div id="guc_idol_photo_preview_wrap" style="display:none; margin-top:10px; align-items:center; gap:12px; background:#fff; padding:8px 12px; border-radius:8px; border:1.5px solid #fde68a; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                                            <img id="guc_idol_photo_preview_img" src="" alt="Idol Photo Preview" style="width:64px; height:64px; object-fit:cover; border-radius:6px; border:1px solid #cbd5e1;">
+                                            <div style="flex:1; min-width:0;">
+                                                <div id="guc_idol_photo_preview_name" style="font-size:12px; font-weight:700; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></div>
+                                                <div id="guc_idol_photo_preview_size" style="font-size:11px; color:#64748b; margin-top:2px;"></div>
+                                                <div style="font-size:10.5px; color:#059669; font-weight:700; margin-top:2px;"><i class="fas fa-check-circle me-1"></i>ఫోటో ఎంపిక చేయబడింది (Photo Selected)</div>
+                                            </div>
+                                        </div>
+                                        <!-- Existing Photo in View / Edit Mode -->
+                                        <div id="guc_existing_idol_photo_wrap" style="display:none; margin-top:10px; align-items:center; gap:12px; background:#fff; padding:8px 12px; border-radius:8px; border:1.5px solid #86efac; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                                            <img id="guc_existing_idol_photo_img" src="" alt="Uploaded Idol Photo" style="width:64px; height:64px; object-fit:cover; border-radius:6px; border:1px solid #86efac;">
+                                            <div style="flex:1; min-width:0;">
+                                                <div style="font-size:11.5px; font-weight:800; color:#166534;"><i class="fas fa-check-circle me-1 text-success"></i>ఇప్పటికే అప్‌లోడ్ చేసిన విగ్రహం ఫోటో (Uploaded Idol Photo)</div>
+                                                <a id="guc_existing_idol_photo_link" href="#" target="_blank" rel="noopener noreferrer" style="font-size:11.5px; font-weight:700; color:#0284c7; text-decoration:none; display:inline-flex; align-items:center; gap:4px; margin-top:3px;">
+                                                    <i class="fas fa-arrow-up-right-from-square"></i>పూర్తి సైజులో చూడండి (View Full Size)
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div style="margin-bottom:10px;">
                                         <label style="font-size:11.5px; font-weight:700; color:#334155; margin-bottom:6px; display:block;">స్థలం వర్గీకరణ (Location Land Category) <span style="color:#dc2626;">*</span>:</label>
                                         <div style="display:flex; flex-wrap:wrap; gap:12px;">
@@ -2074,11 +2225,16 @@
 
                             <!-- GOOGLE MAPS / LOCATION PICKER (LEAFLET INTEGRATED) -->
                             <div class="guc-section-block" style="margin-bottom:16px; border:1px solid #fed7aa; border-radius:10px; overflow:hidden;">
-                                <div style="background:#ffedd5; padding:8px 14px; font-weight:800; font-size:13px; color:#9a3412; border-bottom:1px solid #fed7aa; display:flex; justify-content:space-between; align-items:center;">
+                                <div style="background:#ffedd5; padding:8px 14px; font-weight:800; font-size:13px; color:#9a3412; border-bottom:1px solid #fed7aa; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                                     <span style="display:flex; align-items:center; gap:8px;"><i class="fas fa-location-dot"></i>మండపం లొకేషన్ ఎంపిక (Google Maps Location) <span style="color:#dc2626;">*</span></span>
-                                    <button type="button" onclick="openLocationPicker('google_location')" style="background:#0d9488; color:#fff; border:none; border-radius:6px; padding:5px 12px; font-size:11.5px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:4px;">
-                                        <i class="fas fa-map-marked-alt"></i>Choose Location on Map
-                                    </button>
+                                    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                        <button type="button" onclick="detectCurrentLocationDirectly()" style="background:#16a34a; color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:11.5px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(22,163,74,0.3);">
+                                            <i class="fas fa-location-crosshairs"></i>నా ప్రస్తుత లొకేషన్ (My Location / GPS)
+                                        </button>
+                                        <button type="button" onclick="openLocationPicker('google_location')" style="background:#0d9488; color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:11.5px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                                            <i class="fas fa-map-marked-alt"></i>మ్యాప్‌లో ఎంచుకోండి (Choose on Map)
+                                        </button>
+                                    </div>
                                 </div>
                                 <div style="padding:12px; background:#fff;">
                                     <div class="input-wrapper" style="margin-bottom:8px;">
@@ -2177,6 +2333,189 @@
                                         <div class="typeahead-results" id="ref1Results"></div>
                                     </div>
                                 </div>
+                            <!-- ఆంధ్రప్రదేశ్ గణేష్ ఉత్సవ సమితి - గణేష్ మండప నిర్వాహకులకు సూచనలు (COMPLETELY NEW SEPARATE SECTION) -->
+                            <div class="guc-section-block" style="margin-bottom:20px; border:2px solid #f59e0b; border-radius:12px; overflow:hidden; box-shadow:0 4px 15px rgba(245,158,11,0.15); background:#fff;">
+                                
+                                <!-- Section Top Ribbon Banner -->
+                                <div style="background:linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #b91c1c 100%); padding:16px 18px; text-align:center; color:#fff; border-bottom:2px solid #f59e0b;">
+                                    <div style="font-size:12px; font-weight:700; color:#fef08a; letter-spacing:1px; margin-bottom:4px; text-transform:uppercase;">
+                                        ఆంధ్రప్రదేశ్ గణేష్ ఉత్సవ సమితి
+                                    </div>
+                                    <h3 style="margin:0; font-size:20px; font-weight:900; color:#ffffff; font-family:'Outfit', sans-serif; display:flex; align-items:center; justify-content:center; gap:8px;">
+                                        <span>🚩</span> గణేష్ మండప నిర్వాహకులకు సూచనలు <span>🚩</span>
+                                    </h3>
+                                    <div style="font-size:13px; font-weight:700; color:#ffedd5; margin-top:6px; line-height:1.4;">
+                                        నగర గణేష్ ఉత్సవ సమితులలో ప్రతి వినాయక మండపం వారు తప్పనిసరిగా నమోదు చేసుకోవాలి.
+                                    </div>
+                                </div>
+
+                                <!-- 15 Guidelines Body -->
+                                <div style="padding:16px; background:linear-gradient(180deg, #fffdfa 0%, #fffbf5 100%);">
+                                    <div style="display:flex; flex-direction:column; gap:10px;">
+
+                                        <!-- Rule 1 -->
+                                        <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#fff; border:1px solid #fed7aa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                            <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%); color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 4px rgba(185,28,28,0.3);">1</div>
+                                            <div style="font-size:13px; color:#1e293b; font-weight:600; line-height:1.5; padding-top:2px;">
+                                                ప్రతి రోజు ఉదయం మరియు రాత్రి అన్ని గణేష్ మండపములలో సామూహిక హారతి ఇవ్వవలెను.
+                                            </div>
+                                        </div>
+
+                                        <!-- Rule 2 -->
+                                        <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#fff; border:1px solid #fed7aa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                            <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%); color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 4px rgba(185,28,28,0.3);">2</div>
+                                            <div style="font-size:13px; color:#1e293b; font-weight:600; line-height:1.5; padding-top:2px;">
+                                                మండపంలో భజనలు, సంకీర్తనలు, హరికథలు, కోలాటాలు, ధార్మిక, సాంస్కృతిక కార్యక్రమాలు ఏర్పాటు చేయవలెను.
+                                            </div>
+                                        </div>
+
+                                        <!-- Rule 3 -->
+                                        <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#fff; border:1px solid #fed7aa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                            <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%); color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 4px rgba(185,28,28,0.3);">3</div>
+                                            <div style="font-size:13px; color:#1e293b; font-weight:600; line-height:1.5; padding-top:2px;">
+                                                గణేష్ మండపాల వద్ద కార్యక్రమములు 24 గంటలు జాగరూకతతో రక్షణగా ఉండాలి.
+                                            </div>
+                                        </div>
+
+                                        <!-- Rule 4 -->
+                                        <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#fff; border:1px solid #fed7aa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                            <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%); color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 4px rgba(185,28,28,0.3);">4</div>
+                                            <div style="font-size:13px; color:#1e293b; font-weight:600; line-height:1.5; padding-top:2px;">
+                                                గణేష్ మండపం ఎదుటగా కాషాయ జెండా ఎగురవేయవలెను. నిమజ్జన ఊరేగింపులో ఈ జెండా వాహనముకు కట్టవలెను.
+                                            </div>
+                                        </div>
+
+                                        <!-- Rule 5 -->
+                                        <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#fff; border:1px solid #fed7aa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                            <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%); color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 4px rgba(185,28,28,0.3);">5</div>
+                                            <div style="font-size:13px; color:#1e293b; font-weight:600; line-height:1.5; padding-top:2px;">
+                                                మండపాల అలంకరణకు ప్లాస్టిక్ అలంకరణ సామాగ్రి వాడరాదు.
+                                            </div>
+                                        </div>
+
+                                        <!-- Rule 6 -->
+                                        <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#fff; border:1px solid #fed7aa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                            <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%); color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 4px rgba(185,28,28,0.3);">6</div>
+                                            <div style="font-size:13px; color:#1e293b; font-weight:600; line-height:1.5; padding-top:2px;">
+                                                మండపాల చుట్టూ ఉన్న కుటుంబ సభ్యులను ఉత్సవ కార్యక్రమాలలో భాగస్వామ్యం చేయాలి.
+                                            </div>
+                                        </div>
+
+                                        <!-- Rule 7 -->
+                                        <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#fff; border:1px solid #fed7aa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                            <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%); color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 4px rgba(185,28,28,0.3);">7</div>
+                                            <div style="font-size:13px; color:#1e293b; font-weight:600; line-height:1.5; padding-top:2px;">
+                                                నిమజ్జన ఊరేగింపులో వాహనాన్ని నిర్దేశిత క్రమంలో నడుపుతూ భజన మరియు సంకీర్తనలు చేస్తూ నడవవలయును.
+                                            </div>
+                                        </div>
+
+                                        <!-- Rule 8 -->
+                                        <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#fff; border:1px solid #fed7aa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                            <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%); color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 4px rgba(185,28,28,0.3);">8</div>
+                                            <div style="font-size:13px; color:#b91c1c; font-weight:700; line-height:1.5; padding-top:2px;">
+                                                🚫 నిమజ్జన ఊరేగింపులో పాల్గొనే వారు మత్తుపానీయాలు సేవించరాదు.
+                                            </div>
+                                        </div>
+
+                                        <!-- Rule 9 -->
+                                        <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#fff; border:1px solid #fed7aa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                            <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%); color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 4px rgba(185,28,28,0.3);">9</div>
+                                            <div style="font-size:13px; color:#1e293b; font-weight:600; line-height:1.5; padding-top:2px;">
+                                                నిమజ్జనంలో పాల్గొన్న చిన్న పిల్లల జేబులో వారి ఇంటి చిరునామా, ఫోన్ నెంబర్ రాసి పత్రం ఉంచండి.
+                                            </div>
+                                        </div>
+
+                                        <!-- Rule 10 -->
+                                        <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#fff; border:1px solid #fed7aa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                            <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%); color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 4px rgba(185,28,28,0.3);">10</div>
+                                            <div style="font-size:13px; color:#b91c1c; font-weight:700; line-height:1.5; padding-top:2px;">
+                                                ⚠️ చిన్న పిల్లలు, ఈతరాని వ్యక్తులు నిమజ్జనం జరిగే స్థలంలోకి రానివ్వకూడదు.
+                                            </div>
+                                        </div>
+
+                                        <!-- Rule 11 -->
+                                        <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#fff; border:1px solid #fed7aa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                            <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%); color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 4px rgba(185,28,28,0.3);">11</div>
+                                            <div style="font-size:13px; color:#1e293b; font-weight:600; line-height:1.5; padding-top:2px;">
+                                                మండప కార్యక్రమాలలో, నిమజ్జన కార్యక్రమాలలో అశ్లీల వేషాలు, నృత్యాలు గీతాలు ఉపయోగించరాదు.
+                                            </div>
+                                        </div>
+
+                                        <!-- Rule 12 -->
+                                        <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#fff; border:1px solid #fed7aa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                            <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%); color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 4px rgba(185,28,28,0.3);">12</div>
+                                            <div style="font-size:13px; color:#1e293b; font-weight:600; line-height:1.5; padding-top:2px;">
+                                                మండప కార్యక్రమాలలో, నిమజ్జన కార్యక్రమాలలో ధార్మిక భావన ఉట్టిపడేలా సాంస్కృతిక కార్యక్రమాలు, భక్తి గీతాలు మాత్రమే ఉండాలి.
+                                            </div>
+                                        </div>
+
+                                        <!-- Rule 13 -->
+                                        <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#fff; border:1px solid #fed7aa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                            <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%); color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 4px rgba(185,28,28,0.3);">13</div>
+                                            <div style="font-size:13px; color:#1e293b; font-weight:600; line-height:1.5; padding-top:2px;">
+                                                రాష్ట్ర, జిల్లా, నగర గణేష్ ఉత్సవ సమితుల ద్వారా వచ్చే సూచనలు మండప నిర్వాహకులు పాటించాలి.
+                                            </div>
+                                        </div>
+
+                                        <!-- Rule 14 -->
+                                        <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#fff; border:1px solid #fed7aa; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                            <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%); color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 4px rgba(185,28,28,0.3);">14</div>
+                                            <div style="font-size:13px; color:#1e293b; font-weight:600; line-height:1.5; padding-top:2px;">
+                                                గణేష్ మహోత్సవాన్ని కుల మతాలకు అతీతంగా సమన్వయంతో జరుపుకోవాలి.
+                                            </div>
+                                        </div>
+
+                                        <!-- Rule 15 -->
+                                        <div style="display:flex; align-items:flex-start; gap:12px; padding:10px 12px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                                            <div style="width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg, #16a34a 0%, #15803d 100%); color:#fff; font-weight:900; font-size:13px; display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 4px rgba(22,163,74,0.3);">15</div>
+                                            <div style="font-size:13px; color:#166534; font-weight:800; line-height:1.5; padding-top:2px;">
+                                                🌱 ప్లాస్టిక్ వస్తువుల వాడకాన్ని పూర్తిగా తగ్గిద్దాం! స్వదేశీ వస్తువులనే ఉపయోగిద్దాం!
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                    <!-- Devotional Shloka Banner -->
+                                    <div style="margin-top:16px; background:linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%); border-radius:8px; padding:10px 14px; text-align:center; color:#fef08a; font-weight:800; font-size:13px; box-shadow:0 2px 6px rgba(127,29,29,0.25);">
+                                        ॥ వక్రతుండ మహాకాయ సూర్యకోటి సమప్రభ । నిర్విఘ్నం కురు మే దేవ సర్వకార్యేషు సర్వదా ॥
+                                    </div>
+
+                                    <!-- Samithi Dignitaries Office Bearers Box -->
+                                    <div style="margin-top:14px; background:#fff; border:1px solid #fed7aa; border-radius:10px; padding:14px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+                                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; text-align:center; padding-bottom:12px; border-bottom:1px dashed #fed7aa;">
+                                            <div>
+                                                <div style="font-size:14px; font-weight:900; color:#991b1b;">గోకరాజు గంగరాజు <span style="font-size:11.5px; font-weight:700; color:#64748b;">(Ex MP)</span></div>
+                                                <div style="font-size:11.5px; color:#b45309; font-weight:700; margin-top:2px;">గౌరవాధ్యక్షులు</div>
+                                            </div>
+                                            <div>
+                                                <div style="font-size:14px; font-weight:900; color:#991b1b;">చలసాని ఆంజనేయులు</div>
+                                                <div style="font-size:11.5px; color:#b45309; font-weight:700; margin-top:2px;">అధ్యక్షులు</div>
+                                            </div>
+                                            <div>
+                                                <div style="font-size:14px; font-weight:900; color:#991b1b;">పాకాల త్రినాథ్</div>
+                                                <div style="font-size:11.5px; color:#b45309; font-weight:700; margin-top:2px;">జనరల్ సెక్రటరీ</div>
+                                            </div>
+                                        </div>
+
+                                        <div style="margin-top:10px; font-size:12px; color:#475569; text-align:center; line-height:1.6;">
+                                            <div>📍 <strong>కార్యాలయం:</strong> హోమ్ ల్యాండ్ కళ్యాణ్ చక్రవర్తి, సాంబమూర్తి రోడ్, గాంధీ నగర్, విజయవాడ-3</div>
+                                            <div style="margin-top:3px;">
+                                                ✉️ <strong>ఈమెయిల్:</strong> <a href="mailto:apganeshutsavasamithi@gmail.com" style="color:#0284c7; text-decoration:none; font-weight:700;">apganeshutsavasamithi@gmail.com</a>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Mandatory Acceptance Acknowledgment -->
+                                    <div style="margin-top:14px; background:#fffbeb; border:1.5px solid #fde68a; border-radius:8px; padding:12px 14px;">
+                                        <label style="display:flex; align-items:flex-start; gap:10px; cursor:pointer; font-size:12.5px; color:#92400e; font-weight:700; line-height:1.5; margin:0;">
+                                            <input type="checkbox" id="guidelines_accepted" name="guidelines_accepted" required style="width:18px; height:18px; accent-color:#dc2626; margin-top:2px; flex-shrink:0;">
+                                            <span>
+                                                పైన పేర్కొన్న ఆంధ్రప్రదేశ్ గణేష్ ఉత్సవ సమితి సూచనలు మరియు నియమ నిబంధనలన్నింటినీ మేము పూర్తిగా చదివాము. వీటికి కట్టుబడి ఉత్సవాలను క్రమశిక్షణతో, భక్తిశ్రద్ధలతో నిర్వహిస్తామని అంగీకరిస్తున్నాము. <span style="color:#dc2626;">*</span>
+                                            </span>
+                                        </label>
+                                    </div>
+
+                                </div>
                             </div>
 
                             <!-- MANDATORY FOOTER INSTRUCTIONS (FROM PHYSICAL DOCUMENT) -->
@@ -2190,6 +2529,38 @@
                             <button type="submit" class="btn-submit" id="btnSubmitForm" style="background:#dc2626; color:#fff; font-weight:800; font-size:15px; padding:12px 24px; border-radius:8px; border:none; width:100%; cursor:pointer; box-shadow:0 4px 14px rgba(220,38,38,0.4); display:flex; align-items:center; justify-content:center; gap:8px;">
                                 <i class="fas fa-paper-plane"></i>నమోదు పత్రం సమర్పించండి (Submit Application)
                             </button>
+
+                            <!-- కొత్తగా చేర్చిన వాట్సాప్ కమ్యూనిటీ & సోషల్ మీడియా సెక్షన్ (WhatsApp Community & Social Media Updates) -->
+                            <div class="whatsapp-section" style="background:linear-gradient(135deg, #f0fdf4 0%, #e8f5e9 100%); border:2px dashed #2e7d32; padding:22px 18px; border-radius:12px; margin-top:24px; text-align:center;">
+                                <h3 style="margin:0 0 6px 0; font-size:16px; font-weight:900; color:#1b5e20;">
+                                    📲 పెందుర్తి గణేష్ ఉత్సవ సమితి అధికారిక వాట్సాప్ క్యూఆర్ కోడ్
+                                </h3>
+                                <p style="font-size:12.5px; color:#2e7d32; margin:0 0 14px 0;">
+                                    గ్రూప్లో జాయిన్ అవ్వడానికి క్రింది క్యూఆర్ కోడ్ను స్కాన్ చేయండి లేదా బటన్ క్లిక్ చేయండి:
+                                </p>
+                                
+                                <div style="margin:12px auto; display:inline-block; padding:10px; background:#fff; border-radius:10px; border:1.5px solid #a7f3d0; box-shadow:0 4px 12px rgba(46,125,50,0.12);">
+                                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https%3A%2F%2Fchat.whatsapp.com%2FCaJpflWEiJm6Iutz7EzvPy%3Fs%3Dcl%26p%3Di%26mlu%3D0%26ilr%3D4" alt="WhatsApp Group QR Code" style="width:150px; height:150px; display:block; border-radius:6px;">
+                                </div>
+
+                                <div>
+                                    <a href="https://chat.whatsapp.com/CaJpflWEiJm6Iutz7EzvPy?s=cl&p=i&mlu=0&ilr=4" target="_blank" rel="noopener noreferrer" style="background-color:#25d366; color:white; padding:11px 24px; text-decoration:none; border-radius:8px; font-weight:bold; font-size:14px; display:inline-flex; align-items:center; gap:8px; box-shadow:0 3px 10px rgba(37,211,102,0.35); margin-top:8px;">
+                                        <i class="fab fa-whatsapp" style="font-size:19px;"></i>Direct Link ద్వారా గ్రూప్లో చేరండి
+                                    </a>
+                                </div>
+
+                                <div class="social-links" style="margin-top:18px; padding-top:14px; border-top:1px dashed #86efac; font-size:12.5px; color:#14532d;">
+                                    <p style="margin:0 0 8px 0; font-weight:800;">🎥 <b>మన అధికారిక సోషల్ మీడియా అప్డేట్స్:</b></p>
+                                    <div style="display:flex; justify-content:center; align-items:center; gap:16px; flex-wrap:wrap;">
+                                        <a href="https://www.instagram.com/reel/Dc8kRfgSODK/?utm_source=ig_web_copy_link&stkn=MzRlODBiNWFlZA==" target="_blank" rel="noopener noreferrer" style="color:#e1306c; text-decoration:none; font-weight:bold; display:inline-flex; align-items:center; gap:6px; background:#fff; padding:6px 14px; border-radius:6px; border:1px solid #fbcfe8; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                                            <i class="fab fa-instagram" style="font-size:16px;"></i>Instagram రీల్ చూడండి ↗
+                                        </a>
+                                        <a href="https://youtube.com/shorts/svH9c7v9LrQ?si=yIcWfF1FDlKEOVt2" target="_blank" rel="noopener noreferrer" style="color:#d32f2f; text-decoration:none; font-weight:bold; display:inline-flex; align-items:center; gap:6px; background:#fff; padding:6px 14px; border-radius:6px; border:1px solid #fecaca; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                                            <i class="fab fa-youtube" style="font-size:16px;"></i>YouTube షార్ట్ చూడండి ↗
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
 
                         </div>
                     </div>
@@ -2228,6 +2599,35 @@
                         <i class="fab fa-whatsapp"></i>Send via WhatsApp
                     </a>
                 </div>
+
+                <!-- WhatsApp Community Section in Success Screen -->
+                <div style="background:#fff; border:2px dashed #2e7d32; padding:20px; border-radius:12px; margin-top:20px; text-align:center; color:#1e293b;">
+                    <h4 style="margin:0 0 6px 0; font-size:15px; font-weight:900; color:#1b5e20;">
+                        📲 పెందుర్తి గణేష్ ఉత్సవ సమితి అధికారిక వాట్సాప్ గ్రూప్
+                    </h4>
+                    <p style="font-size:12px; color:#2e7d32; margin:0 0 12px 0;">
+                        గ్రూప్లో జాయిన్ అవ్వడానికి క్రింది క్యూఆర్ కోడ్ను స్కాన్ చేయండి లేదా బటన్ క్లిక్ చేయండి:
+                    </p>
+                    <div style="margin:10px auto; display:inline-block; padding:8px; background:#fff; border-radius:8px; border:1px solid #a7f3d0;">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https%3A%2F%2Fchat.whatsapp.com%2FCaJpflWEiJm6Iutz7EzvPy%3Fs%3Dcl%26p%3Di%26mlu%3D0%26ilr%3D4" alt="WhatsApp Group QR Code" style="width:140px; height:140px; display:block; border-radius:4px;">
+                    </div>
+                    <div>
+                        <a href="https://chat.whatsapp.com/CaJpflWEiJm6Iutz7EzvPy?s=cl&p=i&mlu=0&ilr=4" target="_blank" rel="noopener noreferrer" style="background-color:#25d366; color:white; padding:10px 20px; text-decoration:none; border-radius:6px; font-weight:bold; font-size:13px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 3px 8px rgba(37,211,102,0.35); margin-top:6px;">
+                            <i class="fab fa-whatsapp" style="font-size:16px;"></i>Direct Link ద్వారా గ్రూప్లో చేరండి
+                        </a>
+                    </div>
+                    <div style="margin-top:14px; padding-top:10px; border-top:1px dashed #86efac; font-size:11.5px;">
+                        <p style="margin:0 0 6px 0; font-weight:700; color:#14532d;">🎥 మన అధికారిక సోషల్ మీడియా అప్డేట్స్:</p>
+                        <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+                            <a href="https://www.instagram.com/reel/Dc8kRfgSODK/?utm_source=ig_web_copy_link&stkn=MzRlODBiNWFlZA==" target="_blank" rel="noopener noreferrer" style="color:#e1306c; text-decoration:none; font-weight:bold;">
+                                <i class="fab fa-instagram me-1"></i>Instagram రీల్ చూడండి ↗
+                            </a>
+                            <a href="https://youtube.com/shorts/svH9c7v9LrQ?si=yIcWfF1FDlKEOVt2" target="_blank" rel="noopener noreferrer" style="color:#d32f2f; text-decoration:none; font-weight:bold;">
+                                <i class="fab fa-youtube me-1"></i>YouTube షార్ట్ చూడండి ↗
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 </main>
@@ -2238,6 +2638,14 @@
                 <h3><i class="fas fa-map-location-dot me-2 text-primary"></i>Choose Location</h3>
                 <button type="button" class="location-picker-close" onclick="closeLocationPicker()">&times;</button>
             </div>
+            <!-- Direct GPS / My Location Action Button -->
+            <div style="margin-bottom:12px;">
+                <button type="button" id="btnModalUseCurrentLocation" onclick="fetchAndCenterCurrentLocation()" style="width:100%; background:linear-gradient(135deg, #10b981 0%, #059669 100%); color:#fff; border:none; border-radius:8px; padding:11px 16px; font-size:13.5px; font-weight:800; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; box-shadow:0 3px 12px rgba(16,185,129,0.35); transition:all 0.2s ease;">
+                    <i class="fas fa-location-crosshairs" id="gpsBtnIcon" style="font-size:16px;"></i>
+                    <span id="gpsBtnText">నా ప్రస్తుత లొకేషన్ ఎంచుకోండి (Use My Current Location / GPS)</span>
+                </button>
+            </div>
+
             <div class="map-search-box">
                 <i class="fas fa-magnifying-glass"></i>
                 <input type="text" id="mapSearchInput" placeholder="Search area or address (e.g. Pendurthi, Visakhapatnam...)" oninput="handleMapSearch(this.value)">
@@ -2606,7 +3014,12 @@
                 }
             }
 
-            // Silent remote API lookup with debounce
+            // If already present in local database or on initial page load, skip remote fetch to keep page load lightning-fast
+            if (PIN_CODE_AREAS[cleanPin] || !autoFillArea) {
+                return;
+            }
+
+            // Silent remote API lookup with debounce for unknown pincodes only
             clearTimeout(pinLookupTimer);
             pinLookupTimer = setTimeout(async () => {
                 if (spinner) spinner.style.display = 'inline';
@@ -2644,7 +3057,7 @@
             // Initialize cascading location hierarchy (Andhra Pradesh -> Visakhapatnam -> Pendurthi)
             handleStateChange('Andhra Pradesh', 'Visakhapatnam', 'Pendurthi');
 
-            // Initialize area suggestions for default PIN
+            // Initialize area suggestions for default PIN from local dictionary (instant, no network fetch)
             const currentPin = document.getElementById('guc_pin_code')?.value || '530051';
             handlePinCodeInput(currentPin, false);
 
@@ -2663,60 +3076,6 @@
             const modeParam = urlParams.get('mode') || (urlParams.has('edit') ? 'edit' : (urlParams.has('view') ? 'view' : (regIdParam ? 'view' : 'create')));
             if (regIdParam) {
                 loadRegistrationForViewOrEdit(regIdParam, modeParam);
-            }
-
-            // Load campaign banner and live counter dynamically in top header
-            fetch('/api/v1/community-services/public/active-headers')
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        const counterContainer = document.getElementById('headerLiveCounterContainer');
-                        if (counterContainer) {
-                            const label = data.display_registered_label || "18+ Projects Registered";
-                            counterContainer.innerHTML = `
-                                <div class="header-live-counter">
-                                    <span class="pulse-dot"></span>
-                                    <i class="fas fa-building-flag"></i>
-                                    <span>${label}</span>
-                                </div>
-                            `;
-                            // Section 7 count update
-                            const metricProjects = document.getElementById('metricProjects');
-                            if (metricProjects) metricProjects.textContent = label;
-                        }
-                        const bannerContainer = document.getElementById('headerCampaignBannerContainer');
-                        if (bannerContainer) {
-                            const activeCampaign = (data.services || []).find(s => s.banner_image);
-                            if (activeCampaign && activeCampaign.banner_image) {
-                                bannerContainer.innerHTML = `
-                                    <img src="/storage/${activeCampaign.banner_image}" alt="${activeCampaign.service_name}" class="header-community-banner" onerror="this.style.display='none'">
-                                `;
-                            }
-                        }
-                    }
-                })
-                .catch(err => console.error('Failed to load active headers in public layout:', err));
-            
-            // Auto fill area information from Pincode in background (legacy form fallback)
-            const legacyPin = document.getElementById('pin_code');
-            if (legacyPin) {
-                legacyPin.addEventListener('blur', function() {
-                    const pin = this.value.trim();
-                    if (pin.length === 6) {
-                        fetch(`https://api.postalpincode.in/pincode/${pin}`)
-                            .then(r => r.json())
-                            .then(data => {
-                                if (data && data[0] && data[0].Status === "Success") {
-                                    const post = data[0].PostOffice[0];
-                                    const distEl = document.querySelector('input[name="district"]');
-                                    const stateEl = document.querySelector('input[name="state"]');
-                                    if (distEl && !distEl.value) distEl.value = post.District;
-                                    if (stateEl && !stateEl.value) stateEl.value = post.State;
-                                }
-                            })
-                            .catch(() => {});
-                    }
-                });
             }
         });
 
@@ -3427,6 +3786,41 @@
             return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
+        // Ganesh Idol Photo Handlers (Optional Upload)
+        function handleIdolPhotoSelect(input) {
+            const previewWrap = document.getElementById('guc_idol_photo_preview_wrap');
+            const previewImg = document.getElementById('guc_idol_photo_preview_img');
+            const previewName = document.getElementById('guc_idol_photo_preview_name');
+            const previewSize = document.getElementById('guc_idol_photo_preview_size');
+            const clearBtn = document.getElementById('guc_idol_photo_clear');
+
+            if (input && input.files && input.files[0]) {
+                const file = input.files[0];
+                if (previewName) previewName.textContent = file.name;
+                if (previewSize) previewSize.textContent = (file.size / 1024).toFixed(1) + ' KB';
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    if (previewImg) previewImg.src = e.target.result;
+                    if (previewWrap) previewWrap.style.display = 'flex';
+                    if (clearBtn) clearBtn.style.display = 'inline-block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                if (previewWrap) previewWrap.style.display = 'none';
+                if (clearBtn) clearBtn.style.display = 'none';
+            }
+        }
+
+        function clearIdolPhoto() {
+            const input = document.getElementById('guc_idol_photo');
+            if (input) input.value = '';
+            const previewWrap = document.getElementById('guc_idol_photo_preview_wrap');
+            if (previewWrap) previewWrap.style.display = 'none';
+            const clearBtn = document.getElementById('guc_idol_photo_clear');
+            if (clearBtn) clearBtn.style.display = 'none';
+        }
+
         // ── Google Maps Location Picker Functions (Leaflet OpenStreetMap) ──
         let activeLocationTargetId = '';
         let mapCoords = { lat: 17.8300, lng: 83.2000 }; // Default Pendurthi / Visakhapatnam
@@ -3460,6 +3854,27 @@
                     leafletMarker.setLatLng(pos);
                     updateMapCoords(pos.lat, pos.lng, true);
                 });
+
+                // Custom GPS crosshair control button on the Leaflet map
+                try {
+                    const GpsControl = L.Control.extend({
+                        options: { position: 'topright' },
+                        onAdd: function() {
+                            const btn = L.DomUtil.create('button', 'leaflet-bar leaflet-control');
+                            btn.innerHTML = '<i class="fas fa-location-crosshairs" style="font-size:16px; color:#059669;"></i>';
+                            btn.title = 'Use My Current Location';
+                            btn.style.cssText = 'background:#fff; width:34px; height:34px; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; border-radius:4px; box-shadow:0 2px 6px rgba(0,0,0,0.3);';
+                            btn.onclick = function(e) {
+                                L.DomEvent.stopPropagation(e);
+                                fetchAndCenterCurrentLocation();
+                            };
+                            return btn;
+                        }
+                    });
+                    leafletMap.addControl(new GpsControl());
+                } catch(err) {
+                    console.warn('GPS control init error:', err);
+                }
             } else {
                 leafletMap.setView([mapCoords.lat, mapCoords.lng], 14);
                 leafletMarker.setLatLng([mapCoords.lat, mapCoords.lng]);
@@ -3467,6 +3882,72 @@
             setTimeout(() => {
                 if (leafletMap) leafletMap.invalidateSize();
             }, 250);
+        }
+
+        function fetchAndCenterCurrentLocation() {
+            const btnText = document.getElementById('gpsBtnText');
+            const btnIcon = document.getElementById('gpsBtnIcon');
+            const labelEl = document.getElementById('mapSelectedLabel');
+
+            if (!navigator.geolocation) {
+                alert('మీ పరికరంలో GPS లొకేషన్ సపోర్ట్ లేదు (Geolocation is not supported by your browser).');
+                return;
+            }
+
+            if (btnText) btnText.textContent = 'లొకేషన్ శోధిస్తోంది... (Detecting GPS Location...)';
+            if (btnIcon) btnIcon.className = 'fas fa-spinner fa-spin';
+            if (labelEl) labelEl.textContent = '📍 GPS నుండి అత్యంత కచ్చితమైన లొకేషన్ సేకరిస్తోంది... (Fetching high-accuracy coordinates...)';
+
+            navigator.geolocation.getCurrentPosition(
+                async function(position) {
+                    const lat = parseFloat(position.coords.latitude.toFixed(6));
+                    const lng = parseFloat(position.coords.longitude.toFixed(6));
+
+                    if (btnText) btnText.textContent = '✓ మీ ప్రస్తుత లొకేషన్ లాక్ అయింది! (GPS Locked)';
+                    if (btnIcon) btnIcon.className = 'fas fa-check-circle';
+                    if (labelEl) labelEl.textContent = '✓ GPS Coordinates locked. Drag marker or click map to adjust.';
+
+                    await updateMapCoords(lat, lng, true);
+
+                    if (leafletMap && leafletMarker) {
+                        leafletMap.setView([lat, lng], 17);
+                        leafletMarker.setLatLng([lat, lng]);
+                    }
+
+                    setTimeout(() => {
+                        if (btnText) btnText.textContent = 'నా ప్రస్తుత లొకేషన్ ఎంచుకోండి (Use My Current Location / GPS)';
+                        if (btnIcon) btnIcon.className = 'fas fa-location-crosshairs';
+                    }, 4000);
+                },
+                function(error) {
+                    console.warn('Geolocation error:', error);
+                    let msg = 'లొకేషన్ పొందలేకపోయాము (Unable to retrieve GPS location).';
+                    if (error.code === 1) {
+                        msg = 'లొకేషన్ అనుమతి నిరాకరించబడింది (Location permission denied). దయచేసి బ్రౌజర్ సెట్టింగ్స్ లో లొకేషన్ యాక్సెస్ Allow చేయండి లేదా మ్యాప్ పై నేరుగా క్లిక్ చేసి లొకేషన్ ఎంచుకోండి.';
+                    } else if (error.code === 2) {
+                        msg = 'GPS సిగ్నల్ అందుబాటులో లేదు (Position unavailable). దయచేసి మ్యాప్ పై క్లిక్ చేసి లొకేషన్ ఎంచుకోండి.';
+                    } else if (error.code === 3) {
+                        msg = 'లొకేషన్ రిక్వెస్ట్ టైమౌట్ అయింది (GPS request timed out). దయచేసి మళ్ళీ ప్రయత్నించండి.';
+                    }
+                    alert(msg);
+
+                    if (btnText) btnText.textContent = 'నా ప్రస్తుత లొకేషన్ ఎంచుకోండి (Use My Current Location / GPS)';
+                    if (btnIcon) btnIcon.className = 'fas fa-location-crosshairs';
+                    if (labelEl) labelEl.textContent = 'Drag the marker or click anywhere on the map to pinpoint exact mandap location.';
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 12000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        function detectCurrentLocationDirectly() {
+            openLocationPicker('google_location');
+            setTimeout(() => {
+                fetchAndCenterCurrentLocation();
+            }, 350);
         }
 
         async function updateMapCoords(lat, lng, doReverseGeocode = false) {
@@ -3482,6 +3963,10 @@
                         if (data && data.display_name) {
                             formattedAddress = data.display_name;
                             document.getElementById('mapSelectedAddress').textContent = formattedAddress;
+                            const searchIn = document.getElementById('mapSearchInput');
+                            if (searchIn && document.activeElement !== searchIn) {
+                                searchIn.value = formattedAddress;
+                            }
                         }
                     }
                 } catch (e) {
@@ -3712,6 +4197,17 @@
                     }
                 }
 
+                // Ganesh Idol Photo preview
+                if (d.idol_photo) {
+                    const existWrap = document.getElementById('guc_existing_idol_photo_wrap');
+                    const existImg = document.getElementById('guc_existing_idol_photo_img');
+                    const existLink = document.getElementById('guc_existing_idol_photo_link');
+                    const photoUrl = d.idol_photo.startsWith('http') ? d.idol_photo : `/storage/${d.idol_photo}`;
+                    if (existWrap) existWrap.style.display = 'flex';
+                    if (existImg) existImg.src = photoUrl;
+                    if (existLink) existLink.href = photoUrl;
+                }
+
                 // Mode Customization: VIEW vs EDIT
                 const formEl = document.getElementById('registrationForm');
                 const submitBtn = document.getElementById('btnSubmitForm');
@@ -3745,6 +4241,8 @@
                             el.disabled = true;
                         }
                     });
+                    const idolInputRow = document.getElementById('guc_idol_photo_input_row');
+                    if (idolInputRow) idolInputRow.style.display = 'none';
                     if (submitBtn) submitBtn.style.display = 'none';
 
                 } else if (mode === 'edit') {

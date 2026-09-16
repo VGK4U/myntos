@@ -613,6 +613,18 @@ def run_migrations():
                             conn.execute(text(stmt))
                     logger.info("✅ GUC committee fields migration executed successfully")
 
+                # 4.15 GUC Idol Photo Migration
+                idol_mig_file = _backend_dir / "migrations" / "add_idol_photo_to_community_registrations_20260916.sql"
+                if idol_mig_file.exists():
+                    logger.info("Executing GUC idol photo migration (add_idol_photo_to_community_registrations_20260916.sql)...")
+                    sql_content = idol_mig_file.read_text(encoding="utf-8")
+                    for statement in sql_content.split(";"):
+                        cleaned_lines = [l for l in statement.splitlines() if not l.strip().startswith("--")]
+                        stmt = "\n".join(cleaned_lines).strip()
+                        if stmt:
+                            conn.execute(text(stmt))
+                    logger.info("✅ GUC idol photo migration executed successfully")
+
         logger.info("✅ Feature-specific schema migrations complete")
     except Exception as e:
         logger.error(f"❌ Feature migrations failed: {e}")

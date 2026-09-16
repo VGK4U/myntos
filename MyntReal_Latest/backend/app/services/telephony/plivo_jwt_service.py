@@ -23,6 +23,8 @@ from app.models.base import get_indian_time
 logger = logging.getLogger(__name__)
 
 PLIVO_JWT_EXPIRATION_SECONDS = 3600  # 1 Hour
+_CARRIER_BALANCE_CACHE: Dict[str, Any] = {"data": None, "cached_at": 0}
+_CARRIER_BALANCE_TTL_SECONDS = 300  # 5 minutes
 
 
 class PlivoJWTService:
@@ -193,6 +195,8 @@ class PlivoJWTService:
                 fallback_payload["app"] = app_id
             signed_token = jwt.encode(fallback_payload, auth_token, algorithm="HS256", headers={"typ": "JWT", "cty": "plivo;v=1"})
 
+        carrier_health = cls.check_carrier_balance()
+
         return {
             "success": True,
             "token_type": "Bearer",
@@ -205,7 +209,96 @@ class PlivoJWTService:
                 "alias": endpoint.plivo_alias,
                 "is_registered": endpoint.is_registered
             },
-            "caller_id": getattr(settings, 'PLIVO_DEFAULT_CALLER_ID', '+918031728899')
+            "caller_id": getattr(settings, 'PLIVO_DEFAULT_CALLER_ID', '+918031728899'),
+            "carrier_health": carrier_health
+        }
+
+    @classmethod
+    def check_carrier_balance(cls, force_refresh: bool = False) -> Dict[str, Any]:
+        """
+        Proactively queries Plivo Account API to check prepaid cash credits balance.
+        Maintains a 5-minute memory cache to prevent rate-limiting and latency overhead.
+        Categorizes health status as:
+        - 'healthy': cash_credits > $3.00
+        - 'low': $0.20 < cash_credits <= $3.00
+        - 'depleted': cash_credits <= $0.20
+        """
+        global _CARRIER_BALANCE_CACHE
+        now = time.time()
+
+        if not force_refresh and _CARRIER_BALANCE_CACHE.get("data") and (now - _CARRIER_BALANCE_CACHE.get("cached_at", 0) < _CARRIER_BALANCE_TTL_SECONDS):
+            return _CARRIER_BALANCE_CACHE["data"]
+
+        auth_id = getattr(settings, 'PLIVO_AUTH_ID', None) or os.getenv("PLIVO_AUTH_ID")
+        auth_token = getattr(settings, 'PLIVO_AUTH_TOKEN', None) or os.getenv("PLIVO_AUTH_TOKEN")
+
+        if not auth_id or not auth_token or str(auth_id).startswith("mock_"):
+            fallback_data = {
+                "success": True,
+                "cash_credits": 100.0,
+                "currency": "USD",
+                "billing_mode": "mock",
+                "auto_recharge": False,
+                "status": "healthy",
+                "warning": None,
+                "checked_at": get_indian_time().isoformat()
+            }
+            return fallback_data
+
+        try:
+            url = f"https://api.plivo.com/v1/Account/{auth_id}/"
+            resp = requests.get(url, auth=(auth_id, auth_token), timeout=5)
+            if resp.status_code == 200:
+                acc_info = resp.json()
+                raw_credits = acc_info.get("cash_credits", "0")
+                try:
+                    credits_val = float(raw_credits)
+                except (ValueError, TypeError):
+                    credits_val = 0.0
+
+                auto_recharge = bool(acc_info.get("auto_recharge", False))
+                billing_mode = str(acc_info.get("billing_mode", "prepaid"))
+
+                if credits_val <= 0.20:
+                    status = "depleted"
+                    warning = "Telephony trunk balance is depleted. Outbound calls are suspended."
+                elif credits_val <= 3.00:
+                    status = "low"
+                    warning = f"Telephony trunk balance is low (${credits_val:.2f} remaining). Recharge recommended."
+                else:
+                    status = "healthy"
+                    warning = None
+
+                data = {
+                    "success": True,
+                    "cash_credits": round(credits_val, 2),
+                    "currency": "USD",
+                    "billing_mode": billing_mode,
+                    "auto_recharge": auto_recharge,
+                    "status": status,
+                    "warning": warning,
+                    "checked_at": get_indian_time().isoformat()
+                }
+                _CARRIER_BALANCE_CACHE["data"] = data
+                _CARRIER_BALANCE_CACHE["cached_at"] = now
+                return data
+            else:
+                logger.warning(f"[PLIVO-CARRIER-HEALTH] Plivo Account API returned status {resp.status_code}")
+        except Exception as e:
+            logger.warning(f"[PLIVO-CARRIER-HEALTH] Failed to check Plivo carrier balance: {e}")
+
+        if _CARRIER_BALANCE_CACHE.get("data"):
+            return _CARRIER_BALANCE_CACHE["data"]
+
+        return {
+            "success": False,
+            "cash_credits": None,
+            "currency": "USD",
+            "billing_mode": "unknown",
+            "auto_recharge": False,
+            "status": "unknown",
+            "warning": "Could not verify carrier balance",
+            "checked_at": get_indian_time().isoformat()
         }
 
     @classmethod

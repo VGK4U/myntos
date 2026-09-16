@@ -410,7 +410,10 @@ class TelephonyService {
 
     this.plivoClient.on('onCallFailed', (reason: any) => {
       console.warn('[TelephonyService] Call failed:', reason);
-      this.handleCallEnd(typeof reason === 'string' ? reason : 'Call failed', true);
+      const rStr = String(reason || '').toLowerCase();
+      const isCreditError = rStr.includes('credit') || rStr.includes('1010') || rStr.includes('payment') || rStr.includes('declined') || rStr.includes('rejected');
+      const failMsg = isCreditError ? 'Call Failed: Carrier Credits Depleted' : (typeof reason === 'string' ? reason : 'Call failed');
+      this.handleCallEnd(failMsg, true);
     });
   }
 
@@ -628,12 +631,23 @@ class TelephonyService {
           ? parseInt(String(leadId))
           : null;
 
-      const initResp = await apiService.post<any>('/telephony/plivo/browser/call/initiate', {
-        destination_phone: cleanDest,
-        lead_id: cleanLeadId,
-        is_webrtc: true,
-        dispatch_provider_call: false
-      });
+      let initResp: any = null;
+      try {
+        initResp = await apiService.post<any>('/telephony/plivo/browser/call/initiate', {
+          destination_phone: cleanDest,
+          lead_id: cleanLeadId,
+          is_webrtc: true,
+          dispatch_provider_call: false
+        });
+      } catch (postErr: any) {
+        const errDetail = postErr?.response?.data?.detail || postErr?.data?.detail || postErr?.message;
+        const msg = (typeof errDetail === 'object' && errDetail?.message) ? errDetail.message : String(errDetail || '');
+        if (msg.toLowerCase().includes('depleted') || postErr?.response?.status === 402 || postErr?.status === 402) {
+          this.handleCallEnd('Plivo telephony credits depleted ($0.00). Please recharge before dialing.', true);
+          return { success: false, error: 'Plivo telephony credits depleted ($0.00)' };
+        }
+        throw postErr;
+      }
 
       let sessData: any = null;
       if (initResp && initResp.success && initResp.data) {

@@ -74,6 +74,7 @@ class CommunityRegistration(BaseModel):
     location_category = Column(String(50), nullable=True)  # Temple, Community, Government, Private
     location_owner_details = Column(String, nullable=True)
     idol_height = Column(String(50), nullable=True)
+    idol_photo = Column(String, nullable=True)
     utsav_start_date = Column(Date, nullable=True)
     utsav_end_date = Column(Date, nullable=True)
     visarjan_date = Column(Date, nullable=True)
