@@ -70,6 +70,13 @@ def _safe_iso(val: Any) -> Optional[str]:
         return val.isoformat()
     return str(val)
 
+
+def _canonical_10(raw: Any) -> str:
+    """Safely extract the trailing 10 digits of an Indian phone number."""
+    d = re.sub(r'\D', '', str(raw or ''))
+    return d[-10:] if len(d) >= 10 else d
+
+
 # ── DC_DIALER_WS: In-memory registry + single shared PG LISTEN per worker process ──
 # Maps user_ref (str) -> asyncio.Queue for pushing messages to the WS handler
 _dialer_ws_registry: Dict[str, asyncio.Queue] = {}
@@ -3183,6 +3190,7 @@ async def get_recent_calls(
 
     results: list = []
     seen_phones: set = set()
+    staff_full_name = (staff.full_name or "").strip() if staff and staff.full_name else ""
 
     # ── Source 1: CRM dialer attempts ─────────────────────────────────────────
     if user_ref:
@@ -3198,12 +3206,13 @@ async def get_recent_calls(
         """), {"ref": user_ref}).fetchall()
 
         for r in sorted(dial_rows, key=lambda x: str(x[6] or ''), reverse=True):
-            ph = (r[2] or "").strip().replace(" ", "").lstrip("+91")
-            if ph and ph not in seen_phones:
-                seen_phones.add(ph)
+            raw_phone = r[2] or ""
+            c10 = _canonical_10(raw_phone)
+            if c10 and c10 not in seen_phones:
+                seen_phones.add(c10)
                 results.append({
                     "id": r[0], "lead_id": r[0], "name": r[1] or "Unknown",
-                    "phone": r[2] or "", "status": r[4] or "",
+                    "phone": raw_phone, "status": r[4] or "",
                     "call_type": "OUTGOING", "call_outcome": r[5] or "dialed",
                     "duration_seconds": r[7] or 0,
                     "dialed_at": _safe_iso(r[6]),
@@ -3213,22 +3222,33 @@ async def get_recent_calls(
     # ── Source 2: Native call log (staff_call_logs) ────────────────────────────
     if staff_id:
         log_rows = db.execute(text("""
-            SELECT DISTINCT ON (phone_number)
-                matched_lead_id, contact_name, phone_number, call_type,
-                call_datetime, duration_seconds
-            FROM staff_call_logs
-            WHERE staff_id = :sid
-            ORDER BY phone_number, call_datetime DESC
+            SELECT DISTINCT ON (scl.phone_number)
+                scl.matched_lead_id,
+                COALESCE(NULLIF(TRIM(l.name), ''), scl.contact_name) AS contact_name,
+                scl.phone_number,
+                scl.call_type,
+                scl.call_datetime,
+                scl.duration_seconds
+            FROM staff_call_logs scl
+            LEFT JOIN crm_leads l ON scl.matched_lead_id = l.id
+            WHERE scl.staff_id = :sid
+            ORDER BY scl.phone_number, scl.call_datetime DESC
             LIMIT 40
         """), {"sid": staff_id}).fetchall()
 
         for r in sorted(log_rows, key=lambda x: str(x[4] or ''), reverse=True):
-            ph = (r[2] or "").strip().replace(" ", "").lstrip("+91")
-            if ph and ph not in seen_phones:
-                seen_phones.add(ph)
+            raw_phone = r[2] or ""
+            c10 = _canonical_10(raw_phone)
+            contact_name = (r[1] or "").strip()
+            # If contact_name accidentally stored operator's own name, treat as empty
+            if staff_full_name and contact_name.lower() == staff_full_name.lower():
+                contact_name = ""
+
+            if c10 and c10 not in seen_phones:
+                seen_phones.add(c10)
                 results.append({
-                    "id": r[0], "lead_id": r[0], "name": r[1] or "",
-                    "phone": r[2] or "", "status": "",
+                    "id": r[0], "lead_id": r[0], "name": contact_name,
+                    "phone": raw_phone, "status": "",
                     "call_type": r[3] or "OUTGOING", "call_outcome": "",
                     "duration_seconds": r[5] or 0,
                     "dialed_at": _safe_iso(r[4]),
@@ -3236,15 +3256,20 @@ async def get_recent_calls(
                 })
 
     # ── Backfill missing/Unknown contact names using multi-source batch resolver ─
-    missing_phones = [
-        r["phone"] for r in results 
-        if not r.get("name") or str(r.get("name")).strip().lower() in ('', 'unknown', 'none', 'null', '-')
-    ]
+    def _needs_name_resolution(item: dict) -> bool:
+        nm = str(item.get("name") or "").strip().lower()
+        if not nm or nm in ('', 'unknown', 'none', 'null', '-'):
+            return True
+        if staff_full_name and nm == staff_full_name.lower():
+            return True
+        return False
+
+    missing_phones = [r["phone"] for r in results if _needs_name_resolution(r)]
     if missing_phones:
         res_map = _resolve_phones_batch(db, missing_phones)
         for r in results:
-            if not r.get("name") or str(r.get("name")).strip().lower() in ('', 'unknown', 'none', 'null', '-'):
-                c10 = re.sub(r'\D', '', r.get("phone") or '')[-10:]
+            if _needs_name_resolution(r):
+                c10 = _canonical_10(r.get("phone") or "")
                 match = res_map.get(c10)
                 if match:
                     r["name"] = match["name"]

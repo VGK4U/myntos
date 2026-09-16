@@ -279,12 +279,22 @@ def sync_browser_call_event(
                     ).first()
                     call_dt = session.answered_at or session.started_at or session.created_at or get_indian_time()
                     call_type_val = 'OUTGOING' if new_state == CallStateEnum.ENDED.value and (session.duration_seconds or 0) > 0 else 'MISSED'
+                    lead_contact_name = ''
+                    if session.lead_id:
+                        try:
+                            from app.models.crm import CRMLead
+                            lead_obj = db.query(CRMLead).filter(CRMLead.id == session.lead_id).first()
+                            if lead_obj and lead_obj.name:
+                                lead_contact_name = lead_obj.name.strip()
+                        except Exception:
+                            pass
+
                     if not existing_log:
                         db.add(StaffCallLog(
                             company_id=session.company_id or user_company_id or 1,
                             staff_id=session.operator_id,
                             phone_number=session.destination_number or '',
-                            contact_name=session.operator_name or '',
+                            contact_name=lead_contact_name or '',
                             call_type=call_type_val,
                             call_datetime=call_dt,
                             call_date=call_dt.strftime('%Y-%m-%d'),

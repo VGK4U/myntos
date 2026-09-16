@@ -6845,6 +6845,16 @@ def complete_bot_queue(payload: dict = Body(...), db: Session = Depends(get_db))
                     "result_payload": json.dumps(merged_rp)
                 }
             )
+            try:
+                db.execute(text("""
+                    UPDATE message_log
+                    SET current_status = 'sent', sent_at = NOW(), last_status_update = NOW()
+                    WHERE message_sid = (
+                        SELECT execution_id FROM whatsapp_bot_queue WHERE id = :queue_id
+                    ) AND current_status = 'queued'
+                """), {"queue_id": queue_id})
+            except Exception:
+                pass
         elif status == "dispatch_uncertain":
             merged_rp["dispatch_stage"] = "uncertain_send_boundary"
             db.execute(

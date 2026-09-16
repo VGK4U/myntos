@@ -526,6 +526,9 @@ class CRMLeadEditor {
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-info text-white" id="ule_shareBtn" onclick="window.openUniversalShareLeadModal &amp;&amp; window.openUniversalShareLeadModal(window.crmLeadEditor ? window.crmLeadEditor.currentLead : null)">
+                            <i class="fas fa-share-alt me-1"></i>Share Details
+                        </button>
                         <button type="button" class="btn btn-success" onclick="window.crmLeadEditor.saveLead()">
                             <i class="fas fa-save me-2"></i>Save Changes
                         </button>

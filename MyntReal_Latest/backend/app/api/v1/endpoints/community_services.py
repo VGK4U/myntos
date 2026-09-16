@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Form, File, UploadFile, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Form, File, UploadFile, Query, Body, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, and_, desc
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime, date
 from decimal import Decimal
 import json
@@ -196,6 +196,272 @@ def get_registration_public(reg_id: int, db: Session = Depends(get_db)):
     return {"success": True, "data": jsonable_encoder(data)}
 
 
+def format_guc_telugu_confirmation_message(reg_data: dict) -> str:
+    """
+    Construct official Telugu WhatsApp confirmation message for Pendurthi Ganesh Utsava Committee.
+    Includes committee convenors, official committee contact 8897797667, official WhatsApp group link,
+    and Instagram page.
+    """
+    assoc = reg_data.get("association_name") or "గణేష్ ఉత్సవ సమితి"
+    pres_name = reg_data.get("president_name") or reg_data.get("primary_name") or "కమిటీ ప్రతినిధి"
+    pres_phone = reg_data.get("president_phone") or reg_data.get("primary_phone_1") or ""
+    area = reg_data.get("area") or "పెందుర్తి"
+    landmark = reg_data.get("landmark") or ""
+    app_no = reg_data.get("application_no") or f"GUC-2026-{reg_data.get('id', '')}"
+    
+    loc_str = f"{area}" + (f" ({landmark})" if landmark else "")
+    rep_str = f"{pres_name}" + (f" ({pres_phone})" if pres_phone else "")
+    
+    return (
+        f"*పెందుర్తి గణేష్ ఉత్సవ సమితి - నమోదు ధృవీకరణ* 🙏\n\n"
+        f"శ్రీ వినాయక చవితి మహోత్సవాల సందర్భంగా పెందుర్తి గణేష్ ఉత్సవ సమితితో భాగస్వామ్యం అయినందుకు మరియు నమోదు చేసుకున్నందుకు ధన్యవాదాలు! 🕉️\n\n"
+        f"• *మండపం / అసోసియేషన్:* {assoc}\n"
+        f"• *ప్రతినిధి:* {rep_str}\n"
+        f"• *ప్రాంతం / లొకేషన్:* {loc_str}\n"
+        f"• *రిజిస్ట్రేషన్ ID:* {app_no}\n\n"
+        f"*సమితి ముఖ్యులు:*\n"
+        f"• *కన్వీనర్:* విశ్వనాథ్ కరి (Viswanath Kari)\n"
+        f"• *కో-కన్వీనర్:* అద్దిభట్ల భాస్కరరావు (Addibhatla Bhaskar Rao)\n"
+        f"📞 *పెందుర్తి సమితి సంప్రదింపు నెంబర్:* 8897797667\n\n"
+        f"📲 *అధికారిక వాట్సాప్ గ్రూప్ లింక్ (Join Official Group):*\n"
+        f"https://chat.whatsapp.com/CaJpflWEiJm6Iutz7EzvPy?s=cl&p=i&mlu=0&ilr=4\n\n"
+        f"🎥 *అధికారిక ఇన్‌స్టాగ్రామ్ పేజీ (Follow on Instagram):*\n"
+        f"https://www.instagram.com/reel/Dc8kRfgSODK/?utm_source=ig_web_copy_link&stkn=MzRlODBiNWFlZA==\n\n"
+        f"మీ గణేష్ ఉత్సవాలు నిర్విఘ్నంగా, అత్యంత వైభవంగా జరగాలని ఆకాంక్షిస్తున్నాము.\n"
+        f"॥ వక్రతుండ మహాకాయ సూర్యకోటి సమప్రభ । నిర్విఘ్నం కురు మే దేవ సర్వకార్యేషు సర్వదా ॥"
+    )
+
+
+def get_guc_registration_all_phones(reg) -> List[str]:
+    """
+    Extract all unique 10-digit mobile numbers from registration record:
+    President, Secretary, Treasurer, Visarjan In-charge, and Mandap Volunteers.
+    """
+    import re
+    phones = []
+    
+    def _add(p):
+        if not p:
+            return
+        d = re.sub(r'\D', '', str(p))
+        if len(d) >= 10:
+            canonical = d[-10:]
+            if canonical not in phones:
+                phones.append(canonical)
+                
+    if isinstance(reg, dict):
+        _add(reg.get("president_phone"))
+        _add(reg.get("primary_phone_1"))
+        _add(reg.get("secretary_phone"))
+        _add(reg.get("secondary_phone_1"))
+        _add(reg.get("treasurer_phone"))
+        _add(reg.get("visarjan_phone"))
+        vols = reg.get("mandap_volunteers")
+    else:
+        _add(getattr(reg, "president_phone", None))
+        _add(getattr(reg, "primary_phone_1", None))
+        _add(getattr(reg, "secretary_phone", None))
+        _add(getattr(reg, "secondary_phone_1", None))
+        _add(getattr(reg, "treasurer_phone", None))
+        _add(getattr(reg, "visarjan_phone", None))
+        vols = getattr(reg, "mandap_volunteers", None)
+        
+    if vols:
+        if isinstance(vols, str):
+            try:
+                vols = json.loads(vols)
+            except Exception:
+                vols = []
+        if isinstance(vols, list):
+            for v in vols:
+                if isinstance(v, dict):
+                    _add(v.get("phone"))
+                elif isinstance(v, str):
+                    _add(v)
+                    
+    return phones
+
+
+def dispatch_guc_whatsapp_messages(phones: List[str], message: str, db: Optional[Session] = None) -> Dict[str, Any]:
+    """
+    Dispatches WhatsApp message to all recipient phones via the system's Scanned WhatsApp Bot (port 5002).
+    If the bot is currently offline, disconnected, or QR scanning is pending:
+    - Automatically enqueues each message into PostgreSQL `whatsapp_bot_queue` table with status 'pending'.
+    - Once the scanned WhatsApp connection becomes active, the bot's background queue runner automatically
+      dispatches the queued messages to all recipients without any manual intervention.
+    - All actions are logged into `MessageLog`.
+    """
+    import requests
+    import os
+    import re
+    from datetime import datetime
+    import logging
+    from sqlalchemy import text
+    
+    _logger = logging.getLogger("guc_whatsapp_dispatch")
+    
+    close_db = False
+    if db is None:
+        try:
+            from app.core.database import SessionLocal
+            db = SessionLocal()
+            close_db = True
+        except Exception as _db_err:
+            _logger.warning("Could not establish DB session in dispatch_guc_whatsapp_messages: %s", _db_err)
+            
+    # Canonicalize unique 10-digit phone numbers
+    canonical_phones = []
+    for p in phones:
+        if not p:
+            continue
+        digits = re.sub(r'\D', '', str(p))
+        if len(digits) >= 10:
+            c10 = digits[-10:]
+            if c10 not in canonical_phones:
+                canonical_phones.append(c10)
+
+    # Check bot status
+    env_url = os.getenv("WHATSAPP_BOT_URL") or os.getenv("WA_BOT_URL")
+    urls = []
+    if env_url:
+        urls.append(env_url if env_url.endswith("/api/send-message") else f"{env_url.rstrip('/')}/api/send-message")
+    urls.extend([
+        "http://127.0.0.1:5002/api/send-message",
+        "http://localhost:5002/api/send-message"
+    ])
+    
+    # Fast gateway health check
+    gateway_online = False
+    can_send_now = False
+    status_urls = ["http://127.0.0.1:5002/status", "http://localhost:5002/status"]
+    for s_url in status_urls:
+        try:
+            s_resp = requests.get(s_url, timeout=1.5)
+            if s_resp.status_code == 200:
+                gateway_online = True
+                s_data = s_resp.json()
+                can_send_now = bool(s_data.get("can_send_now")) or (s_data.get("connection_state") == "connected") or (s_data.get("status") == "dev_standby")
+                break
+        except Exception:
+            continue
+
+    results = {"sent": [], "queued": [], "failed": []}
+
+    try:
+        for c10 in canonical_phones:
+            clean_p = "91" + c10
+            target_jid = f"{clean_p}@s.whatsapp.net"
+            exec_id = f"guc_wa_{c10}_{int(datetime.utcnow().timestamp())}"
+            
+            dispatched = False
+            last_err = None
+
+            if gateway_online and can_send_now:
+                for bot_url in urls:
+                    try:
+                        resp = requests.post(
+                            bot_url,
+                            json={"phone": clean_p, "message": message},
+                            timeout=8
+                        )
+                        if resp.status_code == 200:
+                            raw = resp.json()
+                            if raw.get("success"):
+                                dispatched = True
+                                break
+                            else:
+                                last_err = raw.get("error") or "Bot rejected message"
+                        else:
+                            last_err = f"HTTP {resp.status_code}: {resp.text[:100]}"
+                    except Exception as e:
+                        last_err = str(e)
+                        continue
+            else:
+                last_err = "Scanned WhatsApp bot not connected / standby mode"
+
+            if dispatched:
+                results["sent"].append(c10)
+                _logger.info("✅ GUC WhatsApp dispatched to %s", c10)
+                if db:
+                    try:
+                        from app.models.whatsapp import MessageLog
+                        ml = MessageLog(
+                            message_sid=exec_id,
+                            message_type="guc_confirmation",
+                            mobile_number=c10,
+                            message_body=message,
+                            from_number="8897797667",
+                            to_number=f"+{clean_p}",
+                            provider="SCANNED_BOT",
+                            initial_status="sent",
+                            current_status="sent",
+                            job_id="guc_confirmation",
+                            execution_id=exec_id
+                        )
+                        db.add(ml)
+                        db.commit()
+                    except Exception as _m_err:
+                        db.rollback()
+                        _logger.debug("MessageLog insert note: %s", _m_err)
+            else:
+                # Scanned WhatsApp not connected or offline -> Queue message into whatsapp_bot_queue!
+                if db:
+                    try:
+                        rp = {
+                            "phone": c10,
+                            "clean_phone": clean_p,
+                            "source": "guc_registration",
+                            "enqueued_reason": last_err or "Scanned bot offline/disconnected",
+                            "enqueued_at": datetime.utcnow().isoformat()
+                        }
+                        db.execute(text("""
+                            INSERT INTO whatsapp_bot_queue (
+                                target_type, target_jid, message, status, created_at, result_payload, job_id, execution_id
+                            ) VALUES (
+                                'direct', :target_jid, :message, 'pending', NOW(), CAST(:rp AS jsonb), 'guc_confirmation', :execution_id
+                            )
+                        """), {
+                            "target_jid": target_jid,
+                            "message": message,
+                            "rp": json.dumps(rp),
+                            "execution_id": exec_id
+                        })
+
+                        from app.models.whatsapp import MessageLog
+                        ml = MessageLog(
+                            message_sid=exec_id,
+                            message_type="guc_confirmation",
+                            mobile_number=c10,
+                            message_body=message,
+                            from_number="8897797667",
+                            to_number=f"+{clean_p}",
+                            provider="SCANNED_QUEUE",
+                            initial_status="queued",
+                            current_status="queued",
+                            status_source="GUC_QUEUE_AUTO",
+                            job_id="guc_confirmation",
+                            execution_id=exec_id
+                        )
+                        db.add(ml)
+                        db.commit()
+                        results["queued"].append(c10)
+                        _logger.info("⏳ GUC WhatsApp enqueued into whatsapp_bot_queue for %s (will auto-send once connected)", c10)
+                    except Exception as q_err:
+                        db.rollback()
+                        _logger.error("Failed to enqueue GUC message for %s: %s", c10, q_err)
+                        results["failed"].append({"phone": c10, "error": str(q_err)})
+                else:
+                    results["failed"].append({"phone": c10, "error": last_err or "Database session unavailable"})
+    finally:
+        if close_db and db:
+            try:
+                db.close()
+            except Exception:
+                pass
+
+    return results
+
+
 @router.post("/public/register")
 async def register_community(
     community_service_id: Optional[int] = Form(None),
@@ -253,6 +519,7 @@ async def register_community(
     applicant_signature: Optional[str] = Form(None),
     registered_from: Optional[str] = Form(None),
     landmark: Optional[str] = Form(None),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     db: Session = Depends(get_db)
 ):
     """
@@ -606,6 +873,11 @@ async def register_community(
         db.commit()
         db.refresh(reg)
 
+    # 10. Automatically trigger / queue WhatsApp Telugu confirmation to all given phones via Scanned WhatsApp Bot
+    all_phones = get_guc_registration_all_phones(reg)
+    telugu_msg = format_guc_telugu_confirmation_message(reg.to_dict())
+    dispatch_results = dispatch_guc_whatsapp_messages(all_phones, telugu_msg, db)
+
     return {
         "success": True,
         "message": "Registration submitted successfully! Upline / Admin verification is pending.",
@@ -616,7 +888,54 @@ async def register_community(
             "partner_code": partner_code,
             "raw_password": raw_password,
             "phone": resolved_primary_phone
+        },
+        "wa_text": telugu_msg,
+        "phones": all_phones,
+        "wa_dispatch": dispatch_results
+    }
+
+
+@router.post("/public/registrations/{reg_id}/send-whatsapp-confirmation")
+def send_guc_registration_whatsapp_confirmation(
+    reg_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Explicit endpoint to dispatch the official Telugu confirmation message
+    to ALL given mobile numbers via the Scanned WhatsApp Bot.
+    If the bot is not connected on time, messages are safely placed in queue.
+    """
+    reg = db.query(CommunityRegistration).filter(CommunityRegistration.id == reg_id).first()
+    if not reg:
+        raise HTTPException(status_code=404, detail="Registration record not found")
+    
+    all_phones = get_guc_registration_all_phones(reg)
+    if not all_phones:
+        return {
+            "success": False,
+            "message": "No valid phone numbers found for this registration",
+            "phones": []
         }
+        
+    telugu_msg = format_guc_telugu_confirmation_message(reg.to_dict())
+    results = dispatch_guc_whatsapp_messages(all_phones, telugu_msg, db)
+    sent_cnt = len(results.get("sent", []))
+    queued_cnt = len(results.get("queued", []))
+    if sent_cnt > 0 and queued_cnt == 0:
+        feedback_msg = f"స్కాన్డ్ వాట్సాప్ ద్వారా {sent_cnt} నంబర్లకు కన్ఫర్మేషన్ మెసేజ్ పంపబడింది!"
+    elif queued_cnt > 0 and sent_cnt == 0:
+        feedback_msg = f"స్కాన్డ్ వాట్సాప్ కనెక్ట్ అయ్యేందుకు వేచి చూస్తోంది. {queued_cnt} మొబైల్ నంబర్లకు సందేశాలు క్యూ (Queue) లో భద్రపరచబడ్డాయి. వాట్సాప్ కనెక్ట్ అవ్వగానే స్వయంచాలకంగా పంపబడతాయి!"
+    elif sent_cnt > 0 and queued_cnt > 0:
+        feedback_msg = f"{sent_cnt} నంబర్లకు మెసేజ్ పంపబడింది; {queued_cnt} నంబర్లు క్యూలో ఉన్నాయి (కనెక్ట్ అవ్వగానే పంపబడతాయి)."
+    else:
+        feedback_msg = "సందేశం పంపడం లేదా క్యూలో చేర్చడం సాధ్యం కాలేదు."
+
+    return {
+        "success": True,
+        "message": feedback_msg,
+        "phones": all_phones,
+        "results": results,
+        "wa_text": telugu_msg
     }
 
 

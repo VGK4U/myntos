@@ -735,6 +735,9 @@
             <button class="dc-whatsapp-btn" id="dc-whatsapp-btn" type="button" style="background:#25D366;color:#ffffff;border:none;border-radius:10px;padding:12px 18px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:7px;cursor:pointer;box-shadow:0 2px 6px rgba(37,211,102,0.3);transition:transform 0.15s ease;" title="Open WhatsApp chat with lead">
               <i class="fab fa-whatsapp" style="font-size:16px;"></i> WhatsApp
             </button>
+            <button class="dc-share-btn" id="dc-share-btn" type="button" onclick="doDialerShareLead()" style="background:#0284c7;color:#ffffff;border:none;border-radius:10px;padding:12px 18px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:7px;cursor:pointer;box-shadow:0 2px 6px rgba(2,132,199,0.3);transition:transform 0.15s ease;" title="Share Lead details with team member">
+              <i class="fas fa-share-alt" style="font-size:14px;"></i> Share Details
+            </button>
             <button class="dc-save-btn" id="dc-save-btn" style="flex:1;">Save &amp; Next →</button>
           </div>
 
@@ -877,6 +880,7 @@
 <script src="/staff_header.js"></script>
 <script src="/public/js/staff-fetch.js"></script>
 <script src="/public/js/wa-lead-modal.js?v=20260907"></script>
+<script src="/public/js/share-lead-modal.js?v=20260916"></script>
 <script src="/public/js/nda-enforcement.js"></script>
 <script>
 (async function() {
@@ -1721,6 +1725,41 @@
       window.openLeadWAModal(leadId, phone, name, companyId, null, catName);
     } else {
       if (phone) window.open(`https://wa.me/91${phone}`, '_blank');
+    }
+  };
+
+  window.doDialerShareLead = function() {
+    if (!currentLead && !currentLeadId) {
+      toast('No lead selected to share.', 3000);
+      return;
+    }
+    const leadId = currentLeadId || currentLead?.id || currentLead?.lead_id;
+    const name = document.getElementById('e-name')?.value || currentLead?.name || 'Customer';
+    const phone = document.getElementById('e-phone')?.value || currentLead?.phone || '';
+    const altPhone = currentLead?.alternate_phone || '';
+    const catSelect = document.getElementById('e-category');
+    const category = (catSelect && catSelect.options[catSelect.selectedIndex]?.text) || currentLead?.category || '';
+    const area = document.getElementById('e-area')?.value || currentLead?.area || '';
+    const city = document.getElementById('e-city')?.value || currentLead?.city || '';
+    const requirements = document.getElementById('e-requirements')?.value || currentLead?.requirements || '';
+    const notes = document.getElementById('e-recent-comments')?.value || document.getElementById('e-note')?.value || currentLead?.notes || '';
+    const companyId = currentLead?.company_id;
+
+    if (window.openShareLeadModal) {
+      window.openShareLeadModal({
+        leadId: leadId,
+        name: name,
+        phone: phone,
+        alternatePhone: altPhone,
+        category: category,
+        area: area,
+        city: city,
+        requirements: requirements,
+        notes: notes,
+        companyId: companyId
+      });
+    } else {
+      toast('Share Lead modal is loading...', 2000);
     }
   };
 

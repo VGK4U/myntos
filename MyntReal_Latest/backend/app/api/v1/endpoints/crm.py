@@ -934,6 +934,13 @@ class LeadAssign(BaseModel):
     reason: Optional[str] = None
 
 
+class ShareLeadDetailsRequest(BaseModel):
+    target_staff_id: int
+    followup_type: Optional[str] = "secondary_followup"
+    notes: Optional[str] = None
+    assign_as_secondary: bool = True
+
+
 class FollowUpCreate(BaseModel):
     followup_type: str = "call"
     scheduled_date: datetime
@@ -12266,6 +12273,141 @@ def assign_lead(
         'success': True,
         'message': 'Lead assigned successfully',
         'data': lead.to_dict()
+    }
+
+
+@router.get("/leads/shareable-staff")
+def get_shareable_staff(
+    company_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Get active staff list for sharing lead details (secondary follow-up).
+    """
+    query = db.query(StaffEmployee).filter(StaffEmployee.status == 'active')
+    if current_employee.tenant_id:
+        query = query.filter(StaffEmployee.tenant_id == current_employee.tenant_id)
+    
+    staff_list = query.order_by(StaffEmployee.full_name).all()
+    
+    results = []
+    for s in staff_list:
+        results.append({
+            "id": s.id,
+            "emp_code": s.emp_code,
+            "name": s.full_name,
+            "phone": s.phone or "",
+            "role": s.role.role_name if getattr(s, 'role', None) else (s.designation or ""),
+            "department": s.department.name if getattr(s, 'department', None) else ""
+        })
+    return {"success": True, "staff": results}
+
+
+@router.post("/leads/{lead_id}/share-details")
+def share_lead_details(
+    lead_id: int,
+    payload: ShareLeadDetailsRequest,
+    company_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Share lead details with another staff member for secondary follow-up.
+    Optionally assigns the target staff as secondary handler (field_staff_id/depends_on_staff_id).
+    Logs a CRM note and generates formatted WhatsApp card.
+    """
+    import urllib.parse
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
+    
+    target_staff = db.query(StaffEmployee).filter(
+        StaffEmployee.id == payload.target_staff_id,
+        StaffEmployee.status == 'active'
+    ).first()
+    if not target_staff:
+        raise HTTPException(status_code=404, detail="Target staff member not found or inactive")
+
+    # If assign_as_secondary is requested, link target staff
+    if payload.assign_as_secondary:
+        if not lead.field_staff_id:
+            lead.field_staff_id = target_staff.id
+        else:
+            lead.depends_on_staff_id = target_staff.id
+        
+        assignment_record = CRMLeadAssignment(
+            company_id=lead.company_id,
+            lead_id=lead_id,
+            from_handler_type=lead.handler_type,
+            from_handler_id=lead.handler_id,
+            to_handler_type='secondary_staff',
+            to_handler_id=target_staff.emp_code,
+            reason=f"Shared by {current_employee.full_name} for {payload.followup_type or 'secondary follow-up'}: {payload.notes or ''}",
+            assigned_by_type='staff',
+            assigned_by_id=current_employee.emp_code
+        )
+        db.add(assignment_record)
+
+    # Log CRM Lead Note
+    note_text = f"📢 [Shared with {target_staff.full_name} ({target_staff.emp_code}) for {payload.followup_type or 'secondary follow-up'}]\nNote: {payload.notes or 'No additional notes'}"
+    crm_note = CRMLeadNote(
+        company_id=lead.company_id,
+        lead_id=lead_id,
+        note=note_text,
+        is_private=False,
+        created_by_type='staff',
+        created_by_id=current_employee.emp_code
+    )
+    db.add(crm_note)
+    
+    lead.updated_at = get_indian_time()
+    db.commit()
+    db.refresh(lead)
+
+    # Format WhatsApp text card for the target staff member
+    category_name = lead.source or "General"
+    if getattr(lead, 'category_id', None):
+        try:
+            from app.models.signup_category import SignupCategory
+            cat_obj = db.query(SignupCategory).filter(SignupCategory.id == lead.category_id).first()
+            if cat_obj and cat_obj.name:
+                category_name = cat_obj.name.strip()
+        except Exception:
+            pass
+    budget_str = ""
+    if lead.budget_min or lead.budget_max:
+        budget_str = f"₹{(lead.budget_min or 0)/100000:.1f}L - ₹{(lead.budget_max or lead.budget_min or 0)/100000:.1f}L"
+
+    softphone_link = f"https://www.myntreal.com/staff/softphone?lead_id={lead.id}&auto_dial=1"
+    crm_link = f"https://www.myntreal.com/staff/leads?lead_id={lead.id}"
+
+    wa_text = (
+        f"📢 *LEAD DETAILS FOR SECONDARY FOLLOW-UP*\n\n"
+        f"👤 *Customer*: {lead.name}\n"
+        f"📱 *Phone*: {lead.phone or 'N/A'}\n"
+        f"📍 *Location*: {lead.area or lead.city or lead.address or 'N/A'}\n"
+        f"🏷️ *Category*: {category_name}\n"
+        f"📝 *Requirement*: {lead.requirements or lead.looking_for or 'Secondary consultation'}\n"
+        f"{f'💰 *Budget*: {budget_str}\n' if budget_str else ''}"
+        f"💬 *Notes*: {payload.notes or 'Please follow up with customer directly.'}\n"
+        f"👉 *Shared by*: {current_employee.full_name} ({current_employee.emp_code})\n\n"
+        f"📞 *Call via Softphone*: {softphone_link}\n"
+        f"🔗 *View Lead in CRM*: {crm_link}"
+    )
+
+    clean_target_phone = re.sub(r'\D', '', target_staff.phone or '')[-10:] if target_staff.phone else ""
+    wa_url = f"https://wa.me/91{clean_target_phone}?text={urllib.parse.quote(wa_text)}" if clean_target_phone else ""
+
+    return {
+        "success": True,
+        "message": f"Lead shared with {target_staff.full_name} successfully",
+        "target_staff": {
+            "id": target_staff.id,
+            "emp_code": target_staff.emp_code,
+            "name": target_staff.full_name,
+            "phone": target_staff.phone or ""
+        },
+        "wa_message": wa_text,
+        "wa_url": wa_url
     }
 
 

@@ -2569,11 +2569,19 @@
 
             <!-- SUCCESS WRAPPER -->
             <div id="successWrap" class="success-screen">
-                <div class="success-icon"><i class="fas fa-circle-check"></i></div>
-                <h3 class="success-title">Registration Submitted!</h3>
-                <p class="success-desc">
-                    Your community registration has been successfully logged into our database. The administrative team and your upline referral partners will verify the KYC details and issue your welcome portal login.
+                <div class="success-icon" style="color:#22c55e;"><i class="fas fa-circle-check"></i></div>
+                <h3 class="success-title" style="margin-bottom:6px;">నమోదు విజయవంతమైంది!</h3>
+                <div style="font-size:14px;color:#94a3b8;font-weight:600;margin-bottom:14px;">Registration Successfully Submitted!</div>
+                
+                <p class="success-desc" style="max-width:650px;margin:0 auto 16px auto;font-size:13.5px;line-height:1.6;">
+                    పెందుర్తి గణేష్ ఉత్సవ సమితి - 2026 లో మీ మండపం నమోదు విజయవంతంగా స్వీకరించబడింది. కమిటీ నిర్వాహకులు వివరాలను పరిశీలిస్తారు.
                 </p>
+
+                <div id="gucSuccessRefWrap" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:10px 18px;margin-bottom:20px;display:inline-flex;align-items:center;gap:10px;">
+                    <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;font-weight:700;">రిజిస్ట్రేషన్ ID:</span>
+                    <span id="gucSuccessAppNoBadge" style="font-size:15px;font-weight:900;color:#38bdf8;font-family:monospace;">—</span>
+                </div>
+
                 <div id="signupCredsWrap" style="display:none;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:20px;margin-bottom:20px;text-align:left">
                     <div style="font-weight:800;font-size:15px;color:#fff;margin-bottom:12px;display:flex;align-items:center;gap:8px">
                         <i class="fas fa-key text-warning"></i>Community Login Credentials
@@ -2592,12 +2600,88 @@
                         <i class="fas fa-triangle-exclamation text-warning me-1"></i> These credentials will be activated once administrative review is complete.
                     </div>
                 </div>
-                <div class="whatsapp-share-card">
-                    <div style="font-weight:700;font-size:14px;color:#fff;margin-bottom:8px">Share with your Upline / Mentor</div>
-                    <div style="font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:12px">Send this registration reference directly to your referring Channel Partner via WhatsApp.</div>
-                    <a href="#" id="waShareBtn" target="_blank" class="whatsapp-btn">
-                        <i class="fab fa-whatsapp"></i>Send via WhatsApp
-                    </a>
+
+                <!-- OFFICIAL TELUGU WHATSAPP CONFIRMATION CARD -->
+                <div class="guc-whatsapp-card" style="background: linear-gradient(145deg, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 0.95) 100%); border: 1.5px solid #10b981; border-radius: 16px; padding: 22px; margin-bottom: 22px; text-align: left; box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.18);">
+                    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:14px; border-bottom: 1px solid rgba(16, 185, 129, 0.25); padding-bottom:12px;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="width:40px; height:40px; border-radius:50%; background:#25d366; display:flex; align-items:center; justify-content:center; color:#fff; font-size:20px; box-shadow:0 4px 10px rgba(37,211,102,0.4);">
+                                <i class="fab fa-whatsapp"></i>
+                            </div>
+                            <div>
+                                <h4 style="margin:0; font-size:16px; font-weight:900; color:#fff; letter-spacing:-0.2px;">
+                                    పెందుర్తి గణేష్ ఉత్సవ సమితి - వాట్సాప్ ధృవీకరణ
+                                </h4>
+                                <div style="font-size:11.5px; color:#34d399; font-weight:600; margin-top:2px;">
+                                    Official WhatsApp Confirmation Dispatch &amp; Share
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px; background:rgba(16, 185, 129, 0.15); border:1px solid rgba(16, 185, 129, 0.3); padding:4px 12px; border-radius:20px; font-size:11.5px; color:#6ee7b7; font-weight:700;">
+                            <i class="fas fa-robot text-success"></i> Scanned WhatsApp Bot
+                        </div>
+                    </div>
+
+                    <div style="font-size:13px; color:#cbd5e1; line-height:1.55; margin-bottom:14px;">
+                        రిజిస్ట్రేషన్ ఫారంలో ఇచ్చిన <strong>అన్ని మొబైల్ నంబర్లకు</strong> (అధ్యక్షుడు, కార్యదర్శి, కోశాధికారి, విసర్జన ఇన్‌ఛార్జ్, వాలంటీర్లు) స్కాన్డ్ వాట్సాప్ ద్వారా అధికారిక కన్ఫర్మేషన్ మెసేజ్ పంపబడుతుంది.
+                    </div>
+
+                    <!-- Live Dispatch Feedback Status -->
+                    <div id="gucWaDispatchStatus" style="background:rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 16px; margin-bottom:16px;">
+                        <div style="color:#38bdf8; font-size:13px; font-weight:600; display:flex; align-items:center; gap:8px;">
+                            <i class="fas fa-circle-notch fa-spin"></i>
+                            <span>స్కాన్డ్ వాట్సాప్ బాట్ ద్వారా నమోదైన నంబర్లకు ధృవీకరణ సందేశం పంపబడుతోంది...</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+                        <button type="button" id="btnResendGucWa" onclick="resendGucWhatsAppConfirmation()" style="background:#25d366; color:#fff; border:none; padding:10px 18px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);">
+                            <i class="fas fa-paper-plane"></i>
+                            <span id="resendBtnText">స్కాన్డ్ వాట్సాప్ ద్వారా పంపు / Resend to All Numbers</span>
+                        </button>
+
+                        <a href="#" id="waShareBtn" target="_blank" rel="noopener noreferrer" style="background:#128c7e; color:#fff; border:none; padding:10px 18px; border-radius:8px; font-size:13px; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s; box-shadow: 0 4px 12px rgba(18, 140, 126, 0.35);">
+                            <i class="fab fa-whatsapp"></i>
+                            <span>వాట్సాప్‌లో షేర్ చేయండి / Share via WhatsApp</span>
+                        </a>
+
+                        <button type="button" id="btnCopyGucWaMsg" onclick="copyGucMessageText()" style="background:rgba(255,255,255,0.08); color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:10px 16px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; transition:all 0.2s;">
+                            <i class="fas fa-copy"></i>
+                            <span id="copyBtnText">మెసేజ్ కాపీ చేయండి (Copy)</span>
+                        </button>
+                    </div>
+
+                    <!-- Message Preview Box -->
+                    <div style="background:rgba(0,0,0,0.45); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:14px 16px; margin-top:12px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <span style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.5px;">
+                                <i class="fas fa-envelope-open-text me-1"></i>వాట్సాప్ సందేశం ప్రివ్యూ (Telugu Message Preview)
+                            </span>
+                            <span style="font-size:11px; color:var(--text-muted);">అధికారిక సందేశం</span>
+                        </div>
+                        <div id="gucMessageContentBox" style="font-size:12px; line-height:1.65; color:#e2e8f0; white-space:pre-wrap; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-height:220px; overflow-y:auto; padding-right:6px;">
+(సందేశం లోడ్ అవుతోంది...)
+                        </div>
+                    </div>
+
+                    <!-- Committee Details Quick Bar -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap:12px; margin-top:16px; padding-top:14px; border-top:1px dashed rgba(255,255,255,0.12); font-size:12.5px;">
+                        <div style="color:#cbd5e1;">
+                            <span style="color:var(--text-muted); font-size:11px; display:block; font-weight:700; text-transform:uppercase;">కన్వీనర్ (Convenor)</span>
+                            <strong style="color:#fff;">విశ్వనాథ్ కరి</strong> (Viswanath Kari)
+                        </div>
+                        <div style="color:#cbd5e1;">
+                            <span style="color:var(--text-muted); font-size:11px; display:block; font-weight:700; text-transform:uppercase;">కో-కన్వీనర్ (Co-convenor)</span>
+                            <strong style="color:#fff;">అద్దిభట్ల భాస్కరరావు</strong> (Addibhatla Bhaskar Rao)
+                        </div>
+                        <div style="color:#cbd5e1;">
+                            <span style="color:var(--text-muted); font-size:11px; display:block; font-weight:700; text-transform:uppercase;">పెందుర్తి సమితి సంప్రదింపు నెంబర్</span>
+                            <a href="tel:8897797667" style="color:#38bdf8; font-weight:900; text-decoration:none; font-size:14px;">
+                                <i class="fas fa-phone me-1"></i>8897797667
+                            </a>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- WhatsApp Community Section in Success Screen -->
@@ -3144,10 +3228,13 @@
                     return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : '16, 185, 129';
                 }
 
-                document.getElementById('formServiceId').value = s.id;
-                document.getElementById('heroTitle').textContent = settings.custom_title || s.service_name;
-                document.getElementById('heroBadge').textContent = s.short_name;
-                document.title = `${s.service_name} Registration | VGK4U`;
+                const formServiceId = document.getElementById('formServiceId');
+                if (formServiceId) formServiceId.value = s.id;
+                const heroTitle = document.getElementById('heroTitle');
+                if (heroTitle) heroTitle.textContent = settings.custom_title || s.service_name;
+                const heroBadge = document.getElementById('heroBadge');
+                if (heroBadge) heroBadge.textContent = s.short_name;
+                document.title = `${s.service_name || 'విశాఖపట్నం గణేష్ ఉత్సవ సమితి'} | VGK4U`;
 
                 // Tagline, workflow, benefits, rules extraction from description
                 let extractedTagline = '';
@@ -3219,10 +3306,12 @@
                     storyText = storyText.replace(/\{[^\}]*\}/g, '').replace(/\[PASS\].*|\[FAIL\].*/gi, '').trim();
                     
                     if (storyText && storyText.length > 40) {
-                        document.getElementById('storyParagraph').textContent = storyText.substring(0, 600) + (storyText.length > 600 ? '...' : '');
+                        const storyEl = document.getElementById('storyParagraph');
+                        if (storyEl) storyEl.textContent = storyText.substring(0, 600) + (storyText.length > 600 ? '...' : '');
                     }
                 }
-                document.getElementById('heroTagline').textContent = settings.custom_tagline || extractedTagline || "Join the campaign and receive automated contributions.";
+                const heroTaglineEl = document.getElementById('heroTagline');
+                if (heroTaglineEl) heroTaglineEl.textContent = settings.custom_tagline || extractedTagline || "Join the campaign and receive automated contributions.";
 
                 // Section 3: Step Labels & Callouts
                 const steps = (settings.cashflow_steps && settings.cashflow_steps.some(st => st)) ? settings.cashflow_steps : (descSteps.length > 0 ? descSteps : ['Enrollment', 'Referral', 'Installation', 'Payout']);
@@ -3243,10 +3332,14 @@
                 }
 
                 // Section 4: Benefits Breakdown Cards
-                document.getElementById('benefitCustomersText').textContent = settings.benefits_customers || parsedCustBenefits || "Up to 40% immediate discount on monthly electric bills, zero upfront installation options, and free subsidy application assistance.";
-                document.getElementById('benefitCommunityText').textContent = settings.benefits_community || parsedCommBenefits || "A direct contribution of ₹5,000 per solar transition, free solar installation for common temple/society halls, and sustainable green credentials.";
-                document.getElementById('benefitPartnersText').textContent = settings.benefits_partners || parsedPartnerBenefits || "L1, L2, L5 upline partner commission structures, automated lead updates via CRM, and premium seasonal marketing kits.";
-                document.getElementById('benefitRulesText').textContent = settings.campaign_rules || parsedRules || "Applicable for approved solar installations within designated zones. Payouts processed automatically upon installation approval.";
+                const bCust = document.getElementById('benefitCustomersText');
+                if (bCust) bCust.textContent = settings.benefits_customers || parsedCustBenefits || "Up to 40% immediate discount on monthly electric bills, zero upfront installation options, and free subsidy application assistance.";
+                const bComm = document.getElementById('benefitCommunityText');
+                if (bComm) bComm.textContent = settings.benefits_community || parsedCommBenefits || "A direct contribution of ₹5,000 per solar transition, free solar installation for common temple/society halls, and sustainable green credentials.";
+                const bPart = document.getElementById('benefitPartnersText');
+                if (bPart) bPart.textContent = settings.benefits_partners || parsedPartnerBenefits || "L1, L2, L5 upline partner commission structures, automated lead updates via CRM, and premium seasonal marketing kits.";
+                const bRules = document.getElementById('benefitRulesText');
+                if (bRules) bRules.textContent = settings.campaign_rules || parsedRules || "Applicable for approved solar installations within designated zones. Payouts processed automatically upon installation approval.";
 
                 // Section 5: Journey Steps update
                 const journeySteps = document.querySelectorAll('#section-journey .timeline-step');
@@ -3372,8 +3465,10 @@
 
                 // Metadata Dates
                 const fmtDate = dStr => dStr ? new Date(dStr).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-                document.getElementById('heroStartDate').innerHTML = `<i class="fas fa-calendar-alt"></i>Starts: ${fmtDate(s.start_date)}`;
-                document.getElementById('heroEndDate').innerHTML = `<i class="fas fa-calendar-check"></i>Ends: ${fmtDate(s.end_date)}`;
+                const heroStart = document.getElementById('heroStartDate');
+                if (heroStart) heroStart.innerHTML = `<i class="fas fa-calendar-alt"></i>Starts: ${fmtDate(s.start_date)}`;
+                const heroEnd = document.getElementById('heroEndDate');
+                if (heroEnd) heroEnd.innerHTML = `<i class="fas fa-calendar-check"></i>Ends: ${fmtDate(s.end_date)}`;
 
                 // Hero Backdrop fallback
                 const heroBackdrop = document.getElementById('heroBackdrop');
@@ -3445,16 +3540,11 @@
                     }
                 }
             } catch (err) {
-                console.error(err);
-                document.getElementById('heroTitle').textContent = "Active Project Not Found";
-                document.getElementById('heroTagline').textContent = err.message || "This community project is currently inactive or deleted.";
-                document.getElementById('signupFormWrap').innerHTML = `
-                    <div style="text-align:center;padding:40px 10px;color:var(--error)">
-                        <i class="fas fa-circle-exclamation" style="font-size:44px;margin-bottom:16px"></i>
-                        <h4 style="font-size:18px;margin-bottom:8px">Link Expired or Inactive</h4>
-                        <p style="font-size:13px;color:var(--text-muted)">The registration window for this Seva is closed. Check other community activities.</p>
-                    </div>
-                `;
+                console.warn('Service details initialization notice:', err);
+                const heroTitle = document.getElementById('heroTitle');
+                if (heroTitle) heroTitle.textContent = "Active Project Not Found";
+                const heroTagline = document.getElementById('heroTagline');
+                if (heroTagline) heroTagline.textContent = err.message || "This community project is currently inactive or deleted.";
             }
         }
 
@@ -3579,8 +3669,10 @@
         window._campaignVideoUrl = '';
 
         function playMockVideo() {
-            document.querySelector('.video-cover-backdrop').style.display = 'none';
+            const backdrop = document.querySelector('.video-cover-backdrop');
+            if (backdrop) backdrop.style.display = 'none';
             const frame = document.getElementById('mockVideoFrame');
+            if (!frame) return;
             frame.style.display = 'flex';
             
             const ytUrl = window._campaignVideoUrl || '';
@@ -3732,43 +3824,97 @@
                     }
 
                     // Toggle views
-                    document.getElementById('signupFormWrap').style.display = 'none';
-                    document.getElementById('successWrap').style.display = 'block';
+                    const signupWrap = document.getElementById('signupFormWrap');
+                    if (signupWrap) signupWrap.style.display = 'none';
+                    const successWrap = document.getElementById('successWrap');
+                    if (successWrap) successWrap.style.display = 'block';
                     
                     // Display credentials
                     if (json.credentials) {
-                        document.getElementById('credsPartnerCode').textContent = json.credentials.partner_code;
-                        document.getElementById('credsPassword').textContent = json.credentials.raw_password;
-                        document.getElementById('signupCredsWrap').style.display = 'block';
+                        const codeEl = document.getElementById('credsPartnerCode');
+                        if (codeEl) codeEl.textContent = json.credentials.partner_code || '';
+                        const pwdEl = document.getElementById('credsPassword');
+                        if (pwdEl) pwdEl.textContent = json.credentials.raw_password || '';
+                        const credsWrap = document.getElementById('signupCredsWrap');
+                        if (credsWrap) credsWrap.style.display = 'block';
                     }
                     
-                    // Setup WhatsApp Share Link
-                    const associationName = document.getElementById('guc_association_name')?.value || 'గణేష్ ఉత్సవ సమితి';
-                    const orgName = presName || 'Ganesh Committee';
-                    const areaName = document.getElementById('guc_area')?.value || 'Pendurthi';
-                    const landmarkName = document.getElementById('guc_landmark')?.value || '';
-                    const distName = document.getElementById('guc_district')?.value || 'Visakhapatnam';
-                    const constName = document.getElementById('guc_assembly_constituency')?.value || 'Pendurthi';
+                    // Setup Official Telugu WhatsApp Confirmation
+                    currentGucRegId = json.registration_id || json.id;
+                    const appNo = json.application_no || (currentGucRegId ? `GUC-2026-${currentGucRegId}` : '');
+                    const appNoBadge = document.getElementById('gucSuccessAppNoBadge');
+                    if (appNoBadge) appNoBadge.textContent = appNo || '—';
+
+                    const teluguMsg = json.wa_text || buildGucTeluguConfirmationMessage({
+                        association_name: document.getElementById('guc_association_name')?.value || '',
+                        president_name: presName || '',
+                        president_phone: presPhone || '',
+                        area: document.getElementById('guc_area')?.value || 'పెందుర్తి',
+                        landmark: document.getElementById('guc_landmark')?.value || '',
+                        application_no: appNo
+                    });
+                    currentGucWaText = teluguMsg;
+
+                    const msgBox = document.getElementById('gucMessageContentBox');
+                    if (msgBox) {
+                        msgBox.textContent = teluguMsg;
+                    }
+
+                    const waBtn = document.getElementById('waShareBtn');
+                    if (waBtn) {
+                        waBtn.href = `https://wa.me/?text=${encodeURIComponent(teluguMsg)}`;
+                    }
+
+                    // Live Dispatch & Queue Status Feedback
+                    const waDispatch = json.wa_dispatch || {};
+                    const sentPhones = waDispatch.sent || [];
+                    const queuedPhones = waDispatch.queued || [];
+                    const allPhones = json.phones || [];
+                    const dispatchStatusEl = document.getElementById('gucWaDispatchStatus');
+                    if (dispatchStatusEl) {
+                        const masked = allPhones.map(p => p.length >= 10 ? (p.slice(0, 2) + 'XXXXXX' + p.slice(-2)) : p);
+                        if (sentPhones.length > 0 && queuedPhones.length === 0) {
+                            dispatchStatusEl.innerHTML = `
+                                <div style="color:#10b981;font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px;">
+                                    <i class="fas fa-check-circle" style="font-size:16px;"></i>
+                                    <span>స్కాన్డ్ వాట్సాప్ ద్వారా <strong>${sentPhones.length}</strong> మొబైల్ నంబర్లకు కన్ఫర్మేషన్ మెసేజ్ పంపబడింది!</span>
+                                </div>
+                                <div style="font-size:11.5px;color:#94a3b8;margin-top:6px;">
+                                    నమోదైన నంబర్లు: ${masked.join(', ')}
+                                </div>
+                            `;
+                        } else if (queuedPhones.length > 0) {
+                            dispatchStatusEl.innerHTML = `
+                                <div style="color:#f59e0b;font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px;">
+                                    <i class="fas fa-clock" style="font-size:16px;"></i>
+                                    <span>స్కాన్డ్ వాట్సాప్ కనెక్ట్ అయ్యేందుకు వేచి చూస్తోంది (${queuedPhones.length} నంబర్లు క్యూలో భద్రపరచబడ్డాయి).</span>
+                                </div>
+                                <div style="font-size:12px;color:#cbd5e1;margin-top:6px;line-height:1.5;">
+                                    స్కాన్డ్ వాట్సాప్ కనెక్ట్ అవ్వగానే ఈ సందేశం నమోదైన అన్ని నంబర్లకు <strong>స్వయంచాలకంగా పంపబడుతుంది</strong>.
+                                </div>
+                                <div style="font-size:11.5px;color:#94a3b8;margin-top:4px;">
+                                    క్యూలో ఉన్న నంబర్లు: ${masked.join(', ')}
+                                </div>
+                            `;
+                        } else if (allPhones.length > 0) {
+                            dispatchStatusEl.innerHTML = `
+                                <div style="color:#10b981;font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px;">
+                                    <i class="fas fa-check-circle" style="font-size:16px;"></i>
+                                    <span>స్కాన్డ్ వాట్సాప్ బాట్ ద్వారా రిజిస్టర్ అయిన నంబర్లకు సందేశం ప్రాసెస్ చేయబడింది.</span>
+                                </div>
+                                <div style="font-size:11.5px;color:#94a3b8;margin-top:6px;">
+                                    నమోదైన నంబర్లు: ${masked.join(', ')}
+                                </div>
+                            `;
+                        }
+                    }
                     
-                    const waText = encodeURIComponent(
-                        `*VGK4U Community Registration Submitted!*\n\n` +
-                        `Hello Mentor, I have registered my community for the Seva project:\n` +
-                        `• *Project:* ${document.getElementById('heroTitle').textContent}\n` +
-                        `• *Association Name:* ${associationName}\n` +
-                        `• *Representative:* ${orgName}\n` +
-                        `• *Area / Location:* ${areaName}${landmarkName ? ' (Landmark: ' + landmarkName + ')' : ''}\n` +
-                        `• *Constituency & District:* ${constName}, ${distName}\n` +
-                        `• *App No / Ref ID:* ${json.application_no || json.registration_id}\n\n` +
-                        `*Community Login Credentials (Pending Activation):*\n` +
-                        `• *Username:* ${json.credentials ? json.credentials.partner_code : '—'}\n` +
-                        `• *Temp Password:* ${json.credentials ? json.credentials.raw_password : '—'}\n` +
-                        `• *Login Portal:* https://www.vgk4u.com/vgk/login\n\n` +
-                        `Please verify my KYC details on the staff dashboard.`
-                    );
-                    document.getElementById('waShareBtn').href = `https://wa.me/?text=${waText}`;
-                    
-                    // Scroll to registration panel top
-                    scrollToSection('section-registration');
+                    // Scroll to success screen smoothly
+                    if (successWrap) {
+                        successWrap.scrollIntoView({ behavior: 'smooth' });
+                    } else {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
                 } else {
                     throw new Error(json.message || 'Error processing request');
                 }
@@ -3777,6 +3923,168 @@
             } finally {
                 loader.style.display = 'none';
                 submitBtn.disabled = false;
+            }
+        }
+
+        let currentGucRegId = null;
+        let currentGucWaText = '';
+
+        function buildGucTeluguConfirmationMessage(data) {
+            const assoc = (data && data.association_name) || document.getElementById('guc_association_name')?.value || 'గణేష్ ఉత్సవ సమితి';
+            const repName = (data && data.president_name) || document.getElementById('guc_president_name')?.value || 'కమిటీ ప్రతినిధి';
+            const repPhone = (data && data.president_phone) || document.getElementById('guc_president_phone')?.value || '';
+            const area = (data && data.area) || document.getElementById('guc_area')?.value || 'పెందుర్తి';
+            const landmark = (data && data.landmark) || document.getElementById('guc_landmark')?.value || '';
+            const appNo = (data && data.application_no) || (currentGucRegId ? `GUC-2026-${currentGucRegId}` : '');
+
+            const locStr = area + (landmark ? ` (${landmark})` : '');
+            const repStr = repName + (repPhone ? ` (${repPhone})` : '');
+
+            return `*పెందుర్తి గణేష్ ఉత్సవ సమితి - నమోదు ధృవీకరణ* 🙏\n\n` +
+                `శ్రీ వినాయక చవితి మహోత్సవాల సందర్భంగా పెందుర్తి గణేష్ ఉత్సవ సమితితో భాగస్వామ్యం అయినందుకు మరియు నమోదు చేసుకున్నందుకు ధన్యవాదాలు! 🕉️\n\n` +
+                `• *మండపం / అసోసియేషన్:* ${assoc}\n` +
+                `• *ప్రతినిధి:* ${repStr}\n` +
+                `• *ప్రాంతం / లొకేషన్:* ${locStr}\n` +
+                `• *రిజిస్ట్రేషన్ ID:* ${appNo}\n\n` +
+                `*సమితి ముఖ్యులు:*\n` +
+                `• *కన్వీనర్:* విశ్వనాథ్ కరి (Viswanath Kari)\n` +
+                `• *కో-కన్వీనర్:* అద్దిభట్ల భాస్కరరావు (Addibhatla Bhaskar Rao)\n` +
+                `📞 *పెందుర్తి సమితి సంప్రదింపు నెంబర్:* 8897797667\n\n` +
+                `📲 *అధికారిక వాట్సాప్ గ్రూప్ లింక్ (Join Official Group):*\n` +
+                `https://chat.whatsapp.com/CaJpflWEiJm6Iutz7EzvPy?s=cl&p=i&mlu=0&ilr=4\n\n` +
+                `🎥 *అధికారిక ఇన్‌స్టాగ్రామ్ పేజీ (Follow on Instagram):*\n` +
+                `https://www.instagram.com/reel/Dc8kRfgSODK/?utm_source=ig_web_copy_link&stkn=MzRlODBiNWFlZA==\n\n` +
+                `మీ గణేష్ ఉత్సవాలు నిర్విఘ్నంగా, అత్యంత వైభవంగా జరగాలని ఆకాంక్షిస్తున్నాము.\n` +
+                `॥ వక్రతుండ మహాకాయ సూర్యకోటి సమప్రభ । నిర్విఘ్నం కురు మే దేవ సర్వకార్యేషు సర్వదా ॥`;
+        }
+
+        async function resendGucWhatsAppConfirmation(regId) {
+            const targetRegId = regId || currentGucRegId;
+            if (!targetRegId) {
+                alert('రిజిస్ట్రేషన్ ID కనుగొనబడలేదు / Registration ID not found.');
+                return;
+            }
+            const btn = document.getElementById('btnResendGucWa');
+            const btnText = document.getElementById('resendBtnText');
+            const statusEl = document.getElementById('gucWaDispatchStatus');
+            if (btn) {
+                btn.disabled = true;
+                btn.style.opacity = '0.7';
+            }
+            if (btnText) {
+                btnText.textContent = 'సందేశం పంపుతున్నాము...';
+            }
+            if (statusEl) {
+                statusEl.innerHTML = `
+                    <div style="color:#f59e0b;font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>స్కాన్డ్ వాట్సాప్ బాట్ ద్వారా రిజిస్టర్ అయిన అన్ని నంబర్లకు సందేశం పంపబడుతోంది...</span>
+                    </div>`;
+            }
+
+            try {
+                const res = await fetch(`/api/v1/community-services/public/registrations/${targetRegId}/send-whatsapp-confirmation`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const json = await res.json().catch(() => ({}));
+                if (res.ok && json.success) {
+                    const results = json.results || {};
+                    const sent = results.sent || [];
+                    const queued = results.queued || [];
+                    const phones = json.phones || [];
+                    const masked = phones.map(p => p.length >= 10 ? (p.slice(0, 2) + 'XXXXXX' + p.slice(-2)) : p);
+
+                    if (statusEl) {
+                        if (sent.length > 0 && queued.length === 0) {
+                            statusEl.innerHTML = `
+                                <div style="color:#10b981;font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px;">
+                                    <i class="fas fa-check-circle" style="font-size:16px;"></i>
+                                    <span>స్కాన్డ్ వాట్సాప్ ద్వారా <strong>${sent.length}</strong> మొబైల్ నంబర్లకు కన్ఫర్మేషన్ మెసేజ్ పంపబడింది!</span>
+                                </div>
+                                ${masked.length > 0 ? `<div style="font-size:11.5px;color:#94a3b8;margin-top:6px;">నమోదైన నంబర్లు: ${masked.join(', ')}</div>` : ''}
+                            `;
+                        } else if (queued.length > 0) {
+                            statusEl.innerHTML = `
+                                <div style="color:#f59e0b;font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px;">
+                                    <i class="fas fa-clock" style="font-size:16px;"></i>
+                                    <span>స్కాన్డ్ వాట్సాప్ కనెక్ట్ అయ్యేందుకు వేచి చూస్తోంది (${queued.length} నంబర్లు క్యూలో భద్రపరచబడ్డాయి).</span>
+                                </div>
+                                <div style="font-size:12px;color:#cbd5e1;margin-top:6px;line-height:1.5;">
+                                    స్కాన్డ్ వాట్సాప్ కనెక్ట్ అవ్వగానే ఈ సందేశం నమోదైన అన్ని నంబర్లకు <strong>స్వయంచాలకంగా పంపబడుతుంది</strong>.
+                                </div>
+                                ${masked.length > 0 ? `<div style="font-size:11.5px;color:#94a3b8;margin-top:4px;">క్యూలో ఉన్న నంబర్లు: ${masked.join(', ')}</div>` : ''}
+                            `;
+                        } else {
+                            statusEl.innerHTML = `
+                                <div style="color:#10b981;font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px;">
+                                    <i class="fas fa-check-circle" style="font-size:16px;"></i>
+                                    <span>${escapeHtml(json.message || 'ధృవీకరణ సందేశం ప్రాసెస్ చేయబడింది')}</span>
+                                </div>
+                            `;
+                        }
+                    }
+                    alert(json.message || 'WhatsApp status updated.');
+                } else {
+                    throw new Error(json.detail || json.message || 'WhatsApp message dispatch failed');
+                }
+            } catch (err) {
+                if (statusEl) {
+                    statusEl.innerHTML = `
+                        <div style="color:#ef4444;font-size:12.5px;display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-triangle-exclamation text-danger"></i>
+                            <span>${escapeHtml(err.message || 'WhatsApp dispatch error')}</span>
+                        </div>`;
+                }
+                alert('వాట్సాప్ సందేశం పంపడంలో సమస్య ఏర్పడింది: ' + (err.message || 'Please try again.'));
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                }
+                if (btnText) {
+                    btnText.textContent = 'స్కాన్డ్ వాట్సాప్ ద్వారా పంపు / Resend to All Numbers';
+                }
+            }
+        }
+
+        function copyGucMessageText() {
+            const textToCopy = currentGucWaText || document.getElementById('gucMessageContentBox')?.innerText || '';
+            if (!textToCopy) return;
+
+            if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    notifyCopied();
+                }).catch(() => fallbackCopy(textToCopy));
+            } else {
+                fallbackCopy(textToCopy);
+            }
+        }
+
+        function fallbackCopy(text) {
+            if (typeof document === 'undefined') return;
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                document.execCommand('copy');
+                notifyCopied();
+            } catch (e) {
+                alert('కాపీ చేయడం సాధ్యం కాలేదు.');
+            }
+            document.body.removeChild(ta);
+        }
+
+        function notifyCopied() {
+            if (typeof document === 'undefined') return;
+            const label = document.getElementById('copyBtnText');
+            if (label) {
+                const orig = label.textContent;
+                label.textContent = 'కాపీ అయింది! (Copied!)';
+                setTimeout(() => { label.textContent = orig; }, 2500);
             }
         }
 
@@ -4268,7 +4576,11 @@
 
                 // Scroll to form
                 const regSec = document.getElementById('section-registration');
-                if (regSec) regSec.scrollIntoView({ behavior: 'smooth' });
+                if (regSec) {
+                    regSec.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    document.getElementById('signupFormWrap')?.scrollIntoView({ behavior: 'smooth' });
+                }
 
             } catch (err) {
                 console.error('Error loading registration:', err);
@@ -4280,27 +4592,37 @@
 
         // ── Utility Recharge Modal Functions ──
         function openRechargeModal() {
-            document.getElementById('rechargeFormWrap').style.display = 'block';
-            document.getElementById('rechargeSuccessWrap').style.display = 'none';
-            document.getElementById('rechargeModal').style.display = 'flex';
+            const formWrap = document.getElementById('rechargeFormWrap');
+            if (formWrap) formWrap.style.display = 'block';
+            const succWrap = document.getElementById('rechargeSuccessWrap');
+            if (succWrap) succWrap.style.display = 'none';
+            const modal = document.getElementById('rechargeModal');
+            if (modal) modal.style.display = 'flex';
         }
 
         function closeRechargeModal() {
-            document.getElementById('rechargeModal').style.display = 'none';
+            const modal = document.getElementById('rechargeModal');
+            if (modal) modal.style.display = 'none';
         }
 
         function submitMockRecharge() {
-            const num = document.getElementById('rechargeNum').value;
+            const numEl = document.getElementById('rechargeNum');
+            const num = numEl ? numEl.value : '';
             if (!num || num.length < 10 || !/^\d+$/.test(num)) {
                 alert('Please enter a valid 10-digit number.');
                 return;
             }
-            const amt = document.getElementById('rechargeAmount').value;
-            document.getElementById('successRecAmt').textContent = '₹' + amt;
-            document.getElementById('successRecNum').textContent = num;
+            const amtEl = document.getElementById('rechargeAmount');
+            const amt = amtEl ? amtEl.value : '0';
+            const recAmt = document.getElementById('successRecAmt');
+            if (recAmt) recAmt.textContent = '₹' + amt;
+            const recNum = document.getElementById('successRecNum');
+            if (recNum) recNum.textContent = num;
             
-            document.getElementById('rechargeFormWrap').style.display = 'none';
-            document.getElementById('rechargeSuccessWrap').style.display = 'block';
+            const formWrap = document.getElementById('rechargeFormWrap');
+            if (formWrap) formWrap.style.display = 'none';
+            const succWrap = document.getElementById('rechargeSuccessWrap');
+            if (succWrap) succWrap.style.display = 'block';
         }
     </script>
 

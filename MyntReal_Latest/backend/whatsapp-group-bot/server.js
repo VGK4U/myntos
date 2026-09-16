@@ -108,13 +108,18 @@ async function processOutboundQueue() {
     if (isProcessingQueue || !sock || connectionStatus !== 'connected') return;
     isProcessingQueue = true;
     try {
-        const resp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-poll?limit=5&instance_id=${encodeURIComponent(INSTANCE_ID)}`);
+        const resp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-poll?limit=25&instance_id=${encodeURIComponent(INSTANCE_ID)}`);
         if (!resp.ok) return;
         const data = await resp.json();
         const items = data.items || [];
         for (const item of items) {
-            const target = item.target_jid || item.phone;
+            let target = item.target_jid || item.phone;
             if (!target) continue;
+            if (!target.includes('@')) {
+                let cleanPhone = String(target).replace(/\D/g, '');
+                if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
+                target = `${cleanPhone}@s.whatsapp.net`;
+            }
             try {
                 let contentPayload = { text: item.message || '' };
                 if (item.media_url) {
@@ -561,6 +566,7 @@ async function processConnectionUpdate(thisGen, update) {
             }
         }
         syncClusterCoordinator();
+        processOutboundQueue();
     }
 
     if (connection === 'close') {

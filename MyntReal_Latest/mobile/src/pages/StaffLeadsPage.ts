@@ -10,6 +10,7 @@ import { authService } from '../services/auth.service';
 import { PageHeader } from '../components/PageHeader';
 import { vgkBannerService } from '../services/vgk-banner.service';
 import { unifiedWAModal } from '../components/UnifiedWAModal';
+import { unifiedShareLeadModal } from '../components/UnifiedShareLeadModal';
 import { callController } from '../services/call-controller';
 import { dialerService } from '../services/dialer.service';
 
@@ -606,8 +607,9 @@ export class StaffLeadsPage {
               <textarea id="cdCallNotes" class="form-textarea" rows="2" placeholder="Summary of discussion with lead..."></textarea>
             </div>
           </div>
-          <div class="modal-footer">
+          <div class="modal-footer" style="display:flex;gap:8px;">
             <button class="btn btn-secondary" id="cancelCallDispositionBtn">Skip</button>
+            <button class="btn" id="cdShareLeadBtn" style="background:#0284c7;color:white;border:none;border-radius:8px;padding:12px 14px;font-weight:700;font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;">📤 Share</button>
             <button class="btn btn-primary" id="saveCallDispositionBtn">Update Lead</button>
           </div>
         </div>
@@ -1005,9 +1007,10 @@ export class StaffLeadsPage {
               </div>
             </div>
           </div>
-          <div class="modal-footer" style="padding: 20px 24px; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; gap: 12px; background: rgba(13, 27, 42, 0.5); border-radius: 0 0 20px 20px;">
-            <button class="btn btn-secondary" id="cancelFormBtn" style="flex: 1; padding: 16px 20px; background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(255, 255, 255, 0.15); color: #a8c0d8; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer;">Cancel</button>
-            <button class="btn btn-primary" id="saveLeadBtn" style="flex: 1.5; padding: 16px 20px; background: linear-gradient(135deg, #10b981 0%, #047857 100%); border: none; color: white; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);">Create Lead</button>
+          <div class="modal-footer" style="padding: 20px 24px; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; gap: 10px; background: rgba(13, 27, 42, 0.5); border-radius: 0 0 20px 20px;">
+            <button class="btn btn-secondary" id="cancelFormBtn" style="flex: 1; padding: 16px 14px; background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(255, 255, 255, 0.15); color: #a8c0d8; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer;">Cancel</button>
+            <button class="btn" id="leadFormShareBtn" style="display: none; padding: 16px 14px; background: #0284c7; border: none; color: white; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap;">📤 Share</button>
+            <button class="btn btn-primary" id="saveLeadBtn" style="flex: 1.5; padding: 16px 14px; background: linear-gradient(135deg, #10b981 0%, #047857 100%); border: none; color: white; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);">Create Lead</button>
           </div>
         </div>
       </div>
@@ -1358,6 +1361,23 @@ export class StaffLeadsPage {
     document.getElementById('closeCallDispositionModal')?.addEventListener('click', () => this.hideModal('callDispositionModal'));
     document.getElementById('cancelCallDispositionBtn')?.addEventListener('click', () => this.hideModal('callDispositionModal'));
     document.getElementById('saveCallDispositionBtn')?.addEventListener('click', () => this.saveCallDisposition());
+    document.getElementById('cdShareLeadBtn')?.addEventListener('click', () => {
+      if (this.selectedLead) {
+        const notes = (document.getElementById('cdCallNotes') as HTMLTextAreaElement)?.value || '';
+        unifiedShareLeadModal.open({
+          leadId: this.selectedLead.id,
+          name: this.selectedLead.name,
+          phone: this.selectedLead.phone,
+          alternatePhone: (this.selectedLead as any).alternate_phone,
+          category: this.selectedLead.category,
+          area: (this.selectedLead as any).area,
+          city: (this.selectedLead as any).city,
+          requirements: (this.selectedLead as any).requirements,
+          notes: notes,
+          companyId: this.getLeadCompanyId(this.selectedLead)
+        });
+      }
+    });
 
     document.querySelectorAll('#cdOutcomeChips .cd-outcome-chip').forEach(chip => {
       chip.addEventListener('click', () => {
@@ -1400,6 +1420,22 @@ export class StaffLeadsPage {
     document.getElementById('closeFormModal')?.addEventListener('click', () => this.hideModal('leadFormModal'));
     document.getElementById('cancelFormBtn')?.addEventListener('click', () => this.hideModal('leadFormModal'));
     document.getElementById('saveLeadBtn')?.addEventListener('click', () => this.saveLead());
+    document.getElementById('leadFormShareBtn')?.addEventListener('click', () => {
+      if (this.selectedLead) {
+        unifiedShareLeadModal.open({
+          leadId: this.selectedLead.id,
+          name: this.selectedLead.name,
+          phone: this.selectedLead.phone,
+          alternatePhone: (this.selectedLead as any).alternate_phone,
+          category: this.selectedLead.category,
+          area: (this.selectedLead as any).area,
+          city: (this.selectedLead as any).city,
+          requirements: (this.selectedLead as any).requirements,
+          notes: (document.getElementById('leadNotes') as HTMLTextAreaElement)?.value || (this.selectedLead as any).notes || '',
+          companyId: this.getLeadCompanyId(this.selectedLead)
+        });
+      }
+    });
     document.getElementById('leadMobileEditBtn')?.addEventListener('click', () => {
       const inp = document.getElementById('leadMobile') as HTMLInputElement;
       if (inp) {
@@ -2187,15 +2223,15 @@ export class StaffLeadsPage {
       <div class="lead-actions-section">
         <div class="actions-row">
           <button class="btn btn-primary" id="editLeadBtn">✏️ Edit Lead</button>
+          <button class="btn" id="detailShareLeadBtn" style="background:#0284c7;color:white;font-weight:700;border:none;border-radius:12px;cursor:pointer;">📤 Share Details</button>
+        </div>
+        <div class="actions-row">
           <button class="btn btn-secondary" id="updateStatusBtn">Update Status</button>
-        </div>
-        <div class="actions-row">
           <button class="btn btn-secondary" id="scheduleFollowupBtn">Follow-up</button>
-          <button class="btn btn-secondary" id="logActivityBtn">Log Activity</button>
         </div>
         <div class="actions-row">
+          <button class="btn btn-secondary" id="logActivityBtn">Log Activity</button>
           <button class="btn btn-secondary" id="addNoteBtn">Add Note</button>
-          <button class="btn btn-secondary" id="updateDealBtn">Value</button>
         </div>
         <div class="actions-row">
           <button class="btn btn-secondary" id="createTaskBtn">Create Task</button>
@@ -2299,6 +2335,20 @@ export class StaffLeadsPage {
     setTimeout(() => vgkBannerService.load(leadId, companyId, 'sl-mob-vgk-banner'), 200);
 
     document.getElementById('editLeadBtn')?.addEventListener('click', () => this.showEditLeadModal(lead));
+    document.getElementById('detailShareLeadBtn')?.addEventListener('click', () => {
+      unifiedShareLeadModal.open({
+        leadId: lead.id,
+        name: lead.name,
+        phone: lead.phone,
+        alternatePhone: (lead as any).alternate_phone,
+        category: lead.category,
+        area: (lead as any).area,
+        city: (lead as any).city,
+        requirements: (lead as any).requirements,
+        notes: (lead as any).notes || '',
+        companyId: this.getLeadCompanyId(lead)
+      });
+    });
     document.getElementById('updateStatusBtn')?.addEventListener('click', () => {
       (document.getElementById('newStatus') as HTMLSelectElement).value = lead.status.toLowerCase();
       this.showModal('statusModal');
@@ -2464,6 +2514,8 @@ export class StaffLeadsPage {
     (document.getElementById('leadAddress') as HTMLTextAreaElement).value = '';
     (document.getElementById('leadNotes') as HTMLTextAreaElement).value = '';
     (document.getElementById('saveLeadBtn') as HTMLButtonElement).textContent = 'Create Lead';
+    const shareBtn = document.getElementById('leadFormShareBtn');
+    if (shareBtn) shareBtn.style.display = 'none';
     const mnrInput = document.getElementById('leadMnrHandlerId') as HTMLInputElement;
     const guruInput = document.getElementById('leadGuruId') as HTMLInputElement;
     const nsSearch = document.getElementById('leadNetworkSearch') as HTMLInputElement;
@@ -2595,6 +2647,8 @@ export class StaffLeadsPage {
     (document.getElementById('leadAddress') as HTMLTextAreaElement).value = lead.address || '';
     (document.getElementById('leadNotes') as HTMLTextAreaElement).value = lead.notes || '';
     (document.getElementById('saveLeadBtn') as HTMLButtonElement).textContent = 'Update Lead';
+    const shareBtn = document.getElementById('leadFormShareBtn');
+    if (shareBtn) shareBtn.style.display = 'inline-block';
     // DC-VGK-BRAND-INCENTIVE-001: populate solar brand dropdown if Solar category
     const isSolarLead = (lead.category || '').toLowerCase().includes('solar');
     const solarBrandSection = document.getElementById('solarBrandSection') as HTMLElement;

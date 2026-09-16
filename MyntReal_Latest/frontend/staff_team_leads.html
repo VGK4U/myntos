@@ -885,6 +885,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-info text-white" onclick="openShareLeadModalFromLeadModal()" id="shareLeadFromModalBtn" style="display: none;">
+                        <i class="fas fa-share-alt me-1"></i> Share Details
+                    </button>
                     <button type="button" class="btn btn-success" onclick="openCreateTaskFromLeadModal()" id="createTaskFromModalBtn" style="display: none;">
                         <i class="fas fa-tasks me-1"></i> Create Task
                     </button>
@@ -1235,6 +1238,9 @@
                                         <button class="btn btn-sm" style="background:#25D366;color:#fff;border:none" onclick="_qaWaSend()">
                                             <i class="fab fa-whatsapp me-1"></i>Send WhatsApp
                                         </button>
+                                        <button class="btn btn-sm" id="qaShareLeadBtn" style="background:#0284c7;color:#fff;border:none" onclick="openShareLeadFromDetail()">
+                                            <i class="fas fa-share-alt me-1"></i>Share Details
+                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -1352,6 +1358,7 @@
     <script src="/public/js/staff-fetch.js"></script>
   <script src="/public/js/nda-enforcement.js"></script>
     <script src="/public/js/wa-lead-modal.js"></script>
+    <script src="/public/js/share-lead-modal.js?v=20260916"></script>
     <script src="/public/js/wa-send-modal.js"></script>
     <script src="/public/js/crm-assignee-search.js"></script>
     <script src="/staff_sidebar.js?v=20260602c"></script>
@@ -2267,6 +2274,8 @@
             document.getElementById('saveLeadBtn').disabled = false;
             document.getElementById('saveLeadBtn').innerHTML = '<i class="fas fa-save me-1"></i> Save Lead';
             document.getElementById('createTaskFromModalBtn').style.display = 'none';
+            const _stlHideBtn = document.getElementById('shareLeadFromModalBtn');
+            if (_stlHideBtn) _stlHideBtn.style.display = 'none';
             document.getElementById('leadForm').querySelectorAll('input, select, textarea').forEach(el => {
                 el.disabled = false;
             });
@@ -2558,6 +2567,8 @@
                     document.getElementById('saveLeadBtn').disabled = false;
                     document.getElementById('saveLeadBtn').innerHTML = '<i class="fas fa-save me-1"></i> Save Lead';
                     document.getElementById('createTaskFromModalBtn').style.display = 'inline-block';
+                    const _stlShowBtn = document.getElementById('shareLeadFromModalBtn');
+                    if (_stlShowBtn) _stlShowBtn.style.display = 'inline-block';
                     document.getElementById('leadForm').querySelectorAll('input, select, textarea').forEach(el => {
                         el.disabled = false;
                     });
@@ -3526,6 +3537,7 @@
                 
                 if (data.success) {
                     const lead = data.data;
+                    window._currentViewLeadData = lead;
                     selectedLeadCompanyId = lead.company_id || effectiveCompanyId;
                     
                     document.getElementById('detailLeadName').textContent = lead.name;
@@ -4566,6 +4578,59 @@
             // DC Protocol (Dec 30, 2025): Pass lead's company_id from viewLead context
             editLead(currentLeadId, selectedLeadCompanyId);
         }
+
+        function openShareLeadModalFromLeadModal() {
+            const leadId = document.getElementById('leadId')?.value;
+            if (!leadId) return;
+            const name = document.getElementById('leadName')?.value || '';
+            const phone = document.getElementById('leadPhone')?.value || '';
+            const altPhone = document.getElementById('leadAlternatePhone')?.value || '';
+            const categorySelect = document.getElementById('leadCategory');
+            const category = categorySelect?.options[categorySelect.selectedIndex]?.text || '';
+            const area = document.getElementById('leadArea')?.value || '';
+            const city = document.getElementById('leadCity')?.value || '';
+            const requirements = document.getElementById('leadRequirements')?.value || '';
+            const notes = document.getElementById('leadNotes')?.value || '';
+            const companyId = document.getElementById('leadFormCompany')?.value || selectedLeadCompanyId;
+
+            if (window.openShareLeadModal) {
+                window.openShareLeadModal({
+                    leadId: leadId,
+                    name: name,
+                    phone: phone,
+                    alternatePhone: altPhone,
+                    category: category,
+                    area: area,
+                    city: city,
+                    requirements: requirements,
+                    notes: notes,
+                    companyId: companyId
+                });
+            } else {
+                showToast('Share Lead modal is loading...', 'info');
+            }
+        }
+
+        function openShareLeadFromDetail() {
+            const lead = window._currentViewLeadData;
+            if (!lead && !currentLeadId) return;
+            if (window.openShareLeadModal) {
+                window.openShareLeadModal({
+                    leadId: lead?.id || currentLeadId,
+                    name: lead?.name || document.getElementById('detailName')?.textContent || '',
+                    phone: lead?.phone || '',
+                    alternatePhone: lead?.alternate_phone || '',
+                    category: lead?.category_name || lead?.category || '',
+                    area: lead?.area || '',
+                    city: lead?.city || '',
+                    requirements: lead?.requirements || '',
+                    notes: lead?.notes || '',
+                    companyId: lead?.company_id || selectedLeadCompanyId
+                });
+            } else {
+                showToast('Share Lead modal is loading...', 'info');
+            }
+        }
         
         function showToast(message, type = 'info') {
             const container = document.getElementById('toastContainer');
@@ -4710,6 +4775,8 @@
         window.calculateDealBalance = calculateDealBalance;
         window.toggleDealValueRow = toggleDealValueRow;
         window.editLeadFromDetail = editLeadFromDetail;
+        window.openShareLeadModalFromLeadModal = openShareLeadModalFromLeadModal;
+        window.openShareLeadFromDetail = openShareLeadFromDetail;
         window.showAddFollowupForm = showAddFollowupForm;
         window.hideAddFollowupForm = hideAddFollowupForm;
         window.addFollowup = addFollowup;

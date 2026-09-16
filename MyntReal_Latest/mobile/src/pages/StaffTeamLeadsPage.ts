@@ -12,6 +12,7 @@ import { vgkBannerService } from '../services/vgk-banner.service';
 import { unifiedWAModal } from '../components/UnifiedWAModal';
 import { callController } from '../services/call-controller';
 import { dialerService } from '../services/dialer.service';
+import { unifiedShareLeadModal } from '../components/UnifiedShareLeadModal';
 
 interface Company {
   id: number;
@@ -378,6 +379,7 @@ export class StaffTeamLeadsPage {
             </div>
           </div>
           <div class="modal-footer">
+            <button class="btn" id="cdShareLeadBtn" style="background:#0284c7;color:white;border:none;border-radius:8px;padding:12px 14px;font-weight:700;font-size:13px;display:flex;align-items:center;gap:4px;cursor:pointer;">📤 Share</button>
             <button class="btn btn-secondary" id="cancelCallDispositionBtn">Skip</button>
             <button class="btn btn-primary" id="saveCallDispositionBtn">Update Lead</button>
           </div>
@@ -682,6 +684,7 @@ export class StaffTeamLeadsPage {
             </div>
           </div>
           <div class="modal-footer" style="padding: 20px 24px; border-top: 1px solid rgba(255, 255, 255, 0.08); display: flex; gap: 12px; background: rgba(13, 27, 42, 0.5); border-radius: 0 0 20px 20px;">
+            <button class="btn" id="leadFormShareBtn" style="display: none; padding: 16px 14px; background: #0284c7; border: none; color: white; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; white-space: nowrap;">📤 Share</button>
             <button class="btn btn-secondary" id="cancelLeadFormBtn" style="flex: 1; padding: 16px 20px; background: rgba(255, 255, 255, 0.08); border: 2px solid rgba(255, 255, 255, 0.15); color: #a8c0d8; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer;">Cancel</button>
             <button class="btn btn-primary" id="saveLeadBtn" style="flex: 1.5; padding: 16px 20px; background: linear-gradient(135deg, #10b981 0%, #047857 100%); border: none; color: white; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.35);">Create Lead</button>
           </div>
@@ -702,6 +705,23 @@ export class StaffTeamLeadsPage {
     document.getElementById('closeCallDispositionModal')?.addEventListener('click', () => this.hideModal('callDispositionModal'));
     document.getElementById('cancelCallDispositionBtn')?.addEventListener('click', () => this.hideModal('callDispositionModal'));
     document.getElementById('saveCallDispositionBtn')?.addEventListener('click', () => this.saveCallDisposition());
+    document.getElementById('cdShareLeadBtn')?.addEventListener('click', () => {
+      if (this.selectedLead) {
+        const notes = (document.getElementById('cdCallNotes') as HTMLTextAreaElement)?.value || '';
+        unifiedShareLeadModal.open({
+          leadId: this.selectedLead.id,
+          name: this.selectedLead.name,
+          phone: this.selectedLead.phone,
+          alternatePhone: this.selectedLead.alternate_phone,
+          category: this.selectedLead.category,
+          area: (this.selectedLead as any).area,
+          city: (this.selectedLead as any).city,
+          requirements: (this.selectedLead as any).requirements,
+          notes: notes,
+          companyId: this.selectedCompanyId || (this.selectedLead as any).company_id
+        });
+      }
+    });
 
     document.querySelectorAll('#cdOutcomeChips .cd-outcome-chip').forEach(chip => {
       chip.addEventListener('click', () => {
@@ -744,6 +764,22 @@ export class StaffTeamLeadsPage {
     document.getElementById('closeLeadFormModal')?.addEventListener('click', () => this.hideModal('leadFormModal'));
     document.getElementById('cancelLeadFormBtn')?.addEventListener('click', () => this.hideModal('leadFormModal'));
     document.getElementById('saveLeadBtn')?.addEventListener('click', () => this.saveLead());
+    document.getElementById('leadFormShareBtn')?.addEventListener('click', () => {
+      if (this.selectedLead) {
+        unifiedShareLeadModal.open({
+          leadId: this.selectedLead.id,
+          name: this.selectedLead.name,
+          phone: this.selectedLead.phone,
+          alternatePhone: this.selectedLead.alternate_phone,
+          category: this.selectedLead.category,
+          area: (this.selectedLead as any).area,
+          city: (this.selectedLead as any).city,
+          requirements: (this.selectedLead as any).requirements,
+          notes: (document.getElementById('leadNotes') as HTMLTextAreaElement)?.value || (this.selectedLead as any).notes || '',
+          companyId: this.selectedCompanyId || (this.selectedLead as any).company_id
+        });
+      }
+    });
     document.getElementById('leadMobileEditBtn')?.addEventListener('click', () => {
       const inp = document.getElementById('leadMobile') as HTMLInputElement;
       if (inp) {
@@ -772,6 +808,8 @@ export class StaffTeamLeadsPage {
     if (pInp) { pInp.readOnly = false; pInp.value = ''; pInp.dataset.rawPhone = ''; }
     const pBtn = document.getElementById('leadMobileEditBtn');
     if (pBtn) pBtn.style.display = 'none';
+    const shareBtn = document.getElementById('leadFormShareBtn');
+    if (shareBtn) shareBtn.style.display = 'none';
     (document.getElementById('leadEmail') as HTMLInputElement).value = '';
     (document.getElementById('leadCategory') as HTMLSelectElement).value = '';
     (document.getElementById('leadPriority') as HTMLSelectElement).value = 'normal';
@@ -923,6 +961,8 @@ export class StaffTeamLeadsPage {
       nsSelected.style.display = 'none';
       if (nsGuruRow) nsGuruRow.style.display = 'none';
     }
+    const shareBtn = document.getElementById('leadFormShareBtn');
+    if (shareBtn) shareBtn.style.display = 'inline-block';
     this.showModal('leadFormModal');
     this.attachPincodeLookup();
     this.setupNetworkAssignment();
@@ -1759,6 +1799,7 @@ export class StaffTeamLeadsPage {
           <button class="btn btn-warning" id="detailStatusBtn" style="flex: 1; min-width: 120px;">Status</button>
           <button class="btn btn-secondary" onclick="if(window.triggerLeadCall){window.triggerLeadCall('${lead.phone || ''}', '${(lead.name || '').replace(/'/g, "\\'")}', ${lead.id});}" style="flex: 1; min-width: 100px;">Softphone</button>
           <button class="btn btn-success open-team-lead-wa-btn" data-phone="${(lead.phone || '').replace(/\D/g, '')}" data-name="${lead.name}" data-id="${lead.id}" data-cat="${lead.category || ''}" style="flex: 1; min-width: 100px;">WhatsApp</button>
+          <button class="btn" id="detailShareLeadBtn" style="flex: 1; min-width: 120px; background: #0284c7; color: white; font-weight: 700; border: none; border-radius: 8px; cursor: pointer;">📤 Share Details</button>
         </div>
       </div>
     `;
@@ -1770,6 +1811,21 @@ export class StaffTeamLeadsPage {
     if (_stlVgkCid) {
       setTimeout(() => vgkBannerService.load(leadId, _stlVgkCid, 'stl-mob-vgk-banner'), 200);
     }
+
+    document.getElementById('detailShareLeadBtn')?.addEventListener('click', () => {
+      unifiedShareLeadModal.open({
+        leadId: lead.id,
+        name: lead.name,
+        phone: lead.phone,
+        alternatePhone: lead.alternate_phone,
+        category: lead.category,
+        area: (lead as any).area,
+        city: (lead as any).city,
+        requirements: (lead as any).requirements,
+        notes: (lead as any).notes || '',
+        companyId: this.selectedCompanyId || (lead as any).company_id
+      });
+    });
 
     document.getElementById('detailEditBtn')?.addEventListener('click', () => {
       this.hideModal('detailModal');

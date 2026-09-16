@@ -3716,22 +3716,29 @@
                     const distName = document.getElementById('guc_district')?.value || 'Visakhapatnam';
                     const constName = document.getElementById('guc_assembly_constituency')?.value || 'Pendurthi';
                     
+                    const projectName = document.getElementById('heroTitle')?.textContent
+                        || document.getElementById('gucFormMainHeading')?.textContent
+                        || 'VGK4U Community Seva';
+
                     const waText = encodeURIComponent(
                         `*VGK4U Community Registration Submitted!*\n\n` +
                         `Hello Mentor, I have registered my community for the Seva project:\n` +
-                        `• *Project:* ${document.getElementById('heroTitle').textContent}\n` +
+                        `• *Project:* ${projectName}\n` +
                         `• *Association Name:* ${associationName}\n` +
                         `• *Representative:* ${orgName}\n` +
                         `• *Area / Location:* ${areaName}${landmarkName ? ' (Landmark: ' + landmarkName + ')' : ''}\n` +
                         `• *Constituency & District:* ${constName}, ${distName}\n` +
-                        `• *App No / Ref ID:* ${json.application_no || json.registration_id}\n\n` +
+                        `• *App No / Ref ID:* ${json.application_no || json.registration_id || ''}\n\n` +
                         `*Community Login Credentials (Pending Activation):*\n` +
                         `• *Username:* ${json.credentials ? json.credentials.partner_code : '—'}\n` +
                         `• *Temp Password:* ${json.credentials ? json.credentials.raw_password : '—'}\n` +
                         `• *Login Portal:* https://www.vgk4u.com/vgk/login\n\n` +
                         `Please verify my KYC details on the staff dashboard.`
                     );
-                    document.getElementById('waShareBtn').href = `https://wa.me/?text=${waText}`;
+                    const waBtn = document.getElementById('waShareBtn');
+                    if (waBtn) {
+                        waBtn.href = json.wa_text ? `https://wa.me/?text=${encodeURIComponent(json.wa_text)}` : `https://wa.me/?text=${waText}`;
+                    }
                     
                     // Scroll to registration panel top
                     scrollToSection('section-registration');

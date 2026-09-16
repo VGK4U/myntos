@@ -12,6 +12,7 @@ import { PageHeader } from '../components/PageHeader';
 import { routerService } from '../services/router.service';
 import { vgkBannerService } from '../services/vgk-banner.service';
 import { unifiedWAModal } from '../components/UnifiedWAModal';
+import { unifiedShareLeadModal } from '../components/UnifiedShareLeadModal';
 import { callController } from '../services/call-controller';
 import { telephonyService, TelephonyCallSession } from '../services/telephony.service';
 
@@ -337,6 +338,16 @@ export class AutoDialerPage {
 
       this.activeSoftphoneDial = false;
       this._removeCallingScreen();
+
+      // Immediately save softphone call to local dial history & trigger real-time recent calls refresh
+      if (lead && (lead.phone || lead.alternate_phone)) {
+        const dialPhone = lead.phone || lead.alternate_phone || '';
+        this._saveToLocalDialHistory(dialPhone, lead.name || 'CRM Lead');
+        this.recentCallsLoaded = false;
+        this._updateRecentPanel();
+        void this._loadRecentCalls(true);
+      }
+
       if (lead && !this.popupOpen) {
         void this._openPopup(lead.lead_id, duration, {
           notes: inCallNotes,
@@ -1214,9 +1225,14 @@ export class AutoDialerPage {
             <div class="dc-form-group-label" style="display:flex;justify-content:space-between;align-items:center;">
               <span>Contact Details</span>
               ${(lead?.phone || lead?.alternate_phone) ? `
-                <button type="button" class="open-lead-wa-btn" data-phone="${lead?.phone || lead?.alternate_phone || ''}" data-name="${this._escapeHtml(lead?.name || '')}" data-id="${lead?.lead_id || lead?.id || ''}" data-cat="${this._escapeHtml(lead?.category_name || '')}" style="background:#25D366;color:white;border:none;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;">
-                  💬 WhatsApp
-                </button>` : ''}
+                <div style="display:flex;gap:6px;align-items:center;">
+                  <button type="button" class="open-share-lead-btn" data-phone="${lead?.phone || lead?.alternate_phone || ''}" data-name="${this._escapeHtml(lead?.name || '')}" data-id="${lead?.lead_id || lead?.id || ''}" data-cat="${this._escapeHtml(lead?.category_name || '')}" style="background:#0284c7;color:white;border:none;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;">
+                    📤 Share Details
+                  </button>
+                  <button type="button" class="open-lead-wa-btn" data-phone="${lead?.phone || lead?.alternate_phone || ''}" data-name="${this._escapeHtml(lead?.name || '')}" data-id="${lead?.lead_id || lead?.id || ''}" data-cat="${this._escapeHtml(lead?.category_name || '')}" style="background:#25D366;color:white;border:none;border-radius:8px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;">
+                    💬 WhatsApp
+                  </button>
+                </div>` : ''}
             </div>
             <div class="dc-form-row">
               <label>Full Name</label>
@@ -1827,6 +1843,31 @@ export class AutoDialerPage {
             context
           });
         }
+      });
+    });
+
+    // Wire Share Lead Details button in popup
+    overlay.querySelectorAll('.open-share-lead-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const phone = (btn as HTMLElement).dataset.phone || '';
+        const name = (btn as HTMLElement).dataset.name || (document.getElementById('dc-edit-name') as HTMLInputElement)?.value || 'Customer';
+        const id = (btn as HTMLElement).dataset.id || leadId;
+        const category = (btn as HTMLElement).dataset.cat || '';
+        const note = (document.getElementById('dc-edit-note') as HTMLTextAreaElement)?.value || '';
+        const companyId = this.popupLeadData?.company_id || 1;
+        unifiedShareLeadModal.open({
+          leadId: id,
+          name,
+          phone,
+          category,
+          requirements: this.popupLeadData?.requirements || '',
+          notes: note,
+          area: (document.getElementById('dc-edit-area') as HTMLInputElement)?.value || this.popupLeadData?.area || '',
+          city: (document.getElementById('dc-edit-city') as HTMLInputElement)?.value || this.popupLeadData?.city || '',
+          companyId: Number(companyId) || 1,
+        });
       });
     });
   }
@@ -3109,8 +3150,8 @@ export class AutoDialerPage {
 
   // ── DC_RECENT: Recent calls helpers ─────────────────────────────────────────
 
-  private async _loadRecentCalls(): Promise<void> {
-    if (this.recentCallsLoaded) return;
+  private async _loadRecentCalls(force = false): Promise<void> {
+    if (this.recentCallsLoaded && !force) return;
     this.recentCallsLoading = true;
     this._updateRecentPanel();
     try {
