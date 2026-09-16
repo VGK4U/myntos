@@ -2669,7 +2669,7 @@
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap:12px; margin-top:16px; padding-top:14px; border-top:1px dashed rgba(255,255,255,0.12); font-size:12.5px;">
                         <div style="color:#cbd5e1;">
                             <span style="color:var(--text-muted); font-size:11px; display:block; font-weight:700; text-transform:uppercase;">కన్వీనర్ (Convenor)</span>
-                            <strong style="color:#fff;">విశ్వనాథ్ కరి</strong> (Viswanath Kari)
+                            <strong style="color:#fff;">విశ్వనాథ్ కారి</strong> (Viswanath Kaari)
                         </div>
                         <div style="color:#cbd5e1;">
                             <span style="color:var(--text-muted); font-size:11px; display:block; font-weight:700; text-transform:uppercase;">కో-కన్వీనర్ (Co-convenor)</span>
@@ -3930,12 +3930,12 @@
         let currentGucWaText = '';
 
         function buildGucTeluguConfirmationMessage(data) {
-            const assoc = (data && data.association_name) || document.getElementById('guc_association_name')?.value || 'గణేష్ ఉత్సవ సమితి';
-            const repName = (data && data.president_name) || document.getElementById('guc_president_name')?.value || 'కమిటీ ప్రతినిధి';
-            const repPhone = (data && data.president_phone) || document.getElementById('guc_president_phone')?.value || '';
-            const area = (data && data.area) || document.getElementById('guc_area')?.value || 'పెందుర్తి';
-            const landmark = (data && data.landmark) || document.getElementById('guc_landmark')?.value || '';
-            const appNo = (data && data.application_no) || (currentGucRegId ? `GUC-2026-${currentGucRegId}` : '');
+            const assoc = String((data && data.association_name) || document.getElementById('guc_association_name')?.value || 'గణేష్ ఉత్సవ సమితి').trim();
+            const repName = String((data && data.president_name) || document.getElementById('guc_president_name')?.value || 'కమిటీ ప్రతినిధి').trim();
+            const repPhone = String((data && data.president_phone) || document.getElementById('guc_president_phone')?.value || '').trim();
+            const area = String((data && data.area) || document.getElementById('guc_area')?.value || 'పెందుర్తి').trim();
+            const landmark = String((data && data.landmark) || document.getElementById('guc_landmark')?.value || '').trim();
+            const appNo = String((data && data.application_no) || (currentGucRegId ? `GUC-2026-${currentGucRegId}` : '')).trim();
 
             const locStr = area + (landmark ? ` (${landmark})` : '');
             const repStr = repName + (repPhone ? ` (${repPhone})` : '');
@@ -3947,7 +3947,7 @@
                 `• *ప్రాంతం / లొకేషన్:* ${locStr}\n` +
                 `• *రిజిస్ట్రేషన్ ID:* ${appNo}\n\n` +
                 `*సమితి ముఖ్యులు:*\n` +
-                `• *కన్వీనర్:* విశ్వనాథ్ కరి (Viswanath Kari)\n` +
+                `• *కన్వీనర్:* విశ్వనాథ్ కారి (Viswanath Kaari)\n` +
                 `• *కో-కన్వీనర్:* అద్దిభట్ల భాస్కరరావు (Addibhatla Bhaskar Rao)\n` +
                 `📞 *పెందుర్తి సమితి సంప్రదింపు నెంబర్:* 8897797667\n\n` +
                 `📲 *అధికారిక వాట్సాప్ గ్రూప్ లింక్ (Join Official Group):*\n` +

@@ -202,12 +202,12 @@ def format_guc_telugu_confirmation_message(reg_data: dict) -> str:
     Includes committee convenors, official committee contact 8897797667, official WhatsApp group link,
     and Instagram page.
     """
-    assoc = reg_data.get("association_name") or "గణేష్ ఉత్సవ సమితి"
-    pres_name = reg_data.get("president_name") or reg_data.get("primary_name") or "కమిటీ ప్రతినిధి"
-    pres_phone = reg_data.get("president_phone") or reg_data.get("primary_phone_1") or ""
-    area = reg_data.get("area") or "పెందుర్తి"
-    landmark = reg_data.get("landmark") or ""
-    app_no = reg_data.get("application_no") or f"GUC-2026-{reg_data.get('id', '')}"
+    assoc = (reg_data.get("association_name") or "గణేష్ ఉత్సవ సమితి").strip()
+    pres_name = (reg_data.get("president_name") or reg_data.get("primary_name") or "కమిటీ ప్రతినిధి").strip()
+    pres_phone = str(reg_data.get("president_phone") or reg_data.get("primary_phone_1") or "").strip()
+    area = (reg_data.get("area") or "పెందుర్తి").strip()
+    landmark = (reg_data.get("landmark") or "").strip()
+    app_no = str(reg_data.get("application_no") or f"GUC-2026-{reg_data.get('id', '')}").strip()
     
     loc_str = f"{area}" + (f" ({landmark})" if landmark else "")
     rep_str = f"{pres_name}" + (f" ({pres_phone})" if pres_phone else "")
@@ -220,7 +220,7 @@ def format_guc_telugu_confirmation_message(reg_data: dict) -> str:
         f"• *ప్రాంతం / లొకేషన్:* {loc_str}\n"
         f"• *రిజిస్ట్రేషన్ ID:* {app_no}\n\n"
         f"*సమితి ముఖ్యులు:*\n"
-        f"• *కన్వీనర్:* విశ్వనాథ్ కరి (Viswanath Kari)\n"
+        f"• *కన్వీనర్:* విశ్వనాథ్ కారి (Viswanath Kaari)\n"
         f"• *కో-కన్వీనర్:* అద్దిభట్ల భాస్కరరావు (Addibhatla Bhaskar Rao)\n"
         f"📞 *పెందుర్తి సమితి సంప్రదింపు నెంబర్:* 8897797667\n\n"
         f"📲 *అధికారిక వాట్సాప్ గ్రూప్ లింక్ (Join Official Group):*\n"
