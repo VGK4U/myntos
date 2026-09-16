@@ -454,6 +454,7 @@ class VendorMaster(BaseModel):
     rep_signature_url = Column(Text, nullable=True)   # Authorized representative signature (all "Vendor Sig with Stamp" blocks)
     tech_signature_url = Column(Text, nullable=True)  # Technician/site-engineer signature (Commissioning/Site-Eng blocks)
     vendor_logo_url = Column(Text, nullable=True)     # Vendor logo — used in quotation/invoice/annexure letterhead (Apr 2026)
+    gst_certificate_url = Column(Text, nullable=True) # Vendor GST REG-06 Registration Certificate PDF/Image URL
 
     contact_person = Column(String(200), nullable=True)
     phone = Column(String(20), nullable=True)
@@ -575,6 +576,7 @@ class VendorMaster(BaseModel):
             'rep_signature_url': getattr(self, 'rep_signature_url', None),
             'tech_signature_url': getattr(self, 'tech_signature_url', None),
             'vendor_logo_url': getattr(self, 'vendor_logo_url', None),
+            'gst_certificate_url': getattr(self, 'gst_certificate_url', None),
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }

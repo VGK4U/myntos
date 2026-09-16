@@ -104,6 +104,7 @@ class TestCRMContactPrivacyAndDialer(unittest.TestCase):
         cls.s_tc = cls.db.query(StaffEmployee).filter(StaffEmployee.id == 9912).first()
         cls.s_indirect = cls.db.query(StaffEmployee).filter(StaffEmployee.id == 9913).first()
         cls.s_cross = cls.db.query(StaffEmployee).filter(StaffEmployee.id == 9914).first()
+        cls.s_mr10001 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MR10001').first()
 
         cls.lead = cls.db.query(CRMLead).filter(CRMLead.id == 9950).first()
 
@@ -188,25 +189,37 @@ class TestCRMContactPrivacyAndDialer(unittest.TestCase):
         self.db.commit()
 
     # -------------------------------------------------------------------------
-    # TEST 4: Authorized Admin Staff sees full phone
+    # TEST 4: Only MR10001 sees full phone; other staff sees masked
     # -------------------------------------------------------------------------
     def test_04_authorized_admin_staff_sees_full_phone(self):
+        """DC Protocol: ONLY MR10001 sees raw phone numbers; all other staff see masked numbers."""
+        if self.s_mr10001:
+            auth_mr10001 = evaluate_lead_contact_authorization(self.lead, self.s_mr10001, self.db)
+            self.assertTrue(auth_mr10001["can_view"])
+            self.assertTrue(auth_mr10001["has_full_contact"])
+            self.assertFalse(auth_mr10001["is_masked"])
+            self.assertEqual(auth_mr10001["display_phone"], "9988776655")
+
+        # Non-MR10001 admin staff receives masked phone
         auth = evaluate_lead_contact_authorization(self.lead, self.s_admin, self.db)
         self.assertTrue(auth["can_view"])
-        self.assertTrue(auth["has_full_contact"])
-        self.assertFalse(auth["is_masked"])
-        self.assertEqual(auth["display_phone"], "9988776655")
+        self.assertFalse(auth["has_full_contact"])
+        self.assertTrue(auth["is_masked"])
+        self.assertEqual(auth["display_phone"], "99****6655")
+        self.assertTrue(auth["can_click_to_call"])
         self.assertEqual(auth["relationship"], "AUTHORIZED_STAFF")
 
     # -------------------------------------------------------------------------
-    # TEST 5: Assigned Telecaller Staff sees full phone
+    # TEST 5: Assigned Telecaller Staff receives masked phone (can click-to-call)
     # -------------------------------------------------------------------------
     def test_05_assigned_telecaller_staff_sees_full_phone(self):
+        """Non-MR10001 assigned telecallers receive masked phone with click-to-call permission."""
         auth = evaluate_lead_contact_authorization(self.lead, self.s_tc, self.db)
         self.assertTrue(auth["can_view"])
-        self.assertTrue(auth["has_full_contact"])
-        self.assertFalse(auth["is_masked"])
-        self.assertEqual(auth["display_phone"], "9988776655")
+        self.assertFalse(auth["has_full_contact"])
+        self.assertTrue(auth["is_masked"])
+        self.assertEqual(auth["display_phone"], "99****6655")
+        self.assertTrue(auth["can_click_to_call"])
         self.assertEqual(auth["relationship"], "ASSIGNED_STAFF")
 
     # -------------------------------------------------------------------------
@@ -592,8 +605,11 @@ class TestCRMContactPrivacyAndDialer(unittest.TestCase):
         self.db.commit()
 
         auth_s_tc = evaluate_lead_contact_authorization(self.lead, self.s_indirect, self.db)
-        self.assertTrue(auth_s_tc["has_full_contact"])
+        self.assertTrue(auth_s_tc["can_view"])
         self.assertEqual(auth_s_tc["relationship"], "ASSIGNED_STAFF")
+        self.assertTrue(auth_s_tc["can_click_to_call"])
+        self.assertTrue(auth_s_tc["is_masked"])  # Non-MR10001 staff is always masked
+        self.assertFalse(auth_s_tc["has_full_contact"])
 
         self.lead.telecaller_id = self.s_tc.id
         self.db.commit()

@@ -49,8 +49,12 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
         cls.subash_mr10025 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MR10025').first()
         cls.ea_mr10016 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MR10016').first()
         cls.jagannath_mr10018 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MR10018').first()
+        cls.anushka_mr10036 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MR10036').first()
         cls.poojitha_mn10016 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MN10016').first()
-        cls.regular_agent = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code.notin_(['MR10001', 'MR10025', 'MR10016', 'MR10018', 'MN10016']), StaffEmployee.status == 'active').first()
+        cls.regular_agent = next(
+            (u for u in cls.db.query(StaffEmployee).filter(StaffEmployee.status == 'active').all() if not _is_vgk_admin(u)),
+            None
+        )
 
         # Find or create a dedicated test VGK partner
         cls.test_partner = cls.db.query(OfficialPartner).filter(
@@ -89,7 +93,7 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
         cls.db.close()
 
     def test_01_dynamic_role_based_admin_and_visibility(self):
-        """Req 2 & 10: 5-user whitelist visibility (Poojitha, Subash, Yaswanth, Jagannath, Mr10001)."""
+        """Req 2 & 10: 5-user whitelist visibility (Anushka, Subash, Yaswanth, Jagannath, Mr10001)."""
         # MR10001 (Admin) -> Full Visibility
         self.assertTrue(_is_vgk_admin(self.admin_mr10001))
         self.assertTrue(_has_full_vgk_visibility(self.admin_mr10001))
@@ -108,10 +112,14 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
             self.assertTrue(_is_vgk_admin(self.jagannath_mr10018))
             self.assertTrue(_has_full_vgk_visibility(self.jagannath_mr10018))
 
-        # MN10016 (Poojitha) -> Full Visibility
+        # MR10036 (Anushka) -> Full Visibility (Transferred from Poojitha)
+        if self.anushka_mr10036:
+            self.assertTrue(_is_vgk_admin(self.anushka_mr10036))
+            self.assertTrue(_has_full_vgk_visibility(self.anushka_mr10036))
+
+        # MN10016 (Poojitha) -> Authority revoked from whitelist; restricted to assigned/registered
         if self.poojitha_mn10016:
-            self.assertTrue(_is_vgk_admin(self.poojitha_mn10016))
-            self.assertTrue(_has_full_vgk_visibility(self.poojitha_mn10016))
+            self.assertFalse(_has_full_vgk_visibility(self.poojitha_mn10016))
 
         # Regular agent (NOT in whitelist) -> Restricted
         if self.regular_agent:
@@ -354,7 +362,7 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
         )
         self.assertTrue(res["success"])
     def test_08_server_side_visibility_restriction(self):
-        """Req 10: Whitelist visibility — Poojitha and Admins see all; regular staff sees ONLY assigned/registered."""
+        """Req 10: Whitelist visibility — Anushka and Admins see all; Poojitha & regular staff see ONLY assigned/registered."""
         # Admin sees full platform members
         res_admin = list_vgk_members(
             current_user=self.admin_mr10001,
@@ -363,13 +371,27 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
         total_admin = res_admin["total"]
         self.assertGreater(total_admin, 0)
 
-        # Poojitha (MN10016) is in whitelist -> Sees full platform members
+        # Anushka (MR10036) is in whitelist -> Sees full platform members
+        if self.anushka_mr10036:
+            res_anushka = list_vgk_members(
+                current_user=self.anushka_mr10036,
+                db=self.db
+            )
+            self.assertEqual(res_anushka["total"], total_admin)
+
+        # Poojitha (MN10016) is NOT in whitelist -> Restricted to assigned/registered members
         if self.poojitha_mn10016:
             res_poojitha = list_vgk_members(
                 current_user=self.poojitha_mn10016,
                 db=self.db
             )
-            self.assertEqual(res_poojitha["total"], total_admin)
+            for m in res_poojitha["data"]:
+                is_assigned_to_poojitha = (m.get("assigned_staff_id") == self.poojitha_mn10016.id)
+                is_registered_by_poojitha = (m.get("registered_by_emp_code") == self.poojitha_mn10016.emp_code)
+                self.assertTrue(
+                    is_assigned_to_poojitha or is_registered_by_poojitha,
+                    f"Poojitha should only see members assigned to or registered by her, but saw: {m}"
+                )
 
         # Assign test partner to MR10016 (EA), not regular_agent
         self.test_partner.assigned_staff_id = self.ea_mr10016.id

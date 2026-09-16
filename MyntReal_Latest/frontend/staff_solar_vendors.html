@@ -144,7 +144,10 @@ function renderTable(){
         <div style="font-size:11px;color:#6b7280">${esc(v.email||'')}</div>
       </td>
       <td>${esc(v.city||'')}<span style="color:#9ca3af;font-size:11px">${v.state?' / '+v.state:''}</span></td>
-      <td>${v.gst_number?'<code style="font-size:11px;background:#f3f4f6;padding:2px 6px;border-radius:4px">'+esc(v.gst_number)+'</code>':'<span style="color:#9ca3af">—</span>'}</td>
+      <td>
+        ${v.gst_number?'<code style="font-size:11px;background:#f3f4f6;padding:2px 6px;border-radius:4px">'+esc(v.gst_number)+'</code>':'<span style="color:#9ca3af">—</span>'}
+        ${v.gst_certificate_url?`<div style="margin-top:4px"><a href="${esc(v.gst_certificate_url)}" target="_blank" style="font-size:10.5px;color:#0f766e;text-decoration:none;font-weight:600"><i class="fas fa-file-pdf"></i> GST Cert</a></div>`:''}
+      </td>
       <td>
         ${v.mnre_empanelled?'<span class="badge-mnre"><i class="fas fa-check-circle"></i> Empanelled</span>':'<span class="badge-no">Not empanelled</span>'}
         ${v.mnre_reg_no?'<div style="font-size:10.5px;color:#6b7280;margin-top:3px">Reg: '+esc(v.mnre_reg_no)+'</div>':''}
@@ -212,13 +215,17 @@ function _showUploadControls(isEdit){
   document.getElementById('stampUploadBtn').style.display=isEdit?'inline-flex':'none';
   document.getElementById('repSigUploadBtn').style.display=isEdit?'inline-flex':'none';
   document.getElementById('sigUploadBtn').style.display=isEdit?'inline-flex':'none';
+  const gstUpBtn = document.getElementById('gstCertUploadBtn');
+  if(gstUpBtn) gstUpBtn.style.display=isEdit?'inline-flex':'none';
 }
 
 function clearForm(){
-  ['vmName','vmCode','vmGstin','vmPhone','vmEmail','vmAddress','vmCity','vmState','vmPincode',
+  ['vmName','vmCode','vmGstin','vmGstCertUrl','vmPhone','vmEmail','vmAddress','vmCity','vmState','vmPincode',
    'vmBankName','vmBankBranch','vmAccNo','vmIfsc','vmAccHolder',
    'vmMnreReg','vmStampUrl','vmRepSigUrl','vmTechSigUrl'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   document.getElementById('vmMnre').checked=false;
+  const certWrap = document.getElementById('vmGstCertLinkWrap');
+  if(certWrap) certWrap.style.display='none';
   _setImgPreview('stampPreviewImg','stampPreviewPlaceholder','');
   _setImgPreview('repSigPreviewImg','repSigPreviewPlaceholder','');
   _setImgPreview('sigPreviewImg','sigPreviewPlaceholder','');
@@ -229,6 +236,17 @@ function fillForm(v){
   document.getElementById('vmName').value=v.vendor_name||'';
   document.getElementById('vmCode').value=v.vendor_code||'';
   document.getElementById('vmGstin').value=v.gst_number||'';
+  document.getElementById('vmGstCertUrl').value=v.gst_certificate_url||'';
+  const certWrap=document.getElementById('vmGstCertLinkWrap');
+  const certLink=document.getElementById('vmGstCertLink');
+  if(certWrap && certLink){
+    if(v.gst_certificate_url){
+      certLink.href=v.gst_certificate_url;
+      certWrap.style.display='block';
+    } else {
+      certWrap.style.display='none';
+    }
+  }
   document.getElementById('vmPhone').value=v.phone||'';
   document.getElementById('vmEmail').value=v.email||'';
   document.getElementById('vmAddress').value=v.address||'';
@@ -252,13 +270,15 @@ function fillForm(v){
 }
 
 async function uploadVendorImage(type, inputEl){
-  if(!_editVendorId){showToast('Save the vendor first to upload images','error');return;}
+  if(!_editVendorId){showToast('Save the vendor first to upload files','error');return;}
   const file=inputEl.files[0];
   if(!file){return;}
-  const spinnerId=type==='stamp'?'stampUploadSpinner':type==='rep-signature'?'repSigUploadSpinner':'sigUploadSpinner';
-  const btnId=type==='stamp'?'stampUploadBtn':type==='rep-signature'?'repSigUploadBtn':'sigUploadBtn';
-  document.getElementById(spinnerId).style.display='inline-flex';
-  document.getElementById(btnId).style.display='none';
+  const spinnerId=type==='stamp'?'stampUploadSpinner':type==='rep-signature'?'repSigUploadSpinner':type==='gst-certificate'?'gstCertUploadSpinner':'sigUploadSpinner';
+  const btnId=type==='stamp'?'stampUploadBtn':type==='rep-signature'?'repSigUploadBtn':type==='gst-certificate'?'gstCertUploadBtn':'sigUploadBtn';
+  const spEl = document.getElementById(spinnerId);
+  const btEl = document.getElementById(btnId);
+  if(spEl) spEl.style.display='inline-flex';
+  if(btEl) btEl.style.display='none';
   try{
     const formData=new FormData();
     formData.append('file',file);
@@ -266,7 +286,7 @@ async function uploadVendorImage(type, inputEl){
     const r=await staffFetch(endpoint,{method:'POST',body:formData});
     const d=await r.json();
     if(r.ok && d.success){
-      const url=d.image_url;
+      const url=d.file_url||d.image_url;
       if(type==='stamp'){
         document.getElementById('vmStampUrl').value=url;
         _setImgPreview('stampPreviewImg','stampPreviewPlaceholder',url);
@@ -275,6 +295,12 @@ async function uploadVendorImage(type, inputEl){
         document.getElementById('vmRepSigUrl').value=url;
         _setImgPreview('repSigPreviewImg','repSigPreviewPlaceholder',url);
         showToast('Representative signature uploaded! Click Save Vendor to confirm.','success');
+      } else if(type==='gst-certificate'){
+        document.getElementById('vmGstCertUrl').value=url;
+        const cl = document.getElementById('vmGstCertLink');
+        const cw = document.getElementById('vmGstCertLinkWrap');
+        if(cl && cw){ cl.href=url; cw.style.display='block'; }
+        showToast('GST Certificate uploaded successfully!','success');
       } else {
         document.getElementById('vmTechSigUrl').value=url;
         _setImgPreview('sigPreviewImg','sigPreviewPlaceholder',url);
@@ -286,8 +312,8 @@ async function uploadVendorImage(type, inputEl){
   }catch(e){
     showToast('Upload error: '+e.message,'error');
   }finally{
-    document.getElementById(spinnerId).style.display='none';
-    document.getElementById(btnId).style.display='inline-flex';
+    if(spEl) spEl.style.display='none';
+    if(btEl) btEl.style.display='inline-flex';
     inputEl.value='';
   }
 }
@@ -298,6 +324,7 @@ function getFormData(){
     vendor_code:        (document.getElementById('vmCode').value||'').trim().toUpperCase(),
     vendor_type:        'SOLAR',
     gst_number:         (document.getElementById('vmGstin').value||'').trim(),
+    gst_certificate_url:(document.getElementById('vmGstCertUrl')?.value||'').trim(),
     applicable_companies: ['ALL'],
     phone:              (document.getElementById('vmPhone').value||'').trim(),
     email:              (document.getElementById('vmEmail').value||'').trim(),
@@ -414,7 +441,20 @@ document.addEventListener('DOMContentLoaded', ()=>{
         </div>
         <div class="fg">
           <label>GSTIN</label>
-          <input id="vmGstin" type="text" placeholder="27AABCX1234A1Z5" style="text-transform:uppercase">
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="vmGstin" type="text" placeholder="27AABCX1234A1Z5" style="text-transform:uppercase;flex:1">
+            <input id="vmGstCertFileInput" type="file" accept=".pdf,image/*" style="display:none" onchange="uploadVendorImage('gst-certificate',this)">
+            <button type="button" id="gstCertUploadBtn" class="btn-upload-img" onclick="document.getElementById('vmGstCertFileInput').click()" style="display:none;white-space:nowrap">
+              <i class="fas fa-file-upload"></i> Upload GST Cert
+            </button>
+            <span id="gstCertUploadSpinner" style="display:none;font-size:11px;color:#0f766e"><i class="fas fa-spinner fa-spin"></i> Uploading…</span>
+          </div>
+          <input id="vmGstCertUrl" type="hidden">
+          <div id="vmGstCertLinkWrap" style="display:none;margin-top:6px;font-size:12px;background:#f0fdf4;padding:6px 10px;border-radius:6px;border:1px solid #bbf7d0">
+            <a id="vmGstCertLink" href="#" target="_blank" style="color:#0f766e;text-decoration:none;font-weight:700;display:inline-flex;align-items:center;gap:6px">
+              <i class="fas fa-file-pdf" style="font-size:14px;color:#dc2626"></i> View / Download Current GST Registration Certificate
+            </a>
+          </div>
         </div>
         <div class="fg-row">
           <div class="fg">

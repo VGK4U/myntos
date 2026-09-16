@@ -3883,10 +3883,13 @@ async def get_my_menus(
                 'VGK_TEAM_MEMBERS'
             ])
 
-        # DC Protocol: Auto-grant VGK_TEAM_MEMBERS to Sales & Tele Sales departments
+        # DC Protocol: Auto-grant VGK_TEAM_MEMBERS & Auto Dialer to Sales & Tele Sales departments
         _dept_name_lower = (getattr(current_user.department, 'name', '') or '').lower()
         if current_user.department_id in (13, 14) or 'sale' in _dept_name_lower or 'sale' in _role_lower:
-            _dept_auto_codes.update(['VGK_TEAM_MEMBERS', 'staff_vgk_members', 'vgk_members'])
+            _dept_auto_codes.update([
+                'VGK_TEAM_MEMBERS', 'staff_vgk_members', 'vgk_members',
+                'staff_auto_dialer', 'staff_dialer', 'AUTO_DIALER'
+            ])
 
         # DC Protocol Aug 2026: Explicit menu grants for MN10009 and MN10008
         if _emp_code_upper == 'MN10009':
@@ -4122,6 +4125,7 @@ async def get_my_menus(
         allowed_codes = {
             'staff_dashboard_main',
             'staff_leads', 'staff_my_leads',
+            'staff_auto_dialer', 'staff_dialer',
             'staff_ev_spares_leads', 'staff_ev_b2b_leads', 'staff_solar_leads',
             'staff_insurance_leads', 'staff_etc_leads', 'staff_real_dreams_leads', 'staff_ev_b2c_leads',
             'staff_my_attendance', 'staff_attendance_sheet', 'staff_attendance_reports'

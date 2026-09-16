@@ -6878,6 +6878,44 @@ def _startup_worker():
     else:
         print("[DC-SOLAR-DOCS] ⏭️ Solar docs table — already applied", flush=True)
 
+    # DC-DOC-SHARES-AUDIT: crm_lead_document_shares audit table (Sep 2026)
+    _doc_shares_sqls = [
+        """CREATE TABLE IF NOT EXISTS crm_lead_document_shares (
+            id SERIAL PRIMARY KEY,
+            lead_id INTEGER NOT NULL,
+            company_id INTEGER DEFAULT 4,
+            share_mode VARCHAR(50) NOT NULL DEFAULT 'whatsapp_attachments',
+            recipient_phone VARCHAR(50),
+            recipient_name VARCHAR(200),
+            recipient_role VARCHAR(100),
+            shared_by_staff_id INTEGER,
+            shared_by_staff_name VARCHAR(200),
+            doc_group VARCHAR(50),
+            doc_types JSONB,
+            doc_labels JSONB,
+            total_docs INTEGER DEFAULT 0,
+            sent_docs_count INTEGER DEFAULT 0,
+            failed_docs_count INTEGER DEFAULT 0,
+            custom_notes TEXT,
+            share_url TEXT,
+            status VARCHAR(50) DEFAULT 'completed',
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        )""",
+        "CREATE INDEX IF NOT EXISTS ix_crm_doc_shares_lead ON crm_lead_document_shares (lead_id)",
+        "CREATE INDEX IF NOT EXISTS ix_crm_doc_shares_staff ON crm_lead_document_shares (shared_by_staff_id)",
+    ]
+    if 'DC-DOC-SHARES-AUDIT-20260916' not in _applied_keys:
+        try:
+            with engine.begin() as _c:
+                for _sql in _doc_shares_sqls:
+                    _c.execute(text(_sql))
+            _mig_done('DC-DOC-SHARES-AUDIT-20260916')
+            print(f"[DC-DOC-SHARES] Document shares audit table ensured ({len(_doc_shares_sqls)}/{len(_doc_shares_sqls)})", flush=True)
+        except Exception as _se:
+            print(f"[DC-DOC-SHARES] ⚠️ {_se}", flush=True)
+    else:
+        print("[DC-DOC-SHARES] ⏭️ Document shares audit table — already applied", flush=True)
+
     # DC-ETC-HANDLERS: handler/telecaller/field_staff columns on etc_students (Apr 2026)
     _eh_sqls = [
         "ALTER TABLE etc_students ADD COLUMN IF NOT EXISTS handler_emp_code VARCHAR(20)",
@@ -9125,6 +9163,7 @@ def _startup_worker():
         "ALTER TABLE vendor_master ADD COLUMN IF NOT EXISTS mnre_empanelled BOOLEAN DEFAULT FALSE",
         "ALTER TABLE vendor_master ADD COLUMN IF NOT EXISTS mnre_reg_no VARCHAR(50)",
         "ALTER TABLE vendor_master ADD COLUMN IF NOT EXISTS stamp_image_url TEXT",
+        "ALTER TABLE vendor_master ADD COLUMN IF NOT EXISTS gst_certificate_url TEXT",
         # link official_partners back to vendor_master for solar vendor login
         "ALTER TABLE official_partners ADD COLUMN IF NOT EXISTS legacy_vendor_id INTEGER REFERENCES vendor_master(id) ON DELETE SET NULL",
     ]
@@ -17339,6 +17378,24 @@ async def serve_storage_file(request: Request, file_path: str):
     from app.services.object_storage import storage_service
     from pathlib import Path
 
+    # ── Security & Directory Traversal Protection ──
+    clean_p = (file_path or '').strip().lstrip('/').replace('\\', '/')
+    filename = clean_p.split('/')[-1].lower() if clean_p else ''
+    
+    # Strictly block hidden files, directory traversal, and sensitive system files
+    if (
+        not clean_p or
+        clean_p.startswith('.') or 
+        '/.' in clean_p or 
+        '..' in clean_p or
+        filename.startswith('.') or
+        filename.endswith((
+            '.env', '.py', '.pyc', '.sh', '.sql', '.key', '.pem', '.crt', 
+            '.db', '.conf', '.ini', '.yml', '.yaml', '.git', '.bak', '.log'
+        ))
+    ):
+        raise HTTPException(status_code=404, detail="File not found")
+
     # ── Content-Type detection ────────────────────────────────────────
     content_type = "application/octet-stream"
     lp = file_path.lower()
@@ -17358,8 +17415,6 @@ async def serve_storage_file(request: Request, file_path: str):
         content_type = "video/quicktime"
     elif lp.endswith('.pdf'):
         content_type = "application/pdf"
-
-    filename = file_path.split('/')[-1]
 
     # ── Resolve file data (Object Storage → local fallback) ──────────
     file_data: bytes | None = storage_service.download_file(file_path)
@@ -17398,7 +17453,6 @@ async def serve_storage_file(request: Request, file_path: str):
             local_storage_root / "public" / clean_file_path,
             Path(UPLOADS_DIR) / rel_upload_path,
             Path(UPLOADS_DIR) / clean_file_path,
-            Path(__file__).parent.parent / clean_file_path,
             Path(__file__).parent.parent / "uploads" / rel_upload_path,
             Path(__file__).parent.parent.parent / "frontend" / "uploads" / rel_upload_path,
         ]
@@ -17408,7 +17462,6 @@ async def serve_storage_file(request: Request, file_path: str):
                 backend_storage_root / unpref,
                 local_storage_root / unpref,
                 Path(UPLOADS_DIR) / unpref,
-                Path(__file__).parent.parent / unpref,
             ])
         elif clean_file_path.startswith("public/"):
             unpref = clean_file_path[len("public/"):]
@@ -17416,7 +17469,6 @@ async def serve_storage_file(request: Request, file_path: str):
                 backend_storage_root / unpref,
                 local_storage_root / unpref,
                 Path(UPLOADS_DIR) / unpref,
-                Path(__file__).parent.parent / unpref,
             ])
 
         for lp in local_candidates:

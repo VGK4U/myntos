@@ -128,7 +128,20 @@ def evaluate_lead_contact_authorization(
     # =========================================================================
     if isinstance(current_user, StaffEmployee) or hasattr(current_user, 'emp_code'):
         staff_id = current_user.id
-        emp_code = getattr(current_user, 'emp_code', '')
+        emp_code = str(getattr(current_user, 'emp_code', '') or '').strip().upper()
+
+        # DC-PRIVACY-002: Unmask phone numbers ONLY for MR10001 (VGK Mentor / Supreme Admin)
+        if emp_code == 'MR10001':
+            return {
+                "can_view": True,
+                "has_full_contact": True,
+                "can_click_to_call": True,
+                "relationship": "AUTHORIZED_STAFF",
+                "display_phone": raw_phone or "—",
+                "display_alternate_phone": raw_alt_phone or "—",
+                "is_masked": False,
+                "lead_id": lead.id
+            }
 
         # 1. Assigned Staff (Telecaller, Field Staff, Support Staff, Tech Staff, Owner, Creator)
         is_assigned_staff = (
@@ -143,31 +156,31 @@ def evaluate_lead_contact_authorization(
         if is_assigned_staff:
             return {
                 "can_view": True,
-                "has_full_contact": True,
+                "has_full_contact": False,
                 "can_click_to_call": True,
                 "relationship": "ASSIGNED_STAFF",
-                "display_phone": raw_phone or "—",
-                "display_alternate_phone": raw_alt_phone or "—",
-                "is_masked": False,
+                "display_phone": mask_phone_canonical(raw_phone),
+                "display_alternate_phone": mask_phone_canonical(raw_alt_phone) if raw_alt_phone else "—",
+                "is_masked": True,
                 "lead_id": lead.id
             }
 
-        # 2. Administrative / Management Staff Clearance
+        # 2. Administrative / Management Staff Clearance (Masked for all except MR10001)
         staff_type = (getattr(current_user, 'staff_type', '') or '').upper()
         is_admin_staff = (
             getattr(current_user, 'is_supreme', False) or
             staff_type in ('VGK4U', 'VGK4U SUPREME', 'ADMIN', 'MANAGEMENT', 'KEY LEADERSHIP') or
-            emp_code in ('MR10001', 'ADMIN')
+            emp_code in ('ADMIN',)
         )
         if is_admin_staff:
             return {
                 "can_view": True,
-                "has_full_contact": True,
+                "has_full_contact": False,
                 "can_click_to_call": True,
                 "relationship": "AUTHORIZED_STAFF",
-                "display_phone": raw_phone or "—",
-                "display_alternate_phone": raw_alt_phone or "—",
-                "is_masked": False,
+                "display_phone": mask_phone_canonical(raw_phone),
+                "display_alternate_phone": mask_phone_canonical(raw_alt_phone) if raw_alt_phone else "—",
+                "is_masked": True,
                 "lead_id": lead.id
             }
 

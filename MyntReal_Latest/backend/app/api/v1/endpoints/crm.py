@@ -77,7 +77,7 @@ def _canonical_base(request: Request) -> str:
 
 from app.core.database import get_db
 from app.models.crm import (
-    CRMLead, CRMLeadFollowUp, CRMLeadNote, 
+    CRMLead, CRMLeadFollowUp, CRMLeadNote, CRMLeadDocumentShare,
     CRMLeadAssignment, CRMLeadSource, DEFAULT_LEAD_SOURCES, SELF_LEAD_SOURCE_NAME,
     CRMRevenueEntry, CRMRevenueApprovalStatus,
     CRMLeadTransaction, TRANSACTION_TYPES, PAYMENT_MODES,
@@ -1122,6 +1122,9 @@ def get_crm_dashboard(
             lead_filters.append(CRMLead.last_contact_date < now_dt - timedelta(days=30))
     
     # DC Protocol (Jan 1, 2026): Tri-mode team member filtering
+    if scope == 'my' and not team_member_id and current_employee and hasattr(current_employee, 'id'):
+        team_member_id = current_employee.id
+
     if isinstance(team_member_id, int):
         target_emp = db.query(StaffEmployee).filter(StaffEmployee.id == team_member_id).first()
         target_emp_code = target_emp.emp_code if target_emp else None
@@ -1129,9 +1132,11 @@ def get_crm_dashboard(
         if scope == 'primary':
             lead_filters.append(and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id == team_member_id))
         elif scope == 'handler':
+            target_codes = [c for c in [str(team_member_id), target_emp_code] if c]
             handler_conditions = [
                 CRMLead.telecaller_id == team_member_id,
                 CRMLead.field_staff_id == team_member_id,
+                and_(CRMLead.handler_type == 'staff', CRMLead.handler_id.in_(target_codes)),
             ]
             if target_emp_code:
                 handler_conditions.append(CRMLead.mnr_handler_id == target_emp_code)
@@ -1141,10 +1146,14 @@ def get_crm_dashboard(
                 )
             lead_filters.append(or_(*handler_conditions))
         else:
+            target_codes = [c for c in [str(team_member_id), target_emp_code] if c]
             handler_conditions = [
                 and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id == team_member_id),
                 CRMLead.telecaller_id == team_member_id,
                 CRMLead.field_staff_id == team_member_id,
+                and_(CRMLead.handler_type == 'staff', CRMLead.handler_id.in_(target_codes)),
+                and_(CRMLead.created_by_type == 'staff', CRMLead.created_by_id.in_(target_codes)),
+                and_(CRMLead.created_by_type.is_(None), CRMLead.created_by_id.in_(target_codes)),
             ]
             if target_emp_code:
                 handler_conditions.append(CRMLead.mnr_handler_id == target_emp_code)
@@ -1153,6 +1162,15 @@ def get_crm_dashboard(
                          CRMLead.source_ref_id == str(team_member_id))
                 )
             lead_filters.append(or_(*handler_conditions))
+            _is_canon_unassigned = and_(
+                CRMLead.telecaller_id.is_(None),
+                CRMLead.primary_owner_id.is_(None),
+                CRMLead.field_staff_id.is_(None),
+                CRMLead.handler_type == 'unassigned',
+                or_(CRMLead.handler_id.is_(None), CRMLead.handler_id == ''),
+                or_(CRMLead.mnr_handler_id.is_(None), CRMLead.mnr_handler_id == '')
+            )
+            lead_filters.append(~_is_canon_unassigned)
 
     base_query = db.query(CRMLead).filter(*lead_filters)
     total_leads = base_query.count()
@@ -4779,6 +4797,13 @@ def get_bank_wise_leads(
         if not gs_phone and isinstance(g_source, str) and g_source.lower().strip() in staff_phone_map:
             gs_phone = staff_phone_map[g_source.lower().strip()]
 
+        # Resolve Telecaller Phone
+        tc_phone = ''
+        if lead.telecaller_id and lead.telecaller_id in staff_phone_map:
+            tc_phone = staff_phone_map[lead.telecaller_id]
+        elif isinstance(tc_name, str) and tc_name.lower().strip() in staff_phone_map:
+            tc_phone = staff_phone_map[tc_name.lower().strip()]
+
         # Resolve Ground Support Phone
         fs_phone = ''
         if lead.field_staff_id and lead.field_staff_id in staff_phone_map:
@@ -4813,6 +4838,9 @@ def get_bank_wise_leads(
             'upliner_name': upliner_name,
             'upliner_phone': upliner_phone,
             'telecaller_name': tc_name,
+            'telecaller_phone': tc_phone,
+            'co_applicant_name': getattr(lead, 'co_applicant_name', None) or '',
+            'co_applicant_phone': getattr(lead, 'co_applicant_phone', None) or '',
             'ground_support_name': fs_name,
             'ground_support_phone': fs_phone,
             'field_staff_name': fs_name,
@@ -5069,7 +5097,7 @@ def list_leads(
     is_admin = is_vgk_admin(staff_type)
     
     # Unified role_filter mapping for mobile/web parity
-    if role_filter:
+    if role_filter and isinstance(role_filter, str):
         rf = str(role_filter).strip().lower()
         if rf == 'my_leads':
             scope = 'my'
@@ -5166,7 +5194,7 @@ def list_leads(
     
     # VISIBILITY FILTER LOGIC:
     # 1. Specific Team Member filter (for downline leaders or admins)
-    if team_member_id:
+    if isinstance(team_member_id, int):
         if not has_view_all and team_member_id not in all_downline_ids:
             raise HTTPException(status_code=403, detail="Specified team member is not in your authorized downline")
         normal_scope = or_(
@@ -5178,11 +5206,31 @@ def list_leads(
             query = query.filter(and_(company_filter_clause, normal_scope))
         else:
             query = query.filter(normal_scope)
-    elif primary_owner or scope == 'my':
+    elif primary_owner and not scope == 'my':
+        # Explicit primary owner filter
+        normal_scope = and_(
+            CRMLead.primary_owner_type == 'staff',
+            CRMLead.primary_owner_id == current_employee.id
+        )
+        if company_filter_clause is not None:
+            query = query.filter(and_(company_filter_clause, or_(self_created_clause, normal_scope)))
+        else:
+            query = query.filter(or_(self_created_clause, normal_scope))
+        _is_canon_unassigned = and_(
+            CRMLead.telecaller_id.is_(None),
+            CRMLead.primary_owner_id.is_(None),
+            CRMLead.field_staff_id.is_(None),
+            CRMLead.handler_type == 'unassigned',
+            or_(CRMLead.handler_id.is_(None), CRMLead.handler_id == ''),
+            or_(CRMLead.mnr_handler_id.is_(None), CRMLead.mnr_handler_id == '')
+        )
+        query = query.filter(~_is_canon_unassigned)
+    elif scope == 'my' or primary_owner:
         # "My Leads" scope - strictly leads where staff is primary owner or assigned handler, or creator
         if is_restricted_freelancer:
             normal_scope = _crm_assignment_filter(current_employee.id, current_employee.emp_code)
         else:
+            emp_match_codes = [c for c in [str(current_employee.id), current_employee.emp_code] if c]
             normal_scope = or_(
                 and_(
                     CRMLead.primary_owner_type == 'staff',
@@ -5190,7 +5238,12 @@ def list_leads(
                 ),
                 CRMLead.telecaller_id == current_employee.id,
                 CRMLead.field_staff_id == current_employee.id,
-                CRMLead.handler_id == current_employee.emp_code
+                CRMLead.handler_id.in_(emp_match_codes),
+                CRMLead.mnr_handler_id == current_employee.emp_code,
+                and_(
+                    CRMLead.source_ref_type.in_(('staff', 'mnr', 'vgk')),
+                    CRMLead.source_ref_id == str(current_employee.id)
+                )
             )
         if company_filter_clause is not None:
             query = query.filter(and_(company_filter_clause, or_(self_created_clause, normal_scope)))
@@ -5317,7 +5370,7 @@ def list_leads(
     
     # DC Protocol (Jan 1, 2026): Handler role-based filtering for Staff Leads page
     # Filters leads where current user is assigned as a specific handler role
-    if as_handler_role:
+    if as_handler_role and isinstance(as_handler_role, str):
         handler_role = as_handler_role.lower()
         if handler_role == 'telecaller':
             query = query.filter(CRMLead.telecaller_id == current_employee.id)
@@ -5338,22 +5391,27 @@ def list_leads(
             )
         elif handler_role == 'any':
             # Any handler role - leads where user is assigned as any type of handler
-            # Note: Partner role excluded for staff users (separate entity)
+            emp_match_codes = [c for c in [str(current_employee.id), current_employee.emp_code] if c]
             handler_conditions = [
                 CRMLead.telecaller_id == current_employee.id,
                 CRMLead.field_staff_id == current_employee.id,
                 CRMLead.mnr_handler_id == current_employee.emp_code,
+                and_(CRMLead.handler_type == 'staff', CRMLead.handler_id.in_(emp_match_codes)),
+                and_(
+                    CRMLead.source_ref_type.in_(('staff', 'mnr', 'vgk')),
+                    CRMLead.source_ref_id == str(current_employee.id)
+                )
             ]
             query = query.filter(or_(*handler_conditions))
     
     # Telecaller / Field Staff direct filters
-    if filter_telecaller_id:
+    if filter_telecaller_id and isinstance(filter_telecaller_id, int):
         query = query.filter(CRMLead.telecaller_id == filter_telecaller_id)
-    if filter_field_staff_id:
+    if filter_field_staff_id and isinstance(filter_field_staff_id, int):
         query = query.filter(CRMLead.field_staff_id == filter_field_staff_id)
 
     # DC-INCENTIVE-LEADS-001: Filter by a specific staff employee across their roles
-    if involved_employee_id:
+    if involved_employee_id and isinstance(involved_employee_id, int):
         _inv_emp = db.query(StaffEmployee).filter(StaffEmployee.id == involved_employee_id).first()
         _inv_role = (involved_role or '').lower()
         if _inv_emp:
@@ -5394,12 +5452,12 @@ def list_leads(
     if priority:
         query = query.filter(CRMLead.priority == priority)
     # DC Protocol (Jul 2026 Task 11): Category filter — dual-match logic for both string name and integer ID.
-    if category or category_id is not None:
+    if (category and isinstance(category, str)) or (category_id is not None and isinstance(category_id, int)):
         _cat_ids = []
-        if category_id is not None:
+        if category_id is not None and isinstance(category_id, int):
             _cat_ids.append(category_id)
-        if category:
-            if isinstance(category, int) or (isinstance(category, str) and category.isdigit()):
+        if category and isinstance(category, str):
+            if category.isdigit():
                 _cat_ids.append(int(category))
             else:
                 _matched_cats = db.query(SignupCategory.id).filter(
@@ -5424,11 +5482,11 @@ def list_leads(
             ))
         else:
             query = query.filter(CRMLead.id == -1)
-    if handler_type:
+    if handler_type and isinstance(handler_type, str):
         query = query.filter(CRMLead.handler_type == handler_type)
-    if handler_id:
+    if handler_id and isinstance(handler_id, str):
         query = query.filter(CRMLead.handler_id == handler_id)
-    if source:
+    if source and isinstance(source, str):
         query = query.filter(CRMLead.source.ilike(source.strip()))
     if search:
         _st = f'%{search}%'
@@ -11316,11 +11374,24 @@ def update_lead(
     # DC Protocol (Jan 1, 2026): First Contact Ownership & Inactive Staff Takeover
     # When a fresh lead (status='new') is first updated to contacted or any follow-up status,
     # or an active lead belonging to an inactive employee is updated, the active staff member becomes primary owner
-    follow_up_statuses = ['contacted', 'interested', 'qualified', 'proposal', 'won', 'on_hold', 'in_progress', 'site_visit', 'meeting_scheduled', 'callback']
+    follow_up_statuses = ['contacted', 'interested', 'qualified', 'proposal', 'won', 'on_hold', 'in_progress', 'site_visit', 'meeting_scheduled', 'callback', 'tried to contact', 'tried_to_contact']
     new_status = update_data.get('status')
     
+    # USER DIRECTIVE / DC Protocol: If an unassigned lead (or inactive owner lead) is updated by an active staff member,
+    # and a follow-up is scheduled or comments/call logged, but no status change was specified or status remains 'new',
+    # auto-advance status to 'tried to contact' so it transitions out of the unassigned pool and binds to the telecaller.
+    _has_followup = bool(update_data.get('next_followup_date'))
+    _has_recent_comment = bool(update_data.get('recent_comments'))
+    _has_tele_assigned = bool(update_data.get('telecaller_id'))
+
+    if (str(lead.status or '').strip().lower() in ('new', 'fresh', '', 'none') or str(new_status or '').strip().lower() in ('new', 'fresh', '', 'none')) and (_has_followup or _has_recent_comment or _has_tele_assigned):
+        if not new_status or str(new_status).strip().lower() in ('new', 'fresh', '', 'none'):
+            update_data['status'] = 'tried to contact'
+            new_status = 'tried to contact'
+
     # DC-NEW-LEADS-UNASSIGNED-POOL-001: If status is set to 'new', clear telecaller_id, field_staff_id, and ownership
-    if new_status == 'new':
+    # ONLY if caller explicitly desires to reset to 'new' and did NOT schedule a follow-up or assign a telecaller
+    if new_status == 'new' and not _has_followup and not _has_tele_assigned:
         update_data['telecaller_id'] = None
         update_data['field_staff_id'] = None
         update_data['handler_type'] = 'unassigned'
@@ -11334,8 +11405,8 @@ def update_lead(
     lead_is_active = lead_curr_status not in ('won', 'completed', 'lost', 'do_not_call')
 
     is_first_contact = (
-        lead.status == 'new' and 
-        new_status in follow_up_statuses and 
+        (lead.status in ('new', 'fresh', '', None) or lead.telecaller_id is None) and 
+        (new_status in follow_up_statuses or _has_followup) and 
         lead.primary_owner_id is None
     )
 
@@ -11343,7 +11414,7 @@ def update_lead(
     is_inactive_lead_takeover = (
         is_inactive_owner and
         lead_is_active and
-        new_status in follow_up_statuses and
+        (new_status in follow_up_statuses or _has_followup) and
         getattr(current_employee, 'status', 'active') == 'active'
     )
     
@@ -11612,10 +11683,10 @@ def update_lead(
         if hasattr(lead, key):
             setattr(lead, key, value)
 
-    # DC_STATUS_CHANGE_ASSIGN: Only assign lead to current employee if STATUS was changed by this user
-    # (General field editing / comments / notes MUST NOT auto-assign unassigned leads)
+    # DC_STATUS_CHANGE_ASSIGN: Assign lead to current employee if STATUS was changed by this user or follow-up scheduled
     _status_changed = ('status' in update_data and update_data['status'] != _pre_commit_status)
-    if _status_changed and current_employee and hasattr(current_employee, 'id'):
+    _followup_added = ('next_followup_date' in update_data and update_data['next_followup_date'] is not None)
+    if (_status_changed or _followup_added) and current_employee and hasattr(current_employee, 'id'):
         is_inactive_owner = False
         if lead.telecaller_id:
             _st = db.query(StaffEmployee.status, StaffEmployee.is_deleted).filter(StaffEmployee.id == lead.telecaller_id).first()
@@ -11630,8 +11701,9 @@ def update_lead(
             lead.handler_type = 'staff'
             lead.handler_id = current_employee.emp_code
             lead.telecaller_id = current_employee.id
-            lead.primary_owner_type = 'staff'
-            lead.primary_owner_id = current_employee.id
+            if not lead.primary_owner_id or is_inactive_owner:
+                lead.primary_owner_type = 'staff'
+                lead.primary_owner_id = current_employee.id
 
     # DC-NOTE-AUDIT: When recent_comments is added or modified, log a CRMLeadNote entry showing who updated it
     if 'recent_comments' in update_data and update_data['recent_comments']:
@@ -18100,6 +18172,35 @@ def get_solar_docs(
             "view_url":         f"/storage/{r.file_name}" if r.file_name else None,
         })
 
+    # DC-VENDOR-GST-001 (Sep 2026): If lead does not have a custom vendor_gst uploaded,
+    # auto-expose the default Solar Vendor GST Certificate (Visionera) for bank bundle
+    has_vendor_gst = any(d["doc_type"] == "vendor_gst" for d in docs)
+    if not has_vendor_gst:
+        v_gst = db.execute(text("""
+            SELECT id, vendor_name, gst_number, gst_certificate_url
+            FROM vendor_master
+            WHERE vendor_type = 'SOLAR' AND gst_certificate_url IS NOT NULL
+            ORDER BY id LIMIT 1
+        """)).fetchone()
+        if v_gst and v_gst.gst_certificate_url:
+            raw_fn = v_gst.gst_certificate_url.replace('/storage/', '')
+            docs.append({
+                "id": f"vgst_{v_gst.id}",
+                "doc_category": "bank_link",
+                "doc_type": "vendor_gst",
+                "doc_label": f"Solar Vendor GST ({v_gst.vendor_name})",
+                "doc_number": v_gst.gst_number or "",
+                "file_name": raw_fn,
+                "original_name": "Visionera_GST_Registration_Certificate.pdf",
+                "file_size": 118277,
+                "uploaded_by_id": None,
+                "uploaded_by_name": f"{v_gst.vendor_name} (Solar Vendor)",
+                "uploaded_at": None,
+                "notes": f"Vendor Level GST Registration Certificate ({v_gst.vendor_name})",
+                "view_url": v_gst.gst_certificate_url,
+                "is_vendor_default": True
+            })
+
     return {"success": True, "docs": docs, "count": len(docs)}
 
 
@@ -18371,6 +18472,43 @@ def create_share_link(
     base_url = _canonical_base(request)
     share_url = f"{base_url}/lead-share.html?token={token}"
 
+    # DC-DOC-SHARES-AUDIT: Record audit entry and CRMLeadNote
+    try:
+        company_id = getattr(lead, 'company_id', None) or getattr(current_employee, 'base_company_id', 1) or 1
+        share_rec = CRMLeadDocumentShare(
+            company_id=company_id,
+            lead_id=lead_id,
+            share_mode="share_link",
+            recipient_phone=None,
+            recipient_name="Public Link Recipient",
+            recipient_role="Link Access",
+            shared_by_staff_id=current_employee.id,
+            shared_by_staff_name=emp_name,
+            doc_group="custom" if doc_types else "all",
+            doc_types=doc_types or ["all"],
+            doc_labels=[_BUNDLE_DOC_LABELS.get(t, t) for t in (doc_types or [])] if doc_types else ["All Documents"],
+            total_docs=len(doc_types) if doc_types else 0,
+            sent_docs_count=len(doc_types) if doc_types else 0,
+            share_url=share_url,
+            status="active"
+        )
+        db.add(share_rec)
+
+        link_note = CRMLeadNote(
+            company_id=company_id,
+            lead_id=lead_id,
+            note=f"🔗 [Document Share Link Created]\n• Shared by: {emp_name} (Staff ID: {current_employee.id})\n• Link: {share_url}\n• Expiry: 6 hours ({expires_at_utc.strftime('%d %b %Y, %I:%M %p UTC')})\n• Included: {', '.join(doc_types) if doc_types else 'All available documents'}",
+            is_private=False,
+            created_by_type="STAFF",
+            created_by_id=str(current_employee.id)
+        )
+        db.add(link_note)
+        lead.recent_comments = f"[Share Link Created] 6-hour link created by {emp_name}"
+        db.commit()
+    except Exception as _sh_err:
+        db.rollback()
+        logger.warning("[DC-SHARE-AUDIT] Audit recording skipped: %s", _sh_err)
+
     logger.info("[DC-SHARE] Token created for lead #%s by %s, doc_filter=%s, expires %s",
                 lead_id, emp_name, doc_types, expires_at_utc.isoformat())
     return {
@@ -18577,12 +18715,13 @@ def view_share_link(token: str, db: Session = Depends(get_db)):
 # Public token endpoint: /share/{token}/bundle
 # Uses PyMuPDF (fitz) to merge images + PDFs into a single downloadable PDF.
 # ─────────────────────────────────────────────────────────────────────────────
-_BANK_DOC_TYPES   = ['adhar','pan','powerbill','bank_book','house_tax','quotation','feasibility_letter','invoice']
+_BANK_DOC_TYPES   = ['adhar','pan','powerbill','bank_book','house_tax','quotation','feasibility_letter','invoice','vendor_gst']
 _DISCOM_DOC_TYPES = ['annexure_a','annexure_c','annexure_c_technical','synchronisation_certificate','dcr_certificate','geotagging_photo']
 _BUNDLE_DOC_LABELS = {
     'adhar':'Aadhaar Card','pan':'PAN Card','powerbill':'Electricity Bill',
     'bank_book':'Bank Book','house_tax':'House Tax Receipt',
     'quotation':'Quotation','feasibility_letter':'Feasibility Letter','invoice':'Invoice',
+    'vendor_gst':'Solar Vendor GST Certificate (Visionera)',
     'annexure_a':'Annexure-A','annexure_c':'Annexure-C (Project Completion)',
     'annexure_c_technical':'Annexure-C (Technical Details)',
     'synchronisation_certificate':'Synchronisation Certificate',
@@ -18642,6 +18781,7 @@ def download_solar_docs_bundle(
     """
     from app.services.object_storage import storage_service as _ss
     from fastapi.responses import Response as _R
+    from collections import namedtuple
     sec = section.lower()
     if sec == 'bank':
         doc_types = _BANK_DOC_TYPES
@@ -18659,8 +18799,22 @@ def download_solar_docs_bundle(
             f"SELECT file_name, doc_type FROM crm_lead_solar_documents "
             f"WHERE lead_id = :lid AND doc_type IN ({placeholders}) AND file_name IS NOT NULL"
         ), params).fetchall()
+        rows = list(rows)
     else:
         rows = []
+
+    # DC-VENDOR-GST-001: Default Solar Vendor GST if not explicitly uploaded for lead
+    if sec == 'bank' and 'vendor_gst' in doc_types and not any(r.doc_type == 'vendor_gst' for r in rows):
+        v_gst = db.execute(text("""
+            SELECT gst_certificate_url FROM vendor_master
+            WHERE vendor_type = 'SOLAR' AND gst_certificate_url IS NOT NULL
+            ORDER BY id LIMIT 1
+        """)).fetchone()
+        if v_gst and v_gst.gst_certificate_url:
+            raw_fn = v_gst.gst_certificate_url.replace('/storage/', '')
+            DocRow = namedtuple('DocRow', ['file_name', 'doc_type'])
+            rows.append(DocRow(file_name=raw_fn, doc_type='vendor_gst'))
+
     order_map = {t: i for i, t in enumerate(doc_types)}
     rows = sorted(rows, key=lambda r: order_map.get(r.doc_type, 999))
     file_names = [r.file_name for r in rows]
@@ -18681,6 +18835,7 @@ def download_share_bundle(token: str, db: Session = Depends(get_db)):
     from app.services.object_storage import storage_service as _ss
     from fastapi.responses import Response as _R
     from datetime import timezone as _tz2
+    from collections import namedtuple
     row = db.execute(text(
         "SELECT lead_id, expires_at, doc_filter FROM crm_lead_share_tokens WHERE token = :tok"
     ), {"tok": token}).fetchone()
@@ -18707,6 +18862,19 @@ def download_share_bundle(token: str, db: Session = Depends(get_db)):
         "WHERE lead_id = :lid AND file_name IS NOT NULL ORDER BY id"
     ), {"lid": row.lead_id}).fetchall()
     filtered = [d for d in docs if d.doc_type not in _NEVER and (included is None or d.doc_type in included)]
+
+    # DC-VENDOR-GST-001: Default Solar Vendor GST if requested and not per-lead uploaded
+    if (included is None or 'vendor_gst' in included) and not any(d.doc_type == 'vendor_gst' for d in filtered):
+        v_gst = db.execute(text("""
+            SELECT gst_certificate_url FROM vendor_master
+            WHERE vendor_type = 'SOLAR' AND gst_certificate_url IS NOT NULL
+            ORDER BY id LIMIT 1
+        """)).fetchone()
+        if v_gst and v_gst.gst_certificate_url:
+            raw_fn = v_gst.gst_certificate_url.replace('/storage/', '')
+            DocRow = namedtuple('DocRow', ['file_name', 'doc_type'])
+            filtered.append(DocRow(file_name=raw_fn, doc_type='vendor_gst'))
+
     if included:
         om = {t: i for i, t in enumerate(included)}
         filtered.sort(key=lambda d: om.get(d.doc_type, 999))
@@ -18717,6 +18885,283 @@ def download_share_bundle(token: str, db: Session = Depends(get_db)):
     safe = (lead.name or f'Lead{row.lead_id}').replace(' ', '_')
     return _R(content=pdf, media_type='application/pdf',
               headers={'Content-Disposition': f'attachment; filename="{safe}_Documents.pdf"'})
+
+
+class ShareSolarDocsWAPayload(BaseModel):
+    doc_group: str = Field("bank", description="bank or discom")
+    recipient_phone: str = Field(..., description="10-digit Indian recipient mobile phone number")
+    recipient_name: Optional[str] = Field(None, description="Name or designation of recipient")
+    recipient_role: Optional[str] = Field(None, description="Role chip: Customer, BM, Ground Support, etc.")
+    selected_doc_types: Optional[List[str]] = Field(None, description="List of doc types to attach")
+    custom_notes: Optional[str] = Field(None, description="Optional custom notes to include in chat summary")
+
+    model_config = {"extra": "ignore"}
+
+
+@router.post("/leads/{lead_id}/solar-docs/share-whatsapp")
+def share_solar_docs_via_whatsapp(
+    lead_id: int,
+    payload: ShareSolarDocsWAPayload,
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    DC-WA-DOC-SHARE-001 (Sep 2026):
+    Direct WhatsApp Document Dispatch for Bank & DISCOM Solar Bundles.
+    Dispatches customer & system summary text followed by real attachments (PDFs/Images)
+    directly into the WhatsApp chat from the connected scanned WhatsApp number (port 5002).
+    """
+    import time
+    import requests
+    from app.models.crm import CRMLeadNote
+
+    lead = get_authorized_lead(db, lead_id, current_employee)
+
+    # 1. Normalize recipient mobile phone
+    raw_digits = ''.join(filter(str.isdigit, str(payload.recipient_phone or '')))
+    if len(raw_digits) < 10:
+        raise HTTPException(status_code=400, detail="A valid 10-digit mobile number is required")
+    phone10 = raw_digits[-10:]
+
+    # 2. Fetch full lead details
+    lead_row = db.execute(text("""
+        SELECT id, name, phone, alternate_phone, address, city, state, pincode,
+               kw_size, discom, application_no, sc_number, consumer_no,
+               loan_bank AS bank_name, bank_branch, company_id
+        FROM crm_leads WHERE id = :lid
+    """), {"lid": lead_id}).fetchone()
+    if not lead_row:
+        raise HTTPException(status_code=404, detail="Lead not found")
+
+    # 3. Determine doc types
+    group = (payload.doc_group or 'bank').lower().strip()
+    if group == 'bank':
+        base_types = list(_BANK_DOC_TYPES)
+        group_label = "Bank Documents"
+    elif group == 'discom':
+        base_types = list(_DISCOM_DOC_TYPES)
+        group_label = "DISCOM Documents"
+    else:
+        raise HTTPException(status_code=400, detail="doc_group must be 'bank' or 'discom'")
+
+    if payload.selected_doc_types:
+        target_types = [t for t in base_types if t in payload.selected_doc_types]
+    else:
+        target_types = list(base_types)
+
+    # 4. Query uploaded documents for lead
+    placeholders = ','.join(f':t{i}' for i in range(len(target_types)))
+    params = {"lid": lead_id, **{f"t{i}": t for i, t in enumerate(target_types)}}
+    doc_rows = db.execute(text(
+        f"SELECT id, doc_type, doc_label, file_name, original_name "
+        f"FROM crm_lead_solar_documents "
+        f"WHERE lead_id = :lid AND doc_type IN ({placeholders}) AND file_name IS NOT NULL"
+    ), params).fetchall() if target_types else []
+
+    found_types = {r.doc_type for r in doc_rows}
+    docs_to_send = []
+    for r in doc_rows:
+        docs_to_send.append({
+            "doc_type": r.doc_type,
+            "label": _BUNDLE_DOC_LABELS.get(r.doc_type, r.doc_label or r.doc_type),
+            "file_name": r.file_name,
+            "original_name": r.original_name or f"{r.doc_type}.pdf"
+        })
+
+    # DC-VENDOR-GST-001: Fallback to Solar Vendor GST Registration Certificate
+    if group == 'bank' and 'vendor_gst' in target_types and 'vendor_gst' not in found_types:
+        v_gst = db.execute(text("""
+            SELECT id, vendor_name, gst_number, gst_certificate_url
+            FROM vendor_master
+            WHERE vendor_type = 'SOLAR' AND gst_certificate_url IS NOT NULL
+            ORDER BY id LIMIT 1
+        """)).fetchone()
+        if v_gst and v_gst.gst_certificate_url:
+            raw_fn = v_gst.gst_certificate_url.replace('/storage/', '')
+            docs_to_send.append({
+                "doc_type": "vendor_gst",
+                "label": f"Solar Vendor GST ({v_gst.vendor_name})",
+                "file_name": raw_fn,
+                "original_name": "Visionera_GST_Registration_Certificate.pdf"
+            })
+
+    # Order docs
+    order_map = {t: i for i, t in enumerate(base_types)}
+    docs_to_send.sort(key=lambda d: order_map.get(d["doc_type"], 999))
+
+    if not docs_to_send:
+        raise HTTPException(status_code=400, detail=f"No available {group_label} found for this lead to send.")
+
+    # 5. Build summary text
+    customer_name = (lead_row.name or f"Lead #{lead_id}").strip()
+    cust_phone = (lead_row.phone or "").strip()
+    kw = lead_row.kw_size or "—"
+    ref_no = lead_row.application_no or lead_row.sc_number or lead_row.consumer_no or f"APP-{lead_id}"
+    inst_info = f"{lead_row.bank_name or 'Bank'} - {lead_row.bank_branch or 'Main Branch'}" if group == 'bank' else f"{lead_row.discom or 'DISCOM'}"
+    staff_name = f"{current_employee.first_name} {current_employee.last_name or ''}".strip() or "MyntOS Operations"
+    rec_disp_name = payload.recipient_name or (f"Recipient ({payload.recipient_role})" if payload.recipient_role else customer_name)
+
+    doc_list_lines = "\n".join([f"  {i+1}. {d['label']}" for i, d in enumerate(docs_to_send)])
+    summary_msg = (
+        f"☀️ *SOLAR APPLICATION — {group_label.upper()}* ☀️\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📋 *Lead / App ID:* #{lead_id}\n"
+        f"👤 *Customer:* {customer_name}\n"
+        f"📞 *Customer Phone:* +91 {cust_phone}\n"
+        f"⚡ *System Capacity:* {kw} kW\n"
+        f"🏢 *{'Bank & Branch' if group == 'bank' else 'DISCOM'}:* {inst_info}\n"
+        f"🔢 *Reference / App No:* {ref_no}\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"📎 *Enclosed Documents ({len(docs_to_send)} Attachments):*\n"
+        f"{doc_list_lines}\n"
+    )
+    if payload.custom_notes and payload.custom_notes.strip():
+        summary_msg += f"\n📝 *Notes:* {payload.custom_notes.strip()}\n"
+    summary_msg += (
+        f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"_Dispatched by {staff_name} via MyntOS Solar Desk_"
+    )
+
+    bot_url = "http://localhost:5002/api/send-message"
+
+    # 6. Dispatch summary message to scanned bot
+    try:
+        r_txt = requests.post(bot_url, json={
+            "phone": phone10,
+            "message": summary_msg,
+            "recipientName": rec_disp_name,
+            "skip_backend_log": False
+        }, timeout=12)
+        if not r_txt.ok:
+            err_data = r_txt.json() if r_txt.headers.get("content-type", "").startswith("application/json") else {}
+            err_msg = err_data.get("error") or err_data.get("message") or f"Bot HTTP {r_txt.status_code}"
+            raise HTTPException(status_code=502, detail=f"WhatsApp Bot dispatch failed: {err_msg}")
+    except requests.exceptions.RequestException as req_err:
+        raise HTTPException(status_code=503, detail=f"WhatsApp Bot service unreachable on port 5002: {str(req_err)}")
+
+    # 7. Dispatch each attachment sequentially
+    sent_docs = []
+    failed_docs = []
+    safe_cust_name = customer_name.replace(' ', '_').replace('/', '_')
+
+    for d in docs_to_send:
+        fn = d["file_name"]
+        lbl = d["label"]
+        media_path = f"/storage/{fn}" if not fn.startswith('/storage/') else fn
+        ext = fn.split('.')[-1].lower() if '.' in fn else 'pdf'
+        doc_clean_label = lbl.replace(' ', '_').replace('(', '').replace(')', '').replace('/', '_')
+        attachment_filename = f"{safe_cust_name}_{doc_clean_label}.{ext}"
+
+        try:
+            # Pacing delay between attachments to avoid rate limiting
+            time.sleep(1.0)
+            r_att = requests.post(bot_url, json={
+                "phone": phone10,
+                "media_url": media_path,
+                "imageUrl": media_path,
+                "imagePath": media_path,
+                "message": f"📎 {lbl} — {customer_name}",
+                "filename": attachment_filename,
+                "recipientName": rec_disp_name,
+                "skip_backend_log": True
+            }, timeout=20)
+            if r_att.ok:
+                sent_docs.append(lbl)
+            else:
+                failed_docs.append({"label": lbl, "error": r_att.text[:120]})
+        except Exception as err:
+            failed_docs.append({"label": lbl, "error": str(err)[:120]})
+
+    # 8. Record audit lead note & CRMLeadDocumentShare audit log
+    try:
+        company_id = lead_row.company_id or getattr(current_employee, 'base_company_id', 1) or 1
+        note_text = (
+            f"📄 [WhatsApp Documents Shared]\n"
+            f"• Bundle: {group_label}\n"
+            f"• Shared by: {staff_name} (Staff ID: {current_employee.id})\n"
+            f"• Recipient: {rec_disp_name} (+91 {phone10})\n"
+            f"• Role: {payload.recipient_role or 'Contact'}\n"
+            f"• Documents Dispatched ({len(sent_docs)}/{len(docs_to_send)} attachments):\n"
+            + "\n".join([f"   - {d}" for d in sent_docs])
+        )
+        if failed_docs:
+            note_text += f"\n• Failed/Skipped: " + ", ".join([f"{f['label']} ({f['error']})" for f in failed_docs])
+        if payload.custom_notes and payload.custom_notes.strip():
+            note_text += f"\n• Note: {payload.custom_notes.strip()}"
+
+        audit_note = CRMLeadNote(
+            company_id=company_id,
+            lead_id=lead_id,
+            note=note_text,
+            is_private=False,
+            created_by_type="STAFF",
+            created_by_id=str(current_employee.id)
+        )
+        db.add(audit_note)
+
+        # Save dedicated document share audit record
+        share_record = CRMLeadDocumentShare(
+            company_id=company_id,
+            lead_id=lead_id,
+            share_mode="whatsapp_attachments",
+            recipient_phone=phone10,
+            recipient_name=rec_disp_name,
+            recipient_role=payload.recipient_role or "Contact",
+            shared_by_staff_id=current_employee.id,
+            shared_by_staff_name=staff_name,
+            doc_group=group,
+            doc_types=[d["doc_type"] for d in docs_to_send],
+            doc_labels=[d["label"] for d in docs_to_send],
+            total_docs=len(docs_to_send),
+            sent_docs_count=len(sent_docs),
+            failed_docs_count=len(failed_docs),
+            custom_notes=payload.custom_notes or "",
+            status="completed" if len(sent_docs) == len(docs_to_send) else ("partial" if sent_docs else "failed")
+        )
+        db.add(share_record)
+
+        # Update lead's recent_comments and last_contact_date
+        lead.recent_comments = f"[Docs Shared via WA] {group_label} ({len(sent_docs)} docs) sent to {rec_disp_name} (+91 {phone10}) by {staff_name}"
+        lead.last_contact_date = datetime.now()
+        db.commit()
+    except Exception as note_e:
+        db.rollback()
+        logger.warning("[DC-WA-DOC-SHARE] Lead note audit recording skipped: %s", note_e)
+
+    return {
+        "success": len(sent_docs) > 0,
+        "recipient": phone10,
+        "recipient_name": rec_disp_name,
+        "doc_group": group,
+        "total_docs": len(docs_to_send),
+        "sent_count": len(sent_docs),
+        "failed_count": len(failed_docs),
+        "sent_docs": sent_docs,
+        "failed_docs": failed_docs
+    }
+
+
+@router.get("/leads/{lead_id}/document-share-logs")
+def get_document_share_logs(
+    lead_id: int,
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user),
+):
+    """
+    DC-DOC-SHARES-AUDIT-20260916:
+    Return chronological audit log of all documents shared for a lead (via WhatsApp attachments or Share Link).
+    """
+    lead = get_authorized_lead(db, lead_id, current_employee)
+    shares = db.query(CRMLeadDocumentShare).filter(
+        CRMLeadDocumentShare.lead_id == lead_id
+    ).order_by(CRMLeadDocumentShare.created_at.desc()).all()
+
+    return {
+        "success": True,
+        "lead_id": lead_id,
+        "lead_name": lead.name,
+        "logs": [s.to_dict() for s in shares]
+    }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DC Protocol Apr 2026: Solar Vendor + Tech + Document Generation Endpoints
@@ -18736,7 +19181,7 @@ def get_solar_vendors(
                gst_number, phone, email, address, city, state, pincode,
                bank_name, bank_branch, account_number, ifsc_code, account_holder_name,
                mnre_empanelled, mnre_reg_no, stamp_image_url, rep_signature_url,
-               tech_signature_url, vendor_logo_url
+               tech_signature_url, vendor_logo_url, gst_certificate_url
         FROM vendor_master
         WHERE vendor_type = 'SOLAR' AND is_active = true
         ORDER BY vendor_name
@@ -18767,6 +19212,7 @@ def get_solar_vendors(
             "stamp_image_url":      r.stamp_image_url or "",
             "rep_signature_url":    r.rep_signature_url or "",
             "tech_signature_url":   r.tech_signature_url or "",
+            "gst_certificate_url":  r.gst_certificate_url or "",
         })
     return {"vendors": vendors}
 
@@ -18865,7 +19311,7 @@ def get_solar_preflight(
         v = db.execute(text("""
             SELECT id, vendor_name, vendor_code, gst_number, address, city, state, pincode,
                    phone, email, bank_name, bank_branch, account_number, account_holder_name, ifsc_code,
-                   mnre_empanelled, mnre_reg_no, stamp_image_url, tech_signature_url, vendor_logo_url
+                   mnre_empanelled, mnre_reg_no, stamp_image_url, tech_signature_url, vendor_logo_url, gst_certificate_url
             FROM vendor_master WHERE id = :vid AND vendor_type = 'SOLAR'
         """), {"vid": vendor_id}).fetchone()
         if v:

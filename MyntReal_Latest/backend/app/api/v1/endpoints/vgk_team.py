@@ -57,16 +57,16 @@ def require_ea(current_user: StaffEmployee = Depends(get_current_staff_user)):
 
 
 # [DC-VGK-RBAC-001] Strict 5-User Visibility Whitelist
-# Requirement: All members displayed to Poojitha, Subash, Yaswanth, Jagannath and Mr10001 only.
+# Requirement: All members displayed to Anushka, Subash, Yaswanth, Jagannath and Mr10001 only.
 # All other staff only see members registered by them or assigned to them.
 VGK_FULL_VISIBILITY_EMP_CODES = {
     'MR10001',   # System Administrator (VGK4U Supreme)
     'MR10025',   # Subash (Mr. Subhash Kumar Kari)
     'MR10016',   # Yaswanth (Mr. Yaswanth Kumar Appalabattula)
     'MR10018',   # Jagannath (Mr. Jagannadh Velaga)
-    'MN10016',   # Poojitha (Ms. Narsi Kurmasri pujitha)
+    'MR10036',   # Anushka (Ms. Anushka Karri) - transferred authority from MN10016 (Poojitha)
 }
-VGK_FULL_VISIBILITY_STAFF_IDS = {1, 16, 19, 28, 118}
+VGK_FULL_VISIBILITY_STAFF_IDS = {1, 16, 19, 28, 73}
 
 
 def _is_vgk_admin(user: StaffEmployee) -> bool:
@@ -77,7 +77,7 @@ def _is_vgk_admin(user: StaffEmployee) -> bool:
     if emp_code in VGK_FULL_VISIBILITY_EMP_CODES or getattr(user, 'id', None) in VGK_FULL_VISIBILITY_STAFF_IDS:
         return True
     full_name = (getattr(user, 'full_name', '') or getattr(user, 'name', '') or '').lower()
-    if any(k in full_name for k in ('poojitha', 'pujitha', 'subhash', 'subash', 'yaswanth', 'jagannath', 'jagannadh')):
+    if any(k in full_name for k in ('anushka', 'subhash', 'subash', 'yaswanth', 'jagannath', 'jagannadh')):
         return True
     st = (getattr(user, 'staff_type', '') or '').upper()
     if 'VGK' in st or st in ('EA', 'SUPER_ADMIN', 'ADMIN', 'TENANT_ADMIN', 'MANAGEMENT'):
@@ -95,7 +95,7 @@ def _is_vgk_admin(user: StaffEmployee) -> bool:
 def _has_full_vgk_visibility(user: StaffEmployee) -> bool:
     """
     Check if user is permitted to see all VGK members across the platform.
-    Strict access rule: All members should be displayed to Poojitha, Subash, Yaswanth, Jagannath and Mr10001 only.
+    Strict access rule: All members should be displayed to Anushka, Subash, Yaswanth, Jagannath and Mr10001 only.
     All other staff are strictly restricted to members registered by them or assigned to them.
     """
     if not user:
@@ -106,7 +106,7 @@ def _has_full_vgk_visibility(user: StaffEmployee) -> bool:
     if getattr(user, 'id', None) in VGK_FULL_VISIBILITY_STAFF_IDS:
         return True
     full_name = (getattr(user, 'full_name', '') or getattr(user, 'name', '') or '').lower()
-    if any(k in full_name for k in ('poojitha', 'pujitha', 'subhash', 'subash', 'yaswanth', 'jagannath', 'jagannadh')):
+    if any(k in full_name for k in ('anushka', 'subhash', 'subash', 'yaswanth', 'jagannath', 'jagannadh')):
         return True
     return False
 

@@ -17,6 +17,7 @@ import { telephonyService, TelephonyCallSession } from '../services/telephony.se
 
 const LEAD_STATUSES = [
   { value: 'new', label: 'New' },
+  { value: 'tried to contact', label: 'Tried to Contact' },
   { value: 'contacted', label: 'Contacted' },
   { value: 'interested', label: 'Interested' },
   { value: 'qualified', label: 'Qualified' },
@@ -679,8 +680,10 @@ export class AutoDialerPage {
       ? `₹${(lead.budget_min || 0).toLocaleString('en-IN')} – ₹${(lead.budget_max || 0).toLocaleString('en-IN')}`
       : (lead.budget_min ? `₹${(lead.budget_min).toLocaleString('en-IN')}+` : null);
 
+    const initialLeadStatus = String(lead?.status || '').toLowerCase();
+    const defaultInCallStatus = (!initialLeadStatus || initialLeadStatus === 'new') ? 'tried to contact' : (lead?.status || '');
     const statusOptions = LEAD_STATUSES.map(s =>
-      `<option value="${s.value}" ${lead?.status === s.value ? 'selected' : ''}>${s.label}</option>`
+      `<option value="${s.value}" ${defaultInCallStatus === s.value ? 'selected' : ''}>${s.label}</option>`
     ).join('');
 
     const lastContactStr = _fmtLastContact(lead.last_contact_date, lead.last_contact_days);
@@ -1095,8 +1098,10 @@ export class AutoDialerPage {
     const _pad = (n: number) => n.toString().padStart(2, '0');
     const defaultFollowup = `${tomorrowLocal.getFullYear()}-${_pad(tomorrowLocal.getMonth()+1)}-${_pad(tomorrowLocal.getDate())}T${_pad(tomorrowLocal.getHours())}:${_pad(tomorrowLocal.getMinutes())}`;
     const activeStatus = inCallData?.status || lead?.status;
+    const initialStatusStr = String(activeStatus || '').toLowerCase();
+    const defaultStatus = (!initialStatusStr || initialStatusStr === 'new') ? 'tried to contact' : activeStatus;
     const statusOptions = LEAD_STATUSES.map(s =>
-      `<option value="${s.value}" ${activeStatus === s.value ? 'selected' : ''}>${s.label}</option>`
+      `<option value="${s.value}" ${defaultStatus === s.value ? 'selected' : ''}>${s.label}</option>`
     ).join('');
     const priorityOptions = ['normal', 'medium', 'high'].map(p =>
       `<option value="${p}" ${lead?.priority === p ? 'selected' : ''}>${p.charAt(0).toUpperCase() + p.slice(1)}</option>`
@@ -1687,7 +1692,11 @@ export class AutoDialerPage {
       const txt = (id: string) => (g(id) as HTMLTextAreaElement)?.value?.trim() || '';
       const chk = (id: string) => !!(g(id) as HTMLInputElement)?.checked;
 
-      const status   = sel('dc-edit-status');
+      const rawStatus = sel('dc-edit-status');
+      const curStatus = String(this.popupLeadData?.status || this.currentLead?.status || '').toLowerCase();
+      const status = (!rawStatus || rawStatus === 'new') && (curStatus === 'new' || !curStatus)
+        ? 'tried to contact'
+        : (rawStatus || undefined);
       const priority = sel('dc-edit-priority');
       const followup = val('dc-edit-followup');
       const note     = txt('dc-edit-note');
@@ -1699,6 +1708,13 @@ export class AutoDialerPage {
       const catRaw = sel('dc-edit-category');
       const budgetMinRaw = val('dc-edit-budget-min');
       const budgetMaxRaw = val('dc-edit-budget-max');
+      const currentUser = authService.getAuthState()?.user;
+      const effectiveTeleId = this.popupLeadData?.telecaller_id || (currentUser?.id ? currentUser.id : undefined);
+      const effectiveHandlerType = this.popupLeadData?.handler_type && this.popupLeadData?.handler_type !== 'unassigned'
+        ? this.popupLeadData.handler_type
+        : (effectiveTeleId ? 'staff' : undefined);
+      const effectiveHandlerId = this.popupLeadData?.handler_id || (effectiveTeleId && currentUser?.emp_code ? currentUser.emp_code : undefined);
+
       const leadPutPayload: Record<string, any> = {
         name:                      val('dc-edit-name')            || undefined,
         email:                     val('dc-edit-email')           || undefined,
@@ -1726,6 +1742,9 @@ export class AutoDialerPage {
         expected_close_date:       val('dc-edit-close-date')      || undefined,
         lost_reason:               txt('dc-edit-lost-reason')     || undefined,
         recent_comments:           note                           || undefined,
+        telecaller_id:             effectiveTeleId,
+        handler_type:              effectiveHandlerType,
+        handler_id:                effectiveHandlerId,
       };
       // Strip undefined keys so backend only updates what was touched
       Object.keys(leadPutPayload).forEach(k => {

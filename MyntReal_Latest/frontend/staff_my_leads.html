@@ -298,8 +298,8 @@
                 </div>
                 <div class="d-flex gap-2 flex-wrap align-items-center w-100 mb-2">
                     <select class="form-select form-select-sm" id="visibilityFilter" onchange="setVisibility(this.value)" style="width: auto; min-width: 150px;">
+                        <option value="my" selected>My Leads</option>
                         <option value="all">All Leads</option>
-                        <option value="my">My Leads</option>
                         <option value="assigned">Assigned to Me</option>
                         <option value="unassigned">Unassigned Leads</option>
                     </select>
@@ -1687,8 +1687,8 @@
         let partnerSearch = null;
         
         // Staff Leads: Handler role filter (self, any, telecaller, field_staff, mnr_handler, unassigned, or '' for all)
-        // DC Protocol (Jan 28, 2026): Default to '' for 'all' visibility, synced with visibility dropdown
-        let currentHandlerRole = '';
+        // DC Protocol: Default to 'any' for 'my' visibility (All My Leads)
+        let currentHandlerRole = 'any';
         
         // CRM Visibility permissions from backend
         let crmPermissions = {
@@ -1701,6 +1701,13 @@
         // Staff Leads: Set handler role filter
         function setHandlerRole(role) {
             currentHandlerRole = role;
+            if (role === 'unassigned') {
+                currentVisibility = 'unassigned';
+            } else if (currentVisibility === 'unassigned') {
+                currentVisibility = 'my';
+            }
+            const dropdown = document.getElementById('visibilityFilter');
+            if (dropdown && currentVisibility) dropdown.value = currentVisibility;
             updateRoleButtons();
             loadLeads(1);
             loadDashboard();
@@ -1722,7 +1729,7 @@
                 const data = await staffFetchJson(`${API_BASE}/staff-handler-dashboard?company_id=${targetCompany}`);
                 if (data && data.success && data.data) {
                     const stats = data.data;
-                    document.getElementById('countAny').textContent = stats.total_leads || 0;
+                    document.getElementById('countAny').textContent = stats.all_my_leads_count || stats.total_leads || 0;
                     if (stats.handler_breakdown) {
                         document.getElementById('countTelecaller').textContent = stats.handler_breakdown.as_telecaller || 0;
                         document.getElementById('countFieldStaff').textContent = stats.handler_breakdown.as_field_staff || 0;
@@ -1843,14 +1850,16 @@
                 // Non-privileged users: Hide "All Leads" option, default to "My Leads"
                 const allOption = dropdown.querySelector('option[value="all"]');
                 if (allOption) allOption.style.display = 'none';
-                // DC Protocol (Jan 28, 2026): Force my leads visibility and set handler role for non-privileged users
                 currentVisibility = 'my';
-                currentHandlerRole = 'self';  // This maps to primary_owner=true
+                currentHandlerRole = 'any';
                 dropdown.value = 'my';
+                updateRoleButtons();
             } else {
-                // Privileged users: Show all options
+                // Privileged users: Show all options, default dropdown to 'my'
                 const allOption = dropdown.querySelector('option[value="all"]');
                 if (allOption) allOption.style.display = '';
+                if (!dropdown.value) dropdown.value = 'my';
+                updateRoleButtons();
             }
         }
         
@@ -2087,9 +2096,28 @@
             const telecallerId = document.getElementById('filterTelecallerId')?.value || '';
             const fieldStaffId = document.getElementById('filterFieldStaffId')?.value || '';
             const daysSince = document.getElementById('filterDaysSince')?.value || '';
+            const filterTeamMemberId = document.getElementById('filterTeamMemberId')?.value || '';
             
             // Build filter query params
             let filterParams = '';
+            if (filterTeamMemberId) {
+                filterParams += `&team_member_id=${filterTeamMemberId}`;
+            } else if (currentVisibility === 'my' || !crmPermissions.can_view_all_leads) {
+                if (currentStaffId) filterParams += `&team_member_id=${currentStaffId}`;
+                else filterParams += `&scope=my`;
+            } else if (currentVisibility === 'unassigned') {
+                filterParams += `&scope=unassigned`;
+            }
+            if (currentHandlerRole === 'self') {
+                filterParams += `&scope=primary`;
+            } else if (currentHandlerRole === 'telecaller') {
+                if (currentStaffId) filterParams += `&filter_telecaller_id=${currentStaffId}`;
+            } else if (currentHandlerRole === 'field_staff') {
+                if (currentStaffId) filterParams += `&filter_field_staff_id=${currentStaffId}`;
+            } else if (currentHandlerRole === 'unassigned') {
+                filterParams += `&scope=unassigned`;
+            }
+
             if (dateFrom) filterParams += `&next_followup_from=${dateFrom}T00:00:00`;
             if (dateTo) filterParams += `&next_followup_to=${dateTo}T23:59:59`;
             if (lastInteractedFrom) filterParams += `&last_interacted_from=${lastInteractedFrom}T00:00:00`;
@@ -2256,7 +2284,7 @@
         }
         
         let currentQuickFilter = 'all';
-        let currentVisibility = 'all';  // 'all', 'my', 'assigned', 'unassigned'
+        let currentVisibility = 'my';  // 'my' (default on My Leads page), 'all', 'assigned', 'unassigned'
         
         // Role-based permissions: VGK/EA can edit handlers, others view only
         function canEditHandlers() {
@@ -2280,20 +2308,23 @@
             const dropdown = document.getElementById('visibilityFilter');
             if (dropdown) dropdown.value = visibilityType;
             
-            // DC Protocol (Jan 28, 2026): Map visibility filter to handler role for API
-            // This ensures the visibility dropdown properly filters leads
+            // Map visibility filter to handler role for API
             if (visibilityType === 'my') {
-                currentHandlerRole = 'self';  // primary_owner=true
+                currentHandlerRole = 'any';
             } else if (visibilityType === 'assigned') {
-                currentHandlerRole = 'any';   // as_handler_role=any (assigned as any handler)
+                currentHandlerRole = 'any';
             } else if (visibilityType === 'unassigned' || visibilityType === 'fresh') {
-                currentHandlerRole = 'unassigned';  // handler_type=unassigned
+                currentHandlerRole = 'unassigned';
             } else {
                 // 'all' - show all leads (for privileged users)
-                currentHandlerRole = '';  // No handler filter
+                currentHandlerRole = '';
             }
             
+            updateRoleButtons();
             loadLeads(1);
+            if (typeof loadDashboard === 'function') loadDashboard();
+            if (typeof loadHandlerCounts === 'function') loadHandlerCounts();
+            if (typeof highlightActiveCards === 'function') highlightActiveCards();
         }
         
         function setQuickFilter(filterType) {
@@ -2527,13 +2558,13 @@
             
             // Reset state variables
             currentQuickFilter = 'all';
-            // DC Protocol (Jan 28, 2026): Reset handler role based on visibility, not to a hardcoded value
             if (typeof currentVisibility !== 'undefined') {
-                if (currentVisibility === 'my') currentHandlerRole = 'self';
+                if (currentVisibility === 'my') currentHandlerRole = 'any';
                 else if (currentVisibility === 'assigned') currentHandlerRole = 'any';
                 else if (currentVisibility === 'unassigned' || currentVisibility === 'fresh') currentHandlerRole = 'unassigned';
                 else currentHandlerRole = '';
             }
+            updateRoleButtons();
             
             // Reload with default filters
             loadLeads(1);
@@ -2558,16 +2589,31 @@
             let baseEndpoint = `/leads?page=${page}&per_page=20`;
             
             // My Leads: Enforce Personal Scope / Handler Role filter
-            if (currentHandlerRole === 'unassigned') {
+            if (currentVisibility === 'all') {
+                if (currentHandlerRole === 'unassigned') {
+                    baseEndpoint += `&scope=unassigned`;
+                } else if (currentHandlerRole === 'self') {
+                    baseEndpoint += `&primary_owner=true`;
+                } else if (currentHandlerRole && currentHandlerRole !== '' && currentHandlerRole !== 'any') {
+                    baseEndpoint += `&as_handler_role=${currentHandlerRole}`;
+                }
+                // When visibility is 'all' and no handler role, do NOT add scope filter (all company leads)
+            } else if (currentVisibility === 'unassigned') {
                 baseEndpoint += `&scope=unassigned`;
-            } else if (currentHandlerRole === 'self') {
-                baseEndpoint += `&primary_owner=true`;
-            } else if (currentHandlerRole && currentHandlerRole !== '' && currentHandlerRole !== 'any') {
-                baseEndpoint += `&as_handler_role=${currentHandlerRole}`;
+            } else if (currentVisibility === 'assigned') {
+                baseEndpoint += `&as_handler_role=any`;
             } else {
-                baseEndpoint += `&scope=my`;
+                // 'my' (default)
+                if (currentHandlerRole === 'unassigned') {
+                    baseEndpoint += `&scope=unassigned`;
+                } else if (currentHandlerRole === 'self') {
+                    baseEndpoint += `&primary_owner=true`;
+                } else if (currentHandlerRole && currentHandlerRole !== '' && currentHandlerRole !== 'any') {
+                    baseEndpoint += `&as_handler_role=${currentHandlerRole}`;
+                } else {
+                    baseEndpoint += `&scope=my`;
+                }
             }
-            // If currentHandlerRole is empty, no filter applied (show all leads for privileged users)
             
             if (status) baseEndpoint += `&status=${status}`;
             if (priority) baseEndpoint += `&priority=${priority}`;

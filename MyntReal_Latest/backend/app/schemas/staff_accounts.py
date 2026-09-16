@@ -924,6 +924,8 @@ class VendorMasterBase(BaseModel):
     stamp_image_url: Optional[str] = Field(None, description="Vendor stamp image URL")
     rep_signature_url: Optional[str] = Field(None, description="Authorized representative signature image URL (appears on all Vendor Signature with Stamp blocks)")
     tech_signature_url: Optional[str] = Field(None, description="Technician/Site-Engineer signature image URL (Commissioning Report, Site-Eng blocks)")
+    vendor_logo_url: Optional[str] = Field(None, description="Vendor logo image URL")
+    gst_certificate_url: Optional[str] = Field(None, description="Vendor GST Registration Certificate PDF/Image URL")
 
     model_config = {"extra": "forbid"}
     
@@ -1068,6 +1070,8 @@ class VendorMasterUpdate(BaseModel):
     stamp_image_url: Optional[str] = Field(None, description="Vendor stamp image URL")
     rep_signature_url: Optional[str] = Field(None, description="Authorized representative signature image URL")
     tech_signature_url: Optional[str] = Field(None, description="Technician/Site-Engineer signature image URL for solar documents")
+    vendor_logo_url: Optional[str] = Field(None, description="Vendor logo image URL")
+    gst_certificate_url: Optional[str] = Field(None, description="Vendor GST Registration Certificate PDF/Image URL")
 
     applicable_companies: Optional[List[Union[int, str]]] = Field(default=None, description="List of company IDs or codes like 'ALL'")
     product_ids: Optional[List[int]] = Field(default=None, description="List of stock item IDs to associate")
@@ -1175,6 +1179,10 @@ class VendorMasterResponse(BaseModel):
     mnre_empanelled: Optional[bool] = None
     mnre_reg_no: Optional[str] = None
     stamp_image_url: Optional[str] = None
+    rep_signature_url: Optional[str] = None
+    tech_signature_url: Optional[str] = None
+    vendor_logo_url: Optional[str] = None
+    gst_certificate_url: Optional[str] = None
 
     applicable_companies: Optional[Any] = []
     is_active: bool

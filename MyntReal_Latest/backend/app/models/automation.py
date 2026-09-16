@@ -114,6 +114,11 @@ class AutomationDispatch(Base):
             return bool(self.execution.is_legacy)
         return False
 
+    @property
+    def created_at(self):
+        return self.sent_at or self.delivered_at or self.failed_at
+
+
     def __repr__(self):
         did = self.__dict__.get('id', 'new')
         ident = self.__dict__.get('recipient_identifier', '')

@@ -132,6 +132,8 @@ interface CustomerTimelineData {
 export class SoftphonePage {
   private container: HTMLElement;
   private dialNumber: string = '';
+  private rawTargetNumber: string = '';
+  private isPresetNumber: boolean = false;
   private selectedContactName: string = '';
   private selectedLeadId: number | string | null = null;
   private agentStatus: 'available' | 'busy' | 'break' = 'available';
@@ -257,7 +259,9 @@ export class SoftphonePage {
     const isAuth = authService.getAuthState().isLoggedIn;
 
     if (dial) {
+      this.rawTargetNumber = dial;
       this.dialNumber = dial;
+      this.isPresetNumber = true;
       autoDialNum = dial;
       if (name) {
         this.selectedContactName = name;
@@ -278,7 +282,9 @@ export class SoftphonePage {
           const targetName = leadData.name || 'Contact Lead';
           const cleanDigits = String(targetPhone).replace(/\D/g, '').slice(-10);
           if (cleanDigits) {
+            this.rawTargetNumber = cleanDigits;
             this.dialNumber = cleanDigits;
+            this.isPresetNumber = true;
             this.selectedContactName = targetName;
             autoDialNum = cleanDigits;
             autoDialName = targetName;
@@ -481,12 +487,22 @@ export class SoftphonePage {
     const s = String(p).trim();
     if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
     const digits = s.replace(/\D/g, '');
-    if (authService.isMR10001()) {
-      return digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : s;
-    }
     if (digits.length < 6) return s;
     const clean10 = digits.slice(-10);
+    if (authService.isMR10001()) {
+      return clean10.length === 10 ? `+91 ${clean10.slice(0, 5)} ${clean10.slice(5)}` : s;
+    }
     return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+  }
+
+  private getDialInputDisplay(): string {
+    if (this.rawTargetNumber && !authService.isMR10001()) {
+      return this.maskPhone(this.rawTargetNumber);
+    }
+    if (this.isPresetNumber && !authService.isMR10001() && this.dialNumber) {
+      return this.maskPhone(this.dialNumber);
+    }
+    return this.dialNumber;
   }
 
   private escapeAttr(str: string): string {
@@ -683,6 +699,8 @@ export class SoftphonePage {
 
   private pressKey(digit: string): void {
     if (this.dialNumber.length < 15) {
+      this.rawTargetNumber = '';
+      this.isPresetNumber = false;
       this.dialNumber += digit;
       this.selectedContactName = '';
       this.updateDialDisplay();
@@ -690,6 +708,8 @@ export class SoftphonePage {
   }
 
   private backspace(): void {
+    this.rawTargetNumber = '';
+    this.isPresetNumber = false;
     if (this.dialNumber.length > 0) {
       this.dialNumber = this.dialNumber.slice(0, -1);
       this.selectedContactName = '';
@@ -698,6 +718,8 @@ export class SoftphonePage {
   }
 
   private clearNumber(): void {
+    this.rawTargetNumber = '';
+    this.isPresetNumber = false;
     this.dialNumber = '';
     this.selectedContactName = '';
     this.updateDialDisplay();
@@ -706,7 +728,12 @@ export class SoftphonePage {
   private updateDialDisplay(): void {
     const input = document.getElementById('softphoneDialInput') as HTMLInputElement;
     if (input) {
-      input.value = this.dialNumber;
+      input.value = this.getDialInputDisplay();
+      if (!authService.isMR10001() && (this.rawTargetNumber || this.isPresetNumber)) {
+        input.readOnly = true;
+      } else {
+        input.readOnly = false;
+      }
     }
     const nameLabel = document.getElementById('softphoneMatchedNameLabel');
     if (nameLabel) {
@@ -719,11 +746,11 @@ export class SoftphonePage {
     }
     const clearBtn = document.getElementById('softphoneClearBtn');
     if (clearBtn) {
-      clearBtn.style.visibility = this.dialNumber ? 'visible' : 'hidden';
+      clearBtn.style.visibility = (this.dialNumber || this.rawTargetNumber) ? 'visible' : 'hidden';
     }
     const clearAllBtn = document.getElementById('softphoneClearAllBtn');
     if (clearAllBtn) {
-      clearAllBtn.style.display = this.dialNumber ? 'inline-block' : 'none';
+      clearAllBtn.style.display = (this.dialNumber || this.rawTargetNumber) ? 'inline-block' : 'none';
     }
   }
 
@@ -736,7 +763,7 @@ export class SoftphonePage {
     // MANDATE 1: TRUE USER-GESTURE AUDIO UNLOCK BEFORE ANY ASYNC OPERATION
     telephonyService.prepareAudioOnUserGesture();
 
-    const target = (numberToDial || this.dialNumber || '').trim();
+    const target = (numberToDial || this.rawTargetNumber || this.dialNumber || '').trim();
     if (!target || target.replace(/[^0-9]/g, '').length < 3) {
       alert('Please enter a valid phone number');
       return;
@@ -1051,8 +1078,9 @@ export class SoftphonePage {
               type="tel" 
               inputmode="tel"
               id="softphoneDialInput" 
-              value="${this.dialNumber}" 
+              value="${this.getDialInputDisplay()}" 
               placeholder="Enter phone number..." 
+              ${(!authService.isMR10001() && (this.rawTargetNumber || this.isPresetNumber)) ? 'readonly' : ''}
               style="background: transparent; border: none; outline: none; color: #fff; font-size: 22px; font-weight: 700; width: 100%; letter-spacing: 0.5px;"
             />
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -2481,7 +2509,9 @@ export class SoftphonePage {
 
       // 4. Update dialer state
       if (cleanDigits) {
+        this.rawTargetNumber = cleanDigits;
         this.dialNumber = cleanDigits;
+        this.isPresetNumber = true;
         this.selectedContactName = targetName;
       }
       this.activeScope = 'dialer';

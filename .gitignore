@@ -23,3 +23,7 @@ MyntReal_Latest/scratch/*
 !MyntReal_Latest/scratch/build_deploy_zip.py
 !MyntReal_Latest/scratch/deploy_to_eb.py
 */storage/wa_media/*
+**/storage/vendor_docs/*
+**/storage/wa_media/*
+
+

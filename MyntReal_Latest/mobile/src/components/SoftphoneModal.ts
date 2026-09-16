@@ -15,6 +15,7 @@
 import { telephonyService, TelephonyCallSession } from '../services/telephony.service';
 import { apiService } from '../services/api.service';
 import { dialerService } from '../services/dialer.service';
+import { authService } from '../services/auth.service';
 
 export interface SoftphoneModalOptions {
   phoneNumber: string;
@@ -36,6 +37,8 @@ class SoftphoneModal {
   private uiState: SoftphoneUIState = 'CLOSED';
   private currentOptions: SoftphoneModalOptions | null = null;
   private enteredNumber: string = '';
+  private rawNumber: string = '';
+  private isPresetNumber: boolean = false;
   private isDtmfOpen: boolean = false;
   private unsubscribeTelephony: (() => void) | null = null;
   private currentSession: TelephonyCallSession | null = null;
@@ -82,7 +85,10 @@ class SoftphoneModal {
 
   public open(options: SoftphoneModalOptions): void {
     this.currentOptions = options;
-    this.enteredNumber = (options.phoneNumber || '').replace(/[^\d+]/g, '');
+    const cleanDigits = (options.phoneNumber || '').replace(/[^\d+]/g, '');
+    this.enteredNumber = cleanDigits;
+    this.rawNumber = cleanDigits;
+    this.isPresetNumber = !!cleanDigits;
     this.isDtmfOpen = false;
 
     // Reset initial position anchor
@@ -219,7 +225,17 @@ class SoftphoneModal {
     const digits = s.replace(/\D/g, '');
     if (digits.length < 6) return s;
     const clean10 = digits.slice(-10);
+    if (authService.isMR10001()) {
+      return clean10.length === 10 ? `+91 ${clean10.slice(0, 5)} ${clean10.slice(5)}` : s;
+    }
     return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+  }
+
+  private getDialInputDisplay(): string {
+    if (!authService.isMR10001() && this.isPresetNumber && this.enteredNumber) {
+      return this.maskPhone(this.enteredNumber);
+    }
+    return this.enteredNumber;
   }
 
   private formatDuration(seconds: number): string {
@@ -351,7 +367,7 @@ class SoftphoneModal {
             
             <!-- Number Display -->
             <div style="background: #f1f5f9 !important; border-radius: 12px !important; padding: 8px 12px !important; display: flex !important; align-items: center !important; justify-content: space-between !important; margin-bottom: 12px !important; border: 1px solid #cbd5e1 !important;">
-              <input type="text" id="spDialInput" value="${this.enteredNumber}" placeholder="Enter phone number..." style="background: transparent !important; border: none !important; outline: none !important; font-size: 17px !important; font-weight: 700 !important; color: #0f172a !important; width: 100% !important; letter-spacing: 0.5px !important;" />
+              <input type="text" id="spDialInput" value="${this.getDialInputDisplay()}" placeholder="Enter phone number..." ${(!authService.isMR10001() && this.isPresetNumber) ? 'readonly' : ''} style="background: transparent !important; border: none !important; outline: none !important; font-size: 17px !important; font-weight: 700 !important; color: #0f172a !important; width: 100% !important; letter-spacing: 0.5px !important;" />
               <button id="spBackspaceBtn" style="background: transparent !important; border: none !important; color: #64748b !important; font-size: 16px !important; cursor: pointer !important; padding: 4px 6px !important;" title="Backspace">⌫</button>
             </div>
 
@@ -655,11 +671,24 @@ class SoftphoneModal {
     const dialInput = this.modalEl.querySelector('#spDialInput') as HTMLInputElement;
     dialInput?.addEventListener('input', (e: any) => {
       this.enteredNumber = e.target.value;
+      this.rawNumber = '';
+      this.isPresetNumber = false;
       this.updateCallerPhoneDisplay();
     });
 
     // Backspace Button
     this.modalEl.querySelector('#spBackspaceBtn')?.addEventListener('click', () => {
+      if (this.isPresetNumber) {
+        this.isPresetNumber = false;
+        this.rawNumber = '';
+        this.enteredNumber = '';
+        if (dialInput) {
+          dialInput.value = '';
+          dialInput.readOnly = false;
+        }
+        this.updateCallerPhoneDisplay();
+        return;
+      }
       if (this.enteredNumber.length > 0) {
         this.enteredNumber = this.enteredNumber.slice(0, -1);
         if (dialInput) dialInput.value = this.enteredNumber;
@@ -672,6 +701,15 @@ class SoftphoneModal {
     this.modalEl.querySelectorAll('.sp-num-btn').forEach((btn) => {
       btn.addEventListener('click', (e: any) => {
         const key = e.currentTarget.getAttribute('data-key');
+        if (this.isPresetNumber) {
+          this.isPresetNumber = false;
+          this.rawNumber = '';
+          this.enteredNumber = '';
+          if (dialInput) {
+            dialInput.value = '';
+            dialInput.readOnly = false;
+          }
+        }
         if (key && this.enteredNumber.length < 15) {
           this.enteredNumber += key;
           if (dialInput) dialInput.value = this.enteredNumber;
@@ -808,7 +846,8 @@ class SoftphoneModal {
     telephonyService.prepareAudioOnUserGesture();
 
     this.hideError();
-    if (!this.enteredNumber) {
+    const targetDigits = this.rawNumber || this.enteredNumber;
+    if (!targetDigits) {
       this.showError('Please enter a destination phone number.');
       return;
     }
@@ -819,7 +858,7 @@ class SoftphoneModal {
     this.uiState = 'ACTIVE_FLOATING';
     this.updateVisibility();
 
-    const res = await telephonyService.startCall(this.enteredNumber, name, leadId);
+    const res = await telephonyService.startCall(targetDigits, name, leadId);
     if (!res.success && res.error) {
       if (res.error === 'A call is already in progress.') {
         console.warn('[SoftphoneModal] Duplicate dial prevented; ignoring duplicate error toast');

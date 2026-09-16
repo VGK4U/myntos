@@ -1608,7 +1608,16 @@
 
                 const cleanDigits = String(targetPhone).replace(/\D/g, '').slice(-10);
                 const dialerInp = document.getElementById('hubDialerInput');
-                if (dialerInp && cleanDigits) dialerInp.value = cleanDigits;
+                if (dialerInp && cleanDigits) {
+                    dialerInp.dataset.rawNumber = cleanDigits;
+                    if (typeof window !== 'undefined' && typeof window.isMR10001 === 'function' && window.isMR10001()) {
+                        dialerInp.value = cleanDigits.length === 10 ? `+91 ${cleanDigits.slice(0, 5)} ${cleanDigits.slice(5)}` : cleanDigits;
+                        dialerInp.readOnly = false;
+                    } else {
+                        dialerInp.value = maskPhoneNumber(cleanDigits);
+                        dialerInp.readOnly = true;
+                    }
+                }
 
                 // 6. Connect the call
                 if (cleanDigits) {
@@ -1654,7 +1663,16 @@
 
             const cleanDigits = String(targetPhone || '').replace(/\D/g, '').slice(-10);
             const dialerInp = document.getElementById('hubDialerInput');
-            if (dialerInp && cleanDigits) dialerInp.value = cleanDigits;
+            if (dialerInp && cleanDigits) {
+                dialerInp.dataset.rawNumber = cleanDigits;
+                if (typeof window !== 'undefined' && typeof window.isMR10001 === 'function' && window.isMR10001()) {
+                    dialerInp.value = cleanDigits.length === 10 ? `+91 ${cleanDigits.slice(0, 5)} ${cleanDigits.slice(5)}` : cleanDigits;
+                    dialerInp.readOnly = false;
+                } else {
+                    dialerInp.value = maskPhoneNumber(cleanDigits);
+                    dialerInp.readOnly = true;
+                }
+            }
 
             if (autoDial && cleanDigits) {
                 console.log(`[SOFTPHONE] Auto-dialing lead ${targetName} (${cleanDigits})...`);
@@ -1791,17 +1809,17 @@
             }
         }
 
-        function maskPhoneNumber(phone) {
-            if (!phone) return '+91 ••••••••••';
-            const digits = phone.replace(/\D/g, '');
+        function maskPhoneNumber(p) {
+            if (!p || p === '—' || p === '-' || p === 'null') return '—';
+            const s = String(p).trim();
+            if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+            const digits = s.replace(/\D/g, '');
+            if (digits.length < 6) return s;
+            const clean10 = digits.slice(-10);
             if (typeof window !== 'undefined' && typeof window.isMR10001 === 'function' && window.isMR10001()) {
-                return digits.length === 10 ? `+91 ${digits.slice(0, 5)} ${digits.slice(5)}` : phone;
+                return clean10.length === 10 ? `+91 ${clean10.slice(0, 5)} ${clean10.slice(5)}` : s;
             }
-            if (digits.length >= 10) {
-                const last4 = digits.slice(-4);
-                return `+91 ••••••${last4}`;
-            }
-            return phone;
+            return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
         }
 
         function handleRefreshClick() {
@@ -1817,7 +1835,14 @@
 
         function pressHubKey(k) {
             const el = document.getElementById('hubDialerInput');
-            if (el) el.value += k;
+            if (el) {
+                if (el.dataset.rawNumber) {
+                    el.dataset.rawNumber = '';
+                    el.readOnly = false;
+                    el.value = '';
+                }
+                el.value += k;
+            }
             if (window.PlivoSoftphone && typeof window.PlivoSoftphone.playKeyTone === 'function') {
                 window.PlivoSoftphone.playKeyTone();
             }
@@ -1825,13 +1850,22 @@
 
         function backspaceHub() {
             const el = document.getElementById('hubDialerInput');
-            if (el && el.value.length > 0) el.value = el.value.slice(0, -1);
+            if (el) {
+                if (el.dataset.rawNumber) {
+                    el.dataset.rawNumber = '';
+                    el.readOnly = false;
+                    el.value = '';
+                } else if (el.value.length > 0) {
+                    el.value = el.value.slice(0, -1);
+                }
+            }
         }
 
         function dialFromHub(phoneNumber = null, leadName = null, leadId = null) {
+            const dialerInp = document.getElementById('hubDialerInput');
             let phone = phoneNumber;
             if (!phone || typeof phone !== 'string' || !phone.trim() || phone.includes('•') || phone.includes('*')) {
-                phone = document.getElementById('hubDialerInput') ? document.getElementById('hubDialerInput').value.trim() : '';
+                phone = dialerInp ? (dialerInp.dataset.rawNumber || dialerInp.value.trim()) : '';
             }
             const digits = (phone || '').replace(/\D/g, '');
             if (!digits || digits.length < 10) {
@@ -3304,7 +3338,7 @@
 
             list.innerHTML = contacts.map(c => {
                 const name = escapeHtml(c.name || 'Contact');
-                const maskedPhone = escapeHtml(c.masked_phone || c.phone || '—');
+                const maskedPhone = escapeHtml(maskPhoneNumber(c.phone || c.masked_phone));
                 const cleanPhone = c.raw_phone || '';
                 const leadId = c.lead_id || '';
                 const initialLetter = (name.replace(/[^a-zA-Z]/g, '') || 'C').slice(0, 2).toUpperCase();

@@ -1601,6 +1601,7 @@ class VendorMasterService:
             stamp_image_url=getattr(data, 'stamp_image_url', None),
             rep_signature_url=getattr(data, 'rep_signature_url', None),
             tech_signature_url=getattr(data, 'tech_signature_url', None),
+            gst_certificate_url=getattr(data, 'gst_certificate_url', None),
             gst_type=getattr(data, 'gst_type', 'CGST_SGST'),
             applicable_companies=data.applicable_companies,
             is_active=data.is_active,

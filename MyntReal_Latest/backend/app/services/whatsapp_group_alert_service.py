@@ -35,14 +35,44 @@ def send_group_bot_message(
     job_name: Optional[str] = None,
     trigger_type: Optional[str] = None,
     db: Optional[Session] = None,
-    execution_id: Optional[str] = None
+    execution_id: Optional[str] = None,
+    force_queue: bool = False
 ) -> Dict[str, Any]:
     """
     Sends message payload to WhatsApp Web Group Bot Gateway with IPv4/IPv6 & env-var fallback.
-    If the bot HTTP gateway is unreachable and a database session is provided,
+    If force_queue is True or if the bot HTTP gateway is unreachable and a database session is provided,
     falls back safely to enqueuing directly into PostgreSQL whatsapp_bot_queue.
     """
     clean_code = extract_invite_code(invite_code)
+
+    # Fast-path directly into PostgreSQL queue if force_queue requested
+    if force_queue and db is not None:
+        try:
+            from sqlalchemy import text
+            import json
+            target_jid = group_id or clean_code or invite_code or "120363410784518818@g.us"
+            rp = {"job_id": job_id, "job_name": job_name, "trigger_type": trigger_type, "execution_id": execution_id}
+            clean_rp = {k: v for k, v in rp.items() if v is not None}
+            res = db.execute(text("""
+                INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, status, created_at, result_payload, job_id, execution_id)
+                VALUES ('group', :target_jid, :msg, 'pending', NOW(), CAST(:rp AS jsonb), :job_id, :execution_id)
+                RETURNING id
+            """), {
+                "target_jid": target_jid,
+                "msg": message_text,
+                "rp": json.dumps(clean_rp) if clean_rp else None,
+                "job_id": job_id,
+                "execution_id": execution_id
+            })
+            db.commit()
+            queue_id = res.fetchone()[0]
+            logger.info(f"[WA-GROUP-ALERT] Force queued directly to whatsapp_bot_queue (ID #{queue_id})")
+            return {"success": True, "queued": True, "queue_id": queue_id, "message": "Enqueued directly to PostgreSQL queue"}
+        except Exception as db_err:
+            db.rollback()
+            logger.warning(f"[WA-GROUP-ALERT] DB force-queue note: {db_err}")
+            return {"success": False, "error": str(db_err)}
+
     payload = {
         "message": message_text,
         "inviteCode": clean_code or invite_code
@@ -115,7 +145,7 @@ def send_group_bot_message(
     return {"success": False, "error": f"WhatsApp Group Bot service is currently offline on port 5002 ({last_exc}). Please start the WhatsApp Bot daemon on the server."}
 
 
-def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, Any]:
+def send_instant_new_lead_group_alert(db: Session, lead_id: int, force_queue: bool = False) -> Dict[str, Any]:
     """
     Formats and dispatches instant New Lead notification into Sales WhatsApp Group.
     DC Protocol Apr 2026: Uses Meta lead generation date/time (IST) and captures all form fields (Electricity Bill, Property Type, Pincode, etc.)
@@ -205,8 +235,8 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
     category_name = None
     if getattr(lead, 'category_id', None):
         try:
-            from app.models.crm import CRMCategory
-            cat = db.query(CRMCategory).get(lead.category_id)
+            from app.models.signup_category import SignupCategory
+            cat = db.query(SignupCategory).get(lead.category_id)
             if cat:
                 category_name = cat.name
         except Exception:
@@ -312,5 +342,7 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int) -> Dict[str, An
         message_text,
         invite_code="LfX8mGootXa7SpwNIz7P5C",
         group_name="Mynt Sales New",
-        group_id="120363410784518818@g.us"
+        group_id="120363410784518818@g.us",
+        db=db,
+        force_queue=force_queue
     )

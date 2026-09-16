@@ -625,6 +625,40 @@ def run_migrations():
                             conn.execute(text(stmt))
                     logger.info("✅ GUC idol photo migration executed successfully")
 
+                # 4.16 CRM Lead Document Shares Audit Table (DC-DOC-SHARES-AUDIT-20260916)
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS crm_lead_document_shares (
+                        id SERIAL PRIMARY KEY,
+                        lead_id INTEGER NOT NULL,
+                        company_id INTEGER DEFAULT 4,
+                        share_mode VARCHAR(50) NOT NULL DEFAULT 'whatsapp_attachments',
+                        recipient_phone VARCHAR(50),
+                        recipient_name VARCHAR(200),
+                        recipient_role VARCHAR(100),
+                        shared_by_staff_id INTEGER,
+                        shared_by_staff_name VARCHAR(200),
+                        doc_group VARCHAR(50),
+                        doc_types JSONB,
+                        doc_labels JSONB,
+                        total_docs INTEGER DEFAULT 0,
+                        sent_docs_count INTEGER DEFAULT 0,
+                        failed_docs_count INTEGER DEFAULT 0,
+                        custom_notes TEXT,
+                        share_url TEXT,
+                        status VARCHAR(50) DEFAULT 'completed',
+                        created_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS ix_crm_doc_shares_lead ON crm_lead_document_shares (lead_id);
+                    CREATE INDEX IF NOT EXISTS ix_crm_doc_shares_staff ON crm_lead_document_shares (shared_by_staff_id);
+                """))
+                logger.info("✅ CRM lead document shares table verified/created")
+
+                # 4.17 Vendor Master GST Certificate URL
+                conn.execute(text("""
+                    ALTER TABLE vendor_master ADD COLUMN IF NOT EXISTS gst_certificate_url TEXT;
+                """))
+                logger.info("✅ vendor_master.gst_certificate_url verified/added")
+
         logger.info("✅ Feature-specific schema migrations complete")
     except Exception as e:
         logger.error(f"❌ Feature migrations failed: {e}")

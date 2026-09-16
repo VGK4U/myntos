@@ -10,10 +10,11 @@ Handles:
 import logging
 import requests
 import uuid
+import re
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, text
 from app.core.timezone import get_indian_time, IST
 
 logger = logging.getLogger(__name__)
@@ -312,6 +313,17 @@ def handle_missed_call_whatsapp_ack(
         return {"success": True, "reason": "skipped_already_contacted_today", "phone": phone_formatted}
 
     if not lead and company_id:
+        # DC_DID_STAFF_GUARD: Do not auto-create leads for company DID trunks or staff personal phones
+        clean_core = re.sub(r'[^\d]', '', str(phone_core or ''))[-10:]
+        is_did_or_staff = db.execute(text("""
+            SELECT 1 FROM telephony_did_mappings WHERE RIGHT(REGEXP_REPLACE(did_number, '[^0-9]', '', 'g'), 10) = :phone AND is_active = true
+            UNION
+            SELECT 1 FROM staff_employees WHERE RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10) = :phone AND status = 'active'
+        """), {"phone": clean_core}).scalar()
+        if is_did_or_staff:
+            logger.info(f"⏭️ Dropping missed call lead creation for {phone_formatted} — Caller is a company DID or staff mobile.")
+            return {"success": True, "reason": "dropped_internal_did_or_staff", "phone": phone_formatted}
+
         from app.models.staff_accounts import AssociatedCompany
         comp = db.query(AssociatedCompany).filter(AssociatedCompany.id == company_id).first()
         tenant_id = comp.client_id if comp else None

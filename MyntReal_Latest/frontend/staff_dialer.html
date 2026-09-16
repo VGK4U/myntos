@@ -541,6 +541,7 @@
                 <select id="e-status">
                   <optgroup label="Pipeline">
                     <option value="new">New</option>
+                    <option value="tried to contact">Tried to Contact</option>
                     <option value="contacted">Contacted</option>
                     <option value="interested">Interested</option>
                     <option value="qualified">Qualified</option>
@@ -1063,7 +1064,8 @@
     new: '🟠 New Lead', second_contact: '🔵 2nd Contact', upcoming: '⚪ Upcoming'
   };
   const STATUS_LABELS = {
-    new: 'New', contacted: 'Contacted', interested: 'Interested', qualified: 'Qualified',
+    new: 'New', 'tried to contact': 'Tried to Contact', 'tried_to_contact': 'Tried to Contact',
+    contacted: 'Contacted', interested: 'Interested', qualified: 'Qualified',
     proposal: 'Proposal Sent', loan_process: 'Loan Process', on_hold: 'On Hold',
     won: 'Won', lost: 'Lost', do_not_call: '🚫 DNC'
   };
@@ -2193,6 +2195,9 @@
       const followupVal = document.getElementById('e-followup').value;
       const closeDateVal = document.getElementById('e-expected-close').value;
       const teleId = document.getElementById('e-tele-id').value;
+      const staffUser = JSON.parse(localStorage.getItem('staff_user') || '{}');
+      const currentStaffId = staffUser.id || null;
+      const effectiveTeleId = teleId ? parseInt(teleId) : (currentStaffId || undefined);
 
       const pIn = document.getElementById('e-phone');
       let pVal = pIn?.value?.trim() || undefined;
@@ -2205,14 +2210,20 @@
         aVal = aIn.dataset.rawPhone || lead.alternate_phone || undefined;
       }
 
+      const rawStatus = document.getElementById('e-status').value;
+      const currentLeadStatus = String(currentLead?.status || '').toLowerCase();
+      const effectiveStatus = (!rawStatus || rawStatus === 'new') && currentLeadStatus === 'new'
+        ? 'tried to contact'
+        : (rawStatus || undefined);
+
       const leadPayload = {
-        name: document.getElementById('e-name').value || undefined,
-        email: document.getElementById('e-email').value || undefined,
+        name: document.getElementById('e-name').value,
+        email: document.getElementById('e-email') ? document.getElementById('e-email').value : undefined,
         phone: pVal,
         phone_primary_whatsapp: document.getElementById('e-phone-wa').checked,
         alternate_phone: aVal,
         phone_secondary_whatsapp: document.getElementById('e-alt-phone-wa').checked,
-        status: document.getElementById('e-status').value || undefined,
+        status: effectiveStatus,
         priority: document.getElementById('e-priority').value || undefined,
         category_id: document.getElementById('e-category').value ? parseInt(document.getElementById('e-category').value) : undefined,
         source: document.getElementById('e-source').value || undefined,
@@ -2223,10 +2234,10 @@
         description: document.getElementById('e-description').value || undefined,
         requirements: document.getElementById('e-requirements').value || undefined,
         recent_comments: document.getElementById('e-recent-comments').value || undefined,
-        handler_type: document.getElementById('e-handler-type').value || undefined,
+        handler_type: document.getElementById('e-handler-type').value || (effectiveTeleId ? 'staff' : undefined),
         next_followup_date: followupVal ? (followupVal.includes('T') ? followupVal.replace('T', ' ') : followupVal) : undefined,
         expected_close_date: closeDateVal ? (closeDateVal.includes('T') ? closeDateVal.replace('T', ' ') : closeDateVal) : undefined,
-        telecaller_id: teleId ? parseInt(teleId) : undefined,
+        telecaller_id: effectiveTeleId,
       };
       // Strip undefined
       Object.keys(leadPayload).forEach(k => leadPayload[k] === undefined && delete leadPayload[k]);
@@ -2236,6 +2247,12 @@
 
     // 2. Log attempt
     const dncChecked = document.getElementById('e-dnc').checked;
+    const rawAttemptStatus = document.getElementById('e-status').value;
+    const curStatus = String(currentLead?.status || '').toLowerCase();
+    const effectiveAttemptStatus = (!rawAttemptStatus || rawAttemptStatus === 'new') && curStatus === 'new'
+      ? 'tried to contact'
+      : (rawAttemptStatus || null);
+
     const attemptRes = await apiCall('POST', '/crm/dialer/attempt', {
       session_id: sessionId,
       lead_id: currentLeadId,
@@ -2243,7 +2260,7 @@
       duration_seconds: durationSec,
       note: document.getElementById('e-note').value,
       next_followup_date: document.getElementById('e-followup').value ? (document.getElementById('e-followup').value.includes('T') ? document.getElementById('e-followup').value.replace('T', ' ') : document.getElementById('e-followup').value) : null,
-      new_status: document.getElementById('e-status').value,
+      new_status: effectiveAttemptStatus,
       new_priority: document.getElementById('e-priority').value,
       do_not_call: dncChecked,
       current_index: currentIndex,

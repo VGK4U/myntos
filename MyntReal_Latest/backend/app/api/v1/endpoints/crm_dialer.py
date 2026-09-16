@@ -509,6 +509,44 @@ def get_lead_redial_cooldown(
                 reason = f"Recently attempted ({outcome or 'not connected'}) — available again at {time_str} ({remaining_mins}m remaining)"
                 return True, expires_at, reason
 
+    # DC_SCL_COOLDOWN_BRIDGE: If crm_dialer_attempts had no blocking record, verify live staff_call_logs
+    if phone_clean:
+        scl_rows = db.execute(text("""
+            SELECT id, staff_id, duration_seconds, call_type, COALESCE(call_datetime, created_at) as call_time
+            FROM staff_call_logs
+            WHERE RIGHT(REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g'), 10) = :phone
+              AND (call_datetime >= :cutoff_24h OR created_at >= :cutoff_24h)
+            ORDER BY COALESCE(call_datetime, created_at) DESC
+            LIMIT 5
+        """), {"phone": phone_clean, "cutoff_24h": cutoff_24h}).fetchall()
+
+        for s_row in scl_rows:
+            s_id, s_staff_id, s_dur, s_type, s_time = s_row
+            if not s_time:
+                continue
+            s_connected = (s_dur or 0) > 0
+            if s_connected:
+                # 24h rolling suppression on connected calls
+                expires_at = s_time + timedelta(hours=24)
+                if now < expires_at:
+                    is_other = current_user_ref and str(s_staff_id) != str(current_user_ref)
+                    rem_hours = max(1, int((expires_at - now).total_seconds()) // 3600)
+                    time_str = expires_at.strftime("%I:%M %p IST (%d %b)")
+                    if is_other:
+                        reason = f"Recently connected with another staff member — phone suppressed until {time_str} (~{rem_hours}h remaining)"
+                    else:
+                        reason = f"Recently connected with this customer — 24h cooldown active until {time_str} (~{rem_hours}h remaining)"
+                    return True, expires_at, reason
+            else:
+                # 1h non-connected cooldown across all staff
+                if s_time >= cutoff_1h:
+                    expires_at = s_time + timedelta(hours=1)
+                    if now < expires_at:
+                        rem_mins = max(1, int((expires_at - now).total_seconds()) // 60)
+                        time_str = expires_at.strftime("%I:%M %p IST")
+                        reason = f"Recently attempted (unanswered) — available again at {time_str} ({rem_mins}m remaining)"
+                        return True, expires_at, reason
+
     return False, None, None
 
 
@@ -562,8 +600,9 @@ def _is_due_today(lead) -> bool:
 
 
 def _needs_second_contact(lead) -> bool:
-    """Status=contacted, last_contact_date older than 3 days."""
-    if lead.status != 'contacted':
+    """Status=contacted or tried to contact, last_contact_date older than 3 days."""
+    s = (lead.status or '').strip().lower()
+    if s not in ('contacted', 'tried to contact', 'tried_to_contact'):
         return False
     # DC_NFD_GUARD: Skip re-escalation if telecaller deliberately scheduled a future date/time.
     if lead.next_followup_date:
@@ -782,17 +821,23 @@ def _get_dialer_suppression_data(
           AND (a.user_ref != :user_ref OR a.portal != :portal)
     """), {"cutoff_24h": cutoff_24h, "user_ref": actual_ref, "portal": portal}).fetchall()
 
-    scl_rows = []
-    if staff_id:
-        scl_rows = db.execute(text("""
-            SELECT DISTINCT RIGHT(REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g'), 10) AS clean_phone
-            FROM staff_call_logs
-            WHERE call_datetime >= :cutoff_24h
-              AND duration_seconds > 0
-              AND staff_id != :staff_id
-        """), {"cutoff_24h": cutoff_24h, "staff_id": staff_id}).fetchall()
+    # 2. staff_call_logs: Connected calls in rolling 24h across ALL staff (including self-calls)
+    scl_conn_rows = db.execute(text("""
+        SELECT DISTINCT RIGHT(REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g'), 10) AS clean_phone
+        FROM staff_call_logs
+        WHERE (call_datetime >= :cutoff_24h OR created_at >= :cutoff_24h)
+          AND duration_seconds > 0
+    """), {"cutoff_24h": cutoff_24h}).fetchall()
 
-    # 2. 1-hour non-connected cooldown across all staff (Rule 14)
+    # 3. staff_call_logs: 1-hour non-connected cooldown across ALL staff (unanswered / missed calls)
+    scl_non_conn_rows = db.execute(text("""
+        SELECT DISTINCT RIGHT(REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g'), 10) AS clean_phone
+        FROM staff_call_logs
+        WHERE (call_datetime >= :cutoff_1h OR created_at >= :cutoff_1h)
+          AND (duration_seconds = 0 OR call_type = 'MISSED')
+    """), {"cutoff_1h": cutoff_1h}).fetchall()
+
+    # 4. 1-hour non-connected cooldown across all staff from crm_dialer_attempts (Rule 14)
     non_conn_rows = db.execute(text("""
         SELECT DISTINCT COALESCE(lp.phone_norm, RIGHT(REGEXP_REPLACE(l.phone, '[^0-9]', '', 'g'), 10)) AS clean_phone
         FROM crm_dialer_attempts a
@@ -805,7 +850,7 @@ def _get_dialer_suppression_data(
           )
     """), {"cutoff_1h": cutoff_1h}).fetchall()
 
-    # 3. Connected calls by THIS user in rolling 24h where NO follow-up is scheduled and due
+    # 5. Connected calls by THIS user in rolling 24h where NO follow-up is scheduled and due
     # (Prevents customer from immediately reappearing in Staff A's queue after a call, Test 1)
     self_conn_rows = db.execute(text("""
         SELECT DISTINCT COALESCE(lp.phone_norm, RIGHT(REGEXP_REPLACE(l.phone, '[^0-9]', '', 'g'), 10)) AS clean_phone
@@ -822,8 +867,22 @@ def _get_dialer_suppression_data(
           AND (l.next_followup_date IS NULL OR l.next_followup_date > :now)
     """), {"cutoff_24h": cutoff_24h, "user_ref": actual_ref, "portal": portal, "now": _now}).fetchall()
 
+    # 6. Company DIDs: Suppress internal trunk numbers from all dialer queues permanently
+    did_rows = db.execute(text("""
+        SELECT DISTINCT RIGHT(REGEXP_REPLACE(did_number, '[^0-9]', '', 'g'), 10) AS clean_phone
+        FROM telephony_did_mappings
+        WHERE is_active = true
+    """)).fetchall()
+
+    # 7. Staff personal phones: Suppress active staff employee phones from all dialer queues
+    staff_phone_rows = db.execute(text("""
+        SELECT DISTINCT RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10) AS clean_phone
+        FROM staff_employees
+        WHERE phone IS NOT NULL AND status = 'active'
+    """)).fetchall()
+
     suppressed_phones = {
-        r[0] for r in (other_conn_rows + scl_rows + non_conn_rows + self_conn_rows)
+        r[0] for r in (other_conn_rows + scl_conn_rows + scl_non_conn_rows + non_conn_rows + self_conn_rows + did_rows + staff_phone_rows)
         if r[0] and len(r[0]) == 10
     }
 
@@ -2010,6 +2069,24 @@ async def log_dialer_attempt(
         except (ValueError, TypeError):
             safe_lead_id = None
 
+    # Resolve lead and target status before logging attempt
+    lead = None
+    if safe_lead_id:
+        lead = db.query(CRMLead).filter(CRMLead.id == safe_lead_id).with_for_update().first()
+
+    target_status = None
+    if lead:
+        if do_not_call or call_outcome == 'wrong_number':
+            target_status = 'do_not_call'
+        elif new_status and str(new_status).strip().lower() not in ('', 'none', 'new', 'fresh'):
+            target_status = new_status
+        else:
+            # USER DIRECTIVE: status should be changed from new to tried to contact if no status updated
+            if str(lead.status or '').strip().lower() in ('new', 'fresh', '', 'none'):
+                target_status = 'tried to contact'
+            else:
+                target_status = lead.status
+
     # Insert attempt record
     result = db.execute(text("""
         INSERT INTO crm_dialer_attempts
@@ -2024,7 +2101,7 @@ async def log_dialer_attempt(
     """), {
         "sid": valid_session_id, "lid": safe_lead_id, "ref": user_ref, "portal": portal,
         "outcome": call_outcome, "dur": duration_seconds, "note": note,
-        "nfd": next_followup_date, "status_to": new_status or ('do_not_call' if do_not_call else None),
+        "nfd": next_followup_date, "status_to": target_status,
         "now": now, "call_method": call_method
     })
     attempt_id = result.fetchone()[0]
@@ -2051,25 +2128,15 @@ async def log_dialer_attempt(
                 SET current_index = :idx, last_active_at = :now WHERE id = :id
             """), {"idx": current_index, "now": now, "id": valid_session_id})
 
-    # Update lead with row lock (Rule 13 Concurrency)
-    lead = None
-    if safe_lead_id:
-        lead = db.query(CRMLead).filter(CRMLead.id == safe_lead_id).with_for_update().first()
-    if lead:
-        if do_not_call or call_outcome == 'wrong_number':
-            # DC Protocol (Mar 25, 2026): wrong_number outcome sets do_not_call status,
-            # removing the lead from all future dialer queues (DIALER_EXCLUDE_STATUSES).
-            lead.status = 'do_not_call'
-        elif new_status and new_status not in ('', None):
-            if lead.status != new_status:
-                print(f"[DC-DIALER-STATUS] Lead {lead_id}: {lead.status!r} → {new_status!r} by user={user_ref} portal={portal}", flush=True)
-            lead.status = new_status
-            # DC_LOST_REENTRY: Record timestamp when lead is marked lost
-            # This enables the 60-day re-entry rule in _dialer_active_filter()
-            if new_status == 'lost' and not lead.lost_at:
-                lead.lost_at = now
-            elif new_status != 'lost':
-                lead.lost_at = None  # Clear lost_at if status moves away from 'lost'
+    # Update lead status and fields
+    if lead and target_status:
+        if lead.status != target_status:
+            print(f"[DC-DIALER-STATUS] Lead {lead_id}: {lead.status!r} → {target_status!r} by user={user_ref} portal={portal}", flush=True)
+        lead.status = target_status
+        if target_status == 'lost' and not lead.lost_at:
+            lead.lost_at = now
+        elif target_status != 'lost':
+            lead.lost_at = None  # Clear lost_at if status moves away from 'lost'
         if new_priority:
             lead.priority = new_priority
         if new_source is not None and str(new_source).strip():
@@ -2176,7 +2243,7 @@ async def log_dialer_attempt(
         is_inactive_owner, inactive_emp = is_lead_owned_by_inactive_staff(lead, db)
         is_genuine_connected_call = is_attempt_connected(call_outcome, duration_seconds)
 
-        if is_staff and is_genuine_connected_call:
+        if is_staff and (is_genuine_connected_call or (next_followup_date and not do_not_call)):
             # Rule 1: IF lead.telecaller_id IS NULL -> set lead.telecaller_id = current staff. ELSE -> preserve existing telecaller_id.
             if lead.telecaller_id is None:
                 prev_handler_type = lead.handler_type
@@ -2188,12 +2255,15 @@ async def log_dialer_attempt(
                 if not lead.handler_id or lead.handler_type in (None, 'unassigned') or is_inactive_owner:
                     lead.handler_type = 'staff'
                     lead.handler_id = str(getattr(current_user, 'emp_code', None) or current_user.id)
-                    # Note: primary_owner_id remains unchanged per connected call invariant (ownership strictly preserved)
+                if not lead.primary_owner_id or is_inactive_owner:
+                    lead.primary_owner_type = 'staff'
+                    lead.primary_owner_id = current_user.id
 
+                trigger_desc = f"connected call ({call_outcome or f'{duration_seconds}s'})" if is_genuine_connected_call else f"call follow-up ({call_outcome or 'follow-up scheduled'})"
                 assign_reason = (
-                    f"[Auto-Assign] Lead reassigned from inactive employee {getattr(inactive_emp, 'full_name', getattr(inactive_emp, 'emp_code', 'Past Staff'))} to {getattr(current_user, 'name', 'Staff')} ({getattr(current_user, 'emp_code', current_user.id)}) upon connected call ({call_outcome or f'{duration_seconds}s'})."
+                    f"[Auto-Assign] Lead reassigned from inactive employee {getattr(inactive_emp, 'full_name', getattr(inactive_emp, 'emp_code', 'Past Staff'))} to {getattr(current_user, 'name', 'Staff')} ({getattr(current_user, 'emp_code', current_user.id)}) upon {trigger_desc}."
                     if is_inactive_owner
-                    else f"[Auto-Assign] Lead assigned to {getattr(current_user, 'name', 'Staff')} ({getattr(current_user, 'emp_code', current_user.id)}) upon connected call ({call_outcome or f'{duration_seconds}s'})."
+                    else f"[Auto-Assign] Lead assigned to {getattr(current_user, 'name', 'Staff')} ({getattr(current_user, 'emp_code', current_user.id)}) upon {trigger_desc}."
                 )
                 auto_assign_note = CRMLeadNote(
                     company_id=lead.company_id,
@@ -3448,6 +3518,22 @@ async def set_active_call(
             WHERE user_ref = :ref AND status = 'active'
         """), {"lid": int(lead_id), "ref": user_ref})
     else:
+        # Check if there was an active_lead_id being called in this session
+        prev_row = db.execute(text("""
+            SELECT active_lead_id FROM crm_dialer_sessions
+            WHERE user_ref = :ref AND status = 'active'
+        """), {"ref": user_ref}).fetchone()
+        if prev_row and prev_row[0]:
+            prev_lead_id = prev_row[0]
+            # If the lead that was being called still has status 'new', auto-advance it to 'tried to contact'
+            prev_lead = db.query(CRMLead).filter(CRMLead.id == prev_lead_id).first()
+            if prev_lead and str(prev_lead.status or '').strip().lower() in ('new', 'fresh', '', 'none'):
+                prev_lead.status = 'tried to contact'
+                now_ist = get_ist_now()
+                prev_lead.last_contact_date = now_ist
+                prev_lead.last_dialed_at = now_ist
+                logger.info(f"[DC-ACTIVE-CALL-AUTO] Auto-advanced lead {prev_lead_id} from new to 'tried to contact'")
+
         db.execute(text("""
             UPDATE crm_dialer_sessions
             SET active_lead_id = NULL, call_started_at = NULL

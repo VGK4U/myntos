@@ -5,7 +5,7 @@ Supports leads from any category: Real Estate, EV, Solar, Distributorship, etc.
 Handlers can be: Staff Employees, Official Partners, or MNR Members
 """
 
-from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, Date, Text, ForeignKey, Enum, Float, Index, UniqueConstraint, Numeric, text
+from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, Date, Text, ForeignKey, Enum, Float, Index, UniqueConstraint, Numeric, text, JSON
 from sqlalchemy.orm import relationship
 from app.models.base import BaseModel
 from datetime import datetime
@@ -558,6 +558,66 @@ class CRMLeadNote(BaseModel):
             'updated_at': _si(self.updated_at),
             'created_by_type': self.created_by_type,
             'created_by_id': self.created_by_id
+        }
+
+
+class CRMLeadDocumentShare(BaseModel):
+    """
+    Audit log of documents shared for a lead (via WhatsApp attachments or Share Link).
+    DC Protocol: DC-DOC-SHARES-AUDIT-20260916
+    """
+    __tablename__ = 'crm_lead_document_shares'
+    __table_args__ = (
+        Index('ix_crm_doc_shares_lead', 'lead_id'),
+        Index('ix_crm_doc_shares_staff', 'shared_by_staff_id'),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    company_id = Column(Integer, ForeignKey('associated_companies.id'), nullable=False, default=4, index=True)
+    lead_id = Column(Integer, ForeignKey('crm_leads.id', ondelete='CASCADE'), nullable=False)
+
+    share_mode = Column(String(50), nullable=False, default='whatsapp_attachments')  # 'whatsapp_attachments', 'share_link'
+    recipient_phone = Column(String(50), nullable=True)
+    recipient_name = Column(String(200), nullable=True)
+    recipient_role = Column(String(100), nullable=True)
+
+    shared_by_staff_id = Column(Integer, nullable=True)
+    shared_by_staff_name = Column(String(200), nullable=True)
+
+    doc_group = Column(String(50), nullable=True)  # 'bank', 'discom', 'custom'
+    doc_types = Column(JSON, nullable=True)
+    doc_labels = Column(JSON, nullable=True)
+    total_docs = Column(Integer, default=0)
+    sent_docs_count = Column(Integer, default=0)
+    failed_docs_count = Column(Integer, default=0)
+
+    custom_notes = Column(Text, nullable=True)
+    share_url = Column(Text, nullable=True)
+    status = Column(String(50), default='completed')
+
+    created_at = Column(DateTime, default=get_indian_time, nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'lead_id': self.lead_id,
+            'company_id': self.company_id,
+            'share_mode': self.share_mode,
+            'recipient_phone': self.recipient_phone,
+            'recipient_name': self.recipient_name,
+            'recipient_role': self.recipient_role,
+            'shared_by_staff_id': self.shared_by_staff_id,
+            'shared_by_staff_name': self.shared_by_staff_name,
+            'doc_group': self.doc_group,
+            'doc_types': self.doc_types or [],
+            'doc_labels': self.doc_labels or [],
+            'total_docs': self.total_docs or 0,
+            'sent_docs_count': self.sent_docs_count or 0,
+            'failed_docs_count': self.failed_docs_count or 0,
+            'custom_notes': self.custom_notes or '',
+            'share_url': self.share_url or '',
+            'status': self.status or 'completed',
+            'created_at': _si(self.created_at) if hasattr(self, 'created_at') else None,
         }
 
 

@@ -1521,7 +1521,14 @@
 
         function pressHubKey(k) {
             const el = document.getElementById('hubDialerInput');
-            if (el) el.value += k;
+            if (el) {
+                if (el.dataset.rawNumber) {
+                    el.dataset.rawNumber = '';
+                    el.value = '';
+                    el.readOnly = false;
+                }
+                el.value += k;
+            }
             if (window.PlivoSoftphone && typeof window.PlivoSoftphone.playKeyTone === 'function') {
                 window.PlivoSoftphone.playKeyTone();
             }
@@ -1529,13 +1536,22 @@
 
         function backspaceHub() {
             const el = document.getElementById('hubDialerInput');
-            if (el && el.value.length > 0) el.value = el.value.slice(0, -1);
+            if (el) {
+                if (el.dataset.rawNumber) {
+                    el.dataset.rawNumber = '';
+                    el.value = '';
+                    el.readOnly = false;
+                    return;
+                }
+                if (el.value.length > 0) el.value = el.value.slice(0, -1);
+            }
         }
 
         function dialFromHub(phoneNumber = null, leadName = null, leadId = null) {
-            let phone = phoneNumber;
+            const dialerInp = document.getElementById('hubDialerInput');
+            let phone = phoneNumber || (dialerInp ? (dialerInp.dataset.rawNumber || dialerInp.value.trim()) : '');
             if (!phone || typeof phone !== 'string' || !phone.trim() || phone.includes('•') || phone.includes('*')) {
-                phone = document.getElementById('hubDialerInput') ? document.getElementById('hubDialerInput').value.trim() : '';
+                phone = dialerInp ? (dialerInp.dataset.rawNumber || dialerInp.value.trim()) : '';
             }
             const digits = (phone || '').replace(/\D/g, '');
             if (!digits || digits.length < 10) {

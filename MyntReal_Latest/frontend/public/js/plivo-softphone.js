@@ -618,7 +618,18 @@
 
             const input = document.getElementById('softphoneDisplayInput');
             if (input) {
-                input.value = phone ? phone.replace(/\D/g, '').slice(-10) : '';
+                const cleanDigits = phone ? phone.replace(/\D/g, '').slice(-10) : '';
+                input.dataset.rawNumber = cleanDigits;
+                if (typeof window !== 'undefined' && typeof window.isMR10001 === 'function' && window.isMR10001()) {
+                    input.value = cleanDigits;
+                    input.readOnly = false;
+                } else if (cleanDigits) {
+                    input.value = this.maskPhone(cleanDigits);
+                    input.readOnly = true;
+                } else {
+                    input.value = '';
+                    input.readOnly = false;
+                }
                 this.onKeypadInputChange(input.value);
             }
 
@@ -730,7 +741,7 @@
             `;
 
             const displayName = String(leadName || 'Customer Lead').replace(/["'<>]/g, '').trim() || 'Customer Lead';
-            const cleanPhoneDisplay = destinationPhone || '—';
+            const cleanPhoneDisplay = this.maskPhone(destinationPhone);
 
             modal.innerHTML = `
                 <!-- 1. Dedicated Backdrop: Blur & Darken strictly behind dialog -->
@@ -1675,6 +1686,9 @@
             const digits = s.replace(/\D/g, '');
             if (digits.length < 6) return s;
             const clean10 = digits.slice(-10);
+            if (typeof window !== 'undefined' && typeof window.isMR10001 === 'function' && window.isMR10001()) {
+                return clean10.length === 10 ? `+91 ${clean10.slice(0, 5)} ${clean10.slice(5)}` : s;
+            }
             return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
         }
 
@@ -2093,6 +2107,11 @@
         pressKey(val) {
             const input = document.getElementById('softphoneDisplayInput');
             if (input) {
+                if (input.dataset.rawNumber) {
+                    input.dataset.rawNumber = '';
+                    input.value = '';
+                    input.readOnly = false;
+                }
                 input.value += val;
                 this.onKeypadInputChange(input.value);
             }
@@ -2101,9 +2120,17 @@
 
         backspace() {
             const input = document.getElementById('softphoneDisplayInput');
-            if (input && input.value.length > 0) {
-                input.value = input.value.slice(0, -1);
-                this.onKeypadInputChange(input.value);
+            if (input) {
+                if (input.dataset.rawNumber) {
+                    input.dataset.rawNumber = '';
+                    input.value = '';
+                    input.readOnly = false;
+                    return;
+                }
+                if (input.value.length > 0) {
+                    input.value = input.value.slice(0, -1);
+                    this.onKeypadInputChange(input.value);
+                }
             }
         }
 
@@ -2139,7 +2166,7 @@
                     <div onclick="window.PlivoSoftphone.dial('${item.phone}', '${item.lead_id || ''}', '${item.name.replace(/'/g, "\\'")}')" style="padding: 6px 10px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; cursor: pointer;" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background='#ffffff'">
                         <div>
                             <div style="font-weight: 700; color: #0f172a;">${item.name}</div>
-                            <div style="font-size: 11px; color: #64748b;">${item.phone} • ${item.badge}</div>
+                            <div style="font-size: 11px; color: #64748b;">${this.maskPhone(item.phone)} • ${item.badge}</div>
                         </div>
                         <div style="color: #10b981; font-size: 14px;"><i class="fa-solid fa-phone"></i></div>
                     </div>
@@ -2149,12 +2176,13 @@
 
         dialCurrentKeypadNumber() {
             const input = document.getElementById('softphoneDisplayInput');
-            const raw = (input ? input.value : '').trim();
+            const targetPhone = input ? (input.dataset.rawNumber || input.value) : '';
+            const raw = (targetPhone || '').trim();
             if (!raw) {
                 alert('Please enter a phone number or select a contact.');
                 return;
             }
-            this.dial(raw);
+            this.dial(raw, this.activeLeadId || null, this.activeLeadName || 'Contact Lead');
         }
 
         // ── CONTACT & LEAD SEARCH ───────────────────────────────────────────
@@ -2199,7 +2227,7 @@
                                 </div>
                                 <div style="overflow: hidden;">
                                     <div style="font-weight: 700; font-size: 13px; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</div>
-                                    <div style="font-size: 11px; color: #64748b; margin-top: 1px;">${item.phone}</div>
+                                    <div style="font-size: 11px; color: #64748b; margin-top: 1px;">${this.maskPhone(item.phone)}</div>
                                     <div style="margin-top: 2px;">
                                         <span style="font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px; background: ${badgeBg}; color: ${badgeColor}; border: 1px solid ${badgeColor}33;">${item.badge}</span>
                                         <span style="font-size: 10px; color: #94a3b8; margin-left: 4px;">${item.subtitle || ''}</span>
@@ -2263,7 +2291,7 @@
                 <div style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; background: #ffffff;">
                     <div>
                         <div style="font-weight: 700; font-size: 13px; color: #0f172a;">${c.name}</div>
-                        <div style="font-size: 11px; color: #64748b;">${c.phone} • <span style="color: #059669;"><i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i> ${c.direction}</span> • ${c.time}</div>
+                        <div style="font-size: 11px; color: #64748b;">${this.maskPhone(c.phone)} • <span style="color: #059669;"><i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i> ${c.direction}</span> • ${c.time}</div>
                     </div>
                     <button onclick="window.PlivoSoftphone.dial('${c.phone}', null, '${c.name.replace(/'/g, "\\'")}')" style="width: 32px; height: 32px; border-radius: 50%; background: #10b981; border: none; color: white; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                         <i class="fa-solid fa-phone"></i>

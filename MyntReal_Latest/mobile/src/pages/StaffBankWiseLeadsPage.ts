@@ -27,6 +27,10 @@ interface BankLead {
   bank_name?: string;
   bank_branch?: string;
   bank_loan_account_no?: string;
+  branch_manager_name?: string;
+  branch_manager_phone?: string;
+  loan_officer_name?: string;
+  loan_officer_phone?: string;
   solar_pipeline_status?: string;
   solar_pipeline_stage?: string;
   stage?: string;
@@ -52,9 +56,13 @@ interface BankLead {
   upliner_name?: string;
   upliner_phone?: string;
   telecaller_name?: string;
+  telecaller_phone?: string;
+  co_applicant_name?: string;
+  co_applicant_phone?: string;
   ground_support_name?: string;
   ground_support_phone?: string;
   field_staff_name?: string;
+  field_staff_phone?: string;
   handler_name?: string;
   uport_staff_name?: string;
   brand_name?: string;
@@ -88,6 +96,51 @@ export class StaffBankWiseLeadsPage {
   private expandedGroupIds: Set<string> = new Set();
   private revealedPhones: Set<string> = new Set(); // Stores phone keys that have been unmasked by the user
   private showFilterModal: boolean = false;
+
+  // Document Sharing State (Parity with Web Document Bundles & WhatsApp Attachments)
+  private showDocModal: boolean = false;
+  private activeDocLead: BankLead | null = null;
+  private activeDocGroup: 'bank' | 'discom' = 'bank';
+  private docModalLoading: boolean = false;
+  private leadUploadedDocs: any[] = [];
+  private selectedRecipientPhone: string = '';
+  private selectedRecipientName: string = '';
+  private selectedRecipientRole: string = 'Customer';
+  private selectedDocTypes: Set<string> = new Set();
+  private docModalNotes: string = '';
+  private isDispatching: boolean = false;
+  private isGeneratingLink: boolean = false;
+  private isDownloadingPdf: boolean = false;
+  private shareLinkUrl: string = '';
+
+  private readonly BUNDLE_DEFINITIONS = {
+    bank: {
+      key: 'bank_link',
+      label: 'Bank Documents',
+      docs: [
+        { type: 'aadhaar_front', label: 'Aadhaar (Front & Back)' },
+        { type: 'pan_card', label: 'PAN Card' },
+        { type: 'electricity_bill', label: 'Electricity Bill (Latest)' },
+        { type: 'property_tax', label: 'Property Tax / Mutation / Khata' },
+        { type: 'bank_statement', label: 'Bank Statement / Cancelled Cheque' },
+        { type: 'quotation', label: 'Solar Quotation' },
+        { type: 'customer_photo', label: 'Customer Photo / Passport Photo' },
+        { type: 'vendor_gst', label: 'Vendor GST Certificate' }
+      ]
+    },
+    discom: {
+      key: 'discom_link',
+      label: 'DISCOM Documents',
+      docs: [
+        { type: 'aadhaar_front', label: 'Aadhaar Card' },
+        { type: 'electricity_bill', label: 'Electricity Bill (Latest)' },
+        { type: 'property_tax', label: 'Property Tax / Ownership Proof' },
+        { type: 'customer_photo', label: 'Passport Photo' },
+        { type: 'cancelled_cheque', label: 'Cancelled Cheque' },
+        { type: 'solar_application', label: 'Signed Application / Annexure' }
+      ]
+    }
+  };
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -346,6 +399,9 @@ export class StaffBankWiseLeadsPage {
 
         <!-- Filter Modal Overlay -->
         ${this.showFilterModal ? this.renderFilterModal() : ''}
+
+        <!-- Document & WhatsApp Share Modal Overlay -->
+        ${this.showDocModal ? this.renderDocModal() : ''}
       </div>
 
       ${this.getStyles()}
@@ -882,6 +938,353 @@ export class StaffBankWiseLeadsPage {
     `;
   }
 
+  private async openDocModal(lead: BankLead, group: 'bank' | 'discom'): Promise<void> {
+    this.activeDocLead = lead;
+    this.activeDocGroup = group;
+    this.showDocModal = true;
+    this.docModalLoading = true;
+    this.leadUploadedDocs = [];
+    this.selectedDocTypes.clear();
+    this.shareLinkUrl = '';
+    this.docModalNotes = '';
+    this.isDispatching = false;
+    this.isGeneratingLink = false;
+    this.isDownloadingPdf = false;
+
+    // Default recipient to Customer
+    const custPhone = (lead.phone_number || lead.phone || lead.customer_phone || '').replace(/\D/g, '').slice(-10);
+    this.selectedRecipientPhone = custPhone;
+    this.selectedRecipientName = lead.customer_name || lead.name || 'Customer';
+    this.selectedRecipientRole = 'Customer';
+
+    this.render();
+
+    try {
+      const res = await apiService.get<any>(`/crm/leads/${lead.id}/solar-docs`);
+      if (res && res.data && Array.isArray(res.data.documents)) {
+        this.leadUploadedDocs = res.data.documents;
+      } else if (Array.isArray((res as any)?.documents)) {
+        this.leadUploadedDocs = (res as any).documents;
+      }
+      // Pre-select all available documents
+      const bundleConfig = this.BUNDLE_DEFINITIONS[group];
+      const uploadedMap = new Map();
+      this.leadUploadedDocs.forEach(d => {
+        if (d.doc_type) uploadedMap.set(d.doc_type, d);
+      });
+      bundleConfig.docs.forEach(d => {
+        if (uploadedMap.has(d.type) || d.type === 'vendor_gst') {
+          this.selectedDocTypes.add(d.type);
+        }
+      });
+    } catch (err) {
+      console.error('[StaffBankWiseLeadsPage] Error loading solar docs:', err);
+    } finally {
+      this.docModalLoading = false;
+      this.render();
+    }
+  }
+
+  private getLeadContacts(lead: BankLead): Array<{ role: string; name: string; phone: string; icon: string }> {
+    const list: Array<{ role: string; name: string; phone: string; icon: string }> = [];
+    const addContact = (role: string, name: string | undefined, phone: string | undefined, icon: string) => {
+      if (!phone) return;
+      const clean = phone.replace(/\D/g, '').slice(-10);
+      if (clean.length === 10 && !list.some(c => c.phone === clean && c.role === role)) {
+        list.push({ role, name: name || role, phone: clean, icon });
+      }
+    };
+
+    addContact('Customer', lead.customer_name || lead.name, lead.phone_number || lead.phone || lead.customer_phone, 'fa-user');
+    addContact('Branch Manager', lead.branch_manager_name, lead.branch_manager_phone, 'fa-briefcase');
+    addContact('Loan Officer', lead.loan_officer_name, lead.loan_officer_phone, 'fa-landmark');
+    addContact('Ground Support', lead.ground_support_name || lead.field_staff_name, lead.ground_support_phone || lead.field_staff_phone, 'fa-user-gear');
+    addContact('Ground Source', lead.ground_source_name, lead.ground_source_phone, 'fa-handshake');
+    addContact('Telecaller', lead.telecaller_name, lead.telecaller_phone, 'fa-headset');
+    addContact('Upliner', lead.upliner_name, lead.upliner_phone, 'fa-sitemap');
+    addContact('Co-Applicant', lead.co_applicant_name, lead.co_applicant_phone, 'fa-user-group');
+
+    return list;
+  }
+
+  private async downloadBundlePdf(): Promise<void> {
+    if (!this.activeDocLead) return;
+    this.isDownloadingPdf = true;
+    this.render();
+    try {
+      const section = this.activeDocGroup;
+      const baseUrl = apiService.getBaseUrl();
+      const token = await apiService.getToken();
+      const companyId = await apiService.getCompanyId();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (companyId) headers['X-Company-ID'] = companyId;
+
+      const resp = await fetch(`${baseUrl}/crm/leads/${this.activeDocLead.id}/solar-docs/bundle?section=${section}`, { headers });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        alert(err.detail || 'Failed to download PDF bundle');
+        return;
+      }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const leadName = (this.activeDocLead.customer_name || this.activeDocLead.name || `lead_${this.activeDocLead.id}`).replace(/[^a-z0-9]/gi, '_');
+      a.download = `${leadName}_${section}_docs.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    } catch (err: any) {
+      console.error('[StaffBankWiseLeadsPage] Download PDF bundle error:', err);
+      alert('Failed to download PDF: ' + (err?.message || 'Network error'));
+    } finally {
+      this.isDownloadingPdf = false;
+      this.render();
+    }
+  }
+
+  private async generateShareLink(): Promise<void> {
+    if (!this.activeDocLead) return;
+    this.isGeneratingLink = true;
+    this.render();
+    try {
+      const group = this.activeDocGroup === 'discom' ? 'discom_link' : 'bank_link';
+      const bundle = this.BUNDLE_DEFINITIONS[this.activeDocGroup];
+      const docTypes = bundle.docs.map(d => d.type);
+      const res = await apiService.post<any>(`/crm/leads/${this.activeDocLead.id}/share-link`, {
+        doc_group: group,
+        doc_types: docTypes,
+        recipient_phone: this.selectedRecipientPhone,
+        recipient_name: this.selectedRecipientName,
+        recipient_role: this.selectedRecipientRole
+      });
+      if (res && (res.share_url || (res.data && res.data.share_url))) {
+        this.shareLinkUrl = res.share_url || res.data.share_url;
+      } else {
+        alert(res?.detail || (res?.data && res.data.detail) || 'Failed to generate share link');
+      }
+    } catch (err: any) {
+      console.error('[StaffBankWiseLeadsPage] Share link error:', err);
+      alert('Share link failed: ' + (err?.message || 'Server error'));
+    } finally {
+      this.isGeneratingLink = false;
+      this.render();
+    }
+  }
+
+  private async dispatchShareDocumentsViaWa(): Promise<void> {
+    if (!this.activeDocLead) return;
+    const phone = this.selectedRecipientPhone.replace(/\D/g, '').slice(-10);
+    if (phone.length < 10) {
+      alert('Please enter a valid 10-digit mobile number');
+      return;
+    }
+    if (this.selectedDocTypes.size === 0) {
+      alert('Please select at least one document to share');
+      return;
+    }
+
+    this.isDispatching = true;
+    this.render();
+
+    try {
+      const payload = {
+        recipient_phone: phone,
+        recipient_name: this.selectedRecipientName || 'Recipient',
+        recipient_role: this.selectedRecipientRole || 'Recipient',
+        doc_group: this.activeDocGroup === 'discom' ? 'discom' : 'bank',
+        selected_doc_types: Array.from(this.selectedDocTypes),
+        custom_notes: this.docModalNotes
+      };
+      const res = await apiService.post<any>(`/crm/leads/${this.activeDocLead.id}/solar-docs/share-whatsapp`, payload);
+      if (res && (res.success || res.status === 200 || (res.data && res.data.success))) {
+        const sent = res.sent_count || (res.data && res.data.sent_count) || this.selectedDocTypes.size;
+        const total = res.total_docs || (res.data && res.data.total_docs) || this.selectedDocTypes.size;
+        alert(`Success: ${sent} of ${total} document(s) dispatched via WhatsApp to ${this.selectedRecipientName || 'recipient'} (+91 ${phone})!`);
+        this.showDocModal = false;
+        this.render();
+      } else {
+        const errMsg = res?.message || res?.error || (res?.data && (res.data.message || res.data.detail)) || 'Failed to dispatch documents via WhatsApp';
+        alert(`Error: ${errMsg}`);
+      }
+    } catch (err: any) {
+      console.error('[StaffBankWiseLeadsPage] WhatsApp dispatch failed:', err);
+      alert(`Dispatch failed: ${err?.message || 'Server error'}`);
+    } finally {
+      this.isDispatching = false;
+      this.render();
+    }
+  }
+
+  private renderDocModal(): string {
+    if (!this.activeDocLead) return '';
+    const lead = this.activeDocLead;
+    const bundleKey = this.activeDocGroup;
+    const bundle = this.BUNDLE_DEFINITIONS[bundleKey];
+    const contacts = this.getLeadContacts(lead);
+
+    // Map uploaded docs
+    const uploadedMap = new Map<string, any>();
+    this.leadUploadedDocs.forEach(d => {
+      if (d.doc_type) uploadedMap.set(d.doc_type, d);
+    });
+
+    const totalDocs = bundle.docs.length;
+    const availableDocsCount = bundle.docs.filter(d => uploadedMap.has(d.type) || d.type === 'vendor_gst').length;
+    const selectedCount = this.selectedDocTypes.size;
+
+    return `
+      <div class="bl-modal-overlay" id="docModalOverlay">
+        <div class="bl-modal doc-modal">
+          <div class="bl-modal-header" style="background: linear-gradient(135deg, #1e293b, #0f172a); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 14px 16px;">
+            <div>
+              <div style="font-size: 15px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+                <i class="fab fa-whatsapp" style="color: #25d366; font-size: 18px;"></i>
+                <span>${bundle.label}</span>
+              </div>
+              <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">
+                ${this.escapeHtml(lead.customer_name || lead.name || 'Lead')} (#${lead.id})
+                ${lead.bank_name ? ` • ${this.escapeHtml(lead.bank_name)}` : ''}
+              </div>
+            </div>
+            <button class="bl-modal-close" id="closeDocModalBtn">✕</button>
+          </div>
+
+          <div class="bl-modal-body" style="padding: 14px 16px; overflow-y: auto;">
+            <!-- Fast Action Buttons (Download Bundle & Share Link) -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;">
+              <button type="button" class="bl-doc-action-card" id="btnDownloadBundlePdf" ${this.isDownloadingPdf ? 'disabled' : ''} style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 10px; text-align: left; color: #fff; cursor: pointer;">
+                <div style="font-size: 11px; color: #38bdf8; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                  <i class="fas fa-${this.isDownloadingPdf ? 'spinner fa-spin' : 'file-pdf'}" style="font-size: 14px;"></i> Download PDF
+                </div>
+                <div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">Single merged file</div>
+              </button>
+              <button type="button" class="bl-doc-action-card" id="btnGen6hShareLink" ${this.isGeneratingLink ? 'disabled' : ''} style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 10px; text-align: left; color: #fff; cursor: pointer;">
+                <div style="font-size: 11px; color: #fbbf24; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                  <i class="fas fa-${this.isGeneratingLink ? 'spinner fa-spin' : 'link'}" style="font-size: 14px;"></i> 6-Hour Link
+                </div>
+                <div style="font-size: 10px; color: #94a3b8; margin-top: 2px;">Expiring web link</div>
+              </button>
+            </div>
+
+            ${this.shareLinkUrl ? `
+              <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 10px; margin-bottom: 14px;">
+                <div style="font-size: 11px; font-weight: 600; color: #34d399; margin-bottom: 4px;">6-Hour Share Link Active:</div>
+                <div style="font-size: 10.5px; color: #e2e8f0; word-break: break-all; background: rgba(0,0,0,0.3); padding: 6px 8px; border-radius: 4px; font-family: monospace;">${this.escapeHtml(this.shareLinkUrl)}</div>
+                <div style="display: flex; gap: 6px; margin-top: 6px;">
+                  <button type="button" id="btnCopyShareUrl" class="bl-btn" style="padding: 6px 10px; font-size: 11px; background: #1e293b; color: #fff;">
+                    <i class="fas fa-copy me-1"></i> Copy
+                  </button>
+                  <a href="https://wa.me/?text=${encodeURIComponent('Please view documents: ' + this.shareLinkUrl)}" target="_blank" class="bl-btn" style="padding: 6px 10px; font-size: 11px; background: #25d366; color: #fff; text-decoration: none; display: inline-flex; align-items: center;">
+                    <i class="fab fa-whatsapp me-1"></i> WhatsApp
+                  </a>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- WhatsApp Direct Attachments Section -->
+            <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 11px; font-weight: 700; color: #e2e8f0; text-transform: uppercase; letter-spacing: 0.5px;">
+                  Quick Select Recipient
+                </span>
+                <span style="font-size: 10px; color: #94a3b8;">Tap to auto-fill</span>
+              </div>
+
+              <!-- Contact Chips -->
+              <div class="bl-contact-chips-wrap" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 12px; -webkit-overflow-scrolling: touch;">
+                ${contacts.length > 0 ? contacts.map(c => {
+                  const isSelected = (this.selectedRecipientPhone === c.phone && this.selectedRecipientRole === c.role);
+                  return `
+                    <button type="button" class="bl-contact-chip ${isSelected ? 'active' : ''}" 
+                      data-phone="${c.phone}" data-name="${this.escapeHtml(c.name)}" data-role="${this.escapeHtml(c.role)}"
+                      style="flex-shrink: 0; padding: 6px 10px; border-radius: 20px; font-size: 11px; border: 1px solid ${isSelected ? '#22c55e' : 'rgba(255,255,255,0.15)'}; background: ${isSelected ? 'rgba(34, 197, 94, 0.2)' : 'rgba(255,255,255,0.05)'}; color: ${isSelected ? '#4ade80' : '#cbd5e1'}; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+                      <i class="fas ${c.icon}" style="font-size: 10px;"></i>
+                      <span><b>${this.escapeHtml(c.role)}:</b> ${this.escapeHtml(c.name)}</span>
+                    </button>
+                  `;
+                }).join('') : '<span style="font-size: 11px; color: #64748b;">No contacts found. Enter phone below.</span>'}
+              </div>
+
+              <!-- Recipient Phone Input -->
+              <div class="bl-form-group" style="margin-bottom: 12px;">
+                <label style="font-size: 11px; color: #94a3b8;">Recipient WhatsApp Number (10 Digits)</label>
+                <div style="display: flex; align-items: center; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; overflow: hidden;">
+                  <span style="padding: 10px 12px; font-size: 12px; font-weight: 700; color: #22c55e; background: rgba(255,255,255,0.06); border-right: 1px solid rgba(255,255,255,0.1);">+91</span>
+                  <input type="tel" id="mobileDocPhoneInput" class="bl-input" placeholder="Enter 10-digit number" maxlength="10" 
+                    value="${this.escapeHtml(this.selectedRecipientPhone)}" 
+                    style="flex: 1; background: transparent; border: none; padding: 10px 12px; color: #fff; font-size: 13px; outline: none;">
+                </div>
+              </div>
+
+              <!-- Document Selection Checklist -->
+              <div style="margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span style="font-size: 11px; font-weight: 700; color: #e2e8f0; text-transform: uppercase; letter-spacing: 0.5px;">
+                    Select Attachments (${selectedCount} of ${availableDocsCount} available)
+                  </span>
+                  <div style="display: flex; gap: 8px;">
+                    <button type="button" id="btnSelectAllDocs" style="background: none; border: none; font-size: 11px; color: #38bdf8; font-weight: 600; cursor: pointer; padding: 0;">All</button>
+                    <button type="button" id="btnClearAllDocs" style="background: none; border: none; font-size: 11px; color: #94a3b8; font-weight: 600; cursor: pointer; padding: 0;">Clear</button>
+                  </div>
+                </div>
+
+                ${this.docModalLoading ? `
+                  <div style="padding: 24px; text-align: center; color: #94a3b8; font-size: 12px;">
+                    <i class="fas fa-spinner fa-spin me-2"></i> Loading document availability...
+                  </div>
+                ` : `
+                  <div class="bl-doc-items-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto;">
+                    ${bundle.docs.map(doc => {
+                      const ud = uploadedMap.get(doc.type);
+                      const isAvail = !!ud || doc.type === 'vendor_gst';
+                      const isVDef = (ud && ud.is_vendor_default) || doc.type === 'vendor_gst';
+                      const isChecked = this.selectedDocTypes.has(doc.type);
+
+                      return `
+                        <label class="bl-doc-item-row" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); cursor: ${isAvail ? 'pointer' : 'not-allowed'}; opacity: ${isAvail ? '1' : '0.45'};">
+                          <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
+                            <input type="checkbox" class="doc-chk-box" value="${doc.type}" ${isChecked ? 'checked' : ''} ${isAvail ? '' : 'disabled'} style="accent-color: #22c55e;">
+                            <span style="font-size: 12px; color: ${isAvail ? '#e2e8f0' : '#64748b'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${this.escapeHtml(doc.label)}</span>
+                          </div>
+                          <div>
+                            ${isAvail 
+                              ? (isVDef 
+                                ? '<span style="font-size: 9.5px; font-weight: 700; background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 4px; padding: 2px 6px;">Vendor GST</span>' 
+                                : '<span style="font-size: 9.5px; font-weight: 700; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 4px; padding: 2px 6px;">Available</span>')
+                              : '<span style="font-size: 9.5px; font-weight: 600; background: rgba(239, 68, 68, 0.15); color: #f87171; border-radius: 4px; padding: 2px 6px;">Not Uploaded</span>'}
+                          </div>
+                        </label>
+                      `;
+                    }).join('')}
+                  </div>
+                `}
+              </div>
+
+              <!-- Notes Input -->
+              <div class="bl-form-group" style="margin-bottom: 12px;">
+                <label style="font-size: 11px; color: #94a3b8;">Additional Note (Optional)</label>
+                <textarea id="mobileDocNotesInput" class="bl-input" rows="2" placeholder="e.g. Please find loan documents attached for approval..."
+                  style="width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.18); border-radius: 8px; padding: 8px 10px; color: #fff; font-size: 12px; outline: none; resize: none;">${this.escapeHtml(this.docModalNotes)}</textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="bl-modal-footer" style="padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; gap: 10px;">
+            <button class="bl-btn bl-btn-secondary" id="cancelDocModalBtn" style="flex: 1; padding: 10px;">Cancel</button>
+            <button class="bl-btn" id="btnDispatchWaDocs" 
+              ${this.isDispatching || selectedCount === 0 ? 'disabled' : ''} 
+              style="flex: 2; padding: 10px; background: #22c55e; color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; opacity: ${this.isDispatching || selectedCount === 0 ? '0.6' : '1'};">
+              ${this.isDispatching ? '<i class="fas fa-spinner fa-spin"></i> Dispatching...' : '<i class="fab fa-whatsapp" style="font-size: 15px;"></i> Send via WhatsApp'}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   private renderLoadingState(): void {
     const area = document.getElementById('blContentArea');
     if (area) {
@@ -1025,16 +1428,141 @@ export class StaffBankWiseLeadsPage {
       });
     });
 
-    // Open Doc actions (DISCOM & Bank)
+    // Open Doc actions (DISCOM & Bank) -> Unified Document & WhatsApp Share Modal
     this.container.querySelectorAll('.open-doc-action').forEach(btn => {
       btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         const leadId = (btn as HTMLElement).dataset.leadId;
-        const docType = (btn as HTMLElement).dataset.type;
+        const docType = ((btn as HTMLElement).dataset.type || 'bank') as ('bank' | 'discom');
         if (leadId) {
-          routerService.navigate('staff-leads' as any, { lead_id: leadId, tab: docType === 'bank' ? 'bank_docs' : 'discom_docs' });
+          const lead = this.leads.find(l => String(l.id) === String(leadId));
+          if (lead) {
+            this.openDocModal(lead, docType);
+          }
         }
       });
     });
+
+    // Document & WhatsApp Share Modal Event Listeners
+    if (this.showDocModal) {
+      document.getElementById('closeDocModalBtn')?.addEventListener('click', () => {
+        this.showDocModal = false;
+        this.render();
+      });
+
+      document.getElementById('cancelDocModalBtn')?.addEventListener('click', () => {
+        this.showDocModal = false;
+        this.render();
+      });
+
+      document.getElementById('docModalOverlay')?.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).id === 'docModalOverlay') {
+          this.showDocModal = false;
+          this.render();
+        }
+      });
+
+      document.getElementById('btnDownloadBundlePdf')?.addEventListener('click', () => {
+        this.downloadBundlePdf();
+      });
+
+      document.getElementById('btnGen6hShareLink')?.addEventListener('click', () => {
+        this.generateShareLink();
+      });
+
+      document.getElementById('btnCopyShareUrl')?.addEventListener('click', () => {
+        if (this.shareLinkUrl) {
+          navigator.clipboard?.writeText(this.shareLinkUrl).then(() => {
+            const btn = document.getElementById('btnCopyShareUrl');
+            if (btn) btn.innerHTML = '<i class="fas fa-check me-1"></i> Copied!';
+            setTimeout(() => {
+              const b = document.getElementById('btnCopyShareUrl');
+              if (b) b.innerHTML = '<i class="fas fa-copy me-1"></i> Copy';
+            }, 2000);
+          }).catch(() => {
+            alert('Copied URL: ' + this.shareLinkUrl);
+          });
+        }
+      });
+
+      // Recipient quick-select chips
+      this.container.querySelectorAll('.bl-contact-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const phone = (chip as HTMLElement).dataset.phone || '';
+          const name = (chip as HTMLElement).dataset.name || '';
+          const role = (chip as HTMLElement).dataset.role || 'Recipient';
+          this.selectedRecipientPhone = phone;
+          this.selectedRecipientName = name;
+          this.selectedRecipientRole = role;
+          const pInput = document.getElementById('mobileDocPhoneInput') as HTMLInputElement;
+          if (pInput) pInput.value = phone;
+          this.container.querySelectorAll('.bl-contact-chip').forEach(c => c.classList.remove('active'));
+          chip.classList.add('active');
+        });
+      });
+
+      // Recipient Phone Input
+      const phoneInput = document.getElementById('mobileDocPhoneInput') as HTMLInputElement;
+      phoneInput?.addEventListener('input', () => {
+        this.selectedRecipientPhone = phoneInput.value.trim();
+      });
+
+      // Document Selection Checkboxes
+      this.container.querySelectorAll('.doc-chk-box').forEach(chk => {
+        chk.addEventListener('change', () => {
+          const val = (chk as HTMLInputElement).value;
+          if ((chk as HTMLInputElement).checked) {
+            this.selectedDocTypes.add(val);
+          } else {
+            this.selectedDocTypes.delete(val);
+          }
+          const sendBtn = document.getElementById('btnDispatchWaDocs') as HTMLButtonElement;
+          if (sendBtn) {
+            sendBtn.disabled = this.selectedDocTypes.size === 0;
+            sendBtn.style.opacity = this.selectedDocTypes.size === 0 ? '0.6' : '1';
+          }
+        });
+      });
+
+      // Select All Docs
+      document.getElementById('btnSelectAllDocs')?.addEventListener('click', () => {
+        const bundle = this.BUNDLE_DEFINITIONS[this.activeDocGroup];
+        bundle.docs.forEach(d => this.selectedDocTypes.add(d.type));
+        this.container.querySelectorAll('.doc-chk-box:not(:disabled)').forEach(c => {
+          (c as HTMLInputElement).checked = true;
+        });
+        const sendBtn = document.getElementById('btnDispatchWaDocs') as HTMLButtonElement;
+        if (sendBtn) {
+          sendBtn.disabled = this.selectedDocTypes.size === 0;
+          sendBtn.style.opacity = '1';
+        }
+      });
+
+      // Clear All Docs
+      document.getElementById('btnClearAllDocs')?.addEventListener('click', () => {
+        this.selectedDocTypes.clear();
+        this.container.querySelectorAll('.doc-chk-box').forEach(c => {
+          (c as HTMLInputElement).checked = false;
+        });
+        const sendBtn = document.getElementById('btnDispatchWaDocs') as HTMLButtonElement;
+        if (sendBtn) {
+          sendBtn.disabled = true;
+          sendBtn.style.opacity = '0.6';
+        }
+      });
+
+      // Notes Input
+      const notesInput = document.getElementById('mobileDocNotesInput') as HTMLTextAreaElement;
+      notesInput?.addEventListener('input', () => {
+        this.docModalNotes = notesInput.value;
+      });
+
+      // WhatsApp Dispatch Button
+      document.getElementById('btnDispatchWaDocs')?.addEventListener('click', () => {
+        this.dispatchShareDocumentsViaWa();
+      });
+    }
 
     // Open CRM Lead
     this.container.querySelectorAll('.view-crm-lead').forEach(btn => {
@@ -1745,6 +2273,30 @@ export class StaffBankWiseLeadsPage {
         }
         .bl-btn-primary { background: #4f46e5; color: #fff; }
         .bl-btn-secondary { background: rgba(255,255,255,0.1); color: #fff; }
+
+        /* Document Modal Specifics */
+        .doc-modal {
+          max-width: 480px;
+          max-height: 92vh;
+        }
+        .bl-contact-chips-wrap::-webkit-scrollbar {
+          display: none;
+        }
+        .bl-contact-chip:active, .bl-contact-chip.active {
+          background: rgba(34, 197, 94, 0.2) !important;
+          border-color: #22c55e !important;
+          color: #4ade80 !important;
+        }
+        .bl-doc-action-card:active {
+          transform: scale(0.98);
+        }
+        .bl-doc-items-list::-webkit-scrollbar {
+          width: 4px;
+        }
+        .bl-doc-items-list::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.2);
+          border-radius: 4px;
+        }
       </style>
     `;
   }

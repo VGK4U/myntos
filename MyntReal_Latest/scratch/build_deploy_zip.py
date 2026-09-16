@@ -92,7 +92,7 @@ def should_exclude(rel_path: Path, abs_file: Path) -> bool:
     if rel_path.name in EXCLUDE_FILES:
         return True
         
-    if "storage/" in rel_str or "uploaded_files/" in rel_str or "public/catalog/" in rel_str or "public/marketplace/" in rel_str or ".ai_uploads" in rel_str or ".ai_backups" in rel_str or "solar-creative-" in rel_str:
+    if ("storage/" in rel_str and "vendor_docs" not in rel_str) or "uploaded_files/" in rel_str or "public/catalog/" in rel_str or "public/marketplace/" in rel_str or ".ai_uploads" in rel_str or ".ai_backups" in rel_str or "solar-creative-" in rel_str:
         return True
         
     if abs_file.suffix.lower() in [".zip", ".sql", ".dump", ".sqlite", ".db", ".app"]:

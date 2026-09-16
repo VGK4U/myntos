@@ -178,7 +178,19 @@ def get_job_targets(db: Session, job_id: str, company_id: int = 1, active_only: 
     )
     if active_only:
         q = q.filter(AutomationTargetConfig.is_active == True)
-    return q.order_by(AutomationTargetConfig.id.asc()).all()
+    results = q.order_by(AutomationTargetConfig.id.asc()).all()
+
+    # If no custom targets found for this company and company_id != 1, fall back to default company 1
+    if not results and company_id != 1:
+        q_def = db.query(AutomationTargetConfig).filter(
+            AutomationTargetConfig.job_id == job_id,
+            AutomationTargetConfig.company_id == 1
+        )
+        if active_only:
+            q_def = q_def.filter(AutomationTargetConfig.is_active == True)
+        results = q_def.order_by(AutomationTargetConfig.id.asc()).all()
+
+    return results
 
 
 def add_job_target(
@@ -196,9 +208,34 @@ def add_job_target(
     **kwargs
 ) -> AutomationTargetConfig:
     resolved_name = (recipient_name or name or "").strip()
-    resolved_identifier = (recipient_identifier or identifier or "").strip()
-    resolved_type = (recipient_type or target_type or "group").strip()
-    resolved_role = (target_role or "PRIMARY").strip()
+    raw_ident = (recipient_identifier or identifier or "").strip()
+    resolved_type = (recipient_type or target_type or "group").strip().upper()
+    resolved_role = (target_role or "PRIMARY").strip().upper()
+
+    # Intelligent type and identifier normalization
+    # 1. WhatsApp Group Invite Link / Channel Link
+    if "chat.whatsapp.com" in raw_ident or "@g.us" in raw_ident:
+        resolved_type = "GROUP"
+        resolved_identifier = raw_ident
+    elif "whatsapp.com/channel" in raw_ident or "@newsletter" in raw_ident:
+        resolved_type = "CHANNEL"
+        resolved_identifier = raw_ident
+    elif resolved_type == "INDIVIDUAL" or (not raw_ident.startswith("http") and not "@" in raw_ident):
+        # Format phone number cleanly
+        digits_only = ''.join(c for c in raw_ident if c.isdigit())
+        if len(digits_only) == 10:
+            resolved_identifier = f"+91{digits_only}"
+            resolved_type = "INDIVIDUAL"
+        elif len(digits_only) >= 11 and (digits_only.startswith("91") or digits_only.startswith("1")):
+            resolved_identifier = f"+{digits_only}"
+            resolved_type = "INDIVIDUAL"
+        else:
+            resolved_identifier = raw_ident
+    else:
+        resolved_identifier = raw_ident
+
+    if not resolved_name:
+        resolved_name = "WhatsApp Group" if resolved_type == "GROUP" else ("WhatsApp Channel" if resolved_type == "CHANNEL" else f"Mobile {resolved_identifier}")
 
     row = AutomationTargetConfig(
         job_id=job_id,
@@ -219,10 +256,65 @@ def add_job_target(
 def remove_job_target(db: Session, target_id: int, company_id: int = 1) -> bool:
     row = db.query(AutomationTargetConfig).filter(
         AutomationTargetConfig.id == target_id,
-        AutomationTargetConfig.company_id == company_id
+        AutomationTargetConfig.company_id.in_([company_id, 1])
     ).first()
+    if not row:
+        row = db.query(AutomationTargetConfig).filter(AutomationTargetConfig.id == target_id).first()
     if row:
         db.delete(row)
         db.commit()
         return True
     return False
+
+
+def update_job_target(
+    db: Session,
+    target_id: int,
+    company_id: int = 1,
+    name: Optional[str] = None,
+    identifier: Optional[str] = None,
+    target_type: Optional[str] = None,
+    target_role: Optional[str] = None,
+    is_active: Optional[bool] = None,
+    **kwargs
+) -> Optional[AutomationTargetConfig]:
+    row = db.query(AutomationTargetConfig).filter(
+        AutomationTargetConfig.id == target_id,
+        AutomationTargetConfig.company_id.in_([company_id, 1])
+    ).first()
+    if not row:
+        row = db.query(AutomationTargetConfig).filter(AutomationTargetConfig.id == target_id).first()
+    if not row:
+        return None
+
+    if identifier is not None:
+        raw_ident = identifier.strip()
+        row.identifier = raw_ident
+        # Auto-detect type if not explicitly passed
+        if "chat.whatsapp.com" in raw_ident or "@g.us" in raw_ident:
+            row.target_type = "GROUP"
+        elif "whatsapp.com/channel" in raw_ident or "@newsletter" in raw_ident:
+            row.target_type = "CHANNEL"
+        elif (target_type and target_type.upper() == "INDIVIDUAL") or (not raw_ident.startswith("http") and "@" not in raw_ident and any(c.isdigit() for c in raw_ident)):
+            digits = ''.join(c for c in raw_ident if c.isdigit())
+            if len(digits) == 10:
+                row.identifier = f"+91{digits}"
+                row.target_type = "INDIVIDUAL"
+            elif len(digits) >= 11:
+                row.identifier = f"+{digits}"
+                row.target_type = "INDIVIDUAL"
+
+    if name is not None:
+        row.name = name.strip()
+    if target_type is not None and not ("chat.whatsapp.com" in row.identifier or "whatsapp.com/channel" in row.identifier):
+        row.target_type = target_type.strip().upper()
+    if target_role is not None:
+        row.target_role = target_role.strip().upper()
+    if is_active is not None:
+        row.is_active = is_active
+
+    row.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(row)
+    return row
+

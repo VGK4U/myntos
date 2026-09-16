@@ -1233,6 +1233,50 @@ function cleanTargetCode(raw) {
     return str;
 }
 
+function resolveMediaBufferAndPayload(mediaSource, message, defaultFilename) {
+    if (!mediaSource) return { text: message || '' };
+
+    let imgBuffer = null;
+    let resolvedPath = mediaSource;
+
+    if (typeof mediaSource === 'string' && (mediaSource.startsWith('http://') || mediaSource.startsWith('https://'))) {
+        imgBuffer = { url: mediaSource };
+    } else if (typeof mediaSource === 'string' && mediaSource.includes(';base64,')) {
+        const base64Data = mediaSource.split(';base64,').pop().replace(/\s/g, '');
+        imgBuffer = Buffer.from(base64Data, 'base64');
+    } else if (typeof mediaSource === 'string') {
+        if (mediaSource.startsWith('/storage/')) {
+            const relPath = mediaSource.replace(/^\/storage\//, '');
+            const cand1 = path.join(__dirname, '../../frontend/storage', relPath);
+            const cand2 = path.join(__dirname, '../storage', relPath);
+            if (fs.existsSync(cand1)) resolvedPath = cand1;
+            else if (fs.existsSync(cand2)) resolvedPath = cand2;
+        }
+        if (fs.existsSync(resolvedPath)) {
+            imgBuffer = fs.readFileSync(resolvedPath);
+        }
+    }
+
+    if (!imgBuffer) {
+        return { text: message || '' };
+    }
+
+    const isPdf = (typeof mediaSource === 'string' && mediaSource.toLowerCase().endsWith('.pdf'));
+    if (isPdf) {
+        const fileName = defaultFilename || (typeof mediaSource === 'string' ? path.basename(mediaSource) : 'document.pdf');
+        return {
+            document: imgBuffer,
+            mimetype: 'application/pdf',
+            fileName: fileName,
+            caption: message || ''
+        };
+    }
+
+    return (message && message.trim())
+        ? { image: imgBuffer, caption: message.trim(), mimetype: 'image/png' }
+        : { image: imgBuffer, mimetype: 'image/png' };
+}
+
 app.post('/api/send-group-message', async (req, res) => {
     try {
         const { message, inviteCode, groupId, imageUrl, imagePath, media_url, mediaUrl, job_id, job_name, trigger_type } = req.body;
@@ -1667,50 +1711,6 @@ app.post('/api/send-message', async (req, res) => {
                 can_send_now: false
             });
         }
-
-function resolveMediaBufferAndPayload(mediaSource, message, defaultFilename) {
-    if (!mediaSource) return { text: message || '' };
-
-    let imgBuffer = null;
-    let resolvedPath = mediaSource;
-
-    if (typeof mediaSource === 'string' && (mediaSource.startsWith('http://') || mediaSource.startsWith('https://'))) {
-        imgBuffer = { url: mediaSource };
-    } else if (typeof mediaSource === 'string' && mediaSource.includes(';base64,')) {
-        const base64Data = mediaSource.split(';base64,').pop().replace(/\s/g, '');
-        imgBuffer = Buffer.from(base64Data, 'base64');
-    } else if (typeof mediaSource === 'string') {
-        if (mediaSource.startsWith('/storage/')) {
-            const relPath = mediaSource.replace(/^\/storage\//, '');
-            const cand1 = path.join(__dirname, '../../frontend/storage', relPath);
-            const cand2 = path.join(__dirname, '../storage', relPath);
-            if (fs.existsSync(cand1)) resolvedPath = cand1;
-            else if (fs.existsSync(cand2)) resolvedPath = cand2;
-        }
-        if (fs.existsSync(resolvedPath)) {
-            imgBuffer = fs.readFileSync(resolvedPath);
-        }
-    }
-
-    if (!imgBuffer) {
-        return { text: message || '' };
-    }
-
-    const isPdf = (typeof mediaSource === 'string' && mediaSource.toLowerCase().endsWith('.pdf'));
-    if (isPdf) {
-        const fileName = defaultFilename || (typeof mediaSource === 'string' ? path.basename(mediaSource) : 'document.pdf');
-        return {
-            document: imgBuffer,
-            mimetype: 'application/pdf',
-            fileName: fileName,
-            caption: message || ''
-        };
-    }
-
-    return (message && message.trim())
-        ? { image: imgBuffer, caption: message.trim(), mimetype: 'image/png' }
-        : { image: imgBuffer, mimetype: 'image/png' };
-}
 
         let contentPayload = resolveMediaBufferAndPayload(mediaSource, message, req.body.filename);
 

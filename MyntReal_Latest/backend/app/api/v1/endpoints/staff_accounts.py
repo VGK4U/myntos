@@ -2683,6 +2683,60 @@ async def upload_vendor_rep_signature(
         return handle_accounts_error(e)
 
 
+@router.post("/vendors/{vendor_id}/gst-certificate")
+async def upload_vendor_gst_certificate(
+    vendor_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Upload GST Registration Certificate (PDF or image) for a vendor.
+    Returns /storage/... path and updates vendor.gst_certificate_url.
+    Security: MIME validation (PDF, PNG, JPG), 10 MB size limit, sanitized filenames.
+    """
+    try:
+        import uuid
+        import magic
+        from app.models.staff_accounts import VendorMaster
+
+        MAX_FILE_SIZE = 10 * 1024 * 1024
+        ALLOWED_MIME_TYPES = {'application/pdf', 'image/png', 'image/jpeg', 'image/webp'}
+        MIME_TO_EXT = {'application/pdf': 'pdf', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp'}
+
+        content = await file.read()
+        if len(content) > MAX_FILE_SIZE:
+            return JSONResponse(content={"success": False, "message": "File too large. Maximum size: 10MB"}, status_code=400)
+
+        detected_mime = magic.from_buffer(content, mime=True)
+        if detected_mime not in ALLOWED_MIME_TYPES:
+            # Fallback check for PDF signature if magic detects octet-stream
+            if content.startswith(b'%PDF'):
+                detected_mime = 'application/pdf'
+            else:
+                return JSONResponse(content={"success": False, "message": "Invalid file type. Allowed: PDF, PNG, JPG, WEBP"}, status_code=400)
+
+        ext = MIME_TO_EXT.get(detected_mime, 'pdf')
+        from app.services.object_storage import storage_service
+        safe_filename = f"gst_cert_{vendor_id}_{uuid.uuid4().hex}.{ext}"
+        storage_path = f"vendor_docs/{safe_filename}"
+        success = storage_service.upload_file(storage_path, content, content_type=detected_mime)
+        if not success:
+            return JSONResponse(content={"success": False, "message": "Failed to upload GST certificate"}, status_code=500)
+
+        file_url = f"/storage/{storage_path}"
+
+        vendor = db.query(VendorMaster).filter(VendorMaster.id == vendor_id).first()
+        if vendor:
+            vendor.gst_certificate_url = file_url
+            db.commit()
+
+        return JSONResponse(content={"success": True, "file_url": file_url, "image_url": file_url})
+    except Exception as e:
+        return handle_accounts_error(e)
+
+
+
 @router.get("/pincode/{pincode}")
 @router.get("/pincode-lookup/{pincode}")
 async def lookup_pincode(

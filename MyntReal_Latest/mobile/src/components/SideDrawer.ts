@@ -242,6 +242,7 @@ const MENU_MASTER: MenuSection[] = [
       { menu_code: "MY_CRM_DASHBOARD", label: "CRM Dashboard", route: "staff-crm" },
       { menu_code: "MY_LEADS", label: "My Leads", route: "staff-my-leads" },
       { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "auto-dialer" },
+      { menu_code: "SOFTPHONE", label: "Calling & Softphone", route: "softphone" },
       { menu_code: "BANK_WISE_LEADS", label: "Field staff leads", route: "staff-bank-wise-leads" },
       { menu_code: "TEAM_LEADS", label: "Team Leads", route: "staff-team-leads" },
       { menu_code: "LEADS_MASTER", label: "Staff Leads", route: "staff-leads" },
@@ -399,8 +400,8 @@ export class SideDrawer {
           { menu_code: "KRA_STATUS", label: `<i class="fas fa-chart-bar" style="margin-right: 8px; width: 18px; text-align: center;"></i> KRA Status`, route: "kras" },
           { menu_code: "TIME_SHEET", label: `<i class="fas fa-clock" style="margin-right: 8px; width: 18px; text-align: center;"></i> Time Sheet`, route: "timesheet" },
           { menu_code: "WHATSAPP_CENTER", label: `<i class="fab fa-whatsapp" style="margin-right: 8px; width: 18px; text-align: center; color: #25d366;"></i> WhatsApp Center`, route: "staff-whatsapp" },
-          { menu_code: "CALLING_PAGE", label: `<i class="fas fa-phone-alt" style="margin-right: 8px; width: 18px; text-align: center; color: #3b82f6;"></i> Calling Page`, route: "softphone" },
-          { menu_code: "AUTO_DIALER", label: `<i class="fas fa-phone-volume" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i> Auto Dialer`, route: "auto-dialer" }
+          { menu_code: "AUTO_DIALER", label: `<i class="fas fa-phone-volume" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i> Auto Dialer`, route: "auto-dialer" },
+          { menu_code: "CALLING_PAGE", label: `<i class="fas fa-headset" style="margin-right: 8px; width: 18px; text-align: center; color: #3b82f6;"></i> Calling & Softphone`, route: "softphone" }
         ];
       }
     }
@@ -743,36 +744,44 @@ export class SideDrawer {
 
       'AUTO_DIALER': 3,
       'staff_auto_dialer': 3,
+      'staff_dialer': 3,
       'auto-dialer': 3,
 
-      'BANK_WISE_LEADS': 4,
-      'staff_bank_wise_leads': 4,
-      'staff-bank-wise-leads': 4,
+      'SOFTPHONE': 4,
+      'staff_softphone': 4,
+      'softphone': 4,
+      'CALLING_PAGE': 4,
+      'calling': 4,
+      'phone-dialpad': 4,
 
-      'TEAM_LEADS': 5,
-      'staff_team_leads': 5,
-      'staff-team-leads': 5,
+      'BANK_WISE_LEADS': 5,
+      'staff_bank_wise_leads': 5,
+      'staff-bank-wise-leads': 5,
 
-      'WHATSAPP_CENTER': 6,
-      'staff_crm_whatsapp_inbox': 6,
-      'staff-whatsapp': 6,
+      'TEAM_LEADS': 6,
+      'staff_team_leads': 6,
+      'staff-team-leads': 6,
 
-      'CALL_TRACKING': 7,
-      'call_tracking_dashboard': 7,
-      'staff-call-tracking': 7,
+      'WHATSAPP_CENTER': 7,
+      'staff_crm_whatsapp_inbox': 7,
+      'staff-whatsapp': 7,
 
-      'OPERATOR_CALLS': 8,
-      'staff_operator_calls': 8,
-      'operator-calls': 8,
+      'CALL_TRACKING': 8,
+      'call_tracking_dashboard': 8,
+      'staff-call-tracking': 8,
 
-      'VGK_TEAM_MEMBERS': 9,
-      'staff_vgk_members': 9,
-      'staff-vgk-members': 9,
+      'OPERATOR_CALLS': 9,
+      'staff_operator_calls': 9,
+      'operator-calls': 9,
 
-      'STAFF_LEADS': 10,
-      'staff_leads': 10,
-      'LEADS_MASTER': 10,
-      'leads_master': 10
+      'VGK_TEAM_MEMBERS': 10,
+      'staff_vgk_members': 10,
+      'staff-vgk-members': 10,
+
+      'STAFF_LEADS': 11,
+      'staff_leads': 11,
+      'LEADS_MASTER': 11,
+      'leads_master': 11
     };
 
     const sectionMap = new Map<string, MenuSection>();
@@ -799,7 +808,7 @@ export class SideDrawer {
       const codeUpper = (rawCode || '').toUpperCase();
       const routeLower = (rawRoutePath || '').toLowerCase();
 
-      if (codeUpper.includes('AUTO_DIALER') || routeLower.includes('auto-dialer') || routeLower === '/staff/dialer' || codeUpper === 'STAFF_AUTO_DIALER' || codeUpper === 'AUTO_DIALER') {
+      if (codeUpper.includes('AUTO_DIALER') || routeLower.includes('auto-dialer') || routeLower === '/staff/dialer' || codeUpper === 'STAFF_AUTO_DIALER' || codeUpper === 'AUTO_DIALER' || codeUpper === 'STAFF_DIALER' || codeUpper === 'DIALER') {
         label = 'Auto Dialer';
       } else if (codeUpper.includes('BANK_WISE_LEADS') || routeLower.includes('bank-wise-leads')) {
         label = 'Field staff leads';
@@ -811,7 +820,7 @@ export class SideDrawer {
         label = 'Category Lead Master';
       } else if (codeUpper.includes('WHATSAPP') || routeLower.includes('whatsapp')) {
         label = 'WhatsApp Center';
-      } else if (codeUpper.includes('SOFTPHONE') || codeUpper === 'PHONE_DIALPAD' || routeLower.includes('softphone') || routeLower.includes('calling') || routeLower.includes('phone-dialpad')) {
+      } else if (codeUpper.includes('SOFTPHONE') || codeUpper === 'PHONE_DIALPAD' || codeUpper === 'CALLING_PAGE' || routeLower.includes('softphone') || routeLower.includes('calling') || routeLower.includes('phone-dialpad')) {
         label = 'Calling & Softphone';
       } else if (codeUpper.includes('VGK_TEAM_MEMBERS') || codeUpper === 'STAFF_VGK_MEMBERS' || routeLower.includes('vgk/members')) {
         label = 'VGK Channel Partners';
@@ -930,12 +939,31 @@ export class SideDrawer {
 
     if (crmSec) {
       crmSec.items = crmSec.items || [];
-      const hasAutoDialer = crmSec.items.some(i => i.route === 'auto-dialer' || (i.menu_code && i.menu_code.toUpperCase().includes('AUTO_DIALER')));
+
+      // Guarantee Auto Dialer with explicit clean label & icon
+      const hasAutoDialer = crmSec.items.some(i => i.route === 'auto-dialer' || (i.menu_code && (i.menu_code.toUpperCase().includes('AUTO_DIALER') || i.menu_code.toUpperCase().includes('DIALER'))));
       if (!hasAutoDialer) {
         crmSec.items.push({
           menu_code: "AUTO_DIALER",
           label: `<i class="fas fa-phone-volume" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Auto Dialer`,
           route: "auto-dialer"
+        });
+      } else {
+        // Enforce proper label for Auto Dialer
+        for (const item of crmSec.items) {
+          if (item.route === 'auto-dialer' || (item.menu_code && (item.menu_code.toUpperCase().includes('AUTO_DIALER') || item.menu_code.toUpperCase().includes('DIALER')))) {
+            item.label = `<i class="fas fa-phone-volume" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Auto Dialer`;
+          }
+        }
+      }
+
+      // Guarantee Calling & Softphone as distinct standalone item
+      const hasSoftphone = crmSec.items.some(i => i.route === 'softphone' || (i.menu_code && (i.menu_code.toUpperCase().includes('SOFTPHONE') || i.menu_code.toUpperCase().includes('CALLING'))));
+      if (!hasSoftphone) {
+        crmSec.items.push({
+          menu_code: "SOFTPHONE",
+          label: `<i class="fas fa-headset" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Calling & Softphone`,
+          route: "softphone"
         });
       }
     }

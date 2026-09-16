@@ -5,7 +5,7 @@ Handles WhatsApp OTP sending, message logging, and delivery tracking via Meta Cl
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, Query, Body, BackgroundTasks, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, or_, text
 from app.core.database import get_db
 from app.core.security import get_current_user, get_current_admin_user, get_current_user_hybrid, get_current_user_any, get_current_staff_user_from_hybrid
 from app.models.user import User
@@ -5262,17 +5262,34 @@ def get_wa_job_targets(
     from app.services.automation_tracking_service import get_job_targets
     company_id = getattr(current_user, 'base_company_id', 1) or 1
     db_targets = get_job_targets(db, job_id, company_id=company_id)
-    recipients = [
-        {
-            "id": t["id"],
-            "type": (t["recipient_type"] or "group").lower(),
-            "name": t["recipient_name"],
-            "identifier": t["recipient_identifier"],
-            "target_role": t.get("target_role", "PRIMARY"),
-            "is_active": t.get("is_active", True)
-        }
-        for t in db_targets
-    ]
+
+    if not db_targets:
+        active_targets = _load_targets_from_db(db)
+        fallback_tgts = active_targets.get(job_id, [])
+        recipients = [
+            {
+                "id": t.get("id"),
+                "type": (t.get("type") or "group").lower(),
+                "name": t.get("name") or "Recipient",
+                "identifier": t.get("identifier") or "",
+                "target_role": t.get("target_role", "PRIMARY"),
+                "is_active": t.get("is_active", True)
+            }
+            for t in fallback_tgts
+        ]
+    else:
+        recipients = [
+            {
+                "id": t["id"],
+                "type": (t["recipient_type"] or "group").lower(),
+                "name": t["recipient_name"],
+                "identifier": t["recipient_identifier"],
+                "target_role": t.get("target_role", "PRIMARY"),
+                "is_active": t.get("is_active", True)
+            }
+            for t in db_targets
+        ]
+
     is_dynamic = job_id in ('missed_call_ack', 'wa_daily_morning_wish', 'vgk_member_morning_statement', 'vgk_member_zero_lead_motivational')
     return {
         "success": True,
@@ -5287,10 +5304,10 @@ def update_wa_job_targets(
     db: Session = Depends(get_db),
     current_user=Depends(_require_staff_optional)
 ):
-    """Adds or removes a target recipient group or custom number for a job."""
-    from app.services.automation_tracking_service import add_job_target, remove_job_target, get_job_targets
+    """Adds, updates, or removes a target recipient group or custom number for a job."""
+    from app.services.automation_tracking_service import add_job_target, remove_job_target, update_job_target, get_job_targets
     job_id = payload.get("job_id")
-    action = payload.get("action")  # 'add' or 'remove'
+    action = payload.get("action")  # 'add', 'update', or 'remove'
     if not job_id or not action:
         raise HTTPException(status_code=400, detail="job_id and action required")
 
@@ -5310,8 +5327,44 @@ def update_wa_job_targets(
             recipient_name=name,
             target_role=target_role
         )
-        recipients = get_job_targets(db, job_id, company_id=company_id)
-        return {"success": True, "message": f"Added target '{name}'", "recipients": recipients}
+        return get_wa_job_targets(job_id=job_id, db=db, current_user=current_user)
+
+    elif action in ("update", "edit"):
+        target_id = payload.get("target_id")
+        if not target_id:
+            raise HTTPException(status_code=400, detail="target_id required for update")
+        name = payload.get("name")
+        identifier = payload.get("identifier")
+        target_type = payload.get("type")
+        target_role = payload.get("target_role")
+        is_active = payload.get("is_active")
+
+        try:
+            tid = int(target_id)
+            updated_row = update_job_target(
+                db=db,
+                target_id=tid,
+                company_id=company_id,
+                name=name,
+                identifier=identifier,
+                target_type=target_type.upper() if target_type else None,
+                target_role=target_role.upper() if target_role else None,
+                is_active=is_active
+            )
+            if not updated_row:
+                raise HTTPException(status_code=404, detail="Target not found")
+        except (ValueError, TypeError):
+            # Fallback for string IDs in legacy JSON
+            active_targets = _load_targets_from_db(db)
+            for t in active_targets.get(job_id, []):
+                if t.get("id") == target_id:
+                    if name: t["name"] = name
+                    if identifier: t["identifier"] = identifier
+                    if target_type: t["type"] = target_type.lower()
+                    if target_role: t["target_role"] = target_role.upper()
+            _save_targets_to_db(db, active_targets)
+
+        return get_wa_job_targets(job_id=job_id, db=db, current_user=current_user)
 
     elif action == "remove":
         target_id = payload.get("target_id")
@@ -5324,8 +5377,7 @@ def update_wa_job_targets(
             active_targets[job_id] = [t for t in active_targets.get(job_id, []) if t.get("id") != target_id]
             _save_targets_to_db(db, active_targets)
 
-        recipients = get_job_targets(db, job_id, company_id=company_id)
-        return {"success": True, "message": "Target removed successfully", "recipients": recipients}
+        return get_wa_job_targets(job_id=job_id, db=db, current_user=current_user)
 
     raise HTTPException(status_code=400, detail=f"Invalid action: {action}")
 
@@ -5348,6 +5400,19 @@ def add_job_target_rest(
     payload["action"] = "add"
     return update_wa_job_targets(payload=payload, db=db, current_user=current_user)
 
+@router.put("/jobs/{job_id}/targets/{target_id}")
+def update_job_target_rest(
+    job_id: str,
+    target_id: int,
+    payload: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(_require_staff_optional)
+):
+    payload["job_id"] = job_id
+    payload["target_id"] = target_id
+    payload["action"] = "update"
+    return update_wa_job_targets(payload=payload, db=db, current_user=current_user)
+
 @router.delete("/jobs/{job_id}/targets/{target_id}")
 def delete_job_target_rest(
     job_id: str,
@@ -5356,6 +5421,7 @@ def delete_job_target_rest(
     current_user=Depends(_require_staff_optional)
 ):
     return update_wa_job_targets(payload={"job_id": job_id, "action": "remove", "target_id": target_id}, db=db, current_user=current_user)
+
 
 @router.get("/executions/{execution_id}/dispatches")
 def get_execution_dispatches(
@@ -5399,7 +5465,7 @@ def get_execution_dispatches(
             "queue_id": d.queue_id,
             "provider_message_id": d.provider_message_id,
             "error_message": d.error_message,
-            "created_at": d.created_at.strftime('%d %b %Y, %I:%M:%S %p') if d.created_at else '—',
+            "created_at": (getattr(d, 'created_at', None) or getattr(d, 'sent_at', None) or getattr(d, 'delivered_at', None) or getattr(d, 'failed_at', None)).strftime('%d %b %Y, %I:%M:%S %p') if (getattr(d, 'created_at', None) or getattr(d, 'sent_at', None) or getattr(d, 'delivered_at', None) or getattr(d, 'failed_at', None)) else '—',
             "is_legacy": d.is_legacy
         })
 

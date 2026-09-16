@@ -98,6 +98,14 @@ wait_for_http() {
 # Start / Stop Handlers
 # ------------------------------------------------------------------------------
 start_backend() {
+    local existing_pid=$(lsof -nP -i :8000 -sTCP:LISTEN -t 2>/dev/null | head -1)
+    if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
+        BACKEND_PID="$existing_pid"
+        echo "$BACKEND_PID" > "$LOG_DIR/backend.pid"
+        log_msg "FastAPI Backend already listening on port 8000 (PID=$BACKEND_PID). Adopted into supervisor."
+        return 0
+    fi
+
     log_msg "Starting FastAPI Backend on port 8000..."
     cd "$PROJECT_DIR/backend"
     "$PYTHON_BIN" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 >> "$LOG_DIR/backend.log" 2>&1 &
@@ -113,6 +121,14 @@ start_backend() {
 }
 
 start_frontend() {
+    local existing_pid=$(lsof -nP -i :5001 -sTCP:LISTEN -t 2>/dev/null | head -1)
+    if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
+        NODE_PID="$existing_pid"
+        echo "$NODE_PID" > "$LOG_DIR/frontend.pid"
+        log_msg "Node Frontend already listening on port 5001 (PID=$NODE_PID). Adopted into supervisor."
+        return 0
+    fi
+
     log_msg "Starting Node Frontend on port 5001..."
     cd "$PROJECT_DIR/frontend"
     export PORT=5001
@@ -186,6 +202,13 @@ reload_backend() {
             count=$((count + 1))
         done
         log_msg "Previous FastAPI Backend process (PID=$BACKEND_PID) exited cleanly."
+    fi
+    
+    # Ensure port 8000 is completely released
+    local lingering_pid=$(lsof -nP -i :8000 -sTCP:LISTEN -t 2>/dev/null | head -1)
+    if [ -n "$lingering_pid" ]; then
+        kill -9 "$lingering_pid" 2>/dev/null || true
+        sleep 1
     fi
     
     start_backend
