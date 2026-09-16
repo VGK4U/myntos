@@ -1626,9 +1626,21 @@
                         window.PlivoSoftphone.refreshAndLogin().catch(() => {});
                     }
 
-                    setTimeout(() => {
+                    const triggerQuickDial = () => {
                         dialFromHub(cleanDigits, targetName, targetLeadId);
-                    }, 800);
+                    };
+                    if (window.PlivoSoftphone && window.PlivoSoftphone.isRegistered) {
+                        setTimeout(triggerQuickDial, 300);
+                    } else {
+                        let quickAttempts = 0;
+                        const quickInterval = setInterval(() => {
+                            quickAttempts++;
+                            if ((window.PlivoSoftphone && window.PlivoSoftphone.isRegistered) || quickAttempts >= 30) {
+                                clearInterval(quickInterval);
+                                triggerQuickDial();
+                            }
+                        }, 300);
+                    }
                 }
 
             } catch (err) {
@@ -1676,10 +1688,22 @@
 
             if (autoDial && cleanDigits) {
                 console.log(`[SOFTPHONE] Auto-dialing lead ${targetName} (${cleanDigits})...`);
-                // Give Plivo WebRTC singleton 1.2 seconds to finish registration
-                setTimeout(() => {
+                const triggerAutoDial = () => {
                     dialFromHub(cleanDigits, targetName, leadId);
-                }, 1200);
+                };
+                if (window.PlivoSoftphone && window.PlivoSoftphone.isRegistered) {
+                    setTimeout(triggerAutoDial, 300);
+                } else {
+                    let attempts = 0;
+                    const maxAttempts = 30; // up to 9s poll
+                    const pollInterval = setInterval(() => {
+                        attempts++;
+                        if ((window.PlivoSoftphone && window.PlivoSoftphone.isRegistered) || attempts >= maxAttempts) {
+                            clearInterval(pollInterval);
+                            triggerAutoDial();
+                        }
+                    }, 300);
+                }
             }
         }
 

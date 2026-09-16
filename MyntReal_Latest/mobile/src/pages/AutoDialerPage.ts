@@ -1249,15 +1249,15 @@ export class AutoDialerPage {
             </div>
             <div class="dc-form-row">
               <label>Source</label>
-              <input type="text" id="dc-edit-source" value="${lead?.source || ''}" placeholder="e.g. Google, Walk-in, Referral">
+              <input type="text" id="dc-edit-source" value="${this._escapeHtml(lead?.source || '')}" placeholder="e.g. Google, Walk-in, Referral">
             </div>
             <div class="dc-form-row">
               <label>Source Details</label>
-              <input type="text" id="dc-edit-source-details" value="${lead?.source_details || ''}" placeholder="Campaign name, referrer, medium...">
+              <input type="text" id="dc-edit-source-details" value="${this._escapeHtml(lead?.source_details || '')}" placeholder="Campaign name, referrer, medium...">
             </div>
             <div class="dc-form-row">
               <label>Tags</label>
-              <input type="text" id="dc-edit-tags" value="${lead?.tags || ''}" placeholder="Comma-separated tags">
+              <input type="text" id="dc-edit-tags" value="${this._escapeHtml(lead?.tags || '')}" placeholder="Comma-separated tags">
             </div>
 
             <!-- ─── Requirements ──────────────────────────────── -->
@@ -1715,18 +1715,29 @@ export class AutoDialerPage {
         : (effectiveTeleId ? 'staff' : undefined);
       const effectiveHandlerId = this.popupLeadData?.handler_id || (effectiveTeleId && currentUser?.emp_code ? currentUser.emp_code : undefined);
 
+      const rawPhone = val('dc-edit-phone');
+      const cleanPhoneDigits = (rawPhone || '').replace(/\D/g, '');
+      const isMaskedPhone = (rawPhone || '').includes('*') || (rawPhone || '').includes('•') || (rawPhone && cleanPhoneDigits.length < 10);
+
+      const rawAltPhone = val('dc-edit-alt-phone');
+      const cleanAltDigits = (rawAltPhone || '').replace(/\D/g, '');
+      const isMaskedAlt = (rawAltPhone || '').includes('*') || (rawAltPhone || '').includes('•') || (rawAltPhone && cleanAltDigits.length < 10);
+
+      const rawSourceDetails = val('dc-edit-source-details');
+      const isCorruptedSourceDetails = rawSourceDetails === '{' || (rawSourceDetails.startsWith('{') && !rawSourceDetails.endsWith('}'));
+
       const leadPutPayload: Record<string, any> = {
         name:                      val('dc-edit-name')            || undefined,
         email:                     val('dc-edit-email')           || undefined,
-        phone:                     val('dc-edit-phone')           || undefined,
+        phone:                     (!isMaskedPhone && rawPhone)   ? rawPhone : undefined,
         phone_primary_whatsapp:    chk('dc-edit-phone-wa'),
-        alternate_phone:           val('dc-edit-alt-phone')       || undefined,
+        alternate_phone:           (!isMaskedAlt && rawAltPhone)  ? rawAltPhone : undefined,
         phone_secondary_whatsapp:  chk('dc-edit-alt-phone-wa'),
         status,
         priority,
         category_id:               catRaw ? parseInt(catRaw)      : undefined,
         source:                    val('dc-edit-source')          || undefined,
-        source_details:            val('dc-edit-source-details')  || undefined,
+        source_details:            (!isCorruptedSourceDetails && rawSourceDetails) ? rawSourceDetails : undefined,
         tags:                      val('dc-edit-tags')            || undefined,
         description:               txt('dc-edit-desc')            || undefined,
         requirements:              txt('dc-edit-requirements')    || undefined,

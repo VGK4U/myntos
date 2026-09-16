@@ -11211,6 +11211,20 @@ def update_lead(
     
     update_data = lead_data.dict(exclude_unset=True)
 
+    # DC-MASK-GUARD: Never allow masked phone numbers or truncated source_details to be saved
+    if 'phone' in update_data:
+        p = str(update_data['phone'] or '').strip()
+        if '*' in p or '•' in p or (p and len(''.join(c for c in p if c.isdigit())) < 10):
+            del update_data['phone']
+    if 'alternate_phone' in update_data:
+        ap = str(update_data['alternate_phone'] or '').strip()
+        if '*' in ap or '•' in ap or (ap and len(''.join(c for c in ap if c.isdigit())) < 10):
+            del update_data['alternate_phone']
+    if 'source_details' in update_data:
+        sd_val = str(update_data['source_details'] or '').strip()
+        if sd_val == '{' or (sd_val.startswith('{') and not sd_val.endswith('}')):
+            del update_data['source_details']
+
     # DC-CFV-EDIT-001: confirmed_final_value is an admin override field.
     if 'confirmed_final_value' in update_data:
         _cfv_is_allowed = (
@@ -17207,6 +17221,10 @@ async def update_lead_full(
     status = _clean_body_param(status)
     name = _clean_body_param(name)
     phone = _clean_body_param(phone)
+    if phone is not None:
+        p_clean = str(phone).strip()
+        if '*' in p_clean or '•' in p_clean or (p_clean and len(''.join(c for c in p_clean if c.isdigit())) < 10):
+            phone = None
     email = _clean_body_param(email)
     priority = _clean_body_param(priority)
     source = _clean_body_param(source)

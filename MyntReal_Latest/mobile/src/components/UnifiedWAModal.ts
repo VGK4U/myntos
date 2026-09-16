@@ -475,8 +475,9 @@ class UnifiedWAModal {
 
     const { phone, name, leadId } = this.currentOptions;
     const cleanPhone = (phone || '').replace(/\D/g, '').slice(-10);
+    const hasValidLeadId = !!(leadId && leadId !== 'new' && !isNaN(Number(leadId)));
 
-    if (!cleanPhone || cleanPhone.length < 10) {
+    if ((!cleanPhone || cleanPhone.length < 10) && !hasValidLeadId) {
       this.showFeedback('Invalid recipient phone number.', 'error');
       return;
     }
@@ -489,9 +490,9 @@ class UnifiedWAModal {
       this.showFeedback('Dispatching via WhatsApp Cloud API...', 'info');
 
       try {
-        const leadTargetId = (leadId && leadId !== 'new' && !isNaN(Number(leadId))) ? Number(leadId) : 0;
+        const leadTargetId = hasValidLeadId ? Number(leadId) : 0;
         const response = await apiService.post<any>(`/whatsapp-config/crm-lead-send/${leadTargetId}`, {
-          phone: cleanPhone,
+          phone: cleanPhone.length >= 10 ? cleanPhone : undefined,
           custom_message: msg,
           send_mode: 'company'
         });
@@ -521,11 +522,11 @@ class UnifiedWAModal {
 
     try {
       const response = await apiService.post<any>('/whatsapp/send-message', {
-        recipient: cleanPhone,
+        recipient: cleanPhone.length >= 10 ? cleanPhone : 'LEAD_RESOLVE',
         message: msg,
         recipient_type: 'individual',
         recipient_name: name || 'Customer',
-        lead_id: leadId || null
+        lead_id: hasValidLeadId ? Number(leadId) : (leadId || null)
       });
 
       if (response.success) {

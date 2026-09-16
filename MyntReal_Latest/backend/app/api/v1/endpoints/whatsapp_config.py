@@ -205,7 +205,7 @@ class TestSendSchema(BaseModel):
 
 
 class DirectLeadSendSchema(BaseModel):
-    phone: str
+    phone: Optional[str] = None
     template_id: Optional[int] = None
     custom_message: Optional[str] = None
     context_vars: Optional[dict] = {}
@@ -1397,9 +1397,32 @@ def crm_lead_send(
         if not lead:
             raise HTTPException(404, "Lead not found")
 
-    phone = data.phone or (getattr(lead, 'phone', None) if lead else None) or (getattr(lead, 'mobile', None) if lead else None)
-    if not phone:
-        raise HTTPException(400, "No phone number available for this WhatsApp send")
+    def _is_invalid_phone(p_str):
+        if not p_str:
+            return True
+        s = str(p_str).strip()
+        return '*' in s or '•' in s or len(''.join(c for c in s if c.isdigit())) < 10
+
+    phone = data.phone
+    if _is_invalid_phone(phone):
+        phone = (getattr(lead, 'phone', None) if lead else None) or (getattr(lead, 'mobile', None) if lead else None)
+
+    if _is_invalid_phone(phone) and lead:
+        from sqlalchemy import text as _t_phone
+        real_p = db.execute(
+            _t_phone("SELECT phone_norm FROM crm_lead_phones WHERE lead_id = :lid AND is_primary = true AND phone_norm NOT LIKE '%*%' AND phone_norm NOT LIKE '%•%' LIMIT 1"),
+            {"lid": lead.id}
+        ).scalar()
+        if not real_p:
+            real_p = db.execute(
+                _t_phone("SELECT phone_norm FROM crm_lead_phones WHERE lead_id = :lid AND phone_norm NOT LIKE '%*%' AND phone_norm NOT LIKE '%•%' LIMIT 1"),
+                {"lid": lead.id}
+            ).scalar()
+        if real_p:
+            phone = real_p
+
+    if not phone or _is_invalid_phone(phone):
+        raise HTTPException(400, "No valid unmasked phone number available for this WhatsApp send")
 
     # Resolve staff name for activity notes
     staff_id = _get_staff_id(current_user)

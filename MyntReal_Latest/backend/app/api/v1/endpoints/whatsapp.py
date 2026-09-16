@@ -4399,6 +4399,47 @@ def send_manual_whatsapp_message(
         raise HTTPException(status_code=400, detail="Recipient is required")
 
     clean_target = rec
+
+    # Resolve recipient phone if masked or placeholder when lead_id is provided
+    lead_id_val = None
+    if payload.lead_id and str(payload.lead_id).lower() not in ('none', 'null', '', '0', 'new'):
+        try:
+            lead_id_val = int(payload.lead_id)
+        except Exception:
+            pass
+
+    digits_check = ''.join(filter(str.isdigit, rec))
+    if ('*' in rec or '•' in rec or len(digits_check) < 10 or rec == 'LEAD_RESOLVE') and lead_id_val:
+        from app.models.crm import CRMLead
+        from sqlalchemy import text as _t_sql
+        _resolved_phone = None
+        _crm_lead = db.query(CRMLead).filter(CRMLead.id == lead_id_val).first()
+        if _crm_lead and _crm_lead.phone and '*' not in _crm_lead.phone and '•' not in _crm_lead.phone:
+            _rp_digits = ''.join(filter(str.isdigit, _crm_lead.phone))
+            if len(_rp_digits) >= 10:
+                _resolved_phone = _rp_digits[-10:]
+        if not _resolved_phone:
+            _raw_p = db.execute(
+                _t_sql("SELECT phone_norm FROM crm_lead_phones WHERE lead_id = :lid AND is_primary = true AND phone_norm NOT LIKE '%*%' AND phone_norm NOT LIKE '%•%' LIMIT 1"),
+                {"lid": lead_id_val}
+            ).scalar()
+            if not _raw_p:
+                _raw_p = db.execute(
+                    _t_sql("SELECT phone_norm FROM crm_lead_phones WHERE lead_id = :lid AND phone_norm NOT LIKE '%*%' AND phone_norm NOT LIKE '%•%' LIMIT 1"),
+                    {"lid": lead_id_val}
+                ).scalar()
+            if not _raw_p:
+                _raw_p = db.execute(
+                    _t_sql("SELECT phone_number FROM staff_call_logs WHERE matched_lead_id = :lid AND phone_number NOT LIKE '%*%' AND phone_number NOT LIKE '%•%' LIMIT 1"),
+                    {"lid": lead_id_val}
+                ).scalar()
+            if _raw_p:
+                _rp_digits = ''.join(filter(str.isdigit, _raw_p))
+                if len(_rp_digits) >= 10:
+                    _resolved_phone = _rp_digits[-10:]
+        if _resolved_phone:
+            rec = _resolved_phone
+            clean_target = _resolved_phone
     if rec_type in ("individual", "phone", "contact", "staff", "user"):
         digits = ''.join(filter(str.isdigit, rec))
         if len(digits) >= 10:

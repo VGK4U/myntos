@@ -235,6 +235,14 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int, force_queue: bo
     category_name = None
     if getattr(lead, 'category_id', None):
         try:
+            from sqlalchemy import text
+            c_row = db.execute(text("SELECT name FROM signup_categories WHERE id = :cid"), {"cid": lead.category_id}).fetchone()
+            if c_row and c_row[0]:
+                category_name = str(c_row[0]).strip()
+        except Exception as _cat_sql_err:
+            logger.warning(f"[WA-GROUP-ALERT] Category SQL lookup note: {_cat_sql_err}")
+    if not category_name and getattr(lead, 'category_id', None):
+        try:
             from app.models.signup_category import SignupCategory
             cat = db.query(SignupCategory).get(lead.category_id)
             if cat:
@@ -242,7 +250,17 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int, force_queue: bo
         except Exception:
             pass
     if not category_name:
-        category_name = getattr(lead, 'looking_for', '') or getattr(lead, 'requirement', '') or sd.get('ivr_option') or sd.get('category') or None
+        category_name = (
+            getattr(lead, 'looking_for', '') or 
+            getattr(lead, 'requirements', '') or 
+            getattr(lead, 'product_interest', '') or 
+            sd.get('ivr_option') or 
+            sd.get('category') or 
+            None
+        )
+
+    # Comments / Notes
+    recent_comments = (getattr(lead, 'recent_comments', '') or '').strip()
 
     # MyOperator Missed By / Dialed Operator lookup
     missed_by = sd.get('missed_by') or sd.get('operator_name') or sd.get('handled_by') or None
@@ -312,7 +330,10 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int, force_queue: bo
         msg_lines.append(f"📞 *Missed By / Operator*: {missed_by}")
     msg_lines.append(f"⏰ *Lead Generated*: {time_str}")
 
-    # Build Q&A summary
+    if recent_comments:
+        msg_lines.append(f"\n💬 *Comments / Notes*: {recent_comments}")
+
+    # Build Q&A summary for basic other details
     qa_parts = []
     if electricity_bill: qa_parts.append(f"• Monthly Electricity Bill: {electricity_bill}")
     if property_type:    qa_parts.append(f"• Property Type: {property_type}")
@@ -322,7 +343,9 @@ def send_instant_new_lead_group_alert(db: Session, lead_id: int, force_queue: bo
         'full_name', 'name', 'first_name', 'last_name', 'email', 'phone_number', 'phone',
         'city', 'location', 'state', 'post_code', 'zip_code', 'pincode', 'phone_number_verified',
         'what_is_your_monthly_electricity_bill?', 'electricity_bill', 'monthly_electricity_bill', 'bill_amount',
-        'type_of_property', 'property_type'
+        'type_of_property', 'property_type',
+        # Technical ad/campaign keys omitted per user instruction
+        'ad_id', 'adset_id', 'campaign_id', 'form_id', 'page_id', 'page_segment', 'created_time', 'is_organic', 'platform', 'lead_id'
     }
     for k, v in raw_fields.items():
         if k not in _known_keys and v:
