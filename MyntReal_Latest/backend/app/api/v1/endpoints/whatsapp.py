@@ -5796,16 +5796,28 @@ def _generate_qr_data_uri(raw_qr: str) -> str:
         return ""
 
 
+_last_bot_status_cache = None
+_last_bot_status_time = 0.0
+
+
 @router.get("/bot-status")
 def get_whatsapp_bot_status():
     """
     Queries local Baileys gateway on port 5002 and returns real-time connection status,
     generation ID, and readiness without conflating reconnecting with logout.
     Uses local in-memory QR image generation for instant zero-latency rendering.
+    Protected by 2-second in-memory cache and strict 1.5s timeout to avoid worker starvation.
     """
+    global _last_bot_status_cache, _last_bot_status_time
+    import time
+    now_mono = time.monotonic()
+    if _last_bot_status_cache and (now_mono - _last_bot_status_time) < 2.0:
+        return _last_bot_status_cache
+
     now_ts = int(datetime.utcnow().timestamp() * 1000)
+    res = None
     try:
-        rqr = requests.get("http://localhost:5002/qr-data", timeout=3)
+        rqr = requests.get("http://localhost:5002/qr-data", timeout=1.5)
         if rqr.status_code == 200:
             qdata = rqr.json()
             st = qdata.get("status", "disconnected")
@@ -5817,7 +5829,7 @@ def get_whatsapp_bot_status():
             qr_url = local_qr_uri or qdata.get("qr_url") or ""
             qr_avail = bool(qr_url and st in ("qr_ready", "disconnected"))
             is_conflict = (st == "session_conflict" or bool(qdata.get("is_conflict", False)))
-            return {
+            res = {
                 "success": True,
                 "connected": is_conn,
                 "status": st,
@@ -5831,44 +5843,51 @@ def get_whatsapp_bot_status():
                 "message": qdata.get("message"),
                 "timestamp": qdata.get("timestamp", now_ts)
             }
-        r = requests.get("http://localhost:5002/status", timeout=3)
-        if r.status_code == 200:
-            data = r.json()
-            st = data.get("status", "disconnected")
-            is_conn = (st == "connected")
-            can_send = bool(data.get("can_send_now", is_conn))
-            raw_qr = data.get("qr") or ""
-            local_qr_uri = _generate_qr_data_uri(raw_qr) if raw_qr else ""
-            is_conflict = (st == "session_conflict" or bool(data.get("is_conflict", False)))
-            return {
-                "success": True,
-                "connected": is_conn,
-                "status": st,
-                "connection_state": st,
-                "is_conflict": is_conflict,
-                "can_send_now": can_send,
-                "qr": local_qr_uri,
-                "raw_qr": raw_qr,
-                "qr_available": bool(local_qr_uri and st in ("qr_ready", "disconnected")),
-                "generation_id": data.get("generation_id", 0),
-                "message": data.get("message"),
-                "timestamp": data.get("timestamp", now_ts)
-            }
+        else:
+            r = requests.get("http://localhost:5002/status", timeout=1.0)
+            if r.status_code == 200:
+                data = r.json()
+                st = data.get("status", "disconnected")
+                is_conn = (st == "connected")
+                can_send = bool(data.get("can_send_now", is_conn))
+                raw_qr = data.get("qr") or ""
+                local_qr_uri = _generate_qr_data_uri(raw_qr) if raw_qr else ""
+                is_conflict = (st == "session_conflict" or bool(data.get("is_conflict", False)))
+                res = {
+                    "success": True,
+                    "connected": is_conn,
+                    "status": st,
+                    "connection_state": st,
+                    "is_conflict": is_conflict,
+                    "can_send_now": can_send,
+                    "qr": local_qr_uri,
+                    "raw_qr": raw_qr,
+                    "qr_available": bool(local_qr_uri and st in ("qr_ready", "disconnected")),
+                    "generation_id": data.get("generation_id", 0),
+                    "message": data.get("message"),
+                    "timestamp": data.get("timestamp", now_ts)
+                }
     except Exception as e:
         logger.debug(f"[WA-STATUS] Gateway poll note: {e}")
-    return {
-        "success": True,
-        "connected": False,
-        "status": "disconnected",
-        "connection_state": "disconnected",
-        "can_send_now": False,
-        "qr": "",
-        "raw_qr": "",
-        "qr_available": False,
-        "generation_id": 0,
-        "timestamp": now_ts,
-        "message": "WhatsApp Gateway service offline. Will preserve any existing session credentials upon restart."
-    }
+
+    if not res:
+        res = {
+            "success": True,
+            "connected": False,
+            "status": "disconnected",
+            "connection_state": "disconnected",
+            "can_send_now": False,
+            "qr": "",
+            "raw_qr": "",
+            "qr_available": False,
+            "generation_id": 0,
+            "timestamp": now_ts,
+            "message": "WhatsApp Gateway service offline. Will preserve any existing session credentials upon restart."
+        }
+
+    _last_bot_status_cache = res
+    _last_bot_status_time = now_mono
+    return res
 
 
 @router.get("/gateway-status-qr")

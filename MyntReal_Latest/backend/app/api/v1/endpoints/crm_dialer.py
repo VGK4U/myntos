@@ -61,6 +61,15 @@ def _parse_followup_to_ist_naive(nfd_val: Any) -> Optional[datetime]:
         dt = dt.astimezone(IST).replace(tzinfo=None)
     return dt
 
+
+def _safe_iso(val: Any) -> Optional[str]:
+    """[DC-DIALER-ISO-SAFE] Safely convert datetime or string representation to ISO string without raising AttributeError."""
+    if val is None:
+        return None
+    if hasattr(val, 'isoformat'):
+        return val.isoformat()
+    return str(val)
+
 # ── DC_DIALER_WS: In-memory registry + single shared PG LISTEN per worker process ──
 # Maps user_ref (str) -> asyncio.Queue for pushing messages to the WS handler
 _dialer_ws_registry: Dict[str, asyncio.Queue] = {}
@@ -1275,8 +1284,8 @@ def _lead_to_queue_item(lead: CRMLead, slot_type: str, cat_map: Optional[dict] =
         'area': lead.area or '',
         'budget_min': lead.budget_min,
         'budget_max': lead.budget_max,
-        'next_followup_date': lead.next_followup_date.isoformat() if lead.next_followup_date else None,
-        'last_contact_date': lead.last_contact_date.isoformat() if lead.last_contact_date else None,
+        'next_followup_date': _safe_iso(lead.next_followup_date),
+        'last_contact_date': _safe_iso(lead.last_contact_date),
         'last_contact_days': last_contact_days,
         'queue_priority': priority_label,
         'slot_type': slot_type,
@@ -1570,9 +1579,9 @@ async def get_dialer_lead_detail(
         {
             "outcome": r[0],
             "note": r[1] or "",
-            "dialed_at": r[2].isoformat() if r[2] else None,
+            "dialed_at": _safe_iso(r[2]),
             "duration_seconds": r[3] or 0,
-            "next_followup_date_set": r[4].isoformat() if r[4] else None,
+            "next_followup_date_set": _safe_iso(r[4]),
             "user_ref": r[5],
             "portal": r[6],
             "staff_name": r[7] or r[5],
@@ -1591,7 +1600,7 @@ async def get_dialer_lead_detail(
     notes = [
         {
             "note": r[0],
-            "created_at": r[1].isoformat() if r[1] else None,
+            "created_at": _safe_iso(r[1]),
             "created_by_type": r[2],
             "created_by_id": r[3],
         }
@@ -1600,7 +1609,7 @@ async def get_dialer_lead_detail(
 
     last_dialed_at = attempts[0]["dialed_at"] if attempts else None
     last_interaction_date = (
-        lead.last_contact_date.isoformat() if lead.last_contact_date
+        _safe_iso(lead.last_contact_date) if lead.last_contact_date
         else (attempts[0]["dialed_at"] if attempts else None)
     )
     last_interacted_by = (
@@ -1640,7 +1649,7 @@ async def get_dialer_lead_detail(
             "phone": lead.phone,
             "alternate_phone": lead.alternate_phone,
             "status": lead.status,
-            "status_updated_at": lead.updated_at.isoformat() if lead.updated_at else (lead.created_at.isoformat() if lead.created_at else None),
+            "status_updated_at": _safe_iso(lead.updated_at) if lead.updated_at else _safe_iso(lead.created_at),
             "priority": lead.priority,
             "source": lead.source or "",
             "company_id": lead.company_id,
@@ -1654,11 +1663,11 @@ async def get_dialer_lead_detail(
             "budget_min": lead.budget_min,
             "budget_max": lead.budget_max,
             "budget_display": budget_display,
-            "last_contact_date": lead.last_contact_date.isoformat() if lead.last_contact_date else None,
+            "last_contact_date": _safe_iso(lead.last_contact_date),
             "last_interaction_date": last_interaction_date,
             "last_interacted_by": last_interacted_by or "",
             "last_dialed_at": last_dialed_at,
-            "next_followup_date": lead.next_followup_date.isoformat() if lead.next_followup_date else None,
+            "next_followup_date": _safe_iso(lead.next_followup_date),
             "handler_type": lead.handler_type,
             "primary_owner_id": lead.primary_owner_id,
             "primary_owner_type": lead.primary_owner_type,
@@ -1673,7 +1682,7 @@ async def get_dialer_lead_detail(
         "notes": notes,
         "redial_cooldown": {
             "is_cooling_down": is_cooling,
-            "cooldown_until": cooldown_until.isoformat() if cooldown_until else None,
+            "cooldown_until": _safe_iso(cooldown_until),
             "cooldown_reason": cooldown_msg
         }
     }
@@ -1729,7 +1738,7 @@ async def reserve_lead_for_dialer(
             "success": False,
             "error": cooldown_msg,
             "cooldown_blocked": True,
-            "cooldown_until": cooldown_until.isoformat(),
+            "cooldown_until": _safe_iso(cooldown_until),
             "message": cooldown_msg,
             "lead_id": lead_id
         }
@@ -1746,7 +1755,7 @@ async def reserve_lead_for_dialer(
         "success": success,
         "message": msg,
         "lead_id": lead_id,
-        "expires_at": expires_at.isoformat() if expires_at else None
+        "expires_at": _safe_iso(expires_at)
     }
 
 
@@ -1776,7 +1785,7 @@ async def heartbeat_lead_reservation_endpoint(
     return {
         "success": success,
         "lead_id": lead_id,
-        "expires_at": expires_at.isoformat() if expires_at else None
+        "expires_at": _safe_iso(expires_at)
     }
 
 
@@ -2614,7 +2623,7 @@ async def get_dialer_analytics(
             "duration_seconds": int(r[5] or 0),
             "status_updated_to": r[6] or "",
             "note": r[7] or "",
-            "dialed_at": dialed_at_val.isoformat() if dialed_at_val else None,
+            "dialed_at": _safe_iso(dialed_at_val),
             "user_ref": r[9] or "",
         })
 
@@ -3197,7 +3206,7 @@ async def get_recent_calls(
                     "phone": r[2] or "", "status": r[4] or "",
                     "call_type": "OUTGOING", "call_outcome": r[5] or "dialed",
                     "duration_seconds": r[7] or 0,
-                    "dialed_at": r[6].isoformat() if r[6] else None,
+                    "dialed_at": _safe_iso(r[6]),
                     "source": "dialer",
                 })
 
@@ -3222,7 +3231,7 @@ async def get_recent_calls(
                     "phone": r[2] or "", "status": "",
                     "call_type": r[3] or "OUTGOING", "call_outcome": "",
                     "duration_seconds": r[5] or 0,
-                    "dialed_at": r[4].isoformat() if r[4] else None,
+                    "dialed_at": _safe_iso(r[4]),
                     "source": "native",
                 })
 
@@ -3451,7 +3460,7 @@ async def get_call_history(
                 "name": cname,
                 "phone": r[2] or "",
                 "call_type": (r[3] or "OUTGOING").upper(),
-                "dialed_at": r[4].isoformat() if r[4] else None,
+                "dialed_at": _safe_iso(r[4]),
                 "duration_seconds": r[5] or 0,
                 "call_outcome": r[6] or "",
                 "contact_name": cname,
@@ -3686,7 +3695,7 @@ async def get_limbo_leads(
             "company_id": r[4],
             "handler_type": r[5],
             "handler_id": r[6],
-            "created_at": r[7].isoformat() if r[7] else None,
+            "created_at": _safe_iso(r[7]),
         })
 
     return {
@@ -3927,8 +3936,8 @@ async def get_click_to_call_status(
         'status': call.status,
         'duration_seconds': call.duration_seconds or 0,
         'recording_url': call.recording_url,
-        'started_at': call.started_at.isoformat() if call.started_at else None,
-        'ended_at': call.ended_at.isoformat() if call.ended_at else None,
+        'started_at': _safe_iso(call.started_at),
+        'ended_at': _safe_iso(call.ended_at),
     }
 
 
@@ -3988,7 +3997,7 @@ async def get_active_call(
         "lead_status": lead[4] or "new",
         "lead_city": lead[5] or "",
         "company_id": lead[7],
-        "call_started_at": call_started_at.isoformat() if call_started_at else None,
+        "call_started_at": _safe_iso(call_started_at),
     }
 
 
@@ -4073,7 +4082,7 @@ async def dialer_ws_sync(
                     "lead_status": lead_row[3] or "new",
                     "lead_city": lead_row[4] or "",
                     "company_id": lead_row[5],
-                    "call_started_at": call_started_at.isoformat() if call_started_at else None,
+                    "call_started_at": _safe_iso(call_started_at),
                 })
             else:
                 await websocket.send_json({"type": "call_state", "active": False})
