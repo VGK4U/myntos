@@ -59,7 +59,7 @@ eb.create_application_version(
         'S3Bucket': S3_BUCKET,
         'S3Key': S3_KEY
     },
-    Description='MyntOS v2.4.5: Dedicated GUC registration enhancements, Lord Ganesha banner, idol photo upload, GPS map picker, 15 AP guidelines, Plivo carrier balance health monitoring & error handling, 4-platform parity',
+    Description='MyntOS v2.4.5: GUC idol photo upload, GPS map picker, 15 AP guidelines, Plivo trunk health monitoring, 4-platform parity'[:190],
     AutoCreateApplication=False
 )
 print("Application version created.")
