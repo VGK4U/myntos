@@ -589,6 +589,8 @@ def create_vgk_login_for_partner(
         raise HTTPException(status_code=500, detail="Could not generate unique VGK code — try again")
 
     _auto_pwd = _clean_phone
+    _emp_id = getattr(current_employee, 'id', None)
+    _emp_code = (getattr(current_employee, 'emp_code', None) or '').strip().upper() or 'VGK07102207'
     _new_vgk = OfficialPartner(
         company_id=partner.company_id or 4,
         partner_code=_code,
@@ -601,7 +603,10 @@ def create_vgk_login_for_partner(
         is_active=False,
         login_status='active',
         parent_partner_id=_root_vgk_id,
-        registered_by_emp_code='VGK07102207',
+        registered_by_emp_code=_emp_code,
+        assigned_staff_id=_emp_id,
+        assigned_by_id=_emp_id,
+        assigned_at=datetime.now() if _emp_id else None,
         vgk_role='VGK_ASSOCIATE',
         vgk_points_balance=Decimal('0'),
         password_hash=SecurityManager.get_password_hash(_auto_pwd),

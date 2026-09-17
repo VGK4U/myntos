@@ -86,23 +86,19 @@ def create_zip():
                 else:
                     zipf.write(file_path, arcname)
                 
-    # Cleanly remove old destination files so macOS Finder assigns fresh creation/added dates
-    for target in [final_zip_path, deploy_zip_path, str(Path(__file__).resolve().parent / "MyntReal_AWS_Deploy_Full.zip"), root_final_zip_path, root_deploy_zip_path]:
+    # Cleanly remove old destination files
+    for target in [final_zip_path, str(Path(__file__).resolve().parent / "MyntReal_AWS_Deploy_Full.zip"), root_final_zip_path, root_deploy_zip_path]:
         if os.path.exists(target):
             try:
                 os.remove(target)
             except Exception:
                 pass
                 
-    shutil.copyfile(temp_zip_path, final_zip_path)
     shutil.copyfile(temp_zip_path, deploy_zip_path)
-    shutil.copyfile(temp_zip_path, str(Path(__file__).resolve().parent / "MyntReal_AWS_Deploy_Full.zip"))
-    if os.path.exists(root_dir) and os.path.isdir(root_dir):
-        shutil.copyfile(temp_zip_path, root_final_zip_path)
-        shutil.copyfile(temp_zip_path, root_deploy_zip_path)
+    shutil.copyfile(temp_zip_path, final_zip_path)
     if os.path.exists(temp_zip_path):
         os.remove(temp_zip_path)
-    print(f"Deployment zips updated successfully: {final_zip_path}, {root_final_zip_path}")
+    print(f"Deployment zip updated successfully: {deploy_zip_path} ({os.path.getsize(deploy_zip_path)} bytes)")
 
 if __name__ == "__main__":
     create_zip()

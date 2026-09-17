@@ -112,32 +112,34 @@ export class StaffBankWiseLeadsPage {
   private isGeneratingLink: boolean = false;
   private isDownloadingPdf: boolean = false;
   private shareLinkUrl: string = '';
+  private selectedDispatchMode: 'merged' | 'individual' = 'merged';
 
   private readonly BUNDLE_DEFINITIONS = {
     bank: {
       key: 'bank_link',
       label: 'Bank Documents',
       docs: [
-        { type: 'aadhaar_front', label: 'Aadhaar (Front & Back)' },
-        { type: 'pan_card', label: 'PAN Card' },
-        { type: 'electricity_bill', label: 'Electricity Bill (Latest)' },
-        { type: 'property_tax', label: 'Property Tax / Mutation / Khata' },
-        { type: 'bank_statement', label: 'Bank Statement / Cancelled Cheque' },
+        { type: 'adhar', label: 'Aadhaar Card' },
+        { type: 'pan', label: 'PAN Card' },
+        { type: 'powerbill', label: 'Electricity Bill' },
+        { type: 'bank_book', label: 'Bank Book' },
+        { type: 'house_tax', label: 'House Tax Receipt' },
         { type: 'quotation', label: 'Solar Quotation' },
-        { type: 'customer_photo', label: 'Customer Photo / Passport Photo' },
-        { type: 'vendor_gst', label: 'Vendor GST Certificate' }
+        { type: 'feasibility_letter', label: 'Feasibility Letter' },
+        { type: 'invoice', label: 'Invoice' },
+        { type: 'vendor_gst', label: 'Solar Vendor GST (Visionera)' }
       ]
     },
     discom: {
       key: 'discom_link',
       label: 'DISCOM Documents',
       docs: [
-        { type: 'aadhaar_front', label: 'Aadhaar Card' },
-        { type: 'electricity_bill', label: 'Electricity Bill (Latest)' },
-        { type: 'property_tax', label: 'Property Tax / Ownership Proof' },
-        { type: 'customer_photo', label: 'Passport Photo' },
-        { type: 'cancelled_cheque', label: 'Cancelled Cheque' },
-        { type: 'solar_application', label: 'Signed Application / Annexure' }
+        { type: 'annexure_a', label: 'Annexure-A' },
+        { type: 'annexure_c', label: 'Annexure-C (Project Completion)' },
+        { type: 'annexure_c_technical', label: 'Annexure-C (Technical Details)' },
+        { type: 'synchronisation_certificate', label: 'Synchronisation Certificate' },
+        { type: 'dcr_certificate', label: 'DCR Certificate' },
+        { type: 'geotagging_photo', label: 'Geo Tagging Photo' }
       ]
     }
   };
@@ -961,11 +963,9 @@ export class StaffBankWiseLeadsPage {
 
     try {
       const res = await apiService.get<any>(`/crm/leads/${lead.id}/solar-docs`);
-      if (res && res.data && Array.isArray(res.data.documents)) {
-        this.leadUploadedDocs = res.data.documents;
-      } else if (Array.isArray((res as any)?.documents)) {
-        this.leadUploadedDocs = (res as any).documents;
-      }
+      const rawList = (res && res.docs) || (res && res.data && res.data.docs) || (res && res.documents) || (res && res.data && res.data.documents) || [];
+      this.leadUploadedDocs = Array.isArray(rawList) ? rawList : [];
+
       // Pre-select all available documents
       const bundleConfig = this.BUNDLE_DEFINITIONS[group];
       const uploadedMap = new Map();
@@ -973,7 +973,9 @@ export class StaffBankWiseLeadsPage {
         if (d.doc_type) uploadedMap.set(d.doc_type, d);
       });
       bundleConfig.docs.forEach(d => {
-        if (uploadedMap.has(d.type) || d.type === 'vendor_gst') {
+        const ud = uploadedMap.get(d.type);
+        const fileExists = ud ? (ud.file_exists !== false) : false;
+        if ((ud && fileExists) || (d.type === 'vendor_gst' && (!ud || ud.file_exists !== false))) {
           this.selectedDocTypes.add(d.type);
         }
       });
@@ -1096,13 +1098,19 @@ export class StaffBankWiseLeadsPage {
         recipient_role: this.selectedRecipientRole || 'Recipient',
         doc_group: this.activeDocGroup === 'discom' ? 'discom' : 'bank',
         selected_doc_types: Array.from(this.selectedDocTypes),
-        custom_notes: this.docModalNotes
+        custom_notes: this.docModalNotes,
+        dispatch_mode: this.selectedDispatchMode
       };
       const res = await apiService.post<any>(`/crm/leads/${this.activeDocLead.id}/solar-docs/share-whatsapp`, payload);
       if (res && (res.success || res.status === 200 || (res.data && res.data.success))) {
-        const sent = res.sent_count || (res.data && res.data.sent_count) || this.selectedDocTypes.size;
-        const total = res.total_docs || (res.data && res.data.total_docs) || this.selectedDocTypes.size;
-        alert(`Success: ${sent} of ${total} document(s) dispatched via WhatsApp to ${this.selectedRecipientName || 'recipient'} (+91 ${phone})!`);
+        const dataObj = res.data || res;
+        if (dataObj.dispatch_mode === 'merged') {
+          alert(`Success: Consolidated Docket (${dataObj.verified_count || dataObj.sent_count || this.selectedDocTypes.size} docs) dispatched via WhatsApp to ${this.selectedRecipientName || 'recipient'} (+91 ${phone})!`);
+        } else {
+          const sent = dataObj.sent_count || this.selectedDocTypes.size;
+          const total = dataObj.total_docs || this.selectedDocTypes.size;
+          alert(`Success: ${sent} of ${total} document(s) dispatched via WhatsApp to ${this.selectedRecipientName || 'recipient'} (+91 ${phone})!`);
+        }
         this.showDocModal = false;
         this.render();
       } else {
@@ -1219,6 +1227,26 @@ export class StaffBankWiseLeadsPage {
                 </div>
               </div>
 
+              <!-- Delivery Format Selection -->
+              <div style="margin-bottom: 12px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px;">
+                <div style="font-size: 11px; font-weight: 700; color: #e2e8f0; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                  Dispatch Format
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: #e2e8f0;">
+                    <input type="radio" name="mobileDispatchMode" value="merged" ${this.selectedDispatchMode === 'merged' ? 'checked' : ''} style="accent-color: #38bdf8;">
+                    <div>
+                      <span style="font-weight: 600;">📑 Consolidated PDF Docket</span>
+                      <span style="font-size: 9.5px; background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 1px 5px; border-radius: 3px; margin-left: 4px;">Recommended</span>
+                    </div>
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px; color: #94a3b8;">
+                    <input type="radio" name="mobileDispatchMode" value="individual" ${this.selectedDispatchMode === 'individual' ? 'checked' : ''} style="accent-color: #38bdf8;">
+                    <span>📎 Individual Attachments</span>
+                  </label>
+                </div>
+              </div>
+
               <!-- Document Selection Checklist -->
               <div style="margin-bottom: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -1239,9 +1267,22 @@ export class StaffBankWiseLeadsPage {
                   <div class="bl-doc-items-list" style="display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto;">
                     ${bundle.docs.map(doc => {
                       const ud = uploadedMap.get(doc.type);
-                      const isAvail = !!ud || doc.type === 'vendor_gst';
+                      const isUploaded = !!ud;
+                      const fileExists = ud ? (ud.file_exists !== false) : false;
+                      const isAvail = (isUploaded && fileExists) || (doc.type === 'vendor_gst' && (!ud || ud.file_exists !== false));
                       const isVDef = (ud && ud.is_vendor_default) || doc.type === 'vendor_gst';
-                      const isChecked = this.selectedDocTypes.has(doc.type);
+                      const isChecked = this.selectedDocTypes.has(doc.type) && isAvail;
+
+                      let badgeHtml = '';
+                      if (isUploaded && !fileExists) {
+                        badgeHtml = '<span style="font-size: 9.5px; font-weight: 600; background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 4px; padding: 2px 6px;">Missing in Storage</span>';
+                      } else if (isAvail) {
+                        badgeHtml = isVDef 
+                          ? '<span style="font-size: 9.5px; font-weight: 700; background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 4px; padding: 2px 6px;">Vendor GST</span>' 
+                          : '<span style="font-size: 9.5px; font-weight: 700; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 4px; padding: 2px 6px;">Available</span>';
+                      } else {
+                        badgeHtml = '<span style="font-size: 9.5px; font-weight: 600; background: rgba(255, 255, 255, 0.05); color: #64748b; border-radius: 4px; padding: 2px 6px;">Not Uploaded</span>';
+                      }
 
                       return `
                         <label class="bl-doc-item-row" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); cursor: ${isAvail ? 'pointer' : 'not-allowed'}; opacity: ${isAvail ? '1' : '0.45'};">
@@ -1250,11 +1291,7 @@ export class StaffBankWiseLeadsPage {
                             <span style="font-size: 12px; color: ${isAvail ? '#e2e8f0' : '#64748b'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${this.escapeHtml(doc.label)}</span>
                           </div>
                           <div>
-                            ${isAvail 
-                              ? (isVDef 
-                                ? '<span style="font-size: 9.5px; font-weight: 700; background: rgba(99, 102, 241, 0.2); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 4px; padding: 2px 6px;">Vendor GST</span>' 
-                                : '<span style="font-size: 9.5px; font-weight: 700; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 4px; padding: 2px 6px;">Available</span>')
-                              : '<span style="font-size: 9.5px; font-weight: 600; background: rgba(239, 68, 68, 0.15); color: #f87171; border-radius: 4px; padding: 2px 6px;">Not Uploaded</span>'}
+                            ${badgeHtml}
                           </div>
                         </label>
                       `;
@@ -1556,6 +1593,13 @@ export class StaffBankWiseLeadsPage {
       const notesInput = document.getElementById('mobileDocNotesInput') as HTMLTextAreaElement;
       notesInput?.addEventListener('input', () => {
         this.docModalNotes = notesInput.value;
+      });
+
+      // Delivery format radio listener
+      this.container.querySelectorAll('input[name="mobileDispatchMode"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          this.selectedDispatchMode = ((e.target as HTMLInputElement).value as any) || 'merged';
+        });
       });
 
       // WhatsApp Dispatch Button

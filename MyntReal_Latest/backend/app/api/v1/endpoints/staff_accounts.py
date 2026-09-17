@@ -8384,7 +8384,9 @@ async def expense_tally_action_endpoint(
                 emp_to_debit = entry.created_by_id
 
             # Create EmployeeFundLedger debit entry only on APPROVED
-            if emp_to_debit:
+            # Cutoff safeguard: Expenses dated <= 2026-09-16 were already reconciled in the cutoff adjustment
+            cutoff_date = date(2026, 9, 16)
+            if emp_to_debit and (not entry.expense_date or entry.expense_date > cutoff_date):
                 last_ledger = db.query(EmployeeFundLedger).filter(
                     EmployeeFundLedger.employee_id == emp_to_debit
                 ).order_by(EmployeeFundLedger.id.desc()).first()

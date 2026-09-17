@@ -788,6 +788,15 @@ async def register_community(
             parent_id = ref1_member_id if referral_type == 'vgk_member' and ref1_member_id else default_root_id
             reg_by = referral_code.strip().upper() if referral_type == 'staff' and referral_code else VGK_DEFAULT_ROOT
 
+            # [DC-VGK-ASSIGN-002] Default staff assignment if referred by staff
+            _assigned_id = None
+            if reg_by and reg_by != VGK_DEFAULT_ROOT:
+                _st = db.query(StaffEmployee).filter(
+                    func.upper(func.trim(StaffEmployee.emp_code)) == reg_by
+                ).first()
+                if _st:
+                    _assigned_id = _st.id
+
             partner = OfficialPartner(
                 company_id=company_id,
                 partner_code=partner_code,
@@ -799,6 +808,9 @@ async def register_community(
                 vgk_role='COMMUNITY',
                 parent_partner_id=parent_id,
                 registered_by_emp_code=reg_by,
+                assigned_staff_id=_assigned_id,
+                assigned_by_id=_assigned_id,
+                assigned_at=get_indian_time() if _assigned_id else None,
                 vgk_points_balance=Decimal('0'),
                 password_hash=password_hash,
                 created_at=get_indian_time(),
@@ -2000,6 +2012,15 @@ def approve_registration_endpoint(reg_id: int, db: Session = Depends(get_db), cu
         company_id = 1
         partner_code = _next_vgk_partner_code(db, company_id)
         
+        # [DC-VGK-ASSIGN-002] Default staff assignment if referred by staff
+        _assigned_id = None
+        if reg_by and reg_by != VGK_DEFAULT_ROOT:
+            _st = db.query(StaffEmployee).filter(
+                func.upper(func.trim(StaffEmployee.emp_code)) == reg_by
+            ).first()
+            if _st:
+                _assigned_id = _st.id
+
         partner = OfficialPartner(
             company_id=company_id,
             partner_code=partner_code,
@@ -2011,6 +2032,9 @@ def approve_registration_endpoint(reg_id: int, db: Session = Depends(get_db), cu
             vgk_role='COMMUNITY',
             parent_partner_id=parent_id,
             registered_by_emp_code=reg_by,
+            assigned_staff_id=_assigned_id,
+            assigned_by_id=_assigned_id,
+            assigned_at=get_indian_time() if _assigned_id else None,
             vgk_points_balance=Decimal('0'),
             password_hash=password_hash,
             created_at=get_indian_time(),

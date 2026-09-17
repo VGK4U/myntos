@@ -696,7 +696,49 @@ def run_migrations():
                 """))
                 logger.info("✅ vgk4u_career_designation_configs.stage_own_qualifying_files verified/updated")
 
+                # 4.19 Default assignment of VGK members & historical data backfill for staff-created members
+                # Step 1: Assign unassigned VGK members whose registered_by_emp_code matches a staff employee
+                upd1 = conn.execute(text("""
+                    UPDATE official_partners op
+                    SET assigned_staff_id = se.id,
+                        assigned_by_id = se.id,
+                        assigned_at = COALESCE(op.created_at, NOW())
+                    FROM staff_employees se
+                    WHERE op.category = 'VGK_TEAM'
+                      AND op.assigned_staff_id IS NULL
+                      AND UPPER(TRIM(op.registered_by_emp_code)) = UPPER(TRIM(se.emp_code));
+                """))
+
+                # Step 2: Assign unassigned VGK members created by a staff employee in vgk_points_ledger
+                upd2 = conn.execute(text("""
+                    WITH first_points AS (
+                        SELECT DISTINCT ON (partner_id) partner_id, created_by
+                        FROM vgk_points_ledger
+                        WHERE created_by IS NOT NULL
+                        ORDER BY partner_id, id ASC
+                    )
+                    UPDATE official_partners op
+                    SET assigned_staff_id = se.id,
+                        assigned_by_id = se.id,
+                        assigned_at = COALESCE(op.created_at, NOW()),
+                        registered_by_emp_code = COALESCE(NULLIF(TRIM(op.registered_by_emp_code), ''), se.emp_code)
+                    FROM first_points fp
+                    JOIN staff_employees se ON se.id = fp.created_by
+                    WHERE op.category = 'VGK_TEAM'
+                      AND op.id = fp.partner_id
+                      AND op.assigned_staff_id IS NULL;
+                """))
+                logger.info(f"✅ VGK member staff assignment backfill complete: {upd1.rowcount} via reg_by code, {upd2.rowcount} via points creator")
+
         logger.info("✅ Feature-specific schema migrations complete")
+        
+        # 4.20 Staff cash balance zero adjustments as of 16-Sep-2026
+        try:
+            from scripts.apply_staff_cash_balance_zero_adjustment import apply_zero_balance_adjustments
+            apply_zero_balance_adjustments()
+            logger.info("✅ Staff cash balance zero adjustments verified/applied")
+        except Exception as e:
+            logger.warning(f"⚠️ Staff cash balance zero adjustments notice: {e}")
     except Exception as e:
         logger.error(f"❌ Feature migrations failed: {e}")
         sys.exit(1)

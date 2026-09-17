@@ -1742,6 +1742,18 @@ def vgk_signup(request: VGKSignupRequest, db: Session = Depends(get_db)):
     # [DC-VGK-STAFF-REG-001] Staff who referred/registered this member, or default to VGK_DEFAULT_ROOT on self-signup
     _reg_by = (request.registered_by_emp_code or '').strip().upper() or VGK_DEFAULT_ROOT
     _setattr_safe(member, 'registered_by_emp_code', _reg_by)
+
+    # [DC-VGK-ASSIGN-002] Default staff assignment if referred/registered by staff employee
+    if _reg_by and _reg_by != VGK_DEFAULT_ROOT:
+        from app.models.staff import StaffEmployee
+        _reg_staff = db.query(StaffEmployee).filter(
+            func.upper(func.trim(StaffEmployee.emp_code)) == _reg_by
+        ).first()
+        if _reg_staff:
+            member.assigned_staff_id = _reg_staff.id
+            member.assigned_by_id = _reg_staff.id
+            member.assigned_at = now
+
     db.add(member)
     db.commit()
     db.refresh(member)

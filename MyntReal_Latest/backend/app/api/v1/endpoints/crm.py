@@ -18295,6 +18295,46 @@ GENERATABLE_DOC_TYPES = {
 }
 
 
+def _check_solar_doc_physical_exists(file_name: Optional[str]) -> bool:
+    """Fast check whether a solar document physically exists in cloud storage (S3) or local disk."""
+    if not file_name:
+        return False
+    clean_fn = file_name.replace('/storage/', '').lstrip('/')
+    if not clean_fn:
+        return False
+
+    from pathlib import Path
+    _base_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
+    local_roots = [
+        _base_dir / "frontend" / "storage",
+        _base_dir / "backend" / "storage",
+        _base_dir / "media_backup" / "solar_docs"
+    ]
+    for r in local_roots:
+        p = r / clean_fn
+        if not p.exists():
+            p = r / Path(clean_fn).name
+        if p.exists() and p.is_file():
+            return True
+
+    from app.services.object_storage import storage_service as _ss
+    if not getattr(_ss, 'bucket_name', None) or not getattr(_ss, 's3_client', None):
+        return False
+
+    cands = [clean_fn, f"private/{clean_fn}", f"public/{clean_fn}"]
+    bare = clean_fn.split('/')[-1]
+    if bare != clean_fn:
+        cands.extend([f"solar_docs/{bare}", f"private/solar_docs/{bare}"])
+
+    for cand in cands:
+        try:
+            _ss.s3_client.head_object(Bucket=_ss.bucket_name, Key=cand)
+            return True
+        except Exception:
+            continue
+    return False
+
+
 @router.get("/leads/{lead_id}/solar-docs")
 def get_solar_docs(
     lead_id: int,
@@ -18303,7 +18343,7 @@ def get_solar_docs(
 ):
     """
     List all uploaded solar documents for a lead.
-    DC Protocol: Returns docs with view_url for direct object-storage access.
+    DC Protocol: Returns docs with view_url for direct object-storage access and file_exists pre-check.
     """
     lead = get_authorized_lead(db, lead_id, current_employee)
 
@@ -18362,6 +18402,15 @@ def get_solar_docs(
                 "view_url": v_gst.gst_certificate_url,
                 "is_vendor_default": True
             })
+
+    # Parallel pre-flight check of physical storage availability
+    if docs:
+        from concurrent.futures import ThreadPoolExecutor
+        fn_list = [d.get("file_name") for d in docs]
+        with ThreadPoolExecutor(max_workers=min(len(docs), 8)) as ex:
+            exists_flags = list(ex.map(_check_solar_doc_physical_exists, fn_list))
+        for d, exists in zip(docs, exists_flags):
+            d["file_exists"] = bool(exists)
 
     return {"success": True, "docs": docs, "count": len(docs)}
 
@@ -19049,6 +19098,197 @@ def download_share_bundle(token: str, db: Session = Depends(get_db)):
               headers={'Content-Disposition': f'attachment; filename="{safe}_Documents.pdf"'})
 
 
+def generate_solar_docket_pdf(
+    customer_name: str,
+    lead_id: int,
+    lead_phone: str,
+    kw_size: str,
+    inst_info: str,
+    ref_no: str,
+    address: str,
+    staff_name: str,
+    group_label: str,
+    doc_items: list
+) -> bytes:
+    """
+    DC-SOLAR-DOCKET-001 (Sep 2026):
+    Compiles verified solar documents (mix of PDFs and images) into one continuous,
+    professionally branded PDF docket with cover page, customer/project details,
+    and table of contents with exact page numbers.
+    """
+    import io
+    import datetime
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+    from reportlab.lib import colors
+    from reportlab.lib.utils import ImageReader
+    from PIL import Image, ImageOps
+    from pypdf import PdfReader, PdfWriter
+
+    doc_meta = []
+    curr_page = 2
+    for d in doc_items:
+        b = d.get('file_bytes') or d.get('bytes') or b''
+        is_pdf = (b[:4] == b'%PDF')
+        pg_count = 1
+        if is_pdf:
+            try:
+                r = PdfReader(io.BytesIO(b))
+                if r.is_encrypted:
+                    try:
+                        r.decrypt('')
+                    except Exception:
+                        pass
+                pg_count = max(1, len(r.pages))
+            except Exception:
+                pg_count = 1
+        doc_meta.append({
+            'label': d['label'],
+            'bytes': b,
+            'is_pdf': is_pdf,
+            'start_page': curr_page,
+            'end_page': curr_page + pg_count - 1,
+            'page_count': pg_count
+        })
+        curr_page += pg_count
+
+    # Generate Cover Page
+    cover_buf = io.BytesIO()
+    c = canvas.Canvas(cover_buf, pagesize=A4)
+    pw, ph = A4
+
+    # Top Header Banner
+    c.setFillColor(colors.HexColor('#1e3a8a'))
+    c.rect(0, ph - 90, pw, 90, fill=True, stroke=False)
+    c.setFillColor(colors.HexColor('#d97706'))
+    c.rect(0, ph - 94, pw, 4, fill=True, stroke=False)
+
+    c.setFillColor(colors.white)
+    c.setFont('Helvetica-Bold', 18)
+    c.drawString(40, ph - 45, 'MYNT REAL / VGK4U')
+    c.setFont('Helvetica-Bold', 12)
+    c.drawString(40, ph - 68, f'SOLAR APPLICATION — {group_label.upper()} DOSSIER')
+
+    # Lead / Customer Box
+    c.setStrokeColor(colors.HexColor('#e2e8f0'))
+    c.setFillColor(colors.HexColor('#f8fafc'))
+    c.roundRect(40, ph - 250, pw - 80, 130, 8, fill=True, stroke=True)
+
+    c.setFillColor(colors.HexColor('#1e3a8a'))
+    c.setFont('Helvetica-Bold', 12)
+    c.drawString(55, ph - 145, 'CUSTOMER & APPLICATION DETAILS')
+
+    c.setFont('Helvetica', 10)
+    c.setFillColor(colors.HexColor('#334155'))
+    safe_addr = (address or '—').replace('\n', ' ')
+    c.drawString(55, ph - 170, f'Customer Name: {customer_name}')
+    c.drawString(55, ph - 190, f'Application / Lead ID: #{lead_id}')
+    c.drawString(55, ph - 210, f'Contact Phone: +91 {lead_phone}')
+    c.drawString(55, ph - 230, f'Address: {safe_addr[:65]}')
+
+    # Project Details Box
+    c.roundRect(40, ph - 380, pw - 80, 110, 8, fill=True, stroke=True)
+    c.setFillColor(colors.HexColor('#1e3a8a'))
+    c.setFont('Helvetica-Bold', 12)
+    c.drawString(55, ph - 280, 'PROJECT & INSTITUTIONAL SPECIFICATIONS')
+
+    c.setFont('Helvetica', 10)
+    c.setFillColor(colors.HexColor('#334155'))
+    c.drawString(55, ph - 305, f'System Capacity: {kw_size} kW')
+    c.drawString(55, ph - 325, f'Institution: {inst_info}')
+    c.drawString(55, ph - 345, f'Application / Ref No: {ref_no}')
+    c.drawString(55, ph - 365, f'Total Attached Documents: {len(doc_items)} Items ({curr_page - 1} Total Pages)')
+
+    # Table of Contents
+    c.setFillColor(colors.HexColor('#1e3a8a'))
+    c.setFont('Helvetica-Bold', 13)
+    c.drawString(40, ph - 420, 'TABLE OF ENCLOSED DOCUMENTS')
+    c.setStrokeColor(colors.HexColor('#cbd5e1'))
+    c.line(40, ph - 426, pw - 40, ph - 426)
+
+    y = ph - 450
+    c.setFont('Helvetica', 10)
+    for idx, dm in enumerate(doc_meta):
+        if y < 60:
+            break
+        c.setFillColor(colors.HexColor('#1e293b'))
+        lbl_text = f"{idx + 1}.  {dm['label']}"
+        pg_str = f"Page {dm['start_page']}" if dm['start_page'] == dm['end_page'] else f"Pages {dm['start_page']}–{dm['end_page']}"
+        c.drawString(50, y, lbl_text)
+        c.drawRightString(pw - 50, y, pg_str)
+        c.setStrokeColor(colors.HexColor('#f1f5f9'))
+        c.line(50, y - 4, pw - 50, y - 4)
+        y -= 22
+
+    # Footer
+    c.setFont('Helvetica-Oblique', 8)
+    c.setFillColor(colors.HexColor('#64748b'))
+    dt_str = datetime.datetime.now().strftime('%d-%b-%Y %I:%M %p')
+    c.drawString(40, 30, f'Generated on {dt_str} | Dispatched by {staff_name} via MyntOS Solar Desk')
+    c.drawRightString(pw - 40, 30, f'Page 1 of {curr_page - 1}')
+
+    c.save()
+    cover_buf.seek(0)
+
+    # Assemble full PDF
+    writer = PdfWriter()
+    cover_reader = PdfReader(cover_buf)
+    writer.add_page(cover_reader.pages[0])
+
+    for dm in doc_meta:
+        b = dm['bytes']
+        lbl = dm['label']
+        if dm['is_pdf']:
+            try:
+                r = PdfReader(io.BytesIO(b))
+                if r.is_encrypted:
+                    try:
+                        r.decrypt('')
+                    except Exception:
+                        pass
+                for p in r.pages:
+                    writer.add_page(p)
+            except Exception as pe:
+                logger.warning("[DC-SOLAR-DOCKET] Skipping corrupt PDF pages for %s: %s", lbl, pe)
+        else:
+            try:
+                img = Image.open(io.BytesIO(b))
+                img = ImageOps.exif_transpose(img)
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                margin = 36
+                max_w = pw - (2 * margin)
+                max_h = ph - (2 * margin) - 40
+                ow, oh = img.size
+                ratio = min(max_w / ow, max_h / oh)
+                dw = ow * ratio
+                dh = oh * ratio
+                x = margin + (max_w - dw) / 2
+                y = margin + (max_h - dh) / 2
+                ibuf = io.BytesIO()
+                ic = canvas.Canvas(ibuf, pagesize=A4)
+                ic.setFont('Helvetica-Bold', 10)
+                ic.setFillColor(colors.HexColor('#1e3a8a'))
+                ic.drawString(margin, ph - 28, f'{lbl} — {customer_name}')
+                ic.setFont('Helvetica', 8)
+                ic.setFillColor(colors.HexColor('#64748b'))
+                ic.drawRightString(pw - margin, ph - 28, f'Lead #{lead_id}')
+                ic.setStrokeColor(colors.HexColor('#cbd5e1'))
+                ic.setLineWidth(0.5)
+                ic.line(margin, ph - 32, pw - margin, ph - 32)
+                ic.drawImage(ImageReader(img), x, y, width=dw, height=dh)
+                ic.save()
+                ibuf.seek(0)
+                ir = PdfReader(ibuf)
+                writer.add_page(ir.pages[0])
+            except Exception as ie:
+                logger.warning("[DC-SOLAR-DOCKET] Skipping invalid image for %s: %s", lbl, ie)
+
+    out = io.BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+
 class ShareSolarDocsWAPayload(BaseModel):
     doc_group: str = Field("bank", description="bank or discom")
     recipient_phone: str = Field(..., description="10-digit Indian recipient mobile phone number")
@@ -19056,6 +19296,7 @@ class ShareSolarDocsWAPayload(BaseModel):
     recipient_role: Optional[str] = Field(None, description="Role chip: Customer, BM, Ground Support, etc.")
     selected_doc_types: Optional[List[str]] = Field(None, description="List of doc types to attach")
     custom_notes: Optional[str] = Field(None, description="Optional custom notes to include in chat summary")
+    dispatch_mode: str = Field("merged", description="merged or individual")
 
     model_config = {"extra": "ignore"}
 
@@ -19154,7 +19395,7 @@ def share_solar_docs_via_whatsapp(
     if not docs_to_send:
         raise HTTPException(status_code=400, detail=f"No available {group_label} found for this lead to send.")
 
-    # 5. Build summary text
+    # 5. Extract customer and lead application metadata
     customer_name = (lead_row.name or f"Lead #{lead_id}").strip()
     cust_phone = (lead_row.phone or "").strip()
     kw = lead_row.kw_size or "—"
@@ -19162,53 +19403,13 @@ def share_solar_docs_via_whatsapp(
     inst_info = f"{lead_row.bank_name or 'Bank'} - {lead_row.bank_branch or 'Main Branch'}" if group == 'bank' else f"{lead_row.discom or 'DISCOM'}"
     staff_name = f"{current_employee.first_name} {current_employee.last_name or ''}".strip() or "MyntOS Operations"
     rec_disp_name = payload.recipient_name or (f"Recipient ({payload.recipient_role})" if payload.recipient_role else customer_name)
+    safe_cust_name = customer_name.replace(' ', '_').replace('/', '_')
+    disp_mode = (payload.dispatch_mode or "merged").lower().strip()
 
-    doc_list_lines = "\n".join([f"  {i+1}. {d['label']}" for i, d in enumerate(docs_to_send)])
-    summary_msg = (
-        f"☀️ *SOLAR APPLICATION — {group_label.upper()}* ☀️\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"📋 *Lead / App ID:* #{lead_id}\n"
-        f"👤 *Customer:* {customer_name}\n"
-        f"📞 *Customer Phone:* +91 {cust_phone}\n"
-        f"⚡ *System Capacity:* {kw} kW\n"
-        f"🏢 *{'Bank & Branch' if group == 'bank' else 'DISCOM'}:* {inst_info}\n"
-        f"🔢 *Reference / App No:* {ref_no}\n"
-        f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"📎 *Enclosed Documents ({len(docs_to_send)} Attachments):*\n"
-        f"{doc_list_lines}\n"
-    )
-    if payload.custom_notes and payload.custom_notes.strip():
-        summary_msg += f"\n📝 *Notes:* {payload.custom_notes.strip()}\n"
-    summary_msg += (
-        f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        f"_Dispatched by {staff_name} via MyntOS Solar Desk_"
-    )
-
-    bot_url = "http://localhost:5002/api/send-message"
-
-    # 6. Dispatch summary message to scanned bot
-    try:
-        r_txt = requests.post(bot_url, json={
-            "phone": phone10,
-            "message": summary_msg,
-            "recipientName": rec_disp_name,
-            "skip_backend_log": False
-        }, timeout=12)
-        if not r_txt.ok:
-            err_data = r_txt.json() if r_txt.headers.get("content-type", "").startswith("application/json") else {}
-            err_msg = err_data.get("error") or err_data.get("message") or f"Bot HTTP {r_txt.status_code}"
-            raise HTTPException(status_code=502, detail=f"WhatsApp Bot dispatch failed: {err_msg}")
-    except requests.exceptions.RequestException as req_err:
-        raise HTTPException(status_code=503, detail=f"WhatsApp Bot service unreachable on port 5002: {str(req_err)}")
-
-    # 7. Dispatch each attachment sequentially with real file binaries
+    # 6. Pre-download and verify all selected documents from storage BEFORE messaging
     import base64
     from pathlib import Path
     from app.services.object_storage import storage_service as _ss
-
-    sent_docs = []
-    failed_docs = []
-    safe_cust_name = customer_name.replace(' ', '_').replace('/', '_')
 
     _base_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
     _local_storage_roots = [
@@ -19217,15 +19418,14 @@ def share_solar_docs_via_whatsapp(
         _base_dir / "media_backup" / "solar_docs"
     ]
 
+    verified_docs = []
+    failed_docs = []
+
     for d in docs_to_send:
         fn = d["file_name"]
         lbl = d["label"]
         clean_fn = fn.replace('/storage/', '').lstrip('/')
-        ext = clean_fn.split('.')[-1].lower() if '.' in clean_fn else 'pdf'
-        doc_clean_label = lbl.replace(' ', '_').replace('(', '').replace(')', '').replace('/', '_')
-        attachment_filename = f"{safe_cust_name}_{doc_clean_label}.{ext}"
 
-        # 7a. Download real file bytes directly from Object Storage (S3) or local fallback
         file_bytes = None
         try:
             file_bytes = _ss.download_file(clean_fn)
@@ -19249,7 +19449,7 @@ def share_solar_docs_via_whatsapp(
             failed_docs.append({"label": lbl, "error": "File not found in cloud or local storage"})
             continue
 
-        # 7b. Accurately detect MIME type from magic bytes or extension
+        # Detect MIME type
         if file_bytes[:4] == b'%PDF':
             mime = 'application/pdf'
             send_as_doc = True
@@ -19259,65 +19459,198 @@ def share_solar_docs_via_whatsapp(
         elif file_bytes[:8] == b'\x89PNG\r\n\x1a\n':
             mime = 'image/png'
             send_as_doc = False
-        elif ext in ('jpg', 'jpeg'):
-            mime = 'image/jpeg'
-            send_as_doc = False
-        elif ext == 'png':
-            mime = 'image/png'
-            send_as_doc = False
-        elif ext == 'pdf':
+        elif clean_fn.lower().endswith('.pdf'):
             mime = 'application/pdf'
             send_as_doc = True
+        elif clean_fn.lower().endswith(('.jpg', '.jpeg')):
+            mime = 'image/jpeg'
+            send_as_doc = False
+        elif clean_fn.lower().endswith('.png'):
+            mime = 'image/png'
+            send_as_doc = False
         else:
-            mime = 'application/octet-stream'
+            mime = 'application/pdf'
             send_as_doc = True
 
-        # 7c. Construct Base64 Data URI
-        b64_str = base64.b64encode(file_bytes).decode('ascii')
-        media_b64 = f"data:{mime};base64,{b64_str}"
+        ext = 'pdf' if mime == 'application/pdf' else ('png' if mime == 'image/png' else 'jpg')
+        doc_clean_label = lbl.replace(' ', '_').replace('(', '').replace(')', '').replace('/', '_')
+        attachment_filename = f"{safe_cust_name}_{doc_clean_label}.{ext}"
 
+        verified_docs.append({
+            **d,
+            "file_bytes": file_bytes,
+            "bytes": file_bytes,
+            "mime": mime,
+            "send_as_doc": send_as_doc,
+            "attachment_filename": attachment_filename
+        })
+
+    if not verified_docs:
+        raise HTTPException(
+            status_code=400,
+            detail=f"None of the selected {group_label} ({len(docs_to_send)} requested) could be found in storage. Please verify or re-upload files before sharing."
+        )
+
+    # 7. Build summary text representing verified files and dispatch mode
+    doc_list_lines = "\n".join([f"  {i+1}. {d['label']}" for i, d in enumerate(verified_docs)])
+    if disp_mode == "merged":
+        summary_msg = (
+            f"☀️ *SOLAR APPLICATION — {group_label.upper()}* ☀️\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📋 *Lead / App ID:* #{lead_id}\n"
+            f"👤 *Customer:* {customer_name}\n"
+            f"📞 *Customer Phone:* +91 {cust_phone}\n"
+            f"⚡ *System Capacity:* {kw} kW\n"
+            f"🏢 *{'Bank & Branch' if group == 'bank' else 'DISCOM'}:* {inst_info}\n"
+            f"🔢 *Reference / App No:* {ref_no}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📑 *Consolidated Dossier Enclosed ({len(verified_docs)} Documents Combined):*\n"
+            f"{doc_list_lines}\n"
+        )
+    else:
+        summary_msg = (
+            f"☀️ *SOLAR APPLICATION — {group_label.upper()}* ☀️\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📋 *Lead / App ID:* #{lead_id}\n"
+            f"👤 *Customer:* {customer_name}\n"
+            f"📞 *Customer Phone:* +91 {cust_phone}\n"
+            f"⚡ *System Capacity:* {kw} kW\n"
+            f"🏢 *{'Bank & Branch' if group == 'bank' else 'DISCOM'}:* {inst_info}\n"
+            f"🔢 *Reference / App No:* {ref_no}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📎 *Enclosed Documents ({len(verified_docs)} Individual Attachments):*\n"
+            f"{doc_list_lines}\n"
+        )
+
+    if payload.custom_notes and payload.custom_notes.strip():
+        summary_msg += f"\n📝 *Notes:* {payload.custom_notes.strip()}\n"
+    if failed_docs:
+        missing_labels = ", ".join([f["label"] for f in failed_docs])
+        summary_msg += f"\n⚠️ *Note:* {len(failed_docs)} requested item(s) omitted due to missing storage records: {missing_labels}\n"
+    summary_msg += (
+        f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"_Dispatched by {staff_name} via MyntOS Solar Desk_"
+    )
+
+    bot_url = "http://localhost:5002/api/send-message"
+
+    # 8. Dispatch summary message to scanned bot
+    try:
+        r_txt = requests.post(bot_url, json={
+            "phone": phone10,
+            "message": summary_msg,
+            "recipientName": rec_disp_name,
+            "skip_backend_log": False
+        }, timeout=12)
+        if not r_txt.ok:
+            err_data = r_txt.json() if r_txt.headers.get("content-type", "").startswith("application/json") else {}
+            err_msg = err_data.get("error") or err_data.get("message") or f"Bot HTTP {r_txt.status_code}"
+            raise HTTPException(status_code=502, detail=f"WhatsApp Bot dispatch failed: {err_msg}")
+    except requests.exceptions.RequestException as req_err:
+        raise HTTPException(status_code=503, detail=f"WhatsApp Bot service unreachable on port 5002: {str(req_err)}")
+
+    # 9. Dispatch attachments based on dispatch mode
+    sent_docs = []
+
+    if disp_mode == "merged":
         try:
-            # Pacing delay between attachments to avoid rate limiting
+            docket_bytes = generate_solar_docket_pdf(
+                customer_name=customer_name,
+                lead_id=lead_id,
+                lead_phone=cust_phone,
+                kw_size=kw,
+                inst_info=inst_info,
+                ref_no=ref_no,
+                address=str(lead_row.address or "—"),
+                staff_name=staff_name,
+                group_label=group_label,
+                doc_items=verified_docs
+            )
+            b64_str = base64.b64encode(docket_bytes).decode('ascii')
+            media_b64 = f"data:application/pdf;base64,{b64_str}"
+            safe_grp = group_label.replace(' ', '_')
+            docket_filename = f"{safe_cust_name}_{safe_grp}_Docket.pdf"
+
             time.sleep(1.0)
             r_att = requests.post(bot_url, json={
                 "phone": phone10,
                 "media_url": media_b64,
                 "imageUrl": media_b64,
                 "imagePath": media_b64,
-                "mimetype": mime,
-                "message": f"📎 {lbl} — {customer_name}",
-                "filename": attachment_filename,
+                "mimetype": "application/pdf",
+                "message": f"📑 {group_label} — Consolidated Docket ({len(verified_docs)} Documents) for {customer_name}",
+                "filename": docket_filename,
                 "recipientName": rec_disp_name,
-                "send_as_document": send_as_doc,
+                "send_as_document": True,
                 "skip_backend_log": True
-            }, timeout=35)
+            }, timeout=60)
+
             if r_att.ok:
-                sent_docs.append(lbl)
+                sent_docs.append(f"{group_label} Docket ({len(verified_docs)} Documents)")
             else:
                 err_text = r_att.text[:120]
                 try:
-                    err_json = r_att.json()
-                    err_text = err_json.get("error") or err_json.get("message") or err_text
+                    err_text = r_att.json().get("error") or err_text
                 except Exception:
                     pass
-                failed_docs.append({"label": lbl, "error": err_text})
-        except Exception as err:
-            failed_docs.append({"label": lbl, "error": str(err)[:120]})
+                failed_docs.append({"label": f"{group_label} Docket", "error": err_text})
+        except Exception as dock_err:
+            logger.error("[DC-WA-DOC-SHARE] Merged docket generation or send failed: %s", dock_err, exc_info=True)
+            failed_docs.append({"label": f"{group_label} Docket", "error": str(dock_err)[:120]})
 
-    # 8. Record audit lead note & CRMLeadDocumentShare audit log
+    else:
+        # Individual dispatch mode
+        for d in verified_docs:
+            lbl = d["label"]
+            file_bytes = d["file_bytes"]
+            mime = d["mime"]
+            send_as_doc = d["send_as_doc"]
+            attachment_filename = d["attachment_filename"]
+
+            b64_str = base64.b64encode(file_bytes).decode('ascii')
+            media_b64 = f"data:{mime};base64,{b64_str}"
+
+            try:
+                time.sleep(1.0)
+                r_att = requests.post(bot_url, json={
+                    "phone": phone10,
+                    "media_url": media_b64,
+                    "imageUrl": media_b64,
+                    "imagePath": media_b64,
+                    "mimetype": mime,
+                    "message": f"📎 {lbl} — {customer_name}",
+                    "filename": attachment_filename,
+                    "recipientName": rec_disp_name,
+                    "send_as_document": send_as_doc,
+                    "skip_backend_log": True
+                }, timeout=35)
+                if r_att.ok:
+                    sent_docs.append(lbl)
+                else:
+                    err_text = r_att.text[:120]
+                    try:
+                        err_text = r_att.json().get("error") or err_text
+                    except Exception:
+                        pass
+                    failed_docs.append({"label": lbl, "error": err_text})
+            except Exception as err:
+                failed_docs.append({"label": lbl, "error": str(err)[:120]})
+
+    # 10. Record audit lead note & CRMLeadDocumentShare audit log
     try:
         company_id = lead_row.company_id or getattr(current_employee, 'base_company_id', 1) or 1
         note_text = (
-            f"📄 [WhatsApp Documents Shared]\n"
+            f"📄 [WhatsApp Documents Shared ({disp_mode.capitalize()})]\n"
             f"• Bundle: {group_label}\n"
             f"• Shared by: {staff_name} (Staff ID: {current_employee.id})\n"
             f"• Recipient: {rec_disp_name} (+91 {phone10})\n"
             f"• Role: {payload.recipient_role or 'Contact'}\n"
-            f"• Documents Dispatched ({len(sent_docs)}/{len(docs_to_send)} attachments):\n"
+            f"• Format: {'Consolidated Docket PDF' if disp_mode == 'merged' else 'Individual Attachments'}\n"
+            f"• Verified & Sent ({len(sent_docs)} items):\n"
             + "\n".join([f"   - {d}" for d in sent_docs])
         )
         if failed_docs:
-            note_text += f"\n• Failed/Skipped: " + ", ".join([f"{f['label']} ({f['error']})" for f in failed_docs])
+            note_text += f"\n• Skipped/Failed: " + ", ".join([f"{f['label']} ({f['error']})" for f in failed_docs])
         if payload.custom_notes and payload.custom_notes.strip():
             note_text += f"\n• Note: {payload.custom_notes.strip()}"
 
@@ -19335,25 +19668,25 @@ def share_solar_docs_via_whatsapp(
         share_record = CRMLeadDocumentShare(
             company_id=company_id,
             lead_id=lead_id,
-            share_mode="whatsapp_attachments",
+            share_mode=f"whatsapp_{disp_mode}",
             recipient_phone=phone10,
             recipient_name=rec_disp_name,
             recipient_role=payload.recipient_role or "Contact",
             shared_by_staff_id=current_employee.id,
             shared_by_staff_name=staff_name,
             doc_group=group,
-            doc_types=[d["doc_type"] for d in docs_to_send],
-            doc_labels=[d["label"] for d in docs_to_send],
+            doc_types=[d["doc_type"] for d in verified_docs],
+            doc_labels=[d["label"] for d in verified_docs],
             total_docs=len(docs_to_send),
             sent_docs_count=len(sent_docs),
             failed_docs_count=len(failed_docs),
             custom_notes=payload.custom_notes or "",
-            status="completed" if len(sent_docs) == len(docs_to_send) else ("partial" if sent_docs else "failed")
+            status="completed" if len(sent_docs) > 0 and len(failed_docs) == 0 else ("partial" if sent_docs else "failed")
         )
         db.add(share_record)
 
         # Update lead's recent_comments and last_contact_date
-        lead.recent_comments = f"[Docs Shared via WA] {group_label} ({len(sent_docs)} docs) sent to {rec_disp_name} (+91 {phone10}) by {staff_name}"
+        lead.recent_comments = f"[Docs Shared via WA ({disp_mode})] {group_label} ({len(sent_docs)} items) sent to {rec_disp_name} (+91 {phone10}) by {staff_name}"
         lead.last_contact_date = datetime.now()
         db.commit()
     except Exception as note_e:
@@ -19362,10 +19695,12 @@ def share_solar_docs_via_whatsapp(
 
     return {
         "success": len(sent_docs) > 0,
+        "dispatch_mode": disp_mode,
         "recipient": phone10,
         "recipient_name": rec_disp_name,
         "doc_group": group,
         "total_docs": len(docs_to_send),
+        "verified_count": len(verified_docs),
         "sent_count": len(sent_docs),
         "failed_count": len(failed_docs),
         "sent_docs": sent_docs,
@@ -20556,6 +20891,11 @@ def register_lead_as_vgk(
 
     reg_by = (getattr(current_employee, 'emp_code', '') or '').strip().upper() or VGK_DEFAULT_ROOT
 
+    # [DC-VGK-ASSIGN-002] Default staff assignment to converting staff
+    _assigned_id = getattr(current_employee, 'id', None)
+    _assigned_by = getattr(current_employee, 'id', None)
+    _assigned_at = _now if _assigned_id else None
+
     member = _OP(
         company_id=company_id,
         partner_code=code,
@@ -20566,6 +20906,9 @@ def register_lead_as_vgk(
         is_active=False,
         parent_partner_id=parent_id,
         registered_by_emp_code=reg_by,
+        assigned_staff_id=_assigned_id,
+        assigned_by_id=_assigned_by,
+        assigned_at=_assigned_at,
         vgk_role='VGK_ASSOCIATE',
         vgk_points_balance=_Dec('0'),
         password_hash=pwd_hash,

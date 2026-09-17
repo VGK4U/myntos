@@ -264,6 +264,8 @@ class VGKMemberCreate(BaseModel):
     phone_verified_token: Optional[str] = None
     # [DC-VGK-STAFF-REG-001] Registering staff emp code — auto-filled from current_user if omitted
     registered_by_emp_code: Optional[str] = None
+    # [DC-VGK-ASSIGN-002] Default or explicit staff assignment
+    assigned_staff_id: Optional[int] = None
 
 
 class VGKMemberUpdate(BaseModel):
@@ -1611,6 +1613,26 @@ def create_vgk_member(
                 (getattr(current_user, 'emp_code', '') or '').strip().upper() or
                 VGK_DEFAULT_ROOT)
     member.registered_by_emp_code = _reg_emp
+
+    # [DC-VGK-ASSIGN-002] Default staff assignment:
+    # 1. If payload.assigned_staff_id is explicitly specified, validate and assign to it.
+    # 2. Else if registered_by_emp_code matches a staff employee, assign directly to that staff.
+    # 3. Else default directly to current_user.id (the staff creating the member).
+    _target_staff_id = payload.assigned_staff_id
+    if not _target_staff_id and _reg_emp and _reg_emp != VGK_DEFAULT_ROOT:
+        _reg_staff = db.query(StaffEmployee).filter(
+            func.upper(func.trim(StaffEmployee.emp_code)) == _reg_emp
+        ).first()
+        if _reg_staff:
+            _target_staff_id = _reg_staff.id
+    if not _target_staff_id and getattr(current_user, 'id', None):
+        _target_staff_id = current_user.id
+
+    if _target_staff_id:
+        member.assigned_staff_id = _target_staff_id
+        member.assigned_by_id = current_user.id if getattr(current_user, 'id', None) else _target_staff_id
+        member.assigned_at = get_indian_time()
+
     db.add(member)
     db.commit()
     db.refresh(member)
@@ -1890,10 +1912,33 @@ def update_vgk_member(
         member.vcard_enabled = payload.vcard_enabled
     if payload.idcard_enabled is not None:  # [DC_VGK_CARD_ENABLED_001]
         member.idcard_enabled = payload.idcard_enabled
+    # [DC-VGK-ASSIGN-002] Handle assigned_staff_id update
+    if payload.assigned_staff_id is not None:
+        if payload.assigned_staff_id == 0:
+            member.assigned_staff_id = None
+            member.assigned_at = None
+            member.assigned_by_id = current_user.id
+        else:
+            _st = db.query(StaffEmployee).filter(StaffEmployee.id == payload.assigned_staff_id).first()
+            if not _st:
+                raise HTTPException(status_code=400, detail="Assigned staff not found")
+            member.assigned_staff_id = _st.id
+            member.assigned_at = get_indian_time()
+            member.assigned_by_id = current_user.id
+
     # [DC-VGK-STAFF-REG-001] Admin-editable: update registering staff emp_code
     if payload.registered_by_emp_code is not None:
         _new_reg = payload.registered_by_emp_code.strip().upper()
         member.registered_by_emp_code = _new_reg if _new_reg else None
+        # Auto-sync assignment if member is unassigned and registering staff is set to a staff member
+        if _new_reg and member.assigned_staff_id is None:
+            _st = db.query(StaffEmployee).filter(
+                func.upper(func.trim(StaffEmployee.emp_code)) == _new_reg
+            ).first()
+            if _st:
+                member.assigned_staff_id = _st.id
+                member.assigned_at = get_indian_time()
+                member.assigned_by_id = current_user.id
     if payload.parent_partner_id is not None:
         if payload.parent_partner_id == 0:
             member.parent_partner_id = None

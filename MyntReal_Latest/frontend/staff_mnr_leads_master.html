@@ -5702,11 +5702,22 @@ async function openShareDocumentsModal(tab) {
   const docListEl = document.getElementById('sdwDocList');
   docListEl.innerHTML = bd.docs.map(doc => {
     const ud = um[doc.type];
-    const isAvail = !!ud;
+    const isUploaded = !!ud;
+    const fileExists = ud ? (ud.file_exists !== false) : false;
+    const isAvail = isUploaded && fileExists;
     const isVDef = ud && ud.is_vendor_default;
-    const badgeHtml = isAvail 
-      ? (isVDef ? '<span class="sdw-badge-avail" style="background:#e0e7ff;color:#3730a3"><i class="fas fa-building me-1"></i>Vendor Default</span>' : '<span class="sdw-badge-avail">Available</span>')
-      : '<span class="sdw-badge-pend">Not Uploaded</span>';
+
+    let badgeHtml = '';
+    if (isUploaded && !fileExists) {
+      badgeHtml = '<span class="sdw-badge-pend" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca;padding:2px 6px;border-radius:4px;font-size:10px;"><i class="fas fa-exclamation-triangle me-1"></i>Storage Missing (Re-upload)</span>';
+    } else if (isAvail) {
+      badgeHtml = isVDef 
+        ? '<span class="sdw-badge-avail" style="background:#e0e7ff;color:#3730a3;padding:2px 6px;border-radius:4px;font-size:10px;"><i class="fas fa-building me-1"></i>Vendor Default</span>' 
+        : '<span class="sdw-badge-avail" style="padding:2px 6px;border-radius:4px;font-size:10px;">Available</span>';
+    } else {
+      badgeHtml = '<span class="sdw-badge-pend">Not Uploaded</span>';
+    }
+
     return `
       <div class="sdw-doc-item">
         <label>
@@ -5775,11 +5786,14 @@ async function dispatchShareDocumentsViaWa() {
 
   const notes = document.getElementById('sdwNotes')?.value || '';
   const group = _sdwTab === 'discom_link' ? 'discom' : 'bank';
+  const dispatchMode = document.querySelector('input[name="sdwDispatchMode"]:checked')?.value || 'merged';
 
   const sendBtn = document.getElementById('sdwSendBtn');
   const origHtml = sendBtn.innerHTML;
   sendBtn.disabled = true;
-  sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Dispatching Attachments...';
+  sendBtn.innerHTML = dispatchMode === 'merged' 
+    ? '<i class="fas fa-spinner fa-spin me-1"></i> Generating & Sending Docket...' 
+    : '<i class="fas fa-spinner fa-spin me-1"></i> Dispatching Attachments...';
 
   try {
     const res = await staffFetch(`/api/v1/crm/leads/${_sdocLeadId}/solar-docs/share-whatsapp`, {
@@ -5791,7 +5805,8 @@ async function dispatchShareDocumentsViaWa() {
         recipient_role: _sdwRecipientRole,
         doc_group: group,
         selected_doc_types: selectedDocs,
-        custom_notes: notes
+        custom_notes: notes,
+        dispatch_mode: dispatchMode
       })
     });
 
@@ -5800,7 +5815,11 @@ async function dispatchShareDocumentsViaWa() {
       throw new Error(data.detail || 'Dispatch failed');
     }
 
-    showToast(`✅ Successfully shared ${data.sent_count} documents to +91 ${phone10} via WhatsApp!`, 'success');
+    if (data.dispatch_mode === 'merged') {
+      showToast(`✅ Successfully sent Consolidated Docket (${data.verified_count} docs) to +91 ${phone10} via WhatsApp!`, 'success');
+    } else {
+      showToast(`✅ Successfully shared ${data.sent_count} individual document(s) to +91 ${phone10} via WhatsApp!`, 'success');
+    }
     closeShareDocumentsModal();
   } catch (err) {
     showToast(`Share failed: ${err.message}`, 'error');
@@ -7143,6 +7162,21 @@ async function saveCompleteDate(lid, val) {
       <div class="sdw-phone-group">
         <span class="sdw-phone-prefix">+91</span>
         <input type="tel" id="sdwPhoneInput" class="sdw-phone-input" placeholder="Enter 10-digit mobile number" maxlength="10" />
+      </div>
+
+      <div class="sdw-sec-title">
+        <span>Dispatch Format</span>
+        <small style="color:#6b7280;text-transform:none;font-weight:normal">Choose delivery mode</small>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:12px;background:#f8fafc;padding:10px 12px;border-radius:8px;border:1px solid #e2e8f0;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;color:#1e3a8a;">
+          <input type="radio" name="sdwDispatchMode" value="merged" checked style="accent-color:#1e3a8a;">
+          <span>📑 Consolidated PDF Docket <span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:3px;">Recommended</span></span>
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;font-weight:600;color:#475569;">
+          <input type="radio" name="sdwDispatchMode" value="individual" style="accent-color:#1e3a8a;">
+          <span>📎 Individual Attachments</span>
+        </label>
       </div>
 
       <div class="sdw-sec-title">

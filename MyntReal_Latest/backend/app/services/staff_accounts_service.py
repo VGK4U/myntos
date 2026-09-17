@@ -8352,8 +8352,8 @@ def list_unified_employee_ledger(
     if comp_id:
         q_ft = q_ft.filter(EmployeeFundTransfer.company_id == comp_id)
 
-    # 4. Opening Balance
-    q_ob = db.query(EmployeeFundLedger).filter(EmployeeFundLedger.entry_type == 'OPENING_BALANCE')
+    # 4. Opening Balance & Adjustment entries from EmployeeFundLedger
+    q_ob = db.query(EmployeeFundLedger).filter(EmployeeFundLedger.entry_type.in_(['OPENING_BALANCE', 'ADJUSTMENT']))
     if target_emp_ids is not None:
         q_ob = q_ob.filter(EmployeeFundLedger.employee_id.in_(target_emp_ids))
     if comp_id:
@@ -8604,11 +8604,19 @@ def list_unified_employee_ledger(
             })
 
     for ob in ob_list:
-        amt = float(ob.credit_amount or 0)
+        is_adj = (ob.entry_type == 'ADJUSTMENT')
+        cr = float(ob.credit_amount or 0)
+        dr = float(ob.debit_amount or 0)
+        amt = cr if cr > 0 else dr
+        dirn = 'IN' if cr > 0 else 'OUT'
+        cat_name = 'Balance Adjustment' if is_adj else 'Opening Balance'
+        party_name = 'Balance Adjustment' if is_adj else 'Opening Balance'
+        sub_t = 'ADJUSTMENT' if is_adj else 'OPENING_BAL'
+        default_ref = f'ADJ-{ob.id}' if is_adj else f'OB-{ob.id}'
         all_entries.append({
-            'id': ob.id,
+            'id': f"fl_adj_{ob.id}" if is_adj else ob.id,
             'real_id': ob.id,
-            'entry_number': ob.reference_number or f'OB-{ob.id}',
+            'entry_number': ob.reference_number or default_ref,
             'expense_date': str(ob.transaction_date) if ob.transaction_date else '',
             'company_id': ob.company_id,
             'company_name': comp_map.get(ob.company_id, 'Company'),
@@ -8616,21 +8624,21 @@ def list_unified_employee_ledger(
             'employee_name': emp_name_map.get(ob.employee_id, 'Employee'),
             'created_by_name': emp_name_map.get(ob.employee_id, 'Employee'),
             'emp_code': emp_code_map.get(ob.employee_id, ''),
-            'entry_type': 'OPENING_BALANCE',
-            'sub_type': 'OPENING_BAL',
-            'direction': 'IN',
-            'category_name': 'Opening Balance',
-            'party_name': 'Opening Balance',
+            'entry_type': ob.entry_type,
+            'sub_type': sub_t,
+            'direction': dirn,
+            'category_name': cat_name,
+            'party_name': party_name,
             'narration': ob.narration or '',
-            'credit_amount': amt,
-            'debit_amount': 0.0,
+            'credit_amount': cr,
+            'debit_amount': dr,
             'amount': amt,
             'status': 'CONFIRMED',
             'is_paid': True,
             'show_in_ledger': True,
             'is_external': False,
             'reference_id': ob.id,
-            'reference_type': 'OPENING_BALANCE',
+            'reference_type': ob.reference_type or ('ADJUSTMENT' if is_adj else 'OPENING_BALANCE'),
             'created_at': ob.created_at.isoformat() if ob.created_at else ''
         })
 
@@ -8903,7 +8911,7 @@ def list_unified_employee_ledger(
             filtered = [e for e in filtered if e.get('sub_type') == 'SPARES']
         elif tf in ['LABOUR', 'SERVICE']:
             filtered = [e for e in filtered if e.get('sub_type') == 'LABOUR' or (tf == 'SERVICE' and e.get('entry_type') == 'INCOME')]
-        elif tf in ['INCOME', 'EXPENSE', 'FUND_ALLOCATION', 'OPENING_BALANCE', 'BANK_PAYMENT', 'BANK_RECEIPT', 'JOURNAL_VOUCHER']:
+        elif tf in ['INCOME', 'EXPENSE', 'FUND_ALLOCATION', 'OPENING_BALANCE', 'ADJUSTMENT', 'BANK_PAYMENT', 'BANK_RECEIPT', 'JOURNAL_VOUCHER']:
             filtered = [e for e in filtered if e['entry_type'] == tf]
         elif tf == 'TRANSFER':
             filtered = [e for e in filtered if 'TRANSFER' in e['entry_type']]

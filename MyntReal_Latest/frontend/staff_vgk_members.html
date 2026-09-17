@@ -6310,6 +6310,10 @@ async function submitAddMember() {
   // [DC-VGK-STAFF-REG-001] Registering staff emp code
   const _regBy = (document.getElementById('addRegisteredByEmpCode')?.value || '').trim().toUpperCase();
   if (_regBy) payload.registered_by_emp_code = _regBy;
+  // [DC-VGK-ASSIGN-002] Default staff assignment
+  if (typeof _staffMe !== 'undefined' && _staffMe && _staffMe.id) {
+    payload.assigned_staff_id = _staffMe.id;
+  }
   try {
     const r = await staffFetch(API + '/vgk/members', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
     const d = await r.json();
