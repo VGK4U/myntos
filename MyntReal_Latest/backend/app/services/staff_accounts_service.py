@@ -8321,6 +8321,27 @@ def list_unified_employee_ledger(
     comp_id = filters.get('company_id')
     from_d = filters.get('from_date')
     to_d = filters.get('to_date')
+
+    # System Reset Cutoff: On 2026-09-16, staff cash balances were formally reset/cleared to 0.00
+    # For active passbook / ledger statement views when from_date is not provided, start from 2026-09-17
+    # unless include_historical is explicitly True or an explicit historical window is queried (to_date <= 2026-09-16)
+    from datetime import date as _date_type, timedelta as _timedelta_type
+    RESET_CUTOFF_DATE = _date_type(2026, 9, 16)
+    include_historical = bool(filters.get('include_historical', False))
+    effective_from_d = from_d
+
+    if not include_historical:
+        if effective_from_d is None or str(effective_from_d).strip() == '':
+            effective_from_d = str(RESET_CUTOFF_DATE + _timedelta_type(days=1))
+        else:
+            try:
+                _fd = _date_type.fromisoformat(str(effective_from_d)[:10])
+                _td = _date_type.fromisoformat(str(to_d)[:10]) if to_d else None
+                if (_td is None or _td > RESET_CUTOFF_DATE) and _fd <= RESET_CUTOFF_DATE:
+                    effective_from_d = str(RESET_CUTOFF_DATE + _timedelta_type(days=1))
+            except Exception:
+                pass
+
     status_f = filters.get('status')
     type_f = filters.get('entry_type')
     category_id = filters.get('main_category_id') or filters.get('category_id')
@@ -8876,12 +8897,21 @@ def list_unified_employee_ledger(
 
     # Apply user filters
     filtered = all_entries
-    if from_d:
-        filtered = [e for e in filtered if e['expense_date'] and str(e['expense_date']) >= str(from_d)]
+    if effective_from_d:
+        filtered = [e for e in filtered if e['expense_date'] and str(e['expense_date']) >= str(effective_from_d)]
     if to_d:
         filtered = [e for e in filtered if e['expense_date'] and str(e['expense_date']) <= str(to_d)]
     if status_f:
         filtered = [e for e in filtered if e['status'] == status_f]
+
+    # Recalculate running balance cleanly from 0.00 for the active post-reset window if effective_from_d is active
+    if effective_from_d and str(effective_from_d) >= str(RESET_CUTOFF_DATE):
+        emp_running_post = {}
+        for e in filtered:
+            eid = e.get('employee_id')
+            bal = emp_running_post.get(eid, 0.0) + (e['credit_amount'] - e['debit_amount'])
+            emp_running_post[eid] = bal
+            e['running_balance'] = round(bal, 2)
     
     # Ledger filter (All / In Ledger / Excluded)
     ledger_f = filters.get('ledger_filter')

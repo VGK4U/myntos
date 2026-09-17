@@ -20,7 +20,7 @@ APP_NAME = 'vgk4u'
 ENV_NAME = 'Vgk4u-env'
 S3_BUCKET = 'elasticbeanstalk-ap-south-2-251714435676'
 TIMESTAMP = int(time.time() * 1000)
-VERSION_LABEL = f'v2.4.10-production-release-{TIMESTAMP}'
+VERSION_LABEL = f'v2.4.11-journey-fares-company-vehicle-{TIMESTAMP}'
 S3_KEY = f'deployments/{VERSION_LABEL}.zip'
 ZIP_PATH = os.path.join(os.path.dirname(__file__), '..', 'deployment.zip')
 
@@ -59,7 +59,7 @@ eb.create_application_version(
         'S3Bucket': S3_BUCKET,
         'S3Key': S3_KEY
     },
-    Description='MyntOS v2.4.10: Solar doc merged docket dispatch, VGK partner staff assignment, staff cash balance zero reset'[:190],
+    Description='MyntOS v2.4.11: Journey 500 error fix, Company Vehicle option (₹0/km), updated rates for bike (₹2/km) and e-bike (₹1/2km)'[:190],
     AutoCreateApplication=False
 )
 print("Application version created.")

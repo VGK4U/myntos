@@ -7464,6 +7464,7 @@ def get_expense_consolidated(
     from_date: Optional[date] = Query(None, description="Filter expense date from"),
     to_date: Optional[date] = Query(None, description="Filter expense date to"),
     search: Optional[str] = Query(None, description="Search by employee name or emp_code"),
+    include_historical: bool = Query(False, description="Include pre-reset historical data (prior to 2026-09-17)"),
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user)
 ):
@@ -7471,8 +7472,10 @@ def get_expense_consolidated(
     DC_EXP_CONSOLIDATED_001: Per-employee expense + fund summary table.
     Privileged (Accounts/VGK/EA/MR10001) → ALL active employees.
     Reporting managers (non-privileged) → their direct reports only.
+    Honors 16-Sep-2026 management reset cutoff date so balances start cleanly at ₹0.00.
     """
     try:
+        from datetime import timedelta
         from sqlalchemy import func as _func, case as _case, or_ as _or
         from sqlalchemy.orm import joinedload
 
@@ -7510,8 +7513,20 @@ def get_expense_consolidated(
             return {"success": True, "rows": [], "total": 0}
 
         from app.models.staff_accounts import (
-            IncomeEntry, ExpenseEntry, FundAllocation, EmployeeFundTransfer
+            IncomeEntry, ExpenseEntry, FundAllocation, EmployeeFundTransfer, EmployeeFundLedger
         )
+
+        # System Reset Cutoff: On 2026-09-16, staff cash balances were formally reset/cleared to 0.00.
+        # By default ("Overall" / active current operations), only transactions on or after 2026-09-17 are queried.
+        # If an explicit past window is specified (e.g. to_date <= 2026-09-16) or include_historical=True, historical data is retrieved.
+        RESET_CUTOFF_DATE = date(2026, 9, 16)
+        effective_from = from_date
+
+        if not include_historical:
+            if effective_from is None:
+                effective_from = RESET_CUTOFF_DATE + timedelta(days=1)
+            elif (to_date is None or to_date > RESET_CUTOFF_DATE) and effective_from <= RESET_CUTOFF_DATE:
+                effective_from = RESET_CUTOFF_DATE + timedelta(days=1)
 
         # 1. Income entries
         q_ie = db.query(IncomeEntry).filter(
@@ -7520,8 +7535,8 @@ def get_expense_consolidated(
         )
         if company_id:
             q_ie = q_ie.filter(IncomeEntry.company_id == company_id)
-        if from_date:
-            q_ie = q_ie.filter(IncomeEntry.income_date >= from_date)
+        if effective_from:
+            q_ie = q_ie.filter(IncomeEntry.income_date >= effective_from)
         if to_date:
             q_ie = q_ie.filter(IncomeEntry.income_date <= to_date)
         ie_records = q_ie.all()
@@ -7532,8 +7547,8 @@ def get_expense_consolidated(
         )
         if company_id:
             q_fa = q_fa.filter(FundAllocation.company_id == company_id)
-        if from_date:
-            q_fa = q_fa.filter(FundAllocation.allocation_date >= from_date)
+        if effective_from:
+            q_fa = q_fa.filter(FundAllocation.allocation_date >= effective_from)
         if to_date:
             q_fa = q_fa.filter(FundAllocation.allocation_date <= to_date)
         fa_records = q_fa.all()
@@ -7547,8 +7562,8 @@ def get_expense_consolidated(
         )
         if company_id:
             q_ft = q_ft.filter(EmployeeFundTransfer.company_id == company_id)
-        if from_date:
-            q_ft = q_ft.filter(EmployeeFundTransfer.transfer_date >= from_date)
+        if effective_from:
+            q_ft = q_ft.filter(EmployeeFundTransfer.transfer_date >= effective_from)
         if to_date:
             q_ft = q_ft.filter(EmployeeFundTransfer.transfer_date <= to_date)
         ft_records = q_ft.all()
@@ -7559,12 +7574,33 @@ def get_expense_consolidated(
         )
         if company_id:
             q_exp = q_exp.filter(ExpenseEntry.company_id == company_id)
-        if from_date:
-            q_exp = q_exp.filter(ExpenseEntry.expense_date >= from_date)
+        if effective_from:
+            q_exp = q_exp.filter(ExpenseEntry.expense_date >= effective_from)
         if to_date:
             q_exp = q_exp.filter(ExpenseEntry.expense_date <= to_date)
         exp_records = q_exp.all()
-        print(f"[CONSO-API-DEBUG] emp_ids={emp_ids} exp_records_count={len(exp_records)} ft_records_count={len(ft_records)} fa_records_count={len(fa_records)}", flush=True)
+
+        # 5. Ledger Adjustments / Opening Balances from EmployeeFundLedger
+        q_ob = db.query(EmployeeFundLedger).filter(
+            EmployeeFundLedger.employee_id.in_(emp_ids),
+            EmployeeFundLedger.entry_type.in_(['OPENING_BALANCE', 'ADJUSTMENT'])
+        )
+        if company_id:
+            q_ob = q_ob.filter(EmployeeFundLedger.company_id == company_id)
+        if effective_from:
+            q_ob = q_ob.filter(EmployeeFundLedger.transaction_date >= effective_from)
+        if to_date:
+            q_ob = q_ob.filter(EmployeeFundLedger.transaction_date <= to_date)
+        ob_records = q_ob.all()
+
+        print(f"[CONSO-API-DEBUG] emp_ids={emp_ids} effective_from={effective_from} to_date={to_date} exp_records_count={len(exp_records)} ft_records_count={len(ft_records)} fa_records_count={len(fa_records)} ob_records_count={len(ob_records)}", flush=True)
+
+        # Identify employees who have established accounts in EmployeeFundLedger
+        efl_emp_ids = set(
+            r[0] for r in db.query(EmployeeFundLedger.employee_id).filter(
+                EmployeeFundLedger.employee_id.in_(emp_ids)
+            ).distinct().all()
+        )
 
         # Group by employee_id
         from collections import defaultdict
@@ -7588,6 +7624,10 @@ def get_expense_consolidated(
         for r in exp_records:
             exp_by_emp[r.created_by_id].append(r)
 
+        ob_by_emp = defaultdict(list)
+        for r in ob_records:
+            ob_by_emp[r.employee_id].append(r)
+
         rows = []
         for emp in employees:
             e_ies = ie_by_emp.get(emp.id, [])
@@ -7595,9 +7635,13 @@ def get_expense_consolidated(
             e_ft_in = ft_in_by_emp.get(emp.id, [])
             e_ft_out = ft_out_by_emp.get(emp.id, [])
             e_exps = exp_by_emp.get(emp.id, [])
+            e_obs = ob_by_emp.get(emp.id, [])
 
-            # Has any activity? If not, skip
-            if not e_ies and not e_fas and not e_ft_in and not e_ft_out and not e_exps:
+            has_activity = bool(e_ies or e_fas or e_ft_in or e_ft_out or e_exps or e_obs)
+            has_account = (emp.id in efl_emp_ids)
+
+            # Skip employees who have no activity in this period AND no established fund account (unless explicitly searched)
+            if not has_activity and not has_account and not search:
                 continue
 
             # SECTION 1: Confirmed Flow (Inflow)
@@ -7605,13 +7649,15 @@ def get_expense_consolidated(
             ie_cnt = sum(1 for x in e_ies if getattr(x, 'status', 'CONFIRMED') != 'DRAFT')
             fa_amt = round(sum(float(x.amount or 0) for x in e_fas if getattr(x, 'status', 'CONFIRMED') != 'DRAFT'), 2)
             ft_in_amt = round(sum(float(x.amount or 0) for x in e_ft_in if getattr(x, 'status', 'CONFIRMED') != 'DRAFT'), 2)
-            tot_in_conf = round(ie_amt + fa_amt + ft_in_amt, 2)
+            adj_in_amt = round(sum(float(x.credit_amount or 0) for x in e_obs), 2)
+            tot_in_conf = round(ie_amt + fa_amt + ft_in_amt + adj_in_amt, 2)
 
             # SECTION 1: Confirmed Flow (Outflow - Excludes Drafts)
             ledg_exp_conf = round(sum(float(x.amount or 0) for x in e_exps if not getattr(x, 'is_external', False) and x.status in ['SUBMITTED', 'APPROVED', 'PAID']), 2)
             ext_exp_conf = round(sum(float(x.amount or 0) for x in e_exps if getattr(x, 'is_external', False) and x.status in ['SUBMITTED', 'APPROVED', 'PAID']), 2)
             ft_out_conf = round(sum(float(x.amount or 0) for x in e_ft_out if getattr(x, 'status', 'CONFIRMED') != 'DRAFT'), 2)
-            tot_out_conf = round(ledg_exp_conf + ext_exp_conf + ft_out_conf, 2)
+            adj_out_amt = round(sum(float(x.debit_amount or 0) for x in e_obs), 2)
+            tot_out_conf = round(ledg_exp_conf + ext_exp_conf + ft_out_conf + adj_out_amt, 2)
             net_bal_conf = round(tot_in_conf - tot_out_conf, 2)
 
             # SECTION 2: Drafts Only Flow
@@ -7640,6 +7686,7 @@ def get_expense_consolidated(
                 "bank_alloc_in": fa_amt,
                 "fund_allocated": fa_amt,
                 "fund_transferred_in": ft_in_amt,
+                "adjustment_in": adj_in_amt,
                 "total_in": tot_in_conf,
                 "cash_received": tot_in_conf,
                 "cust_cash_received": ie_amt,
@@ -7650,6 +7697,7 @@ def get_expense_consolidated(
                 "ext_exp": ext_exp_conf,
                 "ext_exp_amount": ext_exp_conf,
                 "fund_transferred_out": ft_out_conf,
+                "adjustment_out": adj_out_amt,
                 "total_out": tot_out_conf,
                 # SECTION 1: NET BALANCE
                 "balance": net_bal_conf,
