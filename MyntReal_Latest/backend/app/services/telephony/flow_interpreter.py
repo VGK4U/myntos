@@ -1538,19 +1538,41 @@ class CallFlowInterpreter:
                 TelephonyPlivoEndpoint.staff_id == emp.id
             ).order_by(TelephonyPlivoEndpoint.is_registered.desc(), TelephonyPlivoEndpoint.id.desc()).first()
 
-            if endpoint and endpoint.is_registered and endpoint.plivo_username:
-                sip_uri = f"sip:{endpoint.plivo_username}@phone.plivo.com"
-                logger.info(f"[STICKY-AGENT] Caller {caller_phone} routed to registered recent employee {emp.full_name} ({emp.id}) via {match_reason} -> {sip_uri}")
+            has_sip = bool(endpoint and endpoint.is_registered and endpoint.plivo_username)
+            sip_uri = f"sip:{endpoint.plivo_username}@phone.plivo.com" if has_sip else None
+
+            # Option C: Resolve employee personal mobile for simultaneous dual-ring / direct cellular bridge
+            agent_phone = None
+            raw_phone = getattr(emp, 'phone', None)
+            if raw_phone:
+                clean_digits = re.sub(r'\D', '', str(raw_phone))
+                if len(clean_digits) == 10:
+                    agent_phone = f"+91{clean_digits}"
+                elif len(clean_digits) > 10 and clean_digits.startswith('91'):
+                    agent_phone = f"+{clean_digits}"
+                elif len(clean_digits) > 10:
+                    agent_phone = f"+91{clean_digits[-10:]}"
+
+            dial_targets = []
+            if sip_uri:
+                dial_targets.append(f'  <User>{sip_uri}</User>')
+            if agent_phone:
+                dial_targets.append(f'  <Number>{agent_phone}</Number>')
+
+            if dial_targets:
+                targets_xml = "\n".join(dial_targets)
+                mode_desc = "dual-ring (WebRTC + Mobile)" if len(dial_targets) > 1 else ("WebRTC Softphone" if sip_uri else f"Personal Mobile {agent_phone}")
+                logger.info(f"[STICKY-AGENT] Caller {caller_phone} routed to employee {emp.full_name} ({emp.id}) via {match_reason} [{mode_desc}]")
                 return cls._generate_xml_response([
                     f'<Speak voice="Polly.Aditi" language="en-IN">Welcome back to Mynt Real. Connecting you directly to your executive, {emp.full_name}. Please hold.</Speak>',
-                    f'<Dial timeout="20" callerId="{called_did}" action="https://www.myntreal.com/api/v1/telephony/plivo/ivr/dial-complete">',
-                    f'  <User>{sip_uri}</User>',
+                    f'<Dial timeout="25" callerId="{called_did}" action="https://www.myntreal.com/api/v1/telephony/plivo/ivr/dial-complete">',
+                    targets_xml,
                     f'</Dial>',
                     f'<Speak voice="Polly.Aditi" language="en-IN">Your executive is currently assisting another client. Connecting to our Sales desk.</Speak>',
                     cls._build_telesales_simultaneous_dial(db, company_id, "Sales", called_did)
                 ])
             else:
-                logger.info(f"[STICKY-AGENT] Recent staff {emp.full_name} ({emp.id}) is offline/unregistered ({match_reason}). Continuing to Sales IVR.")
+                logger.info(f"[STICKY-AGENT] Recent staff {emp.full_name} ({emp.id}) has neither registered softphone nor personal mobile ({match_reason}). Continuing to Sales IVR.")
 
         return None
 

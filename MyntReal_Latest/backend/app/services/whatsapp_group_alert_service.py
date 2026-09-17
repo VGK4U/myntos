@@ -108,12 +108,14 @@ def send_group_bot_message(
                 return {"success": True, "data": raw}
             else:
                 logger.warning(f"Group Bot API response from {url}: {resp.status_code} - {resp.text}")
-                return {"success": False, "error": raw.get("error") or resp.text}
+                last_exc = raw.get("error") or resp.text
+                # Break to fallback database enqueueing so message is never lost
+                break
         except Exception as exc:
             last_exc = exc
             continue
 
-    logger.warning(f"Could not connect to WhatsApp Group Bot Gateway: {last_exc}")
+    logger.warning(f"WhatsApp Group Bot Gateway dispatch not completed ({last_exc}); falling back to queue...")
 
     # Fallback directly to PostgreSQL queue if DB session available
     if db is not None:
@@ -121,7 +123,7 @@ def send_group_bot_message(
             from sqlalchemy import text
             import json
             target_jid = group_id or clean_code or invite_code or "120363410784518818@g.us"
-            rp = {"job_id": job_id, "job_name": job_name, "trigger_type": trigger_type, "execution_id": execution_id}
+            rp = {"job_id": job_id, "job_name": job_name, "trigger_type": trigger_type, "execution_id": execution_id, "last_gateway_error": str(last_exc)}
             clean_rp = {k: v for k, v in rp.items() if v is not None}
             res = db.execute(text("""
                 INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, status, created_at, result_payload, job_id, execution_id)
@@ -136,13 +138,13 @@ def send_group_bot_message(
             })
             db.commit()
             queue_id = res.fetchone()[0]
-            logger.info(f"[WA-GROUP-ALERT] Gateway offline; safely enqueued directly to whatsapp_bot_queue (ID #{queue_id})")
+            logger.info(f"[WA-GROUP-ALERT] Gateway not ready ({last_exc}); safely enqueued directly to whatsapp_bot_queue (ID #{queue_id})")
             return {"success": True, "queued": True, "queue_id": queue_id, "message": "Enqueued directly to PostgreSQL queue"}
         except Exception as db_err:
             db.rollback()
             logger.warning(f"[WA-GROUP-ALERT] DB fallback enqueue note: {db_err}")
 
-    return {"success": False, "error": f"WhatsApp Group Bot service is currently offline on port 5002 ({last_exc}). Please start the WhatsApp Bot daemon on the server."}
+    return {"success": False, "error": f"WhatsApp Group Bot service is currently offline or unlinked ({last_exc}). Scan QR at /qr to link bot."}
 
 
 def send_instant_new_lead_group_alert(db: Session, lead_id: int, force_queue: bool = False) -> Dict[str, Any]:
