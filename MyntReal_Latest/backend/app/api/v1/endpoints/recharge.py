@@ -47,20 +47,24 @@ class CreateOrderRequest(BaseModel):
     circle: Optional[str] = None
     guest_email: Optional[str] = None
     guest_name: Optional[str] = None
+    service_type: Optional[str] = "mobile"
+    value1: Optional[str] = None
+    value2: Optional[str] = None
 
 @router.post("/create-order")
 def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)):
     if not razorpay_client:
         raise HTTPException(status_code=500, detail="Razorpay keys (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET) are missing in the server's .env file.")
 
-    # 1. Strict Validation: Check if the amount is valid for this operator
-    valid_plan = db.query(RechargePlan).filter(
-        RechargePlan.operator.ilike(f"%{req.operator}%"),
-        RechargePlan.amount == req.amount
-    ).first()
-    
-    if not valid_plan:
-        raise HTTPException(status_code=400, detail="Invalid recharge amount for this operator. Please select a valid plan.")
+    # 1. Strict Validation: Check if the amount is valid for this operator (Only for Mobile)
+    if req.service_type == "mobile":
+        valid_plan = db.query(RechargePlan).filter(
+            RechargePlan.operator.ilike(f"%{req.operator}%"),
+            RechargePlan.amount == req.amount
+        ).first()
+        
+        if not valid_plan:
+            raise HTTPException(status_code=400, detail="Invalid recharge amount for this operator. Please select a valid plan.")
 
     # 2. Create order in Razorpay (amount in paise)
     order_amount = int(req.amount * 100)
@@ -84,6 +88,9 @@ def create_order(req: CreateOrderRequest, db: Session = Depends(get_db)):
         amount=req.amount,
         guest_email=req.guest_email,
         guest_name=req.guest_name,
+        service_type=req.service_type,
+        value1=req.value1,
+        value2=req.value2,
         razorpay_order_id=payment_order['id'],
         payment_status="Pending",
         api_status="Pending"
@@ -152,8 +159,12 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
         if settings.A1TOPUP_USERNAME and settings.A1TOPUP_PASSWORD:
             a1_url = "https://business.a1topup.com/recharge/api"
             
-            # FIX: Strict Operator Map (Case-Insensitive)
-            operator_code = {k.upper(): v for k, v in A1TOPUP_OPERATOR_MAP.items()}.get(tx.operator.upper() if tx.operator else "")
+            # FIX: Strict Operator Map for Mobile, Direct pass for others
+            if tx.service_type == "mobile":
+                operator_code = {k.upper(): v for k, v in A1TOPUP_OPERATOR_MAP.items()}.get(tx.operator.upper() if tx.operator else "")
+            else:
+                operator_code = tx.operator
+
             if not operator_code:
                 print(f"CRITICAL: Unknown operator '{tx.operator}'. Aborting A1Topup.")
                 tx.api_status = "Failed"
@@ -169,6 +180,11 @@ def verify_payment(req: VerifyPaymentRequest, background_tasks: BackgroundTasks,
                     "format": "json"
                 }
                 params["circlecode"] = tx.circle if tx.circle else "2"
+                
+                if tx.value1:
+                    params["value1"] = tx.value1
+                if tx.value2:
+                    params["value2"] = tx.value2
                     
                 try:
                     # FIX: Add strict 15s timeout

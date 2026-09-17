@@ -88,10 +88,21 @@
         <a href="/hub">Home</a>
         <a href="/hub/about">About</a>
         <a href="/hub/media">Media</a>
-        <a href="#" onclick="openRechargeModal(event)" class="nav-recharge-btn">
-            <span class="pulse-icon">⚡</span> Mobile Recharge
-            <span class="badge-testing">Testing</span>
-        </a>
+        <div class="dropdown" onclick="this.classList.toggle('active')">
+          <a href="#" class="dropdown-trigger" onclick="event.preventDefault()" class="nav-recharge-btn">
+            <span class="pulse-icon">⚡</span> Services <span class="dropdown-arrow">▾</span>
+          </a>
+          <div class="dropdown-menu">
+            <a href="#" onclick="openRechargeModal(event, 'mobile')">📱 Mobile Recharge</a>
+            <a href="#" onclick="openRechargeModal(event, 'postpaid')">📞 Postpaid Bill</a>
+            <a href="#" onclick="openRechargeModal(event, 'dth')">📺 DTH Recharge</a>
+            <a href="#" onclick="openRechargeModal(event, 'electricity')">💡 Electricity</a>
+            <a href="#" onclick="openRechargeModal(event, 'fastag')">🚗 FASTag</a>
+            <a href="#" onclick="openRechargeModal(event, 'gas')">🔥 Gas Cylinder</a>
+            <a href="#" onclick="openRechargeModal(event, 'insurance')">🛡️ Insurance/LIC</a>
+            <a href="#" onclick="openRechargeModal(event, 'googleplay')">🎮 Google Play</a>
+          </div>
+        </div>
 
         <div class="dropdown" onclick="this.classList.toggle('active')">
           <a href="#" class="dropdown-trigger" onclick="event.preventDefault()">
@@ -892,13 +903,21 @@ setInterval(nextWhy, 4500);
 <div class="custom-modal-overlay" id="hubRechargeModal">
   <div class="custom-modal">
     <div class="custom-modal-header">
-      <h3 class="custom-modal-title">📱 Instant Mobile Recharge</h3>
+      <h3 class="custom-modal-title" id="modalServiceTitle">⚡ Services</h3>
       <button class="custom-modal-close" onclick="closeRechargeModal()">&times;</button>
     </div>
     <div class="custom-modal-body">
       <form id="hubRechargeForm">
-        <label>Mobile Number</label>
-        <input type="tel" id="hubRechargeMobile" required pattern="[0-9]{10}" placeholder="Enter 10-digit number">
+        <input type="hidden" id="serviceType" name="serviceType" value="mobile">
+        <label id="lblTargetNumber">Mobile Number</label>
+        <input type="text" id="hubRechargeMobile" required placeholder="Enter Number">
+        
+        <div id="extraFields" style="display: none;">
+            <label id="lblValue1">Extra Field 1</label>
+            <input type="text" id="val1" placeholder="">
+            <label id="lblValue2" style="display:none;">Extra Field 2</label>
+            <input type="text" id="val2" placeholder="" style="display:none;">
+        </div>
         
         <label>Select Operator</label>
         <div class="operator-grid">
@@ -921,10 +940,6 @@ setInterval(nextWhy, 4500);
         </div>
         <select id="hubRechargeOperator" required style="display: none;">
             <option value="">Select Operator</option>
-            <option value="Airtel">Airtel</option>
-            <option value="Jio">Jio</option>
-            <option value="VI">VI</option>
-            <option value="BSNL">BSNL</option>
         </select>
         
         <label>Amount (₹)</label>
@@ -965,17 +980,62 @@ setInterval(nextWhy, 4500);
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
 /* Recharge Modal Logic */
-function openRechargeModal(e) {
+
+const serviceData = {
+    'mobile': { title: '📱 Mobile Recharge', lbl: 'Mobile Number', ops: [{v:'A', n:'Airtel'},{v:'RC', n:'Jio'},{v:'V', n:'Vodafone/Idea'},{v:'BT', n:'BSNL'}], showGrid: true },
+    'postpaid': { title: '📞 Postpaid Bill', lbl: 'Mobile Number', ops: [{v:'PAT', n:'Airtel Postpaid'},{v:'JPP', n:'Jio Postpaid'},{v:'VP', n:'Vodafone Postpaid'},{v:'BP', n:'BSNL Postpaid'}] },
+    'dth': { title: '📺 DTH Recharge', lbl: 'Subscriber ID', ops: [{v:'ATV', n:'Airtel Digital TV'},{v:'DTV', n:'Dish TV'},{v:'TTV', n:'Tata Sky'},{v:'VTV', n:'Videocon D2H'},{v:'STV', n:'Sun Direct'}] },
+    'electricity': { title: '💡 Electricity Bill', lbl: 'Consumer Number', ops: [{v:'APCPDCL', n:'APCPDCL'},{v:'BESCOM', n:'BESCOM'},{v:'TNEB', n:'TNEB'},{v:'MSEDC', n:'MSEDC'},{v:'BSES', n:'BSES Delhi'}], ext1: 'Billing Unit / Cycle' },
+    'fastag': { title: '🚗 FASTag Recharge', lbl: 'Vehicle Number', ops: [{v:'ICF', n:'ICICI FASTag'},{v:'HDF', n:'HDFC FASTag'},{v:'PTF', n:'Paytm FASTag'},{v:'SBF', n:'SBI FASTag'},{v:'AXF', n:'Axis FASTag'}] },
+    'gas': { title: '🔥 Gas Cylinder', lbl: 'Customer ID', ops: [{v:'AG', n:'Adani Gas'},{v:'GG', n:'Gujarat Gas'},{v:'IG', n:'Indraprastha Gas'},{v:'HPCLGC', n:'HP Gas'}] },
+    'insurance': { title: '🛡️ Insurance / LIC', lbl: 'Policy Number', ops: [{v:'ICP', n:'ICICI Prudential'},{v:'TAI', n:'Tata AIA'},{v:'LIC', n:'LIC (Custom)'}], ext1: 'Date of Birth (DD-MM-YYYY)' },
+    'googleplay': { title: '🎮 Google Play Gift Card', lbl: 'Mobile Number', ops: [{v:'GLF', n:'Google Play'}] }
+};
+
+function openRechargeModal(e, type='mobile') {
     if(e) e.preventDefault();
+    const data = serviceData[type];
+    if(!data) return;
+    
+    document.getElementById('serviceType').value = type;
+    document.getElementById('modalServiceTitle').innerText = data.title;
+    document.getElementById('lblTargetNumber').innerText = data.lbl;
+    
+    const opSelect = document.getElementById('hubRechargeOperator');
+    opSelect.innerHTML = '<option value="">Select Operator</option>';
+    data.ops.forEach(op => {
+        opSelect.innerHTML += `<option value="${op.v}">${op.n}</option>`;
+    });
+    
+    if(data.showGrid) {
+        document.querySelector('.operator-grid').style.display = 'grid';
+        opSelect.style.display = 'none';
+        // restore default values for grid
+        opSelect.innerHTML = '<option value="">Select Operator</option><option value="Airtel">Airtel</option><option value="Jio">Jio</option><option value="VI">VI</option><option value="BSNL">BSNL</option>';
+    } else {
+        document.querySelector('.operator-grid').style.display = 'none';
+        opSelect.style.display = 'block';
+    }
+
+    if(data.ext1) {
+        document.getElementById('extraFields').style.display = 'block';
+        document.getElementById('lblValue1').innerText = data.ext1;
+        document.getElementById('val1').required = true;
+    } else {
+        document.getElementById('extraFields').style.display = 'none';
+        document.getElementById('val1').required = false;
+    }
+
+    document.getElementById('hubRechargeAmount').removeAttribute('readonly');
+    if(type === 'mobile') document.getElementById('hubRechargeAmount').setAttribute('readonly', 'true');
+
     document.getElementById('hubRechargeModal').classList.add('show');
-    // Clear operators selection
     document.querySelectorAll('.operator-card').forEach(el => el.classList.remove('selected'));
     document.getElementById('hubRechargeForm').reset();
     document.getElementById('hubPlansSection').style.display = 'none';
-    document.getElementById('hubRechargeAmount').value = '';
-    // close dropdown menu just in case
     document.querySelectorAll('.dropdown').forEach(dd => dd.classList.remove('active'));
 }
+
 function closeRechargeModal() {
     document.getElementById('hubRechargeModal').classList.remove('show');
 }
@@ -1135,7 +1195,10 @@ document.getElementById('hubRechargeForm').addEventListener('submit', async func
         circle: null,
         amount: parseFloat(document.getElementById('hubRechargeAmount').value),
         guest_name: document.getElementById('hubRechargeGuestName').value || null,
-        guest_email: document.getElementById('hubRechargeGuestEmail').value || null
+        guest_email: document.getElementById('hubRechargeGuestEmail').value || null,
+        service_type: document.getElementById('serviceType') ? document.getElementById('serviceType').value : 'mobile',
+        value1: document.getElementById('val1') ? document.getElementById('val1').value : null,
+        value2: document.getElementById('val2') ? document.getElementById('val2').value : null
     };
 
     try {
