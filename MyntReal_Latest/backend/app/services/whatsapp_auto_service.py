@@ -154,11 +154,11 @@ def strip_staff_whatsapp_signature(message: str) -> str:
     Removes any existing staff signature block from the message body
     (e.g., when forwarding, replying, or re-formatting to prevent stacked signatures).
     Handles single number (8585852738, +91 85858 52738), dual numbers (+91 85858 52738 | +91 8897797667 or +91 85858 52738 | +91 80317 28899),
-    and extensions.
+    extensions, dashes ('—', '--'), employee codes, titles/designations, and multiple stacked signatures.
     """
     if not message:
         return ""
-    pattern = r'(?:\r?\n){1,4}Regards,\s*\n[^\n]+(?:\s*\n[^\n]*(?:85858|88977|80317)[^\n]*)?(?:\s*\nExt:\s*\S+)?\s*$'
+    pattern = r'(?:\r?\n|^)\s*(?:[—\-–_]+\s*)?(?:Regards|Warm regards|Best regards|Kind regards|Thanks & regards|Thanks and regards),\s*(?:\r?\n|$)[\s\S]*$'
     cleaned = re.sub(pattern, '', message.strip(), flags=re.IGNORECASE)
     return cleaned.strip()
 

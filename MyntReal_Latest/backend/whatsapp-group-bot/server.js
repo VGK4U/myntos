@@ -1288,8 +1288,11 @@ async function resolveMediaBufferAndPayload(mediaSource, message, defaultFilenam
         const cand2 = path.join(__dirname, '../storage', cleanSrc);
         const cand3 = path.join(__dirname, '../../media_backup/solar_docs', path.basename(cleanSrc));
         const cand4 = path.join(__dirname, '../../frontend/storage/solar_docs', path.basename(cleanSrc));
+        const cand5 = path.join(__dirname, '../../frontend/storage/wa_media', path.basename(cleanSrc));
+        const cand6 = path.join(__dirname, '../storage/wa_media', path.basename(cleanSrc));
+        const cand7 = path.join(__dirname, '../../storage/wa_media', path.basename(cleanSrc));
         
-        for (const cand of [cand1, cand2, cand3, cand4]) {
+        for (const cand of [cand1, cand2, cand3, cand4, cand5, cand6, cand7]) {
             if (fs.existsSync(cand) && fs.statSync(cand).isFile()) {
                 try {
                     imgBuffer = fs.readFileSync(cand);
@@ -1330,10 +1333,19 @@ async function resolveMediaBufferAndPayload(mediaSource, message, defaultFilenam
             detectedMime = 'image/jpeg';
         } else if (imgBuffer.length >= 8 && imgBuffer[0] === 0x89 && imgBuffer[1] === 0x50 && imgBuffer[2] === 0x4E && imgBuffer[3] === 0x47) {
             detectedMime = 'image/png';
+        } else if (imgBuffer.length >= 12 && imgBuffer[0] === 0x52 && imgBuffer[1] === 0x49 && imgBuffer[2] === 0x46 && imgBuffer[3] === 0x46 && imgBuffer[8] === 0x57 && imgBuffer[9] === 0x45 && imgBuffer[10] === 0x42 && imgBuffer[11] === 0x50) {
+            detectedMime = 'image/webp';
         }
     }
 
     const nameToCheck = (defaultFilename || (typeof mediaSource === 'string' ? mediaSource : '')).toLowerCase();
+    if (!detectedMime || detectedMime === 'application/octet-stream') {
+        if (nameToCheck.endsWith('.jpg') || nameToCheck.endsWith('.jpeg')) detectedMime = 'image/jpeg';
+        else if (nameToCheck.endsWith('.png')) detectedMime = 'image/png';
+        else if (nameToCheck.endsWith('.webp')) detectedMime = 'image/webp';
+        else if (nameToCheck.endsWith('.pdf')) detectedMime = 'application/pdf';
+    }
+
     const isPdf = detectedMime === 'application/pdf' || nameToCheck.endsWith('.pdf') || (imgBuffer.length >= 4 && imgBuffer[0] === 0x25 && imgBuffer[1] === 0x50 && imgBuffer[2] === 0x44 && imgBuffer[3] === 0x46);
     const fileName = defaultFilename || (isPdf ? 'document.pdf' : (typeof mediaSource === 'string' && !mediaSource.includes(';base64,') ? path.basename(mediaSource) : 'attachment'));
 

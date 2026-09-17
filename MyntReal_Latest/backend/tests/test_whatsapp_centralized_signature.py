@@ -123,6 +123,46 @@ class TestWhatsAppCentralizedSignature(unittest.TestCase):
         self.assertIn("+91 85858 52738 | +91 80317 28899", ivy_msg)
         self.assertNotIn("88977", ivy_msg)
 
+    def test_11_strip_complex_and_stacked_signatures(self):
+        # Case with dash and designation
+        msg_with_dash_and_title = (
+            "Check this\n\n"
+            "—\n"
+            "Regards,\n"
+            "Mrs. Janapala Hema (MN10017)\n"
+            "Junior Executive | MyntReal Workflows"
+        )
+        self.assertEqual(strip_staff_whatsapp_signature(msg_with_dash_and_title), "Check this")
+
+        # Case with two stacked signatures
+        msg_stacked = (
+            "Check this\n\n"
+            "—\n"
+            "Regards,\n"
+            "Mrs. Janapala Hema (MN10017)\n"
+            "Junior Executive | MyntReal Workflows\n\n"
+            "Regards,\n"
+            "Mrs. Janapala Hema\n"
+            "+91 85858 52738 | +91 8897797667\n"
+            "Ext: 17"
+        )
+        self.assertEqual(strip_staff_whatsapp_signature(msg_stacked), "Check this")
+
+    def test_12_double_signature_prevention(self):
+        # Even when input contains previous signature with titles and dash, format_staff_whatsapp_message produces EXACTLY ONE signature
+        raw_msg = (
+            "Check this\n\n"
+            "—\n"
+            "Regards,\n"
+            "Mrs. Janapala Hema (MN10017)\n"
+            "Junior Executive | MyntReal Workflows"
+        )
+        result = format_staff_whatsapp_message(raw_msg, "Mrs. Janapala Hema", extension="17")
+        self.assertEqual(result.count("Regards,"), 1)
+        self.assertIn("Ext: 17", result)
+        self.assertIn("+91 85858 52738 | +91 8897797667", result)
+        self.assertNotIn("Junior Executive", result)
+
 
 if __name__ == "__main__":
     unittest.main()

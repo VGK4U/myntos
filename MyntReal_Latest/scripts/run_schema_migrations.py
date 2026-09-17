@@ -16,9 +16,12 @@ import logging
 from pathlib import Path
 
 # Setup path to backend
-_backend_dir = Path(__file__).resolve().parent.parent
+_root_dir = Path(__file__).resolve().parent.parent
+_backend_dir = _root_dir / "backend"
 if str(_backend_dir) not in sys.path:
     sys.path.insert(0, str(_backend_dir))
+if str(_root_dir) not in sys.path:
+    sys.path.insert(0, str(_root_dir))
 
 # Enable logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")

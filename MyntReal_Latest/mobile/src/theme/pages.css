@@ -4552,8 +4552,7 @@ input:checked + .slider:before {
 }
 
 /* Floating Action Button */
-.fab-btn,
-.fab {
+.fab-btn {
   position: fixed;
   bottom: 80px;
   right: 16px;
@@ -4572,14 +4571,12 @@ input:checked + .slider:before {
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.fab-btn:active,
-.fab:active {
+.fab-btn:active {
   transform: scale(0.95);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.fab-btn svg,
-.fab svg {
+.fab-btn svg {
   width: 28px;
   height: 28px;
 }

@@ -446,18 +446,24 @@ def get_lead_redial_cooldown(
     db: Session,
     current_user_ref: Optional[str] = None,
     current_portal: Optional[str] = None,
+    is_intentional: bool = False,
 ) -> tuple[bool, Optional[datetime], Optional[str]]:
     """
     DC_REDIAL_COOLDOWN_001: Server-authoritative Redial Protection.
     Returns (is_cooling_down, cooldown_expires_at, reason).
     
     Rules:
-    1. Rolling 24-Hour Phone Suppression: If customer was connected in the last 24h by ANOTHER staff,
-       suppress from other staff dialers for 24 rolling hours.
-    2. Scheduled Callback Override: If this staff member scheduled a future follow-up (next_followup_date > now),
-       defer dialing until the scheduled datetime.
-    3. Global 1-Hour Non-Connected Protection: If attempt was non-connected, enforce 1-hour cooldown across all staff.
+    1. Intentional Dial / Redial: Human agent intentional actions (clicking redial, direct dial, CTC)
+       are NEVER blocked by the 24-hour connected call cooldown or deferred callbacks.
+    2. Rolling 24-Hour Phone Suppression: If customer was connected in the last 24h by ANOTHER staff,
+       suppress from other staff auto dialers for 24 rolling hours.
+    3. Scheduled Callback Override: If this staff member scheduled a future follow-up (next_followup_date > now),
+       defer auto-dialing until the scheduled datetime.
+    4. Global 1-Hour Non-Connected Protection: If attempt was non-connected, enforce 1-hour cooldown across all staff.
     """
+    if is_intentional:
+        return False, None, None
+
     now = get_ist_now()
     cutoff_24h = now - timedelta(hours=24)
     cutoff_1h = now - timedelta(hours=1)
@@ -480,6 +486,23 @@ def get_lead_redial_cooldown(
     if not target_lids:
         return False, None, None
 
+    # Build match refs for current staff to avoid false "other staff" detection (supports id and emp_code)
+    user_match_refs = set()
+    if current_user_ref:
+        user_match_refs.add(str(current_user_ref).strip().lower())
+        try:
+            if str(current_user_ref).isdigit():
+                st = db.query(StaffEmployee.id, StaffEmployee.emp_code).filter(StaffEmployee.id == int(current_user_ref)).first()
+            else:
+                st = db.query(StaffEmployee.id, StaffEmployee.emp_code).filter(StaffEmployee.emp_code.ilike(str(current_user_ref))).first()
+            if st:
+                if st[0] is not None:
+                    user_match_refs.add(str(st[0]).strip().lower())
+                if st[1]:
+                    user_match_refs.add(str(st[1]).strip().lower())
+        except Exception:
+            pass
+
     query = """
         SELECT a.id, a.lead_id, a.call_outcome, a.duration_seconds, a.dialed_at, a.created_at, a.user_ref, a.portal
         FROM crm_dialer_attempts a
@@ -497,7 +520,8 @@ def get_lead_redial_cooldown(
 
         # Check 1: 24h rolling suppression for OTHER staff on connected calls
         if is_attempt_connected(outcome, duration):
-            is_other_staff = current_user_ref and (str(u_ref) != str(current_user_ref) or (portal and current_portal and portal != current_portal))
+            is_same_user = bool(u_ref and str(u_ref).strip().lower() in user_match_refs)
+            is_other_staff = bool(current_user_ref and not is_same_user)
             if is_other_staff:
                 expires_at = att_time + timedelta(hours=24)
                 if now < expires_at:
@@ -519,7 +543,7 @@ def get_lead_redial_cooldown(
                             # Scheduled callback is DUE NOW: allow calling!
                             pass
                     else:
-                        # No follow-up scheduled: 24h cooldown applies
+                        # No follow-up scheduled: 24h cooldown applies to automated dialer
                         expires_at = att_time + timedelta(hours=24)
                         if now < expires_at:
                             remaining_secs = int((expires_at - now).total_seconds())
@@ -558,7 +582,8 @@ def get_lead_redial_cooldown(
                 # 24h rolling suppression on connected calls
                 expires_at = s_time + timedelta(hours=24)
                 if now < expires_at:
-                    is_other = current_user_ref and str(s_staff_id) != str(current_user_ref)
+                    is_same_scl = bool(s_staff_id and str(s_staff_id).strip().lower() in user_match_refs)
+                    is_other = bool(current_user_ref and not is_same_scl)
                     rem_hours = max(1, int((expires_at - now).total_seconds()) // 3600)
                     time_str = expires_at.strftime("%I:%M %p IST (%d %b)")
                     if is_other:
@@ -576,7 +601,7 @@ def get_lead_redial_cooldown(
                                 # Scheduled callback is DUE NOW: allow calling!
                                 pass
                         else:
-                            # No follow-up scheduled: 24h cooldown applies
+                            # No follow-up scheduled: 24h cooldown applies to automated dialer
                             reason = f"Recently connected with this customer — 24h cooldown active until {time_str} (~{rem_hours}h remaining)"
                             return True, expires_at, reason
             else:
@@ -1858,19 +1883,27 @@ async def reserve_lead_for_dialer(
     if not compliant:
         return {"success": False, "error": comp_reason, "compliance_blocked": True, "lead_id": lead_id}
 
-    # Redial Protection Check (24h cross-staff phone suppression & 1h cooldown)
-    is_cooling, cooldown_until, cooldown_msg = get_lead_redial_cooldown(
-        lead_id, lead.phone, db, current_user_ref=user_ref, current_portal=portal
+    is_intentional = bool(
+        body.get('is_intentional') or
+        body.get('is_redial') or
+        body.get('is_manual') or
+        body.get('intent') in ('redial', 'manual', 'intentional')
     )
-    if is_cooling and cooldown_until:
-        return {
-            "success": False,
-            "error": cooldown_msg,
-            "cooldown_blocked": True,
-            "cooldown_until": _safe_iso(cooldown_until),
-            "message": cooldown_msg,
-            "lead_id": lead_id
-        }
+
+    # Redial Protection Check (24h cross-staff phone suppression & 1h cooldown for automated dialer)
+    if not is_intentional:
+        is_cooling, cooldown_until, cooldown_msg = get_lead_redial_cooldown(
+            lead_id, lead.phone, db, current_user_ref=user_ref, current_portal=portal, is_intentional=False
+        )
+        if is_cooling and cooldown_until:
+            return {
+                "success": False,
+                "error": cooldown_msg,
+                "cooldown_blocked": True,
+                "cooldown_until": _safe_iso(cooldown_until),
+                "message": cooldown_msg,
+                "lead_id": lead_id
+            }
 
     success, msg, expires_at = _acquire_lead_reservation(
         lead_id=lead_id,
@@ -3931,7 +3964,7 @@ async def initiate_click_to_call(
             user_ref = str(current_user.id)
             portal = 'staff' if hasattr(current_user, 'emp_code') else 'mnr'
             is_cooling, cooldown_until, cooldown_msg = get_lead_redial_cooldown(
-                lead_obj.id, customer_norm or lead_obj.phone, db, current_user_ref=user_ref, current_portal=portal
+                lead_obj.id, customer_norm or lead_obj.phone, db, current_user_ref=user_ref, current_portal=portal, is_intentional=True
             )
             if is_cooling:
                 raise HTTPException(status_code=400, detail=f"Redial cooldown active: {cooldown_msg}")
@@ -3939,7 +3972,7 @@ async def initiate_click_to_call(
         user_ref = str(current_user.id)
         portal = 'staff' if hasattr(current_user, 'emp_code') else 'mnr'
         is_cooling, cooldown_until, cooldown_msg = get_lead_redial_cooldown(
-            0, customer_norm, db, current_user_ref=user_ref, current_portal=portal
+            0, customer_norm, db, current_user_ref=user_ref, current_portal=portal, is_intentional=True
         )
         if is_cooling:
             raise HTTPException(status_code=400, detail=f"Redial cooldown active: {cooldown_msg}")

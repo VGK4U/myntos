@@ -231,6 +231,47 @@ export class StaffWhatsAppInboxPage {
       statusPillCol = '#fde68a';
     }
 
+    // When an active conversation is open, render dedicated full-height chat workspace
+    if (this.activeChatPhone) {
+      const curPhone = this.activeChatPhone;
+      const curName = this.activeChatName || '';
+      const cleanPhone = curPhone.replace(/[^0-9]/g, '').slice(-10);
+      const isGroup = (curPhone.includes('@g.us') || curPhone.startsWith('120363') || curPhone.length > 14);
+      const rawName = curName;
+      const hasRealName = rawName && rawName !== '0' && rawName !== 'None' && rawName !== 'null' && !/^\d+$/.test(rawName) && !rawName.startsWith('Customer (+91') && !rawName.startsWith('Contact (+91');
+      const headerTitle = isGroup ? (rawName || 'WhatsApp Group') : (hasRealName ? rawName : `Customer (${this.maskPhone(cleanPhone)})`);
+
+      this.container.innerHTML = `
+        ${PageHeader.render({
+          title: headerTitle,
+          showBack: true,
+          rightAction: {
+            icon: '<i class="fas fa-sync-alt" style="font-size:16px;color:#25d366;"></i>',
+            onClick: () => this.loadChat(curPhone, curName)
+          }
+        })}
+
+        <div class="wa-center-page" style="background: #0b1120; height: calc(100vh - 60px); color: #f8fafc; padding: 0; display: flex; flex-direction: column; overflow: hidden;">
+          ${this.renderLiveChatPane()}
+        </div>
+
+        <!-- Modals Container -->
+        <div id="waCenterModalContainer"></div>
+      `;
+
+      PageHeader.attachListeners({
+        title: headerTitle,
+        showBack: true,
+        rightAction: {
+          icon: '<i class="fas fa-sync-alt" style="font-size:16px;color:#25d366;"></i>',
+          onClick: () => this.loadChat(curPhone, curName)
+        }
+      });
+
+      this.attachMainListeners();
+      return;
+    }
+
     this.container.innerHTML = `
       ${PageHeader.render({
         title: 'WhatsApp Center',
@@ -509,7 +550,7 @@ export class StaffWhatsAppInboxPage {
     const headerSub = isGroup ? 'WhatsApp Group' : (hasRealName ? 'WhatsApp Contact' : this.maskPhone(cleanPhone));
 
     return `
-      <div style="display: flex; flex-direction: column; height: calc(100vh - 280px); min-height: 480px; background: #0b1120;">
+      <div style="display: flex; flex-direction: column; height: 100%; width: 100%; box-sizing: border-box; background: #0b1120; overflow: hidden; flex: 1;">
         
         <!-- Live Chat Header -->
         <div style="padding: 10px 12px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center;">
@@ -600,15 +641,16 @@ export class StaffWhatsAppInboxPage {
         </div>
 
         <!-- WhatsApp Interactive Keyboard / Composer Bar -->
-        <div style="display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: #1e293b; border-top: 1px solid #334155;">
+        <div style="display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: #1e293b; border-top: 1px solid #334155; width: 100%; box-sizing: border-box; flex-shrink: 0;">
+          <input type="file" id="waChatFileInput" accept="image/jpeg,image/png,image/webp,application/pdf" style="display: none;" />
           
           <!-- Emoji Picker Toggle Button -->
-          <button id="waToggleEmojiBtn" style="background: none; border: none; font-size: 20px; color: ${this.showEmojiTray ? '#25d366' : '#94a3b8'}; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;">
+          <button id="waToggleEmojiBtn" style="background: none; border: none; font-size: 20px; color: ${this.showEmojiTray ? '#25d366' : '#94a3b8'}; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
             <i class="far fa-smile"></i>
           </button>
 
           <!-- Attachments Menu Button -->
-          <button id="waToggleAttachBtn" style="background: none; border: none; font-size: 18px; color: #94a3b8; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center;">
+          <button id="waToggleAttachBtn" style="background: none; border: none; font-size: 18px; color: #94a3b8; cursor: pointer; padding: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
             <i class="fas fa-paperclip"></i>
           </button>
 
@@ -617,11 +659,11 @@ export class StaffWhatsAppInboxPage {
             type="text" 
             id="waLiveMsgInput" 
             placeholder="Type a WhatsApp message..." 
-            style="flex: 1; padding: 9px 14px; border-radius: 20px; background: #0f172a; border: 1px solid #334155; color: #fff; font-size: 13.5px; outline: none; transition: border-color 0.15s;"
+            style="flex: 1; min-width: 0; box-sizing: border-box; padding: 9px 14px; border-radius: 20px; background: #0f172a; border: 1px solid #334155; color: #fff; font-size: 13.5px; outline: none; transition: border-color 0.15s;"
           />
 
           <!-- Circular Green WhatsApp Send Button -->
-          <button id="waLiveSendBtn" style="width: 38px; height: 38px; border-radius: 50%; background: #25d366; color: #0f172a; border: none; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(37,211,102,0.4); flex-shrink: 0;">
+          <button id="waLiveSendBtn" style="width: 38px; height: 38px; min-width: 38px; min-height: 38px; border-radius: 50%; background: #25d366; color: #0f172a; border: none; font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(37,211,102,0.4); flex-shrink: 0;">
             <i class="fas fa-paper-plane"></i>
           </button>
         </div>
@@ -665,8 +707,6 @@ export class StaffWhatsAppInboxPage {
   private renderAttachMenu(): string {
     return `
       <div style="background: #1e293b; border-top: 1px solid #334155; padding: 12px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
-        <input type="file" id="waChatFileInput" accept="image/jpeg,image/png,image/webp,application/pdf" style="display: none;" />
-        
         <button class="wa-attach-choice-btn" data-type="upload-image" style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 10px 4px; color: #fff; font-size: 11px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer;">
           <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(59,130,246,0.15); display: flex; align-items: center; justify-content: center;">
             <i class="fas fa-image" style="font-size: 16px; color: #3b82f6;"></i>
@@ -772,7 +812,9 @@ export class StaffWhatsAppInboxPage {
     }
 
     const text = m.body_text || m.body || m.message || '';
-    const ticks = m.status_ticks || '✓✓';
+    const isFailed = m.status === 'failed' || m.status_ticks === '✕';
+    const ticks = isFailed ? '✕' : (m.status_ticks || '✓✓');
+    const tickColor = isFailed ? '#ef4444' : '#a7f3d0';
     const mediaHtml = this.renderMediaPreview(m);
 
     let quotedHtml = '';
@@ -789,12 +831,13 @@ export class StaffWhatsAppInboxPage {
 
     if (isOutbound) {
       return `
-        <div style="align-self: flex-end; max-width: 82%; background: ${isBot ? '#065f46' : '#059669'}; color: #fff; padding: 8px 12px; border-radius: 12px 12px 2px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+        <div style="align-self: flex-end; max-width: 82%; background: ${isBot ? '#065f46' : (isFailed ? '#7f1d1d' : '#059669')}; color: #fff; padding: 8px 12px; border-radius: 12px 12px 2px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
           ${isBot ? '<div style="font-size: 9.5px; font-weight: 700; color: #a7f3d0; margin-bottom: 2px;"><i class="fas fa-robot"></i> Bot Automated</div>' : ''}
+          ${isFailed ? '<div style="font-size: 9.5px; font-weight: 700; color: #fca5a5; margin-bottom: 2px;"><i class="fas fa-exclamation-circle"></i> Failed to deliver</div>' : ''}
           ${quotedHtml}
           ${mediaHtml}
           ${text ? `<div style="font-size: 13px; line-height: 1.35; word-break: break-word; white-space: pre-wrap;">${this.escapeHtml(text)}</div>` : ''}
-          <div style="font-size: 9.5px; color: #a7f3d0; text-align: right; margin-top: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+          <div style="font-size: 9.5px; color: ${tickColor}; text-align: right; margin-top: 3px; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
             <button class="wa-bubble-reply-btn" data-idx="${idx}" style="background: none; border: none; color: #a7f3d0; cursor: pointer; font-size: 10px; padding: 2px 4px; display: inline-flex; align-items: center;" title="Reply to message">
               <i class="fas fa-reply"></i>
             </button>
@@ -802,7 +845,7 @@ export class StaffWhatsAppInboxPage {
               <i class="fas fa-share"></i>
             </button>
             <span>${timeStr}</span>
-            <span style="font-size: 10px; color: #a7f3d0;">${ticks}</span>
+            <span style="font-size: 10px; color: ${tickColor}; font-weight: ${isFailed ? '700' : 'normal'};">${ticks}</span>
           </div>
         </div>
       `;
@@ -1568,7 +1611,7 @@ export class StaffWhatsAppInboxPage {
     // File Input for Chat Attachments
     const chatFileInput = document.getElementById('waChatFileInput') as HTMLInputElement;
     chatFileInput?.addEventListener('change', async () => {
-      const file = chatFileInput.files?.[0];
+      const file = (chatFileInput || (document.getElementById('waChatFileInput') as HTMLInputElement))?.files?.[0];
       if (!file) return;
 
       this.activeAttachment = {
@@ -1582,21 +1625,24 @@ export class StaffWhatsAppInboxPage {
         const fd = new FormData();
         fd.append('file', file);
         const res = await apiService.uploadFile<any>('/whatsapp/media-upload', fd);
-        if (res.success && res.data && res.data.media_url) {
+        const uploadData = (res && res.data && typeof res.data === 'object' && (res.data as any).data) ? (res.data as any).data : (res && res.data ? res.data : res);
+        if (uploadData && (uploadData.media_url || uploadData.url)) {
           this.activeAttachment = {
-            type: res.data.media_type || (file.type.startsWith('image/') ? 'image' : 'document'),
-            name: res.data.filename || file.name,
-            url: res.data.media_url
+            type: uploadData.media_type || (file.type.startsWith('image/') ? 'image' : 'document'),
+            name: uploadData.filename || file.name,
+            url: uploadData.media_url || uploadData.url
           };
         } else {
-          alert(res.error || 'Failed to upload attachment.');
+          alert(res?.error || (uploadData && uploadData.error) || 'Failed to upload attachment.');
           this.activeAttachment = null;
         }
       } catch (err: any) {
         alert(`Upload failed: ${err.message || 'Network error'}`);
         this.activeAttachment = null;
       } finally {
-        chatFileInput.value = '';
+        if (chatFileInput) chatFileInput.value = '';
+        const curInput = document.getElementById('waChatFileInput') as HTMLInputElement;
+        if (curInput) curInput.value = '';
         this.render();
         this.scrollToChatBottom();
       }
@@ -1606,15 +1652,16 @@ export class StaffWhatsAppInboxPage {
     this.container.querySelectorAll('.wa-attach-choice-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const type = (e.currentTarget as HTMLElement).dataset.type;
+        const inputEl = (document.getElementById('waChatFileInput') as HTMLInputElement) || chatFileInput;
         if (type === 'upload-image') {
-          if (chatFileInput) {
-            chatFileInput.accept = 'image/jpeg,image/png,image/webp';
-            chatFileInput.click();
+          if (inputEl) {
+            inputEl.accept = 'image/jpeg,image/png,image/webp';
+            inputEl.click();
           }
         } else if (type === 'upload-doc') {
-          if (chatFileInput) {
-            chatFileInput.accept = 'application/pdf';
-            chatFileInput.click();
+          if (inputEl) {
+            inputEl.accept = 'application/pdf';
+            inputEl.click();
           }
         } else if (type === 'brochure') {
           this.activeAttachment = { 
@@ -1649,29 +1696,48 @@ export class StaffWhatsAppInboxPage {
     });
 
     // Bubble Reply Button
-    document.querySelectorAll('.wa-bubble-reply-btn').forEach(btn => {
+    this.container.querySelectorAll('.wa-bubble-reply-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const idxStr = (btn as HTMLElement).getAttribute('data-idx');
-        if (idxStr !== null) {
-          const idx = parseInt(idxStr, 10);
-          const m = this.chatHistory[idx];
-          if (m) {
-            const isOut = m.message_type === 'outbound' || m.message_type === 'bot' || m.message_type === 'manual_staff' || m.sender === 'bot' || m.sender_type === 'bot';
-            const sender = isOut ? 'You' : (this.activeChatName || 'Customer');
-            let text = m.body_text || m.body || m.message || '';
-            if (!text || text === '—') {
-              text = m.media_url ? '[Attachment]' : '';
-            }
-            const wamid = m.wamid || (m.id ? String(m.id).replace('ml_', '').replace('wa_', '') : null);
-            this.activeReplyContext = {
-              wamid: wamid || `msg_${idx}`,
-              text: text.length > 80 ? text.substring(0, 80) + '...' : text,
-              sender: sender
-            };
-            this.render();
-            const input = document.getElementById('waLiveMsgInput') as HTMLInputElement;
-            if (input) input.focus();
+        const idx = parseInt((e.currentTarget as HTMLElement).dataset.idx || '0', 10);
+        const m = this.chatHistory[idx];
+        if (m) {
+          this.activeReplyContext = {
+            wamid: m.wamid || String(m.id),
+            text: m.body_text || m.body || m.message || (m.media_name ? `[${m.media_name}]` : '[Attachment]'),
+            sender: (m.message_type === 'outbound' || m.is_from_me) ? 'You' : (this.activeChatName || 'Contact')
+          };
+          this.render();
+          const input = document.getElementById('waLiveMsgInput') as HTMLInputElement;
+          if (input) input.focus();
+        }
+      });
+    });
+
+    // Bubble Forward Button
+    this.container.querySelectorAll('.wa-bubble-fwd-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const text = (e.currentTarget as HTMLElement).dataset.msg || '';
+        if (text) {
+          const input = document.getElementById('waLiveMsgInput') as HTMLInputElement;
+          if (input) {
+            input.value = text;
+            input.focus();
+          } else {
+            this.openNewMessageModal(undefined, text);
+          }
+        }
+      });
+    });
+
+    // Quick Reply Pills
+    this.container.querySelectorAll('.wa-quick-pill').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const text = (e.currentTarget as HTMLElement).dataset.text || '';
+        if (text) {
+          const input = document.getElementById('waLiveMsgInput') as HTMLInputElement;
+          if (input) {
+            input.value = text;
+            input.focus();
           }
         }
       });
@@ -1707,39 +1773,56 @@ export class StaffWhatsAppInboxPage {
       if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
         signature = `\n\nRegards,\n${staffName}\n📞 +91 85858 52738 | +91 8897797667\nExt: ${String(ext).trim()}`;
       }
-      const finalMsg = text ? (!text.toLowerCase().includes('regards,') ? `${text}${signature}` : text) : '';
+      // Render single canonical signature in local optimistic bubble
+      const displayMsg = text ? (!text.toLowerCase().includes('regards,') ? `${text}${signature}` : text) : '';
 
-      this.chatHistory.push({
-        id: Date.now(),
+      const localMsgId = Date.now();
+      const newMsgObj: any = {
+        id: localMsgId,
         from_phone: this.activeChatPhone,
         message_type: 'outbound',
-        body_text: finalMsg,
+        body_text: displayMsg,
         media_url: currentAttach?.url || null,
         media_name: currentAttach?.name || null,
         media_type: currentAttach?.type || 'text',
         reply_to: replyCtx ? { wamid: replyCtx.wamid, text: replyCtx.text, sender: replyCtx.sender } : undefined,
         received_at: new Date().toISOString(),
         status_ticks: '✓✓'
-      });
+      };
+      this.chatHistory.push(newMsgObj);
       this.render();
       this.scrollToChatBottom();
 
       try {
         const cleanPhone = (this.activeChatPhone || '').replace(/[^0-9]/g, '').slice(-10);
-        await apiService.post('/whatsapp/send-message', {
+        const res = await apiService.post<any>('/whatsapp/send-message', {
           recipient: cleanPhone,
           to_phone: cleanPhone,
           phone: cleanPhone,
-          message: finalMsg,
+          message: text,
           media_url: currentAttach?.url || null,
           message_type: currentAttach ? currentAttach.type : 'text',
+          filename: currentAttach?.name || null,
+          mimetype: currentAttach ? (currentAttach.type === 'document' ? 'application/pdf' : 'image/jpeg') : undefined,
+          send_as_document: currentAttach?.type === 'document',
           recipient_type: 'individual',
           reply_to_wamid: replyCtx?.wamid || null,
           reply_to_text: replyCtx?.text || null,
           reply_to_sender: replyCtx?.sender || null
         });
-      } catch (err) {
+
+        if (res && res.success === false) {
+          newMsgObj.status = 'failed';
+          newMsgObj.status_ticks = '✕';
+          this.render();
+          alert(res.message || res.error || 'Failed to send WhatsApp message.');
+        }
+      } catch (err: any) {
         console.error('[StaffWhatsAppCenter] Send failed:', err);
+        newMsgObj.status = 'failed';
+        newMsgObj.status_ticks = '✕';
+        this.render();
+        alert(`Failed to send message: ${err?.message || 'Network or server error'}`);
       }
     };
 
@@ -2476,12 +2559,13 @@ export class StaffWhatsAppInboxPage {
         const fd = new FormData();
         fd.append('file', file);
         const res = await apiService.uploadFile<any>('/whatsapp/media-upload', fd);
-        if (res.success && res.data && res.data.media_url) {
+        const uploadData = (res && res.data && typeof res.data === 'object' && (res.data as any).data) ? (res.data as any).data : (res && res.data ? res.data : res);
+        if (uploadData && (uploadData.media_url || uploadData.url)) {
           attachedModalMedia = {
-            url: res.data.media_url,
-            name: res.data.filename || file.name,
-            type: res.data.media_type || (file.type.startsWith('image/') ? 'image' : 'document'),
-            size: res.data.file_size || file.size
+            url: uploadData.media_url || uploadData.url,
+            name: uploadData.filename || file.name,
+            type: uploadData.media_type || (file.type.startsWith('image/') ? 'image' : 'document'),
+            size: uploadData.file_size || file.size
           };
 
           if (modalAttachPreviewWrap) modalAttachPreviewWrap.style.display = 'flex';
@@ -2507,7 +2591,7 @@ export class StaffWhatsAppInboxPage {
             }
           }
         } else {
-          alert(res.error || 'Failed to upload attachment.');
+          alert(res?.error || (uploadData && uploadData.error) || 'Failed to upload attachment.');
         }
       } catch (err: any) {
         alert(`Upload failed: ${err.message || 'Network error'}`);
@@ -2545,8 +2629,7 @@ export class StaffWhatsAppInboxPage {
       }
 
       const attachSig = sigCheck?.checked ?? true;
-      const signature = `\n\n${defaultSig}`;
-      const finalMsg = text ? ((attachSig && !text.toLowerCase().includes('regards,')) ? `${text}${signature}` : text) : '';
+      const cleanText = text || '';
 
       if (sendBtn) sendBtn.disabled = true;
       if (sendBtnText) sendBtnText.textContent = currentMode === 'company' ? 'Sending via Meta API...' : 'Sending via WhatsApp Bot...';
@@ -2556,6 +2639,8 @@ export class StaffWhatsAppInboxPage {
           // Meta Cloud API Send
           const tplId = selectedTemplateObj ? (selectedTemplateObj.id || selectedTemplateObj.template_id) : null;
           const leadId = selectedContactLeadId || '0';
+          const signature = `\n\n${defaultSig}`;
+          const finalMsg = cleanText ? ((attachSig && !cleanText.toLowerCase().includes('regards,')) ? `${cleanText}${signature}` : cleanText) : '';
           await apiService.post(`/whatsapp-config/crm-lead-send/${leadId}`, {
             phone: targetPhone,
             template_id: tplId ? parseInt(tplId, 10) : null,
@@ -2565,17 +2650,23 @@ export class StaffWhatsAppInboxPage {
             media_url: attachedModalMedia?.url || null
           });
         } else {
-          // Scanned Bot Gateway Send
-          await apiService.post('/whatsapp/send-message', {
+          // Scanned Bot Gateway Send - let backend format canonical staff signature with extension
+          const res = await apiService.post<any>('/whatsapp/send-message', {
             recipient: targetPhone,
             to_phone: targetPhone,
             phone: targetPhone,
-            message: finalMsg,
+            message: cleanText,
             media_url: attachedModalMedia?.url || null,
             message_type: attachedModalMedia ? attachedModalMedia.type : 'text',
+            filename: attachedModalMedia?.name || null,
+            mimetype: attachedModalMedia ? (attachedModalMedia.type === 'document' ? 'application/pdf' : 'image/jpeg') : undefined,
+            send_as_document: attachedModalMedia?.type === 'document',
             recipient_type: 'individual',
             recipient_name: selectedContactName || 'Customer'
           });
+          if (res && res.success === false) {
+            throw new Error(res.message || res.error || 'WhatsApp gateway dispatch failed');
+          }
         }
 
         modalWrap.innerHTML = '';

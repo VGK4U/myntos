@@ -361,17 +361,17 @@ export class AutoDialerPage {
   // ── Dial ─────────────────────────────────────────────────────────────────────
 
   // Primary dial: dials directly via built-in Plivo WebRTC softphone
-  private _dial(phone: string, lead: QueueItem): void {
+  private _dial(phone: string, lead: QueueItem, isIntentional: boolean = false): void {
     if (this.isDialingInProgress || this.activeSoftphoneDial) {
       console.warn('[AutoDialer] Dial already in progress, ignoring duplicate action.');
       return;
     }
     // MANDATE 1: TRUE USER-GESTURE AUDIO UNLOCK BEFORE ANY ASYNC OPERATION
     telephonyService.prepareAudioOnUserGesture();
-    void this._dialSoftphone(phone, lead);
+    void this._dialSoftphone(phone, lead, isIntentional);
   }
 
-  private async _dialSoftphone(phone: string, lead: QueueItem): Promise<void> {
+  private async _dialSoftphone(phone: string, lead: QueueItem, isIntentional: boolean = false): Promise<void> {
     if (this.isDialingInProgress) return;
     this.isDialingInProgress = true;
     telephonyService.prepareAudioOnUserGesture();
@@ -392,10 +392,10 @@ export class AutoDialerPage {
     }
 
     try {
-      const res = await dialerService.reserveLead(canonicalId, this.sessionId || undefined);
+      const res = await dialerService.reserveLead(canonicalId, this.sessionId || undefined, isIntentional);
       if (!res.success) {
         this.activeSoftphoneDial = false;
-        if (res.cooldown_blocked) {
+        if (res.cooldown_blocked && !isIntentional) {
           alert(`⏳ Redial Cooldown: ${res.message || 'Recently attempted — 1-hour cooldown active'}`);
           return;
         }
@@ -413,8 +413,10 @@ export class AutoDialerPage {
           this._render();
           return;
         }
-        alert(`Lead #${canonicalId} is currently in another agent's active preview.`);
-        return;
+        if (!isIntentional) {
+          alert(`Lead #${canonicalId} is currently in another agent's active preview.`);
+          return;
+        }
       }
 
       this.callMethod = 'softphone';
@@ -456,7 +458,7 @@ export class AutoDialerPage {
   }
 
   // Fallback dial: direct SIM / native device call in case of softphone issue
-  private async _dialDirectMobile(phone: string, lead: QueueItem): Promise<void> {
+  private async _dialDirectMobile(phone: string, lead: QueueItem, isIntentional: boolean = false): Promise<void> {
     if (this.isDialingInProgress || this.activeSoftphoneDial) return;
     this.isDialingInProgress = true;
     const dialBtns = this.container?.querySelectorAll<HTMLButtonElement>('.dc-dial-btn, .dc-direct-mobile-btn');
@@ -476,9 +478,9 @@ export class AutoDialerPage {
     }
 
     try {
-      const res = await dialerService.reserveLead(canonicalId, this.sessionId || undefined);
+      const res = await dialerService.reserveLead(canonicalId, this.sessionId || undefined, isIntentional);
       if (!res.success) {
-        if (res.cooldown_blocked) {
+        if (res.cooldown_blocked && !isIntentional) {
           alert(`⏳ Redial Cooldown: ${res.message || 'Recently attempted — 1-hour cooldown active'}`);
           return;
         }
@@ -496,8 +498,10 @@ export class AutoDialerPage {
           this._render();
           return;
         }
-        alert(`Lead #${canonicalId} is currently in another agent's active preview.`);
-        return;
+        if (!isIntentional) {
+          alert(`Lead #${canonicalId} is currently in another agent's active preview.`);
+          return;
+        }
       }
 
       this.callMethod = 'direct_sim';
@@ -524,7 +528,7 @@ export class AutoDialerPage {
 
   // DC_MYOP_001 / DC_MYOP_CTC: The actual dial — called after method is chosen in the modal.
   // MyOperator: uses Click-to-Call API (server-side bridge). Normal: uses tel: URI.
-  private async _executeDial(phone: string, lead: QueueItem, method: string): Promise<void> {
+  private async _executeDial(phone: string, lead: QueueItem, method: string, isIntentional: boolean = false): Promise<void> {
     const canonicalId = (lead as any).id || lead.lead_id;
     if (!canonicalId) {
       console.error('[AutoDialer] Missing canonical ID for lead:', lead);
@@ -532,9 +536,9 @@ export class AutoDialerPage {
       return;
     }
 
-    const res = await dialerService.reserveLead(canonicalId, this.sessionId || undefined);
+    const res = await dialerService.reserveLead(canonicalId, this.sessionId || undefined, isIntentional);
     if (!res.success) {
-      if (res.cooldown_blocked) {
+      if (res.cooldown_blocked && !isIntentional) {
         alert(`⏳ Redial Cooldown: ${res.message || 'Recently attempted — 1-hour cooldown active'}`);
         return;
       }
@@ -546,8 +550,10 @@ export class AutoDialerPage {
         alert('Lead reservation failed: Invalid lead ID. Please refresh queue.');
         return;
       }
-      alert(`Lead #${canonicalId} is currently in another agent's active preview.`);
-      return;
+      if (!isIntentional) {
+        alert(`Lead #${canonicalId} is currently in another agent's active preview.`);
+        return;
+      }
     }
 
     this.callMethod = method;
@@ -602,7 +608,7 @@ export class AutoDialerPage {
     document.body.appendChild(div);
     document.getElementById('dc-ctc-fallback')?.addEventListener('click', () => {
       div.remove();
-      void this._executeDial(phone, lead, 'normal');
+      void this._executeDial(phone, lead, 'normal', true);
     });
     document.getElementById('dc-ctc-dismiss')?.addEventListener('click', () => div.remove());
   }
@@ -656,17 +662,17 @@ export class AutoDialerPage {
     document.getElementById('dc-method-softphone')?.addEventListener('click', () => {
       telephonyService.prepareAudioOnUserGesture();
       modal.remove();
-      void this._dialSoftphone(phone, lead);
+      void this._dialSoftphone(phone, lead, true);
     });
 
     document.getElementById('dc-method-normal')?.addEventListener('click', () => {
       modal.remove();
-      void this._executeDial(phone, lead, 'normal');
+      void this._executeDial(phone, lead, 'normal', true);
     });
 
     document.getElementById('dc-method-myop')?.addEventListener('click', () => {
       modal.remove();
-      void this._executeDial(phone, lead, 'myoperator');
+      void this._executeDial(phone, lead, 'myoperator', true);
     });
 
     document.getElementById('dc-method-cancel')?.addEventListener('click', () => {
@@ -1406,6 +1412,7 @@ export class AutoDialerPage {
 
     // ── Redial from Popup ────────────────────────────────────────────────────
     const _handlePopupRedial = () => {
+      telephonyService.prepareAudioOnUserGesture();
       const phoneInput = overlay.querySelector('#dc-edit-phone') as HTMLInputElement | null;
       const altPhoneInput = overlay.querySelector('#dc-edit-alt-phone') as HTMLInputElement | null;
       const targetPhone = (phoneInput?.value || this.popupLeadData?.phone || altPhoneInput?.value || this.popupLeadData?.alternate_phone || '').trim();
@@ -1414,7 +1421,7 @@ export class AutoDialerPage {
         return;
       }
       this._saveToLocalDialHistory(targetPhone, this.popupLeadData?.name || 'Customer');
-      void this._executeDial(targetPhone, this.popupLeadData || { lead_id: leadId, phone: targetPhone }, this.callMethod || 'softphone');
+      void this._executeDial(targetPhone, this.popupLeadData || { lead_id: leadId, phone: targetPhone }, this.callMethod || 'softphone', true);
     };
     overlay.querySelector('#dc-popup-redial')?.addEventListener('click', _handlePopupRedial);
     overlay.querySelector('#dc-popup-header-redial')?.addEventListener('click', _handlePopupRedial);
@@ -3303,7 +3310,7 @@ export class AutoDialerPage {
       btn.addEventListener('click', () => {
         const phone = btn.getAttribute('data-phone') || '';
         const lead = dialerService.getCurrentLead();
-        if (phone && lead) this._dial(phone, lead);
+        if (phone && lead) this._dial(phone, lead, true);
       });
     });
 
@@ -3311,7 +3318,7 @@ export class AutoDialerPage {
       btn.addEventListener('click', () => {
         const phone = btn.getAttribute('data-phone') || '';
         const lead = dialerService.getCurrentLead();
-        if (phone && lead) void this._dialDirectMobile(phone, lead);
+        if (phone && lead) void this._dialDirectMobile(phone, lead, true);
       });
     });
 

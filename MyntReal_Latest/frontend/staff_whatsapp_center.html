@@ -125,6 +125,8 @@
     .composer-input{padding:8px 14px;border:1.5px solid #cbd5e1;border-radius:20px;font-size:13px;outline:none;background:#fff;color:#0f172a;transition:all .15s}
     .composer-input:focus{border-color:#059669;box-shadow:0 0 0 3px rgba(5,150,105,0.12)}
     .channel-select-compact{border-radius:14px;background:#f1f5f9;font-weight:600;font-size:12px;padding:6px 10px}
+    .msg-send-btn{flex-shrink:0 !important;white-space:nowrap !important}
+    .msg-text-input{min-width:0;box-sizing:border-box}
 
     @media (min-width: 769px) {
       .chat-composer-bar{flex-direction:row;align-items:center}
@@ -904,6 +906,8 @@ let activeScope     = 'assigned_tagged';
 let activeChatPhone = null;
 let activeChatType  = 'individual';
 let activeMediaUrl  = null;
+let activeMediaName = null;
+let activeMediaType = null;
 let pollTimer       = null;
 let debounceTimer   = null;
 let companyChannelFilter = 'all';
@@ -2121,6 +2125,8 @@ async function onFileSelected(input) {
     const data = await res.json();
     if (data.media_url) {
       activeMediaUrl = data.media_url;
+      activeMediaName = file.name;
+      activeMediaType = data.media_type || (file.type.startsWith('image/') ? 'image' : 'document');
       document.getElementById('attachFileName').textContent = file.name;
       document.getElementById('attachPreviewCard').classList.add('show');
       showToast('Media uploaded successfully');
@@ -2132,6 +2138,8 @@ async function onFileSelected(input) {
 
 function clearAttachment() {
   activeMediaUrl = null;
+  activeMediaName = null;
+  activeMediaType = null;
   document.getElementById('msgFileInput').value = '';
   document.getElementById('attachPreviewCard').classList.remove('show');
 }
@@ -2165,11 +2173,6 @@ async function sendChatMessage() {
   if (!activeChatPhone) return showToast('Please select a chat first', 'red');
   if (!rawMsgText && !activeMediaUrl) return showToast('Please type a message or attach media', 'red');
 
-  let msgText = rawMsgText;
-  if (msgText && !msgText.toLowerCase().includes('regards,')) {
-    msgText = msgText + getStaffSignature();
-  }
-
   const cleanPhone = activeChatPhone.replace(/\D/g, '').slice(-10);
 
   // 1. Channel 2: 📱 Scanned WhatsApp Dispatch
@@ -2191,8 +2194,12 @@ async function sendChatMessage() {
     const payload = {
       recipient: activeChatPhone,
       recipient_type: activeChatType,
-      message: msgText,
+      message: rawMsgText,
       media_url: activeMediaUrl,
+      message_type: activeMediaType || 'text',
+      filename: activeMediaName || (activeMediaUrl ? activeMediaUrl.split('/').pop() : null),
+      mimetype: activeMediaType === 'document' ? 'application/pdf' : (activeMediaUrl && activeMediaUrl.endsWith('.png') ? 'image/png' : 'image/jpeg'),
+      send_as_document: activeMediaType === 'document',
       client_msg_id: `wa_center_${Date.now()}`
     };
 
@@ -3299,6 +3306,9 @@ async function executeForwardMessage() {
       recipient_name: selectedForwardTarget.name,
       message: msgText,
       media_url: mediaUrl,
+      filename: activeForwardMessage.media_name || activeForwardMessage.filename || (mediaUrl ? mediaUrl.split('/').pop() : null),
+      mimetype: activeForwardMessage.media_type === 'document' ? 'application/pdf' : (mediaUrl && mediaUrl.endsWith('.png') ? 'image/png' : 'image/jpeg'),
+      send_as_document: activeForwardMessage.media_type === 'document',
       client_msg_id: `fwd_${Date.now()}`
     };
 

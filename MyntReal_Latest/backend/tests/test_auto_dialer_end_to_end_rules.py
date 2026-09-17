@@ -356,8 +356,70 @@ def run_all_tests():
         assert norm_nc not in supp_phones_b_nc, "Non-connected call should NOT trigger 24h cross-staff suppression!"
         print("  ✓ Rule 14C PASSED: 24h suppression NOT triggered for non-connected call (released after 1h)")
 
+        # ── TEST 7: INTENTIONAL DIAL / REDIAL (24h Block strictly for Auto Dialer, not Intentional Redial) ──
+        print("\n[TEST 7] Verifying Intentional Dial / Redial Bypasses 24h Cooldown & Deferred Callback...")
+        phone_rule_redial = f"91{int(datetime.now().timestamp() * 1000) % 100000000:08d}"
+        lead_redial = CRMLead(
+            company_id=comp_id,
+            name="Redial Test Lead",
+            phone=phone_rule_redial,
+            status="contacted",
+            handler_type="staff",
+            telecaller_id=staff_a.id,
+        )
+        db.add(lead_redial)
+        db.commit()
+        db.refresh(lead_redial)
+        test_lead_ids.append(lead_redial.id)
+
+        # Insert connected attempt by Staff A from 5 minutes ago
+        att_recent_id = insert_attempt(
+            db,
+            lead_id=lead_redial.id,
+            user_ref=str(staff_a.id),
+            portal="staff",
+            call_outcome="answered",
+            duration_seconds=218, # 3m 38s (matching user's exact case)
+            dialed_at=now_dt - timedelta(minutes=5),
+        )
+        test_attempt_ids.append(att_recent_id)
+
+        # 7A: Automated dialer check (is_intentional=False) -> Must enforce 24h cooldown for auto dialer
+        is_cooling_auto, _, auto_reason = get_lead_redial_cooldown(
+            lead_redial.id, lead_redial.phone, db, current_user_ref=str(staff_a.id), current_portal="staff", is_intentional=False
+        )
+        assert is_cooling_auto is True, "Auto dialer MUST be blocked by 24h cooldown on recently connected customer"
+        assert "24h cooldown active" in auto_reason, f"Unexpected auto reason: {auto_reason}"
+        print(f"  ✓ Rule 7A PASSED: Automated dialer properly blocked by 24h cooldown ('{auto_reason}')")
+
+        # 7B: Intentional Redial check (is_intentional=True) -> Must bypass 24h block completely
+        is_cooling_intent, _, _ = get_lead_redial_cooldown(
+            lead_redial.id, lead_redial.phone, db, current_user_ref=str(staff_a.id), current_portal="staff", is_intentional=True
+        )
+        assert is_cooling_intent is False, "Intentional Redial must NEVER be blocked by 24h cooldown!"
+        print("  ✓ Rule 7B PASSED: Intentional Redial (is_intentional=True) successfully bypassed 24h block")
+
+        # 7C: Scheduled follow-up deferred callback test
+        lead_redial.next_followup_date = now_dt + timedelta(hours=24) # scheduled for tomorrow
+        db.commit()
+
+        # Automated dialer check -> blocked with "Scheduled callback deferred until"
+        is_cooling_deferred, _, def_reason = get_lead_redial_cooldown(
+            lead_redial.id, lead_redial.phone, db, current_user_ref=str(staff_a.id), current_portal="staff", is_intentional=False
+        )
+        assert is_cooling_deferred is True, "Auto dialer MUST defer until scheduled callback"
+        assert "Scheduled callback deferred until" in def_reason, f"Unexpected reason: {def_reason}"
+        print(f"  ✓ Rule 7C PASSED: Automated dialer deferred until scheduled callback ('{def_reason}')")
+
+        # Intentional Redial check with scheduled follow-up -> MUST STILL BYPASS!
+        is_cooling_intent_sched, _, _ = get_lead_redial_cooldown(
+            lead_redial.id, lead_redial.phone, db, current_user_ref=str(staff_a.id), current_portal="staff", is_intentional=True
+        )
+        assert is_cooling_intent_sched is False, "Intentional Redial must allow dialing even when scheduled follow-up exists!"
+        print("  ✓ Rule 7D PASSED: Intentional Redial allowed immediately despite scheduled future follow-up")
+
         print("\n" + "=" * 70)
-        print("ALL 6 TEST SUITES PASSED! 100% COMPLIANCE WITH AUTHORITATIVE RULES.")
+        print("ALL 7 TEST SUITES PASSED! 100% COMPLIANCE WITH AUTHORITATIVE RULES.")
         print("=" * 70)
 
     finally:

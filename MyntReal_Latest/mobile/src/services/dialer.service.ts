@@ -507,7 +507,7 @@ class DialerService {
 
   // ── Just-In-Time (JIT) Reservation ─────────────────────────────────────────
 
-  async reserveLead(leadId: number, sessionId?: number): Promise<{
+  async reserveLead(leadId: number, sessionId?: number, isIntentional: boolean = false): Promise<{
     success: boolean;
     message?: string;
     compliance_blocked?: boolean;
@@ -529,7 +529,12 @@ class DialerService {
         error?: string;
       }>(
         `/crm/dialer/lead/${leadId}/reserve`,
-        { session_id: sessionId ?? this.session?.id ?? null, ttl_seconds: 60 }
+        {
+          session_id: sessionId ?? this.session?.id ?? null,
+          ttl_seconds: 60,
+          is_intentional: isIntentional,
+          is_redial: isIntentional
+        }
       );
       const data = res.data as {
         success?: boolean;

@@ -4345,12 +4345,19 @@ async def upload_staff_whatsapp_media(
         logger.warning("[WA-MEDIA-UPLOAD] S3 upload skipped/failed: %s", s3_err)
 
     media_url = f"/storage/wa_media/{filename}"
+    res_data = {
+        "media_url": media_url,
+        "filename": file.filename,
+        "file_size": size,
+        "media_type": "image" if norm_ext in ("jpg", "png", "webp") else "document"
+    }
     return {
         "success": True,
         "media_url": media_url,
         "filename": file.filename,
         "file_size": size,
-        "media_type": "image" if norm_ext in ("jpg", "png", "webp") else "document"
+        "media_type": "image" if norm_ext in ("jpg", "png", "webp") else "document",
+        "data": res_data
     }
 
 
@@ -4371,6 +4378,9 @@ class WASendMessagePayload(BaseModel):
     reply_to_wamid: Optional[str] = None
     reply_to_text: Optional[str] = None
     reply_to_sender: Optional[str] = None
+    filename: Optional[str] = None
+    mimetype: Optional[str] = None
+    send_as_document: Optional[bool] = None
 
 _processed_client_msg_ids = set()
 
@@ -4608,6 +4618,9 @@ def send_manual_whatsapp_message(
         "media_url": payload.media_url or "",
         "imageUrl": payload.media_url or "",
         "imagePath": payload.media_url or "",
+        "filename": payload.filename or (payload.media_url.split("/")[-1] if payload.media_url else None),
+        "mimetype": payload.mimetype or None,
+        "send_as_document": payload.send_as_document if payload.send_as_document is not None else (payload.message_type == "document"),
         "quoted_message_id": payload.reply_to_wamid or None,
         "quoted_text": payload.reply_to_text or None,
         "reply_to_wamid": payload.reply_to_wamid or None,
@@ -4655,6 +4668,8 @@ def send_manual_whatsapp_message(
             provider="BAILEYS",
             initial_status="sent" if sent_success else "failed",
             current_status="sent" if sent_success else "failed",
+            error_message=(error_msg if not sent_success else None),
+            failure_reason=(error_msg if not sent_success else None),
             sent_at=now_utc,
             sent_by_staff_id=current_user.id,
             sent_by_name=f"{staff_display_name} ({current_user.emp_code})",

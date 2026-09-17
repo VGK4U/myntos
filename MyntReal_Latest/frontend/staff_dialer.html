@@ -1322,7 +1322,7 @@
   let activeReservationLeadId = null;
   let reservationHeartbeatTimer = null;
 
-  async function acquireReservation(leadId) {
+  async function acquireReservation(leadId, isIntentional = false) {
     if (!leadId || isNaN(parseInt(leadId)) || parseInt(leadId) <= 0) {
       console.error('[AutoDialer] Invalid canonical lead ID before reservation:', leadId);
       toast('⚠️ Lead in queue has missing/invalid ID. Halting auto-advance for safety.', 4000);
@@ -1330,9 +1330,14 @@
     }
     if (reservationHeartbeatTimer) { clearInterval(reservationHeartbeatTimer); reservationHeartbeatTimer = null; }
     activeReservationLeadId = leadId;
-    const res = await apiCall('POST', `/crm/dialer/lead/${leadId}/reserve`, { session_id: sessionId, ttl_seconds: 60 });
+    const res = await apiCall('POST', `/crm/dialer/lead/${leadId}/reserve`, {
+      session_id: sessionId,
+      ttl_seconds: 60,
+      is_intentional: !!isIntentional,
+      is_redial: !!isIntentional
+    });
     if (!res || !res.success) {
-      if (res && res.cooldown_blocked) {
+      if (res && res.cooldown_blocked && !isIntentional) {
         toast(`⏳ Redial Cooldown: ${res.message || 'Recently attempted — 1-hour cooldown active'}`, 4500);
         return false;
       }
