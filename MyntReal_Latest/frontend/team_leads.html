@@ -3885,30 +3885,49 @@
                 return false;
             }
             
+            const isEditing = !!(document.getElementById('leadId')?.value);
             const pInputEl = document.getElementById('leadPhone');
             const aInputEl = document.getElementById('leadAlternatePhone');
             const phone = pInputEl ? pInputEl.value.trim() : '';
             const altPhone = aInputEl ? aInputEl.value.trim() : '';
-            const phoneClean = (phone.includes('•') || phone.includes('*'))
-                ? ((pInputEl?.dataset?.rawPhone || '').replace(/\D/g, ''))
-                : phone.replace(/\D/g, '');
-            const altPhoneClean = (altPhone.includes('•') || altPhone.includes('*'))
-                ? ((aInputEl?.dataset?.rawPhone || '').replace(/\D/g, ''))
-                : altPhone.replace(/\D/g, '');
-            
-            if (!phoneClean && !altPhoneClean) {
-                showToast('At least one phone number is required (Primary or Secondary)', 'error');
-                return false;
-            }
-            
-            if (phoneClean && !/^\d{10,12}$/.test(phoneClean)) {
-                showToast('Primary phone must be 10-12 digits', 'error');
-                return false;
-            }
-            
-            if (altPhoneClean && !/^\d{10,12}$/.test(altPhoneClean)) {
-                showToast('Secondary phone must be 10-12 digits', 'error');
-                return false;
+
+            const isPrimaryMasked = (phone.includes('•') || phone.includes('*'));
+            const isAltMasked = (altPhone.includes('•') || altPhone.includes('*') || altPhone === '—');
+
+            if (!isEditing) {
+                const phoneClean = phone.replace(/\D/g, '');
+                const altPhoneClean = altPhone.replace(/\D/g, '');
+                
+                if (!phoneClean && !altPhoneClean) {
+                    showToast('At least one phone number is required (Primary or Secondary)', 'error');
+                    return false;
+                }
+                
+                if (phoneClean && !/^\d{10,12}$/.test(phoneClean)) {
+                    showToast('Primary phone must be 10-12 digits', 'error');
+                    return false;
+                }
+                
+                if (altPhoneClean && !/^\d{10,12}$/.test(altPhoneClean)) {
+                    showToast('Secondary phone must be 10-12 digits', 'error');
+                    return false;
+                }
+            } else {
+                // When editing, if unmasked input is provided, validate length
+                if (!isPrimaryMasked) {
+                    const phoneClean = phone.replace(/\D/g, '');
+                    if (phoneClean && !/^\d{10,12}$/.test(phoneClean)) {
+                        showToast('Primary phone must be 10-12 digits', 'error');
+                        return false;
+                    }
+                }
+                if (!isAltMasked && altPhone) {
+                    const altPhoneClean = altPhone.replace(/\D/g, '');
+                    if (altPhoneClean && !/^\d{10,12}$/.test(altPhoneClean)) {
+                        showToast('Secondary phone must be 10-12 digits', 'error');
+                        return false;
+                    }
+                }
             }
             
             const email = document.getElementById('leadEmail').value.trim();
@@ -3962,28 +3981,45 @@
                 }
             }
             
+            const isNewLead = !leadId;
             const pInput = document.getElementById('leadPhone');
             let pVal = pInput ? pInput.value.trim() : null;
+            let shouldIncludePhone = true;
+
             if (pVal && (pVal.includes('•') || pVal.includes('*'))) {
-                pVal = pInput.dataset.rawPhone || null;
+                const raw = pInput.dataset.rawPhone || '';
+                if (raw && !raw.includes('•') && !raw.includes('*')) {
+                    pVal = raw.replace(/\D/g, '').slice(-10) || null;
+                } else {
+                    shouldIncludePhone = false; // Preserve existing phone in DB
+                }
             } else if (pVal) {
                 pVal = pVal.replace(/\D/g, '').slice(-10) || null;
+            } else if (!isNewLead) {
+                shouldIncludePhone = false;
             }
 
             const aInput = document.getElementById('leadAlternatePhone');
             let aVal = aInput ? aInput.value.trim() : null;
-            if (aVal && (aVal.includes('•') || aVal.includes('*'))) {
-                aVal = aInput.dataset.rawPhone || null;
+            let shouldIncludeAltPhone = true;
+
+            if (aVal && (aVal.includes('•') || aVal.includes('*') || aVal === '—')) {
+                const rawAlt = aInput.dataset.rawPhone || '';
+                if (rawAlt && !rawAlt.includes('•') && !rawAlt.includes('*') && rawAlt !== '—') {
+                    aVal = rawAlt.replace(/\D/g, '').slice(-10) || null;
+                } else {
+                    shouldIncludeAltPhone = false; // Preserve existing alt phone in DB
+                }
             } else if (aVal) {
                 aVal = aVal.replace(/\D/g, '').slice(-10) || null;
+            } else if (!isNewLead) {
+                shouldIncludeAltPhone = false;
             }
 
             const leadData = {
                 name: document.getElementById('leadName').value,
                 email: document.getElementById('leadEmail').value || null,
-                phone: pVal,
                 phone_primary_whatsapp: document.getElementById('leadPhonePrimaryWhatsapp').checked,
-                alternate_phone: aVal,
                 phone_secondary_whatsapp: document.getElementById('leadPhoneSecondaryWhatsapp').checked,
                 category_id: document.getElementById('leadCategory').value || null,
                 source: document.getElementById('leadSource').value || null,
@@ -4010,6 +4046,9 @@
                 adi_guru_id: (['mnr','vgk'].includes(document.getElementById('tl_fsType')?.value || ''))
                     ? (document.getElementById('leadAdiGuruId').value || null) : null,
                 associated_partner_id: (typeof partnerSearch !== 'undefined' && partnerSearch) ? partnerSearch.getValue() : null,
+                vendor_id: parseInt(document.getElementById('leadVendorId').value) || null,
+                is_vgk_program: document.getElementById('leadIsVgkProgram').checked || false,
+                vgk_field_support_id: parseInt(document.getElementById('leadVgkFsId').value) || null,
                 budget_min: document.getElementById('leadBudgetMin').value !== '' ? parseFloat(document.getElementById('leadBudgetMin').value) : null,
                 budget_max: document.getElementById('leadBudgetMax').value !== '' ? parseFloat(document.getElementById('leadBudgetMax').value) : null,
                 pincode: document.getElementById('leadPincode').value || null,
@@ -4021,8 +4060,15 @@
                 next_followup_date: nextFollowup ? new Date(nextFollowup).toISOString() : null,
                 depends_on_staff_id: document.getElementById('leadDependsOnStaffId').value || null,
                 description: document.getElementById('leadDescription').value || null,
-                community_id: document.getElementById('tl_communityId').value ? parseInt(document.getElementById('tl_communityId').value) : null
+                community_id: document.getElementById('leadCommunityId').value ? parseInt(document.getElementById('leadCommunityId').value) : null
             };
+
+            if (shouldIncludePhone && pVal) {
+                leadData.phone = pVal;
+            }
+            if (shouldIncludeAltPhone && aVal) {
+                leadData.alternate_phone = aVal;
+            }
             
             // DC Protocol (Jan 1, 2026): Add primary owner if editing and changed
             if (leadId) {

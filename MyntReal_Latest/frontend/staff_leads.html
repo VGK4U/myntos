@@ -3737,29 +3737,49 @@
                 return false;
             }
             
+            const isEditing = !!(document.getElementById('leadId')?.value);
             const pInput = document.getElementById('leadPhone');
             const aInput = document.getElementById('leadAlternatePhone');
             const pVal = pInput ? pInput.value.trim() : '';
             const aVal = aInput ? aInput.value.trim() : '';
 
-            const phone = (pVal.includes('•') || pVal.includes('*')) ? (pInput.dataset.rawPhone || '') : pVal;
-            const altPhone = (aVal.includes('•') || aVal.includes('*')) ? (aInput.dataset.rawPhone || '') : aVal;
-            const phoneClean = phone.replace(/\D/g, '');
-            const altPhoneClean = altPhone.replace(/\D/g, '');
-            
-            if (!phoneClean && !altPhoneClean) {
-                showToast('At least one phone number is required (Primary or Secondary)', 'error');
-                return false;
-            }
-            
-            if (phoneClean && !/^\d{10,12}$/.test(phoneClean)) {
-                showToast('Primary phone must be 10-12 digits', 'error');
-                return false;
-            }
-            
-            if (altPhoneClean && !/^\d{10,12}$/.test(altPhoneClean)) {
-                showToast('Secondary phone must be 10-12 digits', 'error');
-                return false;
+            const isPrimaryMasked = (pVal.includes('•') || pVal.includes('*'));
+            const isAltMasked = (aVal.includes('•') || aVal.includes('*') || aVal === '—');
+
+            if (!isEditing) {
+                const phoneClean = pVal.replace(/\D/g, '');
+                const altPhoneClean = aVal.replace(/\D/g, '');
+                
+                if (!phoneClean && !altPhoneClean) {
+                    showToast('At least one phone number is required (Primary or Secondary)', 'error');
+                    return false;
+                }
+                
+                if (phoneClean && !/^\d{10,12}$/.test(phoneClean)) {
+                    showToast('Primary phone must be 10-12 digits', 'error');
+                    return false;
+                }
+                
+                if (altPhoneClean && !/^\d{10,12}$/.test(altPhoneClean)) {
+                    showToast('Secondary phone must be 10-12 digits', 'error');
+                    return false;
+                }
+            } else {
+                // When editing, if unmasked input is provided, validate length
+                if (!isPrimaryMasked) {
+                    const phoneClean = pVal.replace(/\D/g, '');
+                    if (phoneClean && !/^\d{10,12}$/.test(phoneClean)) {
+                        showToast('Primary phone must be 10-12 digits', 'error');
+                        return false;
+                    }
+                }
+                if (!isAltMasked && aVal) {
+                    const altPhoneClean = aVal.replace(/\D/g, '');
+                    if (altPhoneClean && !/^\d{10,12}$/.test(altPhoneClean)) {
+                        showToast('Secondary phone must be 10-12 digits', 'error');
+                        return false;
+                    }
+                }
             }
             
             const email = document.getElementById('leadEmail').value.trim();
@@ -3857,26 +3877,42 @@
             
             const pInput = document.getElementById('leadPhone');
             let pVal = pInput ? pInput.value.trim() : null;
+            let shouldIncludePhone = true;
+
             if (pVal && (pVal.includes('•') || pVal.includes('*'))) {
-                pVal = pInput.dataset.rawPhone || null;
+                const raw = pInput.dataset.rawPhone || '';
+                if (raw && !raw.includes('•') && !raw.includes('*')) {
+                    pVal = raw.replace(/\D/g, '').slice(-10) || null;
+                } else {
+                    shouldIncludePhone = false; // Preserve existing phone in DB
+                }
             } else if (pVal) {
                 pVal = pVal.replace(/\D/g, '').slice(-10) || null;
+            } else if (!isNewLead) {
+                shouldIncludePhone = false;
             }
 
             const aInput = document.getElementById('leadAlternatePhone');
             let aVal = aInput ? aInput.value.trim() : null;
-            if (aVal && (aVal.includes('•') || aVal.includes('*'))) {
-                aVal = aInput.dataset.rawPhone || null;
+            let shouldIncludeAltPhone = true;
+
+            if (aVal && (aVal.includes('•') || aVal.includes('*') || aVal === '—')) {
+                const rawAlt = aInput.dataset.rawPhone || '';
+                if (rawAlt && !rawAlt.includes('•') && !rawAlt.includes('*') && rawAlt !== '—') {
+                    aVal = rawAlt.replace(/\D/g, '').slice(-10) || null;
+                } else {
+                    shouldIncludeAltPhone = false; // Preserve existing alt phone in DB
+                }
             } else if (aVal) {
                 aVal = aVal.replace(/\D/g, '').slice(-10) || null;
+            } else if (!isNewLead) {
+                shouldIncludeAltPhone = false;
             }
 
             const leadData = {
                 name: document.getElementById('leadName').value,
                 email: document.getElementById('leadEmail').value || null,
-                phone: pVal,
                 phone_primary_whatsapp: document.getElementById('leadPhonePrimaryWhatsapp').checked,
-                alternate_phone: aVal,
                 phone_secondary_whatsapp: document.getElementById('leadPhoneSecondaryWhatsapp').checked,
                 category_id: document.getElementById('leadCategory').value || null,
                 source: document.getElementById('leadSource').value || null,
@@ -3932,6 +3968,13 @@
                 ...CRMHandlerConfirm.getValues(),
                 ...CRMHandlerConfirm.getAssignment()
             };
+
+            if (shouldIncludePhone && pVal) {
+                leadData.phone = pVal;
+            }
+            if (shouldIncludeAltPhone && aVal) {
+                leadData.alternate_phone = aVal;
+            }
             
             // DC Protocol (Jan 1, 2026): Add primary owner if editing and changed
             if (leadId) {

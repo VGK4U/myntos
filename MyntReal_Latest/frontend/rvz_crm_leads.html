@@ -3019,24 +3019,49 @@
                 return false;
             }
             
-            const phone = document.getElementById('leadPhone').value.trim();
-            const altPhone = document.getElementById('leadAlternatePhone').value.trim();
-            const phoneClean = phone.replace(/\D/g, '');
-            const altPhoneClean = altPhone.replace(/\D/g, '');
-            
-            if (!phoneClean && !altPhoneClean) {
-                showToast('At least one phone number is required (Primary or Secondary)', 'error');
-                return false;
-            }
-            
-            if (phoneClean && !/^\d{10,12}$/.test(phoneClean)) {
-                showToast('Primary phone must be 10-12 digits', 'error');
-                return false;
-            }
-            
-            if (altPhoneClean && !/^\d{10,12}$/.test(altPhoneClean)) {
-                showToast('Secondary phone must be 10-12 digits', 'error');
-                return false;
+            const isEditing = !!(document.getElementById('leadId')?.value);
+            const pInputEl = document.getElementById('leadPhone');
+            const aInputEl = document.getElementById('leadAlternatePhone');
+            const phone = pInputEl ? pInputEl.value.trim() : '';
+            const altPhone = aInputEl ? aInputEl.value.trim() : '';
+
+            const isPrimaryMasked = (phone.includes('•') || phone.includes('*'));
+            const isAltMasked = (altPhone.includes('•') || altPhone.includes('*') || altPhone === '—');
+
+            if (!isEditing) {
+                const phoneClean = phone.replace(/\D/g, '');
+                const altPhoneClean = altPhone.replace(/\D/g, '');
+                
+                if (!phoneClean && !altPhoneClean) {
+                    showToast('At least one phone number is required (Primary or Secondary)', 'error');
+                    return false;
+                }
+                
+                if (phoneClean && !/^\d{10,12}$/.test(phoneClean)) {
+                    showToast('Primary phone must be 10-12 digits', 'error');
+                    return false;
+                }
+                
+                if (altPhoneClean && !/^\d{10,12}$/.test(altPhoneClean)) {
+                    showToast('Secondary phone must be 10-12 digits', 'error');
+                    return false;
+                }
+            } else {
+                // When editing, if unmasked input is provided, validate length
+                if (!isPrimaryMasked) {
+                    const phoneClean = phone.replace(/\D/g, '');
+                    if (phoneClean && !/^\d{10,12}$/.test(phoneClean)) {
+                        showToast('Primary phone must be 10-12 digits', 'error');
+                        return false;
+                    }
+                }
+                if (!isAltMasked && altPhone) {
+                    const altPhoneClean = altPhone.replace(/\D/g, '');
+                    if (altPhoneClean && !/^\d{10,12}$/.test(altPhoneClean)) {
+                        showToast('Secondary phone must be 10-12 digits', 'error');
+                        return false;
+                    }
+                }
             }
             
             const email = document.getElementById('leadEmail').value.trim();
@@ -3093,12 +3118,45 @@
                 }
             }
             
+            const isNewLead = !leadId;
+            const pInput = document.getElementById('leadPhone');
+            let pVal = pInput ? pInput.value.trim() : null;
+            let shouldIncludePhone = true;
+
+            if (pVal && (pVal.includes('•') || pVal.includes('*'))) {
+                const raw = pInput.dataset.rawPhone || '';
+                if (raw && !raw.includes('•') && !raw.includes('*')) {
+                    pVal = raw.replace(/\D/g, '').slice(-10) || null;
+                } else {
+                    shouldIncludePhone = false; // Preserve existing phone in DB
+                }
+            } else if (pVal) {
+                pVal = pVal.replace(/\D/g, '').slice(-10) || null;
+            } else if (!isNewLead) {
+                shouldIncludePhone = false;
+            }
+
+            const aInput = document.getElementById('leadAlternatePhone');
+            let aVal = aInput ? aInput.value.trim() : null;
+            let shouldIncludeAltPhone = true;
+
+            if (aVal && (aVal.includes('•') || aVal.includes('*') || aVal === '—')) {
+                const rawAlt = aInput.dataset.rawPhone || '';
+                if (rawAlt && !rawAlt.includes('•') && !rawAlt.includes('*') && rawAlt !== '—') {
+                    aVal = rawAlt.replace(/\D/g, '').slice(-10) || null;
+                } else {
+                    shouldIncludeAltPhone = false; // Preserve existing alt phone in DB
+                }
+            } else if (aVal) {
+                aVal = aVal.replace(/\D/g, '').slice(-10) || null;
+            } else if (!isNewLead) {
+                shouldIncludeAltPhone = false;
+            }
+
             const leadData = {
                 name: document.getElementById('leadName').value,
                 email: document.getElementById('leadEmail').value || null,
-                phone: document.getElementById('leadPhone').value || null,
                 phone_primary_whatsapp: document.getElementById('leadPhonePrimaryWhatsapp').checked,
-                alternate_phone: document.getElementById('leadAlternatePhone').value || null,
                 phone_secondary_whatsapp: document.getElementById('leadPhoneSecondaryWhatsapp').checked,
                 category_id: document.getElementById('leadCategory').value || null,
                 source: document.getElementById('leadSource').value || null,
@@ -3140,6 +3198,13 @@
                 description: document.getElementById('leadDescription').value || null,
                 community_id: document.getElementById('leadCommunityId').value ? parseInt(document.getElementById('leadCommunityId').value) : null
             };
+
+            if (shouldIncludePhone && pVal) {
+                leadData.phone = pVal;
+            }
+            if (shouldIncludeAltPhone && aVal) {
+                leadData.alternate_phone = aVal;
+            }
             
             // Add deal values if status is Won
             if (currentStatus === 'won') {

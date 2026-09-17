@@ -2701,10 +2701,13 @@ export class StaffLeadsPage {
   private async saveLead(): Promise<void> {
     // Get all form field values
     const name = (document.getElementById('leadName') as HTMLInputElement).value.trim();
+    const isEditing = this.selectedLead !== null;
     const pInp = document.getElementById('leadMobile') as HTMLInputElement;
     let phone = pInp ? pInp.value.trim() : '';
-    if (phone.includes('•') || phone.includes('*')) {
-      phone = pInp.dataset.rawPhone || '';
+    const isPhoneMasked = phone.includes('•') || phone.includes('*');
+    if (isPhoneMasked) {
+      const raw = pInp.dataset.rawPhone || '';
+      phone = (!raw.includes('•') && !raw.includes('*')) ? raw.replace(/\D/g, '').slice(-10) : '';
     } else {
       phone = phone.replace(/\D/g, '').slice(-10);
     }
@@ -2719,8 +2722,10 @@ export class StaffLeadsPage {
 
     const aInp = document.getElementById('leadMobileSecondary') as HTMLInputElement;
     let alternatePhone = aInp ? aInp.value.trim() : '';
-    if (alternatePhone.includes('•') || alternatePhone.includes('*')) {
-      alternatePhone = aInp.dataset.rawPhone || '';
+    const isAltMasked = alternatePhone.includes('•') || alternatePhone.includes('*') || alternatePhone === '—';
+    if (isAltMasked) {
+      const rawAlt = aInp.dataset.rawPhone || '';
+      alternatePhone = (!rawAlt.includes('•') && !rawAlt.includes('*') && rawAlt !== '—') ? rawAlt.replace(/\D/g, '').slice(-10) : '';
     } else {
       alternatePhone = alternatePhone.replace(/\D/g, '').slice(-10);
     }
@@ -2737,17 +2742,35 @@ export class StaffLeadsPage {
     const nextFollowupDate = (document.getElementById('leadNextFollowupDate') as HTMLInputElement)?.value;
     const tags = (document.getElementById('leadTags') as HTMLInputElement)?.value?.trim();
 
-    if (!name || !phone) {
-      alert('Please fill required fields: Name, Mobile');
-      return;
+    if (!isEditing) {
+      if (!name || !phone) {
+        alert('Please fill required fields: Name, Mobile');
+        return;
+      }
+
+      if (phone.length !== 10 || !/^\d{10}$/.test(phone)) {
+        alert('Please enter a valid 10-digit mobile number');
+        return;
+      }
+    } else {
+      if (!name) {
+        alert('Please fill required field: Name');
+        return;
+      }
+      if (!isPhoneMasked && phone) {
+        if (phone.length !== 10 || !/^\d{10}$/.test(phone)) {
+          alert('Please enter a valid 10-digit mobile number');
+          return;
+        }
+      }
+      if (!isAltMasked && alternatePhone) {
+        if (alternatePhone.length !== 10 || !/^\d{10}$/.test(alternatePhone)) {
+          alert('Please enter a valid 10-digit secondary mobile number');
+          return;
+        }
+      }
     }
 
-    if (phone.length !== 10 || !/^\d{10}$/.test(phone)) {
-      alert('Please enter a valid 10-digit mobile number');
-      return;
-    }
-
-    const isEditing = this.selectedLead !== null;
     const btn = document.getElementById('saveLeadBtn') as HTMLButtonElement;
     if (btn) { btn.disabled = true; btn.textContent = isEditing ? 'Updating...' : 'Creating...'; }
 
@@ -2761,7 +2784,6 @@ export class StaffLeadsPage {
       // Build payload with correct API field names matching LeadCreate schema
       const payload: any = {
         name,
-        phone,  // API expects 'phone' not 'mobile'
         email: email || null,
         category_id: categoryId ? parseInt(categoryId) : null,
         priority: priority || 'medium',
@@ -2769,7 +2791,6 @@ export class StaffLeadsPage {
         description: description || null,  // API expects 'description' not 'notes'
         source: source || 'staff_app',
         phone_primary_whatsapp: phonePrimaryWhatsapp || false,
-        alternate_phone: alternatePhone || null,
         phone_secondary_whatsapp: phoneSecondaryWhatsapp || false,
         address: address || null,
         requirements: requirements || null,
@@ -2788,6 +2809,13 @@ export class StaffLeadsPage {
         guru_id: (document.getElementById('leadGuruId') as HTMLInputElement)?.value || null,
         solar_brand_id: (() => { const v = (document.getElementById('leadSolarBrandId') as HTMLSelectElement)?.value; return v ? parseInt(v) || null : null; })()
       };
+
+      if (!isEditing || (!isPhoneMasked && phone)) {
+        payload.phone = phone;
+      }
+      if (!isEditing || (!isAltMasked && alternatePhone)) {
+        payload.alternate_phone = alternatePhone || null;
+      }
 
       // DC-DEDUP-002: Pre-flight duplicate phone check for new lead creation
       if (!isEditing && (phone || alternatePhone)) {
