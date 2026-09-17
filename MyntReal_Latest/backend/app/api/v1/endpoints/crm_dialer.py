@@ -478,7 +478,7 @@ def get_lead_redial_cooldown(
         target_lids.update(assoc_lids)
 
     if not target_lids:
-        return False, None
+        return False, None, None
 
     query = """
         SELECT a.id, a.lead_id, a.call_outcome, a.duration_seconds, a.dialed_at, a.created_at, a.user_ref, a.portal
@@ -507,13 +507,26 @@ def get_lead_redial_cooldown(
                     reason = f"Recently connected with another staff member — phone suppressed from other staff until {time_str} (~{remaining_hours}h remaining)"
                     return True, expires_at, reason
             else:
-                # Same staff member: check if follow-up is scheduled in the future
+                # Same staff member: check if follow-up is scheduled
                 if lead_id:
                     lead_obj = db.query(CRMLead).filter(CRMLead.id == lead_id).first()
-                    if lead_obj and lead_obj.next_followup_date and lead_obj.next_followup_date > now:
-                        nfd_str = lead_obj.next_followup_date.strftime("%I:%M %p, %d %b IST")
-                        reason = f"Scheduled callback deferred until {nfd_str}"
-                        return True, lead_obj.next_followup_date, reason
+                    if lead_obj and lead_obj.next_followup_date:
+                        if lead_obj.next_followup_date > now:
+                            nfd_str = lead_obj.next_followup_date.strftime("%I:%M %p, %d %b IST")
+                            reason = f"Scheduled callback deferred until {nfd_str}"
+                            return True, lead_obj.next_followup_date, reason
+                        else:
+                            # Scheduled callback is DUE NOW: allow calling!
+                            pass
+                    else:
+                        # No follow-up scheduled: 24h cooldown applies
+                        expires_at = att_time + timedelta(hours=24)
+                        if now < expires_at:
+                            remaining_secs = int((expires_at - now).total_seconds())
+                            remaining_hours = max(1, remaining_secs // 3600)
+                            time_str = expires_at.strftime("%I:%M %p IST (%d %b)")
+                            reason = f"Recently connected with this customer — 24h cooldown active until {time_str} (~{remaining_hours}h remaining)"
+                            return True, expires_at, reason
 
         # Check 2: 1-hour non-connected cooldown across all staff
         if att_time >= cutoff_1h and is_attempt_non_connected(outcome, duration):
@@ -550,9 +563,22 @@ def get_lead_redial_cooldown(
                     time_str = expires_at.strftime("%I:%M %p IST (%d %b)")
                     if is_other:
                         reason = f"Recently connected with another staff member — phone suppressed until {time_str} (~{rem_hours}h remaining)"
+                        return True, expires_at, reason
                     else:
-                        reason = f"Recently connected with this customer — 24h cooldown active until {time_str} (~{rem_hours}h remaining)"
-                    return True, expires_at, reason
+                        # Same staff member: check if follow-up is scheduled
+                        lead_obj = db.query(CRMLead).filter(CRMLead.id == lead_id).first() if lead_id else None
+                        if lead_obj and lead_obj.next_followup_date:
+                            if lead_obj.next_followup_date > now:
+                                nfd_str = lead_obj.next_followup_date.strftime("%I:%M %p, %d %b IST")
+                                reason = f"Scheduled callback deferred until {nfd_str}"
+                                return True, lead_obj.next_followup_date, reason
+                            else:
+                                # Scheduled callback is DUE NOW: allow calling!
+                                pass
+                        else:
+                            # No follow-up scheduled: 24h cooldown applies
+                            reason = f"Recently connected with this customer — 24h cooldown active until {time_str} (~{rem_hours}h remaining)"
+                            return True, expires_at, reason
             else:
                 # 1h non-connected cooldown across all staff
                 if s_time >= cutoff_1h:
@@ -837,21 +863,32 @@ def _get_dialer_suppression_data(
           AND (a.user_ref != :user_ref OR a.portal != :portal)
     """), {"cutoff_24h": cutoff_24h, "user_ref": actual_ref, "portal": portal}).fetchall()
 
-    # 2. staff_call_logs: Connected calls in rolling 24h across ALL staff (including self-calls)
-    scl_conn_rows = db.execute(text("""
+    # 2. staff_call_logs: Connected calls in rolling 24h across OTHER staff
+    # (Note: calls by THIS staff are governed by Query 5, which respects scheduled callbacks)
+    scl_conn_params = {"cutoff_24h": cutoff_24h}
+    scl_conn_sql = """
         SELECT DISTINCT RIGHT(REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g'), 10) AS clean_phone
         FROM staff_call_logs
         WHERE (call_datetime >= :cutoff_24h OR created_at >= :cutoff_24h)
           AND duration_seconds > 0
-    """), {"cutoff_24h": cutoff_24h}).fetchall()
+    """
+    if staff_id:
+        scl_conn_sql += " AND staff_id != :staff_id"
+        scl_conn_params["staff_id"] = staff_id
+    scl_conn_rows = db.execute(text(scl_conn_sql), scl_conn_params).fetchall()
 
-    # 3. staff_call_logs: 1-hour non-connected cooldown across ALL staff (unanswered / missed calls)
-    scl_non_conn_rows = db.execute(text("""
+    # 3. staff_call_logs: 1-hour non-connected cooldown across OTHER staff (unanswered / missed calls)
+    scl_non_conn_params = {"cutoff_1h": cutoff_1h}
+    scl_non_conn_sql = """
         SELECT DISTINCT RIGHT(REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g'), 10) AS clean_phone
         FROM staff_call_logs
         WHERE (call_datetime >= :cutoff_1h OR created_at >= :cutoff_1h)
           AND (duration_seconds = 0 OR call_type = 'MISSED')
-    """), {"cutoff_1h": cutoff_1h}).fetchall()
+    """
+    if staff_id:
+        scl_non_conn_sql += " AND staff_id != :staff_id"
+        scl_non_conn_params["staff_id"] = staff_id
+    scl_non_conn_rows = db.execute(text(scl_non_conn_sql), scl_non_conn_params).fetchall()
 
     # 4. 1-hour non-connected cooldown across all staff from crm_dialer_attempts (Rule 14)
     non_conn_rows = db.execute(text("""
@@ -902,7 +939,92 @@ def _get_dialer_suppression_data(
         if r[0] and len(r[0]) == 10
     }
 
-    # 4. Leads deferred into the future (Rules 3, 4)
+    # 8. Exempt due scheduled callbacks for this staff/user:
+    # A customer who agreed to a scheduled callback must ring when the scheduled time arrives!
+    due_callback_phones = set()
+    if portal == 'staff' and (staff_id or actual_ref):
+        due_cb_rows = db.execute(text("""
+            SELECT DISTINCT RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10) AS clean_phone
+            FROM crm_leads
+            WHERE (
+                handler_id IN (
+                    SELECT emp_code FROM staff_employees WHERE id = :staff_id OR emp_code = :emp_ref
+                    UNION SELECT :emp_ref
+                    UNION SELECT CAST(:staff_id AS VARCHAR)
+                )
+                OR telecaller_id = :staff_id
+                OR primary_owner_id = :staff_id
+                OR field_staff_id = :staff_id
+            )
+              AND next_followup_date IS NOT NULL
+              AND next_followup_date <= :now
+            UNION
+            SELECT DISTINCT RIGHT(REGEXP_REPLACE(alternate_phone, '[^0-9]', '', 'g'), 10) AS clean_phone
+            FROM crm_leads
+            WHERE (
+                handler_id IN (
+                    SELECT emp_code FROM staff_employees WHERE id = :staff_id OR emp_code = :emp_ref
+                    UNION SELECT :emp_ref
+                    UNION SELECT CAST(:staff_id AS VARCHAR)
+                )
+                OR telecaller_id = :staff_id
+                OR primary_owner_id = :staff_id
+                OR field_staff_id = :staff_id
+            )
+              AND alternate_phone IS NOT NULL
+              AND next_followup_date IS NOT NULL
+              AND next_followup_date <= :now
+            UNION
+            SELECT DISTINCT lp.phone_norm AS clean_phone
+            FROM crm_lead_phones lp
+            JOIN crm_leads l ON lp.lead_id = l.id
+            WHERE (
+                l.handler_id IN (
+                    SELECT emp_code FROM staff_employees WHERE id = :staff_id OR emp_code = :emp_ref
+                    UNION SELECT :emp_ref
+                    UNION SELECT CAST(:staff_id AS VARCHAR)
+                )
+                OR l.telecaller_id = :staff_id
+                OR l.primary_owner_id = :staff_id
+                OR l.field_staff_id = :staff_id
+            )
+              AND lp.is_active = true
+              AND l.next_followup_date IS NOT NULL
+              AND l.next_followup_date <= :now
+        """), {"emp_ref": str(actual_ref), "staff_id": staff_id or -1, "now": _now}).fetchall()
+        due_callback_phones = {r[0] for r in due_cb_rows if r[0] and len(r[0]) == 10}
+    elif portal == 'mnr' and user_ref:
+        try:
+            uid = int(user_ref)
+            due_cb_rows = db.execute(text("""
+                SELECT DISTINCT RIGHT(REGEXP_REPLACE(phone, '[^0-9]', '', 'g'), 10) AS clean_phone
+                FROM crm_leads
+                WHERE mnr_handler_id = :uid
+                  AND next_followup_date IS NOT NULL
+                  AND next_followup_date <= :now
+                UNION
+                SELECT DISTINCT RIGHT(REGEXP_REPLACE(alternate_phone, '[^0-9]', '', 'g'), 10) AS clean_phone
+                FROM crm_leads
+                WHERE mnr_handler_id = :uid
+                  AND alternate_phone IS NOT NULL
+                  AND next_followup_date IS NOT NULL
+                  AND next_followup_date <= :now
+                UNION
+                SELECT DISTINCT lp.phone_norm AS clean_phone
+                FROM crm_lead_phones lp
+                JOIN crm_leads l ON lp.lead_id = l.id
+                WHERE l.mnr_handler_id = :uid
+                  AND lp.is_active = true
+                  AND l.next_followup_date IS NOT NULL
+                  AND l.next_followup_date <= :now
+            """), {"uid": uid, "now": _now}).fetchall()
+            due_callback_phones = {r[0] for r in due_cb_rows if r[0] and len(r[0]) == 10}
+        except (ValueError, TypeError):
+            pass
+
+    suppressed_phones -= due_callback_phones
+
+    # 9. Leads deferred into the future (Rules 3, 4)
     future_nfd_rows = db.execute(text("""
         SELECT id FROM crm_leads WHERE next_followup_date > :now
     """), {"now": _now}).fetchall()
