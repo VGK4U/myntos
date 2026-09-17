@@ -730,6 +730,21 @@ def run_migrations():
                 """))
                 logger.info(f"✅ VGK member staff assignment backfill complete: {upd1.rowcount} via reg_by code, {upd2.rowcount} via points creator")
 
+                # 4.21 Synchronize Sales Incharge access for MR10036 (Anushka Karri)
+                upd_anushka = conn.execute(text("""
+                    UPDATE staff_employees
+                    SET role_id = (SELECT id FROM staff_roles WHERE role_code = 'sales_incharge'),
+                        staff_type = 'SALES_INCHARGE',
+                        designation = COALESCE(NULLIF(TRIM(designation), ''), 'Sales Incharge'),
+                        data_companies = '[1, 2, 3, 4, 88, 92, 93, 94]'::jsonb,
+                        admin_scope = 'SEGMENT_A',
+                        updated_at = NOW()
+                    WHERE emp_code = 'MR10036'
+                      AND (role_id != (SELECT id FROM staff_roles WHERE role_code = 'sales_incharge') OR staff_type != 'SALES_INCHARGE');
+                """))
+                if upd_anushka.rowcount > 0:
+                    logger.info("✅ MR10036 (Anushka Karri) synchronized to Sales Incharge")
+
         logger.info("✅ Feature-specific schema migrations complete")
         
         # 4.20 Staff cash balance zero adjustments as of 16-Sep-2026

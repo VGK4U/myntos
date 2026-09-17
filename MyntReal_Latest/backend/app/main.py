@@ -11106,20 +11106,19 @@ def _startup_worker():
     except Exception as _sair_e:
         print(f"[DC-SALES-INCHARGE-ROLE-001] ⚠️ (non-fatal) {_sair_e}", flush=True)
 
-    # DC-SALES-INCHARGE-ASSIGN-001: Move MN10003 (Bhoolakshmi) and MN10009 (Nandana)
-    # from key_leadership → sales_incharge role, and set staff_type='SALES_INCHARGE'
-    # so is_vgk_admin() in crm.py grants them full CRM cross-company visibility.
-    # Idempotent — only updates employees still on key_leadership who are in the target list.
+    # DC-SALES-INCHARGE-ASSIGN-001: Ensure MN10003 (Bhoolakshmi), MN10009 (Nandana),
+    # and MR10036 (Anushka Karri) are configured with sales_incharge role and staff_type='SALES_INCHARGE'
+    # so is_vgk_admin() in crm.py grants them full CRM cross-company and sales team visibility.
     try:
         with engine.begin() as _sia:
             _sia.execute(text("""
                 UPDATE staff_employees
                 SET role_id = (SELECT id FROM staff_roles WHERE role_code = 'sales_incharge'),
                     staff_type = 'SALES_INCHARGE'
-                WHERE emp_code IN ('MN10003', 'MN10009')
-                  AND role_id = (SELECT id FROM staff_roles WHERE role_code = 'key_leadership')
+                WHERE emp_code IN ('MN10003', 'MN10009', 'MR10036')
+                  AND (role_id != (SELECT id FROM staff_roles WHERE role_code = 'sales_incharge') OR staff_type != 'SALES_INCHARGE');
             """))
-        print("[DC-SALES-INCHARGE-ASSIGN-001] ✅ MN10003 + MN10009 moved to sales_incharge role", flush=True)
+        print("[DC-SALES-INCHARGE-ASSIGN-001] ✅ Sales incharge roles synchronized (MN10003, MN10009, MR10036)", flush=True)
     except Exception as _sia_e:
         print(f"[DC-SALES-INCHARGE-ASSIGN-001] ⚠️ (non-fatal) {_sia_e}", flush=True)
 
