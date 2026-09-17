@@ -7,7 +7,8 @@ export const TRANSPORT_MAX_SPEEDS_KMH = {
     [TransportMode.ELECTRIC_BIKE]: 45,
     [TransportMode.CART]: 25,
     [TransportMode.LOCAL_TRANSPORT]: 80,
-    [TransportMode.OTHERS]: 100
+    [TransportMode.OTHERS]: 100,
+    [TransportMode.COMPANY_VEHICLE]: 120
 };
 export function getAccuracyLevel(accuracy_m) {
     if (accuracy_m <= 50)

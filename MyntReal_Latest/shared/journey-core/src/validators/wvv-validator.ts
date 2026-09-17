@@ -10,7 +10,8 @@ export const TRANSPORT_MAX_SPEEDS_KMH: Record<TransportMode, number> = {
   [TransportMode.ELECTRIC_BIKE]: 45,
   [TransportMode.CART]: 25,
   [TransportMode.LOCAL_TRANSPORT]: 80,
-  [TransportMode.OTHERS]: 100
+  [TransportMode.OTHERS]: 100,
+  [TransportMode.COMPANY_VEHICLE]: 120
 };
 
 export function getAccuracyLevel(accuracy_m: number): GPSAccuracyLevel {

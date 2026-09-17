@@ -163,7 +163,7 @@ class StartJourneyRequest(BaseModel):
 
     @validator('transport_mode')
     def validate_transport_mode(cls, v):
-        valid = ['car', 'bike', 'electric_bike', 'cart', 'local_transport', 'others']
+        valid = ['car', 'bike', 'electric_bike', 'cart', 'local_transport', 'others', 'company_vehicle']
         if v not in valid:
             raise ValueError(f"Invalid transport mode. Must be one of: {valid}")
         return v
@@ -311,11 +311,12 @@ async def start_journey(
     # Default rates per transport mode (fallback when not configured in DB)
     default_rates = {
         'car': 8.00,
-        'bike': 4.00,
-        'electric_bike': 1.00,
+        'bike': 2.00,
+        'electric_bike': 0.50,
         'cart': 10.00,
         'local_transport': 3.00,
-        'others': 2.00
+        'others': 2.00,
+        'company_vehicle': 0.00
     }
     rate_per_km = float(transport_rate.rate_per_km) if transport_rate else default_rates.get(request_data.transport_mode, 4.00)
 
@@ -383,6 +384,7 @@ async def start_journey(
         # WVV Protocol Fix (Dec 05, 2025): Store WVV compliance for start point
         # Re-check since wvv_compliant might not be in scope if no location check was done
         start_wvv_compliant = True
+        start_compliance_reason = None
         if request_data.location.accuracy and request_data.location.accuracy > 100:
             start_wvv_compliant = False
             start_compliance_reason = f"GPS accuracy {request_data.location.accuracy:.0f}m exceeds WVV limit of 100m"
@@ -1456,7 +1458,7 @@ async def update_transport_rate(
     if current_user.role.hierarchy_level < 85:
         raise HTTPException(status_code=403, detail="DC_ROLE_AUTH_003: HR level (85+) access required for rate configuration")
 
-    valid_modes = ['car', 'bike', 'electric_bike', 'cart', 'local_transport', 'others']
+    valid_modes = ['car', 'bike', 'electric_bike', 'cart', 'local_transport', 'others', 'company_vehicle']
     if mode not in valid_modes:
         raise HTTPException(status_code=400, detail=f"Invalid mode. Must be one of: {valid_modes}")
 

@@ -22,6 +22,7 @@ class JourneyValidationService:
         'bike': 80,
         'electric_bike': 45,
         'car': 180,
+        'company_vehicle': 180,
         'cart': 40,
         'local_transport': 100,
         'others': 60

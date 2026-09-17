@@ -12,7 +12,8 @@ export enum TransportMode {
   ELECTRIC_BIKE = 'electric_bike',
   CART = 'cart',
   LOCAL_TRANSPORT = 'local_transport',
-  OTHERS = 'others'
+  OTHERS = 'others',
+  COMPANY_VEHICLE = 'company_vehicle'
 }
 
 export enum JourneyPurpose {

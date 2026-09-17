@@ -82,7 +82,7 @@ class StaffTransportRate(Base):
     
     __table_args__ = (
         CheckConstraint(
-            "transport_mode IN ('car', 'bike', 'electric_bike', 'cart', 'local_transport', 'others')",
+            "transport_mode IN ('car', 'bike', 'electric_bike', 'cart', 'local_transport', 'others', 'company_vehicle')",
             name='staff_transport_mode_check'
         ),
         Index('idx_transport_rate_mode_active', 'transport_mode', 'is_active'),
@@ -141,7 +141,7 @@ class StaffFieldWorkSession(Base):
     
     __table_args__ = (
         CheckConstraint(
-            "transport_mode IN ('car', 'bike', 'electric_bike', 'cart', 'local_transport', 'others')",
+            "transport_mode IN ('car', 'bike', 'electric_bike', 'cart', 'local_transport', 'others', 'company_vehicle')",
             name='staff_field_session_transport_check'
         ),
         CheckConstraint(

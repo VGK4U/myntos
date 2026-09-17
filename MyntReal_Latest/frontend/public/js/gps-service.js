@@ -518,6 +518,7 @@ class GpsService {
         const maxSpeeds = {
             bike: this.WVV_MAX_SPEED_BIKE,
             electric_bike: 45,
+            company_vehicle: 120,
             car: this.WVV_MAX_SPEED_CAR,
             cart: 40,
             local_transport: 100,

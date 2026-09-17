@@ -414,10 +414,13 @@
                                 <i class="fas fa-car"></i> Car <span class="rate-text">(₹8/km)</span>
                             </button>
                             <button type="button" class="transport-btn active" data-mode="bike" onclick="selectTransport('bike')">
-                                <i class="fas fa-motorcycle"></i> Bike <span class="rate-text">(₹4/km)</span>
+                                <i class="fas fa-motorcycle"></i> Bike <span class="rate-text">(₹2/km)</span>
                             </button>
                             <button type="button" class="transport-btn" data-mode="electric_bike" onclick="selectTransport('electric_bike')">
-                                <i class="fas fa-bolt"></i> E-Bike <span class="rate-text">(₹1/km)</span>
+                                <i class="fas fa-bolt"></i> E-Bike <span class="rate-text">(₹1/2km)</span>
+                            </button>
+                            <button type="button" class="transport-btn" data-mode="company_vehicle" onclick="selectTransport('company_vehicle')">
+                                <i class="fas fa-building"></i> Company Vehicle <span class="rate-text">(₹0/km)</span>
                             </button>
                             <button type="button" class="transport-btn" data-mode="cart" onclick="selectTransport('cart')">
                                 <i class="fas fa-truck-pickup"></i> Cart <span class="rate-text">(₹10/km)</span>
@@ -721,7 +724,7 @@
         let isPlaying = false;
         let isAnimating = false;  // DC: Animation lock for smooth marker movement
         
-        let transportRates = { car: 8.00, bike: 4.00, electric_bike: 1.00, cart: 10.00, local_transport: 3.00, others: 2.00 };
+        let transportRates = { car: 8.00, bike: 2.00, electric_bike: 0.50, company_vehicle: 0.00, cart: 10.00, local_transport: 3.00, others: 2.00 };
         
         let companies = [];
         let selectedCompanyId = null;
@@ -787,7 +790,12 @@
                 if (mode && transportRates[mode] !== undefined) {
                     const rateSpan = btn.querySelector('.rate-text');
                     if (rateSpan) {
-                        rateSpan.textContent = `(₹${transportRates[mode]}/km)`;
+                        const r = transportRates[mode];
+                        if (mode === 'electric_bike' && (r == 0.5 || r == 0.50)) {
+                            rateSpan.textContent = `(₹1/2km)`;
+                        } else {
+                            rateSpan.textContent = `(₹${r}/km)`;
+                        }
                     }
                 }
             });
@@ -1921,7 +1929,7 @@
                         <strong>Company:</strong> ${journey.company_name || '-'}<br>
                         <strong>Purpose:</strong> ${formatPurpose(journey.purpose)}<br>
                         <strong>Client:</strong> ${journey.client_name || '-'}<br>
-                        <strong>Transport:</strong> ${formatTransport(journey.transport_mode)} @ ₹${journey.rate_per_km}/km<br>
+                        <strong>Transport:</strong> ${formatTransport(journey.transport_mode)} @ ${(journey.transport_mode === 'electric_bike' && (journey.rate_per_km == 0.5 || journey.rate_per_km == 0.50)) ? '₹1/2km' : `₹${journey.rate_per_km}/km`}<br>
                         <strong>Distance:</strong> ${journey.total_distance_km.toFixed(2)} km<br>
                         <strong>Duration:</strong> ${Math.round(journey.total_duration_minutes)} mins<br>
                         <strong>Avg Speed:</strong> ${Math.round(journey.average_speed_kmh)} km/h<br>
@@ -2388,12 +2396,12 @@
         }
         
         function getTransportIcon(mode) {
-            const icons = { car: 'car', bike: 'motorcycle', local_transport: 'bus', others: 'walking' };
+            const icons = { car: 'car', bike: 'motorcycle', electric_bike: 'bolt', company_vehicle: 'building', cart: 'truck-pickup', local_transport: 'bus', others: 'walking' };
             return icons[mode] || 'route';
         }
         
         function formatTransport(mode) {
-            const labels = { car: 'Car', bike: 'Bike', local_transport: 'Local Transport', others: 'Other' };
+            const labels = { car: 'Car', bike: 'Bike', electric_bike: 'E-Bike', company_vehicle: 'Company Vehicle', cart: 'Cart', local_transport: 'Local Transport', others: 'Other' };
             return labels[mode] || mode;
         }
         

@@ -14,6 +14,7 @@ export var TransportMode;
     TransportMode["CART"] = "cart";
     TransportMode["LOCAL_TRANSPORT"] = "local_transport";
     TransportMode["OTHERS"] = "others";
+    TransportMode["COMPANY_VEHICLE"] = "company_vehicle";
 })(TransportMode || (TransportMode = {}));
 export var JourneyPurpose;
 (function (JourneyPurpose) {

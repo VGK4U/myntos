@@ -22,6 +22,7 @@
         BIKE: 'bike',
         CAR: 'car',
         ELECTRIC_BIKE: 'electric_bike',
+        COMPANY_VEHICLE: 'company_vehicle',
         CART: 'cart',
         LOCAL_TRANSPORT: 'local_transport',
         OTHERS: 'others'
@@ -56,6 +57,7 @@
         [TransportMode.BIKE]: 40,
         [TransportMode.CAR]: 120,
         [TransportMode.ELECTRIC_BIKE]: 45,
+        [TransportMode.COMPANY_VEHICLE]: 120,
         [TransportMode.CART]: 25,
         [TransportMode.LOCAL_TRANSPORT]: 80,
         [TransportMode.OTHERS]: 100

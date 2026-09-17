@@ -2489,6 +2489,12 @@ def run_schema_bootstrap():
         logger.error(f"[AUTOMATION-SCHEMA] Bootstrap error: {_auto_err}")
         raise
 
+    # Staff Journey Transport Rates (Bike 2, E-Bike 0.5, Company Vehicle 0)
+    try:
+        bootstrap_journey_transport_rates()
+    except Exception as _tr_err:
+        logger.warning(f"[JOURNEY-RATES] Non-fatal: {_tr_err}")
+
     logger.info("[SCHEMA BOOTSTRAP] ✅ Schema bootstrap complete")
 
 
@@ -2548,6 +2554,40 @@ def bootstrap_community_idol_photo():
             _db.close()
     except Exception as e:
         logger.warning(f"[DC-COMMUNITY-IDOL-PHOTO-001] Non-fatal: {e}")
+
+
+def bootstrap_journey_transport_rates():
+    """
+    DC-JOURNEY-RATES-20260917:
+    1. Update CHECK constraints on staff_transport_rates and staff_field_work_sessions to include 'company_vehicle'
+    2. Set bike rate to 2.00, electric_bike rate to 0.50 (2 kms = 1 rupee)
+    3. Insert company_vehicle at 0.00 if not exists
+    """
+    try:
+        _db = SessionLocal()
+        try:
+            _db.execute(text("""
+                ALTER TABLE staff_transport_rates DROP CONSTRAINT IF EXISTS staff_transport_mode_check;
+                ALTER TABLE staff_transport_rates ADD CONSTRAINT staff_transport_mode_check
+                    CHECK (((transport_mode)::text = ANY (ARRAY[('car'::character varying)::text, ('bike'::character varying)::text, ('electric_bike'::character varying)::text, ('cart'::character varying)::text, ('local_transport'::character varying)::text, ('others'::character varying)::text, ('company_vehicle'::character varying)::text])));
+                
+                ALTER TABLE staff_field_work_sessions DROP CONSTRAINT IF EXISTS staff_field_session_transport_check;
+                ALTER TABLE staff_field_work_sessions ADD CONSTRAINT staff_field_session_transport_check
+                    CHECK (((transport_mode)::text = ANY (ARRAY[('car'::character varying)::text, ('bike'::character varying)::text, ('electric_bike'::character varying)::text, ('cart'::character varying)::text, ('local_transport'::character varying)::text, ('others'::character varying)::text, ('company_vehicle'::character varying)::text])));
+
+                UPDATE staff_transport_rates SET rate_per_km = 2.00, updated_at = NOW() WHERE transport_mode = 'bike';
+                UPDATE staff_transport_rates SET rate_per_km = 0.50, updated_at = NOW() WHERE transport_mode = 'electric_bike';
+                
+                INSERT INTO staff_transport_rates (transport_mode, rate_per_km, description, is_active, effective_from, created_at, updated_at)
+                SELECT 'company_vehicle', 0.00, 'Company Vehicle (₹0/km)', true, CURRENT_DATE, NOW(), NOW()
+                WHERE NOT EXISTS (SELECT 1 FROM staff_transport_rates WHERE transport_mode = 'company_vehicle');
+            """))
+            _db.commit()
+            logger.info("[DC-JOURNEY-RATES-20260917] ✅ Transport rates & company_vehicle constraint bootstrapped successfully")
+        finally:
+            _db.close()
+    except Exception as e:
+        logger.warning(f"[DC-JOURNEY-RATES-20260917] Non-fatal: {e}")
 
 
 def bootstrap_automation_relational_schema():

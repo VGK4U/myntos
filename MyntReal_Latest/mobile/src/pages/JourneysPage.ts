@@ -42,12 +42,13 @@ interface ActiveJourney {
 }
 
 const TRANSPORT_MODES = [
-  { id: 'bike', name: 'Bike', icon: '🏍️', rate: 4 },
-  { id: 'car', name: 'Car', icon: '🚗', rate: 8 },
-  { id: 'electric_bike', name: 'E-Bike', icon: '⚡', rate: 1 },
-  { id: 'cart', name: 'Cart', icon: '🛻', rate: 10 },
-  { id: 'local_transport', name: 'Local', icon: '🚌', rate: 3 },
-  { id: 'others', name: 'Other', icon: '🚶', rate: 2 }
+  { id: 'bike', name: 'Bike', icon: '🏍️', rate: 2, rateDisplay: '₹2/km' },
+  { id: 'car', name: 'Car', icon: '🚗', rate: 8, rateDisplay: '₹8/km' },
+  { id: 'electric_bike', name: 'E-Bike', icon: '⚡', rate: 0.5, rateDisplay: '₹1/2km' },
+  { id: 'company_vehicle', name: 'Company Vehicle', icon: '🏢', rate: 0, rateDisplay: '₹0/km' },
+  { id: 'cart', name: 'Cart', icon: '🛻', rate: 10, rateDisplay: '₹10/km' },
+  { id: 'local_transport', name: 'Local', icon: '🚌', rate: 3, rateDisplay: '₹3/km' },
+  { id: 'others', name: 'Other', icon: '🚶', rate: 2, rateDisplay: '₹2/km' }
 ];
 
 const PURPOSES = [
@@ -362,7 +363,7 @@ export class JourneysPage {
                 <button class="transport-btn ${t.id === this.selectedTransport ? 'active' : ''}" data-mode="${t.id}">
                   <span class="transport-icon">${t.icon}</span>
                   <span class="transport-name">${t.name}</span>
-                  <span class="transport-rate">₹${t.rate}/km</span>
+                  <span class="transport-rate">${(t as any).rateDisplay || `₹${t.rate}/km`}</span>
                 </button>
               `).join('')}
             </div>
@@ -1281,7 +1282,7 @@ export class JourneysPage {
               </div>
               <div class="detail-row">
                 <span class="detail-label">Transport</span>
-                <span class="detail-value">${this.getTransportIcon(journey.transport_mode)} ${journey.transport_mode || 'N/A'} @ ₹${ratePerKm}/km</span>
+                <span class="detail-value">${this.getTransportIcon(journey.transport_mode)} ${this.formatTransportMode(journey.transport_mode)} @ ${(journey.transport_mode === 'electric_bike' && ratePerKm == 0.5) ? '₹1/2km' : `₹${ratePerKm}/km`}</span>
               </div>
               <div class="detail-row">
                 <span class="detail-label">Purpose</span>

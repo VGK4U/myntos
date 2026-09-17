@@ -704,7 +704,7 @@
                         <strong>Employee:</strong> ${journey.employee_name} (${journey.employee_id_code || ''})<br>
                         <strong>Purpose:</strong> ${formatPurpose(journey.purpose)}<br>
                         <strong>Client:</strong> ${journey.client_name || '-'}<br>
-                        <strong>Transport:</strong> ${formatTransport(journey.transport_mode)} @ ₹${journey.rate_per_km || 0}/km<br>
+                        <strong>Transport:</strong> ${formatTransport(journey.transport_mode)} @ ${(journey.transport_mode === 'electric_bike' && ((journey.rate_per_km || 0) == 0.5 || (journey.rate_per_km || 0) == 0.50)) ? '₹1/2km' : `₹${journey.rate_per_km || 0}/km`}<br>
                         <strong>Distance:</strong> ${(journey.total_distance_km || 0).toFixed(2)} km<br>
                         <strong>Duration:</strong> ${Math.round(journey.total_duration_minutes || 0)} mins<br>
                         <strong>Avg Speed:</strong> ${Math.round(journey.average_speed_kmh || 0)} km/h<br>
@@ -1253,7 +1253,7 @@
         }
         
         function formatTransport(mode) {
-            const labels = { car: 'Car', bike: 'Bike', local_transport: 'Local Transport', others: 'Other' };
+            const labels = { car: 'Car', bike: 'Bike', electric_bike: 'E-Bike', company_vehicle: 'Company Vehicle', cart: 'Cart', local_transport: 'Local Transport', others: 'Other' };
             return labels[mode] || mode;
         }
         

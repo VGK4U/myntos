@@ -503,7 +503,7 @@ export class TeamJourneysPage {
             <!-- Info Grid -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
               <div><span style="font-size: 11px; color: #8892b0; text-transform: uppercase;">Company</span><div style="color: #fff; font-size: 14px;">${journey.company_name || 'N/A'}</div></div>
-              <div><span style="font-size: 11px; color: #8892b0; text-transform: uppercase;">Transport</span><div style="color: #fff; font-size: 14px;">${this.getTransportIcon(journey.transport_mode)} ${journey.transport_mode || 'bike'}</div></div>
+              <div><span style="font-size: 11px; color: #8892b0; text-transform: uppercase;">Transport</span><div style="color: #fff; font-size: 14px;">${this.getTransportIcon(journey.transport_mode)} ${this.formatTransportMode(journey.transport_mode)}</div></div>
             </div>
             
             <!-- Route Points Section -->
@@ -849,7 +849,7 @@ export class TeamJourneysPage {
               </div>
               <div class="detail-item">
                 <span class="detail-label" style="font-size: 11px; color: #8892b0; text-transform: uppercase;">Transport</span>
-                <span class="detail-value" style="font-size: 14px; color: #fff;">${this.getTransportIcon(journey.transport_mode)} ${journey.transport_mode || 'bike'} @ ₹${ratePerKm}/km</span>
+                <span class="detail-value" style="font-size: 14px; color: #fff;">${this.getTransportIcon(journey.transport_mode)} ${this.formatTransportMode(journey.transport_mode)} @ ${(journey.transport_mode === 'electric_bike' && ratePerKm == 0.5) ? '₹1/2km' : `₹${ratePerKm}/km`}</span>
               </div>
               <div class="detail-item" style="grid-column: span 2;">
                 <span class="detail-label" style="font-size: 11px; color: #8892b0; text-transform: uppercase;">Purpose</span>
@@ -998,11 +998,25 @@ export class TeamJourneysPage {
       'bike': '🏍️',
       'car': '🚗',
       'electric_bike': '⚡',
+      'company_vehicle': '🏢',
       'cart': '🛻',
       'local_transport': '🚌',
       'others': '🚶'
     };
     return icons[mode] || '🚗';
+  }
+
+  private formatTransportMode(mode: string): string {
+    const names: { [key: string]: string } = {
+      'bike': 'Bike',
+      'car': 'Car',
+      'electric_bike': 'E-Bike',
+      'company_vehicle': 'Company Vehicle',
+      'cart': 'Cart',
+      'local_transport': 'Local Transport',
+      'others': 'Other'
+    };
+    return names[mode] || mode || 'Bike';
   }
 
   private detectStops(trackPoints: any[]): any[] {
