@@ -230,10 +230,14 @@ def handle_missed_call_whatsapp_ack(
     start_of_today_ist = ist_now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     # ── Guard 2: 24-Hour Deduplication Window ──────────────────────────────────
-    twenty_four_hours_ago = ist_now - timedelta(hours=24)
+    twenty_four_hours_ago_utc = datetime.utcnow() - timedelta(hours=24)
     recent_ack = db.query(MessageLog).filter(
-        MessageLog.mobile_number == phone_formatted,
-        MessageLog.sent_at >= twenty_four_hours_ago
+        or_(
+            MessageLog.mobile_number == phone_formatted,
+            MessageLog.mobile_number.like(f"%{phone_core}")
+        ),
+        MessageLog.sent_at >= twenty_four_hours_ago_utc,
+        MessageLog.current_status.in_(['sent', 'delivered'])
     ).first()
 
     if recent_ack:
@@ -384,7 +388,7 @@ def handle_missed_call_whatsapp_ack(
         user_name=display_name,
         sender_type="auto",
         company_id=4,
-        idempotency_key=f"missed_call_ack:{phone_formatted}:{int(ist_now.timestamp() // 21600)}",
+        idempotency_key=f"missed_call_ack:{phone_formatted}:{ist_now.strftime('%Y%m%d')}",
         raw_body_fallback=MISSED_CALL_TEMPLATE["body_text"].replace("{{name}}", display_name),
         job_id="missed_call_ack",
         execution_id=execution_id

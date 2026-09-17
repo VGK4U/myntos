@@ -256,10 +256,29 @@ def format_staff_whatsapp_message(
 
 
 def _render_body(body_text: str, context: Dict[str, Any]) -> str:
-    """Replace {{variable}} placeholders in template body."""
+    """Replace {{variable}} and {{1}}, {{2}} placeholders in template body."""
+    if not body_text:
+        return ""
+    import re as _re
     result = body_text
+
+    # 1. Direct key replacement
     for key, value in context.items():
-        result = result.replace(f"{{{{{key}}}}}", str(value) if value else "")
+        val_str = str(value) if value is not None else ""
+        result = result.replace(f"{{{{{key}}}}}", val_str)
+        result = result.replace(f"{{{key}}}", val_str)
+
+    # 2. Positional aliases if 'name' is in context
+    lead_name = context.get("name") or context.get("customer_name") or context.get("lead_name")
+    if lead_name:
+        result = result.replace("{{1}}", str(lead_name))
+        result = result.replace("{1}", str(lead_name))
+        result = result.replace("{{name}}", str(lead_name))
+        result = result.replace("{name}", str(lead_name))
+
+    # 3. Clean up any remaining unpopulated placeholders like {{1}}, {{name}}
+    result = _re.sub(r'\{\{(?:1|name|customer_name)\}\}', 'Valued Customer', result)
+    result = _re.sub(r'\{\{[0-9]+\}\}', '', result)
     return result
 
 
@@ -381,46 +400,14 @@ def _send_meta(phone: str, message: str, template=None, db=None,
                 logger.warning(f"[WA-AUTO] Error checking 24h service window: {_we}")
 
         if not is_window_open:
-            logger.info(
-                f"[WA-AUTO] Cold outbound text to {phone} outside Meta 24h window. "
-                f"Falling back to Scanned WhatsApp Bot gateway..."
-            )
-            # Fallback to Scanned WhatsApp Bot on port 5002
-            env_url = os.getenv("WHATSAPP_BOT_URL") or os.getenv("WA_BOT_URL")
-            urls = []
-            if env_url:
-                urls.append(env_url if env_url.endswith("/api/send-message") else f"{env_url.rstrip('/')}/api/send-message")
-            urls.extend([
-                "http://127.0.0.1:5002/api/send-message",
-                "http://localhost:5002/api/send-message"
-            ])
-            for bot_url in urls:
-                try:
-                    bot_resp = requests.post(
-                        bot_url,
-                        json={"phone": phone, "message": message},
-                        timeout=12
-                    )
-                    if bot_resp.status_code == 200:
-                        b_data = bot_resp.json()
-                        if b_data.get("success"):
-                            logger.info(f"✅ [WA-AUTO] Successfully dispatched via Scanned Bot to {phone}")
-                            return {
-                                "success": True,
-                                "wamid": b_data.get("message_id") or f"bot_{int(datetime.utcnow().timestamp())}",
-                                "method": "scanned_bot"
-                            }
-                except Exception as _b_err:
-                    logger.debug(f"[WA-AUTO] Scanned bot attempt at {bot_url} failed: {_b_err}")
-                    continue
-
             logger.warning(
-                f"[WA-AUTO] Cold outbound text to {phone} rejected: "
-                f"Recipient has not messaged within Meta 24-hour service window and Scanned Bot unavailable."
+                f"[WA-AUTO] Cold outbound text to {phone} suppressed: "
+                f"Recipient has not messaged within Meta 24-hour service window. "
+                f"Baileys Bot fallback for customer 1-to-1 outreach is strictly disabled to prevent SIM restriction."
             )
             return {
                 "success": False,
-                "reason": "Meta 24-hour customer service window has expired and WhatsApp Bot is unavailable.",
+                "reason": "Meta 24-hour customer service window has expired. Direct 1-to-1 customer messaging via Baileys is disabled to protect SIM accounts.",
                 "error_code": "WINDOW_EXPIRED"
             }
 
@@ -883,10 +870,43 @@ def send_lead_welcome(
         else:
             event_key = "lead_welcome_general"
 
-        # Dedup: one welcome per lead
-        dedup = _dedup_key(event_key, str(lead_id))
+        # Persistent Dedup: Check DB if welcome was already sent in last 7 days
+        from sqlalchemy import or_
+        from app.models.whatsapp import MessageLog
+        import re as _re
+
+        clean_phone_10 = _re.sub(r'\D', '', str(phone or ''))[-10:]
+        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+
+        # 1. In-memory check first
+        dedup = _dedup_key(event_key, str(lead_id or clean_phone_10))
         if dedup in _sent_cache:
-            return {"success": False, "reason": "already_sent"}
+            return {"success": False, "reason": "already_sent_cache"}
+
+        # 2. Persistent MessageLog check (covers server restarts / multi-worker)
+        try:
+            if clean_phone_10:
+                existing_log = db.query(MessageLog).filter(
+                    MessageLog.sent_at >= seven_days_ago,
+                    MessageLog.current_status.in_(['sent', 'delivered']),
+                    MessageLog.mobile_number.like(f"%{clean_phone_10}"),
+                    or_(
+                        MessageLog.message_type.like('%welcome%'),
+                        MessageLog.message_type.like('%thankyou%'),
+                        MessageLog.message_body.like('%Welcome to%'),
+                        MessageLog.message_body.like('%ధన్యవాదాలు%'),
+                        MessageLog.message_body.like('%స్వాగతం%')
+                    )
+                ).first()
+
+                if existing_log:
+                    logger.info(
+                        f"[WA-WELCOME] Lead #{lead_id} ({clean_phone_10}) already received welcome message "
+                        f"on {existing_log.sent_at} (ID: {existing_log.id}) — skipping to prevent spam."
+                    )
+                    return {"success": False, "reason": "already_sent_db", "message_log_id": existing_log.id}
+        except Exception as _dedup_err:
+            logger.warning(f"[WA-WELCOME] Error querying persistent dedup: {_dedup_err}")
 
         from app.models.whatsapp import WhatsAppTemplate
         template = db.query(WhatsAppTemplate).filter_by(slug=event_key, is_active=True).first()
@@ -910,9 +930,13 @@ def send_lead_welcome(
             logger.warning("[WA-WELCOME] Template '%s' not found — skipping", event_key)
             return {"success": False, "reason": "template_not_found"}
 
+        safe_lead_name = (lead_name or "there").strip()
         now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
         context = {
-            "name": lead_name or "there",
+            "1": safe_lead_name,
+            "name": safe_lead_name,
+            "lead_name": safe_lead_name,
+            "customer_name": safe_lead_name,
             "lead_ref": f"#{lead_id}" if lead_id else "LEAD",
             "date": now_ist.strftime("%d-%m-%Y")
         }

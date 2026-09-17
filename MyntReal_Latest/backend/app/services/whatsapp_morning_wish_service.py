@@ -27,7 +27,7 @@ MORNING_WISH_TEMPLATES = [
         "meta_name": "daily_wish_rot_1",
         "name": "Daily Wish Rot 1 - Solar Subsidy",
         "body_text": (
-            "🌅 *శుభోదయం / Good Morning {{name}}!*\n\n"
+            "🌅 *శుభోదయం / Good Morning {{1}}!*\n\n"
             "_\"ప్రతి రోజూ కొత్త వెలుగులతో ప్రారంభమవుతుంది!\"_ ☀️\n\n"
             "Team *MyntReal* wishes you and your family a bright, prosperous, and successful day ahead!\n\n"
             "⚡ *PM సూర్య ఘర్ పథకంతో ₹78,000 సబ్సిడీ & మీ ఇంటికి ఉచిత విద్యుత్ పొందండి.*\n\n"
@@ -46,7 +46,7 @@ MORNING_WISH_TEMPLATES = [
         "meta_name": "daily_wish_rot_2",
         "name": "Daily Wish Rot 2 - Zero Electricity Bill",
         "body_text": (
-            "🌅 *శుభోదయం / Good Morning {{name}}!*\n\n"
+            "🌅 *శుభోదయం / Good Morning {{1}}!*\n\n"
             "_\"ఈ రోజు సాధించే చిన్న మార్పులే మీ కుటుంబ భవిష్యత్తుకు గొప్ప వెలుగు.\"_ ☀️\n\n"
             "Team *MyntReal - Har Ghar Solar* wishes you a peaceful and productive day!\n\n"
             "💡 *మీ ఇంటి కరెంట్ బిల్లును సున్నా (₹0) చేసుకునే ఉచిత సలహా కోసం మమ్మల్ని సంప్రదించండి.*\n\n"
@@ -65,7 +65,7 @@ MORNING_WISH_TEMPLATES = [
         "meta_name": "daily_wish_rot_3",
         "name": "Daily Wish Rot 3 - Savings & Health",
         "body_text": (
-            "🌅 *శుభోదయం / Good Morning {{name}}!*\n\n"
+            "🌅 *శుభోదయం / Good Morning {{1}}!*\n\n"
             "_\"స్వచ్ఛమైన శక్తి - శ్రేయస్సకరమైన జీవితం!\"_ ☀️\n\n"
             "May your day be filled with positive energy, good health, and success! Best wishes from *MyntReal*.\n\n"
             "🌿 *3KW సోలార్ రూఫ్‌టాప్ ద్వారా నెలకు వేల రూపాయలు ఆదా చేసుకోండి.*\n\n"
@@ -84,7 +84,7 @@ MORNING_WISH_TEMPLATES = [
         "meta_name": "daily_wish_rot_4",
         "name": "Daily Wish Rot 4 - Expert Support",
         "body_text": (
-            "🌅 *శుభోదయం / Good Morning {{name}}!*\n\n"
+            "🌅 *శుభోదయం / Good Morning {{1}}!*\n\n"
             "_\"ఈ ఉదయం మీ ముఖంలో చిరునవ్వు, మీ ఇంట్లో వెలుగు నిండాలని ఆశిస్తున్నాము!\"_ ☀️\n\n"
             "Team *MyntReal* is dedicated to supporting your energy independence.\n\n"
             "📞 *మీ సోలార్ సందేహాల నివారణకు & ఉచిత సైట్ విజిట్ కోసం ఒక కాల్ చేయండి.*\n\n"
@@ -235,7 +235,14 @@ def get_eligible_leads_for_morning_wish(db: Session) -> List[Any]:
     query = db.query(CRMLead).filter(
         CRMLead.phone.isnot(None),
         CRMLead.phone != '',
-        ~CRMLead.status.in_(excluded_statuses)
+        ~CRMLead.status.in_(excluded_statuses),
+        or_(
+            CRMLead.tags.is_(None),
+            and_(
+                ~CRMLead.tags.ilike('%suppress_morning_wish%'),
+                ~CRMLead.tags.ilike('%wa_unreachable%')
+            )
+        )
     ).filter(
         or_(
             CRMLead.status == 'New',
@@ -246,9 +253,12 @@ def get_eligible_leads_for_morning_wish(db: Session) -> List[Any]:
 
     leads = query.all()
     
-    # Exclude staff numbers
+    # Exclude staff numbers and suppressed tags
     filtered_leads = []
     for l in leads:
+        tag_str = (getattr(l, 'tags', '') or '').lower()
+        if 'suppress_morning_wish' in tag_str or 'wa_unreachable' in tag_str:
+            continue
         ph_digits = ''.join(c for c in (l.phone or '') if c.isdigit())[-10:]
         if ph_digits not in staff_phones:
             filtered_leads.append(l)
@@ -333,24 +343,31 @@ def dispatch_daily_morning_wishes(
     if limit_count and limit_count > 0:
         leads = leads[:limit_count]
 
-    # Start of today IST for deduplication
-    ist_now = get_indian_time()
-    start_of_today = ist_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    # ── 3-Day (72-Hour) Deduplication Window ──────────────────────────────────
+    # User Rule: Everyday wishes are not required. Each contact should receive wishes
+    # at most once every 3 days (72 hours).
+    three_days_ago_utc = datetime.utcnow() - timedelta(days=3)
 
-    # Batch fetch all numbers sent today from MessageLog AND wa_inbox for 100% deduplication
     msg_log_numbers = set(
         ''.join(c for c in (r[0] or '') if c.isdigit())[-10:]
-        for r in db.query(MessageLog.mobile_number).filter(MessageLog.sent_at >= start_of_today).all() if r[0]
+        for r in db.query(MessageLog.mobile_number).filter(
+            MessageLog.sent_at >= three_days_ago_utc,
+            MessageLog.current_status.in_(['sent', 'delivered']),
+            MessageLog.job_id == 'wa_daily_morning_wish'
+        ).all() if r[0]
     )
     
     inbox_numbers = set()
     try:
-        inbox_rows = db.execute(text("SELECT from_phone FROM wa_inbox WHERE received_at >= :t"), {"t": start_of_today}).fetchall()
+        inbox_rows = db.execute(
+            text("SELECT from_phone FROM wa_inbox WHERE received_at >= :t AND message_type = 'outbound' AND (body_text LIKE '%శుభోదయం%' OR body_text LIKE '%Good Morning%')"),
+            {"t": three_days_ago_utc}
+        ).fetchall()
         inbox_numbers = set(''.join(c for c in (r[0] or '') if c.isdigit())[-10:] for r in inbox_rows if r[0])
     except Exception:
         pass
 
-    sent_today_numbers = msg_log_numbers.union(inbox_numbers)
+    sent_recently_numbers = msg_log_numbers.union(inbox_numbers)
 
     sent_count = 0
     skipped_count = 0
@@ -399,9 +416,9 @@ def dispatch_daily_morning_wishes(
 
         lead_name = (getattr(lead, 'first_name', '') or getattr(lead, 'name', '') or 'Friend').strip()
 
-        # Check if already sent today (instant O(1) set lookup)
+        # Check if already sent within last 3 days (72h deduplication rule)
         clean_10 = phone_digits[-10:]
-        if (clean_10 in sent_today_numbers or phone_formatted in sent_today_numbers) and not force_test:
+        if (clean_10 in sent_recently_numbers or phone_formatted in sent_recently_numbers) and not force_test:
             skipped_count += 1
             record_dispatch(
                 db=db,
@@ -413,7 +430,7 @@ def dispatch_daily_morning_wishes(
                 target_entity_type="crm_lead",
                 target_entity_id=lead.id,
                 status="SKIPPED",
-                error_message="Already sent or interacted today"
+                error_message="Already sent morning wish within last 3 days (72h rule)"
             )
             continue
 
@@ -425,7 +442,13 @@ def dispatch_daily_morning_wishes(
         from app.services.whatsapp_canonical_service import WhatsAppCanonicalService
 
         safe_lead_name = lead_name if lead_name and lead_name != '0' else f"Customer ({clean_10})"
-        wish_body = tdef.get("body_text", "🌅 Good Morning! Wishing you a productive and successful day ahead.").replace("{{1}}", safe_lead_name)
+        wish_body = (
+            tdef.get("body_text", "🌅 Good Morning! Wishing you a productive and successful day ahead.")
+            .replace("{{name}}", safe_lead_name)
+            .replace("{{1}}", safe_lead_name)
+            .replace("{name}", safe_lead_name)
+            .replace("{1}", safe_lead_name)
+        )
 
         components = [
             {
@@ -456,8 +479,42 @@ def dispatch_daily_morning_wishes(
 
         if sent_success:
             sent_count += 1
+            sent_recently_numbers.add(clean_10)
         else:
             failed_count += 1
+            # User Rule: Do NOT retry failed messages - ignore them.
+            # If a contact fails across 3 consecutive days/attempts with 0 successes,
+            # tag 'suppress_morning_wish' to permanently remove from future distribution lists.
+            try:
+                fail_history = db.query(MessageLog).filter(
+                    MessageLog.mobile_number.like(f"%{clean_10}"),
+                    MessageLog.job_id == "wa_daily_morning_wish",
+                    MessageLog.current_status == "failed"
+                ).count()
+
+                success_history = db.query(MessageLog).filter(
+                    MessageLog.mobile_number.like(f"%{clean_10}"),
+                    MessageLog.job_id == "wa_daily_morning_wish",
+                    MessageLog.current_status.in_(["sent", "delivered"])
+                ).count()
+
+                if fail_history >= 3 and success_history == 0 and lead:
+                    current_tags = (getattr(lead, 'tags', '') or '').strip()
+                    if 'suppress_morning_wish' not in current_tags:
+                        lead.tags = f"{current_tags},suppress_morning_wish".strip(',')
+                        db.add(lead)
+                        db.commit()
+                        logger.info(
+                            f"[WA-MORNING-WISH] 🚫 Lead #{lead.id} ({clean_10}) failed 3 times with 0 deliveries. "
+                            f"Permanently tagged 'suppress_morning_wish' and removed from distribution list."
+                        )
+            except Exception as _fh_err:
+                logger.warning(f"[WA-MORNING-WISH] Error checking consecutive failures for {clean_10}: {_fh_err}")
+
+        # Throttled Pacing: 1.2 second pause between API requests (~30-40 msgs/min)
+        # Prevents Meta API connection pool exhaustion (NET_ERR) and protects business account health.
+        import time
+        time.sleep(1.2)
 
         record_dispatch(
             db=db,

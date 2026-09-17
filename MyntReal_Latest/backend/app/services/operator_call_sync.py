@@ -446,30 +446,6 @@ def sync_myoperator_logs(
                     _ensure_followup(db, existing)
                     if existing.followup_created:
                         followups_created += 1
-                    try:
-                        if not operator_sync_exec_id:
-                            from app.services.automation_tracking_service import create_execution
-                            _rec = create_execution(
-                                db=db,
-                                job_id="missed_call_ack",
-                                job_name="Instant Missed Call Auto-ACK",
-                                trigger_type=trigger_type,
-                                triggered_by=triggered_by,
-                                company_id=MYOPERATOR_COMPANY_ID
-                            )
-                            operator_sync_exec_id = _rec.id
-                        from app.services.whatsapp_missed_call_service import handle_missed_call_whatsapp_ack
-                        handle_missed_call_whatsapp_ack(
-                            db,
-                            existing.caller_number,
-                            caller_name=None,
-                            lead_id=existing.crm_lead_id,
-                            call_type=existing.call_type,
-                            company_id=existing.company_id,
-                            execution_id=operator_sync_exec_id
-                        )
-                    except Exception as _mc_e:
-                        logger.warning(f"[OPERATOR_SYNC] Could not send missed call WA ACK: {_mc_e}")
                 updated += 1
             else:
                 lead = _match_lead(db, caller) if caller else None
@@ -503,30 +479,48 @@ def sync_myoperator_logs(
                         _ensure_followup(db, call)
                         if call.followup_created:
                             followups_created += 1
-                        try:
-                            if not operator_sync_exec_id:
-                                from app.services.automation_tracking_service import create_execution
-                                _rec = create_execution(
-                                    db=db,
-                                    job_id="missed_call_ack",
-                                    job_name="Instant Missed Call Auto-ACK",
-                                    trigger_type=trigger_type,
-                                    triggered_by=triggered_by,
-                                    company_id=MYOPERATOR_COMPANY_ID
+
+                        # Only send instant WhatsApp ACK if call is fresh (within last 45 minutes)
+                        # and NOT a historical daily backfill
+                        is_recent_call = False
+                        if call.started_at and trigger_type != "DAILY_BACKFILL":
+                            try:
+                                call_start_utc = call.started_at.replace(tzinfo=None)
+                                if (datetime.utcnow() - call_start_utc).total_seconds() <= 2700:  # 45 minutes
+                                    is_recent_call = True
+                            except Exception:
+                                pass
+
+                        if is_recent_call:
+                            try:
+                                if not operator_sync_exec_id:
+                                    from app.services.automation_tracking_service import create_execution
+                                    _rec = create_execution(
+                                        db=db,
+                                        job_id="missed_call_ack",
+                                        job_name="Instant Missed Call Auto-ACK",
+                                        trigger_type=trigger_type,
+                                        triggered_by=triggered_by,
+                                        company_id=MYOPERATOR_COMPANY_ID
+                                    )
+                                    operator_sync_exec_id = _rec.id
+                                from app.services.whatsapp_missed_call_service import handle_missed_call_whatsapp_ack
+                                handle_missed_call_whatsapp_ack(
+                                    db,
+                                    call.caller_number,
+                                    caller_name=None,
+                                    lead_id=call.crm_lead_id,
+                                    call_type=call.call_type,
+                                    company_id=call.company_id,
+                                    execution_id=operator_sync_exec_id
                                 )
-                                operator_sync_exec_id = _rec.id
-                            from app.services.whatsapp_missed_call_service import handle_missed_call_whatsapp_ack
-                            handle_missed_call_whatsapp_ack(
-                                db,
-                                call.caller_number,
-                                caller_name=None,
-                                lead_id=call.crm_lead_id,
-                                call_type=call.call_type,
-                                company_id=call.company_id,
-                                execution_id=operator_sync_exec_id
+                            except Exception as _mc_e:
+                                logger.warning(f"[OPERATOR_SYNC] Could not send missed call WA ACK: {_mc_e}")
+                        else:
+                            logger.info(
+                                f"[OPERATOR_SYNC] Skipped missed call WA ACK for {call.caller_number}: "
+                                f"Historical call older than 45m or backfill (started_at: {call.started_at})"
                             )
-                        except Exception as _mc_e:
-                            logger.warning(f"[OPERATOR_SYNC] Could not send missed call WA ACK: {_mc_e}")
                     created += 1
                 except IntegrityError:
                     skipped += 1
