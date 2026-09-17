@@ -19201,36 +19201,106 @@ def share_solar_docs_via_whatsapp(
     except requests.exceptions.RequestException as req_err:
         raise HTTPException(status_code=503, detail=f"WhatsApp Bot service unreachable on port 5002: {str(req_err)}")
 
-    # 7. Dispatch each attachment sequentially
+    # 7. Dispatch each attachment sequentially with real file binaries
+    import base64
+    from pathlib import Path
+    from app.services.object_storage import storage_service as _ss
+
     sent_docs = []
     failed_docs = []
     safe_cust_name = customer_name.replace(' ', '_').replace('/', '_')
 
+    _base_dir = Path(__file__).resolve().parent.parent.parent.parent.parent
+    _local_storage_roots = [
+        _base_dir / "frontend" / "storage",
+        _base_dir / "backend" / "storage",
+        _base_dir / "media_backup" / "solar_docs"
+    ]
+
     for d in docs_to_send:
         fn = d["file_name"]
         lbl = d["label"]
-        media_path = f"/storage/{fn}" if not fn.startswith('/storage/') else fn
-        ext = fn.split('.')[-1].lower() if '.' in fn else 'pdf'
+        clean_fn = fn.replace('/storage/', '').lstrip('/')
+        ext = clean_fn.split('.')[-1].lower() if '.' in clean_fn else 'pdf'
         doc_clean_label = lbl.replace(' ', '_').replace('(', '').replace(')', '').replace('/', '_')
         attachment_filename = f"{safe_cust_name}_{doc_clean_label}.{ext}"
+
+        # 7a. Download real file bytes directly from Object Storage (S3) or local fallback
+        file_bytes = None
+        try:
+            file_bytes = _ss.download_file(clean_fn)
+        except Exception as dl_err:
+            logger.warning("[DC-WA-DOC-SHARE] S3 download error for %s: %s", clean_fn, dl_err)
+
+        if file_bytes is None:
+            for root_cand in _local_storage_roots:
+                p_cand = root_cand / clean_fn
+                if not p_cand.exists():
+                    p_cand = root_cand / Path(clean_fn).name
+                if p_cand.exists() and p_cand.is_file():
+                    try:
+                        file_bytes = p_cand.read_bytes()
+                        break
+                    except Exception:
+                        pass
+
+        if not file_bytes:
+            logger.warning("[DC-WA-DOC-SHARE] Skipping %s: file not found in storage (%s)", lbl, clean_fn)
+            failed_docs.append({"label": lbl, "error": "File not found in cloud or local storage"})
+            continue
+
+        # 7b. Accurately detect MIME type from magic bytes or extension
+        if file_bytes[:4] == b'%PDF':
+            mime = 'application/pdf'
+            send_as_doc = True
+        elif file_bytes[:2] == b'\xff\xd8':
+            mime = 'image/jpeg'
+            send_as_doc = False
+        elif file_bytes[:8] == b'\x89PNG\r\n\x1a\n':
+            mime = 'image/png'
+            send_as_doc = False
+        elif ext in ('jpg', 'jpeg'):
+            mime = 'image/jpeg'
+            send_as_doc = False
+        elif ext == 'png':
+            mime = 'image/png'
+            send_as_doc = False
+        elif ext == 'pdf':
+            mime = 'application/pdf'
+            send_as_doc = True
+        else:
+            mime = 'application/octet-stream'
+            send_as_doc = True
+
+        # 7c. Construct Base64 Data URI
+        b64_str = base64.b64encode(file_bytes).decode('ascii')
+        media_b64 = f"data:{mime};base64,{b64_str}"
 
         try:
             # Pacing delay between attachments to avoid rate limiting
             time.sleep(1.0)
             r_att = requests.post(bot_url, json={
                 "phone": phone10,
-                "media_url": media_path,
-                "imageUrl": media_path,
-                "imagePath": media_path,
+                "media_url": media_b64,
+                "imageUrl": media_b64,
+                "imagePath": media_b64,
+                "mimetype": mime,
                 "message": f"📎 {lbl} — {customer_name}",
                 "filename": attachment_filename,
                 "recipientName": rec_disp_name,
+                "send_as_document": send_as_doc,
                 "skip_backend_log": True
-            }, timeout=20)
+            }, timeout=35)
             if r_att.ok:
                 sent_docs.append(lbl)
             else:
-                failed_docs.append({"label": lbl, "error": r_att.text[:120]})
+                err_text = r_att.text[:120]
+                try:
+                    err_json = r_att.json()
+                    err_text = err_json.get("error") or err_json.get("message") or err_text
+                except Exception:
+                    pass
+                failed_docs.append({"label": lbl, "error": err_text})
         except Exception as err:
             failed_docs.append({"label": lbl, "error": str(err)[:120]})
 

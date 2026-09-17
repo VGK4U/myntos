@@ -1080,7 +1080,7 @@ def get_partner_potential_earning(db, partner_id: int, exclude_l1: bool = False)
                 else:
                     potential_amount = round(lead_val * potential_pct / 100.0, 2)
             else:
-                standard_solar_pcts = {1: 2.50, 2: 1.00, 3: 0.50, 4: 0.50, 5: 1.50, 6: 3.50}
+                standard_solar_pcts = {1: 5.00, 2: 1.50, 3: 1.00, 4: 0.50, 5: 1.50, 6: 3.50}
                 potential_pct = standard_solar_pcts.get(lvl_int, 0.0)
                 potential_amount = round(lead_val * potential_pct / 100.0, 2)
             
@@ -1213,7 +1213,7 @@ def get_bulk_partner_potential_earning(db, partner_ids: list[int], exclude_l1: b
                 else:
                     potential_amount = round(lead_val * potential_pct / 100.0, 2)
             else:
-                standard_solar_pcts = {1: 2.50, 2: 1.00, 3: 0.50, 4: 0.50, 5: 1.50, 6: 3.50}
+                standard_solar_pcts = {1: 5.00, 2: 1.50, 3: 1.00, 4: 0.50, 5: 1.50, 6: 3.50}
                 potential_pct = standard_solar_pcts.get(lvl_int, 0.0)
                 potential_amount = round(lead_val * potential_pct / 100.0, 2)
             

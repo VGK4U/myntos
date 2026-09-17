@@ -2195,7 +2195,7 @@ def get_member_executive_summary(
             
         age_days = max(0, (today_dt - sub_dt).days)
         val = float(getattr(l, 'deal_value', 198000) or 198000)
-        pot = round(val * 0.04, 2)
+        pot = round(val * 0.05, 2)
         
         if age_days <= 10:
             b_10['cnt'] += 1; b_10['deal_val'] += val; b_10['potential'] += pot
@@ -2592,8 +2592,9 @@ def get_vgk4u_staff_configs(
     """
     career_rows = db.execute(text("""
         SELECT id, designation_code, designation_name, hierarchy_order,
-               required_own_qualifying_files, required_active_team_members,
-               self_earning_pct, team_differential_pct, is_active, updated_at
+               stage_own_qualifying_files, required_own_qualifying_files,
+               required_active_team_members, self_earning_pct,
+               team_differential_pct, is_active, updated_at
         FROM vgk4u_career_designation_configs
         ORDER BY hierarchy_order ASC
     """)).fetchall()
@@ -2604,12 +2605,13 @@ def get_vgk4u_staff_configs(
             "designation_code": r[1],
             "designation_name": r[2],
             "hierarchy_order": r[3],
-            "required_own_qualifying_files": r[4],
-            "required_active_team_members": r[5],
-            "self_earning_pct": float(r[6]),
-            "team_differential_pct": float(r[7]),
-            "is_active": bool(r[8]),
-            "updated_at": r[9].isoformat() if r[9] else None,
+            "stage_own_qualifying_files": r[4],
+            "required_own_qualifying_files": r[5],
+            "required_active_team_members": r[6],
+            "self_earning_pct": float(r[7]),
+            "team_differential_pct": float(r[8]),
+            "is_active": bool(r[9]),
+            "updated_at": r[10].isoformat() if r[10] else None,
         }
         for r in career_rows
     ]

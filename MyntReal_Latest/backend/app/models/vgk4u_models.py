@@ -19,6 +19,7 @@ class VGK4UCareerDesignationConfig(BaseModel):
     designation_code = Column(String(30), unique=True, nullable=False, index=True)
     designation_name = Column(String(50), nullable=False)
     hierarchy_order = Column(Integer, unique=True, nullable=False)
+    stage_own_qualifying_files = Column(Integer, nullable=False, default=0)
     required_own_qualifying_files = Column(Integer, nullable=False, default=0)
     required_active_team_members = Column(Integer, nullable=False, default=0) # Active team legs
     self_earning_pct = Column(Numeric(5, 2), nullable=False, default=0.00)

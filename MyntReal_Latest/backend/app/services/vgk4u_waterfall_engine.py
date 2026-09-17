@@ -162,14 +162,11 @@ class VGK4UWaterfallEngine:
 
         if is_apex_producer:
             effective_producer_pct = max_network_pool
-        elif producer_status['own_qualifying_files'] == 0:
-            # Rule: 1st personal file qualifies at base rate (6.0% for Solar) upon closing
-            effective_producer_pct = base_rate
         else:
-            effective_producer_pct = max(
-                career_rates.get(producer_career, base_rate),
-                prod_rates.get(producer_prod_qual, base_rate),
-            )
+            # Pure Model: Personal sales commission is flat base_rate (5.00%)
+            # (+ 1.00% Brand Allowance disbursed separately).
+            # Higher designations earn team overrides on downline sales, not higher self rates.
+            effective_producer_pct = base_rate
 
         # 3. Build Network Allocations
         allocations: List[Dict[str, Any]] = []
@@ -195,242 +192,124 @@ class VGK4UWaterfallEngine:
             'notes': f'Producer Personal Sales Commission ({effective_producer_pct}%)'
         })
 
-        # 4. Differential Waterfall with Model A Direct Sponsor Carve-Out
-        # Available differential headroom
+        # 4. Dynamic Roll-Up Team Leadership Overrides (3.00% Pool)
         remaining_differential_pool = max_network_pool - effective_producer_pct
         current_tier_rate = effective_producer_pct
 
-        # Track tier absorption by producer
-        manager_layer_absorbed = (effective_producer_pct >= (base_rate + mgr_diff_rate))
-        gm_absorbed = (effective_producer_pct >= (base_rate + mgr_diff_rate + gm_diff_rate))
-        rm_absorbed = (effective_producer_pct >= max_network_pool)
+        # Rates per tier:
+        # Senior: sponsor_rate_cfg (1.50%)
+        # Extended: mgr_diff_rate (1.00%)
+        # Core: gm_diff_rate (0.50%)
+        senior_rate = sponsor_rate_cfg if sponsor_rate_cfg > Decimal('0.00') else Decimal('1.50')
+        extended_rate = mgr_diff_rate if mgr_diff_rate > Decimal('0.00') else Decimal('1.00')
+        core_rate = gm_diff_rate if gm_diff_rate > Decimal('0.00') else Decimal('0.50')
 
-        manager_allocated = manager_layer_absorbed
-        gm_allocated = gm_absorbed
-        rm_allocated = rm_absorbed
+        senior_allocated = False
+        extended_allocated = False
+        core_allocated = False
 
-        # A. Resolve Direct Sponsor: Lead override takes precedence over natural parent
+        # If producer absorbed any tiers (e.g. higher producer rate):
+        if effective_producer_pct >= (base_rate + senior_rate):
+            senior_allocated = True
+        if effective_producer_pct >= (base_rate + senior_rate + extended_rate):
+            extended_allocated = True
+        if effective_producer_pct >= max_network_pool:
+            core_allocated = True
+
+        def _get_rank_order(career_desig: Optional[str], is_apex: bool = False) -> int:
+            if is_apex:
+                return 4
+            desig = (career_desig or '').strip().lower()
+            if any(k in desig for k in ('core', 'regional manager', 'apex', 'director')):
+                return 4
+            if any(k in desig for k in ('extended', 'general manager', 'zonal')):
+                return 3
+            if any(k in desig for k in ('senior', 'manager')):
+                return 2
+            if 'channel partner' in desig:
+                return 1
+            return 0
+
+        # Traverse upline chain starting with direct sponsor
         resolved_sponsor_id = direct_sponsor_id or producer_status.get('parent_partner_id')
-        sponsor_info = career_status_map.get(resolved_sponsor_id) if resolved_sponsor_id else None
+        curr_partner_id = resolved_sponsor_id
+        visited_parents = {producer_partner_id}
 
-        is_sponsor_valid = (
-            sponsor_info is not None and
-            resolved_sponsor_id != producer_partner_id
-        )
-
-        sponsor_visited = set()
-        if resolved_sponsor_id:
-            sponsor_visited.add(resolved_sponsor_id)
-
-        # B. Allocate Direct Sponsor from Manager Tier
-        if not manager_layer_absorbed and remaining_differential_pool > Decimal('0.00'):
-            if is_sponsor_valid:
-                sponsor_career = sponsor_info['career_designation']
-                if sponsor_career == DESIGNATION_REGIONAL_MANAGER:
-                    # Case D: RM sponsor absorbs Manager (1.5%) + GM (1.0%) + RM (0.5%) = 3.0%
-                    alloc_pct = min(mgr_diff_rate + gm_diff_rate + rm_diff_rate, remaining_differential_pool)
-                    alloc_gross = (deal_val * (alloc_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                    ded = cls.compute_deductions(alloc_gross)
-                    allocations.append({
-                        'role': 'DIRECT_SPONSOR_OVERRIDE',
-                        'level': 2,
-                        'partner_id': resolved_sponsor_id,
-                        'partner_code': sponsor_info['partner_code'],
-                        'partner_name': sponsor_info['partner_name'],
-                        'career_designation': sponsor_career,
-                        'personal_prod_qualification': sponsor_info['personal_prod_qualification'],
-                        'commission_pct': alloc_pct,
-                        'commission_amount': alloc_gross,
-                        'admin_charges': ded['admin'],
-                        'tds_amount': ded['tds'],
-                        'net_payout': ded['net'],
-                        'is_differential': True,
-                        'notes': f'Direct Sponsor Override (RM Absorbs All Differentials: +{alloc_pct}%)'
-                    })
-                    manager_allocated = True
-                    gm_allocated = True
-                    rm_allocated = True
-                    remaining_differential_pool -= alloc_pct
-                    current_tier_rate += alloc_pct
-                elif sponsor_career == DESIGNATION_GENERAL_MANAGER:
-                    # Case C: GM sponsor absorbs Manager (1.5%) + GM (1.0%) = 2.5%
-                    alloc_pct = min(mgr_diff_rate + gm_diff_rate, remaining_differential_pool)
-                    alloc_gross = (deal_val * (alloc_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                    ded = cls.compute_deductions(alloc_gross)
-                    allocations.append({
-                        'role': 'DIRECT_SPONSOR_OVERRIDE',
-                        'level': 2,
-                        'partner_id': resolved_sponsor_id,
-                        'partner_code': sponsor_info['partner_code'],
-                        'partner_name': sponsor_info['partner_name'],
-                        'career_designation': sponsor_career,
-                        'personal_prod_qualification': sponsor_info['personal_prod_qualification'],
-                        'commission_pct': alloc_pct,
-                        'commission_amount': alloc_gross,
-                        'admin_charges': ded['admin'],
-                        'tds_amount': ded['tds'],
-                        'net_payout': ded['net'],
-                        'is_differential': True,
-                        'notes': f'Direct Sponsor Override (GM Absorbs Manager+GM: +{alloc_pct}%)'
-                    })
-                    manager_allocated = True
-                    gm_allocated = True
-                    remaining_differential_pool -= alloc_pct
-                    current_tier_rate += alloc_pct
-                elif sponsor_career in (DESIGNATION_MANAGER, DESIGNATION_APEX_NODE):
-                    # Case B: Manager sponsor absorbs full Manager layer (1.5%)
-                    alloc_pct = min(mgr_diff_rate, remaining_differential_pool)
-                    alloc_gross = (deal_val * (alloc_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                    ded = cls.compute_deductions(alloc_gross)
-                    allocations.append({
-                        'role': 'DIRECT_SPONSOR_OVERRIDE',
-                        'level': 2,
-                        'partner_id': resolved_sponsor_id,
-                        'partner_code': sponsor_info['partner_code'],
-                        'partner_name': sponsor_info['partner_name'],
-                        'career_designation': sponsor_career,
-                        'personal_prod_qualification': sponsor_info['personal_prod_qualification'],
-                        'commission_pct': alloc_pct,
-                        'commission_amount': alloc_gross,
-                        'admin_charges': ded['admin'],
-                        'tds_amount': ded['tds'],
-                        'net_payout': ded['net'],
-                        'is_differential': True,
-                        'notes': f'Direct Sponsor Override (Manager Absorbs Full Tier: +{alloc_pct}%)'
-                    })
-                    manager_allocated = True
-                    remaining_differential_pool -= alloc_pct
-                    current_tier_rate += alloc_pct
-                else:
-                    # Case A: Member or Channel Partner sponsor receives sponsor_override_pct (1.00%)
-                    if sponsor_rate_cfg > Decimal('0.00'):
-                        alloc_pct = min(sponsor_rate_cfg, remaining_differential_pool)
-                        alloc_gross = (deal_val * (alloc_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                        ded = cls.compute_deductions(alloc_gross)
-                        allocations.append({
-                            'role': 'DIRECT_SPONSOR_OVERRIDE',
-                            'level': 2,
-                            'partner_id': resolved_sponsor_id,
-                            'partner_code': sponsor_info['partner_code'],
-                            'partner_name': sponsor_info['partner_name'],
-                            'career_designation': sponsor_career,
-                            'personal_prod_qualification': sponsor_info['personal_prod_qualification'],
-                            'commission_pct': alloc_pct,
-                            'commission_amount': alloc_gross,
-                            'admin_charges': ded['admin'],
-                            'tds_amount': ded['tds'],
-                            'net_payout': ded['net'],
-                            'is_differential': False,
-                            'notes': f'Direct Sponsor Override (+{alloc_pct}%)'
-                        })
-                        remaining_differential_pool -= alloc_pct
-                        current_tier_rate += alloc_pct
-            else:
-                # Inactive / missing sponsor: sponsor receives 0%
-                # Reserved sponsor_rate_cfg (1.00%) is retained by company for Apex Remainder
-                # Do NOT compress upward to Manager!
-                if sponsor_rate_cfg > Decimal('0.00'):
-                    remaining_differential_pool -= min(sponsor_rate_cfg, remaining_differential_pool)
-
-        # C. Upline Traversal for Residual Manager, GM, and RM Differentials
-        curr_parent_id = sponsor_info.get('parent_partner_id') if sponsor_info else producer_status.get('parent_partner_id')
-        visited_parents = set(sponsor_visited)
-
-        while curr_parent_id and remaining_differential_pool > Decimal('0.00'):
-            if curr_parent_id in visited_parents:
-                logger.warning(f'Cycle detected in unilevel tree at partner {curr_parent_id}')
+        while curr_partner_id and remaining_differential_pool > Decimal('0.00') and not (senior_allocated and extended_allocated and core_allocated):
+            if curr_partner_id in visited_parents:
+                logger.warning(f'Cycle detected in unilevel tree at partner {curr_partner_id}')
                 break
-            visited_parents.add(curr_parent_id)
+            visited_parents.add(curr_partner_id)
 
-            parent_info = career_status_map.get(curr_parent_id)
-            if not parent_info:
+            p_info = career_status_map.get(curr_partner_id)
+            if not p_info:
                 break
 
-            parent_career = parent_info['career_designation']
+            p_career = p_info.get('career_designation')
+            p_is_apex = p_info.get('is_apex_node', False) or (curr_partner_id == ROOT_APEX_PARTNER_ID)
+            p_rank = _get_rank_order(p_career, p_is_apex)
 
-            # 1. Residual Manager Differential
-            if not manager_allocated and not manager_layer_absorbed:
-                if parent_career in (DESIGNATION_MANAGER, DESIGNATION_GENERAL_MANAGER, DESIGNATION_REGIONAL_MANAGER, DESIGNATION_APEX_NODE):
-                    # Residual Manager tier = mgr_diff_rate - sponsor_rate_cfg (e.g. 1.50% - 1.00% = 0.50%)
-                    diff_pct = min(mgr_diff_rate - sponsor_rate_cfg, remaining_differential_pool)
-                    if diff_pct > Decimal('0.00'):
-                        diff_gross = (deal_val * (diff_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                        ded = cls.compute_deductions(diff_gross)
-                        allocations.append({
-                            'role': 'MANAGER_DIFFERENTIAL',
-                            'level': 2,
-                            'partner_id': curr_parent_id,
-                            'partner_code': parent_info['partner_code'],
-                            'partner_name': parent_info['partner_name'],
-                            'career_designation': parent_career,
-                            'personal_prod_qualification': parent_info['personal_prod_qualification'],
-                            'commission_pct': diff_pct,
-                            'commission_amount': diff_gross,
-                            'admin_charges': ded['admin'],
-                            'tds_amount': ded['tds'],
-                            'net_payout': ded['net'],
-                            'is_differential': True,
-                            'notes': f'Manager Differential Override (+{diff_pct}%)'
-                        })
-                        remaining_differential_pool -= diff_pct
-                        current_tier_rate += diff_pct
-                    manager_allocated = True
+            claimed_pct = Decimal('0.00')
+            notes_parts = []
 
-            # 2. GM Differential (+1.0%)
-            elif not gm_allocated and not gm_absorbed and remaining_differential_pool > Decimal('0.00'):
-                if parent_career in (DESIGNATION_GENERAL_MANAGER, DESIGNATION_REGIONAL_MANAGER, DESIGNATION_APEX_NODE):
-                    diff_pct = min(gm_diff_rate, remaining_differential_pool)
-                    if diff_pct > Decimal('0.00'):
-                        diff_gross = (deal_val * (diff_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                        ded = cls.compute_deductions(diff_gross)
-                        allocations.append({
-                            'role': 'GM_DIFFERENTIAL',
-                            'level': 3,
-                            'partner_id': curr_parent_id,
-                            'partner_code': parent_info['partner_code'],
-                            'partner_name': parent_info['partner_name'],
-                            'career_designation': parent_career,
-                            'personal_prod_qualification': parent_info['personal_prod_qualification'],
-                            'commission_pct': diff_pct,
-                            'commission_amount': diff_gross,
-                            'admin_charges': ded['admin'],
-                            'tds_amount': ded['tds'],
-                            'net_payout': ded['net'],
-                            'is_differential': True,
-                            'notes': f'General Manager Differential Override (+{diff_pct}%)'
-                        })
-                        remaining_differential_pool -= diff_pct
-                        current_tier_rate += diff_pct
-                    gm_allocated = True
+            # 1. Senior Override (1.50%)
+            if p_rank >= 2 and not senior_allocated:
+                claimed_pct += senior_rate
+                senior_allocated = True
+                notes_parts.append(f'Senior Override (+{senior_rate}%)')
 
-            # 3. RM Differential (+0.5%)
-            elif not rm_allocated and not rm_absorbed and remaining_differential_pool > Decimal('0.00'):
-                if parent_career in (DESIGNATION_REGIONAL_MANAGER, DESIGNATION_APEX_NODE):
-                    diff_pct = min(rm_diff_rate, remaining_differential_pool)
-                    if diff_pct > Decimal('0.00'):
-                        diff_gross = (deal_val * (diff_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                        ded = cls.compute_deductions(diff_gross)
-                        allocations.append({
-                            'role': 'RM_DIFFERENTIAL',
-                            'level': 4,
-                            'partner_id': curr_parent_id,
-                            'partner_code': parent_info['partner_code'],
-                            'partner_name': parent_info['partner_name'],
-                            'career_designation': parent_career,
-                            'personal_prod_qualification': parent_info['personal_prod_qualification'],
-                            'commission_pct': diff_pct,
-                            'commission_amount': diff_gross,
-                            'admin_charges': ded['admin'],
-                            'tds_amount': ded['tds'],
-                            'net_payout': ded['net'],
-                            'is_differential': True,
-                            'notes': f'Regional Manager Differential Override (+{diff_pct}%)'
-                        })
-                        remaining_differential_pool -= diff_pct
-                        current_tier_rate += diff_pct
-                    rm_allocated = True
+            # 2. Extended Override (1.00%)
+            if p_rank >= 3 and not extended_allocated:
+                claimed_pct += extended_rate
+                extended_allocated = True
+                notes_parts.append(f'Extended Differential (+{extended_rate}%)')
 
-            curr_parent_id = parent_info.get('parent_partner_id')
+            # 3. Core Override (0.50%)
+            if p_rank >= 4 and not core_allocated:
+                claimed_pct += core_rate
+                core_allocated = True
+                notes_parts.append(f'Core Differential (+{core_rate}%)')
+
+            if claimed_pct > Decimal('0.00'):
+                alloc_pct = min(claimed_pct, remaining_differential_pool)
+                if alloc_pct > Decimal('0.00'):
+                    alloc_gross = (deal_val * (alloc_pct / Decimal('100'))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    ded = cls.compute_deductions(alloc_gross)
+
+                    is_direct_sponsor = (curr_partner_id == resolved_sponsor_id)
+                    if is_direct_sponsor:
+                        role_name = 'DIRECT_SPONSOR_OVERRIDE'
+                        level_num = 2
+                    elif p_rank >= 4:
+                        role_name = 'RM_DIFFERENTIAL'
+                        level_num = 4
+                    elif p_rank >= 3:
+                        role_name = 'GM_DIFFERENTIAL'
+                        level_num = 3
+                    else:
+                        role_name = 'MANAGER_DIFFERENTIAL'
+                        level_num = 2
+
+                    allocations.append({
+                        'role': role_name,
+                        'level': level_num,
+                        'partner_id': curr_partner_id,
+                        'partner_code': p_info['partner_code'],
+                        'partner_name': p_info['partner_name'],
+                        'career_designation': p_career,
+                        'personal_prod_qualification': p_info['personal_prod_qualification'],
+                        'commission_pct': alloc_pct,
+                        'commission_amount': alloc_gross,
+                        'admin_charges': ded['admin'],
+                        'tds_amount': ded['tds'],
+                        'net_payout': ded['net'],
+                        'is_differential': True,
+                        'notes': f"{', '.join(notes_parts)} (Total: +{alloc_pct}%)"
+                    })
+                    remaining_differential_pool -= alloc_pct
+                    current_tier_rate += alloc_pct
+
+            curr_partner_id = p_info.get('parent_partner_id')
 
         # D. Apex Remainder Absorption
         field_roles = ('PRODUCER', 'DIRECT_SPONSOR_OVERRIDE', 'MANAGER_DIFFERENTIAL', 'GM_DIFFERENTIAL', 'RM_DIFFERENTIAL')

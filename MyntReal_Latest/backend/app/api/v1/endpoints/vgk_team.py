@@ -6242,7 +6242,7 @@ def member_income_entries_detail(
                     potential_amount = round(lead_val * potential_pct / 100.0, 2)
             else:
                 # Fallback to standard Solar percentages if config missing
-                standard_solar_pcts = {1: 5.00, 2: 1.50, 3: 0.50, 4: 0.50, 5: 1.50, 6: 3.50}
+                standard_solar_pcts = {1: 5.00, 2: 1.50, 3: 1.00, 4: 0.50, 5: 1.50, 6: 3.50}
                 potential_pct = standard_solar_pcts.get(_lvl_int, 0.0)
                 potential_amount = round(lead_val * potential_pct / 100.0, 2)
 

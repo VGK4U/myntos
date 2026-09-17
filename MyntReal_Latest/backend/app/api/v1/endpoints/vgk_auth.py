@@ -2619,8 +2619,8 @@ def vgk_dashboard_summary(
 
     career_cfg_rows = db.execute(sa_text("""
         SELECT designation_code, designation_name, hierarchy_order,
-               required_own_qualifying_files, required_active_team_members,
-               self_earning_pct, team_differential_pct
+               stage_own_qualifying_files, required_own_qualifying_files,
+               required_active_team_members, self_earning_pct, team_differential_pct
         FROM vgk4u_career_designation_configs
         WHERE is_active = TRUE
         ORDER BY hierarchy_order ASC
@@ -2632,14 +2632,16 @@ def vgk_dashboard_summary(
             "label": r[1],
             "order": r[2],
             "rank_order": r[2],
-            "min_files": r[3],
-            "required_files": r[3],
-            "min_legs": r[4],
-            "required_active_legs": r[4],
-            "self_pct": float(r[5]),
-            "self_earning_pct": float(r[5]),
-            "diff_pct": float(r[6]),
-            "team_differential_pct": float(r[6]),
+            "stage_files": r[3],
+            "min_files": r[4],
+            "required_files": r[4],
+            "cumulative_files": r[4],
+            "min_legs": r[5],
+            "required_active_legs": r[5],
+            "self_pct": float(r[6]),
+            "self_earning_pct": float(r[6]),
+            "diff_pct": float(r[7]),
+            "team_differential_pct": float(r[7]),
         }
         for r in career_cfg_rows
     ]

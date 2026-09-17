@@ -22,10 +22,15 @@ logger = logging.getLogger(__name__)
 # Canonical Career Designations
 DESIGNATION_MEMBER = 'Member'
 DESIGNATION_CHANNEL_PARTNER = 'Channel Partner'
-DESIGNATION_MANAGER = 'Manager'
-DESIGNATION_GENERAL_MANAGER = 'General Manager'
-DESIGNATION_REGIONAL_MANAGER = 'Regional Manager'
+DESIGNATION_SENIOR = 'Senior'
+DESIGNATION_EXTENDED = 'Extended'
+DESIGNATION_CORE = 'Core'
 DESIGNATION_APEX_NODE = 'Company Apex Node'
+
+# Backward-compatible aliases
+DESIGNATION_MANAGER = 'Senior'
+DESIGNATION_GENERAL_MANAGER = 'Extended'
+DESIGNATION_REGIONAL_MANAGER = 'Core'
 
 # Canonical Personal Production Qualifications
 PROD_QUAL_NONE = 'None'
@@ -157,31 +162,31 @@ class VGK4UCareerService:
             active_legs = active_legs_map[pid]
 
             # --- A. Career Designation (Organizational Leadership) ---
+            # Dual criteria: Cumulative Personal Files AND Active Team Legs
             if is_apex:
                 career_desig = DESIGNATION_APEX_NODE
             elif own_files == 0:
-                # Rule C (Option A): Sequential prerequisite: Must close >= 1 personal file
                 career_desig = DESIGNATION_MEMBER
-            elif active_legs == 0:
+            elif own_files >= 16 and active_legs >= 10:
+                career_desig = DESIGNATION_CORE
+            elif own_files >= 9 and active_legs >= 5:
+                career_desig = DESIGNATION_EXTENDED
+            elif own_files >= 4 and active_legs >= 1:
+                career_desig = DESIGNATION_SENIOR
+            elif own_files >= 1:
                 career_desig = DESIGNATION_CHANNEL_PARTNER
-            elif 1 <= active_legs <= 4:
-                career_desig = DESIGNATION_MANAGER
-            elif 5 <= active_legs <= 9:
-                career_desig = DESIGNATION_GENERAL_MANAGER
             else:
-                career_desig = DESIGNATION_REGIONAL_MANAGER
+                career_desig = DESIGNATION_MEMBER
 
             # --- B. Personal Production Qualification (Individual Sales) ---
+            # Pure Model: Personal sales commission is flat 6.00% (5.00% Base + 1.00% Brand)
+            # Designation rewards downline team leadership overrides, not higher personal sales rates.
             if is_apex:
-                prod_qual = None  # Corporate Apex Node is strictly decoupled from member production tiers
+                prod_qual = None
             elif own_files == 0:
                 prod_qual = PROD_QUAL_NONE
-            elif 1 <= own_files <= 4:
-                prod_qual = PROD_QUAL_BASE
-            elif 5 <= own_files <= 9:
-                prod_qual = PROD_QUAL_GM
             else:
-                prod_qual = PROD_QUAL_RM
+                prod_qual = PROD_QUAL_BASE
 
             # --- C. Effective Personal Sales Rate (Solar) ---
             if is_apex:
@@ -189,48 +194,81 @@ class VGK4UCareerService:
             elif own_files == 0:
                 effective_personal_rate = 0.0 # Unlocks 6.0% upon closing 1st file
             else:
-                career_rate_map = {
-                    DESIGNATION_CHANNEL_PARTNER: 6.0,
-                    DESIGNATION_MANAGER: 7.5,
-                    DESIGNATION_GENERAL_MANAGER: 8.5,
-                    DESIGNATION_REGIONAL_MANAGER: 9.0,
-                }
-                prod_rate_map = {
-                    PROD_QUAL_BASE: 6.0,
-                    PROD_QUAL_GM: 8.5,
-                    'GM_QUALIFIED': 8.5,
-                    PROD_QUAL_RM: 9.0,
-                    'RM_QUALIFIED': 9.0,
-                }
-                c_rate = career_rate_map.get(career_desig, 6.0)
-                p_rate = prod_rate_map.get(prod_qual, 6.0)
-                effective_personal_rate = max(c_rate, p_rate)
+                # Flat 6.00% across all producing designations (5.00% Base + 1.00% Brand Allowance)
+                effective_personal_rate = 6.0
 
             # --- D. Next Career Milestone ---
             if is_apex:
-                next_career = {'target_title': None, 'required_legs': 0, 'current_legs': active_legs, 'remaining': 0}
-            elif own_files == 0:
-                next_career = {'target_title': DESIGNATION_CHANNEL_PARTNER, 'required_files': 1, 'current_files': 0, 'remaining': 1}
-            elif active_legs == 0:
-                next_career = {'target_title': DESIGNATION_MANAGER, 'required_legs': 1, 'current_legs': 0, 'remaining': 1}
-            elif 1 <= active_legs < 5:
-                next_career = {'target_title': DESIGNATION_GENERAL_MANAGER, 'required_legs': 5, 'current_legs': active_legs, 'remaining': 5 - active_legs}
-            elif 5 <= active_legs < 10:
-                next_career = {'target_title': DESIGNATION_REGIONAL_MANAGER, 'required_legs': 10, 'current_legs': active_legs, 'remaining': 10 - active_legs}
-            else:
-                next_career = {'target_title': 'Top Rank Achieved', 'required_legs': 10, 'current_legs': active_legs, 'remaining': 0}
+                next_career = {'target_title': None, 'required_files': 0, 'current_files': 0, 'remaining_files': 0, 'required_legs': 0, 'current_legs': active_legs, 'remaining': 0, 'remaining_legs': 0}
+            elif career_desig == DESIGNATION_MEMBER:
+                next_career = {
+                    'target_title': DESIGNATION_CHANNEL_PARTNER,
+                    'required_files': 1,
+                    'current_files': own_files,
+                    'remaining': max(0, 1 - own_files),
+                    'remaining_files': max(0, 1 - own_files),
+                    'required_legs': 0,
+                    'current_legs': active_legs,
+                    'remaining_legs': 0
+                }
+            elif career_desig == DESIGNATION_CHANNEL_PARTNER:
+                rem_files = max(0, 4 - own_files)
+                rem_legs = max(0, 1 - active_legs)
+                next_career = {
+                    'target_title': DESIGNATION_SENIOR,
+                    'required_files': 4,
+                    'current_files': own_files,
+                    'remaining': rem_files + rem_legs,
+                    'remaining_files': rem_files,
+                    'required_legs': 1,
+                    'current_legs': active_legs,
+                    'remaining_legs': rem_legs
+                }
+            elif career_desig == DESIGNATION_SENIOR:
+                rem_files = max(0, 9 - own_files)
+                rem_legs = max(0, 5 - active_legs)
+                next_career = {
+                    'target_title': DESIGNATION_EXTENDED,
+                    'required_files': 9,
+                    'current_files': own_files,
+                    'remaining': rem_files + rem_legs,
+                    'remaining_files': rem_files,
+                    'required_legs': 5,
+                    'current_legs': active_legs,
+                    'remaining_legs': rem_legs
+                }
+            elif career_desig == DESIGNATION_EXTENDED:
+                rem_files = max(0, 16 - own_files)
+                rem_legs = max(0, 10 - active_legs)
+                next_career = {
+                    'target_title': DESIGNATION_CORE,
+                    'required_files': 16,
+                    'current_files': own_files,
+                    'remaining': rem_files + rem_legs,
+                    'remaining_files': rem_files,
+                    'required_legs': 10,
+                    'current_legs': active_legs,
+                    'remaining_legs': rem_legs
+                }
+            else: # Core
+                next_career = {
+                    'target_title': 'Top Rank Achieved',
+                    'required_files': 16,
+                    'current_files': own_files,
+                    'remaining': 0,
+                    'remaining_files': 0,
+                    'required_legs': 10,
+                    'current_legs': active_legs,
+                    'remaining_legs': 0
+                }
 
             # --- E. Next Personal Production Milestone ---
             if is_apex:
                 next_prod = {'target_tier': None, 'required_files': 0, 'current_files': own_files, 'remaining': 0}
             elif own_files < 1:
-                next_prod = {'target_tier': 'Base Qualified (6.0%)', 'required_files': 1, 'current_files': 0, 'remaining': 1}
-            elif own_files < 5:
-                next_prod = {'target_tier': 'GM Commission Qualified (8.5%)', 'required_files': 5, 'current_files': own_files, 'remaining': 5 - own_files}
-            elif own_files < 10:
-                next_prod = {'target_tier': 'RM Commission Qualified (9.0%)', 'required_files': 10, 'current_files': own_files, 'remaining': 10 - own_files}
+                next_prod = {'target_tier': 'Active Producer (6.0%)', 'required_files': 1, 'current_files': 0, 'remaining': 1}
             else:
-                next_prod = {'target_tier': 'RM Commission Qualified (9.0%)', 'required_files': 10, 'current_files': own_files, 'remaining': 0}
+                next_prod = {'target_tier': 'Active Producer (6.0%)', 'required_files': 1, 'current_files': own_files, 'remaining': 0}
 
             sponsor_name = ""
             sponsor_code = ""

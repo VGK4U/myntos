@@ -511,8 +511,8 @@
       const activeFiles = uniqueL1Leads.size;
 
       // Authoritative Potential Pending Calculation on Active In-Flight Leads
-      // Formula: Deal Value * Rank Rate + Brand Allowance (APS/Navgrun = ₹2k) + Field Support (1.5%) - Advances Already Paid
-      const memberRatePct = (m.commission_pct || (m.current_position === 'Regional Manager' ? 9.0 : (m.current_position === 'General Manager' ? 8.5 : (m.current_position === 'Manager' ? 7.5 : (m.current_position === 'Channel Partner' ? 6.0 : 5.0))))) / 100.0;
+      // Formula: Deal Value * Rank Rate (5.0% Base) + Brand Allowance (APS/Navgrun = ₹2k) + Field Support (1.5%) - Advances Already Paid
+      const memberRatePct = (m.commission_pct || (m.current_position === 'Regional Manager' ? 9.0 : (m.current_position === 'General Manager' ? 8.5 : (m.current_position === 'Manager' ? 7.5 : (m.current_position === 'Channel Partner' ? 5.0 : 5.0))))) / 100.0;
       const activeLeadPendingMap = {};
 
       entries.forEach(e => {
@@ -534,7 +534,7 @@
             activeLeadPendingMap[lid].isSupport = true;
           }
           const amt = parseFloat(e.commission_amount || 0);
-          if (e.status === 'PAID' || e.status === 'RELEASED') {
+          if (e.status === 'PAID' || e.status === 'RELEASED' || e.status === 'STAGE1_APPROVED' || e.status === 'STAGE2_APPROVED' || e.status === 'VERIFIED') {
             activeLeadPendingMap[lid].paid += amt;
           }
           if (e.kind === 'COMMISSION' && (e.status === 'PAID' || e.status === 'RELEASED') && (e.level === 1 || e.level === 6)) {

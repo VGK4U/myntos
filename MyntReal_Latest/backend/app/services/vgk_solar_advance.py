@@ -32,6 +32,10 @@ logger = logging.getLogger(__name__)
 # L1 (Ground Source): 1000, L2 (Senior): 500 — per VGK Commission & Advance Payment Logic.
 ADVANCE_AMOUNT    = Decimal('1000.00')
 L2_ADVANCE_AMOUNT = Decimal('500.00')
+# DC-SOLAR-SPEC-20260916: Stage 2 Advance (Installation / DVR > 0 confirmed)
+# L1: 1000, L2: 500
+DVR_L1_AMOUNT     = Decimal('1000.00')
+DVR_L2_AMOUNT     = Decimal('500.00')
 CIBIL_MIN_SCORE   = 700
 
 # Solar pipeline stages that are eligible for Stage 1 advance (Strictly 'with bank' and onwards)

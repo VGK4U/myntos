@@ -11,7 +11,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/public/js/staff-token-manager.js"></script>
     <script src="/public/js/staff-fetch.js"></script>
-  <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root {
             --primary: #7c3aed;
@@ -498,6 +500,267 @@
             text-align: left;
             color: #1e293b;
         }
+
+        /* ── Community Registrations Filter & Table Enhancements ── */
+        .badge-guc {
+            background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+            color: #ffffff !important;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11.5px;
+            box-shadow: 0 1px 3px rgba(124, 58, 237, 0.25);
+        }
+        .badge-greenganesha {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: #ffffff !important;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11.5px;
+            box-shadow: 0 1px 3px rgba(5, 150, 105, 0.25);
+        }
+        .badge-comm {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff !important;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 11.5px;
+            box-shadow: 0 1px 3px rgba(2, 132, 199, 0.25);
+        }
+
+        /* Filter Controls */
+        .filter-panel {
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 16px 20px;
+            margin-bottom: 18px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr auto;
+            gap: 12px;
+            align-items: end;
+        }
+        @media (max-width: 1200px) {
+            .filter-grid {
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+        }
+        @media (max-width: 768px) {
+            .filter-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .filter-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            margin-bottom: 4px;
+            display: block;
+        }
+        .filter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+        .filter-chip:hover {
+            background: #e2e8f0;
+            color: #1e293b;
+        }
+        .filter-chip.active {
+            background: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 2px 4px rgba(124, 58, 237, 0.2);
+        }
+        .filter-chip.active .badge {
+            background: rgba(255, 255, 255, 0.25) !important;
+            color: #ffffff !important;
+        }
+
+        /* Sortable table headers */
+        .table-sortable th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            white-space: nowrap;
+            transition: background 0.15s ease;
+        }
+        .table-sortable th.sortable:hover {
+            background-color: #f1f5f9;
+            color: var(--primary);
+        }
+        .sort-icon {
+            font-size: 11px;
+            margin-left: 4px;
+            color: #94a3b8;
+        }
+        .table-sortable th.sorted-asc .sort-icon,
+        .table-sortable th.sorted-desc .sort-icon {
+            color: var(--primary);
+            font-weight: 900;
+        }
+
+        /* Responsive Table styling */
+        .table-responsive {
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        .reg-table-container {
+            max-height: 72vh;
+            overflow-x: auto;
+            overflow-y: auto;
+            position: relative;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .table-card table th {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: #475569;
+            background: #f8fafc;
+            border-bottom: 2px solid #e2e8f0;
+            padding: 10px 12px;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .table-card table td {
+            padding: 9px 12px;
+            vertical-align: middle;
+            font-size: 12.5px;
+            white-space: nowrap;
+        }
+        /* Sticky Left Column: ID */
+        .sticky-col-left {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            background-color: #ffffff !important;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.06);
+        }
+        th.sticky-col-left {
+            z-index: 4 !important;
+            background-color: #f8fafc !important;
+        }
+        /* Sticky Right Column: Actions */
+        .sticky-col-right {
+            position: sticky;
+            right: 0;
+            z-index: 2;
+            background-color: #ffffff !important;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.06);
+        }
+        th.sticky-col-right {
+            z-index: 4 !important;
+            background-color: #f8fafc !important;
+        }
+        .phone-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .phone-link:hover {
+            text-decoration: underline;
+            color: var(--primary-dark);
+        }
+
+        /* Idol photo thumbnail */
+        .idol-thumb-wrap {
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1.5px solid #cbd5e1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            background: #f8fafc;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .idol-thumb-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .idol-thumb-wrap:hover {
+            transform: scale(1.15);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            border-color: var(--primary);
+        }
+
+        /* Full Detail Modal */
+        .view-docket-section {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .view-docket-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #475569;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 6px;
+        }
+        .docket-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 12px;
+        }
+        .docket-field-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+        }
+        .docket-field-value {
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #0f172a;
+            word-break: break-word;
+        }
     </style>
 </head>
 <body>
@@ -552,28 +815,214 @@
 
         <!-- ── TAB 1: REGISTRATIONS APPROVALS ── -->
         <div id="panelReg" class="tab-panel">
+            <!-- Filter & Search Toolbar -->
+            <div class="filter-panel">
+                <div class="filter-grid">
+                    <div>
+                        <label class="filter-label"><i class="fas fa-search me-1"></i>Search Records</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" id="regSearchInput" class="form-control" placeholder="Search name, association, phone, App No, Login ID, area, landmark..." oninput="handleFilterChange()">
+                            <button class="btn btn-outline-secondary" type="button" onclick="clearSearch()" title="Clear search"><i class="fas fa-times"></i></button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="filter-label"><i class="fas fa-layer-group me-1"></i>Registered From (Source)</label>
+                        <select id="filterRegisteredFrom" class="form-select" onchange="handleFilterChange()">
+                            <option value="">All Sources (GUC, Green Ganesha, All)</option>
+                            <option value="GUC">GUC (Utsav Committee)</option>
+                            <option value="GREEN_GANESHA">Green Ganesha</option>
+                            <option value="COMMUNITY_SERVICE">Community Service</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="filter-label"><i class="fas fa-traffic-light me-1"></i>Status</label>
+                        <select id="filterStatus" class="form-select" onchange="handleFilterChange()">
+                            <option value="">All Statuses</option>
+                            <option value="PENDING">Pending Approvals</option>
+                            <option value="APPROVED">Approved Communities</option>
+                            <option value="REJECTED">Rejected</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="filter-label"><i class="fas fa-landmark me-1"></i>Constituency</label>
+                        <select id="filterConstituency" class="form-select" onchange="handleFilterChange()">
+                            <option value="">All Constituencies</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="filter-label"><i class="fas fa-calendar-alt me-1"></i>Date Range</label>
+                        <select id="filterDatePreset" class="form-select" onchange="handleDatePresetChange()">
+                            <option value="all">All Time</option>
+                            <option value="today">Today</option>
+                            <option value="yesterday">Yesterday</option>
+                            <option value="last7">Last 7 Days</option>
+                            <option value="thisMonth">This Month</option>
+                            <option value="custom">Custom Range...</option>
+                        </select>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap align-items-center">
+                        <button class="btn btn-outline-secondary btn-sm" onclick="resetFilters()" title="Reset all filters"><i class="fas fa-rotate-left me-1"></i>Reset</button>
+                        <button class="btn btn-outline-success btn-sm" onclick="exportRegistrationsToCSV()" title="Export all filtered registrations to CSV"><i class="fas fa-file-excel me-1"></i>Export CSV</button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="exportRegistrationsToPDF()" title="Export all filtered registrations to formatted PDF"><i class="fas fa-file-pdf me-1"></i>Export PDF</button>
+                        <button class="btn btn-outline-primary btn-sm" onclick="printFilteredDocketsPDF()" title="Print / Save Official Registration Dockets"><i class="fas fa-print me-1"></i>Print Dockets</button>
+                    </div>
+                </div>
+
+                <!-- Custom Date Range Row (Hidden by default) -->
+                <div id="customDateRow" class="row mt-2 g-2 align-items-center" style="display:none">
+                    <div class="col-md-3">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">From</span>
+                            <input type="date" id="filterFromDate" class="form-control" onchange="handleFilterChange()">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">To</span>
+                            <input type="date" id="filterToDate" class="form-control" onchange="handleFilterChange()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Filter Chips & Results Count Bar -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-3 pt-2 border-top">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="text-muted fs-7 me-1">Quick Filters:</span>
+                        <span class="filter-chip active" id="chipAll" onclick="setChipFilter('all')">All <span id="chipCountAll" class="badge bg-secondary ms-1">0</span></span>
+                        <span class="filter-chip" id="chipGUC" onclick="setChipFilter('GUC')"><i class="fas fa-om me-1 text-primary"></i>GUC <span id="chipCountGUC" class="badge ms-1" style="background:#7c3aed;color:#fff">0</span></span>
+                        <span class="filter-chip" id="chipGreen" onclick="setChipFilter('GREEN_GANESHA')"><i class="fas fa-leaf me-1 text-success"></i>Green Ganesha <span id="chipCountGreen" class="badge bg-success ms-1">0</span></span>
+                        <span class="filter-chip" id="chipComm" onclick="setChipFilter('COMMUNITY_SERVICE')"><i class="fas fa-handshake me-1 text-info"></i>Community Seva <span id="chipCountComm" class="badge bg-info ms-1">0</span></span>
+                        <span class="filter-chip" id="chipPending" onclick="setChipFilter('PENDING')"><i class="fas fa-clock me-1 text-warning"></i>Pending <span id="chipCountPending" class="badge bg-warning ms-1 text-dark">0</span></span>
+                        <span class="filter-chip" id="chipApproved" onclick="setChipFilter('APPROVED')"><i class="fas fa-check-circle me-1 text-success"></i>Approved <span id="chipCountApproved" class="badge bg-success ms-1">0</span></span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fs-7 text-muted" id="filterResultsSummary">Showing 0 registrations</span>
+                        <select id="filterSortBy" class="form-select form-select-sm" style="width: auto;" onchange="handleSortSelectChange()">
+                            <option value="date_desc">Date & Time: Newest First</option>
+                            <option value="date_asc">Date & Time: Oldest First</option>
+                            <option value="id_desc">ID: High to Low</option>
+                            <option value="id_asc">ID: Low to High</option>
+                            <option value="appno_asc">App No: A to Z</option>
+                            <option value="name_asc">Community: A to Z</option>
+                            <option value="name_desc">Community: Z to A</option>
+                            <option value="constituency_asc">Constituency: A to Z</option>
+                            <option value="area_asc">Area: A to Z</option>
+                            <option value="president_asc">President Name: A to Z</option>
+                            <option value="secretary_asc">Secretary Name: A to Z</option>
+                            <option value="treasurer_asc">Treasurer Name: A to Z</option>
+                            <option value="primary_rep_asc">Primary Rep: A to Z</option>
+                            <option value="visarjan_date_asc">Visarjan Date: Early to Late</option>
+                            <option value="status_asc">Status: A to Z</option>
+                            <option value="source_asc">Source: A to Z</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inbound Registrations Table Card -->
             <div class="table-card">
                 <div class="table-card-header">
-                    <h3><i class="fas fa-users"></i>Inbound Registrations Queue</h3>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="loadRegistrations()"><i class="fas fa-rotate me-1"></i>Refresh</button>
+                    <div>
+                        <h3><i class="fas fa-users me-2"></i>Inbound Registrations Queue</h3>
+                        <p class="text-muted fs-7 mb-0">Complete records of community applications with dedicated columns for all contact numbers & fields.</p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="loadRegistrations()"><i class="fas fa-rotate me-1"></i>Refresh</button>
+                    </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="table align-middle">
+                <div class="table-responsive reg-table-container">
+                    <table class="table align-middle table-sortable" id="registrationsTable">
                         <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Login ID</th>
-                                <th>Community Details</th>
-                                <th>Service Schema</th>
-                                <th>Area / Location</th>
-                                <th>Referral CPs</th>
-                                <th>Documents (KYC)</th>
-                                <th>Status</th>
-                                <th class="text-end">Actions</th>
+                                <th class="sticky-col-left sortable" onclick="toggleSort('id')" title="Click to sort by ID">
+                                    # ID <i class="fas fa-sort sort-icon" id="sort_icon_id"></i>
+                                </th>
+                                <th class="sortable" onclick="toggleSort('appno')" title="Click to sort by Application No">
+                                    App No <i class="fas fa-sort sort-icon" id="sort_icon_appno"></i>
+                                </th>
+                                <th class="sortable" onclick="toggleSort('user_partner_code')" title="Click to sort by Login ID">
+                                    Login ID <i class="fas fa-sort sort-icon" id="sort_icon_user_partner_code"></i>
+                                </th>
+                                <th class="sortable" onclick="toggleSort('source')" title="Click to sort by Source">
+                                    Registered From <i class="fas fa-sort sort-icon" id="sort_icon_source"></i>
+                                </th>
+                                <th class="sortable sorted-desc" onclick="toggleSort('date')" title="Click to sort by Date & Time">
+                                    Reg Date & Time <i class="fas fa-sort-down sort-icon text-primary" id="sort_icon_date"></i>
+                                </th>
+                                <th class="sortable" onclick="toggleSort('status')" title="Click to sort by Status">
+                                    Status <i class="fas fa-sort sort-icon" id="sort_icon_status"></i>
+                                </th>
+                                <th class="sortable" onclick="toggleSort('name')" title="Click to sort by Community Name">
+                                    Community / Association Name <i class="fas fa-sort sort-icon" id="sort_icon_name"></i>
+                                </th>
+                                <th class="sortable" onclick="toggleSort('constituency')" title="Click to sort by Constituency">
+                                    Assembly Constituency <i class="fas fa-sort sort-icon" id="sort_icon_constituency"></i>
+                                </th>
+                                <th class="sortable" onclick="toggleSort('area')" title="Click to sort by Area">
+                                    Colony / Area <i class="fas fa-sort sort-icon" id="sort_icon_area"></i>
+                                </th>
+                                <th>Landmark</th>
+                                <th>District</th>
+                                <th>State</th>
+                                <th>Pin Code</th>
+                                <th class="sortable" onclick="toggleSort('president')" title="Click to sort by President Name">
+                                    President Name <i class="fas fa-sort sort-icon" id="sort_icon_president"></i>
+                                </th>
+                                <th>President Mobile</th>
+                                <th class="sortable" onclick="toggleSort('secretary')" title="Click to sort by Secretary Name">
+                                    Secretary Name <i class="fas fa-sort sort-icon" id="sort_icon_secretary"></i>
+                                </th>
+                                <th>Secretary Mobile</th>
+                                <th class="sortable" onclick="toggleSort('treasurer')" title="Click to sort by Treasurer Name">
+                                    Treasurer Name <i class="fas fa-sort sort-icon" id="sort_icon_treasurer"></i>
+                                </th>
+                                <th>Treasurer Mobile</th>
+                                <th class="sortable" onclick="toggleSort('primary_rep')" title="Click to sort by Primary Representative">
+                                    Primary Rep Name <i class="fas fa-sort sort-icon" id="sort_icon_primary_rep"></i>
+                                </th>
+                                <th>Primary Mobile 1</th>
+                                <th>Primary Mobile 2</th>
+                                <th class="sortable" onclick="toggleSort('secondary_rep')" title="Click to sort by Secondary Representative">
+                                    Secondary Rep Name <i class="fas fa-sort sort-icon" id="sort_icon_secondary_rep"></i>
+                                </th>
+                                <th>Secondary Mobile 1</th>
+                                <th>Secondary Mobile 2</th>
+                                <th>Mandap Location</th>
+                                <th>Location Category</th>
+                                <th>Location Owner Details</th>
+                                <th>Idol Height (ft)</th>
+                                <th>Idol Photo</th>
+                                <th>Utsav Start Date</th>
+                                <th>Utsav End Date</th>
+                                <th class="sortable" onclick="toggleSort('visarjan_date')" title="Click to sort by Visarjan Date">
+                                    Visarjan Date <i class="fas fa-sort sort-icon" id="sort_icon_visarjan_date"></i>
+                                </th>
+                                <th>Visarjan Time</th>
+                                <th>Visarjan Mobile</th>
+                                <th>Volunteer 1 Name</th>
+                                <th>Volunteer 1 Mobile</th>
+                                <th>Volunteer 2 Name</th>
+                                <th>Volunteer 2 Mobile</th>
+                                <th>Volunteer 3 Name</th>
+                                <th>Volunteer 3 Mobile</th>
+                                <th>Volunteer 4 Name</th>
+                                <th>Volunteer 4 Mobile</th>
+                                <th>Cultural Programs</th>
+                                <th>Sound System Details</th>
+                                <th>Latitude</th>
+                                <th>Longitude</th>
+                                <th>Google Maps</th>
+                                <th>Applicant Signature</th>
+                                <th>Referral Type</th>
+                                <th>Referrer Code</th>
+                                <th>Referrer Name</th>
+                                <th>KYC Documents</th>
+                                <th class="sticky-col-right text-end" style="min-width: 170px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="registrationsTableBody">
-                            <tr><td colspan="9" class="text-center py-4 text-muted">Loading registrations...</td></tr>
+                            <tr><td colspan="54" class="text-center py-4 text-muted">Loading registrations...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -890,12 +1339,30 @@
             }, 3000);
         }
 
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                showToast('Login ID copied to clipboard!');
-            }).catch(err => {
-                console.error('Failed to copy text: ', err);
-            });
+        function copyToClipboard(text, label = 'Login ID') {
+            if (!text) return;
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast(`${label} copied to clipboard!`);
+                }).catch(() => fallbackCopy(text, label));
+            } else {
+                fallbackCopy(text, label);
+            }
+        }
+        function fallbackCopy(text, label) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                document.execCommand('copy');
+                showToast(`${label} copied to clipboard!`);
+            } catch (err) {
+                showToast(`Failed to copy ${label}`, 'error');
+            }
+            document.body.removeChild(ta);
         }
 
         // ── Load Metrics ────────────────────────────────────────────────
@@ -920,110 +1387,635 @@
         }
 
         // ── Load Registrations Approvals Queue ────────────────────────────
+        // ── State for Community Registrations ──────────────────────────────
+        let allRegistrations = [];
+        let currentFilter = {
+            search: '',
+            source: '',
+            status: '',
+            constituency: '',
+            datePreset: 'all',
+            fromDate: '',
+            toDate: ''
+        };
+        let currentSort = {
+            field: 'date',  // 'date', 'id', 'source', 'name', 'status'
+            dir: 'desc'     // 'desc', 'asc'
+        };
+        let viewRegModalObj = null;
+        let idolPhotoModalObj = null;
+
+        // ── Helper: Format Dates & Times ──────────────────────────────────
+        function formatDateTime(dtStr) {
+            if (!dtStr) return { date: '—', time: '' };
+            try {
+                const dt = new Date(dtStr);
+                if (isNaN(dt.getTime())) return { date: dtStr, time: '' };
+                const datePart = dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                const timePart = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+                return { date: datePart, time: timePart };
+            } catch (e) {
+                return { date: dtStr, time: '' };
+            }
+        }
+
+        // ── Helper: Resolve Source Category & Badge ───────────────────────
+        function resolveRegistrationSource(r) {
+            const raw = String(r.registered_from || '').trim();
+            const lower = raw.toLowerCase();
+            if (lower === 'utsav committee' || lower === 'guc' || lower.includes('utsav') || r.application_no || r.president_name) {
+                return {
+                    category: 'GUC',
+                    label: 'GUC (Utsav Committee)',
+                    badgeHtml: `<span class="badge badge-guc" title="Registered via Ganesh Utsav Committee Portal"><i class="fas fa-om me-1"></i>GUC (Utsav)</span>`
+                };
+            }
+            if (lower.includes('green') || lower.includes('ganesha') || lower.includes('greenganesha')) {
+                return {
+                    category: 'GREEN_GANESHA',
+                    label: 'Green Ganesha',
+                    badgeHtml: `<span class="badge badge-greenganesha" title="Registered via Green Ganesha Seva Campaign"><i class="fas fa-leaf me-1"></i>Green Ganesha</span>`
+                };
+            }
+            return {
+                category: 'COMMUNITY_SERVICE',
+                label: raw || 'Community Service',
+                badgeHtml: `<span class="badge badge-comm" title="Registered via Community Service"><i class="fas fa-handshake-angle me-1"></i>Community Seva</span>`
+            };
+        }
+
+        // ── Load Registrations from API ────────────────────────────────────
         async function loadRegistrations() {
             const tbody = document.getElementById('registrationsTableBody');
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading registrations...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="54" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading registrations...</td></tr>';
             try {
                 const json = await StaffFetch.fetchJson('/api/v1/community-services/admin/registrations');
                 if (!json.success) throw new Error(json.message);
                 
-                tbody.innerHTML = '';
-                if (json.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No community registrations submitted yet.</td></tr>';
-                    return;
+                allRegistrations = json.data || [];
+                
+                // Update Metric Counters
+                const pending = allRegistrations.filter(r => r.status === 'PENDING').length;
+                const approved = allRegistrations.filter(r => r.status === 'APPROVED').length;
+                const countPendingEl = document.getElementById('countPendingReg');
+                const countApprovedEl = document.getElementById('countApprovedReg');
+                if (countPendingEl) countPendingEl.textContent = pending;
+                if (countApprovedEl) countApprovedEl.textContent = approved;
+
+                // Populate Assembly Constituencies dropdown
+                populateConstituencies();
+
+                // Update Quick Filter Chip Badges
+                updateChipBadges();
+
+                // Apply current filters, sort and render
+                applyFiltersAndRender();
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="54" class="text-center py-4 text-danger"><i class="fas fa-circle-exclamation me-1"></i>Error: ${escapeHtml(err.message)}</td></tr>`;
+            }
+        }
+
+        function populateConstituencies() {
+            const sel = document.getElementById('filterConstituency');
+            if (!sel) return;
+            const currentVal = sel.value;
+            const set = new Set();
+            allRegistrations.forEach(r => {
+                if (r.assembly_constituency && r.assembly_constituency.trim()) {
+                    set.add(r.assembly_constituency.trim());
+                }
+            });
+            sel.innerHTML = '<option value="">All Constituencies</option>';
+            Array.from(set).sort().forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c;
+                opt.textContent = c;
+                if (c === currentVal) opt.selected = true;
+                sel.appendChild(opt);
+            });
+        }
+
+        function updateChipBadges() {
+            let total = allRegistrations.length;
+            let gucCount = 0;
+            let greenCount = 0;
+            let commCount = 0;
+            let pendingCount = 0;
+            let approvedCount = 0;
+
+            allRegistrations.forEach(r => {
+                const src = resolveRegistrationSource(r);
+                if (src.category === 'GUC') gucCount++;
+                else if (src.category === 'GREEN_GANESHA') greenCount++;
+                else commCount++;
+
+                if (r.status === 'PENDING') pendingCount++;
+                else if (r.status === 'APPROVED') approvedCount++;
+            });
+
+            const setTxt = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+            setTxt('chipCountAll', total);
+            setTxt('chipCountGUC', gucCount);
+            setTxt('chipCountGreen', greenCount);
+            setTxt('chipCountComm', commCount);
+            setTxt('chipCountPending', pendingCount);
+            setTxt('chipCountApproved', approvedCount);
+        }
+
+        // ── Filter Handlers ───────────────────────────────────────────────
+        function handleFilterChange() {
+            currentFilter.search = (document.getElementById('regSearchInput')?.value || '').trim();
+            currentFilter.source = document.getElementById('filterRegisteredFrom')?.value || '';
+            currentFilter.status = document.getElementById('filterStatus')?.value || '';
+            currentFilter.constituency = document.getElementById('filterConstituency')?.value || '';
+            currentFilter.fromDate = document.getElementById('filterFromDate')?.value || '';
+            currentFilter.toDate = document.getElementById('filterToDate')?.value || '';
+            applyFiltersAndRender();
+        }
+
+        function handleDatePresetChange() {
+            const preset = document.getElementById('filterDatePreset')?.value || 'all';
+            currentFilter.datePreset = preset;
+            const customRow = document.getElementById('customDateRow');
+            if (preset === 'custom') {
+                if (customRow) customRow.style.display = 'flex';
+            } else {
+                if (customRow) customRow.style.display = 'none';
+                const fromInput = document.getElementById('filterFromDate');
+                const toInput = document.getElementById('filterToDate');
+                if (fromInput) fromInput.value = '';
+                if (toInput) toInput.value = '';
+                currentFilter.fromDate = '';
+                currentFilter.toDate = '';
+            }
+            handleFilterChange();
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('regSearchInput');
+            if (input) input.value = '';
+            currentFilter.search = '';
+            applyFiltersAndRender();
+        }
+
+        function resetFilters() {
+            currentFilter = {
+                search: '',
+                source: '',
+                status: '',
+                constituency: '',
+                datePreset: 'all',
+                fromDate: '',
+                toDate: ''
+            };
+            currentSort = { field: 'date', dir: 'desc' };
+
+            const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+            setVal('regSearchInput', '');
+            setVal('filterRegisteredFrom', '');
+            setVal('filterStatus', '');
+            setVal('filterConstituency', '');
+            setVal('filterDatePreset', 'all');
+            setVal('filterFromDate', '');
+            setVal('filterToDate', '');
+            setVal('filterSortBy', 'date_desc');
+
+            const customRow = document.getElementById('customDateRow');
+            if (customRow) customRow.style.display = 'none';
+
+            // Reset chips
+            document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+            document.getElementById('chipAll')?.classList.add('active');
+
+            applyFiltersAndRender();
+        }
+
+        function setChipFilter(type) {
+            document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+            const chipMap = {
+                'all': 'chipAll',
+                'GUC': 'chipGUC',
+                'GREEN_GANESHA': 'chipGreen',
+                'COMMUNITY_SERVICE': 'chipComm',
+                'PENDING': 'chipPending',
+                'APPROVED': 'chipApproved'
+            };
+            if (chipMap[type]) document.getElementById(chipMap[type])?.classList.add('active');
+
+            if (type === 'all') {
+                document.getElementById('filterRegisteredFrom').value = '';
+                document.getElementById('filterStatus').value = '';
+            } else if (['GUC', 'GREEN_GANESHA', 'COMMUNITY_SERVICE'].includes(type)) {
+                document.getElementById('filterRegisteredFrom').value = type;
+                document.getElementById('filterStatus').value = '';
+            } else if (['PENDING', 'APPROVED'].includes(type)) {
+                document.getElementById('filterStatus').value = type;
+                document.getElementById('filterRegisteredFrom').value = '';
+            }
+            handleFilterChange();
+        }
+
+        // ── Shared Filter Helper across Table, CSV & PDF ──────────────────
+        function getFilteredRegistrations() {
+            const q = (currentFilter.search || '').toLowerCase();
+            const sourceFilter = currentFilter.source;
+            const statusFilter = currentFilter.status;
+            const constFilter = currentFilter.constituency;
+            const datePreset = currentFilter.datePreset;
+
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const yesterdayStart = todayStart - 86400000;
+            const last7Start = todayStart - (7 * 86400000);
+            const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+            const fromTime = currentFilter.fromDate ? new Date(currentFilter.fromDate).getTime() : null;
+            const toTime = currentFilter.toDate ? new Date(currentFilter.toDate + 'T23:59:59').getTime() : null;
+
+            return allRegistrations.filter(r => {
+                const src = resolveRegistrationSource(r);
+                
+                // Search query across ALL 54 fields & multiple contact numbers
+                if (q) {
+                    const cultStr = Array.isArray(r.cultural_programs) ? r.cultural_programs.join(' ') : (r.cultural_programs || '');
+                    const haystack = [
+                        r.id,
+                        r.application_no || '',
+                        r.user_partner_code || '',
+                        r.registered_from || '',
+                        src.label,
+                        src.category,
+                        r.status || '',
+                        r.association_name || '',
+                        r.assembly_constituency || '',
+                        r.area || '',
+                        r.landmark || '',
+                        r.district || '',
+                        r.state || '',
+                        r.pin_code || '',
+                        r.president_name || '',
+                        r.president_phone || '',
+                        r.secretary_name || '',
+                        r.secretary_phone || '',
+                        r.treasurer_name || '',
+                        r.treasurer_phone || '',
+                        r.primary_name || '',
+                        r.primary_phone_1 || '',
+                        r.primary_phone_2 || '',
+                        r.secondary_name || '',
+                        r.secondary_phone_1 || '',
+                        r.secondary_phone_2 || '',
+                        r.mandap_location || '',
+                        r.location_category || '',
+                        r.location_owner_details || '',
+                        r.idol_height || '',
+                        r.visarjan_date || '',
+                        r.visarjan_time || '',
+                        r.visarjan_phone || '',
+                        r.vol_1_name || '',
+                        r.vol_1_phone || '',
+                        r.vol_2_name || '',
+                        r.vol_2_phone || '',
+                        r.vol_3_name || '',
+                        r.vol_3_phone || '',
+                        r.vol_4_name || '',
+                        r.vol_4_phone || '',
+                        cultStr,
+                        r.sound_system_details || '',
+                        r.latitude || '',
+                        r.longitude || '',
+                        r.applicant_signature || '',
+                        r.referral_type || '',
+                        r.ref1_code || r.referral_code || '',
+                        r.ref1_name || '',
+                        r.service_name || ''
+                    ].join(' ').toLowerCase();
+
+                    if (!haystack.includes(q)) return false;
                 }
 
-                json.data.forEach(r => {
-                    const tr = document.createElement('tr');
-                    
-                    // Documents list markup
-                    let docsHtml = '<span class="text-muted">None</span>';
-                    if (r.kyc_documents && r.kyc_documents.length > 0) {
-                        docsHtml = r.kyc_documents.map((doc, idx) => `
-                            <a href="/storage/${doc}" target="_blank" class="btn btn-xs btn-outline-info p-1 mb-1 d-inline-block" style="font-size:10px">
-                                <i class="fas fa-file-pdf me-1"></i>Doc ${idx + 1}
-                            </a>
-                        `).join(' ');
-                    }
+                // Source filter
+                if (sourceFilter && src.category !== sourceFilter) return false;
 
-                    // Render actions row
-                    let actionsHtml = '';
-                    const rEscaped = JSON.stringify(r).replace(/"/g, '&quot;');
-                    if (r.status === 'PENDING') {
-                        actionsHtml = `
-                            <div class="d-flex gap-1 justify-content-end">
-                                <button class="btn btn-sm btn-success" onclick="approveRegistration(${r.id})">
-                                    <i class="fas fa-check"></i> Approve
-                                </button>
-                                <button class="btn btn-sm btn-danger" onclick="rejectRegistration(${r.id})">
-                                    <i class="fas fa-times"></i> Reject
-                                </button>
-                                <button class="btn btn-sm btn-outline-primary" onclick="openEditRegistrationModal(${rEscaped})">
-                                    <i class="fas fa-edit"></i> Edit
-                                </button>
-                            </div>
-                        `;
-                    } else {
-                        const isApproved = r.status === 'APPROVED';
-                        const shareBtnHtml = isApproved ? `
-                            <button class="btn btn-sm btn-success" onclick="openShareModal('${r.user_partner_code || ''}', '[Already Set]', '${r.primary_phone_1}')">
+                // Status filter
+                if (statusFilter && r.status !== statusFilter) return false;
+
+                // Constituency filter
+                if (constFilter && (r.assembly_constituency || '').trim() !== constFilter) return false;
+
+                // Date filter
+                if (datePreset !== 'all') {
+                    const subDate = new Date(r.submission_date || r.created_at).getTime();
+                    if (!isNaN(subDate)) {
+                        if (datePreset === 'today' && subDate < todayStart) return false;
+                        if (datePreset === 'yesterday' && (subDate < yesterdayStart || subDate >= todayStart)) return false;
+                        if (datePreset === 'last7' && subDate < last7Start) return false;
+                        if (datePreset === 'thisMonth' && subDate < thisMonthStart) return false;
+                        if (datePreset === 'custom') {
+                            if (fromTime && subDate < fromTime) return false;
+                            if (toTime && subDate > toTime) return false;
+                        }
+                    }
+                }
+
+                return true;
+            });
+        }
+
+        // ── Shared Sort Helper ────────────────────────────────────────────
+        function sortRegistrations(list) {
+            list.sort((a, b) => {
+                let cmp = 0;
+                const field = currentSort.field;
+                if (field === 'date') {
+                    const tA = new Date(a.submission_date || a.created_at || 0).getTime();
+                    const tB = new Date(b.submission_date || b.created_at || 0).getTime();
+                    cmp = tA - tB;
+                } else if (field === 'id') {
+                    cmp = Number(a.id) - Number(b.id);
+                } else if (field === 'appno') {
+                    cmp = (a.application_no || '').localeCompare(b.application_no || '');
+                } else if (field === 'user_partner_code') {
+                    cmp = (a.user_partner_code || '').localeCompare(b.user_partner_code || '');
+                } else if (field === 'name') {
+                    cmp = (a.association_name || '').localeCompare(b.association_name || '');
+                } else if (field === 'status') {
+                    cmp = (a.status || '').localeCompare(b.status || '');
+                } else if (field === 'source') {
+                    const sA = resolveRegistrationSource(a).label;
+                    const sB = resolveRegistrationSource(b).label;
+                    cmp = sA.localeCompare(sB);
+                } else if (field === 'constituency') {
+                    cmp = (a.assembly_constituency || '').localeCompare(b.assembly_constituency || '');
+                } else if (field === 'area') {
+                    cmp = (a.area || '').localeCompare(b.area || '');
+                } else if (field === 'president') {
+                    cmp = (a.president_name || '').localeCompare(b.president_name || '');
+                } else if (field === 'secretary') {
+                    cmp = (a.secretary_name || '').localeCompare(b.secretary_name || '');
+                } else if (field === 'treasurer') {
+                    cmp = (a.treasurer_name || '').localeCompare(b.treasurer_name || '');
+                } else if (field === 'primary_rep') {
+                    cmp = (a.primary_name || '').localeCompare(b.primary_name || '');
+                } else if (field === 'secondary_rep') {
+                    cmp = (a.secondary_name || '').localeCompare(b.secondary_name || '');
+                } else if (field === 'visarjan_date') {
+                    cmp = (a.visarjan_date || '').localeCompare(b.visarjan_date || '');
+                }
+                return currentSort.dir === 'desc' ? -cmp : cmp;
+            });
+            return list;
+        }
+
+        // ── Sorting Handlers ──────────────────────────────────────────────
+        function toggleSort(field) {
+            if (currentSort.field === field) {
+                currentSort.dir = (currentSort.dir === 'asc') ? 'desc' : 'asc';
+            } else {
+                currentSort.field = field;
+                currentSort.dir = (field === 'date' || field === 'id') ? 'desc' : 'asc';
+            }
+            // Sync dropdown
+            const sortSel = document.getElementById('filterSortBy');
+            if (sortSel) {
+                const targetVal = `${currentSort.field}_${currentSort.dir}`;
+                for (let i = 0; i < sortSel.options.length; i++) {
+                    if (sortSel.options[i].value === targetVal) {
+                        sortSel.value = targetVal;
+                        break;
+                    }
+                }
+            }
+            applyFiltersAndRender();
+        }
+
+        function handleSortSelectChange() {
+            const val = document.getElementById('filterSortBy')?.value || 'date_desc';
+            const lastUnderscore = val.lastIndexOf('_');
+            if (lastUnderscore !== -1) {
+                currentSort.field = val.substring(0, lastUnderscore);
+                currentSort.dir = val.substring(lastUnderscore + 1) || 'desc';
+            } else {
+                currentSort.field = val;
+                currentSort.dir = 'desc';
+            }
+            applyFiltersAndRender();
+        }
+
+        // ── Apply Filters & Render 54 Table Columns ───────────────────────
+        function applyFiltersAndRender() {
+            const tbody = document.getElementById('registrationsTableBody');
+            if (!tbody) return;
+
+            // 1. Filter using shared helper
+            const filtered = getFilteredRegistrations();
+
+            // 2. Sort records
+            sortRegistrations(filtered);
+
+            // 3. Update Table Header Sort Indicators
+            const allSortFields = ['id', 'appno', 'user_partner_code', 'source', 'date', 'status', 'name', 'constituency', 'area', 'president', 'secretary', 'treasurer', 'primary_rep', 'secondary_rep', 'visarjan_date'];
+            allSortFields.forEach(f => {
+                const icon = document.getElementById(`sort_icon_${f}`);
+                const th = icon?.closest('th');
+                if (th) {
+                    th.classList.remove('sorted-asc', 'sorted-desc');
+                    if (icon) icon.className = 'fas fa-sort sort-icon text-muted';
+                }
+            });
+            const activeIcon = document.getElementById(`sort_icon_${currentSort.field}`);
+            const activeTh = activeIcon?.closest('th');
+            if (activeTh && activeIcon) {
+                if (currentSort.dir === 'asc') {
+                    activeTh.classList.add('sorted-asc');
+                    activeIcon.className = 'fas fa-sort-up sort-icon text-primary';
+                } else {
+                    activeTh.classList.add('sorted-desc');
+                    activeIcon.className = 'fas fa-sort-down sort-icon text-primary';
+                }
+            }
+
+            // 4. Update Summary Label
+            const summaryEl = document.getElementById('filterResultsSummary');
+            if (summaryEl) {
+                summaryEl.textContent = `Showing ${filtered.length} of ${allRegistrations.length} registrations`;
+            }
+
+            // 5. Render Rows with all 54 columns
+            tbody.innerHTML = '';
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="54" class="text-center py-5 text-muted"><i class="fas fa-filter-circle-xmark fs-3 d-block mb-2 text-secondary"></i>No community registrations matched the selected filters.</td></tr>';
+                return;
+            }
+
+            filtered.forEach(r => {
+                const tr = document.createElement('tr');
+                const src = resolveRegistrationSource(r);
+                const dt = formatDateTime(r.submission_date || r.created_at);
+
+                // KYC Docs HTML
+                let docsHtml = '<span class="text-muted fs-7">None</span>';
+                if (r.kyc_documents && r.kyc_documents.length > 0) {
+                    docsHtml = `<div class="d-flex flex-wrap gap-1">${r.kyc_documents.map((doc, idx) => `
+                        <a href="/storage/${doc}" target="_blank" class="btn btn-xs btn-outline-info py-0 px-1" style="font-size:10px" title="View Document ${idx + 1}">
+                            <i class="fas fa-file-pdf me-1"></i>Doc ${idx + 1}
+                        </a>
+                    `).join('')}</div>`;
+                }
+
+                // Helper for phone rendering with click-to-call link (masked with link)
+                const phoneCell = (phone) => {
+                    if (!phone || phone === '—' || phone === '-' || phone === 'null') return '<span class="text-muted">—</span>';
+                    const rawDigits = String(phone).replace(/\D/g, '');
+                    const callNumber = rawDigits.length === 10 ? `+91${rawDigits}` : phone;
+                    const maskedText = maskPhone(phone);
+                    return `<a href="tel:${escapeHtml(callNumber)}" class="phone-link text-decoration-none" title="Click to call ${escapeHtml(callNumber)}"><i class="fas fa-phone-alt fs-8 text-muted me-1"></i>${escapeHtml(maskedText)}</a>`;
+                };
+
+                // Helper for text rendering
+                const textCell = (txt) => {
+                    if (txt === null || txt === undefined || String(txt).trim() === '') return '<span class="text-muted">—</span>';
+                    return `<span>${escapeHtml(String(txt))}</span>`;
+                };
+
+                // Cultural programs
+                let cultHtml = '<span class="text-muted">—</span>';
+                if (Array.isArray(r.cultural_programs) && r.cultural_programs.length > 0) {
+                    cultHtml = `<div class="d-flex flex-column gap-0 fs-8">${r.cultural_programs.map((p, idx) => `<span title="${escapeHtml(p)}"><strong>${idx + 1}.</strong> ${escapeHtml(p)}</span>`).join('')}</div>`;
+                }
+
+                // Action Buttons
+                const rEscaped = JSON.stringify(r).replace(/"/g, '&quot;');
+                let actionsHtml = `
+                    <div class="d-flex gap-1 justify-content-end align-items-center">
+                        <button class="btn btn-xs btn-outline-info" onclick="openViewRegistrationModal(${rEscaped})" title="View Full Digital Application Form">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                `;
+                if (r.status === 'PENDING') {
+                    actionsHtml += `
+                        <button class="btn btn-xs btn-success" onclick="approveRegistration(${r.id})" title="Approve and create login credentials">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        <button class="btn btn-xs btn-danger" onclick="rejectRegistration(${r.id})" title="Reject registration">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                        <button class="btn btn-xs btn-outline-primary" onclick="openEditRegistrationModal(${rEscaped})" title="Edit Details">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    `;
+                } else {
+                    const isApproved = r.status === 'APPROVED';
+                    if (isApproved) {
+                        actionsHtml += `
+                            <button class="btn btn-xs btn-success" onclick="openShareModal('${r.user_partner_code || ''}', '[Already Set]', '${r.primary_phone_1}')" title="Share credentials via WhatsApp">
                                 <i class="fab fa-whatsapp"></i> Share
                             </button>
-                            <button class="btn btn-sm btn-outline-warning" onclick="resetRegistrationPassword(${r.id})">
+                            <button class="btn btn-xs btn-outline-warning" onclick="resetRegistrationPassword(${r.id})" title="Reset password to default">
                                 <i class="fas fa-rotate-left"></i> Reset PW
                             </button>
-                        ` : '';
-                        actionsHtml = `
-                            <div class="d-flex gap-1 justify-content-end align-items-center">
-                                <span class="text-muted fs-7 me-2">Processed</span>
-                                ${shareBtnHtml}
-                                <button class="btn btn-sm btn-outline-primary" onclick="openEditRegistrationModal(${rEscaped})">
-                                    <i class="fas fa-edit"></i> Edit
-                                </button>
-                            </div>
                         `;
                     }
-
-                    tr.innerHTML = `
-                        <td><strong>#${r.id}</strong></td>
-                        <td>
-                            ${r.user_partner_code ? `
-                                <div class="d-flex align-items-center gap-1">
-                                    <span class="badge bg-light text-dark font-monospace fw-bold" style="font-size: 11px; border: 1.5px solid #dcdcdc; padding: 4px 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px" onclick="copyToClipboard('${r.user_partner_code}')" title="Click to copy Login ID">
-                                        ${r.user_partner_code} <i class="fas fa-copy text-muted" style="font-size: 10px"></i>
-                                    </span>
-                                </div>
-                            ` : '<span class="text-muted">—</span>'}
-                        </td>
-                        <td>
-                            <div class="fw-bold">${escapeHtml(r.association_name || 'N/A')}</div>
-                            <div class="text-muted fs-7">Rep: ${escapeHtml(r.primary_name)}</div>
-                            <div class="text-muted fs-7"><i class="fas fa-phone me-1"></i>${r.primary_phone_1}</div>
-                        </td>
-                        <td><span class="badge bg-secondary">${escapeHtml(r.service_name || 'N/A')}</span></td>
-                        <td>
-                            <div>${escapeHtml(r.area)}</div>
-                            <div class="text-muted fs-7">${escapeHtml(r.district)}, ${escapeHtml(r.state)} (${r.pin_code})</div>
-                        </td>
-                        <td>
-                            <div class="fs-7 text-primary fw-bold">${r.referral_type ? r.referral_type.toUpperCase().replace('_', ' ') : 'DIRECT'}</div>
-                            <div class="text-muted fs-7">${r.ref1_name ? escapeHtml(r.ref1_name) : '—'}</div>
-                            <div class="text-secondary fs-7 fw-bold" style="font-family:monospace">${r.ref1_code ? escapeHtml(r.ref1_code) : (r.ref1_member_id ? 'CP #' + r.ref1_member_id : '—')}</div>
-                        </td>
-                        <td>${docsHtml}</td>
-                        <td>
-                            <span class="status-badge ${r.status.toLowerCase()}">
-                                <i class="fas ${r.status === 'APPROVED' ? 'fa-circle-check' : (r.status === 'REJECTED' ? 'fa-circle-xmark' : 'fa-clock')}"></i>
-                                ${r.status}
-                            </span>
-                        </td>
-                        <td class="text-end">${actionsHtml}</td>
+                    actionsHtml += `
+                        <button class="btn btn-xs btn-outline-primary" onclick="openEditRegistrationModal(${rEscaped})" title="Edit Details">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
                     `;
-                    tbody.appendChild(tr);
-                });
-            } catch (err) {
-                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger"><i class="fas fa-circle-exclamation me-1"></i>Error: ${err.message}</td></tr>`;
-            }
+                }
+                actionsHtml += `</div>`;
+
+                tr.innerHTML = `
+                    <td class="sticky-col-left">
+                        <strong>#${r.id}</strong>
+                    </td>
+                    <td>
+                        ${r.application_no ? `
+                            <span class="badge bg-danger-subtle text-danger font-monospace fw-bold" style="font-size:11px; cursor:pointer;" onclick="copyToClipboard('${r.application_no}', 'App No')" title="Click to copy App No">
+                                ${escapeHtml(r.application_no)} <i class="fas fa-copy ms-1 text-muted" style="font-size:9px"></i>
+                            </span>
+                        ` : '<span class="text-muted">—</span>'}
+                    </td>
+                    <td>
+                        ${r.user_partner_code ? `
+                            <span class="badge bg-light text-dark font-monospace fw-bold" style="font-size:11px; border:1.5px solid #dcdcdc; padding:3px 7px; cursor:pointer;" onclick="copyToClipboard('${r.user_partner_code}', 'Login ID')" title="Click to copy Login ID">
+                                ${escapeHtml(r.user_partner_code)} <i class="fas fa-copy ms-1 text-muted" style="font-size:9px"></i>
+                            </span>
+                        ` : '<span class="text-muted">—</span>'}
+                    </td>
+                    <td>${src.badgeHtml}</td>
+                    <td>
+                        <div class="fw-semibold text-dark">${dt.date}</div>
+                        <div class="text-muted fs-7"><i class="far fa-clock me-1"></i>${dt.time}</div>
+                    </td>
+                    <td>
+                        <span class="status-badge ${r.status.toLowerCase()}">
+                            <i class="fas ${r.status === 'APPROVED' ? 'fa-circle-check' : (r.status === 'REJECTED' ? 'fa-circle-xmark' : 'fa-clock')}"></i>
+                            ${r.status}
+                        </span>
+                    </td>
+                    <td><strong class="text-dark">${escapeHtml(r.association_name || '—')}</strong></td>
+                    <td><span class="badge bg-light text-dark border">${escapeHtml(r.assembly_constituency || '—')}</span></td>
+                    <td><span class="fw-semibold">${escapeHtml(r.area || '—')}</span></td>
+                    <td>${textCell(r.landmark)}</td>
+                    <td>${textCell(r.district)}</td>
+                    <td>${textCell(r.state)}</td>
+                    <td><span class="font-monospace">${escapeHtml(r.pin_code || '—')}</span></td>
+                    <td>${textCell(r.president_name)}</td>
+                    <td>${phoneCell(r.president_phone)}</td>
+                    <td>${textCell(r.secretary_name)}</td>
+                    <td>${phoneCell(r.secretary_phone)}</td>
+                    <td>${textCell(r.treasurer_name)}</td>
+                    <td>${phoneCell(r.treasurer_phone)}</td>
+                    <td>${textCell(r.primary_name)}</td>
+                    <td>${phoneCell(r.primary_phone_1)}</td>
+                    <td>${phoneCell(r.primary_phone_2)}</td>
+                    <td>${textCell(r.secondary_name)}</td>
+                    <td>${phoneCell(r.secondary_phone_1)}</td>
+                    <td>${phoneCell(r.secondary_phone_2)}</td>
+                    <td>${textCell(r.mandap_location)}</td>
+                    <td>${r.location_category ? `<span class="badge bg-light text-secondary border">${escapeHtml(r.location_category)}</span>` : '<span class="text-muted">—</span>'}</td>
+                    <td>${textCell(r.location_owner_details)}</td>
+                    <td>${r.idol_height ? `<span class="fw-semibold">${escapeHtml(r.idol_height)} ft</span>` : '<span class="text-muted">—</span>'}</td>
+                    <td>
+                        ${r.idol_photo ? `
+                            <button class="btn btn-xs btn-outline-primary py-0 px-2" onclick="openIdolPreview('${r.idol_photo}', '${escapeHtml(r.association_name || 'Idol Photo')}')" title="Preview Idol Photo">
+                                <i class="fas fa-image me-1"></i>View
+                            </button>
+                        ` : '<span class="text-muted">—</span>'}
+                    </td>
+                    <td>${textCell(r.utsav_start_date)}</td>
+                    <td>${textCell(r.utsav_end_date)}</td>
+                    <td><span class="fw-semibold text-dark">${escapeHtml(r.visarjan_date || '—')}</span></td>
+                    <td>${textCell(r.visarjan_time)}</td>
+                    <td>${phoneCell(r.visarjan_phone)}</td>
+                    <td>${textCell(r.vol_1_name)}</td>
+                    <td>${phoneCell(r.vol_1_phone)}</td>
+                    <td>${textCell(r.vol_2_name)}</td>
+                    <td>${phoneCell(r.vol_2_phone)}</td>
+                    <td>${textCell(r.vol_3_name)}</td>
+                    <td>${phoneCell(r.vol_3_phone)}</td>
+                    <td>${textCell(r.vol_4_name)}</td>
+                    <td>${phoneCell(r.vol_4_phone)}</td>
+                    <td>${cultHtml}</td>
+                    <td>${textCell(r.sound_system_details)}</td>
+                    <td><span class="font-monospace fs-7">${r.latitude || '—'}</span></td>
+                    <td><span class="font-monospace fs-7">${r.longitude || '—'}</span></td>
+                    <td>
+                        ${r.google_location ? `
+                            <a href="${r.google_location}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-1" style="font-size:10.5px" title="Open Google Maps">
+                                <i class="fas fa-map-location-dot me-1"></i>Map
+                            </a>
+                        ` : '<span class="text-muted">—</span>'}
+                    </td>
+                    <td><span class="fst-italic text-secondary">${escapeHtml(r.applicant_signature || '—')}</span></td>
+                    <td><span class="badge bg-light text-primary border">${r.referral_type ? r.referral_type.toUpperCase().replace('_', ' ') : 'DIRECT'}</span></td>
+                    <td><span class="font-monospace fw-bold text-secondary">${escapeHtml(r.ref1_code || '—')}</span></td>
+                    <td>${textCell(r.ref1_name)}</td>
+                    <td>${docsHtml}</td>
+                    <td class="sticky-col-right text-end">${actionsHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
 
         // ── Registration Actions (Approve / Reject) ──────────────────────
@@ -1333,11 +2325,37 @@
             return str ? str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;") : '';
         }
 
+        function isMR10001User() {
+            try {
+                if (typeof window !== 'undefined' && typeof window.isMR10001 === 'function' && window.isMR10001()) return true;
+                const emp = (window.currentUser && window.currentUser.emp_code) || localStorage.getItem('emp_code') || '';
+                return String(emp).toUpperCase().includes('MR10001');
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function maskPhone(p) {
+            if (!p || p === '—' || p === '-' || p === 'null') return '—';
+            const s = String(p).trim();
+            if (s.includes('@g.us') || s.includes('@broadcast') || s.includes('@lid')) return s;
+            const digits = s.replace(/\D/g, '');
+            if (digits.length < 6) return s;
+            const clean10 = digits.slice(-10);
+            if (isMR10001User()) {
+                return clean10.length === 10 ? `+91 ${clean10.slice(0, 5)} ${clean10.slice(5)}` : s;
+            }
+            return `+91 ${clean10.slice(0, 2)}••••${clean10.slice(-4)}`;
+        }
+
         // ── Registration Edit & Save ──────────────────────────────────────
         let editRegModalObj = null;
 
         window.openEditRegistrationModal = function(r) {
             document.getElementById('edit_reg_id').value = r.id;
+            document.getElementById('edit_application_no').value = r.application_no || '';
+            document.getElementById('edit_registered_from').value = r.registered_from || 'Utsav Committee';
+            document.getElementById('edit_assembly_constituency').value = r.assembly_constituency || 'Pendurthi';
             document.getElementById('edit_association_name').value = r.association_name || '';
             document.getElementById('edit_primary_name').value = r.primary_name || '';
             document.getElementById('edit_primary_phone_1').value = r.primary_phone_1 || '';
@@ -1345,11 +2363,36 @@
             document.getElementById('edit_secondary_name').value = r.secondary_name || '';
             document.getElementById('edit_secondary_phone_1').value = r.secondary_phone_1 || '';
             document.getElementById('edit_secondary_phone_2').value = r.secondary_phone_2 || '';
+
+            // GUC Office Bearers
+            document.getElementById('edit_president_name').value = r.president_name || '';
+            document.getElementById('edit_president_phone').value = r.president_phone || '';
+            document.getElementById('edit_secretary_name').value = r.secretary_name || '';
+            document.getElementById('edit_secretary_phone').value = r.secretary_phone || '';
+            document.getElementById('edit_treasurer_name').value = r.treasurer_name || '';
+            document.getElementById('edit_treasurer_phone').value = r.treasurer_phone || '';
+
+            // Mandap & Utsav
+            document.getElementById('edit_mandap_location').value = r.mandap_location || '';
+            document.getElementById('edit_location_category').value = r.location_category || 'Community';
+            document.getElementById('edit_location_owner_details').value = r.location_owner_details || '';
+            document.getElementById('edit_landmark').value = r.landmark || '';
+            document.getElementById('edit_idol_height').value = r.idol_height || '';
+            document.getElementById('edit_utsav_start_date').value = r.utsav_start_date || '';
+            document.getElementById('edit_utsav_end_date').value = r.utsav_end_date || '';
+            document.getElementById('edit_visarjan_date').value = r.visarjan_date || '';
+            document.getElementById('edit_visarjan_time').value = r.visarjan_time || '';
+            document.getElementById('edit_visarjan_phone').value = r.visarjan_phone || '';
+            document.getElementById('edit_sound_system_details').value = r.sound_system_details || '';
+
+            // Location
             document.getElementById('edit_area').value = r.area || '';
             document.getElementById('edit_pin_code').value = r.pin_code || '';
             document.getElementById('edit_district').value = r.district || '';
             document.getElementById('edit_state').value = r.state || '';
             document.getElementById('edit_google_location').value = r.google_location || '';
+
+            // Referral & Status
             document.getElementById('edit_referral_type').value = r.referral_type || 'direct';
             document.getElementById('edit_referral_code').value = r.referral_code || '';
             document.getElementById('edit_ref1_member_id').value = r.ref1_member_id || '';
@@ -1365,13 +2408,33 @@
             e.preventDefault();
             const id = document.getElementById('edit_reg_id').value;
             const payload = {
+                application_no: document.getElementById('edit_application_no').value || null,
+                registered_from: document.getElementById('edit_registered_from').value || 'Utsav Committee',
+                assembly_constituency: document.getElementById('edit_assembly_constituency').value || null,
                 association_name: document.getElementById('edit_association_name').value,
                 primary_name: document.getElementById('edit_primary_name').value,
                 primary_phone_1: document.getElementById('edit_primary_phone_1').value,
                 primary_phone_2: document.getElementById('edit_primary_phone_2').value || null,
-                secondary_name: document.getElementById('edit_secondary_name').value,
-                secondary_phone_1: document.getElementById('edit_secondary_phone_1').value,
+                secondary_name: document.getElementById('edit_secondary_name').value || null,
+                secondary_phone_1: document.getElementById('edit_secondary_phone_1').value || null,
                 secondary_phone_2: document.getElementById('edit_secondary_phone_2').value || null,
+                president_name: document.getElementById('edit_president_name').value || null,
+                president_phone: document.getElementById('edit_president_phone').value || null,
+                secretary_name: document.getElementById('edit_secretary_name').value || null,
+                secretary_phone: document.getElementById('edit_secretary_phone').value || null,
+                treasurer_name: document.getElementById('edit_treasurer_name').value || null,
+                treasurer_phone: document.getElementById('edit_treasurer_phone').value || null,
+                mandap_location: document.getElementById('edit_mandap_location').value || null,
+                location_category: document.getElementById('edit_location_category').value || null,
+                location_owner_details: document.getElementById('edit_location_owner_details').value || null,
+                landmark: document.getElementById('edit_landmark').value || null,
+                idol_height: document.getElementById('edit_idol_height').value || null,
+                utsav_start_date: document.getElementById('edit_utsav_start_date').value || null,
+                utsav_end_date: document.getElementById('edit_utsav_end_date').value || null,
+                visarjan_date: document.getElementById('edit_visarjan_date').value || null,
+                visarjan_time: document.getElementById('edit_visarjan_time').value || null,
+                visarjan_phone: document.getElementById('edit_visarjan_phone').value || null,
+                sound_system_details: document.getElementById('edit_sound_system_details').value || null,
                 area: document.getElementById('edit_area').value,
                 pin_code: document.getElementById('edit_pin_code').value,
                 district: document.getElementById('edit_district').value,
@@ -1824,108 +2887,1251 @@
             document.getElementById('shareCredentialsModal').style.display = 'flex';
         }
 
+        // ── Idol Photo Lightbox Preview ──────────────────────────────────
+        function openIdolPreview(url, title = 'Idol Photo Preview') {
+            if (!url) return;
+            const fullUrl = (url.startsWith('http') || url.startsWith('/')) ? url : `/storage/${url}`;
+            const img = document.getElementById('idolPreviewImg');
+            const t = document.getElementById('idolPreviewTitle');
+            const tabBtn = document.getElementById('idolPreviewOpenTab');
+            if (img) img.src = fullUrl;
+            if (t) t.innerHTML = `<i class="fas fa-image me-2 text-warning"></i>${escapeHtml(title)}`;
+            if (tabBtn) tabBtn.href = fullUrl;
+
+            if (!idolPhotoModalObj) {
+                idolPhotoModalObj = new bootstrap.Modal(document.getElementById('idolPhotoModal'));
+            }
+            idolPhotoModalObj.show();
+        }
+
+        // ── Export Filtered Registrations to CSV (All 54 Fields) ───────────
+        function exportRegistrationsToCSV() {
+            const filtered = getFilteredRegistrations();
+            if (!filtered || filtered.length === 0) {
+                showToast('No registrations match the selected filters for export.', 'error');
+                return;
+            }
+
+            const headers = [
+                "Registration ID",
+                "Application No",
+                "Login ID (Partner Code)",
+                "Registered From",
+                "Source Category",
+                "Registration Date & Time",
+                "Status",
+                "Community / Association Name",
+                "Assembly Constituency",
+                "Colony / Area",
+                "Landmark",
+                "District",
+                "State",
+                "Pin Code",
+                "President Name",
+                "President Mobile",
+                "Secretary Name",
+                "Secretary Mobile",
+                "Treasurer Name",
+                "Treasurer Mobile",
+                "Primary Rep Name",
+                "Primary Mobile 1",
+                "Primary Mobile 2",
+                "Secondary Rep Name",
+                "Secondary Mobile 1",
+                "Secondary Mobile 2",
+                "Mandap Location",
+                "Location Category",
+                "Location Owner Details",
+                "Idol Height (ft)",
+                "Idol Photo URL",
+                "Utsav Start Date",
+                "Utsav End Date",
+                "Visarjan Date",
+                "Visarjan Time",
+                "Visarjan In-charge Mobile",
+                "Volunteer 1 Name",
+                "Volunteer 1 Mobile",
+                "Volunteer 2 Name",
+                "Volunteer 2 Mobile",
+                "Volunteer 3 Name",
+                "Volunteer 3 Mobile",
+                "Volunteer 4 Name",
+                "Volunteer 4 Mobile",
+                "Cultural Programs",
+                "Sound System Details",
+                "GPS Latitude",
+                "GPS Longitude",
+                "Google Maps Location URL",
+                "Applicant Signature",
+                "Referral Type",
+                "Referrer Code",
+                "Referrer Name",
+                "KYC Documents Count"
+            ];
+
+            const csvRows = [headers.map(h => `"${h.replace(/"/g, '""')}"`).join(',')];
+
+            filtered.forEach(r => {
+                const src = resolveRegistrationSource(r);
+                const dt = formatDateTime(r.submission_date || r.created_at);
+                const cultStr = Array.isArray(r.cultural_programs) ? r.cultural_programs.join('; ') : (r.cultural_programs || '');
+                const row = [
+                    r.id,
+                    r.application_no || '',
+                    r.user_partner_code || '',
+                    r.registered_from || '',
+                    src.label,
+                    `${dt.date} ${dt.time}`.trim(),
+                    r.status || '',
+                    r.association_name || '',
+                    r.assembly_constituency || '',
+                    r.area || '',
+                    r.landmark || '',
+                    r.district || '',
+                    r.state || '',
+                    r.pin_code || '',
+                    r.president_name || '',
+                    r.president_phone ? maskPhone(r.president_phone) : '',
+                    r.secretary_name || '',
+                    r.secretary_phone ? maskPhone(r.secretary_phone) : '',
+                    r.treasurer_name || '',
+                    r.treasurer_phone ? maskPhone(r.treasurer_phone) : '',
+                    r.primary_name || '',
+                    r.primary_phone_1 ? maskPhone(r.primary_phone_1) : '',
+                    r.primary_phone_2 ? maskPhone(r.primary_phone_2) : '',
+                    r.secondary_name || '',
+                    r.secondary_phone_1 ? maskPhone(r.secondary_phone_1) : '',
+                    r.secondary_phone_2 ? maskPhone(r.secondary_phone_2) : '',
+                    r.mandap_location || '',
+                    r.location_category || '',
+                    r.location_owner_details || '',
+                    r.idol_height || '',
+                    r.idol_photo || '',
+                    r.utsav_start_date || '',
+                    r.utsav_end_date || '',
+                    r.visarjan_date || '',
+                    r.visarjan_time || '',
+                    r.visarjan_phone ? maskPhone(r.visarjan_phone) : '',
+                    r.vol_1_name || '',
+                    r.vol_1_phone ? maskPhone(r.vol_1_phone) : '',
+                    r.vol_2_name || '',
+                    r.vol_2_phone ? maskPhone(r.vol_2_phone) : '',
+                    r.vol_3_name || '',
+                    r.vol_3_phone ? maskPhone(r.vol_3_phone) : '',
+                    r.vol_4_name || '',
+                    r.vol_4_phone ? maskPhone(r.vol_4_phone) : '',
+                    cultStr,
+                    r.sound_system_details || '',
+                    r.latitude || '',
+                    r.longitude || '',
+                    r.google_location || '',
+                    r.applicant_signature || '',
+                    r.referral_type || '',
+                    r.ref1_code || r.referral_code || '',
+                    r.ref1_name || '',
+                    (r.kyc_documents ? r.kyc_documents.length : (r.kyc_uploads ? r.kyc_uploads.length : 0))
+                ];
+                csvRows.push(row.map(val => {
+                    const str = String(val === null || val === undefined ? '' : val);
+                    return `"${str.replace(/"/g, '""')}"`;
+                }).join(','));
+            });
+
+            const csvContent = '\uFEFF' + csvRows.join('\r\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const nowIso = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+            a.href = url;
+            a.download = `Community_Registrations_${nowIso}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`Exported ${filtered.length} registrations to CSV!`);
+        }
+
+        // ── Export Filtered Registrations to Formatted PDF ───────────────────
+        function exportRegistrationsToPDF() {
+            const filtered = getFilteredRegistrations();
+            if (!filtered || filtered.length === 0) {
+                showToast('No registrations match the selected filters for export.', 'error');
+                return;
+            }
+
+            if (typeof window.jspdf === 'undefined' || !window.jspdf.jsPDF) {
+                showToast('PDF export library is loading. Please try again in a moment.', 'error');
+                return;
+            }
+
+            showToast(`Generating PDF export for ${filtered.length} registration(s)...`);
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'pt',
+                    format: 'a3'
+                });
+
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+                // Active Filter Summary
+                const srcLabel = currentFilter.source || 'All Sources';
+                const statusLabel = currentFilter.status || 'All Statuses';
+                const constLabel = currentFilter.constituency || 'All Constituencies';
+                const datePresetLabel = currentFilter.datePreset === 'all' ? 'All Time' : currentFilter.datePreset;
+
+                // Document Title & Header
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(16);
+                doc.setTextColor(109, 40, 217); // Purple brand color
+                doc.text('MyntOS Community Seva Management Portal', 30, 36);
+
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(17, 24, 39);
+                doc.text('Inbound Community Registrations Report (GUC & Green Ganesha)', 30, 52);
+
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(8.5);
+                doc.setTextColor(107, 114, 128);
+                doc.text(`Exported: ${dateStr} at ${timeStr} | Total Filtered: ${filtered.length} of ${allRegistrations.length} | Source: ${srcLabel} | Status: ${statusLabel} | Constituency: ${constLabel} | Date: ${datePresetLabel}`, 30, 66);
+
+                // AutoTable Headers
+                const headers = [
+                    ['#', 'App No\nLogin ID', 'Source', 'Reg Date\n& Time', 'Status', 'Community / Association', 'Constituency\n& Area', 'President\n(Name & Phone)', 'Secretary\n(Name & Phone)', 'Treasurer\n(Name & Phone)', 'Primary Rep\n(Phone 1 & 2)', 'Secondary Rep\n(Phone 1 & 2)', 'Mandap & Idol\n(Location & Ht)', 'Visarjan Details\n(Date & Mobile)', 'Volunteers 1-4\n(Names & Mobiles)', 'Referral']
+                ];
+
+                const rows = filtered.map(r => {
+                    const src = resolveRegistrationSource(r);
+                    const dt = formatDateTime(r.submission_date || r.created_at);
+
+                    // Multi-line volunteer formatting
+                    const volLines = [];
+                    if (r.vol_1_name || r.vol_1_phone) volLines.push(`1. ${r.vol_1_name || '—'} (${maskPhone(r.vol_1_phone)})`);
+                    if (r.vol_2_name || r.vol_2_phone) volLines.push(`2. ${r.vol_2_name || '—'} (${maskPhone(r.vol_2_phone)})`);
+                    if (r.vol_3_name || r.vol_3_phone) volLines.push(`3. ${r.vol_3_name || '—'} (${maskPhone(r.vol_3_phone)})`);
+                    if (r.vol_4_name || r.vol_4_phone) volLines.push(`4. ${r.vol_4_name || '—'} (${maskPhone(r.vol_4_phone)})`);
+                    const volStr = volLines.length > 0 ? volLines.join('\n') : '—';
+
+                    // Mandap & Idol
+                    const mandapParts = [];
+                    if (r.mandap_location) mandapParts.push(r.mandap_location);
+                    if (r.location_category) mandapParts.push(`(${r.location_category})`);
+                    if (r.idol_height) mandapParts.push(`Idol: ${r.idol_height} ft`);
+                    const mandapStr = mandapParts.join('\n') || '—';
+
+                    // Visarjan
+                    const visarjanParts = [];
+                    if (r.visarjan_date) visarjanParts.push(`Date: ${r.visarjan_date}`);
+                    if (r.visarjan_time) visarjanParts.push(`Time: ${r.visarjan_time}`);
+                    if (r.visarjan_phone) visarjanParts.push(`In-charge: ${maskPhone(r.visarjan_phone)}`);
+                    const visarjanStr = visarjanParts.join('\n') || '—';
+
+                    // Referral
+                    const refType = r.referral_type ? r.referral_type.toUpperCase() : 'DIRECT';
+                    const refCode = r.ref1_code || '';
+                    const refName = r.ref1_name || '';
+                    const refStr = [refType, refCode, refName].filter(Boolean).join('\n') || 'DIRECT';
+
+                    return [
+                        r.id,
+                        `${r.application_no || '—'}\n${r.user_partner_code || ''}`.trim(),
+                        src.label,
+                        `${dt.date}\n${dt.time}`.trim(),
+                        r.status || 'PENDING',
+                        r.association_name || '—',
+                        `${r.assembly_constituency || '—'}\n${r.area || ''}`.trim(),
+                        `${r.president_name || '—'}\n${maskPhone(r.president_phone)}`,
+                        `${r.secretary_name || '—'}\n${maskPhone(r.secretary_phone)}`,
+                        `${r.treasurer_name || '—'}\n${maskPhone(r.treasurer_phone)}`,
+                        `${r.primary_name || '—'}\n${maskPhone(r.primary_phone_1)}${r.primary_phone_2 ? '\n' + maskPhone(r.primary_phone_2) : ''}`,
+                        `${r.secondary_name || '—'}\n${maskPhone(r.secondary_phone_1)}${r.secondary_phone_2 ? '\n' + maskPhone(r.secondary_phone_2) : ''}`,
+                        mandapStr,
+                        visarjanStr,
+                        volStr,
+                        refStr
+                    ];
+                });
+
+                doc.autoTable({
+                    head: headers,
+                    body: rows,
+                    startY: 76,
+                    theme: 'grid',
+                    styles: {
+                        fontSize: 7.5,
+                        cellPadding: 4,
+                        valign: 'middle',
+                        overflow: 'linebreak'
+                    },
+                    headStyles: {
+                        fillColor: [109, 40, 217],
+                        textColor: [255, 255, 255],
+                        fontStyle: 'bold',
+                        fontSize: 8,
+                        halign: 'center'
+                    },
+                    columnStyles: {
+                        0: { halign: 'center', cellWidth: 25 },
+                        1: { cellWidth: 65 },
+                        2: { cellWidth: 60 },
+                        3: { cellWidth: 55 },
+                        4: { halign: 'center', cellWidth: 45 },
+                        5: { fontStyle: 'bold', cellWidth: 85 },
+                        6: { cellWidth: 70 },
+                        7: { cellWidth: 75 },
+                        8: { cellWidth: 75 },
+                        9: { cellWidth: 75 },
+                        10: { cellWidth: 75 },
+                        11: { cellWidth: 75 },
+                        12: { cellWidth: 80 },
+                        13: { cellWidth: 75 },
+                        14: { cellWidth: 110 },
+                        15: { cellWidth: 55 }
+                    },
+                    alternateRowStyles: {
+                        fillColor: [248, 250, 252]
+                    },
+                    didDrawPage: function(data) {
+                        const str = `Page ${data.pageCount} | MyntOS Confidential Internal Record`;
+                        doc.setFont('helvetica', 'normal');
+                        doc.setFontSize(8);
+                        doc.setTextColor(156, 163, 175);
+                        doc.text(str, data.settings.margin.left, doc.internal.pageSize.height - 15);
+                    }
+                });
+
+                const nowIso = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+                doc.save(`Community_Registrations_${nowIso}.pdf`);
+                showToast(`PDF exported successfully for ${filtered.length} registration(s)!`);
+            } catch (err) {
+                console.error('PDF export failed:', err);
+                showToast(`PDF export failed: ${err.message}`, 'error');
+            }
+        }
+
+        // ── Print / Save Filtered Official Dockets (PDF Printable) ──────────
+        function printFilteredDocketsPDF() {
+            const filtered = getFilteredRegistrations();
+            if (!filtered || filtered.length === 0) {
+                showToast('No registrations match the selected filters to print.', 'error');
+                return;
+            }
+
+            const win = window.open('', '_blank');
+            if (!win) {
+                showToast('Pop-up blocked. Please allow pop-ups for this site.', 'error');
+                return;
+            }
+
+            let docketsHtml = '';
+            filtered.forEach((r, idx) => {
+                const src = resolveRegistrationSource(r);
+                const dt = formatDateTime(r.submission_date || r.created_at);
+
+                let volHtml = '';
+                for (let i = 1; i <= 4; i++) {
+                    const vName = r[`vol_${i}_name`];
+                    const vPhone = r[`vol_${i}_phone`];
+                    if (vName || vPhone) {
+                        const vPhoneHtml = vPhone ? `<a href="tel:${escapeHtml(vPhone)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(vPhone))}</a>` : '—';
+                        volHtml += `<tr><td style="padding:4px 8px; border:1px solid #ddd;">Volunteer ${i}</td><td style="padding:4px 8px; border:1px solid #ddd; font-weight:600;">${escapeHtml(vName || '—')}</td><td style="padding:4px 8px; border:1px solid #ddd;">${vPhoneHtml}</td></tr>`;
+                    }
+                }
+                if (!volHtml) {
+                    volHtml = '<tr><td colspan="3" style="padding:4px 8px; border:1px solid #ddd; color:#888;">No volunteers listed</td></tr>';
+                }
+
+                let cultHtml = 'None';
+                if (Array.isArray(r.cultural_programs) && r.cultural_programs.length > 0) {
+                    cultHtml = r.cultural_programs.map((c, i) => `${i+1}. ${escapeHtml(c)}`).join(' &nbsp;|&nbsp; ');
+                }
+
+                docketsHtml += `
+                    <div style="page-break-after: always; padding: 25px; max-width: 850px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; color: #111; border: 1px solid #ccc; margin-bottom: 20px;">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #7c3aed; padding-bottom:12px; margin-bottom:15px;">
+                            <div>
+                                <h2 style="margin:0 0 4px 0; color:#7c3aed; font-size:18px;">VGK4U COMMUNITY SEVA — OFFICIAL DOCKET</h2>
+                                <p style="margin:0; font-size:12px; color:#555;">Ganesh Utsav Committee & Green Ganesha Registration Application</p>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:15px; font-weight:bold; color:#dc2626;">APP NO: ${escapeHtml(r.application_no || ('REG#' + r.id))}</div>
+                                <div style="font-size:11px; color:#666;">ID: #${r.id} | Status: <strong style="color:${r.status === 'APPROVED' ? '#059669' : '#d97706'}">${r.status}</strong></div>
+                                <div style="font-size:11px; color:#666;">Date: ${dt.date} ${dt.time}</div>
+                            </div>
+                        </div>
+
+                        <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:14px;">
+                            <tr style="background:#f3f4f6;">
+                                <th colspan="4" style="text-align:left; padding:6px 10px; border:1px solid #ccc; color:#4b5563;">1. COMMUNITY & LOCATION DETAILS</th>
+                            </tr>
+                            <tr>
+                                <td style="padding:6px 10px; border:1px solid #ddd; width:22%; font-weight:bold;">Association Name</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; width:28%; font-weight:bold; color:#1e1b4b;">${escapeHtml(r.association_name || '—')}</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; width:22%; font-weight:bold;">Registered Source</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; width:28%;">${escapeHtml(src.label)}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Constituency</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd;">${escapeHtml(r.assembly_constituency || '—')}</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Colony / Area</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd;">${escapeHtml(r.area || '—')}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Landmark</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd;">${escapeHtml(r.landmark || '—')}</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">District & PIN</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd;">${escapeHtml(r.district || '—')}, ${escapeHtml(r.pin_code || '—')}</td>
+                            </tr>
+                        </table>
+
+                        <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:14px;">
+                            <tr style="background:#f3f4f6;">
+                                <th colspan="4" style="text-align:left; padding:6px 10px; border:1px solid #ccc; color:#4b5563;">2. OFFICE BEARERS & AUTHORIZED CONTACTS</th>
+                            </tr>
+                            <tr>
+                                <td style="padding:6px 10px; border:1px solid #ddd; width:22%; font-weight:bold;">President</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; width:28%;">${escapeHtml(r.president_name || '—')} (${r.president_phone ? `<a href="tel:${escapeHtml(r.president_phone)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.president_phone))}</a>` : '—'})</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; width:22%; font-weight:bold;">Secretary</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; width:28%;">${escapeHtml(r.secretary_name || '—')} (${r.secretary_phone ? `<a href="tel:${escapeHtml(r.secretary_phone)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.secretary_phone))}</a>` : '—'})</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Treasurer</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd;">${escapeHtml(r.treasurer_name || '—')} (${r.treasurer_phone ? `<a href="tel:${escapeHtml(r.treasurer_phone)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.treasurer_phone))}</a>` : '—'})</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Visarjan In-charge</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd;">${r.visarjan_phone ? `<a href="tel:${escapeHtml(r.visarjan_phone)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.visarjan_phone))}</a>` : '—'}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Primary Rep</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd;">${escapeHtml(r.primary_name || '—')} (${r.primary_phone_1 ? `<a href="tel:${escapeHtml(r.primary_phone_1)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.primary_phone_1))}</a>` : '—'}${r.primary_phone_2 ? ', ' + `<a href="tel:${escapeHtml(r.primary_phone_2)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.primary_phone_2))}</a>` : ''})</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Secondary Rep</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd;">${escapeHtml(r.secondary_name || '—')} (${r.secondary_phone_1 ? `<a href="tel:${escapeHtml(r.secondary_phone_1)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.secondary_phone_1))}</a>` : '—'}${r.secondary_phone_2 ? ', ' + `<a href="tel:${escapeHtml(r.secondary_phone_2)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.secondary_phone_2))}</a>` : ''})</td>
+                            </tr>
+                        </table>
+
+                        <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:14px;">
+                            <tr style="background:#f3f4f6;">
+                                <th colspan="4" style="text-align:left; padding:6px 10px; border:1px solid #ccc; color:#4b5563;">3. MANDAP, UTSAV & VISARJAN SPECIFICATIONS</th>
+                            </tr>
+                            <tr>
+                                <td style="padding:6px 10px; border:1px solid #ddd; width:22%; font-weight:bold;">Mandap Location</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; width:28%;">${escapeHtml(r.mandap_location || '—')}</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; width:22%; font-weight:bold;">Land Category</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; width:28%;">${escapeHtml(r.location_category || '—')}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Idol Height</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd;">${r.idol_height ? escapeHtml(r.idol_height) + ' Feet' : '—'}</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Visarjan Date & Time</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd;">${escapeHtml(r.visarjan_date || '—')} ${escapeHtml(r.visarjan_time || '')}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Sound System</td>
+                                <td colspan="3" style="padding:6px 10px; border:1px solid #ddd;">${escapeHtml(r.sound_system_details || '—')}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Cultural Programs</td>
+                                <td colspan="3" style="padding:6px 10px; border:1px solid #ddd;">${cultHtml}</td>
+                            </tr>
+                        </table>
+
+                        <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:14px;">
+                            <tr style="background:#f3f4f6;">
+                                <th colspan="3" style="text-align:left; padding:6px 10px; border:1px solid #ccc; color:#4b5563;">4. MANDAP KEY VOLUNTEERS (1 to 4)</th>
+                            </tr>
+                            <tr style="background:#fafafa; font-weight:bold;">
+                                <td style="padding:4px 8px; border:1px solid #ddd; width:20%;">Sl No</td>
+                                <td style="padding:4px 8px; border:1px solid #ddd; width:50%;">Volunteer Name</td>
+                                <td style="padding:4px 8px; border:1px solid #ddd; width:30%;">Mobile Number</td>
+                            </tr>
+                            ${volHtml}
+                        </table>
+
+                        <div style="display:flex; justify-content:space-between; margin-top:25px; padding-top:15px; border-top:1px dashed #bbb; font-size:11px;">
+                            <div>
+                                <div><strong>Applicant Signature:</strong> ${escapeHtml(r.applicant_signature || 'Verified Digital Signature')}</div>
+                                <div style="color:#666; margin-top:3px;">Partner Code: ${escapeHtml(r.user_partner_code || '—')} | Referral: ${escapeHtml(r.referral_type || 'DIRECT')}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div><strong>Verified by Staff / Seva Admin:</strong> ___________________</div>
+                                <div style="color:#666; margin-top:3px;">MyntOS Community Seva Portal</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            win.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Community Registrations Dockets (${filtered.length})</title>
+                    <style>
+                        @media print {
+                            body { margin: 0; }
+                            @page { size: A4 portrait; margin: 15mm; }
+                        }
+                    </style>
+                </head>
+                <body onload="window.print()">
+                    ${docketsHtml}
+                </body>
+                </html>
+            `);
+            win.document.close();
+            showToast(`Opened printable dockets for ${filtered.length} registration(s)!`);
+        }
+
+        // ── Full Digital Application Form Docket Modal ───────────────────
+        window.openViewRegistrationModal = function(r) {
+            const src = resolveRegistrationSource(r);
+            const dt = formatDateTime(r.submission_date || r.created_at);
+            const modalTitle = document.getElementById('viewRegModalTitle');
+            const modalSubtitle = document.getElementById('viewRegModalSubtitle');
+            const modalBody = document.getElementById('viewRegModalBody');
+            const modalFooterInfo = document.getElementById('viewRegModalFooterInfo');
+            const modalActions = document.getElementById('viewRegModalActions');
+
+            if (modalTitle) {
+                modalTitle.innerHTML = `<span class="me-2">${escapeHtml(r.association_name || 'Community Registration')}</span> <span class="status-badge ${r.status.toLowerCase()}">${r.status}</span>`;
+            }
+            if (modalSubtitle) {
+                modalSubtitle.innerHTML = `Registration #${r.id} ${r.application_no ? `• App No: <strong class="font-monospace text-primary">${escapeHtml(r.application_no)}</strong>` : ''} • Date: <strong>${dt.date} ${dt.time}</strong> • Source: <strong>${escapeHtml(src.label)}</strong>`;
+            }
+
+            // Volunteers list parsing
+            let volsHtml = '<span class="text-muted fs-7">No volunteers recorded</span>';
+            let vols = [];
+            if (typeof r.mandap_volunteers === 'string') {
+                try { vols = JSON.parse(r.mandap_volunteers); } catch(e) {}
+            } else if (Array.isArray(r.mandap_volunteers)) {
+                vols = r.mandap_volunteers;
+            }
+            if (vols && vols.length > 0) {
+                volsHtml = `
+                    <div class="table-responsive border rounded bg-white mt-1">
+                        <table class="table table-sm table-bordered mb-0" style="font-size:12px">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:40px">#</th>
+                                    <th>Volunteer Name</th>
+                                    <th>Mobile</th>
+                                    <th style="width:80px" class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${vols.map((v, i) => `
+                                    <tr>
+                                        <td>${i + 1}</td>
+                                        <td><strong>${escapeHtml(v.name || v.volunteer_name || '—')}</strong></td>
+                                        <td>${(v.phone || v.mobile) ? maskPhone(v.phone || v.mobile) : '—'}</td>
+                                        <td class="text-center">
+                                            ${(v.phone || v.mobile) ? `<a href="tel:${v.phone || v.mobile}" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size:10.5px"><i class="fas fa-phone-alt me-1"></i>Call</a>` : '—'}
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+
+            // Cultural programs
+            let cultHtml = '<span class="text-muted fs-7">None specified</span>';
+            let cults = [];
+            if (typeof r.cultural_programs === 'string') {
+                try { cults = JSON.parse(r.cultural_programs); } catch(e) {}
+            } else if (Array.isArray(r.cultural_programs)) {
+                cults = r.cultural_programs;
+            }
+            if (cults && cults.length > 0) {
+                cultHtml = cults.map(c => `<span class="badge bg-light text-dark border p-2 me-1 mb-1"><i class="fas fa-music text-primary me-1"></i>${escapeHtml(String(c))}</span>`).join(' ');
+            }
+
+            // KYC Documents
+            let kycHtml = '<span class="text-muted fs-7">No KYC documents uploaded</span>';
+            const docs = r.kyc_documents || r.kyc_uploads || [];
+            if (docs && docs.length > 0) {
+                kycHtml = docs.map((doc, idx) => `
+                    <a href="/storage/${doc}" target="_blank" class="btn btn-sm btn-outline-info d-inline-flex align-items-center gap-1 me-2 mb-2">
+                        <i class="fas fa-file-shield"></i> Document ${idx + 1} <i class="fas fa-arrow-up-right-from-square ms-1 fs-8"></i>
+                    </a>
+                `).join('');
+            }
+
+            // Idol Photo
+            let idolPhotoHtml = '<span class="text-muted fs-7">No photo uploaded</span>';
+            if (r.idol_photo) {
+                const photoUrl = (r.idol_photo.startsWith('http') || r.idol_photo.startsWith('/')) ? r.idol_photo : `/storage/${r.idol_photo}`;
+                idolPhotoHtml = `
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="idol-thumb-wrap" style="width:64px;height:64px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.15)" onclick="openIdolPreview('${photoUrl}', '${escapeHtml(r.association_name || 'Idol Photo')}')" title="Click to view full photo">
+                            <img src="${photoUrl}" alt="Idol Photo" onerror="this.onerror=null; this.src='/placeholder-idol.png';">
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="openIdolPreview('${photoUrl}', '${escapeHtml(r.association_name || 'Idol Photo')}')">
+                                <i class="fas fa-expand me-1"></i>View Full Photo
+                            </button>
+                            <div class="text-muted fs-8 mt-1">Idol Height: <strong>${r.idol_height ? escapeHtml(r.idol_height) + ' ft' : 'Not specified'}</strong></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Signature
+            let sigHtml = '<span class="text-muted fs-7">Not provided</span>';
+            if (r.applicant_signature) {
+                const sigUrl = (r.applicant_signature.startsWith('http') || r.applicant_signature.startsWith('/')) ? r.applicant_signature : `/storage/${r.applicant_signature}`;
+                sigHtml = `
+                    <div class="border rounded p-1 bg-white d-inline-block shadow-sm" style="max-width:200px">
+                        <img src="${sigUrl}" alt="Applicant Signature" style="max-height:60px;max-width:100%;object-fit:contain" onerror="this.parentElement.innerHTML='<span class=\"text-muted fs-7\">Signature Recorded</span>';">
+                    </div>
+                `;
+            }
+
+            modalBody.innerHTML = `
+                <!-- Top Summary Ribbon -->
+                <div class="d-flex flex-wrap align-items-center justify-content-between p-3 mb-3 rounded border bg-white shadow-sm">
+                    <div class="d-flex align-items-center gap-3">
+                        <div style="width:48px;height:48px;border-radius:10px;background:#eef2ff;color:#4f46e5;display:flex;align-items:center;justify-content:center;font-size:22px">
+                            <i class="fas fa-landmark-flag"></i>
+                        </div>
+                        <div>
+                            <div class="fs-5 fw-bold text-dark mb-0">${escapeHtml(r.association_name || 'N/A')}</div>
+                            <div class="text-muted fs-7">
+                                Application No: <span class="font-monospace fw-bold text-primary">${escapeHtml(r.application_no || 'GUC-PENDING')}</span> • 
+                                ID: <span class="font-monospace fw-bold">#${r.id}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 mt-2 mt-sm-0">
+                        ${src.badgeHtml}
+                        <span class="status-badge ${r.status.toLowerCase()}">${r.status}</span>
+                        ${r.user_partner_code ? `
+                            <span class="badge bg-dark text-white font-monospace p-2 cursor-pointer" onclick="copyToClipboard('${r.user_partner_code}', 'Login ID')" title="Click to copy Login ID">
+                                <i class="fas fa-user-lock me-1"></i>${r.user_partner_code} <i class="fas fa-copy ms-1 fs-8"></i>
+                            </span>
+                        ` : '<span class="badge bg-secondary p-2">Login: Not Generated</span>'}
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <!-- Column Left -->
+                    <div class="col-lg-6">
+                        <!-- Section 1: Association & Source -->
+                        <div class="view-docket-section">
+                            <div class="view-docket-title">
+                                <i class="fas fa-id-card text-primary"></i>1. Association &amp; Source Details
+                            </div>
+                            <div class="docket-grid">
+                                <div>
+                                    <div class="docket-field-label">Association Name</div>
+                                    <div class="docket-field-value">${escapeHtml(r.association_name || '—')}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Registered From (Source)</div>
+                                    <div class="docket-field-value">${src.badgeHtml} <span class="ms-1 fs-7">(${escapeHtml(r.registered_from || 'Direct')})</span></div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Campaign Service</div>
+                                    <div class="docket-field-value">${escapeHtml(r.service_name || 'Community Service')}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Submission Date & Time</div>
+                                    <div class="docket-field-value"><i class="far fa-calendar-alt text-muted me-1"></i>${dt.date} <i class="far fa-clock text-muted ms-1 me-1"></i>${dt.time}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Assembly Constituency</div>
+                                    <div class="docket-field-value"><span class="badge bg-light text-dark border">${escapeHtml(r.assembly_constituency || 'Pendurthi')}</span></div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Registration Status</div>
+                                    <div class="docket-field-value"><span class="status-badge ${r.status.toLowerCase()}">${r.status}</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Contact Persons -->
+                        <div class="view-docket-section">
+                            <div class="view-docket-title">
+                                <i class="fas fa-users-gear text-primary"></i>2. Primary &amp; Secondary Representatives
+                            </div>
+                            <div class="docket-grid">
+                                <div>
+                                    <div class="docket-field-label">Primary Representative</div>
+                                    <div class="docket-field-value fw-bold text-dark">${escapeHtml(r.primary_name || '—')}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Primary Mobile 1</div>
+                                    <div class="docket-field-value">
+                                        <a href="tel:${r.primary_phone_1 || ''}" class="text-primary text-decoration-none fw-bold" title="Click to call">
+                                            <i class="fas fa-phone-alt me-1"></i>${r.primary_phone_1 ? maskPhone(r.primary_phone_1) : '—'}
+                                        </a>
+                                        ${r.primary_phone_1 ? `
+                                            <a href="https://wa.me/91${r.primary_phone_1.replace(/\D/g, '').slice(-10)}" target="_blank" class="btn btn-xs btn-outline-success py-0 px-1 ms-1" style="font-size:10px" title="Chat on WhatsApp">
+                                                <i class="fab fa-whatsapp"></i>
+                                            </a>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Primary Mobile 2 (Alt)</div>
+                                    <div class="docket-field-value">${r.primary_phone_2 ? `<a href="tel:${r.primary_phone_2}" class="text-decoration-none" title="Click to call"><i class="fas fa-phone-alt me-1"></i>${maskPhone(r.primary_phone_2)}</a>` : '—'}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Secondary Representative</div>
+                                    <div class="docket-field-value">${escapeHtml(r.secondary_name || '—')}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Secondary Mobile 1</div>
+                                    <div class="docket-field-value">${r.secondary_phone_1 ? `<a href="tel:${r.secondary_phone_1}" class="text-decoration-none" title="Click to call"><i class="fas fa-phone-alt me-1"></i>${maskPhone(r.secondary_phone_1)}</a>` : '—'}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Secondary Mobile 2</div>
+                                    <div class="docket-field-value">${r.secondary_phone_2 ? `<a href="tel:${r.secondary_phone_2}" class="text-decoration-none" title="Click to call"><i class="fas fa-phone-alt me-1"></i>${maskPhone(r.secondary_phone_2)}</a>` : '—'}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 3: Office Bearers (GUC) -->
+                        <div class="view-docket-section">
+                            <div class="view-docket-title">
+                                <i class="fas fa-crown text-warning"></i>3. Committee Office Bearers (GUC)
+                            </div>
+                            <div class="docket-grid">
+                                <div>
+                                    <div class="docket-field-label">President Name</div>
+                                    <div class="docket-field-value fw-bold text-dark">${escapeHtml(r.president_name || '—')}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">President Mobile</div>
+                                    <div class="docket-field-value">
+                                        ${r.president_phone ? `
+                                            <a href="tel:${r.president_phone}" class="text-primary fw-bold text-decoration-none" title="Click to call">
+                                                <i class="fas fa-phone-alt me-1"></i>${maskPhone(r.president_phone)}
+                                            </a>
+                                            <a href="https://wa.me/91${r.president_phone.replace(/\D/g, '').slice(-10)}" target="_blank" class="btn btn-xs btn-outline-success py-0 px-1 ms-1" style="font-size:10px">
+                                                <i class="fab fa-whatsapp"></i>
+                                            </a>
+                                        ` : '—'}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Secretary Name</div>
+                                    <div class="docket-field-value fw-bold text-dark">${escapeHtml(r.secretary_name || '—')}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Secretary Mobile</div>
+                                    <div class="docket-field-value">
+                                        ${r.secretary_phone ? `
+                                            <a href="tel:${r.secretary_phone}" class="text-primary fw-bold text-decoration-none" title="Click to call">
+                                                <i class="fas fa-phone-alt me-1"></i>${maskPhone(r.secretary_phone)}
+                                            </a>
+                                            <a href="https://wa.me/91${r.secretary_phone.replace(/\D/g, '').slice(-10)}" target="_blank" class="btn btn-xs btn-outline-success py-0 px-1 ms-1" style="font-size:10px">
+                                                <i class="fab fa-whatsapp"></i>
+                                            </a>
+                                        ` : '—'}
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Treasurer Name</div>
+                                    <div class="docket-field-value fw-bold text-dark">${escapeHtml(r.treasurer_name || '—')}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Treasurer Mobile</div>
+                                    <div class="docket-field-value">
+                                        ${r.treasurer_phone ? `
+                                            <a href="tel:${r.treasurer_phone}" class="text-primary fw-bold text-decoration-none" title="Click to call">
+                                                <i class="fas fa-phone-alt me-1"></i>${maskPhone(r.treasurer_phone)}
+                                            </a>
+                                            <a href="https://wa.me/91${r.treasurer_phone.replace(/\D/g, '').slice(-10)}" target="_blank" class="btn btn-xs btn-outline-success py-0 px-1 ms-1" style="font-size:10px">
+                                                <i class="fab fa-whatsapp"></i>
+                                            </a>
+                                        ` : '—'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column Right -->
+                    <div class="col-lg-6">
+                        <!-- Section 4: Mandapam & Utsav Celebration Details -->
+                        <div class="view-docket-section">
+                            <div class="view-docket-title">
+                                <i class="fas fa-om text-primary"></i>4. Mandapam &amp; Utsav Celebration Details
+                            </div>
+                            <div class="docket-grid">
+                                <div style="grid-column: 1 / -1">
+                                    <div class="docket-field-label">Mandap Setup Location</div>
+                                    <div class="docket-field-value fw-bold"><i class="fas fa-map-pin text-danger me-1"></i>${escapeHtml(r.mandap_location || r.area || '—')}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Location Category</div>
+                                    <div class="docket-field-value"><span class="badge bg-light text-dark border">${escapeHtml(r.location_category || 'General')}</span></div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Location Owner Details</div>
+                                    <div class="docket-field-value">${escapeHtml(r.location_owner_details || '—')}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Landmark</div>
+                                    <div class="docket-field-value">${escapeHtml(r.landmark || '—')}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Idol Height</div>
+                                    <div class="docket-field-value">${r.idol_height ? `<strong>${escapeHtml(r.idol_height)} ft</strong>` : '—'}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Utsav Start Date</div>
+                                    <div class="docket-field-value">${r.utsav_start_date || '—'}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Utsav End Date</div>
+                                    <div class="docket-field-value">${r.utsav_end_date || '—'}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Visarjan Date &amp; Time</div>
+                                    <div class="docket-field-value fw-bold text-dark"><i class="fas fa-water text-info me-1"></i>${r.visarjan_date || '—'} ${r.visarjan_time ? `(${escapeHtml(r.visarjan_time)})` : ''}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Visarjan Contact Mobile</div>
+                                    <div class="docket-field-value">${r.visarjan_phone ? `<a href="tel:${r.visarjan_phone}" class="text-decoration-none fw-bold" title="Click to call"><i class="fas fa-phone-alt me-1"></i>${maskPhone(r.visarjan_phone)}</a>` : '—'}</div>
+                                </div>
+                                <div style="grid-column: 1 / -1">
+                                    <div class="docket-field-label">Sound System Details</div>
+                                    <div class="docket-field-value">${escapeHtml(r.sound_system_details || '—')}</div>
+                                </div>
+                                <div style="grid-column: 1 / -1">
+                                    <div class="docket-field-label">Idol Photo</div>
+                                    <div class="docket-field-value mt-1">${idolPhotoHtml}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 5: Address & Geographic Location -->
+                        <div class="view-docket-section">
+                            <div class="view-docket-title">
+                                <i class="fas fa-map-location-dot text-danger"></i>5. Address &amp; GPS Location
+                            </div>
+                            <div class="docket-grid">
+                                <div>
+                                    <div class="docket-field-label">Colony / Area</div>
+                                    <div class="docket-field-value">${escapeHtml(r.area || '—')}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Pin Code</div>
+                                    <div class="docket-field-value font-monospace">${escapeHtml(r.pin_code || '—')}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">District</div>
+                                    <div class="docket-field-value">${escapeHtml(r.district || '—')}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">State</div>
+                                    <div class="docket-field-value">${escapeHtml(r.state || '—')}</div>
+                                </div>
+                                <div style="grid-column: 1 / -1">
+                                    <div class="docket-field-label">Formatted Address</div>
+                                    <div class="docket-field-value">${escapeHtml(r.formatted_address || `${r.area || ''}, ${r.district || ''}, ${r.state || ''} ${r.pin_code || ''}`)}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">GPS Coordinates</div>
+                                    <div class="docket-field-value font-monospace fs-7">${r.latitude && r.longitude ? `${r.latitude}, ${r.longitude}` : '—'}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Google Maps Link</div>
+                                    <div class="docket-field-value">
+                                        ${r.google_location ? `
+                                            <a href="${r.google_location}" target="_blank" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size:11.5px">
+                                                <i class="fas fa-map-marked-alt me-1"></i>Open in Maps <i class="fas fa-arrow-up-right-from-square ms-1 fs-8"></i>
+                                            </a>
+                                        ` : '<span class="text-muted fs-7">No Link</span>'}
+                                    </div>
+                                </div>
+                                <div style="grid-column: 1 / -1">
+                                    <div class="docket-field-label">Applicant Digital Signature</div>
+                                    <div class="docket-field-value mt-1">${sigHtml}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Full Width Sections -->
+                    <div class="col-12">
+                        <!-- Section 6: Mandap Volunteers & Cultural Programs -->
+                        <div class="view-docket-section">
+                            <div class="view-docket-title">
+                                <i class="fas fa-hand-holding-heart text-success"></i>6. Mandap Volunteers &amp; Cultural Activities
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-7">
+                                    <div class="docket-field-label mb-2">Registered Mandap Volunteers</div>
+                                    ${volsHtml}
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="docket-field-label mb-2">Cultural Programs</div>
+                                    <div>${cultHtml}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 7: Referral & KYC Verification -->
+                        <div class="view-docket-section mb-0">
+                            <div class="view-docket-title">
+                                <i class="fas fa-shield-halved text-info"></i>7. Referral Attribution &amp; Verification Documents
+                            </div>
+                            <div class="docket-grid">
+                                <div>
+                                    <div class="docket-field-label">Referral Type</div>
+                                    <div class="docket-field-value"><span class="badge bg-light text-primary border">${escapeHtml(r.referral_type || 'Direct').toUpperCase()}</span></div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Referrer Name</div>
+                                    <div class="docket-field-value fw-bold">${escapeHtml(r.ref1_name || 'Direct / Self')}</div>
+                                </div>
+                                <div>
+                                    <div class="docket-field-label">Referrer Code / Partner ID</div>
+                                    <div class="docket-field-value font-monospace text-primary fw-bold">${r.ref1_code ? escapeHtml(r.ref1_code) : (r.ref1_member_id ? 'CP #' + r.ref1_member_id : '—')}</div>
+                                </div>
+                                <div style="grid-column: 1 / -1">
+                                    <div class="docket-field-label mb-1">Uploaded KYC Documents</div>
+                                    <div class="docket-field-value">${kycHtml}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Setup footer actions
+            const rEscaped = JSON.stringify(r).replace(/"/g, '&quot;');
+            let actionsHtml = `
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="viewRegModalObj.hide(); openEditRegistrationModal(${rEscaped})">
+                    <i class="fas fa-edit me-1"></i>Edit Details
+                </button>
+            `;
+            if (r.status === 'PENDING') {
+                actionsHtml = `
+                    <button type="button" class="btn btn-danger btn-sm" onclick="viewRegModalObj.hide(); rejectRegistration(${r.id})">
+                        <i class="fas fa-times me-1"></i>Reject
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm" onclick="viewRegModalObj.hide(); approveRegistration(${r.id})">
+                        <i class="fas fa-check me-1"></i>Approve Registration
+                    </button>
+                    ${actionsHtml}
+                `;
+            } else if (r.status === 'APPROVED') {
+                actionsHtml = `
+                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="resetRegistrationPassword(${r.id})">
+                        <i class="fas fa-rotate-left me-1"></i>Reset Password
+                    </button>
+                    <button type="button" class="btn btn-success btn-sm" onclick="openShareModal('${r.user_partner_code || ''}', '[Already Set]', '${r.primary_phone_1}')">
+                        <i class="fab fa-whatsapp me-1"></i>Share Login ID
+                    </button>
+                    ${actionsHtml}
+                `;
+            }
+
+            if (modalActions) modalActions.innerHTML = actionsHtml;
+            if (modalFooterInfo) {
+                modalFooterInfo.innerHTML = `Created: <strong>${dt.date} ${dt.time}</strong> • System Record ID: <strong>#${r.id}</strong>`;
+            }
+
+            if (!viewRegModalObj) {
+                viewRegModalObj = new bootstrap.Modal(document.getElementById('viewRegModal'));
+            }
+            viewRegModalObj.show();
+        };
+
         function closeShareModal() {
             document.getElementById('shareCredentialsModal').style.display = 'none';
         }
     </script>
 
-    <!-- Registration Edit Modal -->
+    <!-- ── Full Application Form View Docket Modal ── -->
+    <div class="modal fade" id="viewRegModal" tabindex="-1" aria-labelledby="viewRegModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content" style="background-color: #f8fafc; color: var(--text-main);">
+          <div class="modal-header bg-white border-bottom py-3">
+            <div class="d-flex align-items-center gap-2">
+              <div class="p-2 rounded bg-primary text-white" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center">
+                <i class="fas fa-file-invoice fs-5"></i>
+              </div>
+              <div>
+                <h5 class="modal-title fw-bold mb-0" id="viewRegModalTitle">Community Registration Application</h5>
+                <div class="text-muted fs-7" id="viewRegModalSubtitle">Digital Application Docket &amp; Verification Data</div>
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()" title="Print Docket"><i class="fas fa-print me-1"></i>Print</button>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+          </div>
+          <div class="modal-body p-4" id="viewRegModalBody">
+            <!-- Dynamically populated by openViewRegistrationModal -->
+          </div>
+          <div class="modal-footer bg-white border-top d-flex justify-content-between">
+            <div id="viewRegModalFooterInfo" class="fs-7 text-muted"></div>
+            <div class="d-flex gap-2" id="viewRegModalActions">
+              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Idol Photo Lightbox Preview Modal ── -->
+    <div class="modal fade" id="idolPhotoModal" tabindex="-1" aria-labelledby="idolPhotoModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="background-color: #0f172a; color: white;">
+          <div class="modal-header border-0 pb-0">
+            <h5 class="modal-title fw-bold text-white" id="idolPreviewTitle"><i class="fas fa-image me-2 text-warning"></i>Idol Photo Preview</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body text-center p-3">
+            <div style="max-height: 72vh; overflow: hidden; border-radius: 8px; background: #000; display: inline-block;">
+              <img id="idolPreviewImg" src="" alt="Idol Photo" style="max-height: 72vh; max-width: 100%; object-fit: contain; display: block; margin: 0 auto;">
+            </div>
+          </div>
+          <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
+            <a id="idolPreviewOpenTab" href="#" target="_blank" class="btn btn-sm btn-outline-light"><i class="fas fa-arrow-up-right-from-square me-1"></i>Open Original</a>
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Registration Edit Modal ── -->
     <div class="modal fade" id="editRegModal" tabindex="-1" aria-labelledby="editRegModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content" style="background-color: white; color: var(--text-main);">
-          <div class="modal-header">
-            <h5 class="modal-title" id="editRegModalLabel"><i class="fas fa-edit text-primary me-2"></i>Edit Registration Details</h5>
+          <div class="modal-header bg-light border-bottom">
+            <h5 class="modal-title fw-bold" id="editRegModalLabel"><i class="fas fa-edit text-primary me-2"></i>Edit Community Registration Details</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <form id="editRegForm" onsubmit="handleSaveRegistration(event)">
             <input type="hidden" id="edit_reg_id">
-            <div class="modal-body">
-              <div class="row g-3">
-                <div class="col-md-12">
-                  <label class="form-label fw-bold">Association / Community Name *</label>
-                  <input type="text" class="form-control" id="edit_association_name" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Primary Representative Name *</label>
-                  <input type="text" class="form-control" id="edit_primary_name" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Primary Mobile 1 *</label>
-                  <input type="tel" class="form-control" id="edit_primary_phone_1" pattern="[6-9][0-9]{9}" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Alternative Mobile</label>
-                  <input type="tel" class="form-control" id="edit_primary_phone_2" pattern="[6-9][0-9]{9}">
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Alternate Representative Name *</label>
-                  <input type="text" class="form-control" id="edit_secondary_name" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Alternate Mobile 1 *</label>
-                  <input type="tel" class="form-control" id="edit_secondary_phone_1" pattern="[6-9][0-9]{9}" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Alternate Mobile 2</label>
-                  <input type="tel" class="form-control" id="edit_secondary_phone_2" pattern="[6-9][0-9]{9}">
-                </div>
-                <hr class="my-3">
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Area / Colony *</label>
-                  <input type="text" class="form-control" id="edit_area" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">Pin Code *</label>
-                  <input type="text" class="form-control" id="edit_pin_code" pattern="[1-9][0-9]{5}" maxlength="6" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">District *</label>
-                  <input type="text" class="form-control" id="edit_district" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">State *</label>
-                  <input type="text" class="form-control" id="edit_state" required>
-                </div>
-                <div class="col-12 mt-2">
-                  <div class="d-flex justify-content-between align-items-center mb-1">
-                    <label class="form-label fw-bold mb-0">Google Maps Location Link</label>
-                    <button type="button" class="btn btn-xs btn-primary py-0 px-2" onclick="openLocationPicker('edit_google_location')" style="font-size:11px">
-                      <i class="fas fa-map-marked-alt"></i> Choose Location
-                    </button>
+            <div class="modal-body p-4">
+              
+              <!-- Section 1: Application & Source -->
+              <div class="p-3 mb-3 border rounded bg-light">
+                <h6 class="fw-bold text-primary mb-3"><i class="fas fa-file-signature me-2"></i>1. Application &amp; Origin Source</h6>
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold">Application No</label>
+                    <input type="text" class="form-control form-control-sm font-monospace" id="edit_application_no" placeholder="e.g. GUC-2026-0051">
                   </div>
-                  <input type="text" class="form-control" id="edit_google_location" placeholder="e.g., https://maps.app.goo.gl/...">
-                </div>
-                <hr class="my-3">
-                <div class="col-md-4">
-                  <label class="form-label fw-bold">Referral Type</label>
-                  <select class="form-select text-dark" id="edit_referral_type">
-                    <option value="direct">Direct</option>
-                    <option value="vgk_member">VGK Member</option>
-                    <option value="staff">Staff</option>
-                    <option value="influencer">Influencer</option>
-                  </select>
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label fw-bold">Referral Code</label>
-                  <input type="text" class="form-control" id="edit_referral_code" placeholder="e.g., AKSHAR39">
-                </div>
-                <div class="col-md-4">
-                  <label class="form-label fw-bold">Referral CP 1 ID (OfficialPartner ID)</label>
-                  <input type="number" class="form-control" id="edit_ref1_member_id" placeholder="Optional for staff/influencer">
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fw-bold">KYC / Registration Status *</label>
-                  <select class="form-select text-dark" id="edit_status" required>
-                    <option value="PENDING">PENDING</option>
-                    <option value="APPROVED">APPROVED</option>
-                    <option value="REJECTED">REJECTED</option>
-                  </select>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold">Registered From (Source) *</label>
+                    <select class="form-select form-select-sm text-dark" id="edit_registered_from" required>
+                      <option value="Utsav Committee">Utsav Committee (GUC)</option>
+                      <option value="Green Ganesha">Green Ganesha</option>
+                      <option value="Community Service">Community Service</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold">Assembly Constituency *</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_assembly_constituency" placeholder="e.g. Pendurthi">
+                  </div>
                 </div>
               </div>
+
+              <!-- Section 2: Association & Representatives -->
+              <div class="p-3 mb-3 border rounded bg-light">
+                <h6 class="fw-bold text-primary mb-3"><i class="fas fa-users me-2"></i>2. Association &amp; Contact Representatives</h6>
+                <div class="row g-3">
+                  <div class="col-md-12">
+                    <label class="form-label small fw-bold">Association / Community / Mandap Name *</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_association_name" required>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold">Primary Representative Name *</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_primary_name" required>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold">Primary Mobile 1 *</label>
+                    <input type="tel" class="form-control form-control-sm" id="edit_primary_phone_1" pattern="[6-9][0-9]{9}" required>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold">Alternative Mobile</label>
+                    <input type="tel" class="form-control form-control-sm" id="edit_primary_phone_2" pattern="[6-9][0-9]{9}">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold">Alternate Representative Name</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_secondary_name">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold">Alternate Mobile 1</label>
+                    <input type="tel" class="form-control form-control-sm" id="edit_secondary_phone_1" pattern="[6-9][0-9]{9}">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label small fw-bold">Alternate Mobile 2</label>
+                    <input type="tel" class="form-control form-control-sm" id="edit_secondary_phone_2" pattern="[6-9][0-9]{9}">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 3: Office Bearers (GUC) -->
+              <div class="p-3 mb-3 border rounded bg-light">
+                <h6 class="fw-bold text-primary mb-3"><i class="fas fa-crown me-2 text-warning"></i>3. Committee Office Bearers (GUC)</h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label small fw-bold">President Name</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_president_name">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-bold">President Mobile</label>
+                    <input type="tel" class="form-control form-control-sm" id="edit_president_phone" pattern="[6-9][0-9]{9}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-bold">Secretary Name</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_secretary_name">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-bold">Secretary Mobile</label>
+                    <input type="tel" class="form-control form-control-sm" id="edit_secretary_phone" pattern="[6-9][0-9]{9}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-bold">Treasurer Name</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_treasurer_name">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-bold">Treasurer Mobile</label>
+                    <input type="tel" class="form-control form-control-sm" id="edit_treasurer_phone" pattern="[6-9][0-9]{9}">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 4: Mandap & Celebration Details -->
+              <div class="p-3 mb-3 border rounded bg-light">
+                <h6 class="fw-bold text-primary mb-3"><i class="fas fa-om me-2"></i>4. Mandap &amp; Utsav Celebration Details</h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label small fw-bold">Mandap Setup Location</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_mandap_location" placeholder="e.g. Near Ramalayam Temple">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label small fw-bold">Location Category</label>
+                    <select class="form-select form-select-sm text-dark" id="edit_location_category">
+                      <option value="Community">Community Ground</option>
+                      <option value="Temple">Temple Premises</option>
+                      <option value="Government">Government / Public Land</option>
+                      <option value="Private">Private Property</option>
+                    </select>
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label small fw-bold">Idol Height (ft)</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_idol_height" placeholder="e.g. 5">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-bold">Location Owner / Authority Details</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_location_owner_details">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-bold">Landmark</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_landmark">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label small fw-bold">Utsav Start Date</label>
+                    <input type="date" class="form-control form-control-sm" id="edit_utsav_start_date">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label small fw-bold">Utsav End Date</label>
+                    <input type="date" class="form-control form-control-sm" id="edit_utsav_end_date">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label small fw-bold">Visarjan Date</label>
+                    <input type="date" class="form-control form-control-sm" id="edit_visarjan_date">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label small fw-bold">Visarjan Time</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_visarjan_time" placeholder="e.g. 05:00 PM">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-bold">Visarjan In-Charge Contact Mobile</label>
+                    <input type="tel" class="form-control form-control-sm" id="edit_visarjan_phone" pattern="[6-9][0-9]{9}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-bold">Sound System / DJ Setup Details</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_sound_system_details" placeholder="e.g. 2 Box Sound System (upto 10 PM)">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 5: Area & Location Coordinates -->
+              <div class="p-3 mb-3 border rounded bg-light">
+                <h6 class="fw-bold text-primary mb-3"><i class="fas fa-map-location-dot me-2 text-danger"></i>5. Area &amp; Geographic Location</h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label small fw-bold">Area / Colony *</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_area" required>
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label small fw-bold">Pin Code *</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_pin_code" pattern="[1-9][0-9]{5}" maxlength="6" required>
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label small fw-bold">District *</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_district" required>
+                  </div>
+                  <div class="col-md-2">
+                    <label class="form-label small fw-bold">State *</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_state" required>
+                  </div>
+                  <div class="col-12 mt-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <label class="form-label small fw-bold mb-0">Google Maps Location Link</label>
+                      <button type="button" class="btn btn-xs btn-primary py-0 px-2" onclick="openLocationPicker('edit_google_location')" style="font-size:11px">
+                        <i class="fas fa-map-marked-alt"></i> Choose Location
+                      </button>
+                    </div>
+                    <input type="text" class="form-control form-control-sm" id="edit_google_location" placeholder="e.g., https://maps.app.goo.gl/...">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 6: Referral & Status -->
+              <div class="p-3 border rounded bg-light">
+                <h6 class="fw-bold text-primary mb-3"><i class="fas fa-shield-halved me-2 text-info"></i>6. Referral Attribution &amp; Verification Status</h6>
+                <div class="row g-3">
+                  <div class="col-md-3">
+                    <label class="form-label small fw-bold">Referral Type</label>
+                    <select class="form-select form-select-sm text-dark" id="edit_referral_type">
+                      <option value="direct">Direct</option>
+                      <option value="vgk_member">VGK Member</option>
+                      <option value="staff">Staff</option>
+                      <option value="influencer">Influencer</option>
+                    </select>
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label small fw-bold">Referral Code</label>
+                    <input type="text" class="form-control form-control-sm" id="edit_referral_code" placeholder="e.g., AKSHAR39">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label small fw-bold">Referral CP ID (OfficialPartner ID)</label>
+                    <input type="number" class="form-control form-control-sm" id="edit_ref1_member_id" placeholder="Optional for staff/influencer">
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label small fw-bold">KYC / Registration Status *</label>
+                    <select class="form-select form-select-sm text-dark fw-bold" id="edit_status" required>
+                      <option value="PENDING">PENDING</option>
+                      <option value="APPROVED">APPROVED</option>
+                      <option value="REJECTED">REJECTED</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer bg-light border-top">
               <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-              <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save me-1"></i>Save Changes</button>
+              <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save me-1"></i>Save Registration Changes</button>
             </div>
           </form>
         </div>

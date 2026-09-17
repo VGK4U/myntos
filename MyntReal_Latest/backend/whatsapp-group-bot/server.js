@@ -123,10 +123,19 @@ async function processOutboundQueue() {
             try {
                 let contentPayload = { text: item.message || '' };
                 if (item.media_url) {
-                    contentPayload = {
-                        image: { url: item.media_url },
-                        caption: item.message || ''
-                    };
+                    const extraOpts = item.result_payload || {};
+                    contentPayload = await resolveMediaBufferAndPayload(
+                        item.media_url,
+                        item.message || '',
+                        item.filename || extraOpts.filename,
+                        {
+                            mimetype: item.mimetype || extraOpts.mimetype,
+                            send_as_document: item.send_as_document !== undefined ? item.send_as_document : extraOpts.send_as_document
+                        }
+                    );
+                    if (!contentPayload) {
+                        throw new Error(`Media attachment could not be resolved for queued message: ${item.filename || extraOpts.filename || item.media_url}`);
+                    }
                 }
 
                 // Internal signal: enter send boundary before calling sock.sendMessage
@@ -1239,48 +1248,116 @@ function cleanTargetCode(raw) {
     return str;
 }
 
-function resolveMediaBufferAndPayload(mediaSource, message, defaultFilename) {
+async function resolveMediaBufferAndPayload(mediaSource, message, defaultFilename, options = {}) {
     if (!mediaSource) return { text: message || '' };
 
     let imgBuffer = null;
-    let resolvedPath = mediaSource;
+    let detectedMime = options.mimetype || null;
 
-    if (typeof mediaSource === 'string' && (mediaSource.startsWith('http://') || mediaSource.startsWith('https://'))) {
-        imgBuffer = { url: mediaSource };
-    } else if (typeof mediaSource === 'string' && mediaSource.includes(';base64,')) {
-        const base64Data = mediaSource.split(';base64,').pop().replace(/\s/g, '');
-        imgBuffer = Buffer.from(base64Data, 'base64');
+    if (typeof mediaSource === 'string' && mediaSource.includes(';base64,')) {
+        // Base64 Data URI
+        try {
+            const parts = mediaSource.split(';base64,');
+            const prefix = parts[0];
+            if (prefix.startsWith('data:')) {
+                detectedMime = prefix.substring(5).trim();
+            }
+            const base64Data = parts[1].replace(/\s/g, '');
+            imgBuffer = Buffer.from(base64Data, 'base64');
+        } catch (b64Err) {
+            console.error('[WA-BOT] Failed to parse base64 media payload:', b64Err.message);
+        }
+    } else if (typeof mediaSource === 'string' && (mediaSource.startsWith('http://') || mediaSource.startsWith('https://'))) {
+        try {
+            const resp = await fetch(mediaSource, { timeout: 15000 });
+            if (resp.ok) {
+                const arrBuf = await resp.arrayBuffer();
+                imgBuffer = Buffer.from(arrBuf);
+                const ctype = resp.headers.get('content-type');
+                if (ctype && !detectedMime) detectedMime = ctype.split(';')[0].trim();
+            } else {
+                console.warn(`[WA-BOT] HTTP fetch failed for mediaSource (${resp.status}): ${mediaSource}`);
+            }
+        } catch (fetchErr) {
+            console.error('[WA-BOT] HTTP fetch exception for mediaSource:', fetchErr.message);
+        }
     } else if (typeof mediaSource === 'string') {
-        if (mediaSource.startsWith('/storage/')) {
-            const relPath = mediaSource.replace(/^\/storage\//, '');
-            const cand1 = path.join(__dirname, '../../frontend/storage', relPath);
-            const cand2 = path.join(__dirname, '../storage', relPath);
-            if (fs.existsSync(cand1)) resolvedPath = cand1;
-            else if (fs.existsSync(cand2)) resolvedPath = cand2;
+        const cleanSrc = mediaSource.replace(/^(\/storage\/|storage\/)/, '');
+        // 1. Try local disk candidate paths
+        const cand1 = path.join(__dirname, '../../frontend/storage', cleanSrc);
+        const cand2 = path.join(__dirname, '../storage', cleanSrc);
+        const cand3 = path.join(__dirname, '../../media_backup/solar_docs', path.basename(cleanSrc));
+        const cand4 = path.join(__dirname, '../../frontend/storage/solar_docs', path.basename(cleanSrc));
+        
+        for (const cand of [cand1, cand2, cand3, cand4]) {
+            if (fs.existsSync(cand) && fs.statSync(cand).isFile()) {
+                try {
+                    imgBuffer = fs.readFileSync(cand);
+                    break;
+                } catch (e) {}
+            }
         }
-        if (fs.existsSync(resolvedPath)) {
-            imgBuffer = fs.readFileSync(resolvedPath);
+
+        // 2. If not found locally, fetch via backend storage endpoint (S3 resolver)
+        if (!imgBuffer) {
+            try {
+                const backendUrl = `${BACKEND_API_BASE}/storage/${cleanSrc}`;
+                const resp = await fetch(backendUrl, { timeout: 15000 });
+                if (resp.ok) {
+                    const arrBuf = await resp.arrayBuffer();
+                    imgBuffer = Buffer.from(arrBuf);
+                    const ctype = resp.headers.get('content-type');
+                    if (ctype && !detectedMime) detectedMime = ctype.split(';')[0].trim();
+                } else {
+                    console.warn(`[WA-BOT] Backend storage fetch returned ${resp.status} for ${backendUrl}`);
+                }
+            } catch (backendFetchErr) {
+                console.warn(`[WA-BOT] Could not fetch media from backend API:`, backendFetchErr.message);
+            }
         }
     }
 
-    if (!imgBuffer) {
-        return { text: message || '' };
+    if (!imgBuffer || imgBuffer.length === 0) {
+        console.warn(`[WA-BOT] ⚠️ Media buffer could not be resolved for source: ${typeof mediaSource === 'string' ? mediaSource.slice(0, 80) : '[non-string]'}`);
+        return null;
     }
 
-    const isPdf = (typeof mediaSource === 'string' && mediaSource.toLowerCase().endsWith('.pdf'));
-    if (isPdf) {
-        const fileName = defaultFilename || (typeof mediaSource === 'string' ? path.basename(mediaSource) : 'document.pdf');
+    // Determine MIME type from buffer magic bytes if not already set
+    if (!detectedMime || detectedMime === 'application/octet-stream') {
+        if (imgBuffer.length >= 4 && imgBuffer[0] === 0x25 && imgBuffer[1] === 0x50 && imgBuffer[2] === 0x44 && imgBuffer[3] === 0x46) {
+            detectedMime = 'application/pdf';
+        } else if (imgBuffer.length >= 3 && imgBuffer[0] === 0xFF && imgBuffer[1] === 0xD8 && imgBuffer[2] === 0xFF) {
+            detectedMime = 'image/jpeg';
+        } else if (imgBuffer.length >= 8 && imgBuffer[0] === 0x89 && imgBuffer[1] === 0x50 && imgBuffer[2] === 0x4E && imgBuffer[3] === 0x47) {
+            detectedMime = 'image/png';
+        }
+    }
+
+    const nameToCheck = (defaultFilename || (typeof mediaSource === 'string' ? mediaSource : '')).toLowerCase();
+    const isPdf = detectedMime === 'application/pdf' || nameToCheck.endsWith('.pdf') || (imgBuffer.length >= 4 && imgBuffer[0] === 0x25 && imgBuffer[1] === 0x50 && imgBuffer[2] === 0x44 && imgBuffer[3] === 0x46);
+    const fileName = defaultFilename || (isPdf ? 'document.pdf' : (typeof mediaSource === 'string' && !mediaSource.includes(';base64,') ? path.basename(mediaSource) : 'attachment'));
+
+    if (isPdf || options.send_as_document) {
         return {
             document: imgBuffer,
-            mimetype: 'application/pdf',
+            mimetype: detectedMime || (isPdf ? 'application/pdf' : 'application/octet-stream'),
             fileName: fileName,
             caption: message || ''
         };
     }
 
-    return (message && message.trim())
-        ? { image: imgBuffer, caption: message.trim(), mimetype: 'image/png' }
-        : { image: imgBuffer, mimetype: 'image/png' };
+    if (detectedMime && detectedMime.startsWith('image/')) {
+        return (message && message.trim())
+            ? { image: imgBuffer, caption: message.trim(), mimetype: detectedMime }
+            : { image: imgBuffer, mimetype: detectedMime };
+    }
+
+    return {
+        document: imgBuffer,
+        mimetype: detectedMime || 'application/octet-stream',
+        fileName: fileName,
+        caption: message || ''
+    };
 }
 
 app.post('/api/send-group-message', async (req, res) => {
@@ -1334,7 +1411,10 @@ app.post('/api/send-group-message', async (req, res) => {
                         instance_id: INSTANCE_ID,
                         job_id: job_id || null,
                         job_name: job_name || null,
-                        trigger_type: trigger_type || null
+                        trigger_type: trigger_type || null,
+                        filename: req.body.filename || null,
+                        mimetype: req.body.mimetype || null,
+                        send_as_document: req.body.send_as_document !== undefined ? req.body.send_as_document : null
                     })
                 });
                 const enqData = await enqResp.json();
@@ -1518,7 +1598,25 @@ app.post('/api/send-group-message', async (req, res) => {
                 continue;
             }
 
-            let contentPayload = resolveMediaBufferAndPayload(mediaSource, message, req.body.filename);
+            let contentPayload = await resolveMediaBufferAndPayload(mediaSource, message, req.body.filename, {
+                mimetype: req.body.mimetype,
+                send_as_document: req.body.send_as_document
+            });
+
+            if (mediaSource && !contentPayload) {
+                console.error(`[WA-BOT] ❌ Refusing to dispatch to group: media attachment could not be resolved for ${req.body.filename || mediaSource}`);
+                results.push({
+                    intended_target: rawCode,
+                    clean_code: codeToUse,
+                    target_type: targetType,
+                    resolved_jid: destinationJid,
+                    success: false,
+                    error: `ATTACHMENT_UNRESOLVED: ${req.body.filename || 'File missing from storage'}`,
+                    fallback_used: false
+                });
+                failedCount++;
+                continue;
+            }
 
             const sendOptions = {};
             const replyWamid = req.body.quoted_message_id || req.body.reply_to_wamid || req.body.reply_to_id;
@@ -1664,7 +1762,10 @@ app.post('/api/send-message', async (req, res) => {
                         target_jid: recipientJid,
                         message: message || '',
                         media_url: mediaSource,
-                        instance_id: INSTANCE_ID
+                        instance_id: INSTANCE_ID,
+                        filename: req.body.filename || null,
+                        mimetype: req.body.mimetype || null,
+                        send_as_document: req.body.send_as_document !== undefined ? req.body.send_as_document : null
                     })
                 });
                 const enqData = await enqResp.json();
@@ -1718,7 +1819,18 @@ app.post('/api/send-message', async (req, res) => {
             });
         }
 
-        let contentPayload = resolveMediaBufferAndPayload(mediaSource, message, req.body.filename);
+        let contentPayload = await resolveMediaBufferAndPayload(mediaSource, message, req.body.filename, {
+            mimetype: req.body.mimetype,
+            send_as_document: req.body.send_as_document
+        });
+
+        if (mediaSource && !contentPayload) {
+            console.error(`[WA-BOT] ❌ Refusing to dispatch: media attachment could not be resolved for ${req.body.filename || mediaSource}`);
+            return res.status(404).json({
+                success: false,
+                error: `Attachment could not be resolved: ${req.body.filename || 'File missing from storage'}`
+            });
+        }
 
         const sendOptions = {};
         const replyWamid = req.body.quoted_message_id || req.body.reply_to_wamid || req.body.reply_to_id;

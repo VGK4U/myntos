@@ -1883,6 +1883,54 @@ def list_registrations_admin(db: Session = Depends(get_db), current_user: StaffE
         d['ref2_name'] = r.ref2_member.partner_name if r.ref2_member else None
         d['ref2_code'] = r.ref2_member.partner_code if r.ref2_member else None
         d['user_partner_code'] = r.user_partner.partner_code if r.user_partner else None
+
+        # Standardized Date & Time formatting
+        sub_dt = r.submission_date or r.created_at
+        d['submission_date_formatted'] = sub_dt.strftime('%d %b %Y, %I:%M %p') if sub_dt else '—'
+        d['submission_date_iso'] = sub_dt.isoformat() if sub_dt else None
+        d['created_at_formatted'] = r.created_at.strftime('%d %b %Y, %I:%M %p') if r.created_at else '—'
+
+        # Standardized Origin / Registered From Source
+        rf_raw = str(r.registered_from or '').strip()
+        rf_lower = rf_raw.lower()
+        if rf_lower in ('utsav committee', 'guc', 'ganesh utsav committee') or r.application_no or r.president_name:
+            source_category = 'GUC'
+            source_label = 'GUC (Utsav Committee)'
+        elif 'green' in rf_lower or 'ganesha' in rf_lower:
+            source_category = 'GREEN_GANESHA'
+            source_label = 'Green Ganesha'
+        else:
+            source_category = 'COMMUNITY_SERVICE'
+            source_label = rf_raw or 'Community Service'
+
+        d['source_category'] = source_category
+        d['source_label'] = source_label
+        d['registered_from_display'] = source_label
+
+        # Ensure mandap_volunteers & cultural_programs are clean lists
+        import json
+        mv = r.mandap_volunteers
+        if isinstance(mv, str):
+            try:
+                mv = json.loads(mv)
+            except Exception:
+                mv = []
+        d['mandap_volunteers'] = mv if isinstance(mv, list) else []
+
+        cp = r.cultural_programs
+        if isinstance(cp, str):
+            try:
+                cp = json.loads(cp)
+            except Exception:
+                cp = []
+        d['cultural_programs'] = cp if isinstance(cp, list) else []
+
+        # Flatten volunteers 1 to 4 for direct column mapping
+        for idx in range(4):
+            v_item = d['mandap_volunteers'][idx] if idx < len(d['mandap_volunteers']) and isinstance(d['mandap_volunteers'][idx], dict) else {}
+            d[f'vol_{idx+1}_name'] = v_item.get('name') or v_item.get('volunteer_name') or ''
+            d[f'vol_{idx+1}_phone'] = v_item.get('phone') or v_item.get('mobile') or ''
+
         results.append(d)
     return {"success": True, "data": results}
 
@@ -2034,8 +2082,17 @@ def update_registration_fields(
     if not reg:
         raise HTTPException(status_code=404, detail="Registration not found")
         
+    from datetime import datetime
+    date_fields = {'utsav_start_date', 'utsav_end_date', 'visarjan_date'}
     for k, v in payload.items():
         if hasattr(reg, k):
+            if v == "" or v is None:
+                v = None
+            elif k in date_fields and isinstance(v, str):
+                try:
+                    v = datetime.strptime(v.strip(), "%Y-%m-%d").date()
+                except Exception:
+                    v = None
             setattr(reg, k, v)
 
     # Sync referral details to the associated OfficialPartner if approved/login exists

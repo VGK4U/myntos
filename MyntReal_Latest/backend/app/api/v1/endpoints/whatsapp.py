@@ -5055,7 +5055,7 @@ def get_wa_scheduler_status(
     try:
         latest_exec_rows = db.execute(text("""
             SELECT DISTINCT ON (job_id) 
-                id, job_id, job_name, status, dispatched_count, sent_count, failed_count, skipped_count, started_at
+                id, job_id, job_name, status, total_targets, sent_count, failed_count, skipped_count, started_at
             FROM automation_execution
             ORDER BY job_id, started_at DESC, id DESC
         """)).fetchall()
@@ -5072,14 +5072,58 @@ def get_wa_scheduler_status(
                 "started_at": lr[8]
             }
     except Exception as _le_err:
+        db.rollback()
         logger.warning(f"Could not query latest executions: {_le_err}")
+
+    # Pre-fetch whatsapp_bot_queue counts for last 3 days
+    queue_counts = {}
+    try:
+        q_rows = db.execute(text("""
+            SELECT 
+                result_payload->>'job_id' AS jid,
+                TO_CHAR(COALESCE(sent_at, created_at), 'YYYY-MM-DD') AS d_str,
+                status,
+                COUNT(*) AS c
+            FROM whatsapp_bot_queue
+            WHERE result_payload->>'job_id' IS NOT NULL
+              AND created_at >= :since_dt
+            GROUP BY jid, d_str, status
+        """), {"since_dt": d2_dt}).fetchall()
+        for qr in q_rows:
+            jid, d_str, st, c = qr[0], qr[1], qr[2], int(qr[3])
+            if jid and d_str:
+                key = (jid, d_str)
+                if key not in queue_counts:
+                    queue_counts[key] = {"sent": 0, "uncertain": 0, "failed": 0, "total": 0}
+                queue_counts[key]["total"] += c
+                if st == "sent":
+                    queue_counts[key]["sent"] += c
+                elif st in ("dispatch_uncertain", "uncertain"):
+                    queue_counts[key]["uncertain"] += c
+                elif st == "failed":
+                    queue_counts[key]["failed"] += c
+    except Exception as _qe_err:
+        db.rollback()
+        logger.warning(f"Could not query queue counts: {_qe_err}")
 
     def _get_job_day_status(job_id_key: str, date_str: str) -> dict:
         day_execs = [
             e for e in recent_execs 
             if e.job_id == job_id_key and e.started_at and e.started_at.strftime('%Y-%m-%d') == date_str
         ]
-        if not day_execs:
+
+        q_info = queue_counts.get((job_id_key, date_str))
+        q_sent = q_info["sent"] if q_info else 0
+        q_unc = q_info["uncertain"] if q_info else 0
+        q_fail = q_info["failed"] if q_info else 0
+        q_tot = q_info["total"] if q_info else 0
+
+        s_cnt = sum(e.sent_count for e in day_execs) + q_sent
+        f_cnt = sum(e.failed_count for e in day_execs) + q_fail
+        u_cnt = q_unc
+        tot_cnt = sum(e.dispatched_count for e in day_execs) + q_tot
+
+        if s_cnt == 0 and f_cnt == 0 and u_cnt == 0 and tot_cnt == 0:
             return {
                 "status": "PENDING",
                 "count": 0,
@@ -5090,16 +5134,18 @@ def get_wa_scheduler_status(
                 "label": "⏳ Scheduled / Pending"
             }
 
-        s_cnt = sum(e.sent_count for e in day_execs)
-        f_cnt = sum(e.failed_count for e in day_execs)
-        tot_cnt = sum(e.dispatched_count for e in day_execs)
-
-        if s_cnt > 0 and f_cnt > 0:
+        if s_cnt > 0 and u_cnt > 0:
+            lbl = f"⚠️ {s_cnt} Sent · {u_cnt} Uncertain"
+            st = "EXECUTED"
+        elif s_cnt > 0 and f_cnt > 0:
             lbl = f"⚠️ {s_cnt} Sent · {f_cnt} Failed"
             st = "EXECUTED"
         elif s_cnt > 0:
             lbl = f"✅ {s_cnt} Sent"
             st = "EXECUTED"
+        elif u_cnt > 0:
+            lbl = f"⚠️ {u_cnt} Uncertain"
+            st = "UNCERTAIN"
         elif f_cnt > 0:
             lbl = f"❌ {f_cnt} Failed"
             st = "FAILED"
@@ -5112,24 +5158,40 @@ def get_wa_scheduler_status(
             "count": s_cnt,
             "total_count": tot_cnt,
             "sent_count": s_cnt,
-            "uncertain_count": 0,
+            "uncertain_count": u_cnt,
             "failed_count": f_cnt,
             "label": lbl
         }
 
     def _get_latest_job_stats(job_id_key: str) -> dict:
         lr = latest_by_job.get(job_id_key)
+        q_today = queue_counts.get((job_id_key, d0_str))
+        q_sent = q_today["sent"] if q_today else 0
+        q_unc = q_today["uncertain"] if q_today else 0
+        q_fail = q_today["failed"] if q_today else 0
+        q_tot = q_today["total"] if q_today else 0
+
         if lr:
             ts_str = lr["started_at"].strftime('%d %b %Y, %I:%M %p IST') if lr["started_at"] else None
             return {
-                "total_messages": lr["dispatched_count"],
-                "sent_count": lr["sent_count"],
-                "uncertain_count": 0,
-                "failed_count": lr["failed_count"],
+                "total_messages": max(lr["dispatched_count"], q_tot),
+                "sent_count": max(lr["sent_count"], q_sent),
+                "uncertain_count": q_unc,
+                "failed_count": max(lr["failed_count"], q_fail),
                 "skipped_count": lr["skipped_count"],
                 "last_trigger": ts_str
             }
         
+        if q_today and q_tot > 0:
+            return {
+                "total_messages": q_tot,
+                "sent_count": q_sent,
+                "uncertain_count": q_unc,
+                "failed_count": q_fail,
+                "skipped_count": 0,
+                "last_trigger": now_ist.strftime('%d %b %Y, %I:%M %p IST')
+            }
+
         targets = get_job_targets(db, job_id_key, company_id=1)
         return {
             "total_messages": len(targets) if targets else 0,
@@ -5137,7 +5199,7 @@ def get_wa_scheduler_status(
             "uncertain_count": 0,
             "failed_count": 0,
             "skipped_count": 0,
-            "last_trigger": None
+            "last_trigger": "Scheduled"
         }
 
     active_targets = _load_targets_from_db(db)
@@ -6476,8 +6538,8 @@ def enqueue_bot_message(payload: dict = Body(...), db: Session = Depends(get_db)
         initial_rp = payload.get("result_payload") or {}
         if not isinstance(initial_rp, dict):
             initial_rp = {}
-        for k in ("job_id", "job_name", "trigger_type"):
-            if payload.get(k) and k not in initial_rp:
+        for k in ("job_id", "job_name", "trigger_type", "filename", "mimetype", "send_as_document"):
+            if payload.get(k) is not None and k not in initial_rp:
                 initial_rp[k] = payload.get(k)
 
         res = db.execute(
