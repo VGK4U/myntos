@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" width="240" height="60">
+  <rect width="240" height="60" rx="8" fill="#ffffff" fill-opacity="0.05"/>
+  <circle cx="32" cy="30" r="18" fill="#2563eb"/>
+  <path d="M24 38 L32 20 L40 38 L35 38 L32 30 L29 38 Z" fill="#fbbf24"/>
+  <text x="58" y="34" font-family="'Outfit', sans-serif" font-weight="800" font-size="18" fill="#60a5fa" letter-spacing="1">VIKRAM</text>
+  <text x="136" y="34" font-family="'Outfit', sans-serif" font-weight="600" font-size="15" fill="#f59e0b">SOLAR</text>
+  <text x="59" y="46" font-family="'Outfit', sans-serif" font-weight="500" font-size="9" fill="#94a3b8">EFFICIENCY MATTERS</text>
+</svg>

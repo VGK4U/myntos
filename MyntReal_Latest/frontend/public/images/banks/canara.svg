@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <rect x="6" y="6" width="38" height="38" rx="8" fill="#008fd5"/>
+  <polygon points="16,34 26,16 36,34" fill="#ffcb05"/>
+  <polygon points="22,34 26,24 30,34" fill="#008fd5"/>
+  <text x="52" y="25" font-family="'Outfit', sans-serif" font-weight="800" font-size="14" fill="#008fd5">Canara</text>
+  <text x="52" y="39" font-family="'Outfit', sans-serif" font-weight="700" font-size="13" fill="#ffcb05">Bank</text>
+</svg>

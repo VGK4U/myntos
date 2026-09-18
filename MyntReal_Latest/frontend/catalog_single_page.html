@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Tamil:wght@400;600;700&family=Noto+Sans+Telugu:wght@400;600;700&display=swap" rel="stylesheet">
 
     <style>
-        :root {
+        :root, html[data-bs-theme="dark"] {
             --primary: #10b981;
             --primary-dark: #059669;
             --primary-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -32,7 +32,36 @@
             --wa-green: #25d366;
             --wa-green-hover: #20ba59;
             --wa-gradient: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+            --header-bg: rgba(11, 18, 33, 0.94);
+            --nav-bg: rgba(12, 19, 35, 0.96);
+            --brand-card-bg: rgba(255, 255, 255, 0.04);
             color-scheme: dark;
+        }
+
+        html[data-bs-theme="light"] {
+            --primary: #059669;
+            --primary-dark: #047857;
+            --primary-gradient: linear-gradient(135deg, #059669 0%, #047857 100%);
+            --accent: #d97706;
+            --accent-cyan: #0284c7;
+            --bg-body: #f8fafc;
+            --bg-section-alt: #f1f5f9;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f8fafc;
+            --bg-card-elevated: #ffffff;
+            --border-subtle: rgba(0, 0, 0, 0.1);
+            --border-highlight: rgba(5, 150, 105, 0.4);
+            --text-heading: #0f172a;
+            --text-body: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --wa-green: #25d366;
+            --wa-green-hover: #20ba59;
+            --wa-gradient: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+            --header-bg: rgba(255, 255, 255, 0.96);
+            --nav-bg: rgba(248, 250, 252, 0.96);
+            --brand-card-bg: #ffffff;
+            color-scheme: light;
         }
 
         /* ── ZERO BOTTOM SCROLLINGS OR TICKERS ENFORCEMENT ───────────────── */
@@ -72,32 +101,58 @@
 
         /* ── TOP BRAND HEADER ────────────────────────────────────────────── */
         .catalog-top-header {
-            background: rgba(11, 18, 33, 0.94);
+            background: var(--header-bg);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border-bottom: 1px solid var(--border-subtle);
             position: sticky;
             top: 0;
             z-index: 1040;
-            padding: 12px 24px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+            padding: 10px 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+            transition: background 0.3s ease, border-color 0.3s ease;
         }
 
-        .brand-logo-left {
-            height: 38px;
+        .brand-logo-harghar {
+            height: 48px;
+            max-width: 220px;
             object-fit: contain;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));
+            transition: transform 0.2s ease;
+        }
+        .brand-logo-harghar:hover {
+            transform: scale(1.02);
         }
 
-        .brand-logo-right {
-            height: 42px;
+        .brand-logo-sub {
+            height: 28px;
             object-fit: contain;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+            opacity: 0.85;
+        }
+
+        .theme-toggle-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-heading);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+        .theme-toggle-btn:hover {
+            border-color: var(--primary);
+            transform: translateY(-1px);
         }
 
         .brand-tagline {
             font-size: 11px;
-            color: #fbbf24;
+            color: var(--accent);
             font-weight: 700;
             letter-spacing: 0.8px;
             text-transform: uppercase;
@@ -708,6 +763,1018 @@
             color: #ffffff;
         }
 
+        /* ── HERO BRANDS RIBBON ──────────────────────────────────────────── */
+        .hero-brands-container {
+            background: rgba(17, 26, 46, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 16px;
+            padding: 14px 20px;
+            max-width: 980px;
+            margin: 28px auto 0;
+            backdrop-filter: blur(8px);
+        }
+        .hero-brands-label {
+            font-size: 11px;
+            color: #fbbf24;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .hero-brands-flex {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 10px 14px;
+        }
+        .hero-brand-pill {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            font-size: 12.5px;
+            font-weight: 700;
+            padding: 5px 14px;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .hero-brand-pill:hover {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: #10b981;
+            transform: translateY(-2px);
+        }
+        .hero-brand-pill.brand-tata {
+            border-color: rgba(251, 191, 36, 0.5);
+            background: rgba(251, 191, 36, 0.12);
+            color: #fde68a;
+        }
+        .hero-brand-pill.brand-tier1 {
+            border-color: rgba(56, 189, 248, 0.4);
+            background: rgba(56, 189, 248, 0.1);
+            color: #bae6fd;
+        }
+
+        /* ── SOLAR REQUIREMENT & INVESTMENT CALCULATOR ───────────────────── */
+        .calc-main-card {
+            background: linear-gradient(145deg, #111a2e 0%, #0c1221 100%);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            border-radius: 24px;
+            padding: 36px 30px;
+            box-shadow: 0 16px 45px rgba(0, 0, 0, 0.45), 0 0 30px rgba(16, 185, 129, 0.1);
+        }
+        .calc-step-header {
+            font-size: 13px;
+            font-weight: 700;
+            color: #38bdf8;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .calc-type-toggle {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .calc-type-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #e2e8f0;
+            padding: 13px 14px;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 13.5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .calc-type-btn.active {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: #10b981;
+            color: #ffffff;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+        }
+        .calc-metric-switcher {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .calc-metric-pill {
+            padding: 5px 14px;
+            font-size: 12px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #cbd5e1;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .calc-metric-pill.active {
+            background: var(--primary-gradient);
+            border-color: #10b981;
+            color: #ffffff;
+        }
+        .calc-slider-wrapper {
+            margin: 14px 0 16px;
+        }
+        .calc-slider-input {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #1e293b;
+            outline: none;
+            accent-color: #10b981;
+            cursor: pointer;
+        }
+        .calc-presets-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        .calc-preset-chip {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #cbd5e1;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .calc-preset-chip:hover, .calc-preset-chip.active {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: #38bdf8;
+            color: #ffffff;
+        }
+        .calc-brand-picker {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .calc-brand-option {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 12px 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+        .calc-brand-option.active {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: #10b981;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+        }
+        .calc-brand-name {
+            font-weight: 700;
+            color: #ffffff;
+            font-size: 13.5px;
+        }
+        .calc-brand-price-tag {
+            font-size: 13px;
+            font-weight: 800;
+            color: #34d399;
+        }
+        .calc-result-panel {
+            background: linear-gradient(180deg, #16233e 0%, #0e172a 100%);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 20px;
+            padding: 26px 22px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .calc-rec-banner {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 18px;
+        }
+        .calc-rec-kw {
+            font-size: 24px;
+            font-weight: 900;
+            color: #ffffff;
+            line-height: 1.2;
+        }
+        .calc-rec-units {
+            font-size: 13px;
+            color: #6ee7b7;
+            font-weight: 600;
+        }
+        .calc-price-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 7px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            font-size: 13.5px;
+        }
+        .calc-price-line.total-line {
+            border-top: 2px solid rgba(16, 185, 129, 0.4);
+            border-bottom: none;
+            padding-top: 12px;
+            margin-top: 6px;
+        }
+        .calc-total-val {
+            font-size: 28px;
+            font-weight: 900;
+            color: #34d399;
+            line-height: 1;
+        }
+        .calc-finance-strip {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin: 16px 0;
+        }
+        .calc-fin-item small {
+            font-size: 10.5px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            display: block;
+        }
+        .calc-fin-item span {
+            font-size: 15px;
+            font-weight: 800;
+            color: #fde68a;
+        }
+        .calc-savings-alert {
+            background: rgba(245, 158, 11, 0.15);
+            border-left: 4px solid #f59e0b;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 12px;
+            color: #fef3c7;
+            line-height: 1.5;
+            margin-bottom: 18px;
+        }
+
+        /* ── OFFICIAL PRICING & FINANCIAL COMPARISON MATRIX ──────────────── */
+        .matrix-container-box {
+            background: #0b1222;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 16px 45px rgba(0, 0, 0, 0.4);
+        }
+        .matrix-brand-selector {
+            display: flex;
+            gap: 8px;
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .matrix-brand-tab {
+            padding: 8px 16px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            color: #cbd5e1;
+            font-weight: 700;
+            font-size: 12.5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .matrix-brand-tab.active {
+            background: var(--primary-gradient);
+            border-color: #10b981;
+            color: #ffffff;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+        }
+        .table-responsive-matrix {
+            overflow-x: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #10b981 rgba(255, 255, 255, 0.05);
+        }
+        .matrix-table {
+            width: 100%;
+            margin-bottom: 0;
+            border-collapse: separate;
+            border-spacing: 0;
+            font-size: 13px;
+            color: #e2e8f0;
+        }
+        .matrix-table thead th {
+            background: #0f1c33;
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 14px 10px;
+            border-bottom: 2px solid rgba(16, 185, 129, 0.5);
+            white-space: nowrap;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .matrix-table thead th:first-child {
+            text-align: left;
+            padding-left: 18px;
+        }
+        .matrix-table tbody td {
+            padding: 13px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+            text-align: center;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .matrix-table tbody td:first-child {
+            text-align: left;
+            padding-left: 18px;
+            font-weight: 800;
+            color: #ffffff;
+        }
+        .matrix-table tbody tr:hover {
+            background: rgba(16, 185, 129, 0.08);
+        }
+        .matrix-table tbody tr.row-recommended {
+            background: rgba(16, 185, 129, 0.16);
+            border: 2px solid #10b981;
+        }
+        .matrix-table tbody tr.row-recommended td {
+            border-bottom: 1px solid rgba(16, 185, 129, 0.4);
+            font-weight: 700;
+            color: #ffffff;
+        }
+        .rec-pill-badge {
+            background: #f59e0b;
+            color: #000000;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 8px;
+            margin-left: 6px;
+            text-transform: uppercase;
+        }
+
+        /* ── 10-PHOTO AUTO-ADVANCING GALLERY ─────────────────────────────── */
+        .gallery-carousel-box {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            box-shadow: 0 16px 45px rgba(0, 0, 0, 0.4);
+            aspect-ratio: 16 / 9;
+            max-height: 520px;
+            background: #060911;
+        }
+        .gallery-slide {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease-in-out, visibility 0.5s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        .gallery-slide.active {
+            opacity: 1;
+            visibility: visible;
+            z-index: 2;
+        }
+        .gallery-slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .gallery-caption-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 24px 16px;
+            background: linear-gradient(180deg, transparent 0%, rgba(7, 11, 20, 0.95) 80%);
+            z-index: 3;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            pointer-events: none;
+        }
+        .gallery-caption-title {
+            font-size: 17px;
+            font-weight: 800;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+        .gallery-caption-tag {
+            font-size: 12px;
+            color: #38bdf8;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+        .gallery-counter-pill {
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        .gallery-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: rgba(11, 18, 33, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            cursor: pointer;
+            z-index: 4;
+            transition: all 0.2s;
+            backdrop-filter: blur(4px);
+        }
+        .gallery-nav-btn:hover {
+            background: rgba(16, 185, 129, 0.85);
+            border-color: #10b981;
+            transform: translateY(-50%) scale(1.08);
+        }
+        .gallery-nav-btn.prev-btn { left: 16px; }
+        .gallery-nav-btn.next-btn { right: 16px; }
+
+        .gallery-indicators {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 14px;
+        }
+        .gallery-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .gallery-dot.active {
+            width: 26px;
+            border-radius: 12px;
+            background: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+        }
+
+        /* ── LIGHTBOX MODAL ──────────────────────────────────────────────── */
+        .lightbox-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(3, 7, 18, 0.96);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .lightbox-modal.active {
+            display: flex;
+        }
+        .lightbox-top-bar {
+            position: absolute;
+            top: 16px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10001;
+        }
+        .lightbox-title {
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 700;
+        }
+        .lightbox-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .lightbox-icon-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .lightbox-icon-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.1);
+        }
+        .lightbox-stage {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        .lightbox-stage img {
+            max-width: 90vw;
+            max-height: 80vh;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            transition: transform 0.2s ease;
+        }
+
+        /* ── YOUTUBE VIDEO SHOWCASE ──────────────────────────────────────── */
+        .video-card-item {
+            background: linear-gradient(145deg, #111a2e 0%, #0c1221 100%);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            overflow: hidden;
+            height: 100%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        .video-card-item .ratio {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .video-card-content {
+            padding: 18px 20px;
+        }
+        .video-card-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+
+        /* ── BANKING & FINANCING CARDS (ZERO RATE OF INTEREST) ─────────── */
+        .bank-card-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 20px 14px;
+            text-align: center;
+            height: 100%;
+            transition: all 0.25s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .bank-card-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
+        }
+        .bank-logo-wrapper {
+            height: 48px;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 6px;
+        }
+        html[data-bs-theme="light"] .bank-logo-wrapper {
+            background: #f8fafc;
+        }
+        .bank-logo-img {
+            max-height: 38px;
+            max-width: 130px;
+            object-fit: contain;
+        }
+        .bank-name {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin-bottom: 6px;
+            line-height: 1.3;
+        }
+        .bank-badge {
+            font-size: 11px;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            padding: 3px 10px;
+            border-radius: 12px;
+            display: inline-block;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        .bank-tenure-tag {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 6px;
+        }
+        .bank-highlights-text {
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Hero Brands Showcase Ribbon */
+        .hero-brands-container {
+            margin-top: 36px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-subtle);
+        }
+        .hero-brands-label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 16px;
+        }
+        .hero-brands-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 12px;
+            max-width: 980px;
+            margin: 0 auto;
+        }
+        .hero-brand-card {
+            background: var(--brand-card-bg);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 12px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            text-decoration: none;
+            position: relative;
+        }
+        .hero-brand-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 18px rgba(16, 185, 129, 0.25);
+        }
+        .hero-brand-card.active {
+            border-color: var(--primary);
+            background: rgba(16, 185, 129, 0.12);
+            box-shadow: 0 0 16px rgba(16, 185, 129, 0.3);
+        }
+        .hero-brand-card.active::after {
+            content: "✓ Selected";
+            position: absolute;
+            top: -8px;
+            right: -6px;
+            background: var(--primary);
+            color: #ffffff;
+            font-size: 9.5px;
+            font-weight: 800;
+            padding: 1px 6px;
+            border-radius: 10px;
+            letter-spacing: 0.3px;
+        }
+        .hero-brand-img {
+            height: 32px;
+            max-width: 110px;
+            object-fit: contain;
+            margin-bottom: 4px;
+        }
+        .hero-brand-name {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: var(--text-heading);
+            text-align: center;
+            line-height: 1.2;
+        }
+        .hero-brand-tier {
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-align: center;
+        }
+
+        /* Calculator Brand Selector Chips */
+        .brand-chips-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .brand-chip-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-heading);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .brand-chip-btn:hover {
+            border-color: var(--primary);
+            background: var(--bg-card-hover);
+        }
+        .brand-chip-btn.active {
+            background: var(--primary-gradient);
+            border-color: var(--primary);
+            color: #ffffff !important;
+            box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35);
+        }
+        .brand-chip-logo {
+            height: 16px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        /* Gallery Thumbnails Strip */
+        .gallery-thumbs-strip {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 12px 4px 6px;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) transparent;
+        }
+        .gallery-thumb-item {
+            flex: 0 0 95px;
+            height: 62px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid transparent;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.2s ease;
+        }
+        .gallery-thumb-item:hover {
+            opacity: 0.9;
+            transform: scale(1.05);
+        }
+        .gallery-thumb-item.active {
+            opacity: 1;
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+            transform: scale(1.05);
+        }
+        .gallery-thumb-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* ── LIGHT MODE SYSTEM-WIDE OVERRIDES ────────────────────────────── */
+        html[data-bs-theme="light"] body {
+            background-color: #f8fafc !important;
+            color: #1e293b !important;
+        }
+        html[data-bs-theme="light"] .hero-section-wrapper {
+            background: radial-gradient(ellipse 90% 70% at 50% -10%, rgba(16, 185, 129, 0.12) 0%, rgba(241, 245, 249, 0.98) 65%, #f8fafc 100%) !important;
+            border-bottom-color: #e2e8f0 !important;
+        }
+        html[data-bs-theme="light"] .hero-title {
+            color: #0f172a !important;
+            background: linear-gradient(135deg, #0f172a 40%, #059669 100%) !important;
+            -webkit-background-clip: text !important;
+            -webkit-text-fill-color: transparent !important;
+            text-shadow: none !important;
+        }
+        html[data-bs-theme="light"] .hero-subtitle {
+            color: #334155 !important;
+        }
+        html[data-bs-theme="light"] .stat-card-item {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05) !important;
+        }
+        html[data-bs-theme="light"] .stat-card-label {
+            color: #475569 !important;
+        }
+        html[data-bs-theme="light"] .calc-main-card {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06) !important;
+        }
+        html[data-bs-theme="light"] .calc-step-header {
+            color: #0f172a !important;
+            border-bottom-color: #e2e8f0 !important;
+        }
+        html[data-bs-theme="light"] .calc-brand-option {
+            background: #f8fafc !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        html[data-bs-theme="light"] .calc-brand-option.active {
+            background: rgba(16, 185, 129, 0.12) !important;
+            border-color: #10b981 !important;
+        }
+        html[data-bs-theme="light"] .calc-brand-name {
+            color: #0f172a !important;
+        }
+        html[data-bs-theme="light"] .calc-result-panel {
+            background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%) !important;
+            border: 1px solid #cbd5e1 !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05) !important;
+        }
+        html[data-bs-theme="light"] .calc-rec-banner {
+            background: rgba(16, 185, 129, 0.12) !important;
+            border-color: rgba(16, 185, 129, 0.3) !important;
+        }
+        html[data-bs-theme="light"] .calc-rec-kw {
+            color: #065f46 !important;
+        }
+        html[data-bs-theme="light"] .calc-price-line {
+            border-bottom-color: #e2e8f0 !important;
+        }
+        html[data-bs-theme="light"] .calc-price-line.total-line {
+            border-top-color: #10b981 !important;
+        }
+        html[data-bs-theme="light"] .calc-finance-strip {
+            background: #f1f5f9 !important;
+        }
+        html[data-bs-theme="light"] .calc-fin-item span {
+            color: #b45309 !important;
+        }
+        html[data-bs-theme="light"] .calc-savings-alert {
+            background: #fffbeb !important;
+            color: #92400e !important;
+            border-left-color: #f59e0b !important;
+        }
+        html[data-bs-theme="light"] .matrix-container-box {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06) !important;
+        }
+        html[data-bs-theme="light"] .matrix-brand-selector {
+            background: #f8fafc !important;
+            border-bottom-color: #e2e8f0 !important;
+        }
+        html[data-bs-theme="light"] .matrix-brand-tab {
+            background: #ffffff !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #334155 !important;
+        }
+        html[data-bs-theme="light"] .matrix-brand-tab.active {
+            background: var(--primary-gradient) !important;
+            color: #ffffff !important;
+            border-color: #10b981 !important;
+        }
+        html[data-bs-theme="light"] .matrix-table thead th {
+            background: #f1f5f9 !important;
+            color: #0f172a !important;
+            border-bottom-color: #cbd5e1 !important;
+        }
+        html[data-bs-theme="light"] .matrix-table tbody td {
+            border-bottom-color: #e2e8f0 !important;
+            color: #1e293b !important;
+        }
+        html[data-bs-theme="light"] .matrix-table tbody tr:hover {
+            background: #f8fafc !important;
+        }
+        html[data-bs-theme="light"] .matrix-table tbody tr.row-recommended {
+            background: rgba(16, 185, 129, 0.08) !important;
+        }
+        html[data-bs-theme="light"] .bank-card-item {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+        }
+        html[data-bs-theme="light"] .bank-name {
+            color: #0f172a !important;
+        }
+        html[data-bs-theme="light"] .bank-highlights-text {
+            color: #475569 !important;
+        }
+        html[data-bs-theme="light"] .feature-card,
+        html[data-bs-theme="light"] .step-timeline-card,
+        html[data-bs-theme="light"] .pricing-card,
+        html[data-bs-theme="light"] .video-card-item,
+        html[data-bs-theme="light"] .contact-box-wrapper,
+        html[data-bs-theme="light"] .accordion-item {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
+        }
+        html[data-bs-theme="light"] .feature-card-title,
+        html[data-bs-theme="light"] .step-title,
+        html[data-bs-theme="light"] .pricing-plan-name,
+        html[data-bs-theme="light"] .video-card-title,
+        html[data-bs-theme="light"] .section-header-title {
+            color: #0f172a !important;
+        }
+        html[data-bs-theme="light"] .section-header-subtitle,
+        html[data-bs-theme="light"] .feature-card-desc,
+        html[data-bs-theme="light"] .step-desc {
+            color: #475569 !important;
+        }
+        html[data-bs-theme="light"] .accordion-button {
+            background: #f8fafc !important;
+            color: #0f172a !important;
+        }
+        html[data-bs-theme="light"] .accordion-button:not(.collapsed) {
+            background: #ecfdf5 !important;
+            color: #047857 !important;
+        }
+        html[data-bs-theme="light"] .accordion-body {
+            background: #ffffff !important;
+            color: #1e293b !important;
+        }
+        html[data-bs-theme="light"] .form-control-custom {
+            background: #ffffff !important;
+            border-color: #cbd5e1 !important;
+            color: #0f172a !important;
+        }
+        html[data-bs-theme="light"] .form-control-custom:focus {
+            border-color: #059669 !important;
+            color: #0f172a !important;
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15) !important;
+        }
+        html[data-bs-theme="light"] .form-label-custom {
+            color: #334155 !important;
+        }
+        html[data-bs-theme="light"] .jump-link {
+            color: #475569 !important;
+            background: #f1f5f9 !important;
+        }
+        html[data-bs-theme="light"] .jump-link:hover,
+        html[data-bs-theme="light"] .jump-link.active {
+            color: #059669 !important;
+            background: #ecfdf5 !important;
+            border-color: #059669 !important;
+        }
+        html[data-bs-theme="light"] .sticky-jump-nav {
+            background: rgba(248, 250, 252, 0.96) !important;
+            border-bottom-color: #e2e8f0 !important;
+        }
+        html[data-bs-theme="light"] .calc-type-btn {
+            background: #f8fafc !important;
+            border-color: #cbd5e1 !important;
+            color: #334155 !important;
+        }
+        html[data-bs-theme="light"] .calc-type-btn.active {
+            background: #ffffff !important;
+            border-color: #10b981 !important;
+            color: #047857 !important;
+            box-shadow: 0 2px 10px rgba(16, 185, 129, 0.2) !important;
+        }
+        html[data-bs-theme="light"] .calc-preset-chip {
+            background: #f1f5f9 !important;
+            border-color: #cbd5e1 !important;
+            color: #334155 !important;
+        }
+        html[data-bs-theme="light"] .calc-preset-chip.active {
+            background: #ecfdf5 !important;
+            border-color: #10b981 !important;
+            color: #047857 !important;
+        }
+        html[data-bs-theme="light"] .calc-metric-switcher {
+            background: #f1f5f9 !important;
+        }
+        html[data-bs-theme="light"] .calc-metric-pill {
+            color: #64748b !important;
+        }
+        html[data-bs-theme="light"] .calc-metric-pill.active {
+            background: #ffffff !important;
+            color: #0f172a !important;
+        }
+        html[data-bs-theme="light"] .text-white:not(.btn-cta-main):not(.badge):not(.popular-badge-ribbon):not(.rec-pill-badge) {
+            color: #0f172a !important;
+        }
+        html[data-bs-theme="light"] .text-light {
+            color: #334155 !important;
+        }
+
         /* ── RESPONSIVE MEDIA QUERIES ────────────────────────────────────── */
         @media (max-width: 768px) {
             .hero-title { font-size: 28px !important; line-height: 1.3 !important; }
@@ -784,30 +1851,38 @@
 </head>
 <body>
 
-    <!-- ── 1. TOP BRANDING HEADER ──────────────────────────────────────── -->
+    <!-- ── 1. TOP BRANDING HEADER (HAR GHAR SOLAR + THEME TOGGLE) ──────── -->
     <header class="catalog-top-header">
         <div class="container-xl d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <!-- Left: Platform Branding -->
-            <div class="d-flex align-items-center gap-2 order-1">
-                <img src="/public/vgk4u-logo.png" alt="VGK4U Platform" class="brand-logo-left" onerror="this.src='/public/favicon.ico'">
-                <div class="d-none d-md-flex flex-column">
-                    <span class="fw-bold text-white fs-6 lh-1">VGK4U Platform</span>
-                    <span class="text-secondary small">Smart Clean-Tech &amp; Mobility</span>
+            <!-- Left: Har Ghar Solar Official Branding -->
+            <div class="d-flex align-items-center gap-3 order-1">
+                <a href="#hero" class="d-flex align-items-center gap-2 text-decoration-none">
+                    <img src="/public/solar-logo-harghar-trans.png" alt="MYNTREAL Har Ghar Solar" class="brand-logo-harghar" onerror="this.src='/public/myntreal-logo.png'">
+                </a>
+                <div class="d-none d-xl-flex flex-column border-start border-secondary border-opacity-25 ps-3">
+                    <span class="fw-bold fs-6 lh-1" style="color: var(--text-heading);">Har Ghar Solar</span>
+                    <span class="small" style="color: var(--text-secondary); font-size: 11px;">PM Surya Ghar Muft Bijli Yojana Partner</span>
                 </div>
             </div>
 
-            <!-- Right: MYNTREAL Official Brand -->
-            <div class="d-flex flex-column align-items-end order-2">
-                <img src="/public/myntreal-logo.png" alt="MYNTREAL" class="brand-logo-right" onerror="this.src='/public/vgk4u-logo.png'">
-                <span class="brand-tagline">MYNTREAL – Redefining Future</span>
-            </div>
+            <!-- Right Controls: Theme Switcher + Languages + Platform Mark -->
+            <div class="d-flex align-items-center gap-2 order-2 ms-auto">
+                <!-- 1-Tap Light/Dark Theme Switcher -->
+                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleCatalogTheme()" title="Toggle Light / Dark Mode">
+                    <i class="fas fa-sun text-warning" id="themeToggleIcon"></i>
+                    <span class="d-none d-sm-inline ms-1" id="themeToggleText">Light Mode</span>
+                </button>
 
-            <!-- Center: Language Switcher Pills (Order 3 on mobile -> row 2, Order md 2 -> center) -->
-            <div class="d-flex gap-1 align-items-center justify-content-center w-100 w-md-auto order-3 order-md-2 mt-1 mt-md-0" id="langSwitchGroup">
-                <button class="lang-pill-btn active" data-lang="en" onclick="switchCatalogLanguage('en')">English</button>
-                <button class="lang-pill-btn" data-lang="te" onclick="switchCatalogLanguage('te')">తెలుగు</button>
-                <button class="lang-pill-btn" data-lang="hi" onclick="switchCatalogLanguage('hi')">हिन्दी</button>
-                <button class="lang-pill-btn" data-lang="ta" onclick="switchCatalogLanguage('ta')">தமிழ்</button>
+                <!-- Language Switcher Pills -->
+                <div class="d-flex gap-1 align-items-center" id="langSwitchGroup">
+                    <button class="lang-pill-btn active" data-lang="en" onclick="switchCatalogLanguage('en')">EN</button>
+                    <button class="lang-pill-btn" data-lang="te" onclick="switchCatalogLanguage('te')">తెలుగు</button>
+                    <button class="lang-pill-btn" data-lang="hi" onclick="switchCatalogLanguage('hi')">हिन्दी</button>
+                    <button class="lang-pill-btn" data-lang="ta" onclick="switchCatalogLanguage('ta')">தமிழ்</button>
+                </div>
+                
+                <!-- Platform Mark -->
+                <img src="/public/vgk4u-logo.png" alt="VGK4U" class="brand-logo-sub d-none d-md-block ms-1" onerror="this.style.display='none'">
             </div>
         </div>
     </header>
@@ -844,6 +1919,24 @@
         </div>
     </footer>
 
+    <!-- ── FULLSCREEN LIGHTBOX MODAL ───────────────────────────────────── -->
+    <div class="lightbox-modal" id="galleryLightboxModal" onclick="closeLightbox()">
+        <div class="lightbox-top-bar" onclick="event.stopPropagation()">
+            <div class="lightbox-title" id="lightboxImgTitle">Rooftop Solar Installation</div>
+            <div class="lightbox-actions">
+                <button type="button" class="lightbox-icon-btn" onclick="zoomLightbox(0.25)" title="Zoom In"><i class="fas fa-search-plus"></i></button>
+                <button type="button" class="lightbox-icon-btn" onclick="zoomLightbox(-0.25)" title="Zoom Out"><i class="fas fa-search-minus"></i></button>
+                <button type="button" class="lightbox-icon-btn" onclick="resetLightboxZoom()" title="Reset Zoom"><i class="fas fa-compress-arrows-alt"></i></button>
+                <button type="button" class="lightbox-icon-btn" onclick="prevLightbox(event)" title="Previous"><i class="fas fa-chevron-left"></i></button>
+                <button type="button" class="lightbox-icon-btn" onclick="nextLightbox(event)" title="Next"><i class="fas fa-chevron-right"></i></button>
+                <button type="button" class="lightbox-icon-btn" style="background: rgba(239, 68, 68, 0.3); border-color: rgba(239, 68, 68, 0.5);" onclick="closeLightbox()" title="Close"><i class="fas fa-times text-danger"></i></button>
+            </div>
+        </div>
+        <div class="lightbox-stage" id="lightboxStage">
+            <img id="lightboxStageImg" src="" alt="Enlarged solar installation photo" onclick="event.stopPropagation()">
+        </div>
+    </div>
+
     <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -856,6 +1949,9 @@
         let catalogSlug = 'commercial-residential-solar';
 
         document.addEventListener('DOMContentLoaded', async () => {
+            // Theme initialization
+            applyTheme(getStoredTheme());
+
             // Parse URL parameters and path
             const pathParts = window.location.pathname.split('/').filter(Boolean);
             if (pathParts.length >= 3 && pathParts[0] === 'catalog') {
@@ -868,9 +1964,20 @@
             const urlParams = new URLSearchParams(window.location.search);
             shareRefCode = urlParams.get('ref') || null;
             activeLanguage = urlParams.get('lang') || 'en';
+            const brandParam = urlParams.get('brand');
+            if (brandParam && BRAND_DATA[brandParam.toLowerCase()]) {
+                calcState.selectedSpecificBrand = brandParam.toLowerCase();
+                calcState.selectedBrand = BRAND_DATA[brandParam.toLowerCase()].tier;
+                currentMatrixBrand = calcState.selectedBrand;
+            }
 
             updateLangButtonStyles();
             await fetchCatalogData();
+
+            // Re-apply brand selection after catalog render
+            if (brandParam && BRAND_DATA[brandParam.toLowerCase()]) {
+                selectSpecificBrand(brandParam.toLowerCase(), false);
+            }
 
             // Set up active jump nav highlight on scroll
             setupScrollSpy();
@@ -890,6 +1997,17 @@
             window.history.replaceState({}, '', url);
 
             await fetchCatalogData();
+        }
+
+        function updateFloatingWhatsApp(cat) {
+            const btn = document.getElementById('btnFloatingWhatsApp');
+            if (!btn || !cat) return;
+            const ctaSec = (cat.sections || []).find(s => s.section_type === 'contact_cta') || {};
+            const cfg = ctaSec.configuration || {};
+            const branding = cat.branding || {};
+            const phone = cfg.whatsapp_number || branding.whatsapp_business_number || '919053899899';
+            const msg = cfg.prefill_message || `Hello! I would like more information about ${cat.title}.`;
+            btn.href = `https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(msg)}`;
         }
 
         async function fetchCatalogData() {
@@ -914,6 +2032,7 @@
                         <div class="p-5 bg-dark rounded-4 border border-danger border-opacity-50">
                             <h3 class="text-danger mb-2">Catalog Unavailable</h3>
                             <p class="text-light mb-3">The requested digital catalog could not be loaded or is currently being updated.</p>
+                            <pre class="text-warning text-start" style="white-space: pre-wrap;">${err.stack || err.message || err}</pre>
                             <a href="/catalog/solar/commercial-residential-solar" class="btn btn-outline-success rounded-pill px-4">View Solar Catalog</a>
                         </div>
                     </div>
@@ -927,15 +2046,30 @@
             const items = cat.items || [];
 
             let html = '';
+            let galleryData = [];
 
-            // Render each modular section
+            // Update dynamic jump navigation links
+            updateJumpNavigation(sections);
+
             sections.forEach(sec => {
                 const type = sec.section_type;
+                const key = sec.section_key;
                 const loc = sec.localized_content || {};
                 const cfg = sec.configuration || {};
 
                 if (type === 'hero') {
                     html += renderHeroSection(sec, cat, loc, cfg);
+                } else if (type === 'roi_calculator' || key === 'calculator') {
+                    html += renderCalculatorSection(sec, loc, cfg);
+                } else if (type === 'comparison_table' || key === 'pricing_matrix') {
+                    html += renderPricingMatrixSection(sec, loc, cfg);
+                } else if (type === 'media_gallery' || key === 'installation_gallery') {
+                    html += renderGallerySection(sec, loc, cfg);
+                    if (sec.media_gallery && sec.media_gallery.length > 0) {
+                        galleryData = sec.media_gallery;
+                    }
+                } else if (key === 'banking') {
+                    html += renderBankingSection(sec, loc, cfg);
                 } else if (type === 'highlights_grid') {
                     html += renderHighlightsSection(sec, loc, cfg);
                 } else if (type === 'packages_pricing') {
@@ -952,26 +2086,76 @@
             });
 
             container.innerHTML = html;
+
+            // Initialize dynamic interactive components
+            initCalculator();
+            initMatrix();
+            if (galleryData.length > 0) {
+                initGallery(galleryData);
+            }
+        }
+
+        function updateJumpNavigation(sections) {
+            const nav = document.getElementById('jumpNavBar');
+            if (!nav) return;
+            const labelMap = {
+                'hero': 'Overview',
+                'calculator': 'Solar Calculator',
+                'pricing_matrix': 'Pricing Matrix',
+                'installation_gallery': 'Gallery & Videos',
+                'banking': 'Bank Finance',
+                'benefits': 'Benefits',
+                'packages': 'Packages',
+                'process': 'Process',
+                'faqs': 'FAQs',
+                'cta': 'Contact'
+            };
+            nav.innerHTML = sections.map(s => {
+                const id = s.section_key || s.section_type;
+                const text = labelMap[id] || s.title || id;
+                return `<a href="#${id}" class="jump-link">${escapeHtml(text)}</a>`;
+            }).join('');
+            setupScrollSpy();
         }
 
         function renderHeroSection(sec, cat, loc, cfg) {
             const stats = cfg.stats || [
+                { label: 'Direct Govt Subsidy', value: 'Up to ₹78,000' },
                 { label: 'Bill Reduction', value: 'Up to 90%' },
                 { label: 'Warranty', value: '25 Years' },
-                { label: 'Avg Payback', value: '3.2 Years' },
-                { label: 'Installations', value: '3,000+' }
+                { label: 'Bank EMI From', value: '₹1,140 / mo' }
             ];
+            const badgeText = cfg.badge || '⚡ PM SURYA GHAR APPROVED EPC PARTNER';
+            const teluguBadge = cfg.badge_te || 'ప్రధానమంత్రి సూర్య ఘర్ ఉచిత విద్యుత్ యోజన';
 
-            const ctaText = loc.cta_text || 'Request Free Site Assessment';
-            const badgeText = cfg.badge || 'PM SURYA GHAR APPROVED EPC PARTNER';
+            const brandsList = [
+                { id: 'goldi', name: 'Goldi Solar', tier: 'goldi_navgrun_aps', logo: '/public/images/brands/goldi-solar.svg', tag: 'Tier-1 EPC Partner', base: '₹1,99,999' },
+                { id: 'navgrun', name: 'Navgrun Solar', tier: 'goldi_navgrun_aps', logo: '/public/images/brands/navgrun-solar.svg', tag: 'Best Value Tier', base: '₹1,99,999' },
+                { id: 'aps', name: 'APS Solar', tier: 'goldi_navgrun_aps', logo: '/public/images/brands/aps-solar.svg', tag: 'Australian Premium Solar', base: '₹1,99,999' },
+                { id: 'waaree', name: 'Waaree Energies', tier: 'waaree_adani', logo: '/public/images/brands/waaree-solar.svg', tag: "India's #1 Manufacturer", base: '₹2,09,999' },
+                { id: 'adani', name: 'Adani Solar', tier: 'waaree_adani', logo: '/public/images/brands/adani-solar.svg', tag: 'High Efficiency Mono-PERC', base: '₹2,09,999' },
+                { id: 'vikram', name: 'Vikram Solar', tier: 'waaree_adani', logo: '/public/images/brands/vikram-solar.svg', tag: 'Tier-1 High Output', base: '₹2,09,999' },
+                { id: 'tata', name: 'TATA Solar', tier: 'tata_solar', logo: '/public/images/brands/tata-solar.svg', tag: "India's Most Trusted Brand", base: '₹2,20,000' }
+            ];
 
             return `
                 <section class="hero-section-wrapper" id="hero">
                     <div class="container">
-                        <div class="hero-badge"><i class="fas fa-bolt"></i> ${escapeHtml(badgeText)}</div>
+                        <div class="d-flex justify-content-center gap-2 flex-wrap mb-3">
+                            <div class="hero-badge"><i class="fas fa-bolt"></i> ${escapeHtml(badgeText)}</div>
+                            <div class="hero-badge" style="background: rgba(251, 191, 36, 0.15); border-color: rgba(251, 191, 36, 0.4); color: var(--accent);">
+                                <i class="fas fa-sun"></i> ${escapeHtml(teluguBadge)}
+                            </div>
+                        </div>
+
+                        <div class="text-center mb-3">
+                            <img src="/public/solar-logo-harghar-trans.png" alt="MYNTREAL Har Ghar Solar" style="max-height: 90px; max-width: 90%; object-fit: contain;" onerror="this.style.display='none'">
+                        </div>
+
                         <h1 class="hero-title">${escapeHtml(loc.title || sec.title || cat.title)}</h1>
                         <p class="hero-subtitle">${escapeHtml(loc.subtitle || sec.subtitle || cat.subtitle || cat.summary || '')}</p>
 
+                        <!-- Stats Strip -->
                         <div class="hero-stats-strip">
                             ${stats.map(st => `
                                 <div class="stat-card-item">
@@ -981,13 +2165,471 @@
                             `).join('')}
                         </div>
 
-                        <div class="d-flex justify-content-center gap-3 flex-wrap">
-                            <a href="#contact" class="btn-cta-main">
-                                <i class="fas fa-calendar-check"></i> ${escapeHtml(ctaText)}
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-center gap-3 flex-wrap mb-4">
+                            <a href="#calculator" class="btn-cta-main">
+                                <i class="fas fa-calculator me-2"></i> Calculate Solar Capacity &amp; Savings
                             </a>
-                            <a href="#packages" class="btn-cta-outline">
-                                <i class="fas fa-tags"></i> View Packages &amp; Pricing
+                            <a href="#pricing_matrix" class="btn-cta-outline">
+                                <i class="fas fa-table me-2"></i> Official Financial Matrix
                             </a>
+                        </div>
+
+                        <!-- Authorized Brands Showcase Ribbon with Click-to-Select -->
+                        <div class="hero-brands-container">
+                            <span class="hero-brands-label">
+                                <i class="fas fa-award me-1"></i> Authorized Tier-1 Brands &amp; EPC Technology Partners (Click to View Pricing)
+                            </span>
+                            <div class="hero-brands-grid">
+                                ${brandsList.map(b => `
+                                    <div class="hero-brand-card ${calcState.selectedSpecificBrand === b.id ? 'active' : ''}" id="heroBrand_${b.id}" onclick="selectSpecificBrand('${b.id}', true)">
+                                        <img src="${b.logo}" alt="${escapeHtml(b.name)}" class="hero-brand-img">
+                                        <div class="hero-brand-name">${escapeHtml(b.name)}</div>
+                                        <div class="hero-brand-tier">${escapeHtml(b.tag)}</div>
+                                        <div class="small fw-bold text-success mt-1">3 kW: ${b.base}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderCalculatorSection(sec, loc, cfg) {
+            const brandsQuick = [
+                { id: 'goldi', name: 'Goldi Solar', tier: 'goldi_navgrun_aps', logo: '/public/images/brands/goldi-solar.svg' },
+                { id: 'navgrun', name: 'Navgrun', tier: 'goldi_navgrun_aps', logo: '/public/images/brands/navgrun-solar.svg' },
+                { id: 'aps', name: 'APS Solar', tier: 'goldi_navgrun_aps', logo: '/public/images/brands/aps-solar.svg' },
+                { id: 'waaree', name: 'Waaree', tier: 'waaree_adani', logo: '/public/images/brands/waaree-solar.svg' },
+                { id: 'adani', name: 'Adani', tier: 'waaree_adani', logo: '/public/images/brands/adani-solar.svg' },
+                { id: 'vikram', name: 'Vikram', tier: 'waaree_adani', logo: '/public/images/brands/vikram-solar.svg' },
+                { id: 'tata', name: 'TATA Solar', tier: 'tata_solar', logo: '/public/images/brands/tata-solar.svg' }
+            ];
+
+            return `
+                <section class="catalog-section-block" id="calculator">
+                    <div class="container">
+                        <div class="section-header-box">
+                            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-2" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: var(--primary); font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                                <i class="fas fa-calculator"></i> Interactive Solar Estimator
+                            </div>
+                            <h2 class="section-header-title">${escapeHtml(loc.title || sec.title || 'Solar Requirement & Investment Calculator')}</h2>
+                            <p class="section-header-subtitle">${escapeHtml(loc.subtitle || sec.subtitle || 'Calculate recommended capacity, brand pricing & net savings after ₹78,000 subsidy!')}</p>
+                            <div id="brandCustomAlert" class="alert alert-success d-none mt-2 py-2 px-3 rounded-pill border-0 small fw-bold">
+                                <i class="fas fa-check-circle me-1"></i> <span id="brandCustomAlertText"></span>
+                            </div>
+                        </div>
+
+                        <div class="calc-main-card">
+                            <div class="row g-4 align-items-stretch">
+                                <!-- Left Column: Input Selection -->
+                                <div class="col-lg-7">
+                                    <!-- Step 1: Premise Type -->
+                                    <div class="calc-step-header">
+                                        <i class="fas fa-building me-1"></i> Step 1: What are you looking for?
+                                    </div>
+                                    <div class="calc-type-toggle">
+                                        <button type="button" class="calc-type-btn active" id="btnPremiseRes" onclick="setPremiseType('residential')">
+                                            <i class="fas fa-home text-success fa-lg"></i>
+                                            <span>Rooftop / Home</span>
+                                        </button>
+                                        <button type="button" class="calc-type-btn" id="btnPremiseCom" onclick="setPremiseType('commercial')">
+                                            <i class="fas fa-briefcase text-warning fa-lg"></i>
+                                            <span>Commercial / Business</span>
+                                        </button>
+                                    </div>
+
+                                    <!-- Step 2: Consumption Input -->
+                                    <div class="calc-step-header">
+                                        <i class="fas fa-bolt me-1"></i> Step 2: Monthly Electricity Consumption
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                        <div class="calc-metric-switcher">
+                                            <button type="button" class="calc-metric-pill active" id="btnMetricBill" onclick="setMetricType('bill')">
+                                                ₹ Monthly Bill
+                                            </button>
+                                            <button type="button" class="calc-metric-pill" id="btnMetricUnits" onclick="setMetricType('units')">
+                                                ⚡ Units (kWh)
+                                            </button>
+                                        </div>
+                                        <div>
+                                            <span class="text-secondary small">Current: </span>
+                                            <span class="fs-4 fw-black" id="calcDisplayMetricVal" style="color: var(--primary); font-weight: 900;">₹3,500</span>
+                                            <span class="text-secondary small" id="calcMetricUnitLabel"> / month</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="calc-slider-wrapper">
+                                        <input type="range" class="calc-slider-input" id="calcRangeSlider" min="1000" max="25000" step="500" value="3500" oninput="onSliderChange(this.value)">
+                                    </div>
+
+                                    <!-- Quick Preset Pills -->
+                                    <div class="calc-presets-row" id="calcPresetsContainer">
+                                        <!-- Populated dynamically by JS -->
+                                    </div>
+
+                                    <!-- Step 3: Solar Brand Tier & Brand Selection -->
+                                    <div class="calc-step-header">
+                                        <i class="fas fa-award me-1"></i> Step 3: Select Preferred Brand &amp; Tier
+                                    </div>
+
+                                    <!-- Specific Brand Quick Selector Chips -->
+                                    <div class="brand-chips-row mb-3">
+                                        ${brandsQuick.map(b => `
+                                            <button type="button" class="brand-chip-btn ${calcState.selectedSpecificBrand === b.id ? 'active' : ''}" id="brandChip_${b.id}" onclick="selectSpecificBrand('${b.id}')">
+                                                <img src="${b.logo}" alt="${b.name}" class="brand-chip-logo">
+                                                <span>${b.name}</span>
+                                            </button>
+                                        `).join('')}
+                                    </div>
+
+                                    <!-- Brand Tier Pool Cards -->
+                                    <div class="calc-brand-picker">
+                                        <div class="calc-brand-option ${calcState.selectedBrand === 'goldi_navgrun_aps' ? 'active' : ''}" id="brandOpt_goldi_navgrun_aps" onclick="selectBrandTier('goldi_navgrun_aps')">
+                                            <div>
+                                                <div class="calc-brand-name">
+                                                    <i class="fas fa-shield-alt text-success me-1"></i> Goldi Solar, Navgrun &amp; APS (Australian Premium Solar)
+                                                </div>
+                                                <small class="text-secondary">Best Value EPC Tier • 25-Yr Performance Warranty • BIS &amp; ALMM Approved</small>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="calc-brand-price-tag">₹1,99,999/-</div>
+                                                <small class="text-muted" style="font-size: 10.5px;">3 kW Base</small>
+                                            </div>
+                                        </div>
+
+                                        <div class="calc-brand-option ${calcState.selectedBrand === 'waaree_adani' ? 'active' : ''}" id="brandOpt_waaree_adani" onclick="selectBrandTier('waaree_adani')">
+                                            <div>
+                                                <div class="calc-brand-name">
+                                                    <i class="fas fa-star text-info me-1"></i> Waaree / Adani / Vikram Solar / ReNew
+                                                </div>
+                                                <small class="text-secondary">India's Top Tier-1 Manufacturers • High Efficiency Mono-PERC</small>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="calc-brand-price-tag" style="color: var(--accent-cyan);">₹2,09,999/-</div>
+                                                <small class="text-muted" style="font-size: 10.5px;">3 kW Base</small>
+                                            </div>
+                                        </div>
+
+                                        <div class="calc-brand-option ${calcState.selectedBrand === 'tata_solar' ? 'active' : ''}" id="brandOpt_tata_solar" onclick="selectBrandTier('tata_solar')">
+                                            <div>
+                                                <div class="calc-brand-name">
+                                                    <i class="fas fa-crown text-warning me-1"></i> TATA Solar
+                                                </div>
+                                                <small class="text-secondary">India's Most Trusted Solar Brand • Premium EPC Tier</small>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="calc-brand-price-tag" style="color: var(--accent);">₹2,20,000/-</div>
+                                                <small class="text-muted" style="font-size: 10.5px;">3 kW Base</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Right Column: Computed Financial Summary -->
+                                <div class="col-lg-5">
+                                    <div class="calc-result-panel">
+                                        <!-- Capacity Recommendation Banner -->
+                                        <div class="calc-rec-banner">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-secondary text-uppercase fw-bold" style="letter-spacing: 0.5px; font-size: 11px;">Recommended Capacity</small>
+                                                <span class="badge bg-success bg-opacity-25 text-success small" id="calcSelectedBrandBadge">Goldi / Navgrun / APS</span>
+                                            </div>
+                                            <div class="calc-rec-kw" id="calcRecKwText">3 kW Rooftop Solar Plant</div>
+                                            <div class="calc-rec-units mt-1">
+                                                <i class="fas fa-chart-line me-1"></i> Generation: <span id="calcRecGenText" class="fw-bold" style="color: var(--text-heading);">300 - 375 Units/mo</span>
+                                            </div>
+                                            <div class="small text-secondary mt-1">
+                                                <i class="fas fa-vector-square me-1"></i> Required Roof: <span id="calcRecRoofText" class="text-light">~250 - 300 sq.ft.</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Transparent Pricing Breakdown -->
+                                        <div class="flex-grow-1">
+                                            <div class="calc-price-line">
+                                                <span class="text-secondary">System MRP:</span>
+                                                <del class="text-secondary" id="calcValMRP">₹2,40,000</del>
+                                            </div>
+                                            <div class="calc-price-line">
+                                                <span class="text-secondary">Promotional Discount:</span>
+                                                <span class="badge bg-success bg-opacity-25 text-success" id="calcValDiscount">-₹10,000</span>
+                                            </div>
+                                            <div class="calc-price-line">
+                                                <span class="text-light fw-bold">System Offer Price:</span>
+                                                <span class="fw-bold text-light" id="calcValOfferPrice">₹2,30,000</span>
+                                            </div>
+                                            <div class="calc-price-line">
+                                                <span class="text-warning fw-bold">
+                                                    <i class="fas fa-shield-alt me-1"></i> PM Surya Ghar DBT Subsidy:
+                                                </span>
+                                                <span class="badge bg-warning bg-opacity-25 text-warning fw-bold fs-6" id="calcValSubsidy">-₹78,000</span>
+                                            </div>
+                                            <div class="calc-price-line">
+                                                <span class="text-secondary">Price after Subsidy:</span>
+                                                <span class="text-light" id="calcValAfterSubsidy">₹1,52,000</span>
+                                            </div>
+                                            <div class="calc-price-line">
+                                                <span class="text-info fw-bold">
+                                                    <i class="fas fa-ticket-alt me-1"></i> Site Consultation Voucher:
+                                                </span>
+                                                <span class="badge bg-info bg-opacity-25 text-info" id="calcValVoucher">-₹10,000</span>
+                                            </div>
+                                            <div class="calc-price-line total-line">
+                                                <div>
+                                                    <span class="fw-bold d-block" style="color: var(--text-heading);">Effective Net Investment:</span>
+                                                    <small class="text-secondary" style="font-size: 11px;">Final Customer Out-of-Pocket</small>
+                                                </div>
+                                                <div class="calc-total-val" id="calcValNetFinal">₹1,42,000</div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Bank Loan & EMI Strip (NO RATE OF INTEREST) -->
+                                        <div class="calc-finance-strip">
+                                            <div class="calc-fin-item">
+                                                <small>Down Payment</small>
+                                                <span id="calcValDownPayment">₹20,000</span>
+                                            </div>
+                                            <div class="calc-fin-item">
+                                                <small>Bank Loan Amount</small>
+                                                <span id="calcValLoan">₹1,22,000</span>
+                                            </div>
+                                            <div class="calc-fin-item">
+                                                <small>5-Year Monthly EMI</small>
+                                                <span id="calcValEmi5" style="color: var(--primary);">₹2,400 / mo</span>
+                                            </div>
+                                            <div class="calc-fin-item">
+                                                <small>10-Year Monthly EMI</small>
+                                                <span id="calcValEmi10" style="color: var(--accent-cyan);">₹1,350 / mo</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Net-Positive Savings Alert -->
+                                        <div class="calc-savings-alert" id="calcSavingsAlert">
+                                            <i class="fas fa-check-circle text-warning me-1"></i>
+                                            <strong>Immediate Monthly Net Savings:</strong> Your monthly electricity bill savings of <span id="calcAlertSavings" class="fw-bold">₹2,500 - ₹3,000</span> exceeds your 10-Year EMI (<span id="calcAlertEmi" class="fw-bold">₹1,350</span>)!
+                                        </div>
+
+                                        <!-- Action Buttons -->
+                                        <div class="d-flex flex-column gap-2 mt-auto">
+                                            <button type="button" class="btn-cta-main w-100 justify-content-center" onclick="bookConfiguredPlan()">
+                                                <i class="fas fa-calendar-check me-2"></i> Book Free Site Survey for this Plan
+                                            </button>
+                                            <button type="button" class="btn btn-outline-success rounded-pill py-2 w-100 fw-bold small" onclick="whatsappConfiguredPlan()">
+                                                <i class="fab fa-whatsapp me-2"></i> Get Detailed Quote on WhatsApp
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderPricingMatrixSection(sec, loc, cfg) {
+            return `
+                <section class="catalog-section-block" id="pricing_matrix">
+                    <div class="container">
+                        <div class="section-header-box">
+                            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-2" style="background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.4); color: var(--accent); font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                                <i class="fas fa-file-invoice-dollar"></i> Official Government &amp; Bank Matrix
+                            </div>
+                            <h2 class="section-header-title">${escapeHtml(loc.title || sec.title || 'Official Capacity & Financial Matrix')}</h2>
+                            <p class="section-header-subtitle">${escapeHtml(loc.subtitle || sec.subtitle || 'Complete 10-column financial comparison across 1kW, 2kW, 3kW, 4kW, 5kW, 6kW, 10kW.')}</p>
+                        </div>
+
+                        <div class="matrix-container-box">
+                            <!-- Brand Switcher Tabs -->
+                            <div class="matrix-brand-selector">
+                                <span class="text-secondary small fw-bold me-2"><i class="fas fa-filter me-1"></i> Select Brand:</span>
+                                <button type="button" class="matrix-brand-tab ${currentMatrixBrand === 'goldi_navgrun_aps' ? 'active' : ''}" id="matrixTab_goldi_navgrun_aps" onclick="setMatrixBrand('goldi_navgrun_aps')">
+                                    Goldi, Navgrun &amp; APS (3 kW: ₹1,99,999/-)
+                                </button>
+                                <button type="button" class="matrix-brand-tab ${currentMatrixBrand === 'waaree_adani' ? 'active' : ''}" id="matrixTab_waaree_adani" onclick="setMatrixBrand('waaree_adani')">
+                                    Waaree, Adani &amp; Vikram (3 kW: ₹2,09,999/-)
+                                </button>
+                                <button type="button" class="matrix-brand-tab ${currentMatrixBrand === 'tata_solar' ? 'active' : ''}" id="matrixTab_tata_solar" onclick="setMatrixBrand('tata_solar')">
+                                    TATA Solar (3 kW: ₹2,20,000/-)
+                                </button>
+                            </div>
+
+                            <!-- 10-Column Responsive Table -->
+                            <div class="table-responsive-matrix">
+                                <table class="matrix-table" id="matrixTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Plant Capacity</th>
+                                            <th>Monthly Generation</th>
+                                            <th>Monthly Savings</th>
+                                            <th>System Price</th>
+                                            <th>PM Surya Ghar Subsidy</th>
+                                            <th>Net Customer Investment</th>
+                                            <th>Down Payment</th>
+                                            <th>Bank Loan</th>
+                                            <th>5-Year EMI</th>
+                                            <th>10-Year EMI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="matrixTableBody">
+                                        <!-- Populated dynamically by JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderGallerySection(sec, loc, cfg) {
+            const photos = sec.media_gallery || [];
+            const videos = cfg.videos || [
+                {
+                    url: "https://youtu.be/yE4BF_L81D8?si=hpi-HiV-ujmpjCBf",
+                    title: "MyntReal Har Ghar Solar — Real Customer Installation & Net Metering Walkthrough",
+                    embed_url: "https://www.youtube-nocookie.com/embed/yE4BF_L81D8",
+                    youtube_id: "yE4BF_L81D8"
+                },
+                {
+                    url: "https://youtu.be/qpEGtGN5Kck?si=QniSKdihEtFTAYxE",
+                    title: "3 kW On-Grid Solar Plant Performance & Zero Electric Bill Customer Experience",
+                    embed_url: "https://www.youtube-nocookie.com/embed/qpEGtGN5Kck",
+                    youtube_id: "qpEGtGN5Kck"
+                }
+            ];
+
+            return `
+                <section class="catalog-section-block" id="installation_gallery">
+                    <div class="container">
+                        <div class="section-header-box">
+                            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-2" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); color: var(--accent-cyan); font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                                <i class="fas fa-camera"></i> Live Project Showcase
+                            </div>
+                            <h2 class="section-header-title">${escapeHtml(loc.title || sec.title || 'Real Rooftop Installations Showcase')}</h2>
+                            <p class="section-header-subtitle">${escapeHtml(loc.subtitle || sec.subtitle || 'Over 3,000+ happy homes and businesses powered across Andhra Pradesh & Telangana')}</p>
+                        </div>
+
+                        <!-- Main Photo Carousel -->
+                        <div class="gallery-carousel-box" id="galleryCarouselBox">
+                            ${photos.map((p, idx) => `
+                                <div class="gallery-slide ${idx === 0 ? 'active' : ''}" onclick="openLightbox(${idx})">
+                                    <img src="${escapeHtml(p.url)}" alt="${escapeHtml(p.caption || 'Installation')}" loading="${idx === 0 ? 'eager' : 'lazy'}">
+                                </div>
+                            `).join('')}
+
+                            <!-- Caption & Counter Overlay -->
+                            <div class="gallery-caption-bar">
+                                <div>
+                                    <span class="gallery-caption-tag" id="galleryCaptionTag"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${escapeHtml(photos[0]?.location || photos[0]?.tag || 'Andhra Pradesh')}</span>
+                                    <div class="gallery-caption-title" id="galleryCaptionTitle">${escapeHtml(photos[0]?.caption || '3 kW Rooftop Solar System')}</div>
+                                </div>
+                                <div class="gallery-counter-pill" id="galleryCounter">1 / ${photos.length}</div>
+                            </div>
+
+                            <!-- Navigation Arrows -->
+                            <button type="button" class="gallery-nav-btn prev-btn" onclick="prevGallerySlide()" aria-label="Previous Slide">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button type="button" class="gallery-nav-btn next-btn" onclick="nextGallerySlide()" aria-label="Next Slide">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+
+                        <!-- Thumbnails Strip -->
+                        <div class="gallery-thumbs-strip" id="galleryThumbsStrip">
+                            ${photos.map((p, idx) => `
+                                <div class="gallery-thumb-item ${idx === 0 ? 'active' : ''}" onclick="showGallerySlide(${idx})">
+                                    <img src="${escapeHtml(p.url)}" alt="Thumb ${idx + 1}">
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <!-- Indicator Dots -->
+                        <div class="gallery-indicators">
+                            ${photos.map((_, idx) => `
+                                <div class="gallery-dot ${idx === 0 ? 'active' : ''}" onclick="showGallerySlide(${idx})"></div>
+                            `).join('')}
+                        </div>
+
+                        <div class="text-center mt-3">
+                            <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Auto-advances every 3 seconds (pauses on hover). Click any photo or thumbnail to enlarge in full-resolution lightbox.</small>
+                        </div>
+
+                        <!-- YouTube Video Showcase -->
+                        ${videos.length > 0 ? `
+                            <div class="mt-5 pt-4 border-top border-secondary border-opacity-25" id="videos">
+                                <div class="section-header-box mb-4">
+                                    <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-2" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                                        <i class="fab fa-youtube"></i> Video Walkthrough &amp; Demonstration
+                                    </div>
+                                    <h3 class="section-header-title fs-3">Net Metering &amp; Customer Testimonials</h3>
+                                    <p class="section-header-subtitle">Watch our rooftop solar installations and official net-metering commissioning live in action</p>
+                                </div>
+                                <div class="row g-4 justify-content-center">
+                                    ${videos.map(v => {
+                                        const yId = v.youtube_id || (v.url ? (v.url.match(/(?:youtu\.be\/|v=|\/embed\/)([\w\-]+)/) || [])[1] : '');
+                                        const embedUrl = yId ? `https://www.youtube-nocookie.com/embed/${yId}` : (v.embed_url || v.url);
+                                        return `
+                                            <div class="col-md-6">
+                                                <div class="video-card-item">
+                                                    <div class="ratio ratio-16x9">
+                                                        <iframe src="${escapeHtml(embedUrl)}" title="${escapeHtml(v.title)}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+                                                    </div>
+                                                    <div class="video-card-content">
+                                                        <h4 class="video-card-title">${escapeHtml(v.title)}</h4>
+                                                        <a href="${escapeHtml(v.url || `https://www.youtube.com/watch?v=${yId}`)}" target="_blank" class="text-emerald small fw-bold text-decoration-none">
+                                                            <i class="fab fa-youtube text-danger me-1"></i> Watch on YouTube <i class="fas fa-external-link-alt ms-1"></i>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderBankingSection(sec, loc, cfg) {
+            const defaultBanks = [
+                { logo: "/public/images/banks/sbi.svg", name: "State Bank of India (SBI)", badge: "Surya Ghar Loan", tenure: "Up to 10 Years", highlights: "Zero Collateral • Direct DBT Subsidy Adjustment" },
+                { logo: "/public/images/banks/bob.svg", name: "Bank of Baroda", badge: "Baroda Solar", tenure: "Up to 10 Years", highlights: "Collateral Free • Instant In-Principle Online Sanction" },
+                { logo: "/public/images/banks/canara.svg", name: "Canara Bank", badge: "Canara Green", tenure: "Up to 10 Years", highlights: "Green Energy Priority Lending • Quick Processing" },
+                { logo: "/public/images/banks/union.svg", name: "Union Bank of India", badge: "Union Solar", tenure: "Up to 10 Years", highlights: "Zero Collateral • Easy Digital Application" },
+                { logo: "/public/images/banks/indian-bank.svg", name: "Indian Bank", badge: "Solar Scheme", tenure: "Up to 10 Years", highlights: "Minimal Documentation • Doorstep Verification" },
+                { logo: "/public/images/banks/pnb.svg", name: "Punjab National Bank (PNB)", badge: "PNB Surya", tenure: "Up to 10 Years", highlights: "Concessional Margin Money • Direct DBT Credit" }
+            ];
+            const banks = cfg.banks && cfg.banks.length > 0 ? cfg.banks : defaultBanks;
+
+            return `
+                <section class="catalog-section-block" id="banking">
+                    <div class="container">
+                        <div class="section-header-box">
+                            <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mb-2" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: var(--primary); font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                                <i class="fas fa-university"></i> Official Banking Partners
+                            </div>
+                            <h2 class="section-header-title">${escapeHtml(loc.title || sec.title || 'Authorized Banking & Financing Partners')}</h2>
+                            <p class="section-header-subtitle">${escapeHtml(loc.subtitle || sec.subtitle || 'Zero Collateral PM Surya Ghar Loans with Direct DBT Subsidy Adjustment & Flexible 10-Year Repayment')}</p>
+                        </div>
+                        <div class="row g-3 justify-content-center">
+                            ${banks.map(b => `
+                                <div class="col-6 col-md-4 col-lg-2">
+                                    <div class="bank-card-item">
+                                        <div class="bank-logo-wrapper">
+                                            <img src="${escapeHtml(b.logo || '/public/images/banks/sbi.svg')}" alt="${escapeHtml(b.name)}" class="bank-logo-img" onerror="this.src='/public/favicon.ico'">
+                                        </div>
+                                        <div class="bank-name">${escapeHtml(b.name)}</div>
+                                        <span class="bank-badge"><i class="fas fa-certificate text-success me-1"></i> ${escapeHtml(b.badge || 'Surya Ghar Loan')}</span>
+                                        <div class="bank-tenure-tag"><i class="far fa-clock me-1"></i> ${escapeHtml(b.tenure || 'Up to 10 Years')}</div>
+                                        <div class="bank-highlights-text">${escapeHtml(b.highlights || 'Collateral Free')}</div>
+                                    </div>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
                 </section>
@@ -1113,6 +2755,7 @@
 
         function renderContactCtaSection(sec, cat, loc, cfg) {
             const phone = cfg.whatsapp_number || '919053899899';
+            const officeAddr = cfg.office_address || 'D.No. 4-48, Main Road, Saripalli, Pendurthy, Visakhapatnam, AP - 531173';
             const defaultMsg = encodeURIComponent(`Hello! I reviewed the ${cat.title} digital catalog (Ref: ${shareRefCode || 'direct'}). I would like to get in touch with an engineer.`);
             const waUrl = `https://wa.me/${phone}?text=${defaultMsg}`;
 
@@ -1133,7 +2776,7 @@
 
                             <div class="d-flex align-items-center justify-content-center gap-3 my-4">
                                 <hr class="flex-grow-1 border-secondary opacity-25 m-0">
-                                <span class="text-secondary small fw-bold text-uppercase tracking-wide">Or Request a Callback</span>
+                                <span class="text-secondary small fw-bold text-uppercase tracking-wide">Or Request a Free Site Survey</span>
                                 <hr class="flex-grow-1 border-secondary opacity-25 m-0">
                             </div>
 
@@ -1149,7 +2792,7 @@
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label-custom">Location / Requirement</label>
-                                        <textarea class="form-control form-control-custom" id="inqNotes" rows="2" placeholder="e.g. 5kW Rooftop Solar for Independent House in Hyderabad / Guntur"></textarea>
+                                        <textarea class="form-control form-control-custom" id="inqNotes" rows="2" placeholder="e.g. 3kW Rooftop Solar for Independent House in Pendurthy / Visakhapatnam"></textarea>
                                     </div>
                                     <div class="col-12 text-center mt-4">
                                         <button type="submit" class="btn-cta-main" id="btnSubmitInquiry">
@@ -1161,6 +2804,16 @@
                                     </div>
                                 </div>
                             </form>
+
+                            <div class="mt-4 pt-3 border-top border-secondary border-opacity-25 text-center">
+                                <div class="d-inline-flex align-items-center gap-2 text-secondary small">
+                                    <i class="fas fa-map-marker-alt text-danger"></i>
+                                    <span><strong>Regional Project Office:</strong> ${escapeHtml(officeAddr)}</span>
+                                </div>
+                                <div class="small text-muted mt-1">
+                                    <i class="fas fa-phone-alt text-success me-1"></i> Helpline: +91 90538 99899 | Mon - Sat: 9:00 AM - 7:30 PM
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -1180,51 +2833,584 @@
             `;
         }
 
-        function updateFloatingWhatsApp(cat) {
-            const btn = document.getElementById('btnFloatingWhatsApp');
-            if (!btn) return;
-            const phone = '919053899899';
-            const msg = encodeURIComponent(`Hello! I am reviewing the ${cat.title} digital catalog (Ref: ${shareRefCode || 'direct'}). Please share detailed information.`);
-            btn.href = `https://wa.me/${phone}?text=${msg}`;
+        /* ── THEME SWITCHER ENGINE (LIGHT & DARK MODES) ──────────────────── */
+        function getStoredTheme() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const themeParam = urlParams.get('theme');
+            if (themeParam === 'light' || themeParam === 'dark') return themeParam;
+            return localStorage.getItem('catalog_theme') || 'dark';
         }
 
-        function prefillInquiryPlan(planName) {
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-bs-theme', theme);
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('catalog_theme', theme);
+
+            const icon = document.getElementById('themeToggleIcon');
+            const text = document.getElementById('themeToggleText');
+            if (icon) {
+                icon.className = theme === 'dark' ? 'fas fa-sun text-warning' : 'fas fa-moon text-primary';
+            }
+            if (text) {
+                text.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
+            }
+        }
+
+        function toggleCatalogTheme() {
+            const current = document.documentElement.getAttribute('data-bs-theme') || 'dark';
+            const next = current === 'dark' ? 'light' : 'dark';
+            applyTheme(next);
+        }
+
+        /* ── INTERACTIVE CALCULATOR ENGINE ───────────────────────────────── */
+        const BROCHURE_CAPACITIES = {
+            1: { kw: 1, units: '100 - 130 Units', savingsText: '₹800 - ₹1,000', baseCost: 90000, subsidy: 30000, downPayment: 10000, loan: 50000, emi5: 1050, emi10: 600, roofSqft: '100 - 120 sq.ft.' },
+            2: { kw: 2, units: '220 - 250 Units', savingsText: '₹1,500 - ₹2,000', baseCost: 170000, subsidy: 60000, downPayment: 15000, loan: 95000, emi5: 1980, emi10: 1140, roofSqft: '180 - 220 sq.ft.' },
+            3: { kw: 3, units: '300 - 375 Units', savingsText: '₹2,500 - ₹3,000', baseCost: 220000, subsidy: 78000, downPayment: 20000, loan: 122000, emi5: 2400, emi10: 1350, roofSqft: '250 - 300 sq.ft.' },
+            4: { kw: 4, units: '380 - 500 Units', savingsText: '₹3,000 - ₹4,100', baseCost: 295000, subsidy: 78000, downPayment: 29500, loan: 187500, emi5: 3720, emi10: 2010, roofSqft: '350 - 400 sq.ft.' },
+            5: { kw: 5, units: '500 - 600 Units', savingsText: '₹4,200 - ₹5,000', baseCost: 360000, subsidy: 78000, downPayment: 36000, loan: 246000, emi5: 4880, emi10: 2590, roofSqft: '450 - 500 sq.ft.' },
+            6: { kw: 6, units: '600 - 710 Units', savingsText: '₹5,000 - ₹6,200', baseCost: 435000, subsidy: 78000, downPayment: 43500, loan: 313500, emi5: 6207, emi10: 3253, roofSqft: '550 - 600 sq.ft.' },
+            10: { kw: 10, units: '1,000 - 1,200 Units', savingsText: '₹10,000 - ₹12,000', baseCost: 620000, subsidy: 78000, downPayment: 62000, loan: 480000, emi5: 9504, emi10: 4902, roofSqft: '900 - 1,000 sq.ft.' }
+        };
+
+        const BRAND_3KW_BASES = {
+            'goldi_navgrun_aps': 199999,
+            'navgrun_aps': 199999,
+            'waaree_adani': 209999,
+            'tata_solar': 220000
+        };
+
+        const BRAND_DATA = {
+            'goldi': { id: 'goldi', name: 'Goldi Solar', tier: 'goldi_navgrun_aps', badge: 'Goldi Solar (Tier-1 Modules)', base: 199999 },
+            'navgrun': { id: 'navgrun', name: 'Navgrun Solar', tier: 'goldi_navgrun_aps', badge: 'Navgrun Solar High-Efficiency', base: 199999 },
+            'aps': { id: 'aps', name: 'APS Solar', tier: 'goldi_navgrun_aps', badge: 'APS (Australian Premium Solar)', base: 199999 },
+            'waaree': { id: 'waaree', name: 'Waaree Energies', tier: 'waaree_adani', badge: 'Waaree Energies Tier-1', base: 209999 },
+            'adani': { id: 'adani', name: 'Adani Solar', tier: 'waaree_adani', badge: 'Adani Solar High Efficiency', base: 209999 },
+            'vikram': { id: 'vikram', name: 'Vikram Solar', tier: 'waaree_adani', badge: 'Vikram Solar Mono-PERC', base: 209999 },
+            'renew': { id: 'renew', name: 'ReNew Power', tier: 'waaree_adani', badge: 'ReNew Power Clean-Tech', base: 209999 },
+            'tata': { id: 'tata', name: 'TATA Solar', tier: 'tata_solar', badge: 'TATA Power Solar Premium', base: 220000 }
+        };
+
+        let calcState = {
+            premiseType: 'residential',
+            metricType: 'bill',
+            metricValue: 3500,
+            selectedBrand: 'goldi_navgrun_aps',
+            selectedSpecificBrand: 'goldi'
+        };
+
+        let currentMatrixBrand = 'goldi_navgrun_aps';
+
+        function initCalculator() {
+            renderCalculatorPresets();
+            updateCalculatorOutput();
+        }
+
+        function setPremiseType(type) {
+            calcState.premiseType = type;
+            const btnRes = document.getElementById('btnPremiseRes');
+            const btnCom = document.getElementById('btnPremiseCom');
+            if (btnRes) btnRes.classList.toggle('active', type === 'residential');
+            if (btnCom) btnCom.classList.toggle('active', type === 'commercial');
+
+            const slider = document.getElementById('calcRangeSlider');
+            if (slider) {
+                if (type === 'commercial') {
+                    slider.min = '5000';
+                    slider.max = '80000';
+                    slider.step = '2500';
+                    if (calcState.metricValue < 8000) calcState.metricValue = 15000;
+                } else {
+                    slider.min = calcState.metricType === 'bill' ? '1000' : '100';
+                    slider.max = calcState.metricType === 'bill' ? '25000' : '1500';
+                    slider.step = calcState.metricType === 'bill' ? '500' : '25';
+                    if (calcState.metricValue > 25000) calcState.metricValue = 3500;
+                }
+                slider.value = calcState.metricValue;
+            }
+            renderCalculatorPresets();
+            updateCalculatorOutput();
+        }
+
+        function setMetricType(metric) {
+            calcState.metricType = metric;
+            const btnBill = document.getElementById('btnMetricBill');
+            const btnUnits = document.getElementById('btnMetricUnits');
+            if (btnBill) btnBill.classList.toggle('active', metric === 'bill');
+            if (btnUnits) btnUnits.classList.toggle('active', metric === 'units');
+
+            const slider = document.getElementById('calcRangeSlider');
+            if (slider) {
+                if (metric === 'units') {
+                    slider.min = '100';
+                    slider.max = '1500';
+                    slider.step = '25';
+                    calcState.metricValue = 350;
+                } else {
+                    slider.min = '1000';
+                    slider.max = '25000';
+                    slider.step = '500';
+                    calcState.metricValue = 3500;
+                }
+                slider.value = calcState.metricValue;
+            }
+            renderCalculatorPresets();
+            updateCalculatorOutput();
+        }
+
+        function onSliderChange(val) {
+            calcState.metricValue = parseInt(val, 10);
+            updateCalculatorOutput();
+        }
+
+        function renderCalculatorPresets() {
+            const container = document.getElementById('calcPresetsContainer');
+            if (!container) return;
+
+            let presets = [];
+            if (calcState.premiseType === 'commercial') {
+                presets = [
+                    { label: '₹8,000/mo', val: 8000 },
+                    { label: '₹15,000/mo', val: 15000 },
+                    { label: '₹25,000/mo', val: 25000 },
+                    { label: '₹50,000+/mo', val: 50000 }
+                ];
+            } else if (calcState.metricType === 'bill') {
+                presets = [
+                    { label: '₹1,500', val: 1500 },
+                    { label: '₹2,500', val: 2500 },
+                    { label: '₹3,500', val: 3500 },
+                    { label: '₹5,000', val: 5000 },
+                    { label: '₹7,000', val: 7000 },
+                    { label: '₹9,000', val: 9000 },
+                    { label: '₹15,000+', val: 15000 }
+                ];
+            } else {
+                presets = [
+                    { label: '120 Units', val: 120 },
+                    { label: '250 Units', val: 250 },
+                    { label: '350 Units', val: 350 },
+                    { label: '450 Units', val: 450 },
+                    { label: '550 Units', val: 550 },
+                    { label: '650 Units', val: 650 },
+                    { label: '1,100+ Units', val: 1100 }
+                ];
+            }
+
+            container.innerHTML = presets.map(p => `
+                <button type="button" class="calc-preset-chip ${p.val === calcState.metricValue ? 'active' : ''}" onclick="applyPreset(${p.val})">
+                    ${escapeHtml(p.label)}
+                </button>
+            `).join('');
+        }
+
+        function applyPreset(val) {
+            calcState.metricValue = val;
+            const slider = document.getElementById('calcRangeSlider');
+            if (slider) slider.value = val;
+            renderCalculatorPresets();
+            updateCalculatorOutput();
+        }
+
+        function selectSpecificBrand(brandKey, shouldScroll = false) {
+            const b = BRAND_DATA[brandKey.toLowerCase()] || BRAND_DATA['goldi'];
+            calcState.selectedSpecificBrand = b.id;
+            calcState.selectedBrand = b.tier;
+
+            // Update brand chips
+            document.querySelectorAll('.brand-chip-btn').forEach(el => {
+                el.classList.toggle('active', el.id === `brandChip_${b.id}`);
+            });
+
+            // Update hero brand cards
+            document.querySelectorAll('.hero-brand-card').forEach(el => {
+                el.classList.toggle('active', el.id === `heroBrand_${b.id}`);
+            });
+
+            // Update tier selection cards
+            document.querySelectorAll('.calc-brand-option').forEach(el => {
+                el.classList.toggle('active', el.id === `brandOpt_${b.tier}`);
+            });
+
+            // Update badge on calculator
+            const brandBadge = document.getElementById('calcSelectedBrandBadge');
+            if (brandBadge) brandBadge.textContent = b.badge;
+
+            // Show customized alert
+            const alertBox = document.getElementById('brandCustomAlert');
+            const alertText = document.getElementById('brandCustomAlertText');
+            if (alertBox && alertText) {
+                alertBox.classList.remove('d-none');
+                alertText.textContent = `Viewing quotation & specs configured for ${b.name} (${b.tier === 'goldi_navgrun_aps' ? 'Base 3kW: ₹1,99,999/-' : b.tier === 'waaree_adani' ? 'Base 3kW: ₹2,09,999/-' : 'Base 3kW: ₹2,20,000/-'})`;
+            }
+
+            // Sync with Matrix
+            setMatrixBrand(b.tier);
+
+            // Recalculate
+            updateCalculatorOutput();
+
+            // Update URL search param without full reload
+            try {
+                const url = new URL(window.location);
+                url.searchParams.set('brand', b.id);
+                window.history.replaceState({}, '', url);
+            } catch (e) {}
+
+            if (shouldScroll) {
+                const calcEl = document.getElementById('calculator');
+                if (calcEl) calcEl.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        function selectBrandTier(tierId) {
+            const tierToBrand = {
+                'goldi_navgrun_aps': 'goldi',
+                'navgrun_aps': 'goldi',
+                'waaree_adani': 'waaree',
+                'tata_solar': 'tata'
+            };
+            const brandKey = tierToBrand[tierId] || 'goldi';
+            selectSpecificBrand(brandKey);
+        }
+
+        function getRecommendedCapacity(isCommercial, metricType, val) {
+            if (isCommercial) {
+                if (val < 15000) return 6;
+                return 10;
+            }
+            if (metricType === 'bill') {
+                if (val < 1900) return 1;
+                if (val < 2900) return 2;
+                if (val < 4300) return 3;
+                if (val < 5900) return 4;
+                if (val < 7900) return 5;
+                if (val < 11500) return 6;
+                return 10;
+            } else {
+                if (val < 180) return 1;
+                if (val < 280) return 2;
+                if (val < 390) return 3;
+                if (val < 520) return 4;
+                if (val < 620) return 5;
+                if (val < 800) return 6;
+                return 10;
+            }
+        }
+
+        function updateCalculatorOutput() {
+            const isCom = calcState.premiseType === 'commercial';
+            const val = calcState.metricValue;
+            const recKw = getRecommendedCapacity(isCom, calcState.metricType, val);
+            const row = BROCHURE_CAPACITIES[recKw] || BROCHURE_CAPACITIES[3];
+
+            // Display current input metric
+            const displayMetricVal = document.getElementById('calcDisplayMetricVal');
+            const displayMetricUnit = document.getElementById('calcMetricUnitLabel');
+            if (displayMetricVal) {
+                displayMetricVal.textContent = calcState.metricType === 'bill' ? `₹${val.toLocaleString('en-IN')}` : `${val.toLocaleString('en-IN')} kWh`;
+            }
+            if (displayMetricUnit) {
+                displayMetricUnit.textContent = ' / month';
+            }
+
+            // Brand-tier price calculation
+            let basePrice = row.baseCost;
+            if (recKw === 3) {
+                basePrice = BRAND_3KW_BASES[calcState.selectedBrand] || 199999;
+            } else {
+                if (calcState.selectedBrand === 'goldi_navgrun_aps' || calcState.selectedBrand === 'navgrun_aps') {
+                    basePrice = Math.round(row.baseCost - (20001 * (recKw / 3)));
+                } else if (calcState.selectedBrand === 'waaree_adani') {
+                    basePrice = Math.round(row.baseCost - (10001 * (recKw / 3)));
+                }
+            }
+
+            const mrpPrice = basePrice + 20000;
+            const instantDiscount = 10000;
+            const offerPrice = basePrice + 10000;
+            const subsidy = isCom ? 0 : row.subsidy;
+            const afterSubsidy = offerPrice - subsidy;
+            const voucherDiscount = 10000;
+            const netFinal = afterSubsidy - voucherDiscount;
+
+            // Loan and Down Payment (NO Rate of interest displayed)
+            const downPayment = Math.round(row.downPayment * (basePrice / row.baseCost));
+            const loanAmount = Math.max(0, netFinal - downPayment);
+            const emi5 = Math.round(row.emi5 * (loanAmount / (row.baseCost - row.subsidy - row.downPayment || 1)));
+            const emi10 = Math.round(row.emi10 * (loanAmount / (row.baseCost - row.subsidy - row.downPayment || 1)));
+
+            // Update DOM Elements
+            const kwEl = document.getElementById('calcRecKwText');
+            if (kwEl) kwEl.textContent = `${recKw} kW ${isCom ? 'Commercial On-Grid' : 'Rooftop Solar Plant'}`;
+
+            const genEl = document.getElementById('calcRecGenText');
+            if (genEl) genEl.textContent = row.units;
+
+            const roofEl = document.getElementById('calcRecRoofText');
+            if (roofEl) roofEl.textContent = row.roofSqft;
+
+            const mrpEl = document.getElementById('calcValMRP');
+            if (mrpEl) mrpEl.textContent = `₹${mrpPrice.toLocaleString('en-IN')}`;
+
+            const discEl = document.getElementById('calcValDiscount');
+            if (discEl) discEl.textContent = `-₹${instantDiscount.toLocaleString('en-IN')}`;
+
+            const offerEl = document.getElementById('calcValOfferPrice');
+            if (offerEl) offerEl.textContent = `₹${offerPrice.toLocaleString('en-IN')}`;
+
+            const subEl = document.getElementById('calcValSubsidy');
+            if (subEl) {
+                if (isCom) {
+                    subEl.textContent = '40% Tax Write-Off';
+                    subEl.className = 'badge bg-info bg-opacity-25 text-info fw-bold';
+                } else {
+                    subEl.textContent = `-₹${subsidy.toLocaleString('en-IN')}`;
+                    subEl.className = 'badge bg-warning bg-opacity-25 text-warning fw-bold fs-6';
+                }
+            }
+
+            const afterSubEl = document.getElementById('calcValAfterSubsidy');
+            if (afterSubEl) afterSubEl.textContent = `₹${afterSubsidy.toLocaleString('en-IN')}`;
+
+            const voucherEl = document.getElementById('calcValVoucher');
+            if (voucherEl) voucherEl.textContent = `-₹${voucherDiscount.toLocaleString('en-IN')}`;
+
+            const netEl = document.getElementById('calcValNetFinal');
+            if (netEl) netEl.textContent = `₹${netFinal.toLocaleString('en-IN')}`;
+
+            const dpEl = document.getElementById('calcValDownPayment');
+            if (dpEl) dpEl.textContent = `₹${downPayment.toLocaleString('en-IN')}`;
+
+            const loanEl = document.getElementById('calcValLoan');
+            if (loanEl) loanEl.textContent = `₹${loanAmount.toLocaleString('en-IN')}`;
+
+            const emi5El = document.getElementById('calcValEmi5');
+            if (emi5El) emi5El.textContent = `₹${emi5.toLocaleString('en-IN')} / mo`;
+
+            const emi10El = document.getElementById('calcValEmi10');
+            if (emi10El) emi10El.textContent = `₹${emi10.toLocaleString('en-IN')} / mo`;
+
+            const savingsAlert = document.getElementById('calcSavingsAlert');
+            const alertSavings = document.getElementById('calcAlertSavings');
+            const alertEmi = document.getElementById('calcAlertEmi');
+            if (alertSavings) alertSavings.textContent = row.savingsText;
+            if (alertEmi) alertEmi.textContent = `₹${emi10.toLocaleString('en-IN')}`;
+        }
+
+        function bookConfiguredPlan() {
+            const isCom = calcState.premiseType === 'commercial';
+            const recKw = getRecommendedCapacity(isCom, calcState.metricType, calcState.metricValue);
+            const brandObj = BRAND_DATA[calcState.selectedSpecificBrand] || BRAND_DATA['goldi'];
             const notesField = document.getElementById('inqNotes');
             if (notesField) {
-                notesField.value = `Interested in ${planName}. Please provide quote and feasibility details.`;
+                notesField.value = `Interested in ${recKw} kW ${brandObj.name} system (${isCom ? 'Commercial' : 'Rooftop'}). Please provide official feasibility & schedule site visit.`;
+            }
+            const contactSection = document.getElementById('contact');
+            if (contactSection) {
+                contactSection.scrollIntoView({ behavior: 'smooth' });
             }
         }
 
-        async function submitInquiry(e) {
-            e.preventDefault();
-            const btn = document.getElementById('btnSubmitInquiry');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Submitting...';
-            btn.disabled = true;
+        function whatsappConfiguredPlan() {
+            const isCom = calcState.premiseType === 'commercial';
+            const recKw = getRecommendedCapacity(isCom, calcState.metricType, calcState.metricValue);
+            const brandObj = BRAND_DATA[calcState.selectedSpecificBrand] || BRAND_DATA['goldi'];
+            const phone = '919053899899';
+            const text = encodeURIComponent(`Hello! I used your Har Ghar Solar Calculator on MyntReal. Recommended: ${recKw} kW ${brandObj.name} Rooftop Solar System. Please share the detailed brochure and arrange a site audit.`);
+            window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+        }
 
-            try {
-                const res = await fetch(`/api/v1/digital-catalogs/public/${catalogData.id}/inquire`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: document.getElementById('inqName').value.trim(),
-                        phone: document.getElementById('inqPhone').value.trim(),
-                        notes: document.getElementById('inqNotes').value.trim(),
-                        share_ref_code: shareRefCode,
-                        selected_language: activeLanguage
-                    })
-                });
+        /* ── OFFICIAL PRICING & FINANCING MATRIX ─────────────────────────── */
+        function initMatrix() {
+            updateMatrixTable();
+        }
 
-                if (!res.ok) throw new Error('Submission failed');
-                document.getElementById('inquiryForm').reset();
-                document.getElementById('inquirySuccessMsg').style.display = 'block';
-                btn.innerHTML = '<i class="fas fa-check me-2"></i> Request Submitted';
-            } catch (err) {
-                alert('Inquiry could not be submitted: ' + err.message);
-                btn.innerHTML = originalText;
-                btn.disabled = false;
+        function setMatrixBrand(brandId) {
+            if (brandId === 'navgrun_aps') brandId = 'goldi_navgrun_aps';
+            currentMatrixBrand = brandId;
+            document.querySelectorAll('.matrix-brand-tab').forEach(b => {
+                b.classList.toggle('active', b.id === `matrixTab_${brandId}`);
+            });
+            updateMatrixTable();
+        }
+
+        function updateMatrixTable() {
+            const tbody = document.getElementById('matrixTableBody');
+            if (!tbody) return;
+
+            const capacities = [1, 2, 3, 4, 5, 6, 10];
+            const rowsHtml = capacities.map(kw => {
+                const bRow = BROCHURE_CAPACITIES[kw];
+                let sysPrice = bRow.baseCost;
+
+                if (kw === 3) {
+                    sysPrice = BRAND_3KW_BASES[currentMatrixBrand] || 199999;
+                } else {
+                    if (currentMatrixBrand === 'goldi_navgrun_aps' || currentMatrixBrand === 'navgrun_aps') {
+                        sysPrice = Math.round(bRow.baseCost - (20001 * (kw / 3)));
+                    } else if (currentMatrixBrand === 'waaree_adani') {
+                        sysPrice = Math.round(bRow.baseCost - (10001 * (kw / 3)));
+                    }
+                }
+
+                const subsidy = bRow.subsidy;
+                const netCost = sysPrice - subsidy;
+                const downPayment = Math.round(bRow.downPayment * (sysPrice / bRow.baseCost));
+                const loanAmount = netCost - downPayment;
+                const emi5 = Math.round(bRow.emi5 * (loanAmount / (bRow.baseCost - bRow.subsidy - bRow.downPayment || 1)));
+                const emi10 = Math.round(bRow.emi10 * (loanAmount / (bRow.baseCost - bRow.subsidy - bRow.downPayment || 1)));
+                const isRecommended = (kw === 3);
+
+                return `
+                    <tr class="${isRecommended ? 'row-recommended' : ''}">
+                        <td>
+                            <strong>${kw} kW Rooftop</strong>
+                            ${isRecommended ? '<span class="rec-pill-badge">Most Popular</span>' : ''}
+                        </td>
+                        <td>${escapeHtml(bRow.units)}</td>
+                        <td style="color: var(--primary); font-weight: 700;">${escapeHtml(bRow.savingsText)}</td>
+                        <td style="font-weight: 700;">₹${sysPrice.toLocaleString('en-IN')}/-</td>
+                        <td style="color: var(--accent); font-weight: 800;">₹${subsidy.toLocaleString('en-IN')}/-</td>
+                        <td style="color: var(--primary); font-weight: 900; font-size: 14.5px;">₹${netCost.toLocaleString('en-IN')}/-</td>
+                        <td>₹${downPayment.toLocaleString('en-IN')}/-</td>
+                        <td>₹${loanAmount.toLocaleString('en-IN')}/-</td>
+                        <td style="color: var(--primary);">₹${emi5.toLocaleString('en-IN')}/mo</td>
+                        <td style="color: var(--accent-cyan); font-weight: 700;">₹${emi10.toLocaleString('en-IN')}/mo</td>
+                    </tr>
+                `;
+            }).join('');
+
+            tbody.innerHTML = rowsHtml;
+        }
+
+        /* ── 10-PHOTO AUTO-ADVANCING GALLERY & LIGHTBOX ──────────────────── */
+        let galleryPhotos = [];
+        let galleryTimer = null;
+        let currentGalleryIdx = 0;
+        let currentZoom = 1.0;
+
+        function initGallery(photos) {
+            galleryPhotos = photos || [];
+            if (galleryPhotos.length === 0) return;
+            currentGalleryIdx = 0;
+            showGallerySlide(0);
+            startGalleryTimer();
+
+            const box = document.getElementById('galleryCarouselBox');
+            if (box) {
+                box.addEventListener('mouseenter', stopGalleryTimer);
+                box.addEventListener('mouseleave', startGalleryTimer);
             }
         }
+
+        function startGalleryTimer() {
+            clearInterval(galleryTimer);
+            galleryTimer = setInterval(() => {
+                nextGallerySlide();
+            }, 3000);
+        }
+
+        function stopGalleryTimer() {
+            clearInterval(galleryTimer);
+        }
+
+        function showGallerySlide(idx) {
+            if (galleryPhotos.length === 0) return;
+            if (idx < 0) idx = galleryPhotos.length - 1;
+            if (idx >= galleryPhotos.length) idx = 0;
+            currentGalleryIdx = idx;
+
+            document.querySelectorAll('.gallery-slide').forEach((s, i) => {
+                s.classList.toggle('active', i === idx);
+            });
+            document.querySelectorAll('.gallery-dot').forEach((d, i) => {
+                d.classList.toggle('active', i === idx);
+            });
+            document.querySelectorAll('.gallery-thumb-item').forEach((t, i) => {
+                t.classList.toggle('active', i === idx);
+            });
+
+            const item = galleryPhotos[idx];
+            const counterEl = document.getElementById('galleryCounter');
+            const titleEl = document.getElementById('galleryCaptionTitle');
+            const tagEl = document.getElementById('galleryCaptionTag');
+            if (counterEl) counterEl.textContent = `${idx + 1} / ${galleryPhotos.length}`;
+            if (titleEl) titleEl.textContent = item.caption || item.title || 'Rooftop Solar Installation';
+            if (tagEl) tagEl.innerHTML = `<i class="fas fa-map-marker-alt text-danger me-1"></i> ${escapeHtml(item.location || item.tag || 'Andhra Pradesh')}`;
+        }
+
+        function nextGallerySlide() {
+            showGallerySlide(currentGalleryIdx + 1);
+        }
+
+        function prevGallerySlide() {
+            showGallerySlide(currentGalleryIdx - 1);
+        }
+
+        function openLightbox(idx) {
+            stopGalleryTimer();
+            const modal = document.getElementById('galleryLightboxModal');
+            if (!modal) return;
+            currentGalleryIdx = idx;
+            currentZoom = 1.0;
+            updateLightboxContent();
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            const modal = document.getElementById('galleryLightboxModal');
+            if (modal) modal.classList.remove('active');
+            document.body.style.overflow = '';
+            startGalleryTimer();
+        }
+
+        function updateLightboxContent() {
+            const item = galleryPhotos[currentGalleryIdx];
+            if (!item) return;
+            const img = document.getElementById('lightboxStageImg');
+            const title = document.getElementById('lightboxImgTitle');
+            if (img) {
+                img.src = item.url;
+                img.style.transform = `scale(${currentZoom})`;
+            }
+            if (title) title.textContent = `${item.caption || item.title} (${currentGalleryIdx + 1} of ${galleryPhotos.length})`;
+        }
+
+        function zoomLightbox(delta) {
+            currentZoom = Math.max(0.5, Math.min(3.0, currentZoom + delta));
+            const img = document.getElementById('lightboxStageImg');
+            if (img) img.style.transform = `scale(${currentZoom})`;
+        }
+
+        function resetLightboxZoom() {
+            currentZoom = 1.0;
+            const img = document.getElementById('lightboxStageImg');
+            if (img) img.style.transform = 'scale(1)';
+        }
+
+        function nextLightbox(e) {
+            if (e) e.stopPropagation();
+            currentGalleryIdx = (currentGalleryIdx + 1) % galleryPhotos.length;
+            currentZoom = 1.0;
+            updateLightboxContent();
+        }
+
+        function prevLightbox(e) {
+            if (e) e.stopPropagation();
+            currentGalleryIdx = (currentGalleryIdx - 1 + galleryPhotos.length) % galleryPhotos.length;
+            currentZoom = 1.0;
+            updateLightboxContent();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            const modal = document.getElementById('galleryLightboxModal');
+            if (!modal || !modal.classList.contains('active')) return;
+            if (e.key === 'Escape') closeLightbox();
+            if (e.key === 'ArrowLeft') prevLightbox();
+            if (e.key === 'ArrowRight') nextLightbox();
+        });
 
         function setupScrollSpy() {
             const sections = document.querySelectorAll('section[id]');
@@ -1254,6 +3440,6 @@
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
         }
-    </script>
+</script>
 </body>
 </html>

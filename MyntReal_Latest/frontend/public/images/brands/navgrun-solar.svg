@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" width="240" height="60">
+  <rect width="240" height="60" rx="8" fill="#ffffff" fill-opacity="0.05"/>
+  <circle cx="32" cy="30" r="18" fill="#059669"/>
+  <path d="M22 34 Q32 18 42 34 M25 36 Q32 26 39 36" stroke="#fbbf24" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="32" cy="22" r="3.5" fill="#fbbf24"/>
+  <text x="58" y="34" font-family="'Outfit', sans-serif" font-weight="800" font-size="20" fill="#34d399" letter-spacing="1">NAVGRUN</text>
+  <text x="59" y="46" font-family="'Outfit', sans-serif" font-weight="500" font-size="9" fill="#94a3b8" letter-spacing="0.5">SOLAR POWER EPC</text>
+</svg>

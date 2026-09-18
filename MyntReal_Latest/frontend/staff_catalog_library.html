@@ -432,6 +432,11 @@
                                 </button>
                             </li>
                             <li class="nav-item">
+                                <button class="nav-link" id="media-tab" data-bs-toggle="tab" data-bs-target="#media-pane">
+                                    <i class="fas fa-photo-video me-1"></i> Gallery & Videos (<span id="tabMediaCount">0</span>)
+                                </button>
+                            </li>
+                            <li class="nav-item">
                                 <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings-pane">
                                     <i class="fas fa-sliders-h me-1"></i> SEO & PDF Brochure
                                 </button>
@@ -462,6 +467,65 @@
                                 </div>
                                 <div id="itemsListContainer">
                                     <!-- Dynamic Items List -->
+                                </div>
+                            </div>
+
+                            <!-- Media Gallery & Videos Pane (ALL 8 Segments) -->
+                            <div class="tab-pane fade" id="media-pane">
+                                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                                    <div>
+                                        <h6 class="fw-bold text-white mb-0"><i class="fas fa-photo-video text-info me-2"></i>Live Media Gallery & YouTube Showcase</h6>
+                                        <small class="text-muted">Manage real installation photos (up to 10 photos) and YouTube customer walkthrough video links across all segments.</small>
+                                    </div>
+                                    <button class="btn btn-sm btn-success px-3" onclick="saveMediaGalleryConfig()">
+                                        <i class="fas fa-save me-1"></i> Save Gallery & Videos
+                                    </button>
+                                </div>
+
+                                <!-- Section A: Photos (Up to 10) -->
+                                <div class="card bg-dark border-secondary border-opacity-25 p-3 mb-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <h6 class="fw-bold text-light mb-0"><i class="fas fa-camera text-success me-2"></i>Installation & Project Photos</h6>
+                                            <small class="text-secondary">Displayed in 10-photo auto-advancing carousel (3-second interval) with fullscreen lightbox.</small>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-secondary" id="photoCountBadge">0 / 10 Photos</span>
+                                            <button class="btn btn-sm btn-outline-success" type="button" onclick="addNewPhotoItem()">
+                                                <i class="fas fa-plus me-1"></i> Add Photo
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div id="photosListContainer" class="d-flex flex-column gap-3">
+                                        <!-- Dynamic Photo Items -->
+                                    </div>
+                                </div>
+
+                                <!-- Section B: YouTube Videos -->
+                                <div class="card bg-dark border-secondary border-opacity-25 p-3 mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <div>
+                                            <h6 class="fw-bold text-light mb-0"><i class="fab fa-youtube text-danger me-2"></i>YouTube Video Embeds & Walkthroughs</h6>
+                                            <small class="text-secondary">Embedded 16:9 players for site walkthroughs, net-metering commissioning, and customer testimonials.</small>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-secondary" id="videoCountBadge">0 Videos</span>
+                                            <button class="btn btn-sm btn-outline-danger" type="button" onclick="addNewVideoItem()">
+                                                <i class="fas fa-plus me-1"></i> Add Video Link
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div id="videosListContainer" class="d-flex flex-column gap-3">
+                                        <!-- Dynamic Video Items -->
+                                    </div>
+                                </div>
+
+                                <div class="text-end">
+                                    <button class="btn btn-success px-4" onclick="saveMediaGalleryConfig()">
+                                        <i class="fas fa-save me-1"></i> Save Gallery & Videos Changes
+                                    </button>
                                 </div>
                             </div>
 
@@ -776,6 +840,16 @@
 
             renderSegmentTabs();
             await loadCatalogLibrary();
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const initialTab = urlParams.get('tab') || (window.location.hash ? window.location.hash.replace('#', '') : null);
+            if (initialTab === 'media' || initialTab === 'gallery') {
+                const tabEl = document.getElementById('media-tab');
+                if (tabEl) {
+                    const bsTab = new bootstrap.Tab(tabEl);
+                    bsTab.show();
+                }
+            }
         });
 
         function renderSegmentTabs() {
@@ -835,6 +909,7 @@
                 renderCatalogHeader(activeCatalog);
                 renderSectionsList(activeCatalog.sections || []);
                 renderItemsList(activeCatalog.items || []);
+                renderMediaGalleryTab(activeCatalog);
                 updatePreviewFrame(activeCatalog);
             } catch (err) {
                 console.error('Detail load error:', err);
@@ -961,6 +1036,320 @@
             if (type === 'desktop') document.getElementById('devBtnDesktop').classList.add('active');
             if (type === 'tablet') document.getElementById('devBtnTablet').classList.add('active');
             if (type === 'mobile') document.getElementById('devBtnMobile').classList.add('active');
+        }
+
+        // ── MEDIA GALLERY & VIDEO MANAGEMENT (ALL 8 SEGMENTS) ──────────────────
+        let activeMediaSection = null;
+        let currentPhotos = [];
+        let currentVideos = [];
+
+        function renderMediaGalleryTab(cat) {
+            if (!cat) return;
+
+            // Look for existing media_gallery or installation_gallery section
+            const sec = (cat.sections || []).find(s => s.section_type === 'media_gallery' || s.section_key === 'installation_gallery' || s.section_key === 'media_gallery');
+            activeMediaSection = sec || null;
+
+            // Clone photos and videos
+            currentPhotos = sec && sec.media_gallery && Array.isArray(sec.media_gallery) ? JSON.parse(JSON.stringify(sec.media_gallery)) : [];
+            currentVideos = sec && sec.configuration && Array.isArray(sec.configuration.videos) ? JSON.parse(JSON.stringify(sec.configuration.videos)) : [];
+
+            updateMediaBadges();
+            renderPhotosList();
+            renderVideosList();
+        }
+
+        function updateMediaBadges() {
+            const total = currentPhotos.length + currentVideos.length;
+            const tabCount = document.getElementById('tabMediaCount');
+            if (tabCount) tabCount.textContent = total;
+
+            const photoBadge = document.getElementById('photoCountBadge');
+            if (photoBadge) photoBadge.textContent = `${currentPhotos.length} / 10 Photos`;
+
+            const videoBadge = document.getElementById('videoCountBadge');
+            if (videoBadge) videoBadge.textContent = `${currentVideos.length} Videos`;
+        }
+
+        function renderPhotosList() {
+            const container = document.getElementById('photosListContainer');
+            if (!container) return;
+
+            if (currentPhotos.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4 border border-dashed border-secondary border-opacity-50 rounded-3">
+                        <i class="fas fa-camera fa-2x text-muted mb-2"></i>
+                        <div class="text-secondary small">No installation or project photos added for this segment yet.</div>
+                        <button class="btn btn-sm btn-outline-success mt-2" type="button" onclick="addNewPhotoItem()">
+                            <i class="fas fa-plus me-1"></i> Add First Photo
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = currentPhotos.map((p, idx) => `
+                <div class="card bg-black bg-opacity-50 border border-secondary border-opacity-25 p-3 rounded-3" data-idx="${idx}">
+                    <div class="d-flex flex-column flex-md-row gap-3 align-items-start">
+                        <!-- Thumbnail Preview -->
+                        <div class="position-relative" style="width: 120px; height: 90px; flex-shrink: 0;">
+                            <img src="${escapeHtml(p.url || '')}" class="rounded border border-secondary w-100 h-100" style="object-fit: cover;" onerror="this.src='/public/placeholder-catalog.png'">
+                            <span class="position-absolute top-0 start-0 badge bg-dark bg-opacity-75 m-1" style="font-size: 10px;">#${idx + 1}</span>
+                        </div>
+
+                        <!-- Details & URL Inputs -->
+                        <div class="flex-grow-1 w-100">
+                            <div class="row g-2">
+                                <div class="col-md-7">
+                                    <label class="form-label text-muted mb-1" style="font-size: 11px;">Image URL / File</label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control bg-dark text-white border-secondary border-opacity-50" value="${escapeHtml(p.url || '')}" placeholder="https://... image URL" onchange="onPhotoUrlChange(${idx}, this.value)">
+                                        <label class="btn btn-outline-info btn-sm mb-0">
+                                            <i class="fas fa-cloud-upload-alt me-1"></i> Upload
+                                            <input type="file" accept="image/*" style="display: none;" onchange="handlePhotoUploadFile(event, ${idx})">
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label text-muted mb-1" style="font-size: 11px;">Tag / Category</label>
+                                    <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary border-opacity-50" value="${escapeHtml(p.tag || '')}" placeholder="e.g. Residential Rooftop, Villa" onchange="onPhotoFieldChange(${idx}, 'tag', this.value)">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label text-muted mb-1" style="font-size: 11px;">Caption &amp; Location</label>
+                                    <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary border-opacity-50" value="${escapeHtml(p.caption || '')}" placeholder="e.g. 3 kW Mono-PERC Rooftop System — Pendurthy, Visakhapatnam" onchange="onPhotoFieldChange(${idx}, 'caption', this.value)">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex flex-row flex-md-column gap-1 ms-auto">
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="movePhoto(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} title="Move Up"><i class="fas fa-arrow-up"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="movePhoto(${idx}, 1)" ${idx === currentPhotos.length - 1 ? 'disabled' : ''} title="Move Down"><i class="fas fa-arrow-down"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="removePhoto(${idx})" title="Delete Photo"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderVideosList() {
+            const container = document.getElementById('videosListContainer');
+            if (!container) return;
+
+            if (currentVideos.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-4 border border-dashed border-secondary border-opacity-50 rounded-3">
+                        <i class="fab fa-youtube fa-2x text-muted mb-2"></i>
+                        <div class="text-secondary small">No YouTube videos added for this segment yet.</div>
+                        <button class="btn btn-sm btn-outline-danger mt-2" type="button" onclick="addNewVideoItem()">
+                            <i class="fas fa-plus me-1"></i> Add First Video
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = currentVideos.map((v, idx) => {
+                const yId = v.youtube_id || (v.url ? (v.url.match(/(?:youtu\.be\/|v=|\/embed\/)([\w\-]+)/) || [])[1] : '');
+                const thumbUrl = yId ? `https://img.youtube.com/vi/${yId}/mqdefault.jpg` : '/public/placeholder-catalog.png';
+                return `
+                    <div class="card bg-black bg-opacity-50 border border-secondary border-opacity-25 p-3 rounded-3" data-idx="${idx}">
+                        <div class="d-flex flex-column flex-md-row gap-3 align-items-start">
+                            <div class="position-relative" style="width: 120px; height: 75px; flex-shrink: 0;">
+                                <img src="${thumbUrl}" class="rounded border border-secondary w-100 h-100" style="object-fit: cover;" onerror="this.src='/public/placeholder-catalog.png'">
+                                <span class="position-absolute top-50 start-50 translate-middle text-danger"><i class="fab fa-youtube fa-2x"></i></span>
+                            </div>
+                            <div class="flex-grow-1 w-100">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted mb-1" style="font-size: 11px;">YouTube URL</label>
+                                        <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary border-opacity-50" value="${escapeHtml(v.url || '')}" placeholder="https://www.youtube.com/watch?v=..." onchange="onVideoUrlChange(${idx}, this.value)">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted mb-1" style="font-size: 11px;">Video Title</label>
+                                        <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary border-opacity-50" value="${escapeHtml(v.title || '')}" placeholder="e.g. Net Metering Walkthrough" onchange="onVideoFieldChange(${idx}, 'title', this.value)">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ms-auto">
+                                <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" onclick="removeVideo(${idx})" title="Delete Video"><i class="fas fa-trash-alt"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function addNewPhotoItem() {
+            if (currentPhotos.length >= 10) {
+                alert('Maximum 10 installation photos allowed in the auto-gallery.');
+                return;
+            }
+            currentPhotos.push({
+                url: '',
+                caption: '',
+                tag: 'Residential Rooftop'
+            });
+            updateMediaBadges();
+            renderPhotosList();
+        }
+
+        function addNewVideoItem() {
+            currentVideos.push({
+                url: '',
+                title: 'Rooftop Solar Walkthrough & Net-Metering'
+            });
+            updateMediaBadges();
+            renderVideosList();
+        }
+
+        function onPhotoUrlChange(idx, val) {
+            if (currentPhotos[idx]) {
+                currentPhotos[idx].url = val.trim();
+                renderPhotosList();
+            }
+        }
+
+        function onPhotoFieldChange(idx, field, val) {
+            if (currentPhotos[idx]) {
+                currentPhotos[idx][field] = val;
+            }
+        }
+
+        function onVideoUrlChange(idx, val) {
+            if (currentVideos[idx]) {
+                currentVideos[idx].url = val.trim();
+                renderVideosList();
+            }
+        }
+
+        function onVideoFieldChange(idx, field, val) {
+            if (currentVideos[idx]) {
+                currentVideos[idx][field] = val;
+            }
+        }
+
+        function removePhoto(idx) {
+            if (confirm('Remove this photo from gallery?')) {
+                currentPhotos.splice(idx, 1);
+                updateMediaBadges();
+                renderPhotosList();
+            }
+        }
+
+        function removeVideo(idx) {
+            if (confirm('Remove this video link?')) {
+                currentVideos.splice(idx, 1);
+                updateMediaBadges();
+                renderVideosList();
+            }
+        }
+
+        function movePhoto(idx, delta) {
+            const targetIdx = idx + delta;
+            if (targetIdx < 0 || targetIdx >= currentPhotos.length) return;
+            const temp = currentPhotos[idx];
+            currentPhotos[idx] = currentPhotos[targetIdx];
+            currentPhotos[targetIdx] = temp;
+            renderPhotosList();
+        }
+
+        async function handlePhotoUploadFile(event, idx) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const fd = new FormData();
+            fd.append('file', file);
+            fd.append('folder', 'catalogs/gallery');
+
+            try {
+                const btn = event.target.closest('label');
+                if (btn) btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Uploading...';
+
+                const res = await staffFetch('/api/v1/digital-catalogs/upload-media', {
+                    method: 'POST',
+                    body: fd
+                });
+                if (!res.ok) throw new Error('Upload to S3 failed');
+                const d = await res.json();
+                const uploadedUrl = d.url || d.media_url;
+                if (uploadedUrl && currentPhotos[idx]) {
+                    currentPhotos[idx].url = uploadedUrl;
+                }
+                updateMediaBadges();
+                renderPhotosList();
+            } catch (err) {
+                console.error('File upload error:', err);
+                alert('Upload notice: ' + err.message + '. Please ensure S3 is configured or enter direct image URL.');
+                renderPhotosList();
+            }
+        }
+
+        async function saveMediaGalleryConfig() {
+            if (!activeCatalog) {
+                alert('Please select a catalog first.');
+                return;
+            }
+
+            const validPhotos = currentPhotos.filter(p => p.url && p.url.trim().length > 0);
+            const validVideos = currentVideos.filter(v => v.url && v.url.trim().length > 0).map(v => {
+                const match = v.url.match(/(?:youtu\.be\/|v=|\/embed\/)([\w\-]+)/);
+                const yId = match ? match[1] : '';
+                return {
+                    url: v.url,
+                    title: v.title || 'Walkthrough & Demonstration',
+                    youtube_id: yId,
+                    embed_url: yId ? `https://www.youtube-nocookie.com/embed/${yId}` : v.url
+                };
+            });
+
+            try {
+                if (activeMediaSection && activeMediaSection.id) {
+                    const payload = {
+                        media_gallery: validPhotos,
+                        configuration: {
+                            ...(activeMediaSection.configuration || {}),
+                            videos: validVideos,
+                            enable_lightbox: true,
+                            auto_play_interval_ms: 3000
+                        }
+                    };
+                    const res = await staffFetch(`/api/v1/digital-catalogs/${activeCatalog.id}/sections/${activeMediaSection.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) throw new Error('Failed to update media gallery section');
+                } else {
+                    const payload = {
+                        section_type: 'media_gallery',
+                        section_key: 'installation_gallery',
+                        title: 'Real Project & Installation Showcase',
+                        subtitle: 'Explore our live projects, installations, and video walkthroughs.',
+                        media_gallery: validPhotos,
+                        configuration: {
+                            videos: validVideos,
+                            enable_lightbox: true,
+                            auto_play_interval_ms: 3000
+                        },
+                        sort_order: 3,
+                        is_visible: true
+                    };
+                    const res = await staffFetch(`/api/v1/digital-catalogs/${activeCatalog.id}/sections`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (!res.ok) throw new Error('Failed to create media gallery section');
+                }
+
+                alert('Media Gallery & Videos saved successfully!');
+                await loadCatalogDetail(activeCatalog.id);
+                refreshPreviewFrame();
+            } catch (err) {
+                console.error('Save media gallery error:', err);
+                alert('Save failed: ' + err.message);
+            }
         }
 
         // Section Modal Handling

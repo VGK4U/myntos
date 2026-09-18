@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 50" width="160" height="50">
+  <circle cx="25" cy="25" r="20" fill="#0074be"/>
+  <circle cx="25" cy="21" r="7" fill="#ffffff"/>
+  <rect x="22.5" y="21" width="5" height="18" fill="#ffffff"/>
+  <text x="54" y="26" font-family="'Outfit', sans-serif" font-weight="800" font-size="15" fill="#0074be">State Bank</text>
+  <text x="54" y="40" font-family="'Outfit', sans-serif" font-weight="600" font-size="13" fill="#0074be">of India</text>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" width="240" height="60">
+  <rect width="240" height="60" rx="8" fill="#ffffff" fill-opacity="0.05"/>
+  <circle cx="32" cy="30" r="18" fill="#ea580c"/>
+  <polygon points="32,18 36,26 44,28 38,34 40,42 32,38 24,42 26,34 20,28 28,26" fill="#fde047"/>
+  <text x="58" y="34" font-family="'Outfit', sans-serif" font-weight="800" font-size="18" fill="#fb923c" letter-spacing="1">WAAREE</text>
+  <text x="59" y="46" font-family="'Outfit', sans-serif" font-weight="500" font-size="9" fill="#94a3b8" letter-spacing="0.5">ONE WITH THE SUN</text>
+</svg>

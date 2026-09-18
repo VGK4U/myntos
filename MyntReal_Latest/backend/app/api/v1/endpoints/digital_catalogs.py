@@ -53,10 +53,12 @@ router = APIRouter()
 def _is_catalog_author(user: StaffEmployee) -> bool:
     """
     Validates whether the authenticated staff member has authoring / administrative privileges.
-    Authorized: Leadership / EA / Admin / Managers (hierarchy_level >= 60 or administrative roles).
+    Authorized: Leadership / EA / Admin / Managers (hierarchy_level >= 60 or administrative roles, or VGK4U superadmin).
     """
     if not user:
         return False
+    if user.id == 1 or user.emp_code == "MR10001" or getattr(user, 'staff_type', '') in ['VGK4U', 'VGK4U Supreme']:
+        return True
     h_level = getattr(user, 'hierarchy_level', 0) or 0
     if h_level >= 60:
         return True
