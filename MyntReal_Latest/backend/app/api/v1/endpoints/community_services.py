@@ -1903,14 +1903,15 @@ def list_registrations_admin(db: Session = Depends(get_db), current_user: StaffE
         d['created_at_formatted'] = r.created_at.strftime('%d %b %Y, %I:%M %p') if r.created_at else '—'
 
         # Standardized Origin / Registered From Source
-        rf_raw = str(r.registered_from or '').strip()
+        rf_raw = str(r.registered_from or (r.service.service_name if r.service else '') or '').strip()
         rf_lower = rf_raw.lower()
-        if rf_lower in ('utsav committee', 'guc', 'ganesh utsav committee') or r.application_no or r.president_name:
-            source_category = 'GUC'
-            source_label = 'GUC (Utsav Committee)'
-        elif 'green' in rf_lower or 'ganesha' in rf_lower:
+        assoc_lower = str(r.association_name or '').lower()
+        if 'green' in rf_lower or 'greenganesha' in rf_lower or 'green ganesha' in assoc_lower:
             source_category = 'GREEN_GANESHA'
             source_label = 'Green Ganesha'
+        elif rf_lower in ('utsav committee', 'guc', 'ganesh utsav committee') or 'utsav' in rf_lower or 'samithi' in rf_lower or (r.application_no and 'guc' in str(r.application_no).lower()) or r.president_name or any(k in assoc_lower for k in ('ganesh', 'vinayaka', 'ganapathi')):
+            source_category = 'GUC'
+            source_label = 'GUC (Utsav Committee)'
         else:
             source_category = 'COMMUNITY_SERVICE'
             source_label = rf_raw or 'Community Service'

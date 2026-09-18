@@ -2782,12 +2782,24 @@ export class StaffLeadsPage {
       const companyId = this.selectedCompanyId ?? (user?.company_id || user?.base_company_id || 1);
       
       // Build payload with correct API field names matching LeadCreate schema
+      const isTelecaller = !!(
+        (user?.role && String(user.role).toLowerCase().includes('tele')) ||
+        (user?.department && String(user.department).toLowerCase().includes('tele')) ||
+        (user?.designation && String(user.designation).toLowerCase().includes('tele'))
+      );
+
       const payload: any = {
         name,
         email: email || null,
         category_id: categoryId ? parseInt(categoryId) : null,
         priority: priority || 'medium',
         status: 'new',
+        primary_owner_id: user?.id || null,
+        primary_owner_type: 'staff',
+        handler_type: 'staff',
+        handler_id: user?.emp_code || null,
+        telecaller_id: isTelecaller ? (user?.id || null) : null,
+        field_staff_id: !isTelecaller ? (user?.id || null) : null,
         description: description || null,  // API expects 'description' not 'notes'
         source: source || 'staff_app',
         phone_primary_whatsapp: phonePrimaryWhatsapp || false,

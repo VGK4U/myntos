@@ -800,6 +800,9 @@ class LeadCreate(BaseModel):
     team_senior_partner_id: Optional[int] = None
     team_extended_partner_id: Optional[int] = None
     team_core_partner_id: Optional[int] = None
+    # DC Protocol: Primary owner assignment for staff-created leads
+    primary_owner_id: Optional[int] = None
+    primary_owner_type: Optional[str] = None
 
 
 class LeadUpdate(BaseModel):
@@ -10441,20 +10444,41 @@ def create_lead(
         )
 
     _lead_status = lead_data.status or 'new'
-    # DC-NEW-LEADS-UNASSIGNED-POOL-001: Leads in 'new' status have no telecaller ID or individual ownership
-    # and remain unassigned so they are universally available to all telecallers in the dialer pool.
-    if _lead_status == 'new':
-        validated_telecaller_id = None
-        validated_field_staff_id = None
-        _eff_handler_type = 'unassigned'
-        _eff_handler_id = None
-        _eff_owner_type = None
-        _eff_owner_id = None
+    # DC-STAFF-LEAD-ASSIGN-001: Staff-created leads must be assigned directly to the creating staff member
+    # (or explicit valid assignee chosen) and immediately visible in "My Leads", never lost in unassigned pool.
+    validated_owner_id = None
+    if lead_data.primary_owner_id:
+        try:
+            owner_staff = validate_crm_assignee(db, lead_data.primary_owner_id, ctx.tenant_id, "primary owner")
+            validated_owner_id = owner_staff.id
+        except Exception:
+            validated_owner_id = current_employee.id
     else:
-        _eff_handler_type = lead_data.handler_type or 'unassigned'
+        validated_owner_id = current_employee.id
+
+    _eff_owner_type = 'staff'
+    _eff_owner_id = validated_owner_id
+
+    # Handler assignment
+    if lead_data.handler_type == 'staff' and lead_data.handler_id:
+        _eff_handler_type = 'staff'
         _eff_handler_id = lead_data.handler_id
-        _eff_owner_type = 'staff'
-        _eff_owner_id = current_employee.id
+    else:
+        _eff_handler_type = 'staff'
+        _eff_handler_id = current_employee.emp_code
+
+    # Role slot assignment: auto-assign creator to telecaller or field staff if neither was explicitly selected
+    if validated_telecaller_id is None and validated_field_staff_id is None:
+        emp_dept_name = ((getattr(current_employee, 'department', None) and current_employee.department.name) or '').lower()
+        emp_role_code = ((getattr(current_employee, 'role', None) and current_employee.role.role_code) or '').lower()
+        emp_role_name = ((getattr(current_employee, 'role', None) and current_employee.role.role_name) or '').lower()
+        emp_desig = (getattr(current_employee, 'designation', '') or '').lower()
+
+        is_tele = any('tele' in x for x in (emp_dept_name, emp_role_code, emp_role_name, emp_desig))
+        if is_tele:
+            validated_telecaller_id = current_employee.id
+        else:
+            validated_field_staff_id = current_employee.id
 
     new_lead = CRMLead(
         tenant_id=ctx.tenant_id,
@@ -11409,16 +11433,6 @@ def update_lead(
         if not new_status or str(new_status).strip().lower() in ('new', 'fresh', '', 'none'):
             update_data['status'] = 'tried to contact'
             new_status = 'tried to contact'
-
-    # DC-NEW-LEADS-UNASSIGNED-POOL-001: If status is set to 'new', clear telecaller_id, field_staff_id, and ownership
-    # ONLY if caller explicitly desires to reset to 'new' and did NOT schedule a follow-up or assign a telecaller
-    if new_status == 'new' and not _has_followup and not _has_tele_assigned:
-        update_data['telecaller_id'] = None
-        update_data['field_staff_id'] = None
-        update_data['handler_type'] = 'unassigned'
-        update_data['handler_id'] = None
-        update_data['primary_owner_type'] = None
-        update_data['primary_owner_id'] = None
 
     # Check if lead is unassigned or belongs to inactive/past employee
     is_inactive_owner, inactive_emp = is_lead_owned_by_inactive_staff(lead, db)
@@ -16854,22 +16868,36 @@ async def create_lead_unified(
     effective_cat_id = _auto_align_category_from_looking_for(db, company_id, lead_data.looking_for or lead_data.requirements, lead_data.category_id)
     _u_status = lead_data.status or 'new'
     
-    # DC-NEW-LEADS-UNASSIGNED-POOL-001: Leads in 'new' status have no telecaller ID or individual ownership
-    # and remain unassigned so they are universally available to all telecallers in the dialer pool.
-    if _u_status == 'new':
-        _u_handler_type = 'unassigned'
-        _u_handler_id = None
-        _u_owner_type = None
+    # DC-STAFF-LEAD-ASSIGN-001: Staff-created leads in unified endpoint must be assigned directly
+    # to the creating staff member (or explicit valid assignee) and visible in "My Leads".
+    if is_staff:
+        _u_handler_type = 'staff'
+        _u_handler_id = current_user.emp_code
+        _u_owner_type = 'staff'
+        _u_owner_id = lead_data.primary_owner_id or current_user.id
+        _u_telecaller_id = lead_data.telecaller_id
+        _u_field_staff_id = lead_data.field_staff_id
+
+        # Role slot auto-assignment if neither telecaller nor field staff was explicitly passed
+        if _u_telecaller_id is None and _u_field_staff_id is None:
+            emp_dept_name = ((getattr(current_user, 'department', None) and current_user.department.name) or '').lower()
+            emp_role_code = ((getattr(current_user, 'role', None) and current_user.role.role_code) or '').lower()
+            emp_role_name = ((getattr(current_user, 'role', None) and current_user.role.role_name) or '').lower()
+            emp_desig = (getattr(current_user, 'designation', '') or '').lower()
+
+            is_tele = any('tele' in x for x in (emp_dept_name, emp_role_code, emp_role_name, emp_desig))
+            if is_tele:
+                _u_telecaller_id = current_user.id
+            else:
+                _u_field_staff_id = current_user.id
+    else:
+        # MNR member
+        _u_handler_type = 'member'
+        _u_handler_id = user_id
+        _u_owner_type = 'mnr'
         _u_owner_id = None
         _u_telecaller_id = None
         _u_field_staff_id = None
-    else:
-        _u_handler_type = 'member' if user_type == 'member' else 'staff'
-        _u_handler_id = user_id
-        _u_owner_type = 'mnr' if user_type == 'member' else 'staff'
-        _u_owner_id = current_user.id if is_staff else None
-        _u_telecaller_id = lead_data.telecaller_id if is_staff else None
-        _u_field_staff_id = lead_data.field_staff_id if is_staff else None
 
     new_lead = CRMLead(
         tenant_id=resolved_tenant_id,

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Community Services Manager | Staff Portal</title>
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Mandali&family=Noto+Sans+Telugu:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -924,8 +924,8 @@
             <div class="table-card">
                 <div class="table-card-header">
                     <div>
-                        <h3><i class="fas fa-users me-2"></i>Inbound Registrations Queue</h3>
-                        <p class="text-muted fs-7 mb-0">Complete records of community applications with dedicated columns for all contact numbers & fields.</p>
+                        <h3 id="tableCardTitle"><i class="fas fa-users me-2"></i>Inbound Registrations Queue</h3>
+                        <p id="tableCardSubtitle" class="text-muted fs-7 mb-0">Complete records of community applications with dedicated columns for all contact numbers & fields.</p>
                     </div>
                     <div class="d-flex gap-2">
                         <button class="btn btn-sm btn-outline-secondary" onclick="loadRegistrations()"><i class="fas fa-rotate me-1"></i>Refresh</button>
@@ -1421,20 +1421,41 @@
 
         // ── Helper: Resolve Source Category & Badge ───────────────────────
         function resolveRegistrationSource(r) {
-            const raw = String(r.registered_from || '').trim();
-            const lower = raw.toLowerCase();
-            if (lower === 'utsav committee' || lower === 'guc' || lower.includes('utsav') || r.application_no || r.president_name) {
+            // Respect backend pre-resolved category if present
+            if (r.source_category === 'GREEN_GANESHA') {
+                return {
+                    category: 'GREEN_GANESHA',
+                    label: r.source_label || 'Green Ganesha',
+                    badgeHtml: `<span class="badge badge-greenganesha" title="Registered via Green Ganesha Seva Campaign"><i class="fas fa-leaf me-1"></i>Green Ganesha</span>`
+                };
+            }
+            if (r.source_category === 'GUC') {
                 return {
                     category: 'GUC',
-                    label: 'GUC (Utsav Committee)',
+                    label: r.source_label || 'GUC (Utsav Committee)',
                     badgeHtml: `<span class="badge badge-guc" title="Registered via Ganesh Utsav Committee Portal"><i class="fas fa-om me-1"></i>GUC (Utsav)</span>`
                 };
             }
-            if (lower.includes('green') || lower.includes('ganesha') || lower.includes('greenganesha')) {
+
+            const raw = String(r.registered_from || r.service_name || '').trim();
+            const lower = raw.toLowerCase();
+            const assocLower = String(r.association_name || '').toLowerCase();
+
+            if (lower.includes('green') || lower.includes('greenganesha')) {
                 return {
                     category: 'GREEN_GANESHA',
                     label: 'Green Ganesha',
                     badgeHtml: `<span class="badge badge-greenganesha" title="Registered via Green Ganesha Seva Campaign"><i class="fas fa-leaf me-1"></i>Green Ganesha</span>`
+                };
+            }
+            if (lower === 'utsav committee' || lower === 'guc' || lower.includes('utsav') || lower.includes('samithi') ||
+                (r.application_no && String(r.application_no).toUpperCase().includes('GUC')) ||
+                r.president_name ||
+                assocLower.includes('ganesh') || assocLower.includes('vinayaka') || assocLower.includes('ganapathi')) {
+                return {
+                    category: 'GUC',
+                    label: 'GUC (Utsav Committee)',
+                    badgeHtml: `<span class="badge badge-guc" title="Registered via Ganesh Utsav Committee Portal"><i class="fas fa-om me-1"></i>GUC (Utsav)</span>`
                 };
             }
             return {
@@ -1809,6 +1830,24 @@
 
             // 1. Filter using shared helper
             const filtered = getFilteredRegistrations();
+
+            // Dynamic Table Card Header based on Filter
+            const isGuc = (currentFilter.source === 'GUC') || (filtered.length > 0 && filtered.every(r => resolveRegistrationSource(r).category === 'GUC'));
+            const cardTitle = document.getElementById('tableCardTitle');
+            const cardSubtitle = document.getElementById('tableCardSubtitle');
+            if (cardTitle && cardSubtitle) {
+                if (isGuc) {
+                    cardTitle.innerHTML = '<i class="fas fa-om me-2" style="color:#d97706"></i>గణేష్ ఉత్సవ సమితి, ఆంధ్రప్రదేశ్ — నమోదుల జాబితా';
+                    const constNote = currentFilter.constituency ? ` [నియోజకవర్గం: ${currentFilter.constituency}]` : '';
+                    cardSubtitle.innerHTML = `సామూహిక గణేష్ ఉత్సవాలు — స్థానిక మండప కమిటీల అధికారిక నమోదు దరఖాస్తులు${constNote} (Ganesh Utsava Samithi, Andhra Pradesh).`;
+                } else if (currentFilter.source === 'GREEN_GANESHA') {
+                    cardTitle.innerHTML = '<i class="fas fa-leaf me-2 text-success"></i>Green Ganesha Seva — Registrations Queue';
+                    cardSubtitle.innerHTML = 'Eco-friendly Green Ganesha idol registrations and tree seva campaign records.';
+                } else {
+                    cardTitle.innerHTML = '<i class="fas fa-users me-2"></i>Inbound Registrations Queue';
+                    cardSubtitle.innerHTML = 'Complete records of community applications with dedicated columns for all contact numbers & fields.';
+                }
+            }
 
             // 2. Sort records
             sortRegistrations(filtered);
@@ -2904,155 +2943,350 @@
             idolPhotoModalObj.show();
         }
 
-        // ── Export Filtered Registrations to CSV (All 54 Fields) ───────────
+        // ── Export Filtered Registrations to CSV ────────────────────────────
         function exportRegistrationsToCSV() {
+            // Synchronize active filters from DOM
+            currentFilter.search = (document.getElementById('regSearchInput')?.value || '').trim();
+            currentFilter.source = document.getElementById('filterRegisteredFrom')?.value || '';
+            currentFilter.status = document.getElementById('filterStatus')?.value || '';
+            currentFilter.constituency = document.getElementById('filterConstituency')?.value || '';
+            currentFilter.fromDate = document.getElementById('filterFromDate')?.value || '';
+            currentFilter.toDate = document.getElementById('filterToDate')?.value || '';
+
             const filtered = getFilteredRegistrations();
             if (!filtered || filtered.length === 0) {
                 showToast('No registrations match the selected filters for export.', 'error');
                 return;
             }
 
-            const headers = [
-                "Registration ID",
-                "Application No",
-                "Login ID (Partner Code)",
-                "Registered From",
-                "Source Category",
-                "Registration Date & Time",
-                "Status",
-                "Community / Association Name",
-                "Assembly Constituency",
-                "Colony / Area",
-                "Landmark",
-                "District",
-                "State",
-                "Pin Code",
-                "President Name",
-                "President Mobile",
-                "Secretary Name",
-                "Secretary Mobile",
-                "Treasurer Name",
-                "Treasurer Mobile",
-                "Primary Rep Name",
-                "Primary Mobile 1",
-                "Primary Mobile 2",
-                "Secondary Rep Name",
-                "Secondary Mobile 1",
-                "Secondary Mobile 2",
-                "Mandap Location",
-                "Location Category",
-                "Location Owner Details",
-                "Idol Height (ft)",
-                "Idol Photo URL",
-                "Utsav Start Date",
-                "Utsav End Date",
-                "Visarjan Date",
-                "Visarjan Time",
-                "Visarjan In-charge Mobile",
-                "Volunteer 1 Name",
-                "Volunteer 1 Mobile",
-                "Volunteer 2 Name",
-                "Volunteer 2 Mobile",
-                "Volunteer 3 Name",
-                "Volunteer 3 Mobile",
-                "Volunteer 4 Name",
-                "Volunteer 4 Mobile",
-                "Cultural Programs",
-                "Sound System Details",
-                "GPS Latitude",
-                "GPS Longitude",
-                "Google Maps Location URL",
-                "Applicant Signature",
-                "Referral Type",
-                "Referrer Code",
-                "Referrer Name",
-                "KYC Documents Count"
-            ];
+            const isGuc = (currentFilter.source === 'GUC') || 
+                          (filtered.length > 0 && currentFilter.source !== 'GREEN_GANESHA' && currentFilter.source !== 'COMMUNITY_SERVICE' && filtered.every(r => resolveRegistrationSource(r).category === 'GUC'));
 
-            const csvRows = [headers.map(h => `"${h.replace(/"/g, '""')}"`).join(',')];
-
-            filtered.forEach(r => {
-                const src = resolveRegistrationSource(r);
-                const dt = formatDateTime(r.submission_date || r.created_at);
-                const cultStr = Array.isArray(r.cultural_programs) ? r.cultural_programs.join('; ') : (r.cultural_programs || '');
-                const row = [
-                    r.id,
-                    r.application_no || '',
-                    r.user_partner_code || '',
-                    r.registered_from || '',
-                    src.label,
-                    `${dt.date} ${dt.time}`.trim(),
-                    r.status || '',
-                    r.association_name || '',
-                    r.assembly_constituency || '',
-                    r.area || '',
-                    r.landmark || '',
-                    r.district || '',
-                    r.state || '',
-                    r.pin_code || '',
-                    r.president_name || '',
-                    r.president_phone ? maskPhone(r.president_phone) : '',
-                    r.secretary_name || '',
-                    r.secretary_phone ? maskPhone(r.secretary_phone) : '',
-                    r.treasurer_name || '',
-                    r.treasurer_phone ? maskPhone(r.treasurer_phone) : '',
-                    r.primary_name || '',
-                    r.primary_phone_1 ? maskPhone(r.primary_phone_1) : '',
-                    r.primary_phone_2 ? maskPhone(r.primary_phone_2) : '',
-                    r.secondary_name || '',
-                    r.secondary_phone_1 ? maskPhone(r.secondary_phone_1) : '',
-                    r.secondary_phone_2 ? maskPhone(r.secondary_phone_2) : '',
-                    r.mandap_location || '',
-                    r.location_category || '',
-                    r.location_owner_details || '',
-                    r.idol_height || '',
-                    r.idol_photo || '',
-                    r.utsav_start_date || '',
-                    r.utsav_end_date || '',
-                    r.visarjan_date || '',
-                    r.visarjan_time || '',
-                    r.visarjan_phone ? maskPhone(r.visarjan_phone) : '',
-                    r.vol_1_name || '',
-                    r.vol_1_phone ? maskPhone(r.vol_1_phone) : '',
-                    r.vol_2_name || '',
-                    r.vol_2_phone ? maskPhone(r.vol_2_phone) : '',
-                    r.vol_3_name || '',
-                    r.vol_3_phone ? maskPhone(r.vol_3_phone) : '',
-                    r.vol_4_name || '',
-                    r.vol_4_phone ? maskPhone(r.vol_4_phone) : '',
-                    cultStr,
-                    r.sound_system_details || '',
-                    r.latitude || '',
-                    r.longitude || '',
-                    r.google_location || '',
-                    r.applicant_signature || '',
-                    r.referral_type || '',
-                    r.ref1_code || r.referral_code || '',
-                    r.ref1_name || '',
-                    (r.kyc_documents ? r.kyc_documents.length : (r.kyc_uploads ? r.kyc_uploads.length : 0))
-                ];
-                csvRows.push(row.map(val => {
-                    const str = String(val === null || val === undefined ? '' : val);
-                    return `"${str.replace(/"/g, '""')}"`;
-                }).join(','));
-            });
-
-            const csvContent = '\uFEFF' + csvRows.join('\r\n');
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
             const nowIso = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
-            a.href = url;
-            a.download = `Community_Registrations_${nowIso}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast(`Exported ${filtered.length} registrations to CSV!`);
+
+            let headers = [];
+            let csvRows = [];
+
+            if (isGuc) {
+                headers = [
+                    "Sl No",
+                    "Application No",
+                    "Login ID (Partner Code)",
+                    "Registration Date & Time",
+                    "Verification Status",
+                    "Ganesh Utsav Committee / Association Name",
+                    "Assembly Constituency",
+                    "Colony / Area",
+                    "Landmark",
+                    "District",
+                    "State",
+                    "Pin Code",
+                    "President Name",
+                    "President Mobile",
+                    "Secretary Name",
+                    "Secretary Mobile",
+                    "Treasurer Name",
+                    "Treasurer Mobile",
+                    "Mandap Location",
+                    "Land Category",
+                    "Location Owner Details",
+                    "Idol Height (ft)",
+                    "Idol Photo URL",
+                    "Utsav Start Date",
+                    "Utsav End Date",
+                    "Visarjan Date",
+                    "Visarjan Time",
+                    "Visarjan In-charge Mobile",
+                    "Volunteer 1 Name",
+                    "Volunteer 1 Mobile",
+                    "Volunteer 2 Name",
+                    "Volunteer 2 Mobile",
+                    "Volunteer 3 Name",
+                    "Volunteer 3 Mobile",
+                    "Volunteer 4 Name",
+                    "Volunteer 4 Mobile",
+                    "Cultural Programs",
+                    "Sound System Details",
+                    "Google Maps Location URL",
+                    "GPS Latitude",
+                    "GPS Longitude",
+                    "Applicant Signature",
+                    "Referral Type",
+                    "Referral Code",
+                    "Referral Name",
+                    "KYC Documents Count"
+                ];
+
+                csvRows = [headers.map(h => `"${h.replace(/"/g, '""')}"`).join(',')];
+
+                filtered.forEach((r, idx) => {
+                    const dt = formatDateTime(r.submission_date || r.created_at);
+                    const cultStr = Array.isArray(r.cultural_programs) ? r.cultural_programs.join('; ') : (r.cultural_programs || '');
+                    const row = [
+                        idx + 1,
+                        r.application_no || `GUC-2026-${r.id}`,
+                        r.user_partner_code || '',
+                        `${dt.date} ${dt.time}`.trim(),
+                        r.status || 'PENDING',
+                        r.association_name || '',
+                        r.assembly_constituency || '',
+                        r.area || '',
+                        r.landmark || '',
+                        r.district || '',
+                        r.state || '',
+                        r.pin_code || '',
+                        r.president_name || '',
+                        r.president_phone ? maskPhone(r.president_phone) : '',
+                        r.secretary_name || '',
+                        r.secretary_phone ? maskPhone(r.secretary_phone) : '',
+                        r.treasurer_name || '',
+                        r.treasurer_phone ? maskPhone(r.treasurer_phone) : '',
+                        r.mandap_location || '',
+                        r.location_category || '',
+                        r.location_owner_details || '',
+                        r.idol_height || '',
+                        r.idol_photo || '',
+                        r.utsav_start_date || '',
+                        r.utsav_end_date || '',
+                        r.visarjan_date || '',
+                        r.visarjan_time || '',
+                        r.visarjan_phone ? maskPhone(r.visarjan_phone) : '',
+                        r.vol_1_name || '',
+                        r.vol_1_phone ? maskPhone(r.vol_1_phone) : '',
+                        r.vol_2_name || '',
+                        r.vol_2_phone ? maskPhone(r.vol_2_phone) : '',
+                        r.vol_3_name || '',
+                        r.vol_3_phone ? maskPhone(r.vol_3_phone) : '',
+                        r.vol_4_name || '',
+                        r.vol_4_phone ? maskPhone(r.vol_4_phone) : '',
+                        cultStr,
+                        r.sound_system_details || '',
+                        r.google_location || '',
+                        r.latitude || '',
+                        r.longitude || '',
+                        r.applicant_signature || '',
+                        r.referral_type || 'direct',
+                        r.ref1_code || r.referral_code || '',
+                        r.ref1_name || '',
+                        (r.kyc_documents ? r.kyc_documents.length : (r.kyc_uploads ? r.kyc_uploads.length : 0))
+                    ];
+                    csvRows.push(row.map(val => {
+                        const str = String(val === null || val === undefined ? '' : val);
+                        return `"${str.replace(/"/g, '""')}"`;
+                    }).join(','));
+                });
+
+                const csvContent = '\uFEFF' + csvRows.join('\r\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Ganesh_Utsava_Samithi_Registrations_${nowIso}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast(`Exported ${filtered.length} Ganesh Utsava Samithi registrations to CSV!`);
+            } else {
+                headers = [
+                    "Registration ID",
+                    "Application No",
+                    "Login ID (Partner Code)",
+                    "Registered From",
+                    "Source Category",
+                    "Registration Date & Time",
+                    "Status",
+                    "Community / Association Name",
+                    "Assembly Constituency",
+                    "Colony / Area",
+                    "Landmark",
+                    "District",
+                    "State",
+                    "Pin Code",
+                    "President Name",
+                    "President Mobile",
+                    "Secretary Name",
+                    "Secretary Mobile",
+                    "Treasurer Name",
+                    "Treasurer Mobile",
+                    "Primary Rep Name",
+                    "Primary Mobile 1",
+                    "Primary Mobile 2",
+                    "Secondary Rep Name",
+                    "Secondary Mobile 1",
+                    "Secondary Mobile 2",
+                    "Mandap Location",
+                    "Location Category",
+                    "Location Owner Details",
+                    "Idol Height (ft)",
+                    "Idol Photo URL",
+                    "Utsav Start Date",
+                    "Utsav End Date",
+                    "Visarjan Date",
+                    "Visarjan Time",
+                    "Visarjan In-charge Mobile",
+                    "Volunteer 1 Name",
+                    "Volunteer 1 Mobile",
+                    "Volunteer 2 Name",
+                    "Volunteer 2 Mobile",
+                    "Volunteer 3 Name",
+                    "Volunteer 3 Mobile",
+                    "Volunteer 4 Name",
+                    "Volunteer 4 Mobile",
+                    "Cultural Programs",
+                    "Sound System Details",
+                    "GPS Latitude",
+                    "GPS Longitude",
+                    "Google Maps Location URL",
+                    "Applicant Signature",
+                    "Referral Type",
+                    "Referrer Code",
+                    "Referrer Name",
+                    "KYC Documents Count"
+                ];
+
+                csvRows = [headers.map(h => `"${h.replace(/"/g, '""')}"`).join(',')];
+
+                filtered.forEach(r => {
+                    const src = resolveRegistrationSource(r);
+                    const dt = formatDateTime(r.submission_date || r.created_at);
+                    const cultStr = Array.isArray(r.cultural_programs) ? r.cultural_programs.join('; ') : (r.cultural_programs || '');
+                    const row = [
+                        r.id,
+                        r.application_no || '',
+                        r.user_partner_code || '',
+                        r.registered_from || '',
+                        src.label,
+                        `${dt.date} ${dt.time}`.trim(),
+                        r.status || '',
+                        r.association_name || '',
+                        r.assembly_constituency || '',
+                        r.area || '',
+                        r.landmark || '',
+                        r.district || '',
+                        r.state || '',
+                        r.pin_code || '',
+                        r.president_name || '',
+                        r.president_phone ? maskPhone(r.president_phone) : '',
+                        r.secretary_name || '',
+                        r.secretary_phone ? maskPhone(r.secretary_phone) : '',
+                        r.treasurer_name || '',
+                        r.treasurer_phone ? maskPhone(r.treasurer_phone) : '',
+                        r.primary_name || '',
+                        r.primary_phone_1 ? maskPhone(r.primary_phone_1) : '',
+                        r.primary_phone_2 ? maskPhone(r.primary_phone_2) : '',
+                        r.secondary_name || '',
+                        r.secondary_phone_1 ? maskPhone(r.secondary_phone_1) : '',
+                        r.secondary_phone_2 ? maskPhone(r.secondary_phone_2) : '',
+                        r.mandap_location || '',
+                        r.location_category || '',
+                        r.location_owner_details || '',
+                        r.idol_height || '',
+                        r.idol_photo || '',
+                        r.utsav_start_date || '',
+                        r.utsav_end_date || '',
+                        r.visarjan_date || '',
+                        r.visarjan_time || '',
+                        r.visarjan_phone ? maskPhone(r.visarjan_phone) : '',
+                        r.vol_1_name || '',
+                        r.vol_1_phone ? maskPhone(r.vol_1_phone) : '',
+                        r.vol_2_name || '',
+                        r.vol_2_phone ? maskPhone(r.vol_2_phone) : '',
+                        r.vol_3_name || '',
+                        r.vol_3_phone ? maskPhone(r.vol_3_phone) : '',
+                        r.vol_4_name || '',
+                        r.vol_4_phone ? maskPhone(r.vol_4_phone) : '',
+                        cultStr,
+                        r.sound_system_details || '',
+                        r.latitude || '',
+                        r.longitude || '',
+                        r.google_location || '',
+                        r.applicant_signature || '',
+                        r.referral_type || '',
+                        r.ref1_code || r.referral_code || '',
+                        r.ref1_name || '',
+                        (r.kyc_documents ? r.kyc_documents.length : (r.kyc_uploads ? r.kyc_uploads.length : 0))
+                    ];
+                    csvRows.push(row.map(val => {
+                        const str = String(val === null || val === undefined ? '' : val);
+                        return `"${str.replace(/"/g, '""')}"`;
+                    }).join(','));
+                });
+
+                const csvContent = '\uFEFF' + csvRows.join('\r\n');
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Community_Registrations_${nowIso}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast(`Exported ${filtered.length} registrations to CSV!`);
+            }
+        }
+
+        // ── Render Crisp Telugu Heading Banner for PDF via Canvas ───────────
+        async function createTeluguGucHeaderCanvas(title, subtitle, metaText) {
+            if (document.fonts) {
+                try {
+                    await document.fonts.ready;
+                } catch (e) {
+                    console.warn('document.fonts.ready check error:', e);
+                }
+            }
+            const canvas = document.createElement('canvas');
+            const scale = 3; // 3x Retina resolution for sharp PDF rendering
+            const widthPt = 1130;
+            const heightPt = 62;
+            canvas.width = Math.round(widthPt * scale);
+            canvas.height = Math.round(heightPt * scale);
+            const ctx = canvas.getContext('2d');
+            ctx.scale(scale, scale);
+
+            // Clean white background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, widthPt, heightPt);
+
+            // Left decorative saffron accent bar
+            ctx.fillStyle = '#d97706';
+            if (typeof ctx.roundRect === 'function') {
+                ctx.beginPath();
+                ctx.roundRect(0, 3, 6, 54, 3);
+                ctx.fill();
+            } else {
+                ctx.fillRect(0, 3, 6, 54);
+            }
+
+            // Main Heading in Telugu
+            ctx.font = 'bold 21px "Noto Sans Telugu", Mandali, "Segoe UI", Arial, sans-serif';
+            ctx.fillStyle = '#b45309'; // Rich Saffron Amber
+            ctx.fillText(title, 16, 22);
+
+            // Subtitle
+            ctx.font = '600 11px "Noto Sans Telugu", Mandali, "Segoe UI", Arial, sans-serif';
+            ctx.fillStyle = '#1f2937';
+            ctx.fillText(subtitle, 16, 38);
+
+            // Meta summary line
+            ctx.font = 'normal 9px "Segoe UI", Arial, sans-serif';
+            ctx.fillStyle = '#6b7280';
+            ctx.fillText(metaText, 16, 52);
+
+            return canvas.toDataURL('image/png');
         }
 
         // ── Export Filtered Registrations to Formatted PDF ───────────────────
-        function exportRegistrationsToPDF() {
+        async function exportRegistrationsToPDF() {
+            // Synchronize active filters from DOM
+            currentFilter.search = (document.getElementById('regSearchInput')?.value || '').trim();
+            currentFilter.source = document.getElementById('filterRegisteredFrom')?.value || '';
+            currentFilter.status = document.getElementById('filterStatus')?.value || '';
+            currentFilter.constituency = document.getElementById('filterConstituency')?.value || '';
+            currentFilter.fromDate = document.getElementById('filterFromDate')?.value || '';
+            currentFilter.toDate = document.getElementById('filterToDate')?.value || '';
+
             const filtered = getFilteredRegistrations();
             if (!filtered || filtered.length === 0) {
                 showToast('No registrations match the selected filters for export.', 'error');
@@ -3064,7 +3298,10 @@
                 return;
             }
 
-            showToast(`Generating PDF export for ${filtered.length} registration(s)...`);
+            const isGuc = (currentFilter.source === 'GUC') || 
+                          (filtered.length > 0 && currentFilter.source !== 'GREEN_GANESHA' && currentFilter.source !== 'COMMUNITY_SERVICE' && filtered.every(r => resolveRegistrationSource(r).category === 'GUC'));
+
+            showToast(`Generating ${isGuc ? 'Ganesh Utsava Samithi' : 'Community'} PDF export for ${filtered.length} registration(s)...`);
 
             try {
                 const { jsPDF } = window.jspdf;
@@ -3077,105 +3314,169 @@
                 const now = new Date();
                 const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
                 const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+                const nowIso = now.toISOString().replace(/[-:T]/g, '').slice(0, 14);
 
                 // Active Filter Summary
-                const srcLabel = currentFilter.source || 'All Sources';
+                const srcLabel = isGuc ? 'గణేష్ ఉత్సవ సమితి (GUC)' : (currentFilter.source || 'All Sources');
                 const statusLabel = currentFilter.status || 'All Statuses';
                 const constLabel = currentFilter.constituency || 'All Constituencies';
                 const datePresetLabel = currentFilter.datePreset === 'all' ? 'All Time' : currentFilter.datePreset;
+                const metaText = `Exported: ${dateStr} at ${timeStr} | Total Filtered: ${filtered.length} of ${allRegistrations.length} | Status: ${statusLabel} | Constituency: ${constLabel} | Date Range: ${datePresetLabel}`;
 
-                // Document Title & Header
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(16);
-                doc.setTextColor(109, 40, 217); // Purple brand color
-                doc.text('MyntOS Community Seva Management Portal', 30, 36);
+                let tableHeaders = [];
+                let tableRows = [];
+                let tableThemeColor = [109, 40, 217]; // Default purple
+                let colStyles = {};
 
-                doc.setFontSize(11);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(17, 24, 39);
-                doc.text('Inbound Community Registrations Report (GUC & Green Ganesha)', 30, 52);
+                if (isGuc) {
+                    tableThemeColor = [180, 83, 9]; // Saffron Amber for GUC
+                    
+                    // Render Telugu Header Banner via Canvas
+                    const teluguTitle = '🚩 గణేష్ ఉత్సవ సమితి, ఆంధ్రప్రదేశ్';
+                    const teluguSubtitle = 'సామూహిక గణేష్ ఉత్సవాలు — అధికారిక నమోదు నివేదిక (Ganesh Utsav Committee Registrations Report)';
+                    const bannerDataUrl = await createTeluguGucHeaderCanvas(teluguTitle, teluguSubtitle, metaText);
 
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(8.5);
-                doc.setTextColor(107, 114, 128);
-                doc.text(`Exported: ${dateStr} at ${timeStr} | Total Filtered: ${filtered.length} of ${allRegistrations.length} | Source: ${srcLabel} | Status: ${statusLabel} | Constituency: ${constLabel} | Date: ${datePresetLabel}`, 30, 66);
+                    doc.addImage(bannerDataUrl, 'PNG', 30, 16, 1130, 62);
 
-                // AutoTable Headers
-                const headers = [
-                    ['#', 'App No\nLogin ID', 'Source', 'Reg Date\n& Time', 'Status', 'Community / Association', 'Constituency\n& Area', 'President\n(Name & Phone)', 'Secretary\n(Name & Phone)', 'Treasurer\n(Name & Phone)', 'Primary Rep\n(Phone 1 & 2)', 'Secondary Rep\n(Phone 1 & 2)', 'Mandap & Idol\n(Location & Ht)', 'Visarjan Details\n(Date & Mobile)', 'Volunteers 1-4\n(Names & Mobiles)', 'Referral']
-                ];
-
-                const rows = filtered.map(r => {
-                    const src = resolveRegistrationSource(r);
-                    const dt = formatDateTime(r.submission_date || r.created_at);
-
-                    // Multi-line volunteer formatting
-                    const volLines = [];
-                    if (r.vol_1_name || r.vol_1_phone) volLines.push(`1. ${r.vol_1_name || '—'} (${maskPhone(r.vol_1_phone)})`);
-                    if (r.vol_2_name || r.vol_2_phone) volLines.push(`2. ${r.vol_2_name || '—'} (${maskPhone(r.vol_2_phone)})`);
-                    if (r.vol_3_name || r.vol_3_phone) volLines.push(`3. ${r.vol_3_name || '—'} (${maskPhone(r.vol_3_phone)})`);
-                    if (r.vol_4_name || r.vol_4_phone) volLines.push(`4. ${r.vol_4_name || '—'} (${maskPhone(r.vol_4_phone)})`);
-                    const volStr = volLines.length > 0 ? volLines.join('\n') : '—';
-
-                    // Mandap & Idol
-                    const mandapParts = [];
-                    if (r.mandap_location) mandapParts.push(r.mandap_location);
-                    if (r.location_category) mandapParts.push(`(${r.location_category})`);
-                    if (r.idol_height) mandapParts.push(`Idol: ${r.idol_height} ft`);
-                    const mandapStr = mandapParts.join('\n') || '—';
-
-                    // Visarjan
-                    const visarjanParts = [];
-                    if (r.visarjan_date) visarjanParts.push(`Date: ${r.visarjan_date}`);
-                    if (r.visarjan_time) visarjanParts.push(`Time: ${r.visarjan_time}`);
-                    if (r.visarjan_phone) visarjanParts.push(`In-charge: ${maskPhone(r.visarjan_phone)}`);
-                    const visarjanStr = visarjanParts.join('\n') || '—';
-
-                    // Referral
-                    const refType = r.referral_type ? r.referral_type.toUpperCase() : 'DIRECT';
-                    const refCode = r.ref1_code || '';
-                    const refName = r.ref1_name || '';
-                    const refStr = [refType, refCode, refName].filter(Boolean).join('\n') || 'DIRECT';
-
-                    return [
-                        r.id,
-                        `${r.application_no || '—'}\n${r.user_partner_code || ''}`.trim(),
-                        src.label,
-                        `${dt.date}\n${dt.time}`.trim(),
-                        r.status || 'PENDING',
-                        r.association_name || '—',
-                        `${r.assembly_constituency || '—'}\n${r.area || ''}`.trim(),
-                        `${r.president_name || '—'}\n${maskPhone(r.president_phone)}`,
-                        `${r.secretary_name || '—'}\n${maskPhone(r.secretary_phone)}`,
-                        `${r.treasurer_name || '—'}\n${maskPhone(r.treasurer_phone)}`,
-                        `${r.primary_name || '—'}\n${maskPhone(r.primary_phone_1)}${r.primary_phone_2 ? '\n' + maskPhone(r.primary_phone_2) : ''}`,
-                        `${r.secondary_name || '—'}\n${maskPhone(r.secondary_phone_1)}${r.secondary_phone_2 ? '\n' + maskPhone(r.secondary_phone_2) : ''}`,
-                        mandapStr,
-                        visarjanStr,
-                        volStr,
-                        refStr
+                    tableHeaders = [
+                        ['#', 'App No\nLogin ID', 'Reg Date\n& Time', 'Status', 'Committee / Association Name', 'Constituency\n& Area', 'President\n(Name & Mobile)', 'Secretary\n(Name & Mobile)', 'Treasurer\n(Name & Mobile)', 'Mandap & Idol\n(Location & Ht)', 'Visarjan Details\n(Date & In-charge)', 'Volunteers 1-4\n(Names & Mobiles)', 'Programs &\nSound System']
                     ];
-                });
 
-                doc.autoTable({
-                    head: headers,
-                    body: rows,
-                    startY: 76,
-                    theme: 'grid',
-                    styles: {
-                        fontSize: 7.5,
-                        cellPadding: 4,
-                        valign: 'middle',
-                        overflow: 'linebreak'
-                    },
-                    headStyles: {
-                        fillColor: [109, 40, 217],
-                        textColor: [255, 255, 255],
-                        fontStyle: 'bold',
-                        fontSize: 8,
-                        halign: 'center'
-                    },
-                    columnStyles: {
+                    tableRows = filtered.map((r, idx) => {
+                        const dt = formatDateTime(r.submission_date || r.created_at);
+
+                        // Multi-line volunteer formatting
+                        const volLines = [];
+                        if (r.vol_1_name || r.vol_1_phone) volLines.push(`1. ${r.vol_1_name || '—'} (${maskPhone(r.vol_1_phone)})`);
+                        if (r.vol_2_name || r.vol_2_phone) volLines.push(`2. ${r.vol_2_name || '—'} (${maskPhone(r.vol_2_phone)})`);
+                        if (r.vol_3_name || r.vol_3_phone) volLines.push(`3. ${r.vol_3_name || '—'} (${maskPhone(r.vol_3_phone)})`);
+                        if (r.vol_4_name || r.vol_4_phone) volLines.push(`4. ${r.vol_4_name || '—'} (${maskPhone(r.vol_4_phone)})`);
+                        const volStr = volLines.length > 0 ? volLines.join('\n') : '—';
+
+                        // Mandap & Idol
+                        const mandapParts = [];
+                        if (r.mandap_location) mandapParts.push(r.mandap_location);
+                        if (r.location_category) mandapParts.push(`(${r.location_category})`);
+                        if (r.idol_height) mandapParts.push(`Idol: ${r.idol_height} ft`);
+                        const mandapStr = mandapParts.join('\n') || '—';
+
+                        // Visarjan
+                        const visarjanParts = [];
+                        if (r.visarjan_date) visarjanParts.push(`Date: ${r.visarjan_date}`);
+                        if (r.visarjan_time) visarjanParts.push(`Time: ${r.visarjan_time}`);
+                        if (r.visarjan_phone) visarjanParts.push(`Mobile: ${maskPhone(r.visarjan_phone)}`);
+                        const visarjanStr = visarjanParts.join('\n') || '—';
+
+                        // Programs & Sound
+                        const cultStr = Array.isArray(r.cultural_programs) ? r.cultural_programs.join(', ') : (r.cultural_programs || '');
+                        const progParts = [];
+                        if (cultStr) progParts.push(`Prog: ${cultStr}`);
+                        if (r.sound_system_details) progParts.push(`Sound: ${r.sound_system_details}`);
+                        const progStr = progParts.join('\n') || '—';
+
+                        return [
+                            idx + 1,
+                            `${r.application_no || ('GUC-2026-' + r.id)}\n${r.user_partner_code || ''}`.trim(),
+                            `${dt.date}\n${dt.time}`.trim(),
+                            r.status || 'PENDING',
+                            r.association_name || '—',
+                            `${r.assembly_constituency || '—'}\n${r.area || ''}`.trim(),
+                            `${r.president_name || '—'}\n${maskPhone(r.president_phone)}`,
+                            `${r.secretary_name || '—'}\n${maskPhone(r.secretary_phone)}`,
+                            `${r.treasurer_name || '—'}\n${maskPhone(r.treasurer_phone)}`,
+                            mandapStr,
+                            visarjanStr,
+                            volStr,
+                            progStr
+                        ];
+                    });
+
+                    colStyles = {
+                        0: { halign: 'center', cellWidth: 25 },
+                        1: { cellWidth: 70 },
+                        2: { cellWidth: 60 },
+                        3: { halign: 'center', cellWidth: 50 },
+                        4: { fontStyle: 'bold', cellWidth: 120 },
+                        5: { cellWidth: 95 },
+                        6: { cellWidth: 90 },
+                        7: { cellWidth: 90 },
+                        8: { cellWidth: 90 },
+                        9: { cellWidth: 110 },
+                        10: { cellWidth: 100 },
+                        11: { cellWidth: 135 },
+                        12: { cellWidth: 95 }
+                    };
+                } else {
+                    // Standard Community Seva Header
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(16);
+                    doc.setTextColor(109, 40, 217); // Purple brand color
+                    doc.text('MyntOS Community Seva Management Portal', 30, 36);
+
+                    doc.setFontSize(11);
+                    doc.setFont('helvetica', 'bold');
+                    doc.setTextColor(17, 24, 39);
+                    const subLabel = currentFilter.source === 'GREEN_GANESHA' ? 'Green Ganesha Seva Registrations Report' : 'Inbound Community Registrations Report (GUC & Green Ganesha)';
+                    doc.text(subLabel, 30, 52);
+
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(8.5);
+                    doc.setTextColor(107, 114, 128);
+                    doc.text(metaText + ` | Source: ${srcLabel}`, 30, 66);
+
+                    tableHeaders = [
+                        ['#', 'App No\nLogin ID', 'Source', 'Reg Date\n& Time', 'Status', 'Community / Association', 'Constituency\n& Area', 'President\n(Name & Phone)', 'Secretary\n(Name & Phone)', 'Treasurer\n(Name & Phone)', 'Primary Rep\n(Phone 1 & 2)', 'Secondary Rep\n(Phone 1 & 2)', 'Mandap & Idol\n(Location & Ht)', 'Visarjan Details\n(Date & Mobile)', 'Volunteers 1-4\n(Names & Mobiles)', 'Referral']
+                    ];
+
+                    tableRows = filtered.map(r => {
+                        const src = resolveRegistrationSource(r);
+                        const dt = formatDateTime(r.submission_date || r.created_at);
+
+                        const volLines = [];
+                        if (r.vol_1_name || r.vol_1_phone) volLines.push(`1. ${r.vol_1_name || '—'} (${maskPhone(r.vol_1_phone)})`);
+                        if (r.vol_2_name || r.vol_2_phone) volLines.push(`2. ${r.vol_2_name || '—'} (${maskPhone(r.vol_2_phone)})`);
+                        if (r.vol_3_name || r.vol_3_phone) volLines.push(`3. ${r.vol_3_name || '—'} (${maskPhone(r.vol_3_phone)})`);
+                        if (r.vol_4_name || r.vol_4_phone) volLines.push(`4. ${r.vol_4_name || '—'} (${maskPhone(r.vol_4_phone)})`);
+                        const volStr = volLines.length > 0 ? volLines.join('\n') : '—';
+
+                        const mandapParts = [];
+                        if (r.mandap_location) mandapParts.push(r.mandap_location);
+                        if (r.location_category) mandapParts.push(`(${r.location_category})`);
+                        if (r.idol_height) mandapParts.push(`Idol: ${r.idol_height} ft`);
+                        const mandapStr = mandapParts.join('\n') || '—';
+
+                        const visarjanParts = [];
+                        if (r.visarjan_date) visarjanParts.push(`Date: ${r.visarjan_date}`);
+                        if (r.visarjan_time) visarjanParts.push(`Time: ${r.visarjan_time}`);
+                        if (r.visarjan_phone) visarjanParts.push(`In-charge: ${maskPhone(r.visarjan_phone)}`);
+                        const visarjanStr = visarjanParts.join('\n') || '—';
+
+                        const refType = r.referral_type ? r.referral_type.toUpperCase() : 'DIRECT';
+                        const refCode = r.ref1_code || '';
+                        const refName = r.ref1_name || '';
+                        const refStr = [refType, refCode, refName].filter(Boolean).join('\n') || 'DIRECT';
+
+                        return [
+                            r.id,
+                            `${r.application_no || '—'}\n${r.user_partner_code || ''}`.trim(),
+                            src.label,
+                            `${dt.date}\n${dt.time}`.trim(),
+                            r.status || 'PENDING',
+                            r.association_name || '—',
+                            `${r.assembly_constituency || '—'}\n${r.area || ''}`.trim(),
+                            `${r.president_name || '—'}\n${maskPhone(r.president_phone)}`,
+                            `${r.secretary_name || '—'}\n${maskPhone(r.secretary_phone)}`,
+                            `${r.treasurer_name || '—'}\n${maskPhone(r.treasurer_phone)}`,
+                            `${r.primary_name || '—'}\n${maskPhone(r.primary_phone_1)}${r.primary_phone_2 ? '\n' + maskPhone(r.primary_phone_2) : ''}`,
+                            `${r.secondary_name || '—'}\n${maskPhone(r.secondary_phone_1)}${r.secondary_phone_2 ? '\n' + maskPhone(r.secondary_phone_2) : ''}`,
+                            mandapStr,
+                            visarjanStr,
+                            volStr,
+                            refStr
+                        ];
+                    });
+
+                    colStyles = {
                         0: { halign: 'center', cellWidth: 25 },
                         1: { cellWidth: 65 },
                         2: { cellWidth: 60 },
@@ -3192,22 +3493,47 @@
                         13: { cellWidth: 75 },
                         14: { cellWidth: 110 },
                         15: { cellWidth: 55 }
+                    };
+                }
+
+                doc.autoTable({
+                    head: tableHeaders,
+                    body: tableRows,
+                    startY: isGuc ? 84 : 76,
+                    theme: 'grid',
+                    styles: {
+                        fontSize: 7.5,
+                        cellPadding: 4,
+                        valign: 'middle',
+                        overflow: 'linebreak'
                     },
+                    headStyles: {
+                        fillColor: tableThemeColor,
+                        textColor: [255, 255, 255],
+                        fontStyle: 'bold',
+                        fontSize: 8,
+                        halign: 'center'
+                    },
+                    columnStyles: colStyles,
                     alternateRowStyles: {
-                        fillColor: [248, 250, 252]
+                        fillColor: isGuc ? [254, 252, 232] : [248, 250, 252]
                     },
                     didDrawPage: function(data) {
-                        const str = `Page ${data.pageCount} | MyntOS Confidential Internal Record`;
+                        const footerStr = isGuc 
+                            ? `Page ${data.pageCount} | Ganesh Utsava Samithi, Andhra Pradesh (Official Record)` 
+                            : `Page ${data.pageCount} | MyntOS Confidential Internal Record`;
                         doc.setFont('helvetica', 'normal');
                         doc.setFontSize(8);
                         doc.setTextColor(156, 163, 175);
-                        doc.text(str, data.settings.margin.left, doc.internal.pageSize.height - 15);
+                        doc.text(footerStr, data.settings.margin.left, doc.internal.pageSize.height - 15);
                     }
                 });
 
-                const nowIso = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
-                doc.save(`Community_Registrations_${nowIso}.pdf`);
-                showToast(`PDF exported successfully for ${filtered.length} registration(s)!`);
+                const filename = isGuc 
+                    ? `Ganesh_Utsava_Samithi_Registrations_${nowIso}.pdf` 
+                    : `Community_Registrations_${nowIso}.pdf`;
+                doc.save(filename);
+                showToast(`PDF exported successfully: ${filename}`);
             } catch (err) {
                 console.error('PDF export failed:', err);
                 showToast(`PDF export failed: ${err.message}`, 'error');
@@ -3216,11 +3542,22 @@
 
         // ── Print / Save Filtered Official Dockets (PDF Printable) ──────────
         function printFilteredDocketsPDF() {
+            // Synchronize active filters from DOM
+            currentFilter.search = (document.getElementById('regSearchInput')?.value || '').trim();
+            currentFilter.source = document.getElementById('filterRegisteredFrom')?.value || '';
+            currentFilter.status = document.getElementById('filterStatus')?.value || '';
+            currentFilter.constituency = document.getElementById('filterConstituency')?.value || '';
+            currentFilter.fromDate = document.getElementById('filterFromDate')?.value || '';
+            currentFilter.toDate = document.getElementById('filterToDate')?.value || '';
+
             const filtered = getFilteredRegistrations();
             if (!filtered || filtered.length === 0) {
                 showToast('No registrations match the selected filters to print.', 'error');
                 return;
             }
+
+            const isGuc = (currentFilter.source === 'GUC') || 
+                          (filtered.length > 0 && currentFilter.source !== 'GREEN_GANESHA' && currentFilter.source !== 'COMMUNITY_SERVICE' && filtered.every(r => resolveRegistrationSource(r).category === 'GUC'));
 
             const win = window.open('', '_blank');
             if (!win) {
@@ -3251,23 +3588,63 @@
                     cultHtml = r.cultural_programs.map((c, i) => `${i+1}. ${escapeHtml(c)}`).join(' &nbsp;|&nbsp; ');
                 }
 
+                const docketHeader = isGuc ? `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #d97706; padding-bottom:12px; margin-bottom:15px;">
+                        <div>
+                            <h2 style="margin:0 0 4px 0; color:#b45309; font-size:20px; font-family:'Noto Sans Telugu', Mandali, sans-serif;">🚩 గణేష్ ఉత్సవ సమితి, ఆంధ్రప్రదేశ్</h2>
+                            <p style="margin:0; font-size:12px; color:#555;">సామూహిక గణేష్ ఉత్సవాలు — అధికారిక నమోదు దరఖాస్తు పత్రం (Official Registration Docket)</p>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:15px; font-weight:bold; color:#dc2626;">APP NO: ${escapeHtml(r.application_no || ('GUC-2026-' + r.id))}</div>
+                            <div style="font-size:11px; color:#666;">ID: #${r.id} | Status: <strong style="color:${r.status === 'APPROVED' ? '#059669' : '#d97706'}">${r.status}</strong></div>
+                            <div style="font-size:11px; color:#666;">Date: ${dt.date} ${dt.time}</div>
+                        </div>
+                    </div>
+                ` : `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #7c3aed; padding-bottom:12px; margin-bottom:15px;">
+                        <div>
+                            <h2 style="margin:0 0 4px 0; color:#7c3aed; font-size:18px;">VGK4U COMMUNITY SEVA — OFFICIAL DOCKET</h2>
+                            <p style="margin:0; font-size:12px; color:#555;">Community Registration Application Form</p>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:15px; font-weight:bold; color:#dc2626;">APP NO: ${escapeHtml(r.application_no || ('REG#' + r.id))}</div>
+                            <div style="font-size:11px; color:#666;">ID: #${r.id} | Status: <strong style="color:${r.status === 'APPROVED' ? '#059669' : '#d97706'}">${r.status}</strong></div>
+                            <div style="font-size:11px; color:#666;">Date: ${dt.date} ${dt.time}</div>
+                        </div>
+                    </div>
+                `;
+
+                const docketFooter = isGuc ? `
+                    <div style="display:flex; justify-content:space-between; margin-top:25px; padding-top:15px; border-top:1px dashed #bbb; font-size:11px;">
+                        <div>
+                            <div><strong>దరఖాస్తుదారుడి సంతకం:</strong> ${escapeHtml(r.applicant_signature || 'Verified Digital Signature')}</div>
+                            <div style="color:#666; margin-top:3px;">Partner Code: ${escapeHtml(r.user_partner_code || '—')} | Referral: ${escapeHtml(r.referral_type || 'DIRECT')}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div><strong>ధ్రువీకరించిన అధికారి / నిర్వాహకులు:</strong> ___________________</div>
+                            <div style="color:#666; margin-top:3px; font-family:'Noto Sans Telugu', Mandali, sans-serif;">గణేష్ ఉత్సవ సమితి, ఆంధ్రప్రదేశ్</div>
+                        </div>
+                    </div>
+                ` : `
+                    <div style="display:flex; justify-content:space-between; margin-top:25px; padding-top:15px; border-top:1px dashed #bbb; font-size:11px;">
+                        <div>
+                            <div><strong>Applicant Signature:</strong> ${escapeHtml(r.applicant_signature || 'Verified Digital Signature')}</div>
+                            <div style="color:#666; margin-top:3px;">Partner Code: ${escapeHtml(r.user_partner_code || '—')} | Referral: ${escapeHtml(r.referral_type || 'DIRECT')}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div><strong>Verified by Staff / Seva Admin:</strong> ___________________</div>
+                            <div style="color:#666; margin-top:3px;">MyntOS Community Seva Portal</div>
+                        </div>
+                    </div>
+                `;
+
                 docketsHtml += `
                     <div style="page-break-after: always; padding: 25px; max-width: 850px; margin: 0 auto; font-family: 'Segoe UI', Arial, sans-serif; color: #111; border: 1px solid #ccc; margin-bottom: 20px;">
-                        <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #7c3aed; padding-bottom:12px; margin-bottom:15px;">
-                            <div>
-                                <h2 style="margin:0 0 4px 0; color:#7c3aed; font-size:18px;">VGK4U COMMUNITY SEVA — OFFICIAL DOCKET</h2>
-                                <p style="margin:0; font-size:12px; color:#555;">Ganesh Utsav Committee & Green Ganesha Registration Application</p>
-                            </div>
-                            <div style="text-align:right;">
-                                <div style="font-size:15px; font-weight:bold; color:#dc2626;">APP NO: ${escapeHtml(r.application_no || ('REG#' + r.id))}</div>
-                                <div style="font-size:11px; color:#666;">ID: #${r.id} | Status: <strong style="color:${r.status === 'APPROVED' ? '#059669' : '#d97706'}">${r.status}</strong></div>
-                                <div style="font-size:11px; color:#666;">Date: ${dt.date} ${dt.time}</div>
-                            </div>
-                        </div>
+                        ${docketHeader}
 
                         <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:14px;">
                             <tr style="background:#f3f4f6;">
-                                <th colspan="4" style="text-align:left; padding:6px 10px; border:1px solid #ccc; color:#4b5563;">1. COMMUNITY & LOCATION DETAILS</th>
+                                <th colspan="4" style="text-align:left; padding:6px 10px; border:1px solid #ccc; color:#4b5563;">1. ${isGuc ? 'సమితి & స్థల వివరాలు (COMMUNITY & LOCATION DETAILS)' : '1. COMMUNITY & LOCATION DETAILS'}</th>
                             </tr>
                             <tr>
                                 <td style="padding:6px 10px; border:1px solid #ddd; width:22%; font-weight:bold;">Association Name</td>
@@ -3291,31 +3668,33 @@
 
                         <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:14px;">
                             <tr style="background:#f3f4f6;">
-                                <th colspan="4" style="text-align:left; padding:6px 10px; border:1px solid #ccc; color:#4b5563;">2. OFFICE BEARERS & AUTHORIZED CONTACTS</th>
+                                <th colspan="4" style="text-align:left; padding:6px 10px; border:1px solid #ccc; color:#4b5563;">2. ${isGuc ? 'కమిటీ ముఖ్య బాధ్యులు (OFFICE BEARERS & AUTHORIZED CONTACTS)' : '2. OFFICE BEARERS & AUTHORIZED CONTACTS'}</th>
                             </tr>
                             <tr>
-                                <td style="padding:6px 10px; border:1px solid #ddd; width:22%; font-weight:bold;">President</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; width:22%; font-weight:bold;">President (అధ్యక్షులు)</td>
                                 <td style="padding:6px 10px; border:1px solid #ddd; width:28%;">${escapeHtml(r.president_name || '—')} (${r.president_phone ? `<a href="tel:${escapeHtml(r.president_phone)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.president_phone))}</a>` : '—'})</td>
-                                <td style="padding:6px 10px; border:1px solid #ddd; width:22%; font-weight:bold;">Secretary</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; width:22%; font-weight:bold;">Secretary (కార్యదర్శి)</td>
                                 <td style="padding:6px 10px; border:1px solid #ddd; width:28%;">${escapeHtml(r.secretary_name || '—')} (${r.secretary_phone ? `<a href="tel:${escapeHtml(r.secretary_phone)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.secretary_phone))}</a>` : '—'})</td>
                             </tr>
                             <tr>
-                                <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Treasurer</td>
+                                <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Treasurer (కోశాధికారి)</td>
                                 <td style="padding:6px 10px; border:1px solid #ddd;">${escapeHtml(r.treasurer_name || '—')} (${r.treasurer_phone ? `<a href="tel:${escapeHtml(r.treasurer_phone)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.treasurer_phone))}</a>` : '—'})</td>
                                 <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Visarjan In-charge</td>
                                 <td style="padding:6px 10px; border:1px solid #ddd;">${r.visarjan_phone ? `<a href="tel:${escapeHtml(r.visarjan_phone)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.visarjan_phone))}</a>` : '—'}</td>
                             </tr>
+                            ${!isGuc ? `
                             <tr>
                                 <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Primary Rep</td>
                                 <td style="padding:6px 10px; border:1px solid #ddd;">${escapeHtml(r.primary_name || '—')} (${r.primary_phone_1 ? `<a href="tel:${escapeHtml(r.primary_phone_1)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.primary_phone_1))}</a>` : '—'}${r.primary_phone_2 ? ', ' + `<a href="tel:${escapeHtml(r.primary_phone_2)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.primary_phone_2))}</a>` : ''})</td>
                                 <td style="padding:6px 10px; border:1px solid #ddd; font-weight:bold;">Secondary Rep</td>
                                 <td style="padding:6px 10px; border:1px solid #ddd;">${escapeHtml(r.secondary_name || '—')} (${r.secondary_phone_1 ? `<a href="tel:${escapeHtml(r.secondary_phone_1)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.secondary_phone_1))}</a>` : '—'}${r.secondary_phone_2 ? ', ' + `<a href="tel:${escapeHtml(r.secondary_phone_2)}" style="color:#2563eb; text-decoration:none;">${escapeHtml(maskPhone(r.secondary_phone_2))}</a>` : ''})</td>
                             </tr>
+                            ` : ''}
                         </table>
 
                         <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:14px;">
                             <tr style="background:#f3f4f6;">
-                                <th colspan="4" style="text-align:left; padding:6px 10px; border:1px solid #ccc; color:#4b5563;">3. MANDAP, UTSAV & VISARJAN SPECIFICATIONS</th>
+                                <th colspan="4" style="text-align:left; padding:6px 10px; border:1px solid #ccc; color:#4b5563;">3. ${isGuc ? 'మండపం, విగ్రహం & నిమజ్జనం వివరాలు (MANDAP & VISARJAN SPECIFICATIONS)' : '3. MANDAP, UTSAV & VISARJAN SPECIFICATIONS'}</th>
                             </tr>
                             <tr>
                                 <td style="padding:6px 10px; border:1px solid #ddd; width:22%; font-weight:bold;">Mandap Location</td>
@@ -3341,7 +3720,7 @@
 
                         <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:14px;">
                             <tr style="background:#f3f4f6;">
-                                <th colspan="3" style="text-align:left; padding:6px 10px; border:1px solid #ccc; color:#4b5563;">4. MANDAP KEY VOLUNTEERS (1 to 4)</th>
+                                <th colspan="3" style="text-align:left; padding:6px 10px; border:1px solid #ccc; color:#4b5563;">4. ${isGuc ? 'మండపం ముఖ్య వాలంటీర్లు (MANDAP KEY VOLUNTEERS 1 to 4)' : '4. MANDAP KEY VOLUNTEERS (1 to 4)'}</th>
                             </tr>
                             <tr style="background:#fafafa; font-weight:bold;">
                                 <td style="padding:4px 8px; border:1px solid #ddd; width:20%;">Sl No</td>
@@ -3351,16 +3730,7 @@
                             ${volHtml}
                         </table>
 
-                        <div style="display:flex; justify-content:space-between; margin-top:25px; padding-top:15px; border-top:1px dashed #bbb; font-size:11px;">
-                            <div>
-                                <div><strong>Applicant Signature:</strong> ${escapeHtml(r.applicant_signature || 'Verified Digital Signature')}</div>
-                                <div style="color:#666; margin-top:3px;">Partner Code: ${escapeHtml(r.user_partner_code || '—')} | Referral: ${escapeHtml(r.referral_type || 'DIRECT')}</div>
-                            </div>
-                            <div style="text-align:right;">
-                                <div><strong>Verified by Staff / Seva Admin:</strong> ___________________</div>
-                                <div style="color:#666; margin-top:3px;">MyntOS Community Seva Portal</div>
-                            </div>
-                        </div>
+                        ${docketFooter}
                     </div>
                 `;
             });
@@ -3369,7 +3739,8 @@
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>Community Registrations Dockets (${filtered.length})</title>
+                    <title>${isGuc ? 'గణేష్ ఉత్సవ సమితి, ఆంధ్రప్రదేశ్ — దరఖాస్తులు' : 'Community Registrations Dockets'} (${filtered.length})</title>
+                    <link href="https://fonts.googleapis.com/css2?family=Mandali&family=Noto+Sans+Telugu:wght@400;600;700&display=swap" rel="stylesheet">
                     <style>
                         @media print {
                             body { margin: 0; }

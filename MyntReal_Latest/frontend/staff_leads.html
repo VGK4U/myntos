@@ -2876,10 +2876,32 @@
             document.getElementById('leadForm').querySelectorAll('input, select, textarea').forEach(el => {
                 el.disabled = false;
             });
-            if (typeof telecallerSearch !== 'undefined' && telecallerSearch) telecallerSearch.clearSelection();
-            if (typeof fieldStaffSearch !== 'undefined' && fieldStaffSearch) fieldStaffSearch.clearSelection();
+            // Auto-assign to current staff member by default
+            const _staffRole = (staffUserData.role || '').toLowerCase();
+            const _staffDept = (staffUserData.department_name || staffUserData.department || '').toLowerCase();
+            const _staffDesig = (staffUserData.designation || '').toLowerCase();
+            const _isTc = _staffRole.includes('tele') || _staffDept.includes('tele') || _staffDesig.includes('tele');
+
+            const _displayName = staffUserData.full_name || staffUserData.name || staffUserData.emp_code || 'Staff';
+            const _empCode = staffUserData.emp_code || '';
+
+            if (currentStaffId) {
+                if (_isTc && typeof telecallerSearch !== 'undefined' && telecallerSearch) {
+                    telecallerSearch.setValue(currentStaffId, _displayName, _empCode);
+                    if (typeof fieldStaffSearch !== 'undefined' && fieldStaffSearch) fieldStaffSearch.clearSelection();
+                } else if (typeof fieldStaffSearch !== 'undefined' && fieldStaffSearch) {
+                    fieldStaffSearch.setValue(currentStaffId, _displayName, _empCode);
+                    if (typeof telecallerSearch !== 'undefined' && telecallerSearch) telecallerSearch.clearSelection();
+                }
+                if (typeof primaryOwnerSearch !== 'undefined' && primaryOwnerSearch) {
+                    primaryOwnerSearch.setValue(currentStaffId, _displayName, _empCode);
+                }
+            } else {
+                if (typeof telecallerSearch !== 'undefined' && telecallerSearch) telecallerSearch.clearSelection();
+                if (typeof fieldStaffSearch !== 'undefined' && fieldStaffSearch) fieldStaffSearch.clearSelection();
+                if (typeof primaryOwnerSearch !== 'undefined' && primaryOwnerSearch) primaryOwnerSearch.clearSelection();
+            }
             if (typeof partnerSearch !== 'undefined' && partnerSearch) partnerSearch.clearSelection();
-            if (typeof primaryOwnerSearch !== 'undefined' && primaryOwnerSearch) primaryOwnerSearch.clearSelection();
             resetInlineTaskForm();
             // Reset and hide revenue section for new leads
             toggleLeadRevenueSection('new');
@@ -2900,7 +2922,11 @@
             
             // DC Protocol (Jan 1, 2026): Hide ownership section for new leads (auto-set to current user)
             document.getElementById('leadOwnershipSection').style.display = 'none';
-            document.getElementById('leadPrimaryOwnerId').value = '';
+            document.getElementById('leadPrimaryOwnerId').value = currentStaffId || '';
+            const _hType = document.getElementById('leadHandlerType');
+            if (_hType) _hType.value = 'staff';
+            const _hId = document.getElementById('leadHandlerId');
+            if (_hId) _hId.value = _empCode;
             
             // DC Protocol (Dec 31, 2025): Sync form company dropdown with header
             syncFormCompanyWithHeader();
@@ -3976,11 +4002,16 @@
                 leadData.alternate_phone = aVal;
             }
             
-            // DC Protocol (Jan 1, 2026): Add primary owner if editing and changed
-            if (leadId) {
-                const primaryOwnerId = document.getElementById('leadPrimaryOwnerId').value;
-                if (primaryOwnerId) {
-                    leadData.primary_owner_id = parseInt(primaryOwnerId);
+            // DC Protocol: Primary owner assignment for both new and edited leads
+            const primaryOwnerId = document.getElementById('leadPrimaryOwnerId').value || currentStaffId;
+            if (primaryOwnerId) {
+                leadData.primary_owner_id = parseInt(primaryOwnerId);
+                leadData.primary_owner_type = 'staff';
+            }
+            if (!leadId) {
+                if (!leadData.handler_type || leadData.handler_type === 'unassigned') {
+                    leadData.handler_type = 'staff';
+                    leadData.handler_id = staffUserData.emp_code || null;
                 }
             }
             
