@@ -87,7 +87,8 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
       { menu_code: "CRM_SETTINGS", label: "CRM Settings", route: "/staff/crm/settings", audience: ["STAFF"] },
       { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "/staff/dialer", audience: ["STAFF"] },
       { menu_code: "CALL_QUALITY_REVIEW", label: "Call Quality Review", route: "/staff/call-quality", audience: ["STAFF"] },
-      { menu_code: "STAFF_OPERATOR_CALLS", label: "Operator Calls", route: "/staff/operator-calls", audience: ["STAFF"] }
+      { menu_code: "STAFF_OPERATOR_CALLS", label: "Operator Calls", route: "/staff/operator-calls", audience: ["STAFF"] },
+      { menu_code: "STAFF_CATALOG_LIBRARY", label: "Catalog Library", route: "/staff/configuration/catalog", icon: "fas fa-book-open", audience: ["STAFF"] }
     ]
   },
   {
@@ -259,6 +260,7 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
       { menu_code: "CALL_FLOW_STUDIO", label: "Call Flow Studio", route: "/staff/call-flow-studio", icon: "fas fa-diagram-project", audience: ["STAFF", "VGK4U"] },
       { menu_code: "AI_CALLING", label: "AI Calling", route: "/staff/crm/ai-calling", audience: ["STAFF"] },
       { menu_code: "VGK_SAAS_MENU_ACCESS", label: "Menu Access Control", route: "/rvz/menu-access-config", icon: "fas fa-key", audience: ["STAFF", "VGK4U"] },
+      { menu_code: "DIGITAL_CATALOG_MANAGEMENT", label: "Catalog", route: "/staff/configuration/catalog", icon: "fas fa-book-open", audience: ["STAFF", "VGK4U"] },
       { menu_code: "PORTAL_AUDIENCE_SCOPE", label: "Portal & Audience Scope", route: "/staff/configuration/scope", icon: "fas fa-layer-group", audience: ["STAFF", "VGK4U"] },
       { menu_code: "SOLAR_VENDORS", label: "Solar Vendors", route: "/staff/solar-vendors", icon: "fas fa-solar-panel", audience: ["STAFF"] },
       { menu_code: "VGK_MEDIA_MANAGER", label: "Media Manager", route: "/staff/vgk/media", icon: "fas fa-globe", audience: ["STAFF"] },

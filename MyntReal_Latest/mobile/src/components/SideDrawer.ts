@@ -70,6 +70,9 @@ const ROUTE_PATH_MAP: Record<string, string> = {
   '/staff/whatsapp-center': 'staff-whatsapp',
   '/staff/crm/whatsapp-center': 'staff-whatsapp',
   '/staff/crm/whatsapp': 'staff-whatsapp',
+  '/staff/configuration/catalog': 'digital-catalog',
+  '/staff/catalog-library': 'digital-catalog',
+  '/staff/catalog': 'digital-catalog',
   
   '/staff/call-tracking': 'staff-call-tracking',
   '/staff/vendors': 'staff-vendors',

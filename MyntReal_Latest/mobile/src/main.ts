@@ -108,6 +108,7 @@ import { ServiceReportsPage } from './pages/ServiceReportsPage';
 import { ServiceRevenuePage } from './pages/ServiceRevenuePage';
 import { CreateAnnouncementPage } from './pages/CreateAnnouncementPage';
 import { EditAnnouncementPage } from './pages/EditAnnouncementPage';
+import { DigitalCatalogPage } from './pages/DigitalCatalogPage';
 // MNR Portal Pages
 import { MNRDashboard } from './pages/mnr/MNRDashboard';
 import { MNRIncome } from './pages/mnr/MNRIncome';
@@ -942,6 +943,9 @@ class MNRApp {
       case 'staff-whatsapp':
       case 'staff-whatsapp-inbox':
         page = new StaffWhatsAppInboxPage(this.pageContainer);
+        break;
+      case 'digital-catalog':
+        page = new DigitalCatalogPage(this.pageContainer);
         break;
       
       // New Staff Dashboard Section Pages

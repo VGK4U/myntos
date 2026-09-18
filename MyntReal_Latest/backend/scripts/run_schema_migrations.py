@@ -781,6 +781,113 @@ def run_migrations():
                 """))
                 logger.info("✅ meta_capi_logs and system_feature_flags tables ensured")
 
+                # 4.24 Ensure digital_catalogs, catalog_sections, catalog_items, and catalog_lead_sends tables
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS digital_catalogs (
+                        id SERIAL PRIMARY KEY,
+                        company_id INTEGER NOT NULL REFERENCES associated_companies(id),
+                        tenant_id INTEGER REFERENCES platform_clients(id) ON DELETE SET NULL,
+                        category_id INTEGER,
+                        segment_code VARCHAR(50) NOT NULL,
+                        slug VARCHAR(120) NOT NULL,
+                        title VARCHAR(255) NOT NULL,
+                        subtitle VARCHAR(500),
+                        summary TEXT,
+                        hero_media_url VARCHAR(500),
+                        catalog_type VARCHAR(50) NOT NULL DEFAULT 'SINGLE_PAGE',
+                        status VARCHAR(20) NOT NULL DEFAULT 'published',
+                        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                        is_featured BOOLEAN NOT NULL DEFAULT FALSE,
+                        sort_order INTEGER NOT NULL DEFAULT 0,
+                        seo_title VARCHAR(255),
+                        seo_description TEXT,
+                        seo_keywords TEXT,
+                        theme_config JSONB NOT NULL DEFAULT '{}'::jsonb,
+                        default_language VARCHAR(10) NOT NULL DEFAULT 'en',
+                        active_languages JSONB NOT NULL DEFAULT '["en"]'::jsonb,
+                        pdf_brochure_url VARCHAR(500),
+                        whatsapp_template_name VARCHAR(100),
+                        version INTEGER NOT NULL DEFAULT 1,
+                        created_by_id INTEGER REFERENCES staff_employees(id) ON DELETE SET NULL,
+                        updated_by_id INTEGER REFERENCES staff_employees(id) ON DELETE SET NULL,
+                        published_at TIMESTAMP,
+                        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                        CONSTRAINT uq_digital_catalogs_company_slug UNIQUE (company_id, slug)
+                    );
+                    CREATE INDEX IF NOT EXISTS ix_digital_catalogs_company_status ON digital_catalogs(company_id, status);
+                    CREATE INDEX IF NOT EXISTS ix_digital_catalogs_segment ON digital_catalogs(segment_code);
+                    CREATE INDEX IF NOT EXISTS ix_digital_catalogs_category ON digital_catalogs(category_id);
+                    CREATE INDEX IF NOT EXISTS ix_digital_catalogs_slug ON digital_catalogs(slug);
+
+                    CREATE TABLE IF NOT EXISTS catalog_sections (
+                        id SERIAL PRIMARY KEY,
+                        catalog_id INTEGER NOT NULL REFERENCES digital_catalogs(id) ON DELETE CASCADE,
+                        section_type VARCHAR(50) NOT NULL,
+                        section_key VARCHAR(50) NOT NULL,
+                        title VARCHAR(255),
+                        subtitle VARCHAR(500),
+                        content_variants JSONB NOT NULL DEFAULT '{}'::jsonb,
+                        media_gallery JSONB NOT NULL DEFAULT '[]'::jsonb,
+                        configuration JSONB NOT NULL DEFAULT '{}'::jsonb,
+                        sort_order INTEGER NOT NULL DEFAULT 0,
+                        is_visible BOOLEAN NOT NULL DEFAULT TRUE,
+                        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS ix_catalog_sections_catalog_order ON catalog_sections(catalog_id, sort_order);
+
+                    CREATE TABLE IF NOT EXISTS catalog_items (
+                        id SERIAL PRIMARY KEY,
+                        catalog_id INTEGER NOT NULL REFERENCES digital_catalogs(id) ON DELETE CASCADE,
+                        item_type VARCHAR(50) NOT NULL DEFAULT 'PRODUCT',
+                        source_entity_type VARCHAR(50),
+                        source_entity_id INTEGER,
+                        item_code VARCHAR(50),
+                        title VARCHAR(255) NOT NULL,
+                        subtitle VARCHAR(500),
+                        specifications JSONB NOT NULL DEFAULT '[]'::jsonb,
+                        pricing JSONB NOT NULL DEFAULT '{}'::jsonb,
+                        media_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+                        video_url VARCHAR(500),
+                        content_variants JSONB NOT NULL DEFAULT '{}'::jsonb,
+                        badges JSONB NOT NULL DEFAULT '[]'::jsonb,
+                        sort_order INTEGER NOT NULL DEFAULT 0,
+                        is_featured BOOLEAN NOT NULL DEFAULT FALSE,
+                        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS ix_catalog_items_catalog_order ON catalog_items(catalog_id, sort_order);
+
+                    CREATE TABLE IF NOT EXISTS catalog_lead_sends (
+                        id SERIAL PRIMARY KEY,
+                        catalog_id INTEGER NOT NULL REFERENCES digital_catalogs(id) ON DELETE CASCADE,
+                        lead_id INTEGER REFERENCES crm_leads(id) ON DELETE SET NULL,
+                        company_id INTEGER NOT NULL DEFAULT 4,
+                        staff_id INTEGER REFERENCES staff_employees(id) ON DELETE SET NULL,
+                        recipient_phone VARCHAR(20) NOT NULL,
+                        recipient_name VARCHAR(200),
+                        language_code VARCHAR(10) NOT NULL DEFAULT 'en',
+                        delivery_channel VARCHAR(30) NOT NULL DEFAULT 'whatsapp',
+                        delivery_method VARCHAR(30) NOT NULL DEFAULT 'web_link',
+                        share_ref_code VARCHAR(64) UNIQUE NOT NULL,
+                        whatsapp_message_id VARCHAR(255),
+                        status VARCHAR(30) NOT NULL DEFAULT 'sent',
+                        failure_reason TEXT,
+                        view_count INTEGER NOT NULL DEFAULT 0,
+                        first_viewed_at TIMESTAMP,
+                        last_viewed_at TIMESTAMP,
+                        sent_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS ix_catalog_sends_catalog ON catalog_lead_sends(catalog_id);
+                    CREATE INDEX IF NOT EXISTS ix_catalog_sends_lead ON catalog_lead_sends(lead_id);
+                    CREATE INDEX IF NOT EXISTS ix_catalog_sends_phone ON catalog_lead_sends(recipient_phone);
+                    CREATE INDEX IF NOT EXISTS ix_catalog_sends_ref_code ON catalog_lead_sends(share_ref_code);
+                """))
+                logger.info("✅ digital_catalogs, catalog_sections, catalog_items, catalog_lead_sends tables ensured")
+
         logger.info("✅ Feature-specific schema migrations complete")
         
         # 4.20 Staff cash balance zero adjustments as of 16-Sep-2026
@@ -790,6 +897,14 @@ def run_migrations():
             logger.info("✅ Staff cash balance zero adjustments verified/applied")
         except Exception as e:
             logger.warning(f"⚠️ Staff cash balance zero adjustments notice: {e}")
+
+        # 4.24 Seed default digital catalogs for all 8 verticals
+        try:
+            from scripts.seed_digital_catalogs import seed_default_catalogs
+            seed_default_catalogs()
+            logger.info("✅ Digital catalog default seed data verified/applied")
+        except Exception as e:
+            logger.warning(f"⚠️ Digital catalog seed notice: {e}")
     except Exception as e:
         logger.error(f"❌ Feature migrations failed: {e}")
         sys.exit(1)

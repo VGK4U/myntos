@@ -20423,6 +20423,14 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
+  } else if (url.startsWith('/staff/configuration/catalog') || url.startsWith('/staff/catalog-library') || url.startsWith('/staff/catalog')) {
+    const filePath = path.join(__dirname, 'staff_catalog_library.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
+      let html = data.replace(/\?v=\d+/g, `?v=${BUILD_ID}`); html = injectNdaEnforcement(html); html = injectVgkAssistant(html);
+      res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
+      res.end(html);
+    });
     return;
   } else if (url.startsWith('/staff/configuration/scope') || url.startsWith('/staff/configuration/portal-scope')) {
     const filePath = path.join(__dirname, 'staff_configuration_scope.html');
@@ -30513,13 +30521,21 @@ async function processAction(id, action){
     res.end();
 
 
-  } else if (url.toLowerCase() === '/mnrcatalog' || url.toLowerCase().startsWith('/mnrcatalog?') || url.toLowerCase() === '/catalog' || url.toLowerCase().startsWith('/catalog?')) {
-    // DC Protocol (Feb 26, 2026): Public catalog brochure — no auth required
-    const catalogPath = path.join(__dirname, 'catalog.html');
+  } else if (url.startsWith('/catalog/') || url.toLowerCase() === '/catalog' || url.toLowerCase().startsWith('/catalog?') || url.toLowerCase() === '/mnrcatalog' || url.toLowerCase().startsWith('/mnrcatalog?')) {
+    // Single-Page Digital Catalog Platform (Public Interactive Web Catalog — no auth required)
+    const isLegacy = url.toLowerCase().startsWith('/mnrcatalog');
+    const targetFile = isLegacy ? 'catalog.html' : 'catalog_single_page.html';
+    const catalogPath = path.join(__dirname, targetFile);
     readFileWithRetry(catalogPath, (err, data) => {
       if (err) {
-        res.writeHead(404);
-        res.end('Catalog page not found');
+        // Fallback to catalog.html if catalog_single_page.html not found
+        const fallbackPath = path.join(__dirname, 'catalog.html');
+        readFileWithRetry(fallbackPath, (err2, data2) => {
+          if (err2) { res.writeHead(404); res.end('Catalog page not found'); return; }
+          let html = data2.toString().replace('</body>', LEGAL_DISCLAIMER_HTML + '</body>');
+          res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate', 'X-Frame-Options': 'SAMEORIGIN' });
+          res.end(html);
+        });
         return;
       }
       let html = data.toString();

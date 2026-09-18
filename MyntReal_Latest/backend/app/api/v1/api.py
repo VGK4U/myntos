@@ -54,6 +54,7 @@ from app.api.v1.endpoints import (
     account_deletion,
     bank_contacts,
     crm_settings,
+    digital_catalogs,
 )
 
 # Scaffold routers are mounted in main.py at ROOT level to match Flask routing
@@ -249,6 +250,7 @@ api_router.include_router(crm_commissions.router, tags=["CRM Commissions"])
 
 # Catalog Sharing & Analytics (DC Protocol - Feb 26, 2026)
 api_router.include_router(catalog.router, prefix="/catalog", tags=["Catalog Sharing & Analytics"])
+api_router.include_router(digital_catalogs.router, prefix="/digital-catalogs", tags=["Digital Catalogs Platform"])
 api_router.include_router(session_analytics.router, prefix="/staff", tags=["Session Analytics"])
 
 # MNR E-Com Lite — Marketplace Phase 1 + 2 (DC Protocol - Feb 2026)

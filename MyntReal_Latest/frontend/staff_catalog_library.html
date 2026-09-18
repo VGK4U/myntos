@@ -1,0 +1,1258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Catalog Platform — MyntOS & VGK4U</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="/public/js/staff-token-manager.js"></script>
+    <script src="/public/js/staff-fetch.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
+    <style>
+        :root {
+            --primary: #059669;
+            --primary-glow: rgba(5, 150, 105, 0.35);
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --card-bg-light: #283548;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #0284c7;
+            --brand-gold: #fbbf24;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        .main-content {
+            margin-left: 0;
+            transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding-top: 80px;
+            padding-bottom: 60px;
+        }
+
+        .sidebar-expanded .main-content {
+            margin-left: 260px;
+        }
+
+        .content-area {
+            padding: 24px 32px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Banner Header */
+        .catalog-hero-banner {
+            background: linear-gradient(135deg, #064e3b 0%, #0f172a 100%);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 18px;
+            padding: 28px 32px;
+            margin-bottom: 28px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .catalog-hero-banner::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .catalog-hero-banner h1 {
+            font-size: 26px;
+            font-weight: 800;
+            margin: 0 0 6px 0;
+            background: linear-gradient(to right, #6ee7b7, #fbbf24);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Vertical Segment Tabs Bar */
+        .segment-tabs-container {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 12px;
+            margin-bottom: 24px;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+        }
+
+        .segment-tab-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 10px 18px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .segment-tab-btn:hover {
+            background: var(--card-bg-light);
+            color: var(--text-main);
+            transform: translateY(-1px);
+        }
+
+        .segment-tab-btn.active {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: #ffffff;
+            border-color: #10b981;
+            box-shadow: 0 4px 15px rgba(5, 150, 105, 0.35);
+        }
+
+        /* Catalog Card */
+        .catalog-main-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        }
+
+        .section-card {
+            background: #182234;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin-bottom: 14px;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: grab;
+        }
+
+        .section-card:hover {
+            border-color: rgba(16, 185, 129, 0.4);
+            background: #1e2c42;
+        }
+
+        .section-card.sortable-ghost {
+            opacity: 0.4;
+            background: #064e3b;
+        }
+
+        .drag-handle {
+            color: var(--text-muted);
+            margin-right: 14px;
+            cursor: grab;
+        }
+
+        .badge-pill {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Action Buttons */
+        .btn-brand-primary {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: #ffffff;
+            border: none;
+            font-weight: 600;
+            border-radius: 10px;
+            padding: 9px 18px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+            transition: all 0.2s;
+        }
+
+        .btn-brand-primary:hover {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+
+        .btn-brand-wa {
+            background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+            color: #ffffff;
+            border: none;
+            font-weight: 600;
+            border-radius: 10px;
+            padding: 9px 18px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+            transition: all 0.2s;
+        }
+
+        .btn-brand-wa:hover {
+            background: linear-gradient(135deg, #34e073 0%, #17a08e 100%);
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+
+        .btn-ghost-dark {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 10px;
+            padding: 8px 16px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-ghost-dark:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        /* Modal styling */
+        .modal-content {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px 24px;
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--border-color);
+            padding: 16px 24px;
+        }
+
+        .form-control, .form-select {
+            background-color: #0f172a;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 10px;
+            padding: 10px 14px;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background-color: #0f172a;
+            border-color: #10b981;
+            color: var(--text-main);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+        }
+
+        .nav-tabs {
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .nav-tabs .nav-link {
+            color: var(--text-muted);
+            border: none;
+            padding: 10px 16px;
+            font-weight: 600;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: #10b981;
+            background: transparent;
+            border-bottom: 2px solid #10b981;
+        }
+
+        /* Live Preview Frame Container */
+        .preview-wrapper {
+            background: #020617;
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .preview-toolbar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 14px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .preview-frame-container {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            overflow: hidden;
+            background: #ffffff;
+            height: 750px;
+        }
+
+        .device-desktop { width: 100%; max-width: 1100px; }
+        .device-tablet { width: 768px; }
+        .device-mobile { width: 375px; border-radius: 36px; border-width: 8px; border-color: #334155; }
+
+        /* Item Grid */
+        .catalog-item-card {
+            background: #182234;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .catalog-item-thumb {
+            width: 90px;
+            height: 70px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #0f172a;
+        }
+    </style>
+</head>
+<body>
+    <nav id="staffSidebar"></nav>
+    <div class="main-content">
+        <div id="headerContainer"></div>
+        <div class="content-area">
+
+            <!-- Banner Header -->
+            <div class="catalog-hero-banner">
+                <div>
+                    <h1><i class="fas fa-book-open me-2"></i>Digital Catalog Management</h1>
+                    <p class="text-muted mb-0">Single-page responsive web catalogs, modular section builder, multilingual copy & WhatsApp dispatch.</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-ghost-dark" onclick="openDispatchHistoryModal()">
+                        <i class="fas fa-history"></i> My Dispatches
+                    </button>
+                    <button class="btn btn-brand-primary" id="btnCreateCatalog" onclick="openNewCatalogModal()" style="display: none;">
+                        <i class="fas fa-plus"></i> New Catalog
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vertical Segment Tabs -->
+            <div class="segment-tabs-container" id="segmentTabsBar">
+                <!-- Dynamically Populated -->
+            </div>
+
+            <!-- Active Vertical Content Area -->
+            <div class="row">
+                <!-- Left: Catalog Overview & Section Builder -->
+                <div class="col-lg-7">
+                    <div class="catalog-main-card">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <span class="badge bg-success bg-opacity-25 text-success badge-pill me-2" id="catalogSegmentBadge">SOLAR</span>
+                                <h3 class="h4 mb-1 fw-bold text-white" id="catalogTitle">Loading...</h3>
+                                <p class="text-muted small mb-0" id="catalogSubtitle">Loading details...</p>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a id="btnPublicViewLink" href="#" target="_blank" class="btn btn-sm btn-ghost-dark" title="Open Public Single-Page Web Catalog">
+                                    <i class="fas fa-external-link-alt me-1"></i> Public View
+                                </a>
+                                <button class="btn btn-sm btn-brand-wa" onclick="openWhatsAppDispatchModal()">
+                                    <i class="fab fa-whatsapp me-1"></i> Send WhatsApp
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quick Meta Stats Row -->
+                        <div class="row g-2 mb-4">
+                            <div class="col-4">
+                                <div class="p-2 rounded bg-dark text-center border border-secondary border-opacity-25">
+                                    <small class="text-muted d-block">Sections</small>
+                                    <span class="fw-bold fs-5 text-white" id="statSectionsCount">0</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 rounded bg-dark text-center border border-secondary border-opacity-25">
+                                    <small class="text-muted d-block">Items / Plans</small>
+                                    <span class="fw-bold fs-5 text-white" id="statItemsCount">0</span>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 rounded bg-dark text-center border border-secondary border-opacity-25">
+                                    <small class="text-muted d-block">Total Dispatches</small>
+                                    <span class="fw-bold fs-5 text-emerald text-success" id="statDispatchesCount">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab Sub-Navigation: Sections vs Items -->
+                        <ul class="nav nav-tabs mb-3" id="catalogTabs" role="tablist">
+                            <li class="nav-item">
+                                <button class="nav-link active" id="sections-tab" data-bs-toggle="tab" data-bs-target="#sections-pane">
+                                    <i class="fas fa-layer-group me-1"></i> Modular Sections (<span id="tabSecCount">0</span>)
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link" id="items-tab" data-bs-toggle="tab" data-bs-target="#items-pane">
+                                    <i class="fas fa-cubes me-1"></i> Products & Offerings (<span id="tabItemCount">0</span>)
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings-pane">
+                                    <i class="fas fa-sliders-h me-1"></i> SEO & PDF Brochure
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <!-- Modular Sections List -->
+                            <div class="tab-pane fade show active" id="sections-pane">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <small class="text-muted"><i class="fas fa-arrows-alt me-1"></i> Drag cards to reorder sections</small>
+                                    <button class="btn btn-sm btn-outline-success" id="btnAddSection" onclick="openSectionModal()" style="display: none;">
+                                        <i class="fas fa-plus me-1"></i> Add Section
+                                    </button>
+                                </div>
+                                <div id="sectionsListContainer">
+                                    <!-- Dynamic Sections List -->
+                                </div>
+                            </div>
+
+                            <!-- Products & Items List -->
+                            <div class="tab-pane fade" id="items-pane">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <small class="text-muted">Package, model or course listings displayed in this catalog</small>
+                                    <button class="btn btn-sm btn-outline-success" id="btnAddItem" onclick="openItemModal()" style="display: none;">
+                                        <i class="fas fa-plus me-1"></i> Add Product/Item
+                                    </button>
+                                </div>
+                                <div id="itemsListContainer">
+                                    <!-- Dynamic Items List -->
+                                </div>
+                            </div>
+
+                            <!-- Catalog Settings & PDF -->
+                            <div class="tab-pane fade" id="settings-pane">
+                                <div class="p-3 bg-dark rounded border border-secondary border-opacity-25">
+                                    <h6 class="fw-bold text-white mb-3"><i class="fas fa-file-pdf text-danger me-2"></i>PDF Brochure Attachment (Option A)</h6>
+                                    <div class="mb-3">
+                                        <label class="form-label small text-muted">S3 Direct PDF Brochure URL (Optional)</label>
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" id="pdfBrochureUrlInput" placeholder="https://myntreal-media-vault.s3.../brochure.pdf">
+                                            <button class="btn btn-outline-secondary" type="button" onclick="uploadPdfBrochure()">
+                                                <i class="fas fa-upload"></i> Upload PDF
+                                            </button>
+                                        </div>
+                                        <small class="text-muted">If attached, the WhatsApp dispatch modal can include direct PDF download alongside the interactive single-page link.</small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label small text-muted">SEO Title & Keywords</label>
+                                        <input type="text" class="form-control mb-2" id="seoTitleInput" placeholder="SEO Title">
+                                        <textarea class="form-control" id="seoDescInput" rows="2" placeholder="SEO Meta Description"></textarea>
+                                    </div>
+                                    <button class="btn btn-sm btn-brand-primary" id="btnSaveSettings" onclick="saveCatalogSettings()">
+                                        <i class="fas fa-save me-1"></i> Save Changes
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Interactive Desktop / Tablet / Mobile Preview -->
+                <div class="col-lg-5">
+                    <div class="preview-wrapper">
+                        <div class="preview-toolbar">
+                            <span class="text-muted small align-self-center me-2"><i class="fas fa-eye me-1"></i> Live Preview:</span>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-light active" onclick="setDeviceView('desktop')" id="devBtnDesktop">
+                                    <i class="fas fa-desktop me-1"></i> Desktop
+                                </button>
+                                <button type="button" class="btn btn-outline-light" onclick="setDeviceView('tablet')" id="devBtnTablet">
+                                    <i class="fas fa-tablet-alt me-1"></i> Tablet
+                                </button>
+                                <button type="button" class="btn btn-outline-light" onclick="setDeviceView('mobile')" id="devBtnMobile">
+                                    <i class="fas fa-mobile-alt me-1"></i> Mobile
+                                </button>
+                            </div>
+                            <button class="btn btn-sm btn-outline-secondary ms-auto" onclick="refreshPreviewFrame()" title="Reload Preview">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+
+                        <div class="preview-frame-container device-desktop" id="previewFrameContainer">
+                            <iframe id="catalogPreviewIframe" src="about:blank" style="width: 100%; height: 100%; border: none;"></iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ── MODAL: Section Builder / Editor ──────────────────────────────── -->
+    <div class="modal fade" id="sectionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="sectionModalTitle"><i class="fas fa-layer-group text-success me-2"></i>Configure Section</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editSectionId">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted">Section Type</label>
+                            <select class="form-select" id="secTypeSelect">
+                                <option value="hero">Hero Banner (Headline, Stats, CTA)</option>
+                                <option value="highlights_grid">Highlights Grid (Key Value Props)</option>
+                                <option value="specifications_table">Specifications / Technical Details</option>
+                                <option value="packages_pricing">Packages & Pricing Cards</option>
+                                <option value="process_workflow">Process Workflow (Step 1-4)</option>
+                                <option value="media_gallery">Media Gallery & Video Embeds</option>
+                                <option value="faqs">Frequently Asked Questions (FAQ)</option>
+                                <option value="contact_cta">Contact & WhatsApp CTA</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small text-muted">Section Key (Unique Identifier)</label>
+                            <input type="text" class="form-control" id="secKeyInput" placeholder="e.g. hero, benefits, specs, pricing">
+                        </div>
+                    </div>
+
+                    <!-- Multilingual Content Tabs -->
+                    <div class="card bg-dark border-secondary border-opacity-25 p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold text-white mb-0"><i class="fas fa-language text-warning me-1"></i> Content & Multilingual Variants</h6>
+                            <button class="btn btn-sm btn-outline-info" type="button" onclick="triggerGeminiDraftForSection()">
+                                <i class="fas fa-magic me-1"></i> AI Content Writer (Gemini)
+                            </button>
+                        </div>
+
+                        <ul class="nav nav-tabs mb-3" id="langTabs">
+                            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-en">English (Default)</button></li>
+                            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-te">తెలుగు (Telugu)</button></li>
+                            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-hi">हिन्दी (Hindi)</button></li>
+                            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-ta">தமிழ் (Tamil)</button></li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="tab-en">
+                                <div class="mb-2">
+                                    <label class="form-label small text-muted">English Title</label>
+                                    <input type="text" class="form-control" id="secTitle_en" placeholder="Section Heading">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small text-muted">English Subtitle</label>
+                                    <input type="text" class="form-control" id="secSubtitle_en" placeholder="Section Subtitle or Summary">
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="tab-te">
+                                <div class="mb-2">
+                                    <label class="form-label small text-muted">Telugu Title (తెలుగు శీర్షిక)</label>
+                                    <input type="text" class="form-control" id="secTitle_te" placeholder="ఉదా: మీ ఇల్లు మరియు వ్యాపారానికి స్వచ్ఛమైన సౌర విద్యుత్">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small text-muted">Telugu Subtitle (తెలుగు వివరణ)</label>
+                                    <input type="text" class="form-control" id="secSubtitle_te" placeholder="వివరణ...">
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="tab-hi">
+                                <div class="mb-2">
+                                    <label class="form-label small text-muted">Hindi Title (हिन्दी शीर्षक)</label>
+                                    <input type="text" class="form-control" id="secTitle_hi" placeholder="उदा: आपके घर और व्यापार के लिए स्वच्छ और असीमित सोलर ऊर्जा">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small text-muted">Hindi Subtitle (हिन्दी विवरण)</label>
+                                    <input type="text" class="form-control" id="secSubtitle_hi" placeholder="विवरण...">
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="tab-ta">
+                                <div class="mb-2">
+                                    <label class="form-label small text-muted">Tamil Title (தமிழ் தலைப்பு)</label>
+                                    <input type="text" class="form-control" id="secTitle_ta" placeholder="எ.கா: உங்கள் வீட்டிற்கு தூய்மையான சூரிய சக்தி">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small text-muted">Tamil Subtitle (தமிழ் விளக்கம்)</label>
+                                    <input type="text" class="form-control" id="secSubtitle_ta" placeholder="விளக்கம்...">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Media & Video Links -->
+                    <div class="mb-3">
+                        <label class="form-label small text-muted"><i class="fas fa-video me-1 text-danger"></i> Video Embed URL (YouTube / Vimeo / MP4)</label>
+                        <input type="text" class="form-control" id="secVideoUrlInput" placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/...">
+                    </div>
+
+                    <!-- JSON Configuration for cards / steps / stats -->
+                    <div class="mb-2">
+                        <label class="form-label small text-muted"><i class="fas fa-code me-1 text-info"></i> Advanced JSON Configuration (Cards, Stats, FAQs)</label>
+                        <textarea class="form-control font-monospace small" id="secConfigJson" rows="5" placeholder='{"cards": [...], "stats": [...]}'></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost-dark" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-brand-primary" onclick="saveSection()">Save Section</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MODAL: WhatsApp Dispatch (Option A: Web Link + PDF) ──────────── -->
+    <div class="modal fade" id="dispatchModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="fab fa-whatsapp text-success me-2"></i>Send Digital Catalog</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Recipient Mobile Number (10 Digits)</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-dark border-secondary text-muted">+91</span>
+                            <input type="text" class="form-control" id="dispatchPhoneInput" placeholder="9876543210" maxlength="10">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Recipient Name (Optional)</label>
+                        <input type="text" class="form-control" id="dispatchNameInput" placeholder="e.g. Ramesh Kumar">
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Catalog Language</label>
+                            <select class="form-select" id="dispatchLangSelect">
+                                <option value="en">English</option>
+                                <option value="te">తెలుగు (Telugu)</option>
+                                <option value="hi">हिन्दी (Hindi)</option>
+                                <option value="ta">தமிழ் (Tamil)</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-muted">Delivery Format (Option A)</label>
+                            <select class="form-select" id="dispatchMethodSelect">
+                                <option value="web_link">Interactive Web Link (Primary)</option>
+                                <option value="both">Web Link + PDF Brochure</option>
+                                <option value="pdf_document">PDF Brochure Only</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Personalized Note from Staff (Optional)</label>
+                        <textarea class="form-control" id="dispatchCustomNote" rows="2" placeholder="e.g. It was a pleasure speaking with you today. Review the solar options on this link."></textarea>
+                    </div>
+
+                    <div class="p-3 bg-dark rounded border border-secondary border-opacity-25 small" id="dispatchResultBox" style="display: none;">
+                        <div class="fw-bold text-success mb-1"><i class="fas fa-check-circle me-1"></i> Link Generated Successfully!</div>
+                        <div class="text-muted text-break mb-2" id="dispatchLinkDisplay"></div>
+                        <a href="#" target="_blank" class="btn btn-sm btn-brand-wa w-100" id="btnOpenWhatsAppDirect">
+                            <i class="fab fa-whatsapp me-1"></i> Open in WhatsApp Web / App
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost-dark" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-brand-wa" id="btnExecuteDispatch" onclick="executeWhatsAppDispatch()">
+                        <i class="fab fa-whatsapp me-1"></i> Send Catalog Now
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── MODAL: Dispatch History ─────────────────────────────────────── -->
+    <div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-history text-info me-2"></i>My Dispatch History</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="table-responsive" style="max-height: 450px;">
+                        <table class="table table-dark table-hover mb-0 small align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Recipient</th>
+                                    <th>Catalog</th>
+                                    <th>Format</th>
+                                    <th>Views</th>
+                                    <th>Sent At</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dispatchHistoryTableBody">
+                                <!-- Dynamic rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-ghost-dark" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/public/js/menu-master.js"></script>
+    <script src="/staff_sidebar.js"></script>
+    <script src="/staff_header.js"></script>
+
+    <script>
+        // State Management
+        let currentCatalogs = [];
+        let activeCatalog = null;
+        let activeSegment = 'SOLAR';
+        let userPermissions = { can_author: false, can_dispatch: true };
+        let sectionModalInstance = null;
+        let dispatchModalInstance = null;
+        let historyModalInstance = null;
+
+        const VERTICALS = [
+            { code: 'SOLAR', label: 'Solar Solutions', icon: 'fa-solar-panel', defaultSlug: 'commercial-residential-solar' },
+            { code: 'INDUSTRIAL_HUB', label: 'Industrial Hub', icon: 'fa-industry', defaultSlug: 'industrial-hub-franchise' },
+            { code: 'EV_B2B', label: 'EV B2B Fleets', icon: 'fa-truck-moving', defaultSlug: 'ev-commercial-fleet' },
+            { code: 'EV_B2C', label: 'EV 2-Wheelers', icon: 'fa-motorcycle', defaultSlug: 'ev-smart-commuter' },
+            { code: 'EV_SPARES', label: 'EV Spares & Batteries', icon: 'fa-cogs', defaultSlug: 'ev-spares-and-chargers' },
+            { code: 'ETC_TRAINING', label: 'ETC Training', icon: 'fa-graduation-cap', defaultSlug: 'etc-renewable-certifications' },
+            { code: 'REAL_DREAMS', label: 'Real Dreams Real Estate', icon: 'fa-building', defaultSlug: 'real-dreams-premium-properties' },
+            { code: 'INSURANCE', label: 'Insurance Advisory', icon: 'fa-shield-alt', defaultSlug: 'comprehensive-insurance-advisory' }
+        ];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            sectionModalInstance = new bootstrap.Modal(document.getElementById('sectionModal'));
+            dispatchModalInstance = new bootstrap.Modal(document.getElementById('dispatchModal'));
+            historyModalInstance = new bootstrap.Modal(document.getElementById('historyModal'));
+
+            renderSegmentTabs();
+            await loadCatalogLibrary();
+        });
+
+        function renderSegmentTabs() {
+            const bar = document.getElementById('segmentTabsBar');
+            bar.innerHTML = VERTICALS.map(v => `
+                <button class="segment-tab-btn ${v.code === activeSegment ? 'active' : ''}" onclick="switchSegment('${v.code}')">
+                    <i class="fas ${v.icon}"></i> ${v.label}
+                </button>
+            `).join('');
+        }
+
+        function switchSegment(segCode) {
+            activeSegment = segCode;
+            renderSegmentTabs();
+            // Find catalog matching segment
+            const found = currentCatalogs.find(c => c.segment_code === segCode);
+            if (found) {
+                loadCatalogDetail(found.id);
+            } else {
+                renderEmptyCatalogView();
+            }
+        }
+
+        async function loadCatalogLibrary() {
+            try {
+                const res = await staffFetch('/api/v1/digital-catalogs/library');
+                if (!res.ok) throw new Error('Failed to load catalogs library');
+                const data = await res.json();
+                currentCatalogs = data.catalogs || [];
+                userPermissions = data.user_permissions || userPermissions;
+
+                if (userPermissions.can_author) {
+                    document.getElementById('btnCreateCatalog').style.display = 'inline-flex';
+                    document.getElementById('btnAddSection').style.display = 'inline-block';
+                    document.getElementById('btnAddItem').style.display = 'inline-block';
+                }
+
+                // Activate initial segment
+                const initial = currentCatalogs.find(c => c.segment_code === activeSegment) || currentCatalogs[0];
+                if (initial) {
+                    activeSegment = initial.segment_code;
+                    renderSegmentTabs();
+                    await loadCatalogDetail(initial.id);
+                }
+            } catch (err) {
+                console.error('Error loading catalogs:', err);
+            }
+        }
+
+        async function loadCatalogDetail(catalogId) {
+            try {
+                const res = await staffFetch(`/api/v1/digital-catalogs/${catalogId}`);
+                if (!res.ok) throw new Error('Failed to load catalog details');
+                const data = await res.json();
+                activeCatalog = data.catalog;
+
+                renderCatalogHeader(activeCatalog);
+                renderSectionsList(activeCatalog.sections || []);
+                renderItemsList(activeCatalog.items || []);
+                updatePreviewFrame(activeCatalog);
+            } catch (err) {
+                console.error('Detail load error:', err);
+            }
+        }
+
+        function renderCatalogHeader(cat) {
+            document.getElementById('catalogSegmentBadge').textContent = cat.segment_code;
+            document.getElementById('catalogTitle').textContent = cat.title;
+            document.getElementById('catalogSubtitle').textContent = cat.subtitle || cat.summary || '';
+            document.getElementById('statSectionsCount').textContent = cat.sections_count || (cat.sections ? cat.sections.length : 0);
+            document.getElementById('statItemsCount').textContent = cat.items_count || (cat.items ? cat.items.length : 0);
+            document.getElementById('statDispatchesCount').textContent = (cat.stats && cat.stats.total_sends) || 0;
+
+            document.getElementById('tabSecCount').textContent = (cat.sections || []).length;
+            document.getElementById('tabItemCount').textContent = (cat.items || []).length;
+
+            const segmentSlug = cat.segment_code.toLowerCase().replace(/_/g, '-');
+            const publicUrl = `/catalog/${segmentSlug}/${cat.slug}`;
+            document.getElementById('btnPublicViewLink').href = publicUrl;
+
+            document.getElementById('pdfBrochureUrlInput').value = cat.pdf_brochure_url || '';
+            document.getElementById('seoTitleInput').value = cat.seo_title || '';
+            document.getElementById('seoDescInput').value = cat.seo_description || '';
+        }
+
+        function renderSectionsList(sections) {
+            const container = document.getElementById('sectionsListContainer');
+            if (!sections || sections.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-muted">No sections created yet. Click "Add Section" to create modular content.</div>`;
+                return;
+            }
+
+            container.innerHTML = sections.map((s, idx) => `
+                <div class="section-card" data-id="${s.id}">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-grip-vertical drag-handle"></i>
+                        <div>
+                            <span class="badge bg-secondary bg-opacity-50 text-white-50 badge-pill me-2">${s.section_type}</span>
+                            <span class="fw-bold text-white">${escapeHtml(s.title || s.raw_title || 'Untitled Section')}</span>
+                            <div class="text-muted small">${escapeHtml(s.subtitle || '')}</div>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        ${userPermissions.can_author ? `
+                            <button class="btn btn-sm btn-ghost-dark" onclick="editSection(${s.id})" title="Edit Section">
+                                <i class="fas fa-edit text-info"></i>
+                            </button>
+                            <button class="btn btn-sm btn-ghost-dark" onclick="deleteSection(${s.id})" title="Delete Section">
+                                <i class="fas fa-trash-alt text-danger"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+
+            if (userPermissions.can_author) {
+                initSectionSortable();
+            }
+        }
+
+        function initSectionSortable() {
+            const container = document.getElementById('sectionsListContainer');
+            if (!container) return;
+            Sortable.create(container, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: async function () {
+                    const items = container.querySelectorAll('.section-card');
+                    const payload = [];
+                    items.forEach((item, index) => {
+                        payload.push({ id: parseInt(item.dataset.id), sort_order: index });
+                    });
+                    await staffFetch(`/api/v1/digital-catalogs/${activeCatalog.id}/sections/reorder`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    refreshPreviewFrame();
+                }
+            });
+        }
+
+        function renderItemsList(items) {
+            const container = document.getElementById('itemsListContainer');
+            if (!items || items.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-muted">No products or packages attached. Click "Add Product/Item" to add items.</div>`;
+                return;
+            }
+
+            container.innerHTML = items.map(it => `
+                <div class="catalog-item-card">
+                    <img src="${(it.media_urls && it.media_urls[0]) || '/public/placeholder-catalog.png'}" class="catalog-item-thumb" onerror="this.src='/public/vgk4u-logo.png'">
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between">
+                            <h6 class="fw-bold text-white mb-1">${escapeHtml(it.title)}</h6>
+                            <span class="fw-bold text-emerald text-success">${(it.pricing && it.pricing.price_text) || (it.pricing && it.pricing.base_price ? '₹' + it.pricing.base_price.toLocaleString('en-IN') : 'Enquire')}</span>
+                        </div>
+                        <p class="text-muted small mb-1">${escapeHtml(it.subtitle || '')}</p>
+                        <div class="d-flex gap-1 flex-wrap">
+                            ${(it.badges || []).map(b => `<span class="badge bg-warning bg-opacity-25 text-warning" style="font-size: 10px;">${b}</span>`).join('')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updatePreviewFrame(cat) {
+            const iframe = document.getElementById('catalogPreviewIframe');
+            const segmentSlug = cat.segment_code.toLowerCase().replace(/_/g, '-');
+            iframe.src = `/catalog/${segmentSlug}/${cat.slug}?preview=1`;
+        }
+
+        function refreshPreviewFrame() {
+            const iframe = document.getElementById('catalogPreviewIframe');
+            iframe.src = iframe.src;
+        }
+
+        function setDeviceView(type) {
+            const container = document.getElementById('previewFrameContainer');
+            container.className = `preview-frame-container device-${type}`;
+            document.querySelectorAll('#devBtnDesktop, #devBtnTablet, #devBtnMobile').forEach(b => b.classList.remove('active'));
+            if (type === 'desktop') document.getElementById('devBtnDesktop').classList.add('active');
+            if (type === 'tablet') document.getElementById('devBtnTablet').classList.add('active');
+            if (type === 'mobile') document.getElementById('devBtnMobile').classList.add('active');
+        }
+
+        // Section Modal Handling
+        function openSectionModal() {
+            document.getElementById('editSectionId').value = '';
+            document.getElementById('sectionModalTitle').innerHTML = '<i class="fas fa-plus text-success me-2"></i>Add Modular Section';
+            document.getElementById('secTypeSelect').value = 'highlights_grid';
+            document.getElementById('secKeyInput').value = 'features';
+            document.getElementById('secTitle_en').value = '';
+            document.getElementById('secSubtitle_en').value = '';
+            document.getElementById('secTitle_te').value = '';
+            document.getElementById('secSubtitle_te').value = '';
+            document.getElementById('secTitle_hi').value = '';
+            document.getElementById('secSubtitle_hi').value = '';
+            document.getElementById('secTitle_ta').value = '';
+            document.getElementById('secSubtitle_ta').value = '';
+            document.getElementById('secVideoUrlInput').value = '';
+            document.getElementById('secConfigJson').value = '{\n  "cards": []\n}';
+            sectionModalInstance.show();
+        }
+
+        function editSection(sectionId) {
+            const sec = (activeCatalog.sections || []).find(s => s.id === sectionId);
+            if (!sec) return;
+
+            document.getElementById('editSectionId').value = sec.id;
+            document.getElementById('sectionModalTitle').innerHTML = '<i class="fas fa-edit text-info me-2"></i>Edit Section';
+            document.getElementById('secTypeSelect').value = sec.section_type;
+            document.getElementById('secKeyInput').value = sec.section_key;
+
+            const cv = sec.content_variants || {};
+            document.getElementById('secTitle_en').value = (cv.en && cv.en.title) || sec.raw_title || '';
+            document.getElementById('secSubtitle_en').value = (cv.en && cv.en.subtitle) || sec.raw_subtitle || '';
+            document.getElementById('secTitle_te').value = (cv.te && cv.te.title) || '';
+            document.getElementById('secSubtitle_te').value = (cv.te && cv.te.subtitle) || '';
+            document.getElementById('secTitle_hi').value = (cv.hi && cv.hi.title) || '';
+            document.getElementById('secSubtitle_hi').value = (cv.hi && cv.hi.subtitle) || '';
+            document.getElementById('secTitle_ta').value = (cv.ta && cv.ta.title) || '';
+            document.getElementById('secSubtitle_ta').value = (cv.ta && cv.ta.subtitle) || '';
+
+            document.getElementById('secVideoUrlInput').value = sec.configuration?.video_url || '';
+            document.getElementById('secConfigJson').value = JSON.stringify(sec.configuration || {}, null, 2);
+
+            sectionModalInstance.show();
+        }
+
+        async function saveSection() {
+            const secId = document.getElementById('editSectionId').value;
+            let configObj = {};
+            try {
+                configObj = JSON.parse(document.getElementById('secConfigJson').value || '{}');
+            } catch (e) {
+                alert('Invalid JSON in Configuration field.');
+                return;
+            }
+
+            const videoUrl = document.getElementById('secVideoUrlInput').value.trim();
+            if (videoUrl) {
+                configObj.video_url = videoUrl;
+            }
+
+            const payload = {
+                section_type: document.getElementById('secTypeSelect').value,
+                section_key: document.getElementById('secKeyInput').value.trim(),
+                title: document.getElementById('secTitle_en').value.trim(),
+                subtitle: document.getElementById('secSubtitle_en').value.trim(),
+                content_variants: {
+                    en: { title: document.getElementById('secTitle_en').value.trim(), subtitle: document.getElementById('secSubtitle_en').value.trim() },
+                    te: { title: document.getElementById('secTitle_te').value.trim(), subtitle: document.getElementById('secSubtitle_te').value.trim() },
+                    hi: { title: document.getElementById('secTitle_hi').value.trim(), subtitle: document.getElementById('secSubtitle_hi').value.trim() },
+                    ta: { title: document.getElementById('secTitle_ta').value.trim(), subtitle: document.getElementById('secSubtitle_ta').value.trim() }
+                },
+                configuration: configObj
+            };
+
+            try {
+                let res;
+                if (secId) {
+                    res = await staffFetch(`/api/v1/digital-catalogs/${activeCatalog.id}/sections/${secId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    res = await staffFetch(`/api/v1/digital-catalogs/${activeCatalog.id}/sections`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
+                if (!res.ok) throw new Error('Failed to save section');
+                sectionModalInstance.hide();
+                await loadCatalogDetail(activeCatalog.id);
+            } catch (err) {
+                alert('Error saving section: ' + err.message);
+            }
+        }
+
+        async function deleteSection(secId) {
+            if (!confirm('Are you sure you want to remove this section?')) return;
+            try {
+                const res = await staffFetch(`/api/v1/digital-catalogs/${activeCatalog.id}/sections/${secId}`, {
+                    method: 'DELETE'
+                });
+                if (!res.ok) throw new Error('Failed to delete section');
+                await loadCatalogDetail(activeCatalog.id);
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        // Gemini AI Copy Drafting
+        async function triggerGeminiDraftForSection() {
+            const topic = prompt('Enter the specific offering or topic to draft copy for:', activeCatalog.title);
+            if (!topic) return;
+
+            const secType = document.getElementById('secTypeSelect').value;
+            try {
+                const btn = event.target;
+                const oldText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Writing...';
+                btn.disabled = true;
+
+                const res = await staffFetch('/api/v1/digital-catalogs/ai-draft', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        vertical: activeSegment,
+                        section_type: secType,
+                        topic: topic
+                    })
+                });
+
+                btn.innerHTML = oldText;
+                btn.disabled = false;
+
+                if (!res.ok) throw new Error('AI generation error');
+                const data = await res.json();
+                const gen = data.generated;
+
+                if (gen && gen.content_variants) {
+                    const cv = gen.content_variants;
+                    if (cv.en) {
+                        document.getElementById('secTitle_en').value = cv.en.title || '';
+                        document.getElementById('secSubtitle_en').value = cv.en.subtitle || '';
+                    }
+                    if (cv.te) {
+                        document.getElementById('secTitle_te').value = cv.te.title || '';
+                        document.getElementById('secSubtitle_te').value = cv.te.subtitle || '';
+                    }
+                    if (cv.hi) {
+                        document.getElementById('secTitle_hi').value = cv.hi.title || '';
+                        document.getElementById('secSubtitle_hi').value = cv.hi.subtitle || '';
+                    }
+                    if (cv.ta) {
+                        document.getElementById('secTitle_ta').value = cv.ta.title || '';
+                        document.getElementById('secSubtitle_ta').value = cv.ta.subtitle || '';
+                    }
+                }
+            } catch (e) {
+                alert('AI Draft notice: ' + e.message);
+            }
+        }
+
+        // WhatsApp Dispatch Modal
+        function openWhatsAppDispatchModal() {
+            document.getElementById('dispatchPhoneInput').value = '';
+            document.getElementById('dispatchNameInput').value = '';
+            document.getElementById('dispatchCustomNote').value = '';
+            document.getElementById('dispatchResultBox').style.display = 'none';
+            document.getElementById('btnExecuteDispatch').style.display = 'inline-flex';
+            dispatchModalInstance.show();
+        }
+
+        async function executeWhatsAppDispatch() {
+            const phone = document.getElementById('dispatchPhoneInput').value.trim();
+            if (!phone || phone.length < 10) {
+                alert('Please enter a valid 10-digit mobile number.');
+                return;
+            }
+
+            const btn = document.getElementById('btnExecuteDispatch');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending...';
+            btn.disabled = true;
+
+            try {
+                const res = await staffFetch(`/api/v1/digital-catalogs/${activeCatalog.id}/dispatch-whatsapp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        recipient_phone: phone,
+                        recipient_name: document.getElementById('dispatchNameInput').value.trim(),
+                        language_code: document.getElementById('dispatchLangSelect').value,
+                        delivery_method: document.getElementById('dispatchMethodSelect').value,
+                        custom_note: document.getElementById('dispatchCustomNote').value.trim()
+                    })
+                });
+
+                btn.innerHTML = '<i class="fab fa-whatsapp me-1"></i> Send Catalog Now';
+                btn.disabled = false;
+
+                if (!res.ok) throw new Error('Dispatch request failed');
+                const result = await res.json();
+
+                document.getElementById('dispatchResultBox').style.display = 'block';
+                document.getElementById('dispatchLinkDisplay').textContent = result.web_catalog_url;
+                document.getElementById('btnOpenWhatsAppDirect').href = result.wa_me_url;
+                btn.style.display = 'none';
+
+                // Refresh catalog stats
+                loadCatalogDetail(activeCatalog.id);
+            } catch (err) {
+                btn.innerHTML = '<i class="fab fa-whatsapp me-1"></i> Send Catalog Now';
+                btn.disabled = false;
+                alert('Dispatch error: ' + err.message);
+            }
+        }
+
+        // Dispatch History Modal
+        async function openDispatchHistoryModal() {
+            try {
+                const res = await staffFetch('/api/v1/digital-catalogs/dispatches/my-history');
+                if (!res.ok) throw new Error('Failed to load history');
+                const data = await res.json();
+                const tbody = document.getElementById('dispatchHistoryTableBody');
+                if (!data.dispatches || data.dispatches.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">No dispatches sent yet.</td></tr>`;
+                } else {
+                    tbody.innerHTML = data.dispatches.map(d => `
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-white">${escapeHtml(d.recipient_name || 'Customer')}</div>
+                                <div class="text-muted" style="font-size: 11px;">+${d.recipient_phone}</div>
+                            </td>
+                            <td>${escapeHtml(d.catalog_title || 'Catalog')}</td>
+                            <td><span class="badge bg-secondary bg-opacity-50">${d.delivery_method}</span></td>
+                            <td><span class="badge ${d.view_count > 0 ? 'bg-success' : 'bg-dark'}">${d.view_count} views</span></td>
+                            <td>${d.sent_at ? new Date(d.sent_at).toLocaleDateString('en-IN', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'}) : 'N/A'}</td>
+                            <td>
+                                <a href="/catalog/${(d.segment_code || 'catalog').toLowerCase().replace(/_/g, '-')}/${d.catalog_slug || ''}?ref=${d.share_ref_code}" target="_blank" class="btn btn-sm btn-ghost-dark py-0 px-2" title="Open Link">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+                historyModalInstance.show();
+            } catch (e) {
+                alert('History notice: ' + e.message);
+            }
+        }
+
+        async function saveCatalogSettings() {
+            try {
+                const payload = {
+                    pdf_brochure_url: document.getElementById('pdfBrochureUrlInput').value.trim() || null,
+                    seo_title: document.getElementById('seoTitleInput').value.trim() || null,
+                    seo_description: document.getElementById('seoDescInput').value.trim() || null
+                };
+                const res = await staffFetch(`/api/v1/digital-catalogs/${activeCatalog.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('Failed to update catalog settings');
+                alert('Catalog settings saved successfully!');
+            } catch (e) {
+                alert('Settings error: ' + e.message);
+            }
+        }
+
+        async function uploadPdfBrochure() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/pdf';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const fd = new FormData();
+                fd.append('file', file);
+                fd.append('folder', 'catalogs/brochures');
+                try {
+                    const res = await staffFetch('/api/v1/digital-catalogs/upload-media', {
+                        method: 'POST',
+                        body: fd
+                    });
+                    if (!res.ok) throw new Error('Upload failed');
+                    const d = await res.json();
+                    document.getElementById('pdfBrochureUrlInput').value = d.url;
+                    alert('PDF brochure uploaded to S3 successfully!');
+                } catch (err) {
+                    alert('Upload notice: ' + err.message);
+                }
+            };
+            input.click();
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>

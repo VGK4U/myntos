@@ -496,6 +496,12 @@ __all__ = [
     "VGK4UCategoryCommissionConfig",
     "VGK4UCorporateMarginLedger",
     "VGKSelfBusinessPointsAccrualLedger",
+
+    # Digital Catalog System (Sep 2026)
+    "DigitalCatalog",
+    "CatalogSection",
+    "CatalogItem",
+    "CatalogLeadSend",
 ]
 
 from app.models.vgk_business_points import VGKSelfBusinessPointsAccrualLedger
@@ -519,4 +525,12 @@ from app.models.automation import (
     AutomationExecution,
     AutomationDispatch,
     AutomationTargetConfig
+)
+
+# Digital Catalog System (Sep 2026)
+from app.models.digital_catalog import (
+    DigitalCatalog,
+    CatalogSection,
+    CatalogItem,
+    CatalogLeadSend
 )

@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Official Digital Catalog — MYNTREAL & VGK4U</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome 6 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts: Outfit & Noto Sans for Indian Regional Scripts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Tamil:wght@400;600;700&family=Noto+Sans+Telugu:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #059669;
+            --primary-gradient: linear-gradient(135deg, #059669 0%, #047857 100%);
+            --accent: #d97706;
+            --bg-body: #090d16;
+            --bg-card: #131b2e;
+            --bg-card-alt: #1a243d;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-highlight: rgba(16, 185, 129, 0.35);
+            --text-light: #f8fafc;
+            --text-dim: #94a3b8;
+            --wa-green: #25d366;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-light);
+            font-family: 'Outfit', 'Noto Sans Telugu', 'Noto Sans Devanagari', 'Noto Sans Tamil', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* Top Brand Header */
+        .catalog-top-header {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--border-subtle);
+            position: sticky;
+            top: 0;
+            z-index: 1040;
+            padding: 12px 24px;
+        }
+
+        .brand-logo-left {
+            height: 38px;
+            object-fit: contain;
+        }
+
+        .brand-logo-right {
+            height: 42px;
+            object-fit: contain;
+        }
+
+        .brand-tagline {
+            font-size: 11px;
+            color: #fbbf24;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+        }
+
+        /* Language Toggle Pills */
+        .lang-pill-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-dim);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .lang-pill-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: var(--text-light);
+        }
+
+        .lang-pill-btn.active {
+            background: var(--primary-gradient);
+            border-color: #10b981;
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(5, 150, 105, 0.4);
+        }
+
+        /* Sticky In-Page Navigation Bar */
+        .sticky-jump-nav {
+            background: #0f172a;
+            border-bottom: 1px solid var(--border-subtle);
+            overflow-x: auto;
+            white-space: nowrap;
+            padding: 8px 16px;
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            scrollbar-width: none;
+        }
+
+        .sticky-jump-nav::-webkit-scrollbar { display: none; }
+
+        .jump-link {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .jump-link:hover, .jump-link.active {
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        /* Hero Section */
+        .hero-section-wrapper {
+            position: relative;
+            padding: 70px 20px 60px;
+            background: radial-gradient(circle at 50% 20%, rgba(5, 150, 105, 0.18) 0%, rgba(9, 13, 22, 0.95) 75%);
+            border-bottom: 1px solid var(--border-subtle);
+            text-align: center;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #34d399;
+            font-weight: 700;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            padding: 6px 16px;
+            border-radius: 30px;
+            margin-bottom: 20px;
+        }
+
+        .hero-title {
+            font-size: 42px;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 18px;
+            max-width: 900px;
+            margin-left: auto;
+            margin-right: auto;
+            background: linear-gradient(135deg, #ffffff 30%, #a7f3d0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        @media (max-width: 768px) {
+            .hero-title { font-size: 28px; }
+        }
+
+        .hero-subtitle {
+            font-size: 18px;
+            color: var(--text-dim);
+            max-width: 750px;
+            margin: 0 auto 32px;
+            line-height: 1.6;
+        }
+
+        /* Stats Counter Strip */
+        .hero-stats-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            max-width: 950px;
+            margin: 0 auto 32px;
+        }
+
+        .stat-card-item {
+            background: rgba(19, 27, 46, 0.7);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 16px 20px;
+            backdrop-filter: blur(8px);
+        }
+
+        .stat-card-value {
+            font-size: 26px;
+            font-weight: 800;
+            color: #fbbf24;
+            margin-bottom: 2px;
+        }
+
+        .stat-card-label {
+            font-size: 12px;
+            color: var(--text-dim);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Generic Section Container */
+        .catalog-section-block {
+            padding: 70px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .catalog-section-block:nth-child(even) {
+            background: rgba(15, 23, 42, 0.45);
+        }
+
+        .section-header-box {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 48px;
+        }
+
+        .section-header-title {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 10px;
+        }
+
+        .section-header-subtitle {
+            font-size: 16px;
+            color: var(--text-dim);
+        }
+
+        /* Highlights Feature Card */
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 28px 24px;
+            height: 100%;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card:hover {
+            border-color: var(--border-highlight);
+            transform: translateY(-4px);
+            box-shadow: 0 16px 30px -10px rgba(0, 0, 0, 0.5);
+        }
+
+        .feature-icon-wrapper {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            background: rgba(5, 150, 105, 0.15);
+            color: #10b981;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 20px;
+        }
+
+        /* Packages & Pricing Cards */
+        .pricing-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 18px;
+            padding: 32px 28px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .pricing-card.popular-tier {
+            border-color: #10b981;
+            background: linear-gradient(180deg, #162438 0%, #131b2e 100%);
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);
+        }
+
+        .popular-badge-ribbon {
+            position: absolute;
+            top: -12px;
+            right: 24px;
+            background: var(--primary-gradient);
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(5, 150, 105, 0.4);
+        }
+
+        .pricing-price-text {
+            font-size: 34px;
+            font-weight: 900;
+            color: #ffffff;
+            margin: 14px 0 4px;
+        }
+
+        .pricing-subsidy-text {
+            color: #34d399;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .pricing-net-cost {
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 8px;
+            padding: 6px 12px;
+            margin-top: 8px;
+            font-weight: 700;
+            color: #6ee7b7;
+            font-size: 13px;
+            display: inline-block;
+        }
+
+        .pricing-features-list {
+            list-style: none;
+            padding: 0;
+            margin: 24px 0;
+            flex-grow: 1;
+        }
+
+        .pricing-features-list li {
+            padding: 8px 0;
+            font-size: 14px;
+            color: #cbd5e1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pricing-features-list li i {
+            color: #10b981;
+            font-size: 13px;
+        }
+
+        /* Process Steps Timeline */
+        .step-timeline-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            position: relative;
+        }
+
+        .step-number-circle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+        }
+
+        /* Accordion FAQs */
+        .accordion-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px !important;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        .accordion-button {
+            background: var(--bg-card);
+            color: var(--text-light);
+            font-weight: 700;
+            font-size: 15px;
+            padding: 18px 22px;
+            box-shadow: none !important;
+        }
+
+        .accordion-button:not(.collapsed) {
+            background: var(--bg-card-alt);
+            color: #34d399;
+        }
+
+        .accordion-button::after {
+            filter: invert(1);
+        }
+
+        .accordion-body {
+            background: var(--bg-card);
+            color: var(--text-dim);
+            font-size: 14px;
+            line-height: 1.6;
+            padding: 18px 22px;
+        }
+
+        /* Floating WhatsApp Click-to-Chat Button */
+        .floating-wa-btn {
+            position: fixed;
+            bottom: 26px;
+            right: 26px;
+            z-index: 1050;
+            background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+            color: #ffffff;
+            border-radius: 40px;
+            padding: 12px 22px;
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 8px 25px rgba(37, 211, 102, 0.45);
+            text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .floating-wa-btn:hover {
+            transform: scale(1.05);
+            color: #ffffff;
+            box-shadow: 0 12px 30px rgba(37, 211, 102, 0.6);
+        }
+
+        /* Buttons */
+        .btn-cta-main {
+            background: var(--primary-gradient);
+            color: #ffffff;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 6px 20px rgba(5, 150, 105, 0.4);
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-cta-main:hover {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: #ffffff;
+            transform: translateY(-2px);
+        }
+
+        .btn-cta-wa {
+            background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+            color: #ffffff;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 15px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-cta-wa:hover {
+            color: #ffffff;
+            transform: translateY(-2px);
+        }
+
+        /* Footer */
+        .catalog-footer {
+            background: #060911;
+            border-top: 1px solid var(--border-subtle);
+            padding: 40px 20px 80px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── 1. TOP BRANDING HEADER ──────────────────────────────────────── -->
+    <header class="catalog-top-header">
+        <div class="container-xl d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <!-- Left: VGK4U Platform Logo -->
+            <div class="d-flex align-items-center gap-2">
+                <img src="/public/vgk4u-logo.png" alt="VGK4U Platform" class="brand-logo-left" onerror="this.src='/public/favicon.ico'">
+                <span class="d-none d-sm-inline fw-bold small text-white-50">VGK4U Platform</span>
+            </div>
+
+            <!-- Center: Language Switcher Pills -->
+            <div class="d-flex gap-1 align-items-center" id="langSwitchGroup">
+                <button class="lang-pill-btn active" data-lang="en" onclick="switchCatalogLanguage('en')">English</button>
+                <button class="lang-pill-btn" data-lang="te" onclick="switchCatalogLanguage('te')">తెలుగు</button>
+                <button class="lang-pill-btn" data-lang="hi" onclick="switchCatalogLanguage('hi')">हिन्दी</button>
+                <button class="lang-pill-btn" data-lang="ta" onclick="switchCatalogLanguage('ta')">தமிழ்</button>
+            </div>
+
+            <!-- Right: MYNTREAL Official Logo -->
+            <div class="d-flex flex-column align-items-end">
+                <img src="/public/myntreal-logo.png" alt="MYNTREAL" class="brand-logo-right" onerror="this.src='/public/vgk4u-logo.png'">
+                <span class="brand-tagline">MYNTREAL – Redefining Future</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- ── 2. STICKY IN-PAGE JUMP NAVIGATION ───────────────────────────── -->
+    <nav class="sticky-jump-nav" id="jumpNavBar">
+        <a href="#hero" class="jump-link active">Overview</a>
+        <a href="#highlights" class="jump-link">Key Benefits</a>
+        <a href="#packages" class="jump-link">Packages & Pricing</a>
+        <a href="#process" class="jump-link">Installation Steps</a>
+        <a href="#media" class="jump-link">Gallery & Videos</a>
+        <a href="#faqs" class="jump-link">FAQs</a>
+        <a href="#contact" class="jump-link">Contact Specialist</a>
+    </nav>
+
+    <!-- ── 3. DYNAMIC SECTIONS CONTAINER ───────────────────────────────── -->
+    <main id="catalogSectionsContainer">
+        <!-- Rendered dynamically by script -->
+        <div class="text-center py-5">
+            <div class="spinner-border text-success" role="status"></div>
+            <p class="text-muted mt-3">Loading interactive digital catalog...</p>
+        </div>
+    </main>
+
+    <!-- ── 4. FLOATING WHATSAPP BUTTON ─────────────────────────────────── -->
+    <a href="#" target="_blank" class="floating-wa-btn" id="btnFloatingWhatsApp">
+        <i class="fab fa-whatsapp fa-lg"></i>
+        <span>Chat on WhatsApp</span>
+    </a>
+
+    <!-- ── 5. FOOTER & DISCLAIMER ──────────────────────────────────────── -->
+    <footer class="catalog-footer">
+        <div class="container text-center">
+            <p class="mb-2"><strong>MYNTREAL & VGK4U Platform</strong> — Empowering Sustainable Clean Energy & Smart Mobility.</p>
+            <p class="text-muted mb-0">Authorized Official Digital Catalog. All content, specifications, and subsidies subject to regional guidelines.</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // State variables
+        let catalogData = null;
+        let activeLanguage = 'en';
+        let shareRefCode = null;
+        let categorySlug = 'solar';
+        let catalogSlug = 'commercial-residential-solar';
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Parse URL parameters and path
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            // Expected /catalog/:category/:slug
+            if (pathParts.length >= 3 && pathParts[0] === 'catalog') {
+                categorySlug = pathParts[1];
+                catalogSlug = pathParts[2];
+            } else if (pathParts.length >= 2 && pathParts[0] === 'catalog') {
+                catalogSlug = pathParts[1];
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            shareRefCode = urlParams.get('ref') || null;
+            activeLanguage = urlParams.get('lang') || 'en';
+
+            updateLangButtonStyles();
+            await fetchCatalogData();
+        });
+
+        function updateLangButtonStyles() {
+            document.querySelectorAll('#langSwitchGroup .lang-pill-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === activeLanguage);
+            });
+        }
+
+        async function switchCatalogLanguage(lang) {
+            activeLanguage = lang;
+            updateLangButtonStyles();
+            // Update URL without reload
+            const url = new URL(window.location);
+            url.searchParams.set('lang', lang);
+            window.history.replaceState({}, '', url);
+
+            await fetchCatalogData();
+        }
+
+        async function fetchCatalogData() {
+            try {
+                let apiUrl = `/api/v1/digital-catalogs/public/${categorySlug}/${catalogSlug}?lang=${activeLanguage}`;
+                if (shareRefCode) {
+                    apiUrl += `&ref=${shareRefCode}`;
+                }
+
+                const res = await fetch(apiUrl);
+                if (!res.ok) throw new Error('Catalog not found');
+                const data = await res.json();
+                catalogData = data.catalog;
+
+                document.title = `${catalogData.title} — MYNTREAL & VGK4U`;
+                renderSinglePageCatalog(catalogData);
+                updateFloatingWhatsApp(catalogData);
+            } catch (err) {
+                console.error('Failed to load catalog:', err);
+                document.getElementById('catalogSectionsContainer').innerHTML = `
+                    <div class="container text-center py-5">
+                        <div class="p-5 bg-dark rounded border border-danger border-opacity-25">
+                            <h3 class="text-danger mb-2">Catalog Unavailable</h3>
+                            <p class="text-muted">The requested digital catalog could not be loaded or is being updated.</p>
+                            <a href="/catalog/solar/commercial-residential-solar" class="btn btn-sm btn-outline-success">View Solar Catalog</a>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderSinglePageCatalog(cat) {
+            const container = document.getElementById('catalogSectionsContainer');
+            const sections = cat.sections || [];
+            const items = cat.items || [];
+
+            let html = '';
+
+            // Render each modular section
+            sections.forEach(sec => {
+                const type = sec.section_type;
+                const loc = sec.localized_content || {};
+                const title = loc.title || sec.title || '';
+                const subtitle = loc.subtitle || sec.subtitle || '';
+                const cfg = sec.configuration || {};
+
+                if (type === 'hero') {
+                    html += renderHeroSection(sec, cat, loc, cfg);
+                } else if (type === 'highlights_grid') {
+                    html += renderHighlightsSection(sec, loc, cfg);
+                } else if (type === 'packages_pricing') {
+                    html += renderPackagesSection(sec, loc, cfg, items);
+                } else if (type === 'process_workflow') {
+                    html += renderProcessSection(sec, loc, cfg);
+                } else if (type === 'faqs') {
+                    html += renderFaqsSection(sec, loc, cfg);
+                } else if (type === 'contact_cta') {
+                    html += renderContactCtaSection(sec, cat, loc, cfg);
+                } else {
+                    html += renderGenericSection(sec, loc, cfg);
+                }
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderHeroSection(sec, cat, loc, cfg) {
+            const stats = cfg.stats || [
+                { label: 'Bill Reduction', value: 'Up to 90%' },
+                { label: 'Warranty', value: '25 Years' },
+                { label: 'Avg Payback', value: '3.2 Years' }
+            ];
+
+            const ctaText = loc.cta_text || 'Request Free Site Assessment';
+            const badgeText = cfg.badge || 'Official Government Approved Partner';
+
+            return `
+                <section class="hero-section-wrapper" id="hero">
+                    <div class="container">
+                        <div class="hero-badge"><i class="fas fa-certificate"></i> ${badgeText}</div>
+                        <h1 class="hero-title">${escapeHtml(loc.title || cat.title)}</h1>
+                        <p class="hero-subtitle">${escapeHtml(loc.subtitle || cat.subtitle || cat.summary || '')}</p>
+
+                        <div class="hero-stats-strip">
+                            ${stats.map(st => `
+                                <div class="stat-card-item">
+                                    <div class="stat-card-value">${st.value}</div>
+                                    <div class="stat-card-label">${st.label}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <div class="d-flex justify-content-center gap-3 flex-wrap">
+                            <a href="#contact" class="btn-cta-main">
+                                <i class="fas fa-calendar-check"></i> ${ctaText}
+                            </a>
+                            <a href="#packages" class="btn btn-outline-light rounded-pill px-4 py-3 fw-bold">
+                                <i class="fas fa-tag me-1"></i> View Packages
+                            </a>
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderHighlightsSection(sec, loc, cfg) {
+            const cards = cfg.cards || [];
+            return `
+                <section class="catalog-section-block" id="highlights">
+                    <div class="container">
+                        <div class="section-header-box">
+                            <h2 class="section-header-title">${escapeHtml(loc.title || sec.title || 'Key Advantages')}</h2>
+                            <p class="section-header-subtitle">${escapeHtml(loc.subtitle || sec.subtitle || '')}</p>
+                        </div>
+                        <div class="row g-4">
+                            ${cards.map(c => `
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="feature-card">
+                                        <div class="feature-icon-wrapper">
+                                            <i class="fas fa-check-circle"></i>
+                                        </div>
+                                        <h5 class="fw-bold text-white mb-2">${escapeHtml(c.title || '')}</h5>
+                                        <p class="text-muted small mb-0">${escapeHtml(c.desc || '')}</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderPackagesSection(sec, loc, cfg, items) {
+            const plans = cfg.plans || [];
+            return `
+                <section class="catalog-section-block" id="packages">
+                    <div class="container">
+                        <div class="section-header-box">
+                            <h2 class="section-header-title">${escapeHtml(loc.title || sec.title || 'Packages & Capacity Options')}</h2>
+                            <p class="section-header-subtitle">${escapeHtml(loc.subtitle || sec.subtitle || 'Tailored to your specific energy needs & roof area')}</p>
+                        </div>
+                        <div class="row g-4 justify-content-center">
+                            ${plans.map(p => `
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="pricing-card ${p.is_popular ? 'popular-tier' : ''}">
+                                        ${p.is_popular ? '<div class="popular-badge-ribbon">Most Popular</div>' : ''}
+                                        <h4 class="fw-bold text-white mb-1">${escapeHtml(p.name)}</h4>
+                                        <small class="text-muted">${escapeHtml(p.ideal_for || '')}</small>
+                                        <div class="pricing-price-text">${p.price}</div>
+                                        ${p.subsidy ? `<div class="pricing-subsidy-text"><i class="fas fa-shield-alt me-1"></i> ${p.subsidy}</div>` : ''}
+                                        ${p.net_cost ? `<div class="pricing-net-cost">${p.net_cost}</div>` : ''}
+                                        <ul class="pricing-features-list">
+                                            ${(p.features || []).map(f => `<li><i class="fas fa-check"></i> ${escapeHtml(f)}</li>`).join('')}
+                                        </ul>
+                                        <a href="#contact" class="btn-cta-main w-100 justify-content-center mt-auto">
+                                            <i class="fas fa-bolt"></i> Enquire for this Plan
+                                        </a>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderProcessSection(sec, loc, cfg) {
+            const steps = cfg.steps || [];
+            return `
+                <section class="catalog-section-block" id="process">
+                    <div class="container">
+                        <div class="section-header-box">
+                            <h2 class="section-header-title">${escapeHtml(loc.title || sec.title || 'Step-by-Step Journey')}</h2>
+                            <p class="section-header-subtitle">${escapeHtml(loc.subtitle || sec.subtitle || 'Seamless execution from inquiry to switch-on')}</p>
+                        </div>
+                        <div class="row g-4">
+                            ${steps.map(s => `
+                                <div class="col-md-6 col-lg-3">
+                                    <div class="step-timeline-card">
+                                        <div class="step-number-circle">${s.step || '•'}</div>
+                                        <h5 class="fw-bold text-white mb-2">${escapeHtml(s.title || '')}</h5>
+                                        <p class="text-muted small mb-0">${escapeHtml(s.desc || '')}</p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderFaqsSection(sec, loc, cfg) {
+            const faqs = cfg.faqs || [];
+            const accId = `acc_${sec.id}`;
+            return `
+                <section class="catalog-section-block" id="faqs">
+                    <div class="container" style="max-width: 850px;">
+                        <div class="section-header-box">
+                            <h2 class="section-header-title">${escapeHtml(loc.title || sec.title || 'Frequently Asked Questions')}</h2>
+                            <p class="section-header-subtitle">${escapeHtml(loc.subtitle || sec.subtitle || '')}</p>
+                        </div>
+                        <div class="accordion" id="${accId}">
+                            ${faqs.map((f, i) => `
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button ${i !== 0 ? 'collapsed' : ''}" type="button" data-bs-toggle="collapse" data-bs-target="#${accId}_${i}">
+                                            ${escapeHtml(f.q)}
+                                        </button>
+                                    </h2>
+                                    <div id="${accId}_${i}" class="accordion-collapse collapse ${i === 0 ? 'show' : ''}" data-bs-parent="#${accId}">
+                                        <div class="accordion-body">
+                                            ${escapeHtml(f.a)}
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderContactCtaSection(sec, cat, loc, cfg) {
+            const phone = cfg.whatsapp_number || '919053899899';
+            const defaultMsg = encodeURIComponent(`Hello! I reviewed the ${cat.title} digital catalog (Ref: ${shareRefCode || 'direct'}). I would like to get in touch with an engineer.`);
+            const waUrl = `https://wa.me/${phone}?text=${defaultMsg}`;
+
+            return `
+                <section class="catalog-section-block" id="contact">
+                    <div class="container" style="max-width: 800px;">
+                        <div class="section-header-box mb-4">
+                            <h2 class="section-header-title">${escapeHtml(loc.title || 'Connect with our Specialists')}</h2>
+                            <p class="section-header-subtitle">${escapeHtml(loc.subtitle || 'Direct WhatsApp support, technical consultation and site audit booking.')}</p>
+                        </div>
+
+                        <div class="p-4 p-md-5 bg-dark rounded-4 border border-secondary border-opacity-25 text-center">
+                            <div class="mb-4">
+                                <a href="${waUrl}" target="_blank" class="btn-cta-wa px-5 py-3 fs-5">
+                                    <i class="fab fa-whatsapp fa-lg"></i> Direct WhatsApp Consultation
+                                </a>
+                            </div>
+
+                            <p class="text-muted small mb-4">— OR REQUEST A CALL BACK —</p>
+
+                            <form id="inquiryForm" onsubmit="submitInquiry(event)" class="text-start">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label small text-muted">Full Name</label>
+                                        <input type="text" class="form-control bg-black text-white border-secondary" id="inqName" required placeholder="Your Name">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small text-muted">Mobile Number</label>
+                                        <input type="tel" class="form-control bg-black text-white border-secondary" id="inqPhone" required placeholder="10-digit mobile" maxlength="10">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label small text-muted">Notes / Requirement</label>
+                                        <textarea class="form-control bg-black text-white border-secondary" id="inqNotes" rows="2" placeholder="e.g. 5kW Rooftop solar for villa in Guntur"></textarea>
+                                    </div>
+                                    <div class="col-12 text-center mt-3">
+                                        <button type="submit" class="btn btn-brand-primary btn-cta-main px-4 py-2" id="btnSubmitInquiry">
+                                            <i class="fas fa-paper-plane me-1"></i> Submit Inquiry
+                                        </button>
+                                        <div id="inquirySuccessMsg" class="text-success mt-2 fw-bold" style="display: none;">
+                                            <i class="fas fa-check-circle me-1"></i> Thank you! Our specialist will reach out shortly.
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function renderGenericSection(sec, loc, cfg) {
+            return `
+                <section class="catalog-section-block" id="${sec.section_key}">
+                    <div class="container">
+                        <div class="section-header-box">
+                            <h2 class="section-header-title">${escapeHtml(loc.title || sec.title || '')}</h2>
+                            <p class="section-header-subtitle">${escapeHtml(loc.subtitle || sec.subtitle || '')}</p>
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+
+        function updateFloatingWhatsApp(cat) {
+            const btn = document.getElementById('btnFloatingWhatsApp');
+            const phone = '919053899899';
+            const msg = encodeURIComponent(`Hello! I am reviewing the ${cat.title} digital catalog (Ref: ${shareRefCode || 'direct'}). Please share details.`);
+            btn.href = `https://wa.me/${phone}?text=${msg}`;
+        }
+
+        async function submitInquiry(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSubmitInquiry');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Submitting...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`/api/v1/digital-catalogs/public/${catalogData.id}/inquire`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: document.getElementById('inqName').value.trim(),
+                        phone: document.getElementById('inqPhone').value.trim(),
+                        notes: document.getElementById('inqNotes').value.trim(),
+                        share_ref_code: shareRefCode,
+                        selected_language: activeLanguage
+                    })
+                });
+
+                if (!res.ok) throw new Error('Submission failed');
+                document.getElementById('inquiryForm').reset();
+                document.getElementById('inquirySuccessMsg').style.display = 'block';
+                btn.innerHTML = '<i class="fas fa-check me-1"></i> Submitted';
+            } catch (err) {
+                alert('Inquiry error: ' + err.message);
+                btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Submit Inquiry';
+                btn.disabled = false;
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+</body>
+</html>

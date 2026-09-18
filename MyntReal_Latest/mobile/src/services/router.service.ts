@@ -200,6 +200,7 @@ export type PageRoute =
   | 'staff-vendors'
   // Custom Web Views
   | 'staff-expense-entries'
+  | 'digital-catalog'
   | 'staff-my-earnings';
 
 interface RouteConfig {
@@ -246,6 +247,7 @@ class RouterService {
     'staff-service': { id: 'staff-service', title: 'Service Center', icon: 'tool', showInTabs: false, portal: 'staff' },
     'staff-crm': { id: 'staff-crm', title: 'CRM Dashboard', icon: 'pie-chart', showInTabs: false, portal: 'staff' },
     'staff-team-leads': { id: 'staff-team-leads', title: 'Team Leads', icon: 'users', showInTabs: false, portal: 'staff' },
+    'digital-catalog': { id: 'digital-catalog', title: 'Digital Catalog', icon: 'book-open', showInTabs: false, portal: 'staff' },
     'change-password': { id: 'change-password', title: 'Change Password', icon: 'lock', showInTabs: false, portal: 'staff' },
     // Staff Dashboard Section - New Routes
     'staff-employees': { id: 'staff-employees', title: 'Employees', icon: 'users', showInTabs: false, portal: 'staff' },
