@@ -8,10 +8,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Configure AVAudioSession for background audio and VoIP calling stability
+        // Configure AVAudioSession for background audio and VoIP calling stability (defaulting to earpiece/receiver for conversational voice calls)
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth, .allowBluetoothA2DP, .defaultToSpeaker])
+            try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth, .allowBluetoothA2DP])
             try session.setActive(true)
         } catch {
             print("[AppDelegate] Notice initializing AVAudioSession: \(error)")

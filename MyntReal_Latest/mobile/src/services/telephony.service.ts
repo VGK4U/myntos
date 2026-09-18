@@ -621,8 +621,9 @@ class TelephonyService {
       }
     }
 
-    // Ensure remote audio playback element is ready and full volume
+    // Ensure remote audio playback element is ready and earpiece routing is enforced
     this.audioAdapter.ensureRemoteAudioSink();
+    void this.audioAdapter.setAudioRoute(false);
 
     // Create session on backend with lead_id preserved
     try {
@@ -878,6 +879,18 @@ class TelephonyService {
     }
     this.notify();
     return this.session.isHeld;
+  }
+
+  public setVolume(vol: number): void {
+    this.audioAdapter.setVolume(vol);
+  }
+
+  public getVolume(): number {
+    return this.audioAdapter.getSavedVolume();
+  }
+
+  public async getAudioDiagnostics(): Promise<any> {
+    return this.audioAdapter.getAudioDiagnostics();
   }
 
   public sendDTMF(digit: string): void {

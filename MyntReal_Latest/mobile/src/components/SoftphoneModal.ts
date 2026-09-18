@@ -496,6 +496,13 @@ class SoftphoneModal {
                 </button>
               </div>
 
+              <!-- In-Call Volume Control Slider -->
+              <div id="spInCallVolumeWrap" style="display: flex !important; align-items: center !important; justify-content: center !important; gap: 8px !important; width: 100% !important; max-width: 220px !important; padding: 4px 10px !important; background: rgba(255,255,255,0.06) !important; border-radius: 12px !important; border: 1px solid rgba(255,255,255,0.1) !important; box-sizing: border-box !important;">
+                <span style="color: #94a3b8 !important; font-size: 11px !important;">🔈</span>
+                <input id="spInCallVolumeSlider" type="range" min="0" max="100" value="${Math.round(telephonyService.getVolume() * 100)}" style="width: 100% !important; height: 4px !important; accent-color: #38bdf8 !important; cursor: pointer !important;" title="Adjust call volume" />
+                <span style="color: #94a3b8 !important; font-size: 11px !important;">🔊</span>
+              </div>
+
               <!-- End Call (Hangup) Red Button -->
               <button id="spBtnHangup" style="width: 52px !important; height: 52px !important; border-radius: 50% !important; background: linear-gradient(135deg, #ef4444, #dc2626) !important; border: none !important; color: white !important; font-size: 20px !important; cursor: pointer !important; box-shadow: 0 8px 20px rgba(239,68,68,0.4) !important; display: flex !important; align-items: center !important; justify-content: center !important;" title="End Call">
                 🛑
@@ -757,6 +764,11 @@ class SoftphoneModal {
 
     this.modalEl.querySelector('#spBtnSpeaker')?.addEventListener('click', () => {
       telephonyService.toggleSpeaker();
+    });
+
+    this.modalEl.querySelector('#spInCallVolumeSlider')?.addEventListener('input', (e: any) => {
+      const val = parseFloat(e.target.value) / 100;
+      telephonyService.setVolume(val);
     });
 
     this.modalEl.querySelector('#spBtnHold')?.addEventListener('click', () => {

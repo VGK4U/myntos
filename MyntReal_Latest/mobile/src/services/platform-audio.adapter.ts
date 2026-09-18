@@ -15,6 +15,9 @@ export interface IPlatformAudioAdapter {
   stopMicrophone(): void;
   setAudioRoute(isSpeaker: boolean): Promise<boolean>;
   cleanupAudio(): void;
+  getSavedVolume(): number;
+  setVolume(vol: number): void;
+  getAudioDiagnostics(): Promise<any>;
 }
 
 // 44-byte standard PCM 8000Hz 16-bit mono silent WAV for instantaneous autoplay unlock
@@ -78,7 +81,7 @@ class PlatformAudioAdapter implements IPlatformAudioAdapter {
     // 1. Prime HTMLAudioElement synchronously within user gesture
     if (audioEl) {
       try {
-        audioEl.volume = 1.0;
+        audioEl.volume = this.getSavedVolume();
         audioEl.muted = false;
 
         // Play silent audio buffer to unlock element in WebKit/Chromium
@@ -154,7 +157,7 @@ class PlatformAudioAdapter implements IPlatformAudioAdapter {
       console.log('[PlatformAudioAdapter] Canonical remote audio sink element (#plivoRemoteAudio) mounted.');
     }
 
-    el.volume = 1.0;
+    el.volume = this.getSavedVolume();
     el.muted = false;
     this.remoteAudioEl = el;
     return el;
@@ -265,7 +268,7 @@ class PlatformAudioAdapter implements IPlatformAudioAdapter {
     }
 
     try {
-      audioEl.volume = 1.0;
+      audioEl.volume = this.getSavedVolume();
       audioEl.muted = false;
 
       if (audioEl.hasAttribute('src')) {
@@ -286,14 +289,9 @@ class PlatformAudioAdapter implements IPlatformAudioAdapter {
         console.log('[PlatformAudioAdapter] MediaStream assigned to #plivoRemoteAudio. Tracks:', streamToAttach.getAudioTracks().length);
       }
 
-      // Mute Plivo internal remote view element to prevent duplicate playback / acoustic echo
-      if (plivoRemoteEl) {
-        plivoRemoteEl.muted = true;
-      }
-
       const activeStream = audioEl.srcObject as MediaStream | null;
       const audioTracks = activeStream ? activeStream.getAudioTracks() : [];
-      const liveTracks = audioTracks.filter((t) => t.readyState === 'live');
+      const liveTracks = audioTracks.filter((t) => t.readyState === 'live' && t.enabled);
       console.log(`[PlatformAudioAdapter] Sink #plivoRemoteAudio verification: hasSrcObject=${!!activeStream}, totalTracks=${audioTracks.length}, liveTracks=${liveTracks.length}, paused=${audioEl.paused}`);
 
       const playPromise = audioEl.play();
@@ -301,6 +299,16 @@ class PlatformAudioAdapter implements IPlatformAudioAdapter {
         await playPromise;
         console.log('[PlatformAudioAdapter] #plivoRemoteAudio is actively playing incoming speech.');
       }
+
+      // SAFEGUARD: Only mute Plivo internal element if canonical sink is confirmed playing live audio
+      if (plivoRemoteEl && liveTracks.length > 0 && !audioEl.paused) {
+        plivoRemoteEl.muted = true;
+        console.log('[PlatformAudioAdapter] Verified duplicate audio stream: Plivo internal remote view element muted.');
+      } else if (plivoRemoteEl) {
+        plivoRemoteEl.muted = false;
+        console.warn('[PlatformAudioAdapter] Safeguard active: Canonical sink has no verified live stream; preserved plivo_webrtc_remoteview unmuted.');
+      }
+
       return true;
     } catch (playErr: any) {
       // Do NOT silently swallow: Log the exact error and state
@@ -453,6 +461,64 @@ class PlatformAudioAdapter implements IPlatformAudioAdapter {
     } catch (_) {}
 
     console.log('[PlatformAudioAdapter] Audio cleanup complete: Zero audio leakage.');
+  }
+
+  // ── 11. VOLUME CONTROL & PERSISTENCE ───────────────────────────────────────
+  public getSavedVolume(): number {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const saved = localStorage.getItem('myntos_softphone_volume');
+        if (saved !== null) {
+          const parsed = parseFloat(saved);
+          if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
+            return parsed;
+          }
+        }
+      }
+    } catch (_) {}
+    return 0.85; // Standard conversational voice level
+  }
+
+  public setVolume(vol: number): void {
+    const clamped = Math.max(0, Math.min(1, vol || 0.85));
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('myntos_softphone_volume', clamped.toString());
+      }
+    } catch (_) {}
+    if (this.remoteAudioEl) {
+      this.remoteAudioEl.volume = clamped;
+    }
+    const plivoRemoteEl = typeof document !== 'undefined' ? (document.getElementById('plivo_webrtc_remoteview') as HTMLAudioElement | null) : null;
+    if (plivoRemoteEl && !plivoRemoteEl.muted) {
+      plivoRemoteEl.volume = clamped;
+    }
+    console.log(`[PlatformAudioAdapter] Call volume updated to ${Math.round(clamped * 100)}%`);
+  }
+
+  // ── 12. AUDIO DIAGNOSTICS (ZERO PII) ──────────────────────────────────────
+  public async getAudioDiagnostics(): Promise<any> {
+    const cap = (window as any).Capacitor;
+    let nativeDiag = null;
+    if (cap?.Plugins?.AudioRouting?.getAudioDiagnostics) {
+      try {
+        nativeDiag = await cap.Plugins.AudioRouting.getAudioDiagnostics();
+      } catch (e: any) {
+        nativeDiag = { error: e?.message };
+      }
+    }
+
+    const plivoRemoteEl = typeof document !== 'undefined' ? (document.getElementById('plivo_webrtc_remoteview') as HTMLAudioElement | null) : null;
+    return {
+      remoteAudioPresent: !!this.remoteAudioEl,
+      remoteAudioPaused: this.remoteAudioEl ? this.remoteAudioEl.paused : null,
+      remoteAudioMuted: this.remoteAudioEl ? this.remoteAudioEl.muted : null,
+      remoteAudioVolume: this.remoteAudioEl ? this.remoteAudioEl.volume : null,
+      plivoInternalPresent: !!plivoRemoteEl,
+      plivoInternalMuted: plivoRemoteEl ? plivoRemoteEl.muted : null,
+      plivoInternalVolume: plivoRemoteEl ? plivoRemoteEl.volume : null,
+      nativeRouting: nativeDiag
+    };
   }
 }
 

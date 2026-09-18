@@ -1837,6 +1837,13 @@ export class SoftphonePage {
           </button>
         </div>
 
+        <!-- In-Call Volume Control Slider -->
+        <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 16px; padding: 6px 14px; background: rgba(255,255,255,0.06); border-radius: 14px; border: 1px solid rgba(255,255,255,0.1);">
+          <i class="fas fa-volume-low" style="color: #94a3b8; font-size: 13px;"></i>
+          <input id="pageCallVolumeSlider" type="range" min="0" max="100" value="${Math.round(telephonyService.getVolume() * 100)}" style="flex: 1; height: 4px; accent-color: #38bdf8; cursor: pointer;" title="Adjust call volume" />
+          <i class="fas fa-volume-high" style="color: #94a3b8; font-size: 13px;"></i>
+        </div>
+
         <!-- In-Call DTMF Keypad Toggle & Drawer -->
         <div style="margin-bottom: 24px;">
           <button id="inCallDTMFToggleBtn" style="padding: 6px 14px; border-radius: 16px; background: ${this.showInCallDTMF ? '#3b82f6' : 'rgba(255,255,255,0.06)'}; border: 1px solid rgba(255,255,255,0.12); color: #fff; font-size: 11.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
@@ -2244,6 +2251,10 @@ export class SoftphonePage {
     document.getElementById('softphoneEndCallBtn')?.addEventListener('click', () => this.endCall());
     document.getElementById('callMuteBtn')?.addEventListener('click', () => this.toggleMute());
     document.getElementById('callSpeakerBtn')?.addEventListener('click', () => this.toggleSpeaker());
+    document.getElementById('pageCallVolumeSlider')?.addEventListener('input', (e: any) => {
+      const val = parseFloat(e.target.value) / 100;
+      telephonyService.setVolume(val);
+    });
     document.getElementById('callHoldBtn')?.addEventListener('click', () => this.toggleHold());
     document.getElementById('inCallDTMFToggleBtn')?.addEventListener('click', () => {
       this.showInCallDTMF = !this.showInCallDTMF;

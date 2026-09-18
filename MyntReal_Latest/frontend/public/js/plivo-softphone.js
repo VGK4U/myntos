@@ -123,6 +123,115 @@
             console.log('[PLIVO-SOFTPHONE] W3C RFC 8829 Early-Media signaling bridge installed successfully (signalingState untouched, instance-scoped)');
         }
 
+        getSavedVolume() {
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    const saved = localStorage.getItem('myntos_softphone_volume');
+                    if (saved !== null) {
+                        const parsed = parseFloat(saved);
+                        if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
+                            return parsed;
+                        }
+                    }
+                }
+            } catch (_) {}
+            return 0.85; // Standard conversational voice level
+        }
+
+        setCallVolume(vol) {
+            const clamped = Math.max(0, Math.min(1, parseFloat(vol) || 0.85));
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('myntos_softphone_volume', clamped.toString());
+                }
+            } catch (_) {}
+            const remoteAudio = document.getElementById('plivoRemoteAudio');
+            if (remoteAudio) {
+                remoteAudio.volume = clamped;
+            }
+            const plivoInternal = document.getElementById('plivo_webrtc_remoteview');
+            if (plivoInternal && !plivoInternal.muted) {
+                plivoInternal.volume = clamped;
+            }
+            console.log(`[PLIVO-SOFTPHONE] Call volume updated to ${Math.round(clamped * 100)}%`);
+        }
+
+        updateSpeakerButtonUI() {
+            const btn = document.getElementById('btnSpeakerCall');
+            if (btn) {
+                btn.style.background = this.isSpeakerOn ? 'rgba(59, 130, 246, 0.4)' : 'rgba(255,255,255,0.1)';
+                btn.style.color = this.isSpeakerOn ? '#38bdf8' : '#ffffff';
+                btn.style.borderColor = this.isSpeakerOn ? '#38bdf8' : 'rgba(255,255,255,0.2)';
+            }
+        }
+
+        async enforceDefaultEarpieceRouting() {
+            this.isSpeakerOn = false;
+            this.updateSpeakerButtonUI();
+
+            try {
+                if (window.Capacitor?.Plugins?.AudioRouting) {
+                    const res = await window.Capacitor.Plugins.AudioRouting.setSpeakerphoneOn({ enabled: false });
+                    console.log('[PLIVO-SOFTPHONE] Native AudioRouting setSpeakerphoneOn(false) applied:', res);
+                } else if (typeof navigator !== 'undefined' && navigator.mediaDevices?.enumerateDevices) {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const audioOutputs = devices.filter(d => d.kind === 'audiooutput');
+                    const audioElements = Array.from(document.querySelectorAll('audio, video'));
+                    
+                    if (audioOutputs.length > 0 && audioElements.length > 0) {
+                        const targetDevice = audioOutputs.find(d => /default|earpiece|headset|internal/i.test(d.label)) || audioOutputs[0];
+                        for (const el of audioElements) {
+                            if (typeof el.setSinkId === 'function' && targetDevice?.deviceId) {
+                                await el.setSinkId(targetDevice.deviceId);
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('[PLIVO-SOFTPHONE] Notice applying default earpiece routing:', err?.message);
+            }
+        }
+
+        verifyAndManageDuplicateAudio() {
+            try {
+                const canonicalEl = document.getElementById('plivoRemoteAudio');
+                const plivoInternalEl = document.getElementById('plivo_webrtc_remoteview');
+
+                if (!canonicalEl || !plivoInternalEl) {
+                    return;
+                }
+
+                // Check canonical stream health
+                const canonicalStream = canonicalEl.srcObject;
+                const canonicalHasLiveTrack = canonicalStream instanceof MediaStream &&
+                    canonicalStream.getAudioTracks().some(t => t.readyState === 'live' && t.enabled);
+
+                // Check internal stream health
+                const internalStream = plivoInternalEl.srcObject;
+                const internalHasLiveTrack = internalStream instanceof MediaStream &&
+                    internalStream.getAudioTracks().some(t => t.readyState === 'live' && t.enabled);
+
+                console.log(`[PLIVO-AUDIO-VERIFY] Canonical live=${canonicalHasLiveTrack}, paused=${canonicalEl.paused} | Internal live=${internalHasLiveTrack}, paused=${plivoInternalEl.paused}`);
+
+                // SAFEGUARD: NEVER blindly mute!
+                // Only if canonical has an active live playing track, mute plivoInternalEl to prevent acoustic doubling
+                if (canonicalHasLiveTrack && !canonicalEl.paused && internalHasLiveTrack) {
+                    if (!plivoInternalEl.muted) {
+                        plivoInternalEl.muted = true;
+                        console.log('[PLIVO-AUDIO-VERIFY] Verified duplicate stream: muted plivo_webrtc_remoteview while canonical plays cleanly.');
+                    }
+                } else if (!canonicalHasLiveTrack && internalHasLiveTrack) {
+                    // Canonical is NOT playing, but internal IS live: Preserve internal unmuted so voice is heard!
+                    if (plivoInternalEl.muted) {
+                        plivoInternalEl.muted = false;
+                        console.log('[PLIVO-AUDIO-VERIFY] Safeguard active: Canonical has no live track; preserved plivo_webrtc_remoteview unmuted.');
+                    }
+                }
+            } catch (e) {
+                console.warn('[PLIVO-AUDIO-VERIFY] Notice verifying duplicate audio:', e);
+            }
+        }
+
         ensureRemoteAudioElement() {
             if (typeof document === 'undefined') return null;
             let audioEl = document.getElementById('plivoRemoteAudio');
@@ -130,7 +239,7 @@
                 audioEl = document.createElement('audio');
                 audioEl.id = 'plivoRemoteAudio';
                 audioEl.autoplay = true;
-                audioEl.volume = 1.0;
+                audioEl.volume = this.getSavedVolume();
                 audioEl.muted = false;
                 audioEl.setAttribute('playsinline', 'true');
                 audioEl.setAttribute('webkit-playsinline', 'true');
@@ -144,7 +253,7 @@
                 const parent = document.body || document.documentElement || document.head;
                 if (parent) parent.appendChild(audioEl);
             } else {
-                audioEl.volume = 1.0;
+                audioEl.volume = this.getSavedVolume();
                 audioEl.muted = false;
             }
             return audioEl;
@@ -154,7 +263,7 @@
             try {
                 const audioEl = this.ensureRemoteAudioElement();
                 if (audioEl) {
-                    audioEl.volume = 1.0;
+                    audioEl.volume = this.getSavedVolume();
                     audioEl.muted = false;
                     const silentWav = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAP8A/w==';
                     if (!audioEl.srcObject && !audioEl.src) {
@@ -897,13 +1006,15 @@
             this.openSoftphoneDock();
             this.showCallInProgressUI(cleanDest, leadName || 'Customer Lead', leadId);
 
-            // Ensure remote audio playback element is ready and at full volume
+            // Ensure remote audio playback element is ready and at user volume
             this.ensureRemoteAudioElement();
             const prewarmAudio = document.getElementById('plivoRemoteAudio');
             if (prewarmAudio) {
-                prewarmAudio.volume = 1.0;
+                prewarmAudio.volume = this.getSavedVolume();
                 prewarmAudio.muted = false;
             }
+            this.isSpeakerOn = false;
+            this.enforceDefaultEarpieceRouting();
 
             try {
                 const token = localStorage.getItem('staff_token') || localStorage.getItem('token');
@@ -1134,7 +1245,7 @@
             console.log('[PLIVO-SOFTPHONE] WebRTC media track active (early/in-band audio)');
             const remoteAudio = document.getElementById('plivoRemoteAudio');
             if (remoteAudio) {
-                remoteAudio.volume = 1.0;
+                remoteAudio.volume = this.getSavedVolume();
                 remoteAudio.muted = false;
                 if (typeof remoteAudio.play === 'function') {
                     remoteAudio.play().catch((err) => {
@@ -1142,6 +1253,8 @@
                     });
                 }
             }
+            this.enforceDefaultEarpieceRouting();
+            this.verifyAndManageDuplicateAudio();
             // EARLY MEDIA != ANSWERED: Only show ringing if not yet connected
             if (!this.isCallConnected && !this.callConnectedTime) {
                 const statusLabel = document.getElementById('callStatusLabel');
@@ -1170,12 +1283,14 @@
                 }
                 const remoteAudio = document.getElementById('plivoRemoteAudio');
                 if (remoteAudio) {
-                    remoteAudio.volume = 1.0;
+                    remoteAudio.volume = this.getSavedVolume();
                     remoteAudio.muted = false;
                     if (typeof remoteAudio.play === 'function') {
                         remoteAudio.play().catch(() => {});
                     }
                 }
+                this.enforceDefaultEarpieceRouting();
+                this.verifyAndManageDuplicateAudio();
                 if (!this.callTimerInterval) {
                     this.startCallTimer();
                 }
@@ -1548,12 +1663,7 @@
 
         async toggleSpeaker() {
             this.isSpeakerOn = !this.isSpeakerOn;
-            const btn = document.getElementById('btnSpeakerCall');
-            if (btn) {
-                btn.style.background = this.isSpeakerOn ? 'rgba(59, 130, 246, 0.4)' : 'rgba(255,255,255,0.1)';
-                btn.style.color = this.isSpeakerOn ? '#38bdf8' : '#ffffff';
-                btn.style.borderColor = this.isSpeakerOn ? '#38bdf8' : 'rgba(255,255,255,0.2)';
-            }
+            this.updateSpeakerButtonUI();
 
             // Real WebRTC audio output device sink routing
             try {
@@ -1934,6 +2044,13 @@
                                             <i class="fa-solid fa-grip"></i>
                                             <span style="font-size: 8.5px; margin-top: 1px;">Keypad</span>
                                         </button>
+                                    </div>
+
+                                    <!-- In-Call Volume Control Slider -->
+                                    <div id="inCallVolumeWrap" style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-width: 220px; padding: 4px 10px; background: rgba(255,255,255,0.06); border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); box-sizing: border-box;">
+                                        <i class="fa-solid fa-volume-low" style="color: #94a3b8; font-size: 11px;"></i>
+                                        <input id="inCallVolumeSlider" type="range" min="0" max="100" value="85" style="width: 100%; height: 4px; accent-color: #38bdf8; cursor: pointer;" oninput="window.PlivoSoftphone.setCallVolume(this.value / 100)" title="Adjust call volume" />
+                                        <i class="fa-solid fa-volume-high" style="color: #94a3b8; font-size: 11px;"></i>
                                     </div>
 
                                     <!-- Hangup Red Button & Direct SIM Fallback -->
@@ -2457,11 +2574,10 @@
                 const span = holdBtn.querySelector('span');
                 if (span) span.textContent = 'Hold';
             }
-            const speakerBtn = document.getElementById('btnSpeakerCall');
-            if (speakerBtn) {
-                speakerBtn.style.background = 'rgba(255,255,255,0.1)';
-                speakerBtn.style.color = '#ffffff';
-                speakerBtn.style.borderColor = 'rgba(255,255,255,0.2)';
+            this.updateSpeakerButtonUI();
+            const volSlider = document.getElementById('inCallVolumeSlider');
+            if (volSlider) {
+                volSlider.value = String(Math.round(this.getSavedVolume() * 100));
             }
             const dtmfPad = document.getElementById('inCallDTMFPad');
             if (dtmfPad) dtmfPad.style.display = 'none';
@@ -2679,6 +2795,48 @@
         setAgentStatus(status) {
             this.agentStatus = status;
             console.log(`[PLIVO-SOFTPHONE] Agent status changed to ${status}`);
+        }
+
+        async getAudioDiagnostics() {
+            const canonicalEl = document.getElementById('plivoRemoteAudio');
+            const plivoInternalEl = document.getElementById('plivo_webrtc_remoteview');
+            let nativeDiag = null;
+            if (window.Capacitor?.Plugins?.AudioRouting?.getAudioDiagnostics) {
+                try {
+                    nativeDiag = await window.Capacitor.Plugins.AudioRouting.getAudioDiagnostics();
+                } catch (e) {
+                    nativeDiag = { error: e.message };
+                }
+            }
+
+            const canonicalTracks = canonicalEl?.srcObject instanceof MediaStream 
+                ? canonicalEl.srcObject.getAudioTracks().map(t => ({ id: t.id, enabled: t.enabled, readyState: t.readyState })) 
+                : [];
+            const internalTracks = plivoInternalEl?.srcObject instanceof MediaStream 
+                ? plivoInternalEl.srcObject.getAudioTracks().map(t => ({ id: t.id, enabled: t.enabled, readyState: t.readyState })) 
+                : [];
+
+            return {
+                isCallActive: this.isCallActive,
+                isCallConnected: this.isCallConnected,
+                isSpeakerOn: this.isSpeakerOn,
+                volumeSetting: this.getSavedVolume(),
+                canonicalAudio: {
+                    present: !!canonicalEl,
+                    paused: canonicalEl ? canonicalEl.paused : null,
+                    muted: canonicalEl ? canonicalEl.muted : null,
+                    volume: canonicalEl ? canonicalEl.volume : null,
+                    tracks: canonicalTracks
+                },
+                internalAudio: {
+                    present: !!plivoInternalEl,
+                    paused: plivoInternalEl ? plivoInternalEl.paused : null,
+                    muted: plivoInternalEl ? plivoInternalEl.muted : null,
+                    volume: plivoInternalEl ? plivoInternalEl.volume : null,
+                    tracks: internalTracks
+                },
+                nativeRouting: nativeDiag
+            };
         }
     }
 

@@ -2,11 +2,14 @@ package com.myntos.mobile.plugins;
 
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioAttributes;
 import android.media.AudioDeviceInfo;
+import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.os.Build;
 import android.util.Log;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -19,6 +22,9 @@ import java.util.List;
 public class AudioRoutingPlugin extends Plugin {
     private static final String TAG = "AudioRoutingPlugin";
     private AudioManager audioManager;
+    private AudioFocusRequest audioFocusRequest = null;
+    private boolean hasVoiceAudioFocus = false;
+    private String currentDeviceRoute = "DEFAULT";
 
     private AudioManager getAudioManager() {
         if (audioManager == null) {
@@ -37,6 +43,56 @@ public class AudioRoutingPlugin extends Plugin {
         Log.d(TAG, "AudioRoutingPlugin loaded");
     }
 
+    private synchronized void requestVoiceAudioFocus(AudioManager am) {
+        if (am == null || hasVoiceAudioFocus) return;
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (audioFocusRequest == null) {
+                    AudioAttributes playbackAttributes = new AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build();
+                    audioFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                        .setAudioAttributes(playbackAttributes)
+                        .setAcceptsDelayedFocusGain(true)
+                        .setOnAudioFocusChangeListener(focusChange -> {
+                            Log.d(TAG, "[AudioRouting] Voice AudioFocus changed: " + focusChange);
+                            if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
+                                hasVoiceAudioFocus = false;
+                            }
+                        })
+                        .build();
+                }
+                int res = am.requestAudioFocus(audioFocusRequest);
+                hasVoiceAudioFocus = (res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
+            } else {
+                int res = am.requestAudioFocus(null, AudioManager.STREAM_VOICE_CALL, AudioManager.AUDIOFOCUS_GAIN);
+                hasVoiceAudioFocus = (res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED);
+            }
+            Log.d(TAG, "[AudioRouting] Voice AudioFocus request granted: " + hasVoiceAudioFocus);
+        } catch (Exception e) {
+            Log.w(TAG, "[AudioRouting] Notice requesting voice AudioFocus: " + e.getMessage());
+        }
+    }
+
+    private synchronized void abandonVoiceAudioFocus(AudioManager am) {
+        if (am == null) return;
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (audioFocusRequest != null) {
+                    am.abandonAudioFocusRequest(audioFocusRequest);
+                    audioFocusRequest = null;
+                }
+            } else {
+                am.abandonAudioFocus(null);
+            }
+            hasVoiceAudioFocus = false;
+            Log.d(TAG, "[AudioRouting] Voice AudioFocus abandoned cleanly");
+        } catch (Exception e) {
+            Log.w(TAG, "[AudioRouting] Notice abandoning AudioFocus: " + e.getMessage());
+        }
+    }
+
     @PluginMethod
     public void setSpeakerphoneOn(PluginCall call) {
         Boolean enabled = call.getBoolean("enabled");
@@ -52,7 +108,10 @@ public class AudioRoutingPlugin extends Plugin {
         }
 
         try {
-            // Assert MODE_IN_COMMUNICATION for call audio routing and AEC
+            // 1. Acquire voice communication audio focus so Android AudioPolicy routes WebView to in-call stream
+            requestVoiceAudioFocus(am);
+
+            // 2. Assert MODE_IN_COMMUNICATION for call audio routing and hardware AEC
             if (am.getMode() != AudioManager.MODE_IN_COMMUNICATION) {
                 am.setMode(AudioManager.MODE_IN_COMMUNICATION);
             }
@@ -61,44 +120,81 @@ public class AudioRoutingPlugin extends Plugin {
             if (enabled) {
                 // Route audio to external loudspeaker
                 am.setSpeakerphoneOn(true);
+                currentDeviceRoute = "BUILTIN_SPEAKER";
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    am.clearCommunicationDevice();
                     List<AudioDeviceInfo> devices = am.getAvailableCommunicationDevices();
                     for (AudioDeviceInfo device : devices) {
                         if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
                             boolean res = am.setCommunicationDevice(device);
-                            Log.d(TAG, "Set communication device to SPEAKER: " + res);
+                            Log.d(TAG, "[AudioRouting] Set communication device to SPEAKER: " + res);
                             break;
                         }
                     }
                 }
             } else {
-                // Route audio to normal in-call EARPIECE (default during call)
+                // Route audio to normal in-call EARPIECE or connected headset (Wired > Bluetooth > Builtin Earpiece)
                 am.setSpeakerphoneOn(false);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    // Always clear first so any forced speaker route is dropped
                     am.clearCommunicationDevice();
                     List<AudioDeviceInfo> devices = am.getAvailableCommunicationDevices();
-                    boolean foundEarpiece = false;
-                    for (AudioDeviceInfo device : devices) {
-                        if (device.getType() == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE) {
-                            boolean res = am.setCommunicationDevice(device);
-                            Log.d(TAG, "Set communication device to EARPIECE: " + res);
-                            foundEarpiece = true;
+                    AudioDeviceInfo selectedDevice = null;
+                    String selectedType = "DEFAULT_COMMUNICATION";
+
+                    // Priority 1: Connected Wired Headset / Headphones / USB Headset
+                    for (AudioDeviceInfo d : devices) {
+                        int t = d.getType();
+                        if (t == AudioDeviceInfo.TYPE_WIRED_HEADSET || t == AudioDeviceInfo.TYPE_WIRED_HEADPHONES || t == AudioDeviceInfo.TYPE_USB_HEADSET) {
+                            selectedDevice = d;
+                            selectedType = "WIRED_HEADSET";
                             break;
                         }
                     }
-                    if (!foundEarpiece) {
-                        Log.d(TAG, "No builtin earpiece device found; default communication device retained.");
+
+                    // Priority 2: Connected Bluetooth Headset (SCO or BLE)
+                    if (selectedDevice == null) {
+                        for (AudioDeviceInfo d : devices) {
+                            int t = d.getType();
+                            if (t == AudioDeviceInfo.TYPE_BLUETOOTH_SCO || t == AudioDeviceInfo.TYPE_BLE_HEADSET) {
+                                selectedDevice = d;
+                                selectedType = "BLUETOOTH_HEADSET";
+                                break;
+                            }
+                        }
                     }
+
+                    // Priority 3: Built-in Phone Earpiece (Front conversational receiver)
+                    if (selectedDevice == null) {
+                        for (AudioDeviceInfo d : devices) {
+                            if (d.getType() == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE) {
+                                selectedDevice = d;
+                                selectedType = "BUILTIN_EARPIECE";
+                                break;
+                            }
+                        }
+                    }
+
+                    if (selectedDevice != null) {
+                        boolean res = am.setCommunicationDevice(selectedDevice);
+                        currentDeviceRoute = selectedType;
+                        Log.d(TAG, "[AudioRouting] Set communication device to " + selectedType + ": " + res);
+                    } else {
+                        currentDeviceRoute = "EARPIECE_FALLBACK";
+                        Log.d(TAG, "[AudioRouting] Retaining default communication device route for earpiece.");
+                    }
+                } else {
+                    currentDeviceRoute = "LEGACY_EARPIECE";
                 }
             }
 
             JSObject ret = new JSObject();
             ret.put("success", true);
             ret.put("speakerOn", enabled);
+            ret.put("deviceRoute", currentDeviceRoute);
+            ret.put("hasVoiceAudioFocus", hasVoiceAudioFocus);
             call.resolve(ret);
         } catch (Exception e) {
-            Log.e(TAG, "Failed to set audio routing: " + e.getMessage(), e);
+            Log.e(TAG, "[AudioRouting] Failed to set audio routing: " + e.getMessage(), e);
             call.reject("Failed to set audio routing: " + e.getMessage());
         }
     }
@@ -126,11 +222,13 @@ public class AudioRoutingPlugin extends Plugin {
                 am.setSpeakerphoneOn(false);
                 am.setMicrophoneMute(false);
                 am.setMode(AudioManager.MODE_NORMAL);
-                Log.d(TAG, "Audio mode reset to MODE_NORMAL");
+                abandonVoiceAudioFocus(am);
+                currentDeviceRoute = "MODE_NORMAL";
+                Log.d(TAG, "[AudioRouting] Audio mode reset to MODE_NORMAL and AudioFocus released");
             }
             call.resolve(new JSObject().put("success", true));
         } catch (Exception e) {
-            Log.e(TAG, "Failed to reset audio mode: " + e.getMessage(), e);
+            Log.e(TAG, "[AudioRouting] Failed to reset audio mode: " + e.getMessage(), e);
             call.reject("Failed to reset audio mode: " + e.getMessage());
         }
     }
@@ -213,5 +311,53 @@ public class AudioRoutingPlugin extends Plugin {
         JSObject ret = new JSObject();
         ret.put("speakerOn", isSpeaker);
         call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void getAudioDiagnostics(PluginCall call) {
+        AudioManager am = getAudioManager();
+        JSObject ret = new JSObject();
+        if (am == null) {
+            ret.put("error", "AudioManager unavailable");
+            call.resolve(ret);
+            return;
+        }
+
+        try {
+            ret.put("audioMode", am.getMode());
+            ret.put("speakerOn", am.isSpeakerphoneOn());
+            ret.put("micMute", am.isMicrophoneMute());
+            ret.put("currentDeviceRoute", currentDeviceRoute);
+            ret.put("hasVoiceAudioFocus", hasVoiceAudioFocus);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                AudioDeviceInfo comm = am.getCommunicationDevice();
+                if (comm != null) {
+                    ret.put("commDeviceType", comm.getType());
+                    ret.put("commDeviceName", comm.getProductName().toString());
+                } else {
+                    ret.put("commDeviceType", null);
+                    ret.put("commDeviceName", "NONE");
+                }
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                JSArray devList = new JSArray();
+                AudioDeviceInfo[] devices = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+                for (AudioDeviceInfo d : devices) {
+                    JSObject devObj = new JSObject();
+                    devObj.put("id", d.getId());
+                    devObj.put("type", d.getType());
+                    devObj.put("productName", d.getProductName().toString());
+                    devList.put(devObj);
+                }
+                ret.put("availableOutputs", devList);
+            }
+            call.resolve(ret);
+        } catch (Exception e) {
+            Log.e(TAG, "[AudioRouting] Error collecting diagnostics: " + e.getMessage(), e);
+            ret.put("error", e.getMessage());
+            call.resolve(ret);
+        }
     }
 }

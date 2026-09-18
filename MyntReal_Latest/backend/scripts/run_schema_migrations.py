@@ -745,6 +745,42 @@ def run_migrations():
                 if upd_anushka.rowcount > 0:
                     logger.info("✅ MR10036 (Anushka Karri) synchronized to Sales Incharge")
 
+                # 4.22 Ensure recharge_transactions unified services columns (DTH, FASTag, Electricity, Gas)
+                conn.execute(text("""
+                    ALTER TABLE recharge_transactions ADD COLUMN IF NOT EXISTS service_type VARCHAR DEFAULT 'Mobile';
+                    ALTER TABLE recharge_transactions ADD COLUMN IF NOT EXISTS value1 VARCHAR;
+                    ALTER TABLE recharge_transactions ADD COLUMN IF NOT EXISTS value2 VARCHAR;
+                """))
+                logger.info("✅ recharge_transactions unified services columns ensured (service_type, value1, value2)")
+
+                # 4.23 Ensure meta_capi_logs and system_feature_flags tables
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS meta_capi_logs (
+                        id SERIAL PRIMARY KEY,
+                        company_id INTEGER NOT NULL DEFAULT 1,
+                        lead_id INTEGER NOT NULL REFERENCES crm_leads(id) ON DELETE CASCADE,
+                        event_name VARCHAR(50) NOT NULL,
+                        event_id VARCHAR(150) UNIQUE NOT NULL,
+                        status VARCHAR(20) NOT NULL DEFAULT 'QUEUED',
+                        request_payload JSONB,
+                        response_payload TEXT,
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        processed_at TIMESTAMP
+                    );
+                    CREATE TABLE IF NOT EXISTS system_feature_flags (
+                        id SERIAL PRIMARY KEY,
+                        company_id INTEGER NOT NULL DEFAULT 1,
+                        vertical VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
+                        feature_key VARCHAR(100) NOT NULL,
+                        is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+                        updated_by_staff_id INTEGER REFERENCES staff_employees(id),
+                        created_at TIMESTAMP DEFAULT NOW(),
+                        updated_at TIMESTAMP DEFAULT NOW(),
+                        CONSTRAINT uq_feature_flag UNIQUE (company_id, vertical, feature_key)
+                    );
+                """))
+                logger.info("✅ meta_capi_logs and system_feature_flags tables ensured")
+
         logger.info("✅ Feature-specific schema migrations complete")
         
         # 4.20 Staff cash balance zero adjustments as of 16-Sep-2026
