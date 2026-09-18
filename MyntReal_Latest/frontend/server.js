@@ -30532,14 +30532,13 @@ async function processAction(id, action){
         const fallbackPath = path.join(__dirname, 'catalog.html');
         readFileWithRetry(fallbackPath, (err2, data2) => {
           if (err2) { res.writeHead(404); res.end('Catalog page not found'); return; }
-          let html = data2.toString().replace('</body>', LEGAL_DISCLAIMER_HTML + '</body>');
+          let html = data2.toString();
           res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate', 'X-Frame-Options': 'SAMEORIGIN' });
           res.end(html);
         });
         return;
       }
       let html = data.toString();
-      html = html.replace('</body>', LEGAL_DISCLAIMER_HTML + '</body>');
       res.writeHead(200, {
         'Content-Type': 'text/html',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
