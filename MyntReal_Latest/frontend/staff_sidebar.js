@@ -386,6 +386,9 @@ window.StaffSidebar = window.StaffSidebar || {
                         this.allowedMenuPaths.add('/staff/dialer');
                         this.allowedMenuPaths.add('/staff/auto-dialer');
                         this.allowedMenuPaths.add('/staff/my-leads');
+                        this.allowedMenuPaths.add('/staff/configuration/catalog');
+                        this.allowedMenuPaths.add('/staff/catalog-library');
+                        this.allowedMenuPaths.add('/staff/catalog');
                         this.allowedMenuCodes = new Set(data.menus.map(m => m.menu_code).filter(c => c));
                         this.allowedMenuCodes.add('CRM_WA_INBOX');
                         this.allowedMenuCodes.add('CRM_WA_BOT_HUB');
@@ -398,6 +401,8 @@ window.StaffSidebar = window.StaffSidebar || {
                         this.allowedMenuCodes.add('staff_auto_dialer');
                         this.allowedMenuCodes.add('MY_LEADS');
                         this.allowedMenuCodes.add('staff_my_leads');
+                        this.allowedMenuCodes.add('DIGITAL_CATALOG_MANAGEMENT');
+                        this.allowedMenuCodes.add('STAFF_CATALOG_LIBRARY');
                         this.rawMenus = data.menus || [];
                         this.menuRoutesForVGK = data.menus.filter(m => m.route_path && m.label).map(m => ({ label: m.label, route: m.route_path }));
                         console.log('[DC-SIDEBAR] Unified menus loaded:', this.allowedMenuPaths.size, '(unified_mode:', data.unified_mode, ')');
@@ -438,6 +443,9 @@ window.StaffSidebar = window.StaffSidebar || {
                         this.allowedMenuPaths.add('/staff/dialer');
                         this.allowedMenuPaths.add('/staff/auto-dialer');
                         this.allowedMenuPaths.add('/staff/my-leads');
+                        this.allowedMenuPaths.add('/staff/configuration/catalog');
+                        this.allowedMenuPaths.add('/staff/catalog-library');
+                        this.allowedMenuPaths.add('/staff/catalog');
                         this.allowedMenuCodes = new Set(data.menus.map(m => m.menu_code).filter(c => c));
                         this.allowedMenuCodes.add('CRM_WA_INBOX');
                         this.allowedMenuCodes.add('CRM_WA_BOT_HUB');
@@ -450,6 +458,8 @@ window.StaffSidebar = window.StaffSidebar || {
                         this.allowedMenuCodes.add('staff_auto_dialer');
                         this.allowedMenuCodes.add('MY_LEADS');
                         this.allowedMenuCodes.add('staff_my_leads');
+                        this.allowedMenuCodes.add('DIGITAL_CATALOG_MANAGEMENT');
+                        this.allowedMenuCodes.add('STAFF_CATALOG_LIBRARY');
                         this.rawMenus = data.menus || [];
                         this.menuRoutesForVGK = data.menus.filter(m => m.route_path && m.label).map(m => ({ label: m.label, route: m.route_path }));
                     }

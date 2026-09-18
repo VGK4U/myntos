@@ -39,14 +39,20 @@
         }
 
         .main-content {
-            margin-left: 0;
+            margin-left: 260px;
+            min-height: 100vh;
             transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            padding-top: 80px;
             padding-bottom: 60px;
         }
 
-        .sidebar-expanded .main-content {
-            margin-left: 260px;
+        body.sidebar-collapsed-mode .main-content {
+            margin-left: 70px !important;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 0 !important;
+            }
         }
 
         .content-area {
@@ -755,6 +761,15 @@
         ];
 
         document.addEventListener('DOMContentLoaded', async () => {
+            // 1. Initialize Universal Staff Header & Sidebar
+            if (typeof window.StaffHeader !== 'undefined') {
+                window.StaffHeader.inject('Digital Catalog', 'fas fa-book-open', { showBack: true, backUrl: '/staff/progress' });
+                window.StaffHeader.init();
+            }
+            if (typeof window.StaffSidebar !== 'undefined') {
+                await window.StaffSidebar.init();
+            }
+
             sectionModalInstance = new bootstrap.Modal(document.getElementById('sectionModal'));
             dispatchModalInstance = new bootstrap.Modal(document.getElementById('dispatchModal'));
             historyModalInstance = new bootstrap.Modal(document.getElementById('historyModal'));
