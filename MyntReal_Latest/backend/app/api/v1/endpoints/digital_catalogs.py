@@ -17,7 +17,7 @@ import json
 import logging
 import re
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import (
     APIRouter, Depends, HTTPException, status, Query, Body, 
@@ -454,6 +454,8 @@ def get_staff_catalog_library(
 
     if status_filter:
         query = query.filter(DigitalCatalog.status == status_filter)
+    else:
+        query = query.filter(DigitalCatalog.is_active == True)
 
     if search:
         s = f"%{search}%"
@@ -502,29 +504,247 @@ def get_staff_catalog_library(
     }
 
 
-@router.get("/dispatches/my-history")
-def get_my_dispatch_history(
-    limit: int = Query(50, le=100),
+def _format_dispatch_record(s: CatalogLeadSend, staff_map: dict) -> dict:
+    sd = s.to_dict()
+    # Sender Staff Info
+    if s.staff_id and s.staff_id in staff_map:
+        st = staff_map[s.staff_id]
+        s_name = f"{st.first_name or ''} {st.last_name or ''}".strip() or st.emp_code or "Staff Member"
+        sd["staff_name"] = s_name
+        sd["staff_code"] = st.emp_code or ""
+        sd["staff_designation"] = st.designation or st.staff_type or "Sales Specialist"
+        sd["staff_email"] = st.email or ""
+    else:
+        sd["staff_name"] = "System Administrator" if s.staff_id == 1 else "Staff Member"
+        sd["staff_code"] = "MR10001" if s.staff_id == 1 else ""
+        sd["staff_designation"] = "Platform Administrator" if s.staff_id == 1 else "Staff"
+        sd["staff_email"] = ""
+
+    # Catalog Model Info
+    if s.catalog:
+        sd["catalog_title"] = s.catalog.title
+        sd["segment_code"] = s.catalog.segment_code
+        sd["catalog_slug"] = s.catalog.slug
+    else:
+        sd["catalog_title"] = "Digital Catalog"
+        sd["segment_code"] = "SOLAR"
+        sd["catalog_slug"] = "commercial-residential-solar"
+
+    # Resolved Tracked Live Link
+    ref = sd.get("share_ref_code") or ""
+    cat_slug = sd.get("catalog_slug") or ""
+    seg_code = sd.get("segment_code") or "SOLAR"
+
+    if seg_code == "HUB_PRICING" or cat_slug == "hub-ev-pricing":
+        sd["tracked_url"] = f"/catalog/hub-ev-pricing?ref={ref}"
+    elif seg_code == "EV_B2C" or cat_slug in ["ev-b2c-pricing", "customer-2w-ev-pricing"]:
+        sd["tracked_url"] = f"/catalog/ev-b2c-pricing?ref={ref}"
+    elif seg_code == "EV_SPARES" or cat_slug in ["ev-spares", "ev-spares-and-chargers"]:
+        sd["tracked_url"] = f"/catalog/ev-spares?ref={ref}"
+    elif seg_code == "REAL_DREAMS":
+        sd["tracked_url"] = f"/catalog/real-dreams?ref={ref}"
+    elif seg_code == "INSURANCE":
+        sd["tracked_url"] = f"/catalog/insurance?ref={ref}"
+    elif seg_code == "INDUSTRIAL_HUB" or cat_slug == "industrial-hub-franchise":
+        sd["tracked_url"] = f"/catalog/industrial-hub?ref={ref}"
+    elif seg_code == "ETC_TRAINING":
+        sd["tracked_url"] = f"/catalog/etc-training?ref={ref}"
+    else:
+        sd["tracked_url"] = f"/catalog/solar/commercial-residential-solar?ref={ref}"
+
+    # Engagement calculation
+    views = s.view_count or 0
+    if views >= 3:
+        sd["engagement_badge"] = "high"
+        sd["engagement_text"] = f"🔥 {views} clicks"
+    elif views > 0:
+        sd["engagement_badge"] = "active"
+        sd["engagement_text"] = f"✓ {views} click{'s' if views > 1 else ''}"
+    else:
+        sd["engagement_badge"] = "unopened"
+        sd["engagement_text"] = "0 clicks"
+
+    return sd
+
+
+@router.get("/dispatches/history")
+def get_dispatch_history(
+    scope: str = Query("my", description="'my' for current login, 'team' for entire team/company"),
+    q: Optional[str] = Query(None, description="Search recipient name, phone, ref code, or staff name/code"),
+    segment_code: Optional[str] = Query(None, description="Filter by catalog model segment"),
+    delivery_method: Optional[str] = Query(None, description="web_link, pdf_document, both, all"),
+    engagement: Optional[str] = Query(None, description="all, viewed, unviewed, high"),
+    staff_id: Optional[int] = Query(None, description="Filter by specific staff sender"),
+    timeframe: Optional[str] = Query(None, description="today, yesterday, 7d, 30d, all"),
+    sort_by: str = Query("sent_desc", description="sent_desc, sent_asc, views_desc, name_asc"),
+    limit: int = Query(100, le=500),
+    offset: int = Query(0, ge=0),
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
     """
-    Returns personal catalog dispatch history for the currently logged-in staff member.
+    Returns comprehensive catalog dispatch history with multi-model filtering,
+    click telemetry, and dedicated 'my' vs 'team' scoping.
     """
-    sends = db.query(CatalogLeadSend).filter(
-        CatalogLeadSend.staff_id == current_user.id
-    ).order_by(CatalogLeadSend.sent_at.desc()).limit(limit).all()
+    from collections import Counter
+    query = db.query(CatalogLeadSend)
 
-    items = []
-    for s in sends:
-        sd = s.to_dict()
-        if s.catalog:
-            sd["catalog_title"] = s.catalog.title
-            sd["segment_code"] = s.catalog.segment_code
-            sd["catalog_slug"] = s.catalog.slug
-        items.append(sd)
+    # 1. Scope filter
+    scope_str = scope if isinstance(scope, str) else "my"
+    is_team_scope = (scope_str.lower() == "team")
+    if not is_team_scope:
+        query = query.filter(CatalogLeadSend.staff_id == current_user.id)
+    elif staff_id and isinstance(staff_id, int):
+        query = query.filter(CatalogLeadSend.staff_id == staff_id)
 
-    return {"success": True, "dispatches": items}
+    # 2. Model / Segment filter
+    if segment_code and isinstance(segment_code, str) and segment_code.upper() != "ALL":
+        query = query.join(DigitalCatalog, CatalogLeadSend.catalog_id == DigitalCatalog.id).filter(
+            DigitalCatalog.segment_code == segment_code.upper()
+        )
+
+    # 3. Delivery method filter
+    if delivery_method and isinstance(delivery_method, str) and delivery_method.lower() != "all":
+        query = query.filter(CatalogLeadSend.delivery_method == delivery_method)
+
+    # 4. Engagement / Click filter
+    eng_str = engagement if isinstance(engagement, str) else None
+    if eng_str == "viewed":
+        query = query.filter(CatalogLeadSend.view_count > 0)
+    elif eng_str == "unviewed":
+        query = query.filter(CatalogLeadSend.view_count == 0)
+    elif eng_str == "high":
+        query = query.filter(CatalogLeadSend.view_count >= 2)
+
+    # 5. Timeframe filter
+    now_ist = get_indian_time()
+    tf_str = timeframe if isinstance(timeframe, str) else None
+    if tf_str == "today":
+        start_day = now_ist.replace(hour=0, minute=0, second=0, microsecond=0)
+        query = query.filter(CatalogLeadSend.sent_at >= start_day)
+    elif tf_str == "yesterday":
+        start_yest = (now_ist - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        end_yest = start_yest + timedelta(days=1)
+        query = query.filter(CatalogLeadSend.sent_at >= start_yest, CatalogLeadSend.sent_at < end_yest)
+    elif tf_str == "7d":
+        query = query.filter(CatalogLeadSend.sent_at >= (now_ist - timedelta(days=7)))
+    elif tf_str == "30d":
+        query = query.filter(CatalogLeadSend.sent_at >= (now_ist - timedelta(days=30)))
+
+    # 6. Text Search
+    if q and isinstance(q, str) and q.strip():
+        term = f"%{q.strip()}%"
+        query = query.join(DigitalCatalog, CatalogLeadSend.catalog_id == DigitalCatalog.id, isouter=True) \
+                     .join(StaffEmployee, CatalogLeadSend.staff_id == StaffEmployee.id, isouter=True) \
+                     .filter(or_(
+                         CatalogLeadSend.recipient_name.ilike(term),
+                         CatalogLeadSend.recipient_phone.ilike(term),
+                         CatalogLeadSend.share_ref_code.ilike(term),
+                         DigitalCatalog.title.ilike(term),
+                         StaffEmployee.first_name.ilike(term),
+                         StaffEmployee.last_name.ilike(term),
+                         StaffEmployee.emp_code.ilike(term)
+                     ))
+
+    # 7. Sorting
+    sort_str = sort_by if isinstance(sort_by, str) else "sent_desc"
+    if sort_str == "sent_asc":
+        query = query.order_by(CatalogLeadSend.sent_at.asc())
+    elif sort_str == "views_desc":
+        query = query.order_by(CatalogLeadSend.view_count.desc(), CatalogLeadSend.sent_at.desc())
+    elif sort_str == "name_asc":
+        query = query.order_by(CatalogLeadSend.recipient_name.asc())
+    else:  # sent_desc
+        query = query.order_by(CatalogLeadSend.sent_at.desc())
+
+    # Calculate overall KPIs for current filtered query
+    all_sends = query.all()
+    total_count = len(all_sends)
+    total_views = sum((s.view_count or 0) for s in all_sends)
+    viewed_count = sum(1 for s in all_sends if (s.view_count or 0) > 0)
+    high_count = sum(1 for s in all_sends if (s.view_count or 0) >= 2)
+    view_rate = round((viewed_count / total_count * 100), 1) if total_count > 0 else 0.0
+
+    # Top model
+    model_counts = Counter(s.catalog.segment_code for s in all_sends if s.catalog)
+    top_model = model_counts.most_common(1)[0][0] if model_counts else "SOLAR"
+
+    # Paginate safely
+    limit_val = limit if isinstance(limit, int) else (getattr(limit, "default", 100) if hasattr(limit, "default") else 100)
+    offset_val = offset if isinstance(offset, int) else (getattr(offset, "default", 0) if hasattr(offset, "default") else 0)
+    if not isinstance(limit_val, int):
+        limit_val = 100
+    if not isinstance(offset_val, int):
+        offset_val = 0
+
+    paged_sends = all_sends[offset_val:offset_val + limit_val]
+
+    # Pre-fetch staff map for performance
+    staff_ids = list({s.staff_id for s in paged_sends if s.staff_id})
+    staff_map = {}
+    if staff_ids:
+        staff_records = db.query(StaffEmployee).filter(StaffEmployee.id.in_(staff_ids)).all()
+        staff_map = {st.id: st for st in staff_records}
+
+    items = [_format_dispatch_record(s, staff_map) for s in paged_sends]
+
+    # Team members list for filter dropdown
+    team_members = []
+    if is_team_scope or _is_catalog_author(current_user):
+        distinct_staff_ids = [r[0] for r in db.query(CatalogLeadSend.staff_id).distinct().all() if r[0]]
+        if distinct_staff_ids:
+            st_list = db.query(StaffEmployee).filter(StaffEmployee.id.in_(distinct_staff_ids)).all()
+            for st in st_list:
+                team_members.append({
+                    "id": st.id,
+                    "name": f"{st.first_name or ''} {st.last_name or ''}".strip() or st.emp_code,
+                    "code": st.emp_code or "",
+                    "designation": st.designation or st.staff_type or "Staff"
+                })
+
+    # Available catalog models
+    all_catalogs = db.query(DigitalCatalog).filter(DigitalCatalog.is_active == True).order_by(DigitalCatalog.sort_order.asc()).all()
+    available_models = [
+        {"id": c.id, "segment_code": c.segment_code, "title": c.title, "slug": c.slug}
+        for c in all_catalogs
+    ]
+
+    return {
+        "success": True,
+        "scope": scope,
+        "total": total_count,
+        "limit": limit,
+        "offset": offset,
+        "dispatches": items,
+        "stats": {
+            "total_dispatches": total_count,
+            "total_views": total_views,
+            "viewed_count": viewed_count,
+            "unviewed_count": total_count - viewed_count,
+            "high_engagement_count": high_count,
+            "view_rate_percent": view_rate,
+            "top_model": top_model
+        },
+        "team_members": team_members,
+        "available_models": available_models
+    }
+
+
+@router.get("/dispatches/my-history")
+def get_my_dispatch_history(
+    limit: int = Query(100, le=500),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Backward-compatible personal catalog dispatch history endpoint.
+    """
+    return get_dispatch_history(
+        scope="my",
+        limit=limit,
+        current_user=current_user,
+        db=db
+    )
 
 
 @router.get("/{catalog_id}")
