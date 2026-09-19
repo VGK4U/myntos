@@ -23,33 +23,46 @@
 
     <style>
         :root {
-            --bg-page: #f8fafc;
-            --bg-page-alt: #f1f5f9;
+            --bg-page: #faf8f5;
+            --bg-page-alt: #f5f0e8;
             --bg-card: #ffffff;
             --bg-card-hover: #ffffff;
-            --bg-warm: #fefdf9;
+            --bg-warm: #fffdfa;
             --text-heading: #0f172a;
-            --text-body: #334155;
-            --text-secondary: #64748b;
-            --text-muted: #94a3b8;
-            --brand-border: #e2e8f0;
-            --brand-border-subtle: #f1f5f9;
-            --brand-primary: #059669;
-            --brand-primary-hover: #047857;
-            --brand-primary-light: rgba(5, 150, 105, 0.08);
-            --brand-primary-border: rgba(5, 150, 105, 0.25);
+            --text-body: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --brand-border: #e6dfd5;
+            --brand-border-subtle: #f0ebe1;
+            
+            /* Solar Amber / Warm Gold (Primary Brand Identity) */
+            --brand-primary: #d97706;
+            --brand-primary-hover: #b45309;
+            --brand-primary-light: rgba(217, 119, 6, 0.08);
+            --brand-primary-border: rgba(217, 119, 6, 0.28);
             --brand-solar: #d97706;
             --brand-solar-hover: #b45309;
             --brand-solar-light: rgba(245, 158, 11, 0.12);
             --brand-gold: #f59e0b;
+            --brand-gold-dark: #b45309;
+
+            /* Clean Renewable Green (Secondary - Subsidies & Savings) */
+            --brand-secondary: #059669;
+            --brand-secondary-hover: #047857;
+            --brand-secondary-light: rgba(5, 150, 105, 0.08);
+            --brand-secondary-border: rgba(5, 150, 105, 0.25);
+            --brand-green: #059669;
+            --brand-green-dark: #047857;
+            --brand-green-light: #ecfdf5;
+
             --brand-accent-blue: #0284c7;
             --wa-green: #25d366;
             --wa-green-hover: #20ba59;
             --wa-green-light: rgba(37, 211, 102, 0.12);
-            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04);
-            --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.08);
-            --shadow-solar: 0 8px 25px rgba(217, 119, 6, 0.12);
+            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.04);
+            --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.06);
+            --shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.08);
+            --shadow-solar: 0 8px 25px rgba(217, 119, 6, 0.14);
             --radius-sm: 8px;
             --radius-md: 12px;
             --radius-lg: 18px;
@@ -91,7 +104,7 @@
 
         /* ── TOP ANNOUNCEMENT / PROMO BAR ─────────────────────────────────── */
         .catalog-promo-bar {
-            background: linear-gradient(135deg, #065f46 0%, #047857 50%, #059669 100%);
+            background: linear-gradient(135deg, #78350f 0%, #b45309 45%, #d97706 100%);
             color: #ffffff;
             padding: 9px 16px;
             font-size: 13px;
@@ -139,7 +152,7 @@
         .brand-logo-fallback {
             font-weight: 800;
             font-size: 18px;
-            color: #065f46;
+            color: #0f172a;
             display: flex;
             align-items: center;
             gap: 6px;
@@ -165,8 +178,8 @@
         }
         .catalog-nav-item a:hover,
         .catalog-nav-item a.active {
-            color: #065f46;
-            background: var(--brand-primary-light);
+            color: var(--brand-solar);
+            background: var(--brand-solar-light);
         }
 
         /* Language Switcher */
@@ -196,7 +209,7 @@
         }
         .lang-pill-btn.active {
             background: #ffffff;
-            color: #065f46;
+            color: var(--brand-solar);
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         }
         .lang-short { display: none; }
@@ -269,8 +282,8 @@
             border-radius: var(--radius-sm);
         }
         .mobile-nav-drawer a:hover {
-            background: var(--brand-primary-light);
-            color: #065f46;
+            background: var(--brand-solar-light);
+            color: var(--brand-solar);
         }
 
         /* ── SECTION COMMON STYLING ───────────────────────────────────────── */
@@ -294,9 +307,9 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: var(--brand-primary-light);
-            border: 1px solid var(--brand-primary-border);
-            color: var(--brand-primary);
+            background: var(--brand-solar-light);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            color: var(--brand-solar);
             font-size: 11.5px;
             font-weight: 800;
             text-transform: uppercase;
@@ -309,6 +322,11 @@
             background: var(--brand-solar-light);
             border-color: rgba(245, 158, 11, 0.35);
             color: var(--brand-solar);
+        }
+        .section-tag-green {
+            background: rgba(5, 150, 105, 0.1);
+            border-color: rgba(5, 150, 105, 0.25);
+            color: #059669;
         }
         .section-title {
             font-size: 32px;
@@ -328,7 +346,7 @@
         /* ── HERO SECTION ─────────────────────────────────────────────────── */
         .hero-section {
             padding: 40px 0 48px 0;
-            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            background: linear-gradient(180deg, #fffdfa 0%, #faf8f5 100%);
             border-bottom: 1px solid var(--brand-border);
         }
         .hero-grid {
@@ -374,11 +392,11 @@
 
         /* "Get Solar for ₹1" Highlight Card */
         .solar-one-rupee-card {
-            background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
-            border: 2px solid #10b981;
+            background: linear-gradient(135deg, #ffffff 0%, #fffdf5 100%);
+            border: 2px solid #f59e0b;
             border-radius: var(--radius-lg);
             padding: 22px;
-            box-shadow: 0 10px 25px rgba(16, 185, 129, 0.12);
+            box-shadow: 0 10px 25px rgba(217, 119, 6, 0.12);
             margin-bottom: 24px;
             position: relative;
         }
@@ -399,7 +417,7 @@
         .one-rupee-content h3 {
             font-size: 20px;
             font-weight: 800;
-            color: #065f46;
+            color: #b45309;
             margin: 0 0 4px 0;
             display: flex;
             align-items: center;
@@ -431,7 +449,7 @@
         .hero-stat-value {
             font-size: 18px;
             font-weight: 800;
-            color: #065f46;
+            color: #d97706;
             line-height: 1.2;
             margin-bottom: 2px;
         }
@@ -1647,6 +1665,352 @@
             font-weight: 600;
         }
 
+        /* ── EXPLORE SOLAR SOLUTIONS QUICK NAV ────────────────────────────── */
+        .explore-nav-section {
+            padding: 24px 0 10px 0;
+            background: var(--bg-warm);
+            border-bottom: 1px solid var(--brand-border);
+        }
+        .explore-nav-box {
+            background: #ffffff;
+            border: 1px solid var(--brand-border);
+            border-radius: var(--radius-xl);
+            padding: 22px 24px;
+            box-shadow: var(--shadow-sm);
+        }
+        .explore-nav-header {
+            margin-bottom: 18px;
+        }
+        .explore-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--brand-solar);
+            background: var(--brand-solar-light);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            padding: 3px 10px;
+            border-radius: 999px;
+            margin-bottom: 6px;
+        }
+        .explore-title {
+            font-size: 20px;
+            font-weight: 800;
+            color: var(--text-heading);
+            letter-spacing: -0.4px;
+            margin: 0 0 4px 0;
+        }
+        .explore-subtitle {
+            font-size: 13.5px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+        .explore-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        .explore-item-chip {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            background: var(--bg-page);
+            border: 1px solid var(--brand-border);
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            color: var(--text-heading);
+            transition: all 0.2s ease;
+        }
+        .explore-item-chip:hover {
+            background: #ffffff;
+            border-color: var(--brand-solar);
+            box-shadow: 0 4px 12px rgba(217, 119, 6, 0.12);
+            transform: translateY(-1px);
+        }
+        .explore-icon-circle {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        .explore-item-text {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .explore-item-text strong {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-heading);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .explore-item-text span {
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .bg-amber-soft { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+        .bg-emerald-soft { background: rgba(5, 150, 105, 0.12); color: #059669; }
+        .bg-blue-soft { background: rgba(2, 132, 199, 0.12); color: #0284c7; }
+        .bg-gold-soft { background: rgba(217, 119, 6, 0.12); color: #b45309; }
+        .bg-purple-soft { background: rgba(147, 51, 234, 0.12); color: #9333ea; }
+        .bg-teal-soft { background: rgba(13, 148, 136, 0.12); color: #0d9488; }
+        .bg-red-soft { background: rgba(225, 29, 72, 0.12); color: #e11d48; }
+        .bg-green-soft { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+
+        /* ── SOLAR IN ACTION (VIDEO SECTION) ──────────────────────────────── */
+        .videos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 22px;
+        }
+        .video-card-item {
+            background: #ffffff;
+            border: 1px solid var(--brand-border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            transition: all 0.25s ease;
+        }
+        .video-card-item:hover {
+            border-color: var(--brand-solar);
+            box-shadow: var(--shadow-solar);
+            transform: translateY(-2px);
+        }
+        .video-thumb-frame {
+            position: relative;
+            aspect-ratio: 16/9;
+            background: #0f172a;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .video-thumb-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+        .video-card-item:hover .video-thumb-img {
+            transform: scale(1.04);
+        }
+        .video-gradient-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.15) 0%, rgba(15, 23, 42, 0.7) 100%);
+            pointer-events: none;
+        }
+        .video-badge-cat {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(4px);
+            color: #fbbf24;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 999px;
+            border: 1px solid rgba(251, 191, 36, 0.35);
+            z-index: 2;
+        }
+        .video-duration-pill {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.75);
+            color: #ffffff;
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 4px;
+            z-index: 2;
+        }
+        .video-play-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #ffffff;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 4px 16px rgba(217, 119, 6, 0.5);
+            cursor: pointer;
+            transition: all 0.25s ease;
+            z-index: 3;
+        }
+        .video-play-btn:hover {
+            transform: translate(-50%, -50%) scale(1.12);
+            background: linear-gradient(135deg, #fbbf24 0%, #b45309 100%);
+        }
+        .video-card-body {
+            padding: 16px 18px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+        .video-verified-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #059669;
+            background: #ecfdf5;
+            padding: 2px 8px;
+            border-radius: 6px;
+            width: fit-content;
+            margin-bottom: 8px;
+        }
+        .video-card-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: var(--text-heading);
+            margin: 0 0 6px 0;
+            line-height: 1.35;
+        }
+        .video-card-desc {
+            font-size: 12.5px;
+            color: var(--text-secondary);
+            margin: 0 0 14px 0;
+            line-height: 1.5;
+            flex-grow: 1;
+        }
+        .video-card-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding-top: 10px;
+            border-top: 1px solid var(--brand-border-subtle);
+        }
+        .btn-watch-vid {
+            background: var(--brand-solar-light);
+            color: var(--brand-solar);
+            border: 1px solid rgba(217, 119, 6, 0.28);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 999px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+        .btn-watch-vid:hover {
+            background: var(--brand-solar);
+            color: #ffffff;
+        }
+        .btn-yt-direct {
+            color: #ef4444;
+            font-size: 12px;
+            font-weight: 700;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn-yt-direct:hover {
+            text-decoration: underline;
+        }
+
+        /* ── VIDEO LIGHTBOX MODAL PLAYER ─────────────────────────────────── */
+        .video-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(8px);
+            z-index: 2010;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        .video-modal-overlay.open { display: flex; }
+        .video-modal-dialog {
+            background: #0f172a;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: var(--radius-xl);
+            width: 100%;
+            max-width: 860px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+        .video-modal-header {
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .video-modal-title {
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 700;
+        }
+        .video-modal-close {
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: #ffffff;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+        .video-modal-close:hover {
+            background: #ef4444;
+        }
+        .video-iframe-container {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 */
+            height: 0;
+            background: #000000;
+        }
+        .video-iframe-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .video-modal-footer {
+            padding: 12px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: #1e293b;
+        }
+        .video-modal-desc {
+            font-size: 13px;
+            color: #cbd5e1;
+        }
+
         /* ── RESPONSIVE MEDIA QUERIES ─────────────────────────────────────── */
 
         /* TABLET (768px to 1024px) */
@@ -1658,6 +2022,8 @@
             .hero-title { font-size: 32px; }
             .hero-main-photo { height: 360px; }
             .hero-stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .explore-grid { grid-template-columns: repeat(3, 1fr); }
+            .videos-grid { grid-template-columns: repeat(2, 1fr); }
             .brands-grid { grid-template-columns: repeat(4, 1fr); }
             .benefits-grid { grid-template-columns: repeat(2, 1fr); }
             .packages-grid { grid-template-columns: 1fr; gap: 20px; }
@@ -1708,6 +2074,16 @@
             .hero-stat-value { font-size: 16px; }
             .hero-stat-label { font-size: 11px; }
 
+            .explore-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .explore-item-chip { padding: 8px 10px; gap: 8px; }
+            .explore-icon-circle { width: 32px; height: 32px; font-size: 14px; border-radius: 8px; }
+            .explore-item-text strong { font-size: 11.5px; }
+            .explore-item-text span { font-size: 10px; }
+
+            .videos-grid { grid-template-columns: 1fr; gap: 16px; }
+            .video-play-btn { width: 46px; height: 46px; font-size: 18px; }
+            .video-modal-dialog { max-width: 96vw; }
+
             .brands-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; }
             .brand-chip-name { font-size: 9.5px; }
 
@@ -1744,6 +2120,9 @@
             .catalog-container { padding: 0 10px; }
             .hero-title { font-size: 20px; line-height: 1.25; }
             .section-title { font-size: 22px; }
+            .explore-grid { grid-template-columns: 1fr; }
+            .explore-item-text strong { font-size: 12px; }
+            .explore-item-text span { font-size: 11px; }
             .brands-grid { grid-template-columns: repeat(2, 1fr); }
             .brand-logo-img { height: 28px; max-width: 110px; }
             .lang-pill-btn { padding: 2px 4px; font-size: 10px; }
@@ -1765,23 +2144,27 @@
     <header class="catalog-sticky-header">
         <div class="catalog-container">
             <div class="header-content">
-                <!-- Brand Logo -->
+                <!-- Brand Logo (Preserves MYNTREAL Master-Brand with Har Ghar Solar Identity) -->
                 <a href="#hero" class="brand-logo-link">
                     <img src="/public/images/myntreal-har-ghar-solar-nav.png" alt="MYNTREAL Har Ghar Solar" class="brand-logo-img" onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='flex';">
                     <div id="logoFallback" class="brand-logo-fallback" style="display: none;">
-                        <i class="fas fa-solar-panel"></i> MYNTREAL <span style="color: #d97706;">Solar</span>
+                        <span style="font-weight: 900; letter-spacing: -0.5px; color: #0f172a;">MYNTREAL</span>
+                        <span style="font-weight: 300; color: #cbd5e1; margin: 0 4px;">|</span>
+                        <span style="color: #d97706; font-weight: 800;"><i class="fas fa-sun text-warning me-1"></i>Har Ghar Solar</span>
                     </div>
                 </a>
 
                 <!-- Desktop Section Navigation Links -->
                 <ul class="catalog-nav-links">
                     <li class="catalog-nav-item"><a href="#hero" class="active" id="navLinkOverview">Overview</a></li>
-                    <li class="catalog-nav-item"><a href="#highlights" id="navLinkBenefits">Benefits</a></li>
-                    <li class="catalog-nav-item"><a href="#packages" id="navLinkPackages">Packages &amp; Pricing</a></li>
+                    <li class="catalog-nav-item"><a href="#explore_solutions" id="navLinkExplore">Explore</a></li>
+                    <li class="catalog-nav-item"><a href="#packages" id="navLinkPackages">Packages</a></li>
                     <li class="catalog-nav-item"><a href="#calculator" id="navLinkCalculator">Calculator</a></li>
-                    <li class="catalog-nav-item"><a href="#process" id="navLinkProcess">Installation</a></li>
+                    <li class="catalog-nav-item"><a href="#gallery" id="navLinkGallery">Gallery</a></li>
+                    <li class="catalog-nav-item"><a href="#videos" id="navLinkVideos">Videos</a></li>
+                    <li class="catalog-nav-item"><a href="#process" id="navLinkProcess">Process</a></li>
                     <li class="catalog-nav-item"><a href="#faqs" id="navLinkFaqs">FAQs</a></li>
-                    <li class="catalog-nav-item"><a href="#contact" id="navLinkContact">Contact Specialist</a></li>
+                    <li class="catalog-nav-item"><a href="#contact" id="navLinkContact">Contact</a></li>
                 </ul>
 
                 <!-- Language Switcher & Actions -->
@@ -1807,12 +2190,14 @@
         <!-- Mobile Drawer Navigation -->
         <div class="mobile-nav-drawer" id="mobileNavDrawer">
             <ul>
-                <li><a href="#hero" onclick="toggleMobileMenu()"><i class="fas fa-home me-2 text-success"></i> Overview</a></li>
+                <li><a href="#hero" onclick="toggleMobileMenu()"><i class="fas fa-home me-2 text-warning"></i> Overview</a></li>
+                <li><a href="#explore_solutions" onclick="toggleMobileMenu()"><i class="fas fa-compass me-2 text-warning"></i> Explore Solutions</a></li>
                 <li><a href="#highlights" onclick="toggleMobileMenu()"><i class="fas fa-star me-2 text-warning"></i> Key Benefits</a></li>
                 <li><a href="#packages" onclick="toggleMobileMenu()"><i class="fas fa-boxes me-2 text-primary"></i> Packages &amp; Pricing</a></li>
                 <li><a href="#calculator" onclick="toggleMobileMenu()"><i class="fas fa-calculator me-2 text-success"></i> Requirement Calculator</a></li>
                 <li><a href="#pricing_matrix" onclick="toggleMobileMenu()"><i class="fas fa-table me-2 text-info"></i> Financial Matrix</a></li>
                 <li><a href="#gallery" onclick="toggleMobileMenu()"><i class="fas fa-camera me-2 text-secondary"></i> Real Installations</a></li>
+                <li><a href="#videos" onclick="toggleMobileMenu()"><i class="fas fa-play-circle me-2 text-danger"></i> Solar in Action (Videos)</a></li>
                 <li><a href="#banking" onclick="toggleMobileMenu()"><i class="fas fa-university me-2 text-warning"></i> Banking Partners</a></li>
                 <li><a href="#process" onclick="toggleMobileMenu()"><i class="fas fa-list-ol me-2 text-primary"></i> 4-Step Process</a></li>
                 <li><a href="#faqs" onclick="toggleMobileMenu()"><i class="fas fa-question-circle me-2 text-success"></i> FAQs</a></li>
@@ -1947,6 +2332,77 @@
                             <img src="/public/images/brands/tata-solar.png" alt="TATA Power Solar" class="brand-chip-img">
                             <div class="brand-chip-name">TATA Solar</div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── 3B. EXPLORE SOLAR SOLUTIONS (COMPACT CATALOGUE NAVIGATION) ───── -->
+        <section class="explore-nav-section" id="explore_solutions">
+            <div class="catalog-container">
+                <div class="explore-nav-box">
+                    <div class="explore-nav-header">
+                        <span class="explore-tag" id="exploreTag"><i class="fas fa-compass"></i> Quick Catalogue Navigation</span>
+                        <h2 class="explore-title" id="exploreNavTitle">Explore Solar Solutions &amp; Tools</h2>
+                        <p class="explore-subtitle" id="exploreNavSubtitle">Select any category below to instantly jump to verified packages, calculators, and media.</p>
+                    </div>
+                    <div class="explore-grid">
+                        <a href="#packages" class="explore-item-chip">
+                            <div class="explore-icon-circle bg-amber-soft"><i class="fas fa-home"></i></div>
+                            <div class="explore-item-text">
+                                <strong>Residential Solar (1–3 kW)</strong>
+                                <span>₹78,000 Subsidy • Net ₹1.31L</span>
+                            </div>
+                        </a>
+                        <a href="#packages" class="explore-item-chip">
+                            <div class="explore-icon-circle bg-emerald-soft"><i class="fas fa-charging-station"></i></div>
+                            <div class="explore-item-text">
+                                <strong>Hybrid &amp; Villa (5 kW)</strong>
+                                <span>Battery-Ready • ₹2.65L Net</span>
+                            </div>
+                        </a>
+                        <a href="#packages" class="explore-item-chip">
+                            <div class="explore-icon-circle bg-blue-soft"><i class="fas fa-building"></i></div>
+                            <div class="explore-item-text">
+                                <strong>Commercial (10 kW+)</strong>
+                                <span>40% AD Tax Benefit • 3-Yr ROI</span>
+                            </div>
+                        </a>
+                        <a href="#calculator" class="explore-item-chip">
+                            <div class="explore-icon-circle bg-gold-soft"><i class="fas fa-calculator"></i></div>
+                            <div class="explore-item-text">
+                                <strong>ROI Estimator</strong>
+                                <span>Bill &amp; Roof Space Tool</span>
+                            </div>
+                        </a>
+                        <a href="#pricing_matrix" class="explore-item-chip">
+                            <div class="explore-icon-circle bg-purple-soft"><i class="fas fa-table"></i></div>
+                            <div class="explore-item-text">
+                                <strong>10-Col Financial Matrix</strong>
+                                <span>Compare All Capacities</span>
+                            </div>
+                        </a>
+                        <a href="#gallery" class="explore-item-chip">
+                            <div class="explore-icon-circle bg-teal-soft"><i class="fas fa-images"></i></div>
+                            <div class="explore-item-text">
+                                <strong>Real Installations</strong>
+                                <span>AP Rooftop Customer Photos</span>
+                            </div>
+                        </a>
+                        <a href="#videos" class="explore-item-chip">
+                            <div class="explore-icon-circle bg-red-soft"><i class="fas fa-play-circle"></i></div>
+                            <div class="explore-item-text">
+                                <strong>Solar in Action (Videos)</strong>
+                                <span>Installation &amp; Testimonials</span>
+                            </div>
+                        </a>
+                        <a href="#banking" class="explore-item-chip">
+                            <div class="explore-icon-circle bg-green-soft"><i class="fas fa-landmark"></i></div>
+                            <div class="explore-item-text">
+                                <strong>₹1 Scheme &amp; Bank Loans</strong>
+                                <span>SBI, Canara, BoB, APGB</span>
+                            </div>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -2492,8 +2948,23 @@
             </div>
         </section>
 
-        <!-- ── 10. AUTHORIZED BANKING PARTNERS ──────────────────────────────── -->
-        <section class="catalog-section" id="banking">
+        <!-- ── 10. SOLAR IN ACTION (AUTHENTIC VIDEO SHOWCASE) ──────────────── -->
+        <section class="catalog-section" id="videos">
+            <div class="catalog-container">
+                <div class="section-header-box">
+                    <div class="section-tag section-tag-solar"><i class="fas fa-play-circle"></i> <span id="videosTag">Solar in Action</span></div>
+                    <h2 class="section-title" id="videosSectionTitle">Watch &amp; Understand: Live Installations &amp; Walkthroughs</h2>
+                    <p class="section-subtitle" id="videosSectionSubtitle">Authentic project footage, engineering net-metering walkthroughs, and verified customer testimonials across Andhra Pradesh.</p>
+                </div>
+
+                <div class="videos-grid" id="videosGridContainer">
+                    <!-- Populated dynamically by JS from verified SOLAR_VIDEOS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ── 11. AUTHORIZED BANKING PARTNERS ──────────────────────────────── -->
+        <section class="catalog-section catalog-section-alt" id="banking">
             <div class="catalog-container">
                 <div class="section-header-box">
                     <div class="section-tag section-tag-solar"><i class="fas fa-university"></i> Partner Banks</div>
@@ -2679,9 +3150,9 @@
                     <div class="fw-bold text-heading mb-1">National Helpline: <a href="tel:+918585852738" class="text-emerald text-decoration-none">+91 858585 2738</a></div>
                     <div class="text-secondary small mb-2">Corporate Office: Visakhapatnam, Andhra Pradesh</div>
                     <div>
-                        <a href="/terms?segment=solar" class="text-secondary text-decoration-none small">
-                            <i class="fas fa-file-contract text-emerald me-1"></i> * Terms &amp; Conditions Apply
-                        </a>
+                        <span class="text-muted small">
+                            <i class="fas fa-file-contract text-warning me-1"></i> * Terms &amp; Conditions Apply
+                        </span>
                     </div>
                 </div>
             </div>
@@ -2710,6 +3181,29 @@
         </div>
     </div>
 
+    <!-- ── 17. VIDEO MODAL PLAYER ─────────────────────────────────────────── -->
+    <div class="video-modal-overlay" id="videoModalOverlay" onclick="closeVideoModal()">
+        <div class="video-modal-dialog" onclick="event.stopPropagation()">
+            <div class="video-modal-header">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-warning text-dark" id="videoModalBadge">Live Execution</span>
+                    <h5 class="video-modal-title mb-0" id="videoModalTitle">Video Title</h5>
+                </div>
+                <button type="button" class="video-modal-close" onclick="closeVideoModal()" aria-label="Close video player">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="video-modal-body">
+                <div class="video-iframe-container">
+                    <iframe id="videoPlayerIframe" src="" title="MYNTREAL Solar Video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+            </div>
+            <div class="video-modal-footer">
+                <p class="video-modal-desc mb-0" id="videoModalDesc"></p>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -2727,12 +3221,18 @@
                 cardDesc: 'Avail <strong>PM Surya Ghar Muft Bijli Yojana</strong> collateral-free solar loans from SBI, BoB, Canara, APGB, and PNB. Your <strong>₹78,000 direct DBT government subsidy (Residential)</strong> directly adjusts towards the loan principal. <strong class="text-success">Pay the monthly EMI purely out of your electricity bill savings!</strong> Zero out-of-pocket stress.',
                 cardCalcBtn: 'Calculate My ₹1 Plan',
                 cardCallBtn: 'Talk to Solar Specialist',
+                exploreTag: 'Quick Catalogue Navigation',
+                exploreTitle: 'Explore Solar Solutions & Tools',
+                exploreSubtitle: 'Select any category below to instantly jump to verified packages, calculators, and media.',
                 overviewHeading: 'Turn Your Idle Roof Into a 25-Year Income-Yielding Power Plant',
                 overviewDesc: 'With government tariffs escalating by 5% to 8% every year, continuous electricity payments remain an unending liability. MYNTREAL Har Ghar Solar enables you to generate your own clean power from your rooftop, slash power bills by up to 90%, and export surplus daytime electricity back to the DISCOM grid through bi-directional net metering.',
                 benefitsTitle: 'Why Switch to Rooftop Solar with MyntReal?',
                 benefitsSubtitle: 'Engineering excellence meets seamless government subsidy execution & 25-year performance security.',
                 packagesTitle: 'Popular Solar Plant Capacities & Packages',
                 packagesSubtitle: '100% synchronized with official government subsidy matrices and zero-collateral bank loan standards.',
+                videosTag: 'Solar in Action',
+                videosTitle: 'Watch & Understand: Live Installations & Walkthroughs',
+                videosSubtitle: 'Authentic project footage, engineering net-metering walkthroughs, and verified customer testimonials across Andhra Pradesh.',
                 faqsTitle: 'Frequently Asked Questions (FAQs)',
                 faqsSubtitle: 'Everything you need to know about rooftop solar, net metering, bank loans & DBT subsidies.'
             },
@@ -2747,12 +3247,18 @@
                 cardDesc: 'SBI, BoB, కెనరా, APGB మరియు PNB బ్యాంకుల ద్వారా <strong>పీఎం సూర్య ఘర్ ముఫ్త్ బిజిలీ యోజన</strong> పూచీకత్తు లేని సోలార్ రుణాలు పొందండి. మీ <strong>₹78,000 నేరుగా బ్యాంక్ ఖాతాలో జమయ్యే ప్రభుత్వ సబ్సిడీ (గృహ వినియోగానికి)</strong> లోన్ ప్రిన్సిపల్‌కు సర్దుబాటు అవుతుంది. <strong class="text-success">నెలవారీ కరెంట్ బిల్లు ఆదాతోనే సులభంగా EMI చెల్లించండి!</strong> ఎలాంటి అదనపు భారం లేదు.',
                 cardCalcBtn: 'నా ₹1 ప్లాన్ లెక్కించండి',
                 cardCallBtn: 'సోలార్ నిపుణుడితో మాట్లాడండి',
+                exploreTag: 'శీఘ్ర నావిగేషన్',
+                exploreTitle: 'సోలార్ సొల్యూషన్స్ & టూల్స్ అన్వేషించండి',
+                exploreSubtitle: 'ప్యాకేజీలు, కాలిక్యులేటర్ లేదా వీడియోలను నేరుగా చూడటానికి క్రింది వర్గాలపై క్లిక్ చేయండి.',
                 overviewHeading: 'మీ ఇంటి డాబాను 25 సంవత్సరాల ఆదాయాన్నిచ్చే పవర్ ప్లాంట్‌గా మార్చుకోండి',
                 overviewDesc: 'ప్రభుత్వ విద్యుత్ ఛార్జీలు ఏటా 5% నుండి 8% పెరుగుతున్నందున, కరెంట్ బిల్లులు నిరంతర భారంగా మారుతున్నాయి. మైంట్‌రియల్ హర్ ఘర్ సోలార్ ద్వారా మీ ఇంటి పైకప్పుపై స్వయంగా విద్యుత్‌ను ఉత్పత్తి చేసుకొని, బిల్లులను 90% వరకు తగ్గించుకోవచ్చు. అదనపు విద్యుత్‌ను నెట్ మీటరింగ్ ద్వారా ప్రభుత్వ గ్రిడ్‌కు ఎగుమతి చేయవచ్చు.',
                 benefitsTitle: 'మైంట్‌రియల్ రూఫ్‌టాప్ సోలార్‌ను ఎందుకు ఎంచుకోవాలి?',
                 benefitsSubtitle: 'అద్భుతమైన ఇంజనీరింగ్, సులభమైన ప్రభుత్వ సబ్సిడీ ప్రాసెసింగ్ మరియు 25 సంవత్సరాల వారంటీ భరోసా.',
                 packagesTitle: 'ప్రజాదరణ పొందిన సోలార్ ప్లాంట్ సామర్థ్యాలు & ప్యాకేజీలు',
                 packagesSubtitle: 'అధికారిక ప్రభుత్వ సబ్సిడీ విధానం మరియు బ్యాంక్ లోన్ నిబంధనలకు 100% సరిపోలే పారదర్శక ధరలు.',
+                videosTag: 'సోలార్ ఇన్ యాక్షన్',
+                videosTitle: 'వాస్తవ సోలార్ ఇన్‌స్టాలేషన్స్ & కస్టమర్ అనుభవాలు',
+                videosSubtitle: 'ఆంధ్రప్రదేశ్ మరియు తెలంగాణలో మా ఇంజనీర్లు పూర్తి చేసిన వాస్తవ ప్లాంట్లు, నెట్ మీటరింగ్ మరియు కస్టమర్ల మాటలు.',
                 faqsTitle: 'తరచుగా అడిగే ప్రశ్నలు & సమాధానాలు (FAQs)',
                 faqsSubtitle: 'రూఫ్‌టాప్ సోలార్, నెట్ మీటరింగ్, బ్యాంక్ లోన్స్ మరియు పీఎం సూర్య ఘర్ సబ్సిడీ గురించి సమగ్ర సమాచారం.'
             },
@@ -2767,12 +3273,18 @@
                 cardDesc: 'SBI, BoB, Canara, APGB और PNB से <strong>पीएम सूर्य घर मुफ्त बिजली योजना</strong> के तहत बिना किसी गारंटी के सोलर लोन प्राप्त करें। आपकी <strong>₹78,000 सीधी सरकारी डीबीटी सब्सिडी (आवासीय)</strong> सीधे लोन में एडजस्ट हो जाती है। <strong class="text-success">बिजली बिल की बचत से ही आसान मासिक किस्त (EMI) चुकाएं!</strong> कोई वित्तीय तनाव नहीं।',
                 cardCalcBtn: 'अपना ₹1 प्लान कैलकुलेट करें',
                 cardCallBtn: 'सोलर विशेषज्ञ से बात करें',
+                exploreTag: 'क्विक नेविगेशन',
+                exploreTitle: 'सोलर सॉल्यूशंस और टूल्स एक्सप्लोर करें',
+                exploreSubtitle: 'पैकेज, कैलकुलेटर या वीडियो देखने के लिए नीचे दिए गए किसी भी विकल्प पर टैप करें।',
                 overviewHeading: 'अपनी छत को 25 साल तक बिजली बनाने वाले पावर प्लांट में बदलें',
                 overviewDesc: 'बिजली की दरें हर साल 5% से 8% बढ़ रही हैं। माइन्टरियल हर घर सोलर के साथ अपनी छत पर स्वच्छ ऊर्जा बनाएं, बिजली बिल में 90% तक की भारी कटौती करें और अतिरिक्त बिजली को नेट मीटरिंग द्वारा सरकारी ग्रिड में भेजकर बचत करें।',
                 benefitsTitle: 'माइन्टरियल सोलर क्यों चुनें?',
                 benefitsSubtitle: 'उत्कृष्ट इंजीनियरिंग, आसान सरकारी सब्सिडी प्रक्रिया और 25 साल की वारंटी सुरक्षा।',
                 packagesTitle: 'लोकप्रिय सोलर प्लांट क्षमताएं एवं पैकेज',
                 packagesSubtitle: 'सरकारी सब्सिडी मैट्रिक्स और बैंक लोन मानकों के अनुसार 100% पारदर्शी दरें।',
+                videosTag: 'सोलर इन एक्शन',
+                videosTitle: 'देखें और समझें: वास्तविक इंस्टॉलेशन और कस्टमर रिव्यू',
+                videosSubtitle: 'आंध्र प्रदेश एवं तेलंगाना में पूर्ण किए गए प्रोजेक्ट्स, नेट मीटरिंग प्रक्रिया और संतुष्ट ग्राहकों के अनुभव।',
                 faqsTitle: 'अक्सर पूछे जाने वाले सवाल (FAQs)',
                 faqsSubtitle: 'रूफटॉप सोलर, नेट मीटरिंग, बैंक लोन और सरकारी सब्सिडी के बारे में संपूर्ण जानकारी।'
             },
@@ -2787,12 +3299,18 @@
                 cardDesc: 'SBI, BoB, Canara, APGB மற்றும் PNB வங்கிகள் மூலம் <strong>பிஎம் சூர்யா கர் திட்டம்</strong> கீழ் பிணையில்லா கடன் பெறுங்கள். உங்கள் <strong>ரூ.78,000 நேரடி அரசு மானியம் (வீடுகளுக்கு)</strong> நேரடியாக கடன் அசலில் கழிக்கப்படும். <strong class="text-success">மாதாந்திர மின் கட்டண சேமிப்பிலிருந்தே எளிய தவணையை (EMI) செலுத்துங்கள்!</strong> எந்த சிரமமும் இன்றி.',
                 cardCalcBtn: 'எனது ₹1 திட்டத்தை கணக்கிடுக',
                 cardCallBtn: 'சோலார் நிபுணருடன் பேசவும்',
+                exploreTag: 'விரைவு வழிசெலுத்தல்',
+                exploreTitle: 'சோலார் தீர்வுகள் & கருவிகளை ஆராயுங்கள்',
+                exploreSubtitle: 'திட்டங்கள், கால்குலேட்டர் அல்லது வீடியோக்களை காண கீழே உள்ள பிரிவுகளை தேர்ந்தெடுக்கவும்.',
                 overviewHeading: 'உங்கள் வெற்று கூரையை 25 ஆண்டு வருமானம் தரும் மின் நிலையமாக மாற்றுங்கள்',
                 overviewDesc: 'மின் கட்டணங்கள் ஆண்டுதோறும் உயர்ந்து கொண்டே செல்கின்றன. மைண்ட்ரியல் ஹர் கர் சோலார் மூலம் உங்கள் கூரையிலேயே சொந்தமாக மின்சாரம் உற்பத்தி செய்து, மின் கட்டணத்தில் 90% வரை சேமித்து, உபரி மின்சாரத்தை நெட் மீட்டரிங் மூலம் அரசு கிரிட்டுக்கு அனுப்பலாம்.',
                 benefitsTitle: 'மைண்ட்ரியல் சோலார் திட்டத்தை ஏன் தேர்வு செய்ய வேண்டும்?',
                 benefitsSubtitle: 'சிறந்த பொறியியல் கட்டமைப்பு, விரைவான அரசு மானிய உதவி மற்றும் 25 வருட செயல்திறன் உத்தரவாதம்.',
                 packagesTitle: 'பிரபலமான சோலார் அமைப்புகள் மற்றும் திட்டங்கள்',
                 packagesSubtitle: 'அரசு மானிய நெறிமுறைகள் மற்றும் வங்கி கடன் விதிமுறைகளுக்கு ஏற்ற வெளிப்படையான விலை விவரங்கள்.',
+                videosTag: 'சோலார் இன் ஆக்ஷன்',
+                videosTitle: 'நேரடி சோலார் நிறுவல்கள் & வாடிக்கையாளர் மதிப்புரைகள்',
+                videosSubtitle: 'நேரடி திட்ட வீடியோக்கள், நெட் மீட்டரிங் செயல்முறை மற்றும் வாடிக்கையாளர்களின் உண்மை அனுபவங்கள்.',
                 faqsTitle: 'அடிக்கடி கேட்கப்படும் கேள்விகள் (FAQs)',
                 faqsSubtitle: 'கூரை சோலார், நெட் மீட்டரிங், வங்கி கடன்கள் மற்றும் அரசு மானியம் பற்றிய முழு விவரங்கள்.'
             }
@@ -2926,6 +3444,54 @@
             { url: '/public/images/solar_installations/ap_solar_customer_2.jpg', caption: 'Andhra Pradesh — 5 kW High-Capacity Array', location: 'Andhra Pradesh' }
         ];
 
+        /* ── AUTHENTIC MYNTREAL SOLAR VIDEOS (VERIFIED FROM DATABASE) ─────── */
+        const SOLAR_VIDEOS = [
+            {
+                id: 'cYRHh8AkMug',
+                title: 'Solar Installation by Myntreal - Har Ghar Solar Initiative',
+                cat: 'Live Rooftop Execution',
+                loc: 'Andhra Pradesh',
+                desc: 'Live on-site rooftop solar execution in Andhra Pradesh: homeowner interaction, mounting structure, panel alignment, and customer feedback.',
+                dur: '2:45',
+                thumb: '/public/images/solar_videos/vid_installation.webp',
+                ytThumb: 'https://img.youtube.com/vi/cYRHh8AkMug/hqdefault.jpg',
+                url: 'https://youtu.be/cYRHh8AkMug'
+            },
+            {
+                id: 'yE4BF_L81D8',
+                title: 'Solar Installation Process | MyntReal - Har Ghar Solar',
+                cat: 'Engineering & Net Metering',
+                loc: 'Har Ghar Solar Site',
+                desc: 'Step-by-step rooftop setup: structure fabrication, Tier-1 Mono PERC panel wiring, DISCOM bi-directional net meter synchronization, and testing.',
+                dur: '2:15',
+                thumb: '/public/images/solar_videos/vid_process.webp',
+                ytThumb: 'https://img.youtube.com/vi/yE4BF_L81D8/hqdefault.jpg',
+                url: 'https://youtu.be/yE4BF_L81D8'
+            },
+            {
+                id: 'qpEGtGN5Kck',
+                title: '☀️ Switch to Solar & Save More | Real Customer Testimonial',
+                cat: 'Customer Story & 90% Bill Savings',
+                loc: 'Verified Customer Home',
+                desc: 'Verified homeowner testimonial sharing how their monthly electricity bill dropped by 90% with MyntReal Har Ghar Solar and ₹78,000 DBT subsidy.',
+                dur: '1:50',
+                thumb: '/public/images/solar_videos/vid_testimonial.webp',
+                ytThumb: 'https://img.youtube.com/vi/qpEGtGN5Kck/hqdefault.jpg',
+                url: 'https://youtu.be/qpEGtGN5Kck'
+            },
+            {
+                id: 'Ev5pq4g7DQk',
+                title: 'Tired of High Electricity Bills? Switch to Solar with MyntReal ☀️',
+                cat: 'Solar Economics & ROI Guide',
+                loc: 'Financial Breakdown',
+                desc: 'Why continuing to pay escalating DISCOM electricity tariffs is an unending liability, and how rooftop solar generates free power for 25+ years.',
+                dur: '0:45',
+                thumb: '/public/images/solar_videos/vid_economics.webp',
+                ytThumb: 'https://img.youtube.com/vi/Ev5pq4g7DQk/hqdefault.jpg',
+                url: 'https://youtube.com/shorts/Ev5pq4g7DQk'
+            }
+        ];
+
         /* ── APPLICATION STATE ────────────────────────────────────────────── */
         let activeLang = 'en';
         let currentSlideIdx = 0;
@@ -2978,6 +3544,7 @@
             // Initial UI Setup
             renderFaqs();
             renderGallery();
+            renderVideos();
             renderCalculatorPresets();
             renderMatrixTable();
             updateCalculator();
@@ -3000,6 +3567,7 @@
 
             applyLanguage();
             renderFaqs();
+            renderVideos();
         }
 
         function applyLanguage() {
@@ -3016,12 +3584,18 @@
             setHtml('cardDesc', s.cardDesc);
             setHtml('cardCalcBtn', `<i class="fas fa-calculator me-1"></i> ${s.cardCalcBtn}`);
             setHtml('cardCallBtn', `<i class="fas fa-phone-alt me-1 text-success"></i> ${s.cardCallBtn}`);
+            if (s.exploreTag) setText('exploreTag', s.exploreTag);
+            if (s.exploreTitle) setText('exploreNavTitle', s.exploreTitle);
+            if (s.exploreSubtitle) setText('exploreNavSubtitle', s.exploreSubtitle);
             setText('overviewHeading', s.overviewHeading);
             setText('overviewDesc', s.overviewDesc);
             setText('benefitsTitle', s.benefitsTitle);
             setText('benefitsSubtitle', s.benefitsSubtitle);
             setText('packagesTitle', s.packagesTitle);
             setText('packagesSubtitle', s.packagesSubtitle);
+            if (s.videosTag) setText('videosTag', s.videosTag);
+            if (s.videosTitle) setText('videosSectionTitle', s.videosTitle);
+            if (s.videosSubtitle) setText('videosSectionSubtitle', s.videosSubtitle);
             setText('faqsSectionTitle', s.faqsTitle);
             setText('faqsSectionSubtitle', s.faqsSubtitle);
         }
@@ -3330,7 +3904,83 @@
         function closeLightbox() {
             const overlay = document.getElementById('lightboxOverlay');
             if (overlay) overlay.classList.remove('open');
+            document.body.style.overflow = '';
         }
+
+        /* ── VIDEO SHOWCASE ENGINE ────────────────────────────────────────── */
+        function renderVideos() {
+            const container = document.getElementById('videosGridContainer');
+            if (!container) return;
+
+            container.innerHTML = SOLAR_VIDEOS.map(v => `
+                <div class="video-card-item">
+                    <div class="video-thumb-frame" onclick="openVideoModal('${v.id}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' ')openVideoModal('${v.id}')" aria-label="Play video: ${v.title}">
+                        <img src="${v.thumb}" alt="${v.title}" class="video-thumb-img" onerror="this.onerror=null;this.src='${v.ytThumb}'" loading="lazy">
+                        <div class="video-gradient-overlay"></div>
+                        <span class="video-badge-cat">${v.cat}</span>
+                        <span class="video-duration-pill"><i class="far fa-clock me-1"></i>${v.dur}</span>
+                        <button type="button" class="video-play-btn" aria-label="Play ${v.title}">
+                            <i class="fas fa-play"></i>
+                        </button>
+                    </div>
+                    <div class="video-card-body">
+                        <div class="video-verified-tag"><i class="fas fa-check-circle"></i> ${v.loc}</div>
+                        <h3 class="video-card-title">${v.title}</h3>
+                        <p class="video-card-desc">${v.desc}</p>
+                        <div class="video-card-actions">
+                            <button type="button" class="btn-watch-vid" onclick="openVideoModal('${v.id}')">
+                                <i class="fas fa-play-circle"></i> Watch Video
+                            </button>
+                            <a href="${v.url}" target="_blank" rel="noopener noreferrer" class="btn-yt-direct" title="Open directly on YouTube">
+                                <i class="fab fa-youtube"></i> YouTube <i class="fas fa-external-link-alt" style="font-size:10px;"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openVideoModal(vidId) {
+            const video = SOLAR_VIDEOS.find(v => v.id === vidId);
+            if (!video) return;
+
+            const overlay = document.getElementById('videoModalOverlay');
+            const iframe = document.getElementById('videoPlayerIframe');
+            const titleEl = document.getElementById('videoModalTitle');
+            const badgeEl = document.getElementById('videoModalBadge');
+            const descEl = document.getElementById('videoModalDesc');
+
+            if (titleEl) titleEl.textContent = video.title;
+            if (badgeEl) badgeEl.textContent = video.cat;
+            if (descEl) descEl.textContent = `${video.desc} • Location: ${video.loc}`;
+            if (iframe) {
+                iframe.src = `https://www.youtube-nocookie.com/embed/${video.id}?autoplay=1&rel=0&modestbranding=1`;
+            }
+            if (overlay) {
+                overlay.classList.add('open');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeVideoModal() {
+            const overlay = document.getElementById('videoModalOverlay');
+            const iframe = document.getElementById('videoPlayerIframe');
+
+            if (iframe) {
+                iframe.src = '';
+            }
+            if (overlay) {
+                overlay.classList.remove('open');
+                document.body.style.overflow = '';
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeLightbox();
+                closeVideoModal();
+            }
+        });
 
         /* ── FAQS ACCORDION ENGINE ────────────────────────────────────────── */
         function renderFaqs() {
