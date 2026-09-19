@@ -72,6 +72,15 @@
             box-sizing: border-box;
         }
 
+        /* Brand Logo Light/Dark Theme Switching */
+        .brand-logo-light { display: inline-block !important; }
+        .brand-logo-dark { display: none !important; }
+        [data-theme="dark"] .brand-logo-light { display: none !important; }
+        [data-theme="dark"] .brand-logo-dark { display: inline-block !important; }
+        [data-theme="dark"] .vgk-brand-logo {
+            filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
+        }
+
         html, body {
             overflow-x: hidden;
             width: 100%;
@@ -690,7 +699,8 @@
             <!-- Left: Authentic MyntReal Logo & Ecosystem Tabs -->
             <div class="d-flex align-items-center gap-3">
                 <a href="/catalog/industrial-hub-franchise" class="d-flex align-items-center text-decoration-none">
-                    <img src="/public/hub/Assets/Myntreal.logo.png" alt="MyntReal Hub" style="height: 38px; object-fit: contain;" onerror="this.src='/public/myntreal-logo.png'">
+                    <img class="brand-logo-light" src="/public/hub/Assets/Myntreal.logo.png" alt="MyntReal Hub" style="height: 38px; object-fit: contain;" onerror="this.src='/public/myntreal-logo.png'">
+                    <img class="brand-logo-dark" src="/public/hub/Assets/Myntreal.logo-white.png" alt="MyntReal Hub" style="height: 38px; object-fit: contain;" onerror="this.src='/public/myntreal-logo.png'">
                 </a>
 
                 <!-- Cross-Vertical Navigation Tabs matching all catalog stages -->
@@ -734,7 +744,8 @@
                     <button class="lang-pill-btn lang-btn" data-lang="te" onclick="switchPricingLanguage('te')">తెలుగు</button>
                 </div>
                 
-                <img src="/public/vgk4u-logo.png" alt="VGK4U" class="d-none d-md-block ms-1" style="height: 28px;" onerror="this.style.display='none'">
+                <img src="/public/hub/Assets/vgk4u-logo.png" alt="VGK4U" class="brand-logo-light d-none d-md-block ms-1" style="height: 28px;" onerror="this.style.display='none'">
+                <img src="/public/vgk4u-logo-dark-theme.png" alt="VGK4U" class="brand-logo-dark d-none d-md-block ms-1 vgk-brand-logo" style="height: 28px;" onerror="this.style.display='none'">
             </div>
         </div>
     </header>

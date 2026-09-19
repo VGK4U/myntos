@@ -130,6 +130,18 @@
             opacity: 0.85;
         }
 
+        /* Brand Logo Light/Dark Theme Switching */
+        .brand-logo-light { display: inline-block !important; }
+        .brand-logo-dark { display: none !important; }
+        [data-theme="dark"] .brand-logo-light,
+        [data-bs-theme="dark"] .brand-logo-light { display: none !important; }
+        [data-theme="dark"] .brand-logo-dark,
+        [data-bs-theme="dark"] .brand-logo-dark { display: inline-block !important; }
+
+        @media (max-width: 767.98px) {
+            .brand-logo-sub.d-none { display: none !important; }
+        }
+
         .theme-toggle-btn {
             background: var(--bg-card);
             border: 1px solid var(--border-subtle);
@@ -3343,8 +3355,8 @@
             <!-- Left: Official Branding (Dynamically switches between Solar, Hub, and ETC) -->
             <div class="d-flex align-items-center gap-3 order-1">
                 <a href="#hero" class="d-flex align-items-center text-decoration-none" id="headerLogoLink">
-                    <img id="headerLogoLight" src="/public/solar-logo-harghar-trans.png" alt="MyntReal" class="brand-logo-harghar brand-logo-light" onerror="this.src='/public/myntreal-logo.png'">
-                    <img id="headerLogoDark" src="/public/solar-logo-harghar-trans.png" alt="MyntReal" class="brand-logo-harghar brand-logo-dark" onerror="this.src='/public/myntreal-logo.png'">
+                    <img id="headerLogoLight" src="/public/images/myntreal-har-ghar-solar-nav.png" alt="MyntReal" class="brand-logo-harghar brand-logo-light" onerror="this.src='/public/solar-logo-harghar-trans.png'">
+                    <img id="headerLogoDark" src="/public/images/myntreal-har-ghar-solar-nav-white.png" alt="MyntReal" class="brand-logo-harghar brand-logo-dark" onerror="this.src='/public/solar-logo-harghar-white.png'">
                 </a>
                 <span id="headerBadge" class="d-none d-sm-inline-block badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1 rounded-pill small fw-bold">
                     <i class="fas fa-bolt me-1 text-warning"></i> PM Surya Ghar EPC Partner
@@ -3368,7 +3380,8 @@
                 </div>
                 
                 <!-- Platform Mark -->
-                <img src="/public/vgk4u-logo.png" alt="VGK4U" class="brand-logo-sub d-none d-md-block ms-1" onerror="this.style.display='none'">
+                <img src="/public/hub/Assets/vgk4u-logo.png" alt="VGK4U" class="brand-logo-sub brand-logo-light d-none d-md-block ms-1" onerror="this.style.display='none'">
+                <img src="/public/vgk4u-logo-dark-theme.png" alt="VGK4U" class="brand-logo-sub brand-logo-dark d-none d-md-block ms-1" onerror="this.style.display='none'">
             </div>
         </div>
     </header>
@@ -3403,8 +3416,8 @@
             <div class="row g-4 align-items-center border-bottom border-secondary border-opacity-25 pb-4 mb-4">
                 <div class="col-md-6 text-center text-md-start">
                     <div class="d-flex align-items-center justify-content-center justify-content-md-start gap-3 flex-wrap">
-                        <img id="footerLogoLight" src="/public/solar-logo-harghar-trans.png" alt="MyntReal" class="brand-logo-harghar brand-logo-light" style="height: 46px;">
-                        <img id="footerLogoDark" src="/public/solar-logo-harghar-trans.png" alt="MyntReal" class="brand-logo-harghar brand-logo-dark" style="height: 46px;">
+                        <img id="footerLogoLight" src="/public/images/myntreal-har-ghar-solar-nav.png" alt="MyntReal" class="brand-logo-harghar brand-logo-light" style="height: 46px;">
+                        <img id="footerLogoDark" src="/public/images/myntreal-har-ghar-solar-nav-white.png" alt="MyntReal" class="brand-logo-harghar brand-logo-dark" style="height: 46px;">
                         <div class="vr d-none d-sm-block text-secondary opacity-50" style="height: 32px;"></div>
                         <div>
                             <div id="footerIsoBadge" class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill fw-bold footer-iso-badge" style="background: rgba(59, 130, 246, 0.12); border: 1px solid rgba(59, 130, 246, 0.35); color: #2563eb; font-size: 12.5px;">
@@ -3499,7 +3512,7 @@
             if (pathLower.includes('industrial-hub') || pathLower.includes('/hub') || pathParts.includes('hub') || pathParts.includes('industrial-hub') || pathParts.includes('industrial-hub-franchise') || searchLower.includes('hub')) {
                 categorySlug = 'industrial-hub';
                 catalogSlug = 'industrial-hub-franchise';
-            } else if (pathLower.includes('/etc') || pathParts.includes('etc') || pathParts.includes('etc-training') || pathParts.includes('etc-renewable-certifications') || pathLower.includes('evolution')) {
+            } else if (pathLower.includes('/etc') || pathParts.includes('etc') || pathParts.includes('etc-training') || pathParts.includes('etc-renewable-certifications') || pathLower.includes('evolution') || searchLower.includes('etc')) {
                 categorySlug = 'etc';
                 catalogSlug = 'etc-renewable-certifications';
             } else if (pathParts.length >= 3 && pathParts[0].toLowerCase() === 'catalog') {
@@ -3591,9 +3604,8 @@
 
             if (catType === 'industrial-hub' || catType === 'hub') {
                 document.title = 'MyntReal Hub — 5-in-1 Investor Franchise';
-                const logoSrc = '/public/hub/Assets/Myntreal.logo.png';
-                if (headerLogoLight) { headerLogoLight.src = logoSrc; headerLogoLight.style.height = '46px'; }
-                if (headerLogoDark) { headerLogoDark.src = logoSrc; headerLogoDark.style.height = '46px'; }
+                if (headerLogoLight) { headerLogoLight.src = '/public/hub/Assets/Myntreal.logo.png'; headerLogoLight.style.height = '46px'; }
+                if (headerLogoDark) { headerLogoDark.src = '/public/hub/Assets/Myntreal.logo-white.png'; headerLogoDark.style.height = '46px'; }
                 if (headerBadge) {
                     headerBadge.className = 'd-none d-sm-inline-flex align-items-center gap-2 p-0 border-0 bg-transparent';
                     headerBadge.innerHTML = `
@@ -3616,9 +3628,8 @@
                 }
             } else if (catType === 'etc' || catType === 'etc-training') {
                 document.title = 'EVolution Training Centre — Professional EV Certifications';
-                const logoSrc = '/public/images/etc_training/evolution_training_centre_logo.png';
-                if (headerLogoLight) { headerLogoLight.src = logoSrc; headerLogoLight.style.height = '46px'; }
-                if (headerLogoDark) { headerLogoDark.src = logoSrc; headerLogoDark.style.height = '46px'; }
+                if (headerLogoLight) { headerLogoLight.src = '/public/hub/Assets/ETC.png'; headerLogoLight.style.height = '46px'; }
+                if (headerLogoDark) { headerLogoDark.src = '/public/hub/Assets/ETC-white.png'; headerLogoDark.style.height = '46px'; }
                 if (headerBadge) {
                     headerBadge.innerHTML = '<i class="fas fa-university me-1 text-warning"></i> Govt. Polytechnic Partner';
                 }
@@ -3627,9 +3638,8 @@
                 }
             } else {
                 document.title = 'MYNTREAL — Har Ghar Solar (హర్ ఘర్ సోలార్)';
-                const logoSrc = '/public/solar-logo-harghar-trans.png';
-                if (headerLogoLight) { headerLogoLight.src = logoSrc; headerLogoLight.style.height = '46px'; }
-                if (headerLogoDark) { headerLogoDark.src = logoSrc; headerLogoDark.style.height = '46px'; }
+                if (headerLogoLight) { headerLogoLight.src = '/public/images/myntreal-har-ghar-solar-nav.png'; headerLogoLight.style.height = '46px'; }
+                if (headerLogoDark) { headerLogoDark.src = '/public/images/myntreal-har-ghar-solar-nav-white.png'; headerLogoDark.style.height = '46px'; }
                 if (headerBadge) {
                     headerBadge.innerHTML = '<i class="fas fa-bolt me-1 text-warning"></i> PM Surya Ghar EPC Partner';
                 }
@@ -4112,9 +4122,8 @@
                 const footerIsoSub = document.getElementById('footerIsoSub');
                 const footerBrandDesc = document.getElementById('footerBrandDesc');
 
-                const logoSrc = '/public/hub/Assets/Myntreal.logo.png';
-                if (headerLogoLight) { headerLogoLight.src = logoSrc; headerLogoLight.style.height = '46px'; }
-                if (headerLogoDark) { headerLogoDark.src = logoSrc; headerLogoDark.style.height = '46px'; }
+                if (headerLogoLight) { headerLogoLight.src = '/public/hub/Assets/Myntreal.logo.png'; headerLogoLight.style.height = '46px'; }
+                if (headerLogoDark) { headerLogoDark.src = '/public/hub/Assets/Myntreal.logo-white.png'; headerLogoDark.style.height = '46px'; }
                 if (headerBadge) {
                     headerBadge.className = 'd-none d-sm-inline-flex align-items-center gap-2 p-0 border-0 bg-transparent';
                     headerBadge.innerHTML = `
@@ -4132,8 +4141,8 @@
                         </a>
                     `;
                 }
-                if (footerLogoLight) { footerLogoLight.src = logoSrc; footerLogoLight.style.height = '46px'; }
-                if (footerLogoDark) { footerLogoDark.src = logoSrc; footerLogoDark.style.height = '46px'; }
+                if (footerLogoLight) { footerLogoLight.src = '/public/hub/Assets/Myntreal.logo.png'; footerLogoLight.style.height = '46px'; }
+                if (footerLogoDark) { footerLogoDark.src = '/public/hub/Assets/Myntreal.logo-white.png'; footerLogoDark.style.height = '46px'; }
                 if (footerIsoBadge) {
                     footerIsoBadge.innerHTML = '<i class="fas fa-award text-warning"></i> ISO 9001:2015 Certified';
                 }
@@ -4172,14 +4181,13 @@
                 const footerIsoSub = document.getElementById('footerIsoSub');
                 const footerBrandDesc = document.getElementById('footerBrandDesc');
 
-                const logoSrc = '/public/images/etc_training/evolution_training_centre_logo.png';
-                if (headerLogoLight) { headerLogoLight.src = logoSrc; headerLogoLight.style.height = '46px'; }
-                if (headerLogoDark) { headerLogoDark.src = logoSrc; headerLogoDark.style.height = '46px'; }
+                if (headerLogoLight) { headerLogoLight.src = '/public/hub/Assets/ETC.png'; headerLogoLight.style.height = '46px'; }
+                if (headerLogoDark) { headerLogoDark.src = '/public/hub/Assets/ETC-white.png'; headerLogoDark.style.height = '46px'; }
                 if (headerBadge) {
                     headerBadge.innerHTML = '<i class="fas fa-university me-1 text-warning"></i> Govt. Polytechnic Partner';
                 }
-                if (footerLogoLight) { footerLogoLight.src = logoSrc; footerLogoLight.style.height = '46px'; }
-                if (footerLogoDark) { footerLogoDark.src = logoSrc; footerLogoDark.style.height = '46px'; }
+                if (footerLogoLight) { footerLogoLight.src = '/public/hub/Assets/ETC.png'; footerLogoLight.style.height = '46px'; }
+                if (footerLogoDark) { footerLogoDark.src = '/public/hub/Assets/ETC-white.png'; footerLogoDark.style.height = '46px'; }
                 if (footerIsoBadge) {
                     footerIsoBadge.innerHTML = '<i class="fas fa-award text-warning"></i> ISO 9001:2015 Certified';
                 }
@@ -4192,10 +4200,10 @@
                 const footerFollowLabel = document.getElementById('footerFollowLabel');
                 const footerHelplineText = document.getElementById('footerHelplineText');
                 if (footerFollowLabel) {
-                    footerFollowLabel.textContent = 'Connect with EVolution Training:';
+                    footerFollowLabel.textContent = 'Admissions & Certification Desk:';
                 }
                 if (footerHelplineText) {
-                    footerHelplineText.innerHTML = 'Admissions Helpline: <a href="tel:+918585852738" class="text-emerald fw-bold text-decoration-none">+91 858585 2738</a> • Campus: Govt. Polytechnic College, Pendurthi • Web: <a href="https://www.myntreal.com" target="_blank" rel="noopener" class="text-secondary text-decoration-none">www.myntreal.com</a>';
+                    footerHelplineText.innerHTML = 'Admissions: <a href="tel:+918585852738" class="text-emerald fw-bold text-decoration-none">+91 858585 2738</a> • Campus: Govt. Polytechnic College, Pendurthi, Visakhapatnam, AP';
                 }
 
                 const catalogTermsLink = document.getElementById('catalogTermsLink');
@@ -4218,14 +4226,13 @@
                 const footerIsoSub = document.getElementById('footerIsoSub');
                 const footerBrandDesc = document.getElementById('footerBrandDesc');
 
-                const logoSrc = '/public/solar-logo-harghar-trans.png';
-                if (headerLogoLight) { headerLogoLight.src = logoSrc; headerLogoLight.style.height = '46px'; }
-                if (headerLogoDark) { headerLogoDark.src = logoSrc; headerLogoDark.style.height = '46px'; }
+                if (headerLogoLight) { headerLogoLight.src = '/public/images/myntreal-har-ghar-solar-nav.png'; headerLogoLight.style.height = '46px'; }
+                if (headerLogoDark) { headerLogoDark.src = '/public/images/myntreal-har-ghar-solar-nav-white.png'; headerLogoDark.style.height = '46px'; }
                 if (headerBadge) {
                     headerBadge.innerHTML = '<i class="fas fa-bolt me-1 text-warning"></i> PM Surya Ghar EPC Partner';
                 }
-                if (footerLogoLight) { footerLogoLight.src = logoSrc; footerLogoLight.style.height = '46px'; }
-                if (footerLogoDark) { footerLogoDark.src = logoSrc; footerLogoDark.style.height = '46px'; }
+                if (footerLogoLight) { footerLogoLight.src = '/public/images/myntreal-har-ghar-solar-nav.png'; footerLogoLight.style.height = '46px'; }
+                if (footerLogoDark) { footerLogoDark.src = '/public/images/myntreal-har-ghar-solar-nav-white.png'; footerLogoDark.style.height = '46px'; }
                 if (footerIsoBadge) {
                     footerIsoBadge.innerHTML = '<i class="fas fa-award text-warning"></i> ISO 9001:2015 Certified';
                 }

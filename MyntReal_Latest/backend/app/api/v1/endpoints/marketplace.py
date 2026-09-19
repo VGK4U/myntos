@@ -11,7 +11,7 @@ from typing import Optional
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, HTTPException, Body, UploadFile, File
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, text
+from sqlalchemy import func, or_, text, case
 
 from app.core.database import get_db
 from app.core.security import get_current_user_hybrid
@@ -254,16 +254,16 @@ def get_filter_options(
         q = q.filter(MarketspareItem.segment_id == resolved_seg_id)
 
     if categories:
-        cat_list = [c.strip().upper() for c in categories.split(',') if c.strip()]
+        cat_list = [c.strip().lower() for c in categories.split(',') if c.strip()]
         if cat_list:
-            q = q.filter(MarketspareItem.category_name.in_(cat_list))
+            q = q.filter(func.lower(MarketspareItem.category_name).in_(cat_list))
     elif category:
-        q = q.filter(MarketspareItem.category_name == category.upper())
+        q = q.filter(func.lower(MarketspareItem.category_name) == category.strip().lower())
 
     items = q.all()
-    models = sorted({i.model_compat for i in items if i.model_compat})
-    specs = sorted({i.specifications for i in items if i.specifications})
-    colors = sorted({i.color for i in items if i.color})
+    models = sorted({i.model_compat.strip() for i in items if i.model_compat and i.model_compat.strip() and i.model_compat.strip() != '#REF!'})
+    specs = sorted({i.specifications.strip() for i in items if i.specifications and i.specifications.strip() and i.specifications.strip() != '#REF!'})
+    colors = sorted({i.color.strip() for i in items if i.color and i.color.strip() and i.color.strip() != '#REF!'})
     return {'models': models, 'specs': specs, 'colors': colors}
 
 
@@ -273,6 +273,7 @@ def list_products(
     search: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
     categories: Optional[str] = Query(None, description='Comma-separated category names for multi-select'),
+    department: Optional[str] = Query(None, description='Filter by department: ev, solar, spares, vehicles'),
     min_price: Optional[float] = Query(None),
     max_price: Optional[float] = Query(None),
     discount_mode: Optional[str] = Query(None, regex='^(mnr|mnr_points|partner|student|vgk)$'),
@@ -296,6 +297,8 @@ def list_products(
         MarketspareItem.company_id == company_id,
         MarketspareItem.is_active == True,
         MarketspareItem.show_in_marketplace == True,
+        MarketspareItem.name != '#REF!',
+        MarketspareItem.name != '',
     )
 
     # Phase 3: segment filter — resolve slug → id if needed
@@ -306,6 +309,33 @@ def list_products(
             resolved_seg_id = seg.id
     if resolved_seg_id:
         q = q.filter(MarketspareItem.segment_id == resolved_seg_id)
+
+    # Department filter (ev / solar / spares / vehicles)
+    if department:
+        dept = department.strip().lower()
+        if dept == 'solar':
+            q = q.filter(
+                or_(
+                    MarketspareItem.name.ilike('%solar%'),
+                    MarketspareItem.sku.ilike('%solar%'),
+                    MarketspareItem.model_compat.ilike('%solar%'),
+                    MarketspareItem.specifications.ilike('%solar%'),
+                )
+            )
+        elif dept in ('vehicles', 'ev'):
+            q = q.filter(
+                or_(
+                    func.lower(MarketspareItem.category_name).in_(['product', 'finished']),
+                    MarketspareItem.model_compat.ilike('%scooter%'),
+                    MarketspareItem.name.ilike('%gt pro%'),
+                    MarketspareItem.name.ilike('%sweety%'),
+                    MarketspareItem.name.ilike('%power plus%'),
+                    MarketspareItem.name.ilike('%royal%'),
+                    MarketspareItem.name.ilike('%beast%'),
+                )
+            )
+        elif dept == 'spares':
+            q = q.filter(func.lower(MarketspareItem.category_name).in_(['spare part', 'accessory', 'consumable', 'raw material']))
 
     if search:
         search_clean = search.strip()
@@ -320,13 +350,13 @@ def list_products(
             )
         )
 
-    # Multi-category filter (takes priority over single category)
+    # Multi-category filter (takes priority over single category) - case-insensitive
     if categories:
-        cats = [c.strip().upper() for c in categories.split(',') if c.strip()]
+        cats = [c.strip().lower() for c in categories.split(',') if c.strip()]
         if cats:
-            q = q.filter(MarketspareItem.category_name.in_(cats))
+            q = q.filter(func.lower(MarketspareItem.category_name).in_(cats))
     elif category:
-        q = q.filter(MarketspareItem.category_name == category.upper())
+        q = q.filter(func.lower(MarketspareItem.category_name) == category.strip().lower())
 
     if model:
         q = q.filter(MarketspareItem.model_compat == model)
@@ -347,12 +377,32 @@ def list_products(
         order_col = MarketspareItem.dealer_price.asc()
     elif sort == "price_desc":
         order_col = MarketspareItem.dealer_price.desc()
+    elif sort == "name_asc":
+        order_col = MarketspareItem.name.asc()
     else:
         order_col = None
     if order_col is not None:
         items = q.order_by(order_col).offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all()
     else:
-        items = q.order_by(MarketspareItem.category_name, MarketspareItem.name) \
+        # DC-IMAGE-PARITY-001: Prioritize products with price > 0, then verified image links / thumbnails, then Spare Part / Accessory
+        has_price = case(
+            (MarketspareItem.dealer_price > 0, 0),
+            else_=1
+        )
+        has_valid_image = case(
+            (
+                (MarketspareItem.image_url.isnot(None) & (MarketspareItem.image_url != '') & (MarketspareItem.image_url != '#REF!')) |
+                (MarketspareItem.image_data.isnot(None)),
+                0
+            ),
+            else_=1
+        )
+        category_priority = case(
+            (func.lower(MarketspareItem.category_name) == 'spare part', 0),
+            (func.lower(MarketspareItem.category_name) == 'accessory', 1),
+            else_=2
+        )
+        items = q.order_by(has_price, has_valid_image, category_priority, MarketspareItem.name) \
                  .offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE).all()
 
     config_map = _get_category_config_map(db, company_id)

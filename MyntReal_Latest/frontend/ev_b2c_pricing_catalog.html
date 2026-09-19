@@ -79,6 +79,12 @@
             scroll-behavior: smooth;
         }
 
+        /* Brand Logo Light/Dark Visibility */
+        .brand-logo-light { display: inline-block !important; }
+        .brand-logo-dark { display: none !important; }
+        [data-theme="dark"] .brand-logo-light { display: none !important; }
+        [data-theme="dark"] .brand-logo-dark { display: inline-block !important; }
+
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--bg-page);
@@ -908,7 +914,8 @@
             <!-- Left: Brand Logo & Section Anchors -->
             <div class="d-flex align-items-center gap-3">
                 <a href="/catalog/ev-b2c-pricing" class="d-flex align-items-center gap-2 text-decoration-none" title="Manthra EV Digital Showroom">
-                    <img src="/public/hub/Assets/ManthraEV-logo.png" alt="Manthra EV" style="height: 38px; object-fit: contain;" onerror="this.src='/public/myntreal-logo.png'">
+                    <img class="brand-logo-light" src="/public/hub/Assets/ManthraEV-logo-dark.png" alt="Manthra EV" style="height: 38px; object-fit: contain;" onerror="this.src='/public/hub/Assets/ManthraEV-logo.png'">
+                    <img class="brand-logo-dark" src="/public/hub/Assets/ManthraEV-logo.png" alt="Manthra EV" style="height: 38px; object-fit: contain;" onerror="this.src='/public/myntreal-logo.png'">
                 </a>
 
                 <!-- Quick Showroom Section Jump Links (Desktop) -->

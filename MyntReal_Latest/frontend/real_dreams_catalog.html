@@ -3,306 +3,749 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title>Real Dreams Premium Townships & Luxury Villas — Official Digital Catalog | MYNTREAL & VGK4U</title>
-    <meta name="description" content="Official catalog of VGK Real Dreams premium gated community villa plots, commercial spaces, and solar townships. 100% RERA/DTCP approved, 80% bank loans, clear titles.">
-    <link rel="icon" type="image/png" href="/public/favicon.ico">
+    <title>VGK Real Dreams — Premium Townships & Luxury Residences | Official Digital Catalogue</title>
+    <meta name="description" content="Discover VMRDA & RERA approved premium residential apartments and luxury gated townships across Visakhapatnam growth corridors. Anandas Royal Imperia and VGK Homes.">
 
-    <!-- Bootstrap 5.3 & FontAwesome 6 -->
+    <!-- Bootstrap 5.3.0 & FontAwesome 6.4.0 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Google Fonts: Playfair Display & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --bg-base: #f8fafc;
-            --bg-card: #ffffff;
-            --bg-card-alt: #f1f5f9;
-            --text-main: #0f172a;
-            --text-secondary: #475569;
-            --text-muted: #64748b;
-            --brand-border: #e2e8f0;
-            --brand-red: #e11d48;
-            --brand-gold: #d97706;
-            --brand-emerald: #059669;
-            --brand-blue: #0284c7;
-            --card-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -2px rgba(15, 23, 42, 0.04);
-            --card-shadow-lg: 0 12px 30px -4px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
+            --rd-navy: #0B1F33;
+            --rd-navy-deep: #061320;
+            --rd-navy-surface: #112942;
+            --rd-gold: #C9A227;
+            --rd-gold-bright: #E2B93B;
+            --rd-gold-light: #FBF6E9;
+            --rd-sand: #E8DED0;
+            --rd-green: #0D7A57;
+            --rd-green-light: #E8F5EE;
+            
+            --bg-body: #FAF9F6;
+            --bg-card: #FFFFFF;
+            --bg-card-alt: #F4F2EB;
+            --border-color: #E7E3D8;
+            --text-primary: #172033;
+            --text-secondary: #4A5568;
+            --text-muted: #718096;
+            
+            --shadow-sm: 0 2px 8px rgba(11, 31, 51, 0.05);
+            --shadow-md: 0 8px 24px rgba(11, 31, 51, 0.08);
+            --shadow-lg: 0 16px 40px rgba(11, 31, 51, 0.12);
+            --shadow-gold: 0 8px 25px rgba(201, 162, 39, 0.25);
         }
 
         [data-theme="dark"] {
-            --bg-base: #0b0f19;
-            --bg-card: #131b2e;
-            --bg-card-alt: #1a233a;
-            --text-main: #f8fafc;
-            --text-secondary: #cbd5e1;
-            --text-muted: #94a3b8;
-            --brand-border: #1e293b;
-            --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
-            --card-shadow-lg: 0 16px 36px -4px rgba(0, 0, 0, 0.7);
+            --bg-body: #070E17;
+            --bg-card: #0D1A29;
+            --bg-card-alt: #132438;
+            --border-color: #1F3650;
+            --text-primary: #F7FAFC;
+            --text-secondary: #CBD5E0;
+            --text-muted: #A0AEC0;
+            --rd-gold-light: #232014;
+            --rd-green-light: #0D261E;
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+            --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.5);
+            --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
         }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--bg-base);
-            color: var(--text-main);
-            margin: 0;
-            padding-bottom: 80px;
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
             transition: background-color 0.3s ease, color 0.3s ease;
+            padding-bottom: 70px;
         }
 
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        @media (min-width: 992px) {
+            body { padding-bottom: 0; }
+        }
 
-        /* ── TOP HEADER & TABS ── */
+        h1, h2, h3, h4, .font-serif {
+            font-family: "Playfair Display", Georgia, serif;
+            letter-spacing: -0.01em;
+        }
+
+        .font-mono {
+            font-family: "JetBrains Mono", monospace;
+        }
+
+        .rd-promo-strip {
+            background: linear-gradient(90deg, #0B1F33 0%, #153250 50%, #0B1F33 100%);
+            color: #FFFFFF;
+            font-size: 0.85rem;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(201, 162, 39, 0.3);
+        }
+
         .catalog-top-header {
             background: var(--bg-card);
-            border-bottom: 1px solid var(--brand-border);
-            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
             position: sticky;
             top: 0;
-            z-index: 1040;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+            z-index: 1020;
+            box-shadow: var(--shadow-sm);
         }
 
         .catalog-header-tab {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 5px 11px;
-            font-size: 12px;
-            font-weight: 700;
-            border-radius: 999px;
-            text-decoration: none;
-            border: 1px solid var(--brand-border);
-            background: var(--bg-card-alt);
+            gap: 0.45rem;
+            padding: 0.4rem 0.85rem;
+            border-radius: 9999px;
+            font-size: 0.82rem;
+            font-weight: 500;
             color: var(--text-secondary);
-            transition: all 0.2s ease;
+            text-decoration: none;
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border-color);
             white-space: nowrap;
+            transition: all 0.2s ease;
         }
 
         .catalog-header-tab:hover {
-            color: #e11d48;
-            border-color: #e11d48;
+            color: var(--rd-gold);
+            border-color: var(--rd-gold);
+            transform: translateY(-1px);
         }
 
         .catalog-header-tab.active {
-            background: rgba(225, 29, 72, 0.12);
-            border-color: rgba(225, 29, 72, 0.45);
-            color: #e11d48;
-            box-shadow: 0 0 0 1px rgba(225, 29, 72, 0.2);
+            background: var(--rd-navy);
+            color: var(--rd-gold-bright);
+            border-color: var(--rd-gold);
+            font-weight: 600;
         }
 
-        /* ── TOP ANNOUNCEMENT STRIP ── */
-        .rd-promo-strip {
-            background: linear-gradient(135deg, #881337 0%, #4c0519 100%);
-            color: #ffffff;
-            padding: 9px 16px;
-            font-size: 13px;
-            border-bottom: 2px solid #fb7185;
+        [data-theme="dark"] .catalog-header-tab.active {
+            background: var(--rd-gold);
+            color: var(--rd-navy-deep);
+            border-color: var(--rd-gold-bright);
         }
 
-        /* ── HERO BANNER ── */
-        .hero-banner {
-            background: linear-gradient(135deg, #1c1917 0%, #0f172a 100%);
-            color: #ffffff;
-            padding: 48px 0 38px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .hero-banner::after {
-            content: "";
-            position: absolute;
-            top: -40%;
-            right: -10%;
-            width: 550px;
-            height: 550px;
-            background: radial-gradient(circle, rgba(225, 29, 72, 0.2) 0%, rgba(0,0,0,0) 70%);
-            pointer-events: none;
-        }
-
-        .hero-badge {
-            background: rgba(225, 29, 72, 0.22);
-            border: 1px solid rgba(251, 113, 133, 0.5);
-            color: #fda4af;
-            padding: 6px 14px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 0.8px;
-            text-transform: uppercase;
+        .control-btn {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-        }
-
-        .trust-stat-card {
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 12px;
-            padding: 14px 16px;
-            text-align: center;
-        }
-
-        /* ── CARDS ── */
-        .catalog-card {
-            background: var(--bg-card);
-            border: 1px solid var(--brand-border);
-            border-radius: 16px;
-            box-shadow: var(--card-shadow);
-            padding: 24px;
-            margin-bottom: 24px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .catalog-card:hover {
-            box-shadow: var(--card-shadow-lg);
-        }
-
-        .section-header-badge {
-            display: inline-block;
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            padding: 4px 10px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-        }
-
-        /* ── PROPERTY CARD ── */
-        .property-card {
-            background: var(--bg-card);
-            border: 1px solid var(--brand-border);
-            border-radius: 16px;
-            overflow: hidden;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            transition: all 0.25s ease;
-        }
-
-        .property-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--card-shadow-lg);
-            border-color: #fb7185;
-        }
-
-        .property-img-wrap {
-            height: 200px;
-            position: relative;
-            background: #0f172a;
-            overflow: hidden;
-        }
-
-        .property-img-wrap img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.3s ease;
-        }
-
-        .property-card:hover .property-img-wrap img {
-            transform: scale(1.05);
-        }
-
-        .rera-badge-pill {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            background: rgba(15, 23, 42, 0.9);
-            color: #34d399;
-            font-size: 11px;
-            font-weight: 800;
-            padding: 4px 10px;
-            border-radius: 6px;
-            border: 1px solid rgba(52, 211, 153, 0.4);
-        }
-
-        .price-badge-pill {
-            position: absolute;
-            bottom: 12px;
-            right: 12px;
-            background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
-            color: #ffffff;
-            font-size: 13px;
-            font-weight: 800;
-            padding: 4px 12px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(225, 29, 72, 0.4);
-        }
-
-        .btn-rd {
-            background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
-            color: #ffffff !important;
-            border: none;
-            font-weight: 700;
-            border-radius: 8px;
-            padding: 9px 18px;
-            font-size: 13.5px;
+            gap: 0.35rem;
+            cursor: pointer;
             transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
             text-decoration: none;
         }
 
-        .btn-rd:hover {
-            background: linear-gradient(135deg, #be123c 0%, #9f1239 100%);
-            box-shadow: 0 4px 12px rgba(225, 29, 72, 0.4);
-        }
-
-        .amenity-chip {
-            background: var(--bg-card-alt);
-            border: 1px solid var(--brand-border);
-            border-radius: 10px;
-            padding: 10px 14px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .bank-badge {
-            background: var(--bg-card-alt);
-            border: 1px solid var(--brand-border);
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: 700;
-            font-size: 13px;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .theme-toggle-btn {
-            background: var(--bg-card-alt);
-            border: 1px solid var(--brand-border);
-            color: var(--text-main);
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 12.5px;
-            font-weight: 600;
-            cursor: pointer;
+        .control-btn:hover {
+            border-color: var(--rd-gold);
+            color: var(--rd-gold);
         }
 
         .lang-pill-btn {
             background: var(--bg-card-alt);
-            border: 1px solid var(--brand-border);
+            border: 1px solid var(--border-color);
             color: var(--text-secondary);
-            padding: 5px 11px;
-            border-radius: 6px;
-            font-size: 12px;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.78rem;
             font-weight: 700;
             cursor: pointer;
+            transition: all 0.2s ease;
         }
 
         .lang-pill-btn.active {
-            background: #e11d48;
-            color: #fff;
-            border-color: #e11d48;
+            background: var(--rd-navy);
+            color: #FFFFFF;
+            border-color: var(--rd-navy);
+        }
+
+        [data-theme="dark"] .lang-pill-btn.active {
+            background: var(--rd-gold);
+            color: var(--rd-navy-deep);
+            border-color: var(--rd-gold);
+        }
+
+        .rd-hero {
+            background: linear-gradient(135deg, var(--rd-navy) 0%, #102A45 60%, #071524 100%);
+            color: #FFFFFF;
+            padding: 3.5rem 0 3rem;
+            position: relative;
+            overflow: hidden;
+            border-bottom: 3px solid var(--rd-gold);
+        }
+
+        .rd-hero::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(201, 162, 39, 0.12) 0%, rgba(201, 162, 39, 0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .gold-badge {
+            background: rgba(201, 162, 39, 0.18);
+            border: 1px solid var(--rd-gold);
+            color: var(--rd-gold-bright);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.35rem 0.9rem;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .hero-title {
+            font-size: 2.35rem;
+            font-weight: 700;
+            line-height: 1.25;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        @media (min-width: 992px) {
+            .hero-title { font-size: 3.25rem; }
+        }
+
+        .hero-title span {
+            color: var(--rd-gold-bright);
+            font-style: italic;
+        }
+
+        .hero-desc {
+            font-size: 1.05rem;
+            color: #CBD5E0;
+            max-width: 680px;
+            margin-bottom: 1.8rem;
+        }
+
+        .rd-stats-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem 1rem;
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+            height: 100%;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .rd-stats-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--rd-gold);
+        }
+
+        .stat-val {
+            font-size: 1.85rem;
+            font-weight: 700;
+            color: var(--rd-gold);
+            line-height: 1;
+            margin-bottom: 0.4rem;
+            font-family: "Playfair Display", Georgia, serif;
+        }
+
+        .stat-lbl {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .corridor-tab {
+            padding: 0.6rem 1.4rem;
+            border-radius: 30px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .corridor-tab:hover {
+            border-color: var(--rd-gold);
+            color: var(--rd-gold);
+        }
+
+        .corridor-tab.active {
+            background: var(--rd-navy);
+            color: #FFFFFF;
+            border-color: var(--rd-navy);
+            box-shadow: 0 4px 12px rgba(11, 31, 51, 0.15);
+        }
+
+        [data-theme="dark"] .corridor-tab.active {
+            background: var(--rd-gold);
+            color: var(--rd-navy-deep);
+            border-color: var(--rd-gold);
+        }
+
+        .project-showcase-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            margin-bottom: 2.5rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .project-showcase-card:hover {
+            border-color: var(--rd-gold);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .project-media-wrap {
+            position: relative;
+            background: #000;
+            min-height: 320px;
+            overflow: hidden;
+        }
+
+        @media (min-width: 992px) {
+            .project-media-wrap { min-height: 480px; }
+        }
+
+        .project-media-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            min-height: 320px;
+            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @media (min-width: 992px) {
+            .project-media-img { min-height: 480px; }
+        }
+
+        .project-showcase-card:hover .project-media-img {
+            transform: scale(1.03);
+        }
+
+        .media-badge-group {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 2;
+        }
+
+        .status-pill {
+            background: rgba(11, 31, 51, 0.85);
+            backdrop-filter: blur(8px);
+            color: #FFFFFF;
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 0.35rem 0.8rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .status-pill.approved {
+            background: rgba(13, 122, 87, 0.9);
+            border-color: rgba(13, 122, 87, 0.4);
+        }
+
+        .gallery-count-pill {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            background: rgba(11, 31, 51, 0.85);
+            backdrop-filter: blur(8px);
+            color: #FFFFFF;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 0.4rem 0.9rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(201, 162, 39, 0.4);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 2;
+        }
+
+        .gallery-count-pill:hover {
+            background: var(--rd-gold);
+            color: var(--rd-navy-deep);
+        }
+
+        .play-video-pill {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            background: rgba(220, 38, 38, 0.9);
+            color: #FFFFFF;
+            font-size: 0.82rem;
+            font-weight: 600;
+            padding: 0.4rem 0.9rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            border: none;
+            z-index: 2;
+            transition: transform 0.2s ease;
+        }
+
+        .play-video-pill:hover {
+            transform: scale(1.05);
+            background: #B91C1C;
+        }
+
+        .project-content-body {
+            padding: 2rem;
+        }
+
+        @media (min-width: 992px) {
+            .project-content-body { padding: 2.5rem; }
+        }
+
+        .project-category-tag {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--rd-gold);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.4rem;
+            display: block;
+        }
+
+        .project-title {
+            font-size: 1.85rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.6rem;
+        }
+
+        @media (min-width: 992px) {
+            .project-title { font-size: 2.25rem; }
+        }
+
+        .project-loc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .spec-grid-item {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .spec-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            display: block;
+        }
+
+        .spec-value {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-family: "JetBrains Mono", monospace;
+        }
+
+        .bike-offer-banner {
+            background: linear-gradient(135deg, var(--rd-green-light) 0%, rgba(13, 122, 87, 0.1) 100%);
+            border: 1px solid rgba(13, 122, 87, 0.3);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            margin: 1.25rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+
+        [data-theme="dark"] .bike-offer-banner {
+            background: rgba(13, 122, 87, 0.15);
+            border-color: rgba(13, 122, 87, 0.4);
+        }
+
+        .bike-icon-box {
+            width: 44px;
+            height: 44px;
+            background: var(--rd-green);
+            color: #FFFFFF;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .btn-rd-primary {
+            background: var(--rd-navy);
+            color: var(--rd-gold-bright);
+            border: 1px solid var(--rd-gold);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+        }
+
+        .btn-rd-primary:hover {
+            background: var(--rd-gold);
+            color: var(--rd-navy-deep);
+            border-color: var(--rd-gold-bright);
+            box-shadow: var(--shadow-gold);
+            transform: translateY(-1px);
+        }
+
+        .btn-rd-secondary {
+            background: var(--bg-card-alt);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1.25rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .btn-rd-secondary:hover {
+            border-color: var(--rd-gold);
+            color: var(--rd-gold);
+            background: var(--bg-card);
+        }
+
+        .gallery-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(6, 19, 32, 0.95);
+            backdrop-filter: blur(12px);
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 1.5rem;
+        }
+
+        .gallery-modal-overlay.active {
+            display: flex;
+        }
+
+        .gallery-content-wrap {
+            position: relative;
+            max-width: 1100px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .gallery-main-img {
+            max-width: 100%;
+            max-height: 75vh;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(201, 162, 39, 0.3);
+        }
+
+        .gallery-close-btn {
+            position: absolute;
+            top: -45px;
+            right: 0;
+            background: none;
+            border: none;
+            color: #FFFFFF;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .gallery-close-btn:hover { color: var(--rd-gold-bright); }
+
+        .gallery-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(11, 31, 51, 0.8);
+            border: 1px solid var(--rd-gold);
+            color: #FFFFFF;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .gallery-nav-btn:hover {
+            background: var(--rd-gold);
+            color: var(--rd-navy-deep);
+        }
+
+        .gallery-prev { left: -25px; }
+        .gallery-next { right: -25px; }
+
+        @media (max-width: 768px) {
+            .gallery-prev { left: 5px; }
+            .gallery-next { right: 5px; }
+        }
+
+        .gallery-thumbnails-strip {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-top: 1rem;
+            overflow-x: auto;
+            max-width: 100%;
+            padding-bottom: 0.5rem;
+        }
+
+        .gallery-thumb {
+            width: 60px;
+            height: 45px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0.5;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .gallery-thumb.active {
+            opacity: 1;
+            border-color: var(--rd-gold);
+            transform: scale(1.08);
+        }
+
+        .chauffeur-modal-wrap {
+            max-width: 520px;
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--rd-gold);
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            padding: 2rem;
+            position: relative;
+        }
+
+        .video-modal-wrap {
+            max-width: 800px;
+            width: 100%;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
+            border: 1px solid var(--rd-gold);
+        }
+
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+        }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .amenity-chip {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.6rem 0.9rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .amenity-chip i {
+            color: var(--rd-gold);
+        }
+
+        .mobile-sticky-action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            padding: 0.65rem 1rem;
+            display: flex;
+            gap: 0.75rem;
+            z-index: 1010;
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (min-width: 992px) {
+            .mobile-sticky-action-bar { display: none; }
+        }
+
+        .terms-plain-text {
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            margin-top: 0.5rem;
+            text-align: center;
+            user-select: none;
         }
     </style>
 </head>
@@ -312,25 +755,34 @@
     <div class="rd-promo-strip">
         <div class="container-xl d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-warning text-dark fw-bold"><i class="fas fa-check-double me-1"></i> 100% GENUINE</span>
+                <span class="badge" style="background: var(--rd-gold); color: #061320; font-weight: 700;">
+                    <i class="fas fa-award me-1"></i> RERA &amp; VMRDA VERIFIED
+                </span>
                 <span id="rdPromoBannerText">
-                    <strong>DTCP &amp; RERA Approved Villa Townships:</strong> Up to <strong>80% Bank Loans Approved</strong> (SBI, HDFC, ICICI) with Spot Registration Guarantee!
+                    <strong>Prime Visakhapatnam Real Estate:</strong> Up to <strong>80% Bank Loan Approved</strong> (SBI, HDFC, ICICI) with Free Electric Bike Offer!
                 </span>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <a href="/ecom?segment=real-dreams" class="badge bg-white text-dark py-2 px-3 text-decoration-none fw-bold" title="Open Real Estate Marketplace">
-                    <i class="fas fa-search-location me-1 text-danger"></i> <span id="rdShopBtnText">Browse Properties on E-Com</span>
+            <div class="d-flex align-items-center gap-3">
+                <a href="/ecom?segment=real-dreams" class="badge bg-white text-dark py-1 px-3 text-decoration-none fw-bold shadow-sm" title="View Properties on E-Com Marketplace">
+                    <i class="fas fa-store text-danger me-1"></i> Browse on /ecom &rarr;
+                </a>
+                <a href="#featured_projects" class="text-white text-decoration-none small fw-semibold" title="View Approved Projects">
+                    <i class="fas fa-arrow-down text-warning me-1"></i> View Live Portfolio
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- ── 2. TOP HEADER & CROSS-VERTICAL NAVIGATION TABS ── -->
+    <!-- ── 2. TOP HEADER WITH CROSS-VERTICAL TABS ── -->
     <header class="catalog-top-header">
-        <div class="container-fluid px-3 px-xl-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="container-fluid px-3 px-xl-4 d-flex justify-content-between align-items-center flex-wrap gap-2 py-2">
             <div class="d-flex align-items-center gap-3">
-                <a href="/catalog/real-dreams/real-dreams-premium-properties" class="d-flex align-items-center text-decoration-none">
-                    <img src="/public/hub/Assets/Myntreal.logo.png" alt="MyntReal" style="height: 40px; object-fit: contain;" onerror="this.src='/public/myntreal-logo.png'">
+                <a href="/catalog/real-dreams/real-dreams-premium-properties" class="d-flex align-items-center gap-2 text-decoration-none">
+                    <img src="/public/hub/Assets/realdreams.png" alt="VGK Real Dreams" style="height: 40px; width: auto; object-fit: contain; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));" onerror="this.src='/public/hub/Assets/Myntreal.logo.png'">
+                    <div class="d-none d-sm-flex flex-column">
+                        <span class="fw-bold" style="font-size: 15px; letter-spacing: -0.2px; line-height: 1.1; color: var(--text-primary);">REAL DREAMS</span>
+                        <span class="small text-uppercase fw-semibold" style="font-size: 10px; letter-spacing: 0.5px; color: var(--rd-gold, #D97706);">Premium Properties</span>
+                    </div>
                 </a>
 
                 <!-- Cross-Vertical Navigation Tabs -->
@@ -345,7 +797,7 @@
                     </a>
                     <a href="/catalog/hub-ev-pricing" class="catalog-header-tab" title="Hub Commercial Pricing (24h)">
                         <i class="fas fa-tags text-success"></i>
-                        <span>Hub Pricing (24h)</span>
+                        <span>Hub Pricing</span>
                     </a>
                     <a href="/catalog/ev-spares/ev-spares-and-chargers" class="catalog-header-tab" title="EV Spares, Chargers & Batteries">
                         <i class="fas fa-cogs" style="color: #a855f7;"></i>
@@ -359,12 +811,16 @@
                         <i class="fas fa-shield-alt text-primary"></i>
                         <span>VGK Care</span>
                     </a>
+                    <a href="/ecom?segment=real-dreams" class="catalog-header-tab" style="background: var(--rd-gold); color: #061320; font-weight: 700; border-color: var(--rd-gold);" title="View Properties on E-Commerce Marketplace">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span>Shop /ecom</span>
+                    </a>
                 </div>
             </div>
 
-            <!-- Theme Toggle & Languages -->
+            <!-- Controls: Theme Toggle & Language Switcher -->
             <div class="d-flex align-items-center gap-2">
-                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
+                <button type="button" class="control-btn" id="themeToggleBtn" onclick="toggleTheme()" aria-label="Toggle Theme">
                     <i class="fas fa-moon text-warning" id="themeToggleIcon"></i>
                     <span class="d-none d-sm-inline" id="themeToggleText">Dark Mode</span>
                 </button>
@@ -374,62 +830,61 @@
                     <button class="lang-pill-btn" data-lang="te" onclick="switchLanguage('te')">తెలుగు</button>
                 </div>
 
-                <img src="/public/vgk4u-logo.png" alt="VGK4U" class="d-none d-md-block ms-1" style="height: 26px;" onerror="this.style.display='none'">
+                <a href="tel:+918585852738" class="control-btn d-none d-md-inline-flex" title="Direct Property Advisory Hotline">
+                    <i class="fas fa-phone-alt text-success"></i>
+                    <span>+91 858585 2738</span>
+                </a>
             </div>
         </div>
     </header>
 
-    <!-- ── 3. HERO SHOWCASE ── -->
-    <section class="hero-banner">
-        <div class="container-xl">
-            <div class="row align-items-center gy-4">
+    <!-- ── 3. LUXURY EDITORIAL HERO ── -->
+    <section class="rd-hero">
+        <div class="container-xl position-relative z-1">
+            <div class="row align-items-center g-4">
                 <div class="col-lg-7">
-                    <span class="hero-badge mb-3">
-                        <i class="fas fa-certificate"></i> RERA &amp; DTCP / VMRDA Approved Townships
-                    </span>
-                    <h1 class="display-6 fw-extrabold mb-3" id="heroTitle">
-                        VGK Real Dreams: Verified Gated Communities &amp; Solar Townships
+                    <div class="gold-badge">
+                        <i class="fas fa-compass"></i> Visakhapatnam Prime Corridors
+                    </div>
+                    <h1 class="hero-title">
+                        Curated Luxury Residences &amp; <span>Prime Gated Enclaves</span>
                     </h1>
-                    <p class="lead text-light opacity-90 mb-4" id="heroSubtitle" style="font-size: 1.05rem;">
-                        100% genuine legal clearance, spot registration, underground electrical cabling, and 40+ lifestyle amenities. Backed by bank loan approvals up to 80% from SBI, HDFC, and ICICI Bank.
+                    <p class="hero-desc">
+                        Explore verified residential properties across Visakhapatnam premier industrial and IT development corridors. Built with complete legal transparency, 30-year search title verification, and up to 80% national bank loan pre-approvals.
                     </p>
                     <div class="d-flex flex-wrap gap-3">
-                        <a href="/ecom?segment=real-dreams" class="btn btn-danger btn-lg fw-bold px-4 py-2" style="background:#e11d48; border-color:#e11d48;">
-                            <i class="fas fa-map-marked-alt me-2"></i> <span id="heroBuyBtn">Explore Plots on E-Com Marketplace</span>
-                        </a>
-                        <a href="#featured_projects" class="btn btn-outline-light btn-lg fw-bold px-4 py-2">
-                            <i class="fas fa-layer-group me-2"></i> <span id="heroCompareBtn">Featured Layouts &amp; Master Plans</span>
+                        <button class="btn-rd-primary" onclick="openChauffeurModal('Anandas Royal Imperia')">
+                            <i class="fas fa-calendar-check"></i> Book VIP Chauffeur Site Visit
+                        </button>
+                        <a href="#featured_projects" class="btn-rd-secondary">
+                            <i class="fas fa-city"></i> Explore Available Properties
                         </a>
                     </div>
                 </div>
                 <div class="col-lg-5">
-                    <div class="row g-2">
+                    <div class="row g-3">
                         <div class="col-6">
-                            <div class="trust-stat-card">
-                                <i class="fas fa-shield-check text-success fs-3 mb-1"></i>
-                                <h3 class="fw-bold mb-0 text-white font-mono">100%</h3>
-                                <div class="text-white-50 small" id="statLegal">Clear Title &amp; RERA</div>
+                            <div class="rd-stats-card">
+                                <div class="stat-val">100%</div>
+                                <div class="stat-lbl">Clear Titles &amp; RERA</div>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="trust-stat-card">
-                                <i class="fas fa-landmark text-warning fs-3 mb-1"></i>
-                                <h3 class="fw-bold mb-0 text-white font-mono">80%</h3>
-                                <div class="text-white-50 small" id="statLoan">Bank Loan Available</div>
+                            <div class="rd-stats-card">
+                                <div class="stat-val">80%</div>
+                                <div class="stat-lbl">Bank Loan Approved</div>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="trust-stat-card">
-                                <i class="fas fa-tree-city text-info fs-3 mb-1"></i>
-                                <h3 class="fw-bold mb-0 text-white font-mono">40+</h3>
-                                <div class="text-white-50 small" id="statAmenities">Modern Amenities</div>
+                            <div class="rd-stats-card">
+                                <div class="stat-val">G + 4</div>
+                                <div class="stat-lbl">Smart Residences</div>
                             </div>
                         </div>
                         <div class="col-6">
-                            <div class="trust-stat-card">
-                                <i class="fas fa-chart-line text-danger fs-3 mb-1"></i>
-                                <h3 class="fw-bold mb-0 text-white font-mono">25%+</h3>
-                                <div class="text-white-50 small" id="statRoi">Annual Land ROI</div>
+                            <div class="rd-stats-card">
+                                <div class="stat-val"><i class="fas fa-motorcycle text-success me-1"></i>Free</div>
+                                <div class="stat-lbl">Electric Bike Offer</div>
                             </div>
                         </div>
                     </div>
@@ -438,271 +893,643 @@
         </div>
     </section>
 
-    <!-- ── 4. GENUINE LEGALITY & BANK APPROVALS SHIELD ── -->
-    <div class="container-xl mt-4">
-        <div class="catalog-card" style="border-left: 5px solid #e11d48;">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                <div>
-                    <span class="section-header-badge bg-danger-subtle text-danger">VERIFIED CREDENTIALS</span>
-                    <h4 class="fw-bold mb-1" id="bankHeading">Legal Genuineness, Clear Titles &amp; 80% Bank Loan Approvals</h4>
-                    <p class="text-muted small mb-0" id="bankSubheading">
-                        All Real Dreams properties undergo rigorous 30-year title searches by certified advocates and are fully configured at our central administrative catalog.
-                    </p>
-                </div>
-                <div>
-                    <a href="/staff/configuration/catalog" class="btn btn-outline-secondary btn-sm fw-bold">
-                        <i class="fas fa-sliders-h me-1"></i> Staff Configuration Portal
-                    </a>
-                </div>
-            </div>
-
-            <div class="row g-3 align-items-center">
-                <div class="col-lg-8">
-                    <div class="d-flex flex-wrap gap-2">
-                        <div class="bank-badge"><i class="fas fa-university text-primary"></i> State Bank of India (SBI) Approved</div>
-                        <div class="bank-badge"><i class="fas fa-university text-danger"></i> HDFC Bank Home Loans</div>
-                        <div class="bank-badge"><i class="fas fa-university text-warning"></i> ICICI Bank Approved</div>
-                        <div class="bank-badge"><i class="fas fa-university text-info"></i> Axis Bank &amp; LIC HFL</div>
+    <!-- ── 4. CORRIDOR SELECTION FILTER ── -->
+    <section class="py-4 border-bottom" style="background: var(--bg-card);">
+        <div class="container-xl">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted small fw-bold text-uppercase"><i class="fas fa-filter text-warning me-1"></i> Corridors:</span>
+                    <div class="d-flex flex-wrap gap-2" id="corridorFilterGroup">
+                        <button class="corridor-tab active" onclick="filterCorridor('ALL', this)">All Projects</button>
+                        <button class="corridor-tab" onclick="filterCorridor('GAJUWAKA', this)">Gajuwaka / Aganampudi</button>
+                        <button class="corridor-tab" onclick="filterCorridor('PENDURTHI', this)">Pendurthi Main Road</button>
                     </div>
                 </div>
-                <div class="col-lg-4 text-lg-end">
-                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-6 fw-bold">
-                        <i class="fas fa-stamp me-1"></i> Immediate Spot Registration
-                    </span>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-light text-dark border"><i class="fas fa-shield-alt text-success me-1"></i> 30-Yr Legal Search</span>
+                    <span class="badge bg-light text-dark border"><i class="fas fa-university text-primary me-1"></i> SBI | HDFC | ICICI Approved</span>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- ── 5. FEATURED TOWNSHIP LAYOUTS & PLOTS ── -->
-    <div class="container-xl mt-3" id="featured_projects">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <span class="section-header-badge bg-warning-subtle text-warning">FEATURED DEVELOPMENTS</span>
-                <h3 class="fw-bold mb-0" id="projectsHeading">Prime Villa Townships &amp; Open Layouts</h3>
-            </div>
-            <a href="/ecom?segment=real-dreams" class="btn-rd">
-                <i class="fas fa-shopping-bag"></i> View Live Listings on E-Com
-            </a>
-        </div>
-
-        <div class="row g-4">
-            <!-- Project 1: Green Meadows Gated Villa Plots -->
-            <div class="col-md-6 col-lg-4">
-                <div class="property-card">
-                    <div class="property-img-wrap">
-                        <span class="rera-badge-pill"><i class="fas fa-check-circle me-1"></i>RERA &amp; DTCP</span>
-                        <img src="https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=80" alt="Green Meadows Villa Plots">
-                        <span class="price-badge-pill font-mono">₹18,500 / Sq. Yd</span>
-                    </div>
-                    <div class="p-3 d-flex flex-column flex-grow-1">
-                        <h5 class="fw-bold mb-1">Real Dreams Green Meadows</h5>
-                        <p class="text-muted small mb-2"><i class="fas fa-map-marker-alt text-danger me-1"></i> NH-16 Growth Corridor, Pendurthi Zone</p>
-                        <ul class="list-unstyled small text-secondary mb-3">
-                            <li><i class="fas fa-check text-success me-1"></i> Plot Sizes: 167, 200, 267 &amp; 500 Sq. Yards</li>
-                            <li><i class="fas fa-check text-success me-1"></i> 40ft Wide BT Roads &amp; Underground Cabling</li>
-                            <li><i class="fas fa-check text-success me-1"></i> 80% Bank Loan Approved with SBI &amp; HDFC</li>
-                        </ul>
-                        <div class="mt-auto pt-2 border-top">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted small">Plot Cost (200 Yd):</span>
-                                <strong class="text-success font-mono">₹37.00 Lakhs</strong>
-                            </div>
-                            <a href="/ecom?segment=real-dreams" class="btn-rd w-100">
-                                <i class="fas fa-arrow-right me-1"></i> View on Real Dreams E-Com
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Project 2: Royal Palms Luxury Turnkey Villas -->
-            <div class="col-md-6 col-lg-4">
-                <div class="property-card">
-                    <div class="property-img-wrap">
-                        <span class="rera-badge-pill"><i class="fas fa-check-circle me-1"></i>Solar Powered Villa</span>
-                        <img src="https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=80" alt="Royal Palms Luxury Villas">
-                        <span class="price-badge-pill font-mono">₹78.50 Lakhs</span>
-                    </div>
-                    <div class="p-3 d-flex flex-column flex-grow-1">
-                        <h5 class="fw-bold mb-1">Real Dreams Royal Palms Villas</h5>
-                        <p class="text-muted small mb-2"><i class="fas fa-map-marker-alt text-danger me-1"></i> Scenic Hillside Enclave, Vizag Growth Hub</p>
-                        <ul class="list-unstyled small text-secondary mb-3">
-                            <li><i class="fas fa-check text-success me-1"></i> 3 BHK Duplex (1800 sq ft on 200 sq yd plot)</li>
-                            <li><i class="fas fa-check text-success me-1"></i> Built-in 3 kW Solar Rooftop (Zero Bills)</li>
-                            <li><i class="fas fa-check text-success me-1"></i> Private Garden &amp; Covered EV Charging Port</li>
-                        </ul>
-                        <div class="mt-auto pt-2 border-top">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted small">Turnkey Package:</span>
-                                <strong class="text-success font-mono">₹78.50 Lakhs</strong>
-                            </div>
-                            <a href="/ecom?segment=real-dreams" class="btn-rd w-100">
-                                <i class="fas fa-arrow-right me-1"></i> View on Real Dreams E-Com
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Project 3: Commercial Highstreet Frontage -->
-            <div class="col-md-6 col-lg-4">
-                <div class="property-card">
-                    <div class="property-img-wrap">
-                        <span class="rera-badge-pill"><i class="fas fa-check-circle me-1"></i>Highway Facing</span>
-                        <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80" alt="Commercial Highstreet Plots">
-                        <span class="price-badge-pill font-mono">₹28,000 / Sq. Yd</span>
-                    </div>
-                    <div class="p-3 d-flex flex-column flex-grow-1">
-                        <h5 class="fw-bold mb-1">Real Dreams Commercial Highstreet</h5>
-                        <p class="text-muted small mb-2"><i class="fas fa-map-marker-alt text-danger me-1"></i> 60ft Express Master Plan Highway Road</p>
-                        <ul class="list-unstyled small text-secondary mb-3">
-                            <li><i class="fas fa-check text-success me-1"></i> Commercial Retail &amp; EV Hub Frontage</li>
-                            <li><i class="fas fa-check text-success me-1"></i> Ideal for Showrooms, Clinics &amp; Depots</li>
-                            <li><i class="fas fa-check text-success me-1"></i> High Visibility with Ample Customer Parking</li>
-                        </ul>
-                        <div class="mt-auto pt-2 border-top">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted small">Base Rate:</span>
-                                <strong class="text-success font-mono">₹28,000 / Yd</strong>
-                            </div>
-                            <a href="/ecom?segment=real-dreams" class="btn-rd w-100">
-                                <i class="fas fa-arrow-right me-1"></i> View on Real Dreams E-Com
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ── 6. 40+ TOWNSHIP LIFESTYLE AMENITIES ── -->
-    <div class="container-xl mt-4">
-        <div class="catalog-card">
-            <div class="text-center max-w-2xl mx-auto mb-4">
-                <span class="section-header-badge bg-success-subtle text-success">WORLD CLASS LIVING</span>
-                <h3 class="fw-bold mb-1" id="amenitiesHeading">40+ Integrated Township Amenities</h3>
-                <p class="text-muted small mb-0" id="amenitiesSubheading">
-                    Engineered for sustainable modern living with integrated clean energy, lush recreation zones, and multi-tier security.
+    <!-- ── 5. FEATURED APPROVED PROJECTS (DYNAMIC DATA INTEGRATION) ── -->
+    <section class="py-5" id="featured_projects">
+        <div class="container-xl">
+            <div class="text-center mb-5">
+                <span class="gold-badge mb-2">Authentic Inventory</span>
+                <h2 class="h1 fw-bold">Live Approved Properties</h2>
+                <p class="text-muted max-w-600 mx-auto">
+                    Properties verified and staged under the MYNTREAL Real Dreams portfolio. Every property includes clear title deed validation and site inspection support.
                 </p>
             </div>
 
-            <div class="row g-3">
-                <div class="col-6 col-md-3">
-                    <div class="amenity-chip"><i class="fas fa-road text-primary"></i> 40ft &amp; 33ft Wide BT Roads</div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="amenity-chip"><i class="fas fa-bolt text-warning"></i> Underground Cabling</div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="amenity-chip"><i class="fas fa-solar-panel text-success"></i> Solar Street Lighting</div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="amenity-chip"><i class="fas fa-shield-alt text-danger"></i> 24/7 Security &amp; CCTV</div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="amenity-chip"><i class="fas fa-water text-info"></i> Overhead Water Tank</div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="amenity-chip"><i class="fas fa-child text-purple" style="color:#7c3aed;"></i> Children's Play Arena</div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="amenity-chip"><i class="fas fa-swimming-pool text-primary"></i> Clubhouse &amp; Pool</div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="amenity-chip"><i class="fas fa-leaf text-success"></i> Landscaped Avenue Parks</div>
-                </div>
-            </div>
-        </div>
-    </div>
+            <!-- Dynamic Property Grid -->
+            <div id="propertyShowcaseContainer">
 
-    <!-- ── 7. VIP SITE VISIT & CONSULTATION CTA ── -->
-    <div class="container-xl mt-3">
-        <div class="catalog-card" style="background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-alt) 100%);">
-            <div class="row align-items-center">
-                <div class="col-lg-7">
-                    <h4 class="fw-bold mb-2">Schedule a Free VIP Site Visit &amp; Documentation Review</h4>
-                    <p class="text-muted mb-3">
-                        Our real estate property advisory team provides complimentary chauffeur pickup from Visakhapatnam city center, on-site survey verification, and direct title inspection with legal advisors.
-                    </p>
-                    <div class="d-flex flex-wrap gap-2">
-                        <span class="badge bg-light text-dark border"><i class="fas fa-car text-primary me-1"></i> Complimentary AC Cab Pickup</span>
-                        <span class="badge bg-light text-dark border"><i class="fas fa-file-contract text-success me-1"></i> Free Legal Verification</span>
-                        <span class="badge bg-light text-dark border"><i class="fas fa-headset text-danger me-1"></i> Hotline: +91 858585 2738</span>
+                <!-- ── PROJECT 1: ANANDAS ROYAL IMPERIA ── -->
+                <div class="project-showcase-card" data-corridor="GAJUWAKA" id="prop-card-1">
+                    <div class="row g-0">
+                        <div class="col-lg-6">
+                            <div class="project-media-wrap">
+                                <div class="media-badge-group">
+                                    <span class="status-pill approved"><i class="fas fa-check-circle me-1"></i> VMRDA &amp; RERA Approved</span>
+                                    <span class="status-pill"><i class="fas fa-building me-1"></i> G + 4 Smart Luxury Residences</span>
+                                </div>
+                                <img src="/storage/real_dreams/1/staged/698f7fbb845e.png" alt="Anandas Royal Imperia Elevation" class="project-media-img" id="hero-img-1" onerror="this.src='/public/hub/Assets/Estate.png'">
+                                
+                                <button class="play-video-pill" onclick="openVideoModal('bDuF-SWa4tc', 'Anandas Royal Imperia — Walkthrough Video')">
+                                    <i class="fab fa-youtube text-white"></i> Watch Video Tour
+                                </button>
+                                
+                                <div class="gallery-count-pill" onclick="openGalleryModal(1)">
+                                    <i class="fas fa-images me-1 text-warning"></i> View 8 Authentic Photos
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 d-flex flex-column">
+                            <div class="project-content-body flex-grow-1">
+                                <span class="project-category-tag">Prime Industrial &amp; Residential Corridor</span>
+                                <h3 class="project-title">Anandas Royal Imperia</h3>
+                                <div class="project-loc">
+                                    <i class="fas fa-map-marker-alt text-danger"></i>
+                                    <span>Aganampudi, Gajuwaka, Visakhapatnam (Near Old Toll Plaza)</span>
+                                </div>
+
+                                <p class="text-secondary small mb-3">
+                                    We invite you to discover exclusive smart luxury residences with premium architectural features, VMRDA sanctions, and expansive 87,210 sq. ft. campus development.
+                                </p>
+
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6 col-md-4">
+                                        <div class="spec-grid-item">
+                                            <span class="spec-label">Campus Area</span>
+                                            <span class="spec-value">87,210 Sq. Ft.</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-4">
+                                        <div class="spec-grid-item">
+                                            <span class="spec-label">Configurations</span>
+                                            <span class="spec-value">2 &amp; 3 BHK</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <div class="spec-grid-item">
+                                            <span class="spec-label">Base Price</span>
+                                            <span class="spec-value text-success">₹3,999 / Sq. Ft.</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Free Electric Bike Offer Banner -->
+                                <div class="bike-offer-banner">
+                                    <div class="bike-icon-box">
+                                        <i class="fas fa-motorcycle"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-success" style="font-size: 0.95rem;">Complimentary Mynt Electric Bike</div>
+                                        <div class="small text-secondary">Every apartment booking receives a verified Mynt Electric 2-Wheeler upon booking registration.</div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <div class="small fw-bold text-muted text-uppercase mb-2">Verified Highlights:</div>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <span class="amenity-chip"><i class="fas fa-shield-alt"></i> 24/7 Gated Security</span>
+                                        <span class="amenity-chip"><i class="fas fa-solar-panel"></i> Solar Common Lighting</span>
+                                        <span class="amenity-chip"><i class="fas fa-elevator"></i> High-Speed Elevators</span>
+                                        <span class="amenity-chip"><i class="fas fa-car"></i> Covered Car Parking</span>
+                                        <span class="amenity-chip"><i class="fas fa-dumbbell"></i> Wellness Center</span>
+                                        <span class="amenity-chip"><i class="fas fa-seedling"></i> Landscaped Parks</span>
+                                    </div>
+                                </div>
+
+                                <div class="mt-auto pt-3 border-top d-flex flex-wrap gap-2 align-items-center">
+                                    <button class="btn-rd-primary flex-grow-1" onclick="openChauffeurModal('Anandas Royal Imperia')">
+                                        <i class="fas fa-calendar-check"></i> Book VIP Site Visit
+                                    </button>
+                                    <a href="/storage/real_dreams/1/staged/df3236747796.pdf" target="_blank" download="Anandas_Royal_Imperia_Brochure.pdf" class="btn-rd-secondary flex-grow-1" title="Download Official Master Brochure PDF">
+                                        <i class="fas fa-file-pdf text-danger"></i> Download Brochure (16MB)
+                                    </a>
+                                    <a href="https://wa.me/918585852738?text=Hello%20MyntReal,%20I%20would%20like%20details%20and%20pricing%20for%20Anandas%20Royal%20Imperia." target="_blank" class="btn btn-outline-success" title="WhatsApp Enquiry" style="border-radius: 8px; padding: 0.75rem 1rem;">
+                                        <i class="fab fa-whatsapp fs-5"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-lg-5 text-lg-end mt-3 mt-lg-0">
-                    <a href="https://wa.me/918585852738?text=Hello%20MyntReal,%20I%20would%20like%20to%20schedule%20a%20VIP%20Site%20Visit%20for%20Real%20Dreams%20Properties." target="_blank" class="btn btn-success btn-lg fw-bold px-4">
-                        <i class="fab fa-whatsapp me-2 fs-5"></i> Book Site Visit on WhatsApp
-                    </a>
+
+                <!-- ── PROJECT 2: VGK HOMES LUXURY FLATS - 1 ── -->
+                <div class="project-showcase-card" data-corridor="PENDURTHI" id="prop-card-2">
+                    <div class="row g-0">
+                        <div class="col-lg-6">
+                            <div class="project-media-wrap">
+                                <div class="media-badge-group">
+                                    <span class="status-pill approved"><i class="fas fa-clock me-1"></i> Ready in 20 Days</span>
+                                    <span class="status-pill"><i class="fas fa-home me-1"></i> Quality Residential Units</span>
+                                </div>
+                                <img src="/storage/real_dreams/1/staged/7084e3d7cad7.jpeg" alt="VGK Homes Elevation" class="project-media-img" id="hero-img-2" onerror="this.src='/public/hub/Assets/Estate.png'">
+                                
+                                <div class="gallery-count-pill" onclick="openGalleryModal(2)">
+                                    <i class="fas fa-images me-1 text-warning"></i> View 5 Authentic Photos
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-6 d-flex flex-column">
+                            <div class="project-content-body flex-grow-1">
+                                <span class="project-category-tag">Pendurthi Growth Corridor</span>
+                                <h3 class="project-title">VGK Homes Luxury Flats - 1</h3>
+                                <div class="project-loc">
+                                    <i class="fas fa-map-marker-alt text-danger"></i>
+                                    <span>Sai Priya Layout, Near High Fields School, Pendurthi Main Road</span>
+                                </div>
+
+                                <p class="text-secondary small mb-3">
+                                    Near to the main road with front park access. Built with premium construction materials and customizable finishes. Units can be made ready for possession within 20 days of booking.
+                                </p>
+
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6 col-md-4">
+                                        <div class="spec-grid-item">
+                                            <span class="spec-label">Plot Area</span>
+                                            <span class="spec-value">1,800 Sq. Ft.</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-4">
+                                        <div class="spec-grid-item">
+                                            <span class="spec-label">Structure</span>
+                                            <span class="spec-value">3 Residential Floors</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-4">
+                                        <div class="spec-grid-item">
+                                            <span class="spec-label">Possession</span>
+                                            <span class="spec-value text-success">Within 20 Days</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Free Electric Bike Offer Banner -->
+                                <div class="bike-offer-banner">
+                                    <div class="bike-icon-box">
+                                        <i class="fas fa-motorcycle"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-success" style="font-size: 0.95rem;">Complimentary Mynt Electric Bike</div>
+                                        <div class="small text-secondary">Free electric bike included with booking as per promoter terms.</div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <div class="small fw-bold text-muted text-uppercase mb-2">Location Advantages:</div>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <span class="amenity-chip"><i class="fas fa-road"></i> Direct Main Road Access</span>
+                                        <span class="amenity-chip"><i class="fas fa-tree"></i> Frontage Park Facing</span>
+                                        <span class="amenity-chip"><i class="fas fa-school"></i> High Fields School Vicinity</span>
+                                        <span class="amenity-chip"><i class="fas fa-om"></i> Near Ayyappa Swami Temple</span>
+                                    </div>
+                                </div>
+
+                                <div class="mt-auto pt-3 border-top d-flex flex-wrap gap-2 align-items-center">
+                                    <button class="btn-rd-primary flex-grow-1" onclick="openChauffeurModal('VGK Homes Luxury Flats - 1')">
+                                        <i class="fas fa-calendar-check"></i> Book VIP Site Visit
+                                    </button>
+                                    <a href="https://wa.me/918585852738?text=Hello%20MyntReal,%20I%20would%20like%20to%20inquire%20about%20VGK%20Homes%20Luxury%20Flats%20in%20Pendurthi." target="_blank" class="btn-rd-secondary flex-grow-1" title="Inquire on WhatsApp">
+                                        <i class="fab fa-whatsapp text-success"></i> WhatsApp Enquiry
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 6. VMRDA / RERA LEGAL GENUINENESS & BANK TIE-UPS ── -->
+    <section class="py-5" style="background: var(--bg-card-alt); border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);">
+        <div class="container-xl">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-6">
+                    <span class="gold-badge mb-2">Legal Security</span>
+                    <h2 class="h2 fw-bold mb-3">Clear Titles, RERA Approvals &amp; 80% Bank Funding</h2>
+                    <p class="text-secondary mb-4">
+                        Every property catalogued under VGK Real Dreams undergoes a meticulous 30-year encumbrance search and municipal sanction verification. Our projects are formally pre-approved for home loans by premier public and private financial institutions.
+                    </p>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="d-flex align-items-center gap-3 p-3 bg-white border rounded" style="background: var(--bg-card);">
+                                <i class="fas fa-stamp text-success fs-3"></i>
+                                <div>
+                                    <div class="fw-bold">VMRDA Sanctioned</div>
+                                    <div class="small text-muted">Clear layout &amp; building plans</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="d-flex align-items-center gap-3 p-3 bg-white border rounded" style="background: var(--bg-card);">
+                                <i class="fas fa-balance-scale text-primary fs-3"></i>
+                                <div>
+                                    <div class="fw-bold">30-Year Title Search</div>
+                                    <div class="small text-muted">Zero legal encumbrances</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="p-4 rounded-4" style="background: var(--bg-card); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                        <h4 class="fw-bold mb-3 text-center">Approved Lending Partners</h4>
+                        <div class="row g-3 text-center">
+                            <div class="col-4">
+                                <div class="p-3 border rounded bg-light" style="background: var(--bg-card-alt);">
+                                    <i class="fas fa-university fs-2 text-primary mb-2"></i>
+                                    <div class="fw-bold small">State Bank of India</div>
+                                    <div class="text-muted" style="font-size:0.7rem;">Max 80% LTV</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-3 border rounded bg-light" style="background: var(--bg-card-alt);">
+                                    <i class="fas fa-landmark fs-2 text-danger mb-2"></i>
+                                    <div class="fw-bold small">HDFC Bank</div>
+                                    <div class="text-muted" style="font-size:0.7rem;">Pre-Approved</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-3 border rounded bg-light" style="background: var(--bg-card-alt);">
+                                    <i class="fas fa-building-columns fs-2 text-warning mb-2"></i>
+                                    <div class="fw-bold small">ICICI Bank</div>
+                                    <div class="text-muted" style="font-size:0.7rem;">Instant Sanction</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center mt-3 text-muted small">
+                            <i class="fas fa-check-circle text-success me-1"></i> Spot registration &amp; paperwork assistance provided by our legal desk.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 7. VIP CHAUFFEUR SITE VISIT CTA SECTION ── -->
+    <section class="py-5" style="background: linear-gradient(135deg, var(--rd-navy) 0%, #153250 100%); color: #FFFFFF;">
+        <div class="container-xl text-center py-4">
+            <span class="gold-badge mb-3"><i class="fas fa-car"></i> Complimentary Experience</span>
+            <h2 class="h1 fw-bold mb-3 text-white">Experience Your Future Residence in Person</h2>
+            <p class="text-light opacity-75 max-w-680 mx-auto mb-4">
+                We provide a complimentary, private chauffeur-driven AC car service to pick you and your family up from anywhere in Visakhapatnam for a personalized project tour and documentation review.
+            </p>
+            <div class="d-flex justify-content-center flex-wrap gap-3">
+                <button class="btn-rd-primary px-4 py-3 fs-6" onclick="openChauffeurModal('General Site Visit')">
+                    <i class="fas fa-calendar-alt me-2"></i> Schedule Private Chauffeur Tour
+                </button>
+                <a href="https://wa.me/918585852738?text=Hello%20MyntReal,%20I%20would%20like%20to%20book%20a%20VIP%20Site%20Visit%20for%20Real%20Dreams%20Properties." target="_blank" class="btn btn-success px-4 py-3 fs-6 fw-bold" style="border-radius: 8px;">
+                    <i class="fab fa-whatsapp me-2 fs-5"></i> WhatsApp Advisory Desk
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 8. FOOTER WITH PLAIN-TEXT TERMS & CONDITIONS RULE ── -->
+    <footer class="py-4 border-top" style="background: var(--bg-card);">
+        <div class="container-xl">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 pb-3 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <img src="/public/hub/Assets/realdreams.png" alt="Real Dreams" style="height: 32px;" onerror="this.src='/public/hub/Assets/Myntreal.logo.png'">
+                    <span class="fw-bold" style="color: var(--rd-gold);">VGK Real Dreams Portfolio</span>
+                </div>
+                <div class="small text-muted">
+                    Visakhapatnam Operations Desk: <strong class="text-primary">+91 858585 2738</strong>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3 small text-muted">
+                <div>
+                    &copy; 2026 MYNTREAL &amp; VGK4U Ecosystem. All rights reserved. VMRDA &amp; RERA Disclosed.
+                </div>
+                <!-- STRICT PLAIN TEXT TERMS & CONDITIONS RULE -->
+                <div class="terms-plain-text m-0">
+                    * Terms &amp; Conditions Apply
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ── 9. MOBILE STICKY BOTTOM ACTION BAR ── -->
+    <div class="mobile-sticky-action-bar">
+        <a href="/storage/real_dreams/1/staged/df3236747796.pdf" target="_blank" download="Anandas_Royal_Imperia_Brochure.pdf" class="btn-rd-secondary flex-fill text-center py-2">
+            <i class="fas fa-file-pdf text-danger me-1"></i> Brochure (16MB)
+        </a>
+        <button class="btn-rd-primary flex-fill text-center py-2" onclick="openChauffeurModal('Mobile Quick Booking')">
+            <i class="fas fa-calendar-check me-1"></i> Book Visit
+        </button>
+    </div>
+
+    <!-- ── 10. LIGHTBOX GALLERY MODAL ── -->
+    <div class="gallery-modal-overlay" id="galleryModal" onclick="closeGalleryModal(event)">
+        <div class="gallery-content-wrap" onclick="event.stopPropagation()">
+            <button class="gallery-close-btn" onclick="closeGalleryModal()">&times;</button>
+            <button class="gallery-nav-btn gallery-prev" onclick="prevGalleryImg()"><i class="fas fa-chevron-left"></i></button>
+            <img src="" alt="Project Photo Gallery" class="gallery-main-img" id="galleryActiveImg">
+            <button class="gallery-nav-btn gallery-next" onclick="nextGalleryImg()"><i class="fas fa-chevron-right"></i></button>
+            <div class="text-white mt-2 small fw-semibold" id="galleryCaption">Photo 1 of 8</div>
+            <div class="gallery-thumbnails-strip" id="galleryThumbsStrip"></div>
+        </div>
+    </div>
+
+    <!-- ── 11. YOUTUBE WALKTHROUGH VIDEO MODAL ── -->
+    <div class="gallery-modal-overlay" id="videoModal" onclick="closeVideoModal(event)">
+        <div class="video-modal-wrap" onclick="event.stopPropagation()">
+            <div class="d-flex justify-content-between align-items-center p-3 text-white border-bottom border-secondary">
+                <span class="fw-bold" id="videoModalTitle">Video Walkthrough</span>
+                <button type="button" class="btn-close btn-close-white" onclick="closeVideoModal()"></button>
+            </div>
+            <div class="video-container">
+                <iframe id="youtubePlayerIframe" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
             </div>
         </div>
     </div>
 
-    <!-- JavaScript for Theme & Multi-Language Switching -->
+    <!-- ── 12. VIP CHAUFFEUR SITE VISIT BOOKING MODAL ── -->
+    <div class="gallery-modal-overlay" id="chauffeurModal" onclick="closeChauffeurModal(event)">
+        <div class="chauffeur-modal-wrap" onclick="event.stopPropagation()">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold m-0" style="color: var(--rd-navy);"><i class="fas fa-car text-warning me-2"></i>VIP Chauffeur Visit</h4>
+                <button type="button" class="btn-close" onclick="closeChauffeurModal()"></button>
+            </div>
+            <p class="small text-muted mb-3">Select your preferred date, time and Visakhapatnam pickup location for private car inspection.</p>
+            
+            <form id="chauffeurBookingForm" onsubmit="submitChauffeurVisit(event)">
+                <div class="mb-2">
+                    <label class="small fw-bold text-muted">Project of Interest</label>
+                    <select class="form-select form-select-sm" id="visitProjectSelect" required>
+                        <option value="Anandas Royal Imperia">Anandas Royal Imperia (Gajuwaka / Aganampudi)</option>
+                        <option value="VGK Homes Luxury Flats - 1">VGK Homes Luxury Flats - 1 (Pendurthi)</option>
+                    </select>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="small fw-bold text-muted">Preferred Date</label>
+                        <input type="date" class="form-control form-control-sm" id="visitDateInput" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="small fw-bold text-muted">Preferred Time</label>
+                        <select class="form-select form-select-sm" id="visitTimeInput" required>
+                            <option value="10:00 AM">10:00 AM (Morning)</option>
+                            <option value="02:00 PM">02:00 PM (Afternoon)</option>
+                            <option value="04:30 PM">04:30 PM (Evening)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="small fw-bold text-muted">Full Name</label>
+                    <input type="text" class="form-control form-control-sm" id="visitNameInput" placeholder="Enter your full name" required>
+                </div>
+                <div class="mb-2">
+                    <label class="small fw-bold text-muted">10-Digit Mobile Number</label>
+                    <input type="tel" pattern="[0-9]{10}" class="form-control form-control-sm" id="visitPhoneInput" placeholder="e.g. 9876543210" required>
+                </div>
+                <div class="mb-3">
+                    <label class="small fw-bold text-muted">Pickup Landmark in Visakhapatnam</label>
+                    <input type="text" class="form-control form-control-sm" id="visitPickupInput" placeholder="e.g. Near Gajuwaka Junction / RTC Complex" required>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn-rd-primary w-100 py-2">
+                        <i class="fas fa-check-circle me-1"></i> Confirm Chauffeur Pickup
+                    </button>
+                </div>
+            </form>
+            <div id="bookingConfirmationAlert" class="alert alert-success mt-3 mb-0 p-2 small d-none text-center">
+                <i class="fas fa-check-double me-1"></i> Tour confirmed! Our Chauffeur coordinator will call you within 30 minutes.
+            </div>
+        </div>
+    </div>
+
+    <!-- ── JAVASCRIPT: DYNAMIC DATA, LIGHTBOX, & INTERACTIONS ── -->
     <script>
-        const TRANSLATIONS = {
-            en: {
-                rdPromoBannerText: "<strong>DTCP & RERA Approved Villa Townships:</strong> Up to <strong>80% Bank Loans Approved</strong> (SBI, HDFC, ICICI) with Spot Registration Guarantee!",
-                rdShopBtnText: "Browse Properties on E-Com",
-                heroTitle: "VGK Real Dreams: Verified Gated Communities & Solar Townships",
-                heroSubtitle: "100% genuine legal clearance, spot registration, underground electrical cabling, and 40+ lifestyle amenities. Backed by bank loan approvals up to 80% from SBI, HDFC, and ICICI Bank.",
-                heroBuyBtn: "Explore Plots on E-Com Marketplace",
-                heroCompareBtn: "Featured Layouts & Master Plans",
-                statLegal: "Clear Title & RERA",
-                statLoan: "Bank Loan Available",
-                statAmenities: "Modern Amenities",
-                statRoi: "Annual Land ROI",
-                bankHeading: "Legal Genuineness, Clear Titles & 80% Bank Loan Approvals",
-                bankSubheading: "All Real Dreams properties undergo rigorous 30-year title searches by certified advocates and are fully configured at our central administrative catalog.",
-                projectsHeading: "Prime Villa Townships & Open Layouts",
-                amenitiesHeading: "40+ Integrated Township Amenities",
-                amenitiesSubheading: "Engineered for sustainable modern living with integrated clean energy, lush recreation zones, and multi-tier security."
-            },
-            te: {
-                rdPromoBannerText: "<strong>DTCP & RERA ఆమోదిత విల్లా లేఅవుట్స్:</strong> <strong>80% వరకు బ్యాంక్ లోన్ సదుపాయం</strong> (SBI, HDFC, ICICI) మరియు తక్షణ స్పాట్ రిజిస్ట్రేషన్!",
-                rdShopBtnText: "ఈ-కామ్‌లో ప్రాపర్టీస్ చూడండి",
-                heroTitle: "VGK రియల్ డ్రీమ్స్: ధృవీకరించబడిన గేటెడ్ కమ్యూనిటీలు & సోలార్ టౌన్‌షిప్స్",
-                heroSubtitle: "100% స్పష్టమైన టైటిల్స్, స్పాట్ రిజిస్ట్రేషన్, భూగర్భ విద్యుద్దీకరణ మరియు 40+ ఆధునిక వసతులు. ప్రముఖ బ్యాంకుల (SBI, HDFC, ICICI) ద్వారా 80% వరకు లోన్ సదుపాయం.",
-                heroBuyBtn: "ఈ-కామ్ మార్కెట్‌ప్లేస్‌లో ప్లాట్స్ చూడండి",
-                heroCompareBtn: "లేఅవుట్స్ & మాస్టర్ ప్లాన్స్",
-                statLegal: "క్లియర్ టైటిల్ & RERA",
-                statLoan: "80% బ్యాంక్ లోన్",
-                statAmenities: "40+ ఆధునిక వసతులు",
-                statRoi: "వార్షిక విలువ పెరుగుదల",
-                bankHeading: "చట్టబద్ధమైన పత్రాలు & 80% బ్యాంక్ లోన్ ఆమోదాలు",
-                bankSubheading: "ప్రతి ప్రాపర్టీ 30 సంవత్సరాల లీగల్ సెర్చ్ చేయబడి, పూర్తి పారదర్శకతతో సెంట్రల్ అడ్మినిస్ట్రేటివ్ క్యాటలాగ్‌లో ధృవీకరించబడింది.",
-                projectsHeading: "అద్భుతమైన విల్లా టౌన్‌షిప్స్ & ఓపెన్ ప్లాట్స్",
-                amenitiesHeading: "40+ సమీకృత టౌన్‌షిప్ సౌకర్యాలు",
-                amenitiesSubheading: "పరిశుభ్రమైన పర్యావరణం, సోలార్ ఎనర్జీ, విశాలమైన పార్కులు మరియు కట్టుదిట్టమైన భద్రతతో నిర్మితం."
-            }
+        const PROJECT_GALLERIES = {
+            1: [
+                { src: "/storage/real_dreams/1/staged/698f7fbb845e.png", caption: "Anandas Royal Imperia — Elevation Perspective" },
+                { src: "/storage/real_dreams/1/staged/fde7851f87bb.png", caption: "Anandas Royal Imperia — Master Architecture" },
+                { src: "/storage/real_dreams/1/staged/b4888b83950f.png", caption: "Anandas Royal Imperia — Corridor & Finishes" },
+                { src: "/storage/real_dreams/1/staged/24e546114451.png", caption: "Anandas Royal Imperia — Residential Structure" },
+                { src: "/storage/real_dreams/1/staged/c6eb66441665.png", caption: "Anandas Royal Imperia — Entrance Gate" },
+                { src: "/storage/real_dreams/1/staged/d1f9aea4f3f5.png", caption: "Anandas Royal Imperia — G+4 Building Frontage" },
+                { src: "/storage/real_dreams/1/staged/aec12d1ef45b.png", caption: "Anandas Royal Imperia — Daylight Facade" },
+                { src: "/storage/real_dreams/1/staged/ca76c222a7c9.png", caption: "Anandas Royal Imperia — Campus Landscape" }
+            ],
+            2: [
+                { src: "/storage/real_dreams/1/staged/7084e3d7cad7.jpeg", caption: "VGK Homes Luxury Flats - 1 — Exterior View" },
+                { src: "/storage/real_dreams/1/staged/c858a72f3747.jpeg", caption: "VGK Homes Luxury Flats - 1 — Site Progress" },
+                { src: "/storage/real_dreams/1/staged/04704a138c25.jpeg", caption: "VGK Homes Luxury Flats - 1 — Front Elevation" },
+                { src: "/storage/real_dreams/1/staged/0c35038fae26.jpeg", caption: "VGK Homes Luxury Flats - 1 — Structure Finish" },
+                { src: "/storage/real_dreams/1/staged/4b9dbad2ad79.jpeg", caption: "VGK Homes Luxury Flats - 1 — Street View" }
+            ]
         };
 
-        let currentLang = 'en';
+        let currentActiveGallery = 1;
+        let currentGalleryIndex = 0;
 
-        function switchLanguage(lang) {
-            currentLang = lang;
-            const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
-            for (let id in t) {
-                const el = document.getElementById(id);
-                if (el) el.innerHTML = t[id];
+        async function loadRealDreamsLiveProperties() {
+            try {
+                const res = await fetch("/api/v1/real-dreams/public/properties?company_id=1");
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.properties && data.properties.length > 0) {
+                        data.properties.forEach(p => {
+                            if (p.id === 1 && p.price_per_unit) {
+                                const pEl = document.querySelector("#prop-card-1 .spec-value.text-success");
+                                if (pEl) pEl.textContent = "₹" + Math.round(p.price_per_unit).toLocaleString("en-IN") + " / Sq. Ft.";
+                            }
+                        });
+                    }
+                }
+            } catch (err) {
+                console.warn("[Real Dreams API] Using staged offline cache:", err);
             }
-            document.querySelectorAll('.lang-pill-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
-            });
+        }
+
+        function filterCorridor(corridor, btn) {
+            document.querySelectorAll(".corridor-tab").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+
+            const c1 = document.getElementById("prop-card-1");
+            const c2 = document.getElementById("prop-card-2");
+
+            if (corridor === "ALL") {
+                if (c1) c1.style.display = "block";
+                if (c2) c2.style.display = "block";
+            } else if (corridor === "GAJUWAKA") {
+                if (c1) c1.style.display = "block";
+                if (c2) c2.style.display = "none";
+            } else if (corridor === "PENDURTHI") {
+                if (c1) c1.style.display = "none";
+                if (c2) c2.style.display = "block";
+            }
+        }
+
+        function openGalleryModal(propId, index = 0) {
+            currentActiveGallery = propId;
+            currentGalleryIndex = index;
+            renderGalleryView();
+            document.getElementById("galleryModal").classList.add("active");
+            document.body.style.overflow = "hidden";
+        }
+
+        function closeGalleryModal(e) {
+            document.getElementById("galleryModal").classList.remove("active");
+            document.body.style.overflow = "";
+        }
+
+        function renderGalleryView() {
+            const list = PROJECT_GALLERIES[currentActiveGallery] || [];
+            if (list.length === 0) return;
+            if (currentGalleryIndex < 0) currentGalleryIndex = list.length - 1;
+            if (currentGalleryIndex >= list.length) currentGalleryIndex = 0;
+
+            const item = list[currentGalleryIndex];
+            const imgEl = document.getElementById("galleryActiveImg");
+            imgEl.src = item.src;
+            document.getElementById("galleryCaption").textContent = item.caption + " (" + (currentGalleryIndex + 1) + " of " + list.length + ")";
+
+            const strip = document.getElementById("galleryThumbsStrip");
+            strip.innerHTML = list.map((th, i) => `
+                <img src="${th.src}" class="gallery-thumb ${i === currentGalleryIndex ? "active" : ""}" onclick="currentGalleryIndex=${i}; renderGalleryView();" alt="thumb">
+            `).join("");
+        }
+
+        function prevGalleryImg() { currentGalleryIndex--; renderGalleryView(); }
+        function nextGalleryImg() { currentGalleryIndex++; renderGalleryView(); }
+
+        document.addEventListener("keydown", function(e) {
+            if (document.getElementById("galleryModal").classList.contains("active")) {
+                if (e.key === "ArrowLeft") prevGalleryImg();
+                if (e.key === "ArrowRight") nextGalleryImg();
+                if (e.key === "Escape") closeGalleryModal();
+            }
+            if (document.getElementById("videoModal").classList.contains("active")) {
+                if (e.key === "Escape") closeVideoModal();
+            }
+            if (document.getElementById("chauffeurModal").classList.contains("active")) {
+                if (e.key === "Escape") closeChauffeurModal();
+            }
+        });
+
+        function openVideoModal(ytId, title) {
+            document.getElementById("videoModalTitle").textContent = title;
+            const iframe = document.getElementById("youtubePlayerIframe");
+            iframe.src = "https://www.youtube.com/embed/" + ytId + "?autoplay=1&enablejsapi=1";
+            document.getElementById("videoModal").classList.add("active");
+            document.body.style.overflow = "hidden";
+        }
+
+        function closeVideoModal() {
+            const iframe = document.getElementById("youtubePlayerIframe");
+            iframe.src = "";
+            document.getElementById("videoModal").classList.remove("active");
+            document.body.style.overflow = "";
+        }
+
+        function openChauffeurModal(projectName) {
+            if (projectName && projectName !== "General Site Visit" && projectName !== "Mobile Quick Booking") {
+                const sel = document.getElementById("visitProjectSelect");
+                if (sel) sel.value = projectName;
+            }
+            const dInput = document.getElementById("visitDateInput");
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            dInput.min = tomorrow.toISOString().split("T")[0];
+            dInput.value = tomorrow.toISOString().split("T")[0];
+
+            document.getElementById("chauffeurModal").classList.add("active");
+            document.body.style.overflow = "hidden";
+        }
+
+        function closeChauffeurModal() {
+            document.getElementById("chauffeurModal").classList.remove("active");
+            document.body.style.overflow = "";
+        }
+
+        async function submitChauffeurVisit(e) {
+            e.preventDefault();
+            const project = document.getElementById("visitProjectSelect").value;
+            const date = document.getElementById("visitDateInput").value;
+            const time = document.getElementById("visitTimeInput").value;
+            const name = document.getElementById("visitNameInput").value.trim();
+            const phone = document.getElementById("visitPhoneInput").value.trim();
+            const pickup = document.getElementById("visitPickupInput").value.trim();
+
+            const propId = project.includes("Anandas") ? 1 : 2;
+
+            try {
+                await fetch("/api/v1/real-dreams/public/properties/" + propId + "/enquiry", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        name: name,
+                        mobile: phone,
+                        message: "VIP Chauffeur Tour Request: " + project + " on " + date + " at " + time + ". Pickup Landmark: " + pickup
+                    })
+                });
+            } catch (err) {
+                console.log("[Chauffeur Form] Fallback to WhatsApp:", err);
+            }
+
+            const alertBox = document.getElementById("bookingConfirmationAlert");
+            alertBox.classList.remove("d-none");
+
+            setTimeout(() => {
+                const waText = encodeURIComponent(`Hello MyntReal Real Dreams Desk, I have scheduled a VIP Chauffeur Site Visit:
+• Project: ${project}
+• Date: ${date} (${time})
+• Name: ${name}
+• Phone: ${phone}
+• Pickup Landmark: ${pickup}`);
+                window.open("https://wa.me/918585852738?text=" + waText, "_blank");
+                setTimeout(closeChauffeurModal, 1500);
+            }, 800);
         }
 
         function toggleTheme() {
             const html = document.documentElement;
-            const isDark = html.getAttribute('data-theme') === 'dark';
-            const next = isDark ? 'light' : 'dark';
-            html.setAttribute('data-theme', next);
-            const icon = document.getElementById('themeToggleIcon');
-            const txt = document.getElementById('themeToggleText');
-            if (icon) icon.className = next === 'dark' ? 'fas fa-sun text-warning' : 'fas fa-moon text-warning';
-            if (txt) txt.textContent = next === 'dark' ? 'Light Mode' : 'Dark Mode';
+            const isDark = html.getAttribute("data-theme") === "dark";
+            const next = isDark ? "light" : "dark";
+            html.setAttribute("data-theme", next);
+            const icon = document.getElementById("themeToggleIcon");
+            const txt = document.getElementById("themeToggleText");
+            if (icon) icon.className = next === "dark" ? "fas fa-sun text-warning" : "fas fa-moon text-warning";
+            if (txt) txt.textContent = next === "dark" ? "Light Mode" : "Dark Mode";
         }
+
+        const TRANSLATIONS = {
+            en: {
+                heroTitle: "Curated Luxury Residences &amp; <span>Prime Gated Enclaves</span>",
+                heroDesc: "Explore verified residential properties across Visakhapatnam premier industrial and IT development corridors. Built with complete legal transparency, 30-year search title verification, and up to 80% national bank loan pre-approvals."
+            },
+            te: {
+                heroTitle: "విశాఖపట్నం ప్రీమియం నివాసాలు &amp; <span>ఆధునిక గేటెడ్ ఎన్‌క్లేవ్స్</span>",
+                heroDesc: "గాజువాక, అగనంపూడి మరియు పెందుర్తి కారిడార్లలో VMRDA & RERA ఆమోదించబడిన అత్యున్నత అపార్ట్‌మెంట్లు మరియు గేటెడ్ లేఅవుట్‌లు. 30 సంవత్సరాల క్లియర్ టైటిల్ మరియు 80% బ్యాంక్ లోన్ ఆమోదంతో అందుబాటులో ఉన్నాయి."
+            }
+        };
+
+        function switchLanguage(lang) {
+            const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+            const hTitle = document.querySelector(".hero-title");
+            const hDesc = document.querySelector(".hero-desc");
+            if (hTitle) hTitle.innerHTML = t.heroTitle;
+            if (hDesc) hDesc.innerHTML = t.heroDesc;
+
+            document.querySelectorAll(".lang-pill-btn").forEach(b => {
+                b.classList.toggle("active", b.getAttribute("data-lang") === lang);
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            loadRealDreamsLiveProperties();
+        });
     </script>
 </body>
 </html>

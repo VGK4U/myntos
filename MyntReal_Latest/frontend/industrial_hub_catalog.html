@@ -261,6 +261,11 @@
             object-fit: contain;
         }
 
+        .brand-logo-dark { display: inline-block !important; }
+        .brand-logo-light { display: none !important; }
+        [data-theme="light"] .brand-logo-dark { display: none !important; }
+        [data-theme="light"] .brand-logo-light { display: inline-block !important; }
+
         .brand-text-block {
             display: flex;
             flex-direction: column;
@@ -3020,7 +3025,8 @@
     <header class="hub-navbar">
         <div class="navbar-content">
             <a href="/catalog/industrial-hub/industrial-hub-franchise" class="brand-logo-wrap">
-                <img src="/public/hub/Assets/Myntreal.logo.png" alt="MYNTREAL Master Brand" onerror="this.onerror=null; this.src='/public/hub/Assets/mnr-logo.png';">
+                <img class="brand-logo-dark" src="/public/hub/Assets/Myntreal.logo-white.png" alt="MYNTREAL Master Brand" onerror="this.onerror=null; this.src='/public/hub/Assets/Myntreal.logo.png';">
+                <img class="brand-logo-light" src="/public/hub/Assets/Myntreal.logo.png" alt="MYNTREAL Master Brand" onerror="this.onerror=null; this.src='/public/hub/Assets/mnr-logo.png';">
                 <div class="brand-text-block">
                     <span class="brand-title">MYNTREAL</span>
                     <span class="brand-subtitle">Business Hub Network</span>

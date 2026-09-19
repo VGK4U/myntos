@@ -11,7 +11,7 @@ from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
-from sqlalchemy import text, func
+from sqlalchemy import text, func, or_
 
 from decimal import Decimal
 
@@ -946,6 +946,67 @@ def get_staff_list(
         {'id': r.id, 'full_name': r.full_name, 'emp_code': r.emp_code or '', 'designation': r.designation or ''}
         for r in rows
     ]
+
+
+# ── GET /public/pos/track — Public Order Tracking ─────────────────────────────
+
+@router.get('/public/pos/track', tags=['marketplace-po'])
+def track_purchase_order(
+    query: str = Query(..., description='PO Number (e.g. ZYPO-202603-0001) or Customer Phone Number'),
+    company_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    """
+    Public order tracking endpoint.
+    Allows customers to look up order status by PO number or phone number.
+    Returns safe public tracking timeline and order summary without internal staff notes.
+    """
+    q_str = query.strip()
+    filters = [
+        or_(
+            MarketplacePurchaseOrder.po_number.ilike(q_str),
+            MarketplacePurchaseOrder.customer_phone == q_str,
+            MarketplacePurchaseOrder.bill_phone == q_str,
+            MarketplacePurchaseOrder.ship_phone == q_str,
+        )
+    ]
+    if company_id:
+        filters.append(MarketplacePurchaseOrder.company_id == company_id)
+    po = db.query(MarketplacePurchaseOrder).filter(*filters).order_by(MarketplacePurchaseOrder.created_at.desc()).first()
+
+    if not po:
+        raise HTTPException(status_code=404, detail='No order found matching this reference.')
+
+    items = db.query(MarketplacePOItem).filter_by(po_id=po.id).all()
+
+    status_steps = [
+        {'key': 'placed', 'label': 'Order Placed', 'completed': True},
+        {'key': 'confirmed', 'label': 'Confirmed', 'completed': po.status in ('confirmed', 'procurement_pending', 'payment_received', 'dispatched', 'completed')},
+        {'key': 'dispatched', 'label': 'Dispatched', 'completed': po.status in ('dispatched', 'completed')},
+        {'key': 'completed', 'label': 'Delivered / Completed', 'completed': po.status == 'completed'},
+    ]
+
+    return {
+        'success': True,
+        'po_number': po.po_number,
+        'status': po.status,
+        'created_at': po.created_at.isoformat() if po.created_at else None,
+        'customer_name': po.customer_name,
+        'ship_address': po.ship_address or po.delivery_address,
+        'total_items': po.total_items,
+        'total_value': po.total_value,
+        'timeline': status_steps,
+        'items': [
+            {
+                'sku': i.sku,
+                'product_name': i.product_name,
+                'qty': i.ordered_qty,
+                'unit_price': i.unit_final_price,
+                'line_total': i.line_total,
+            }
+            for i in items
+        ]
+    }
 
 
 # ── GET /pos/{po_id} — PO detail (staff auth) ─────────────────────────────────

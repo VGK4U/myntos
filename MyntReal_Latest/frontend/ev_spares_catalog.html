@@ -3,381 +3,737 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title>EV Spares, Fast Chargers & Battery Systems — Official Digital Catalog | MYNTREAL & VGK4U</title>
-    <meta name="description" content="Official OEM-grade electric vehicle spare parts, AIS-156 certified lithium batteries, DC fast chargers, smart BMS and controllers. Hub wholesale pricing vs retail breakdown.">
-    <link rel="icon" type="image/png" href="/public/favicon.ico">
+    <title>EV Spares, Fast Chargers &amp; Smart Batteries — Official Digital Catalogue | MYNTREAL &amp; VGK4U</title>
+    <meta name="description" content="Explore genuine OEM automotive-grade EV spare parts, certified high-density LFP &amp; Graphene battery packs, smart fast chargers, sine-wave controllers and wiring harnesses. Immediate pan-India dispatch.">
 
-    <!-- Bootstrap 5.3 & FontAwesome 6 -->
+    <!-- Bootstrap 5.3.0 & FontAwesome 6.4.0 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --bg-base: #f8fafc;
-            --bg-card: #ffffff;
-            --bg-card-alt: #f1f5f9;
-            --text-main: #0f172a;
+            /* EV CleanTech Automotive Palette */
+            --ev-green: #84CC16;
+            --ev-green-dark: #65A30D;
+            --ev-green-light: #F7FEE7;
+            --ev-cyan: #06B6D4;
+            --ev-cyan-dark: #0891B2;
+            --ev-cyan-light: #ECFEFF;
+            --ev-graphite: #0F172A;
+            --ev-graphite-surface: #1E293B;
+            --ev-slate: #334155;
+            
+            --bg-body: #F8FAFC;
+            --bg-card: #FFFFFF;
+            --bg-card-alt: #F1F5F9;
+            --border-color: #E2E8F0;
+            --text-primary: #0F172A;
             --text-secondary: #475569;
-            --text-muted: #64748b;
-            --brand-border: #e2e8f0;
-            --brand-purple: #7c3aed;
-            --brand-purple-hover: #6d28d9;
-            --brand-emerald: #059669;
-            --brand-amber: #b45309;
-            --brand-blue: #0284c7;
-            --brand-crimson: #b91c1c;
-            --card-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -2px rgba(15, 23, 42, 0.04);
-            --card-shadow-lg: 0 12px 30px -4px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
+            --text-muted: #64748B;
+            
+            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+            --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.08);
+            --shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.12);
+            --shadow-green: 0 4px 16px rgba(132, 204, 22, 0.25);
         }
 
         [data-theme="dark"] {
-            --bg-base: #0b0f19;
-            --bg-card: #131b2e;
-            --bg-card-alt: #1a233a;
-            --text-main: #f8fafc;
-            --text-secondary: #cbd5e1;
-            --text-muted: #94a3b8;
-            --brand-border: #1e293b;
-            --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
-            --card-shadow-lg: 0 16px 36px -4px rgba(0, 0, 0, 0.7);
+            --bg-body: #090E17;
+            --bg-card: #111827;
+            --bg-card-alt: #1F2937;
+            --border-color: #374151;
+            --text-primary: #F9FAFB;
+            --text-secondary: #D1D5DB;
+            --text-muted: #9CA3AF;
+            --ev-green-light: #1A2E05;
+            --ev-cyan-light: #082F38;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+            --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.5);
+            --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
         }
+
+        /* Brand Logo Light/Dark Theme Switching */
+        .brand-logo-light { display: inline-block !important; }
+        .brand-logo-dark { display: none !important; }
+        [data-theme="dark"] .brand-logo-light { display: none !important; }
+        [data-theme="dark"] .brand-logo-dark { display: inline-block !important; }
 
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--bg-base);
-            color: var(--text-main);
-            margin: 0;
-            padding-bottom: 80px;
+            font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            line-height: 1.55;
+            overflow-x: hidden;
             transition: background-color 0.3s ease, color 0.3s ease;
+            padding-bottom: 70px;
         }
 
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        @media (min-width: 992px) {
+            body { padding-bottom: 0; }
+        }
 
-        /* ── TOP HEADER & TABS ── */
+        .font-mono {
+            font-family: "JetBrains Mono", monospace;
+        }
+
+        /* Top Discount Strip */
+        .ev-discount-strip {
+            background: linear-gradient(90deg, #0F172A 0%, #1E293B 50%, #0F172A 100%);
+            color: #FFFFFF;
+            font-size: 0.84rem;
+            padding: 0.5rem 0;
+            border-bottom: 2px solid var(--ev-green);
+        }
+
+        .badge-lime {
+            background: var(--ev-green);
+            color: #0F172A;
+            font-weight: 800;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        /* Catalog Top Header */
         .catalog-top-header {
             background: var(--bg-card);
-            border-bottom: 1px solid var(--brand-border);
-            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
             position: sticky;
             top: 0;
-            z-index: 1040;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+            z-index: 1020;
+            box-shadow: var(--shadow-sm);
         }
 
         .catalog-header-tab {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 5px 11px;
-            font-size: 12px;
-            font-weight: 700;
-            border-radius: 999px;
-            text-decoration: none;
-            border: 1px solid var(--brand-border);
-            background: var(--bg-card-alt);
+            gap: 0.45rem;
+            padding: 0.4rem 0.85rem;
+            border-radius: 9999px;
+            font-size: 0.82rem;
+            font-weight: 500;
             color: var(--text-secondary);
-            transition: all 0.2s ease;
+            text-decoration: none;
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border-color);
             white-space: nowrap;
+            transition: all 0.2s ease;
         }
 
         .catalog-header-tab:hover {
-            color: #7c3aed;
-            border-color: #7c3aed;
+            color: var(--ev-green-dark);
+            border-color: var(--ev-green);
+            transform: translateY(-1px);
         }
 
         .catalog-header-tab.active {
-            background: rgba(124, 58, 237, 0.12);
-            border-color: rgba(124, 58, 237, 0.45);
-            color: #7c3aed;
-            box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.2);
-        }
-
-        /* ── DYNAMIC PROMO STRIP ── */
-        .promo-disc-strip {
-            background: linear-gradient(135deg, #4c1d95 0%, #31104b 100%);
-            color: #ffffff;
-            padding: 10px 16px;
-            font-size: 13.5px;
-            border-bottom: 2px solid #a855f7;
-        }
-
-        .promo-pill {
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 20px;
-            padding: 4px 12px;
+            background: var(--ev-graphite);
+            color: var(--ev-green);
+            border-color: var(--ev-green);
             font-weight: 700;
         }
 
-        /* ── HERO BANNER ── */
-        .hero-banner {
-            background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
-            color: #ffffff;
-            padding: 45px 0 35px;
-            position: relative;
-            overflow: hidden;
+        [data-theme="dark"] .catalog-header-tab.active {
+            background: var(--ev-green);
+            color: var(--ev-graphite);
+            border-color: var(--ev-green);
         }
 
-        .hero-banner::after {
-            content: "";
-            position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(124, 58, 237, 0.25) 0%, rgba(0,0,0,0) 70%);
-            pointer-events: none;
-        }
-
-        .hero-badge {
-            background: rgba(124, 58, 237, 0.25);
-            border: 1px solid rgba(168, 85, 247, 0.5);
-            color: #c084fc;
-            padding: 6px 14px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 800;
-            letter-spacing: 0.8px;
-            text-transform: uppercase;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .trust-stat-card {
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 12px;
-            padding: 14px 16px;
-            text-align: center;
-        }
-
-        /* ── SECTION CARDS ── */
-        .catalog-card {
-            background: var(--bg-card);
-            border: 1px solid var(--brand-border);
-            border-radius: 16px;
-            box-shadow: var(--card-shadow);
-            padding: 24px;
-            margin-bottom: 24px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .catalog-card:hover {
-            box-shadow: var(--card-shadow-lg);
-        }
-
-        .section-header-badge {
-            display: inline-block;
-            font-size: 11px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            padding: 4px 10px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-        }
-
-        /* ── TABLE STYLES ── */
-        .pricing-table-container {
-            border-radius: 12px;
-            overflow-x: auto;
-            border: 1px solid var(--brand-border);
-        }
-
-        .pricing-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13.5px;
-            margin: 0;
-        }
-
-        .pricing-table th {
+        .control-btn {
             background: var(--bg-card-alt);
-            color: var(--text-main);
-            font-weight: 700;
-            padding: 12px 14px;
-            border-bottom: 2px solid var(--brand-border);
-            white-space: nowrap;
-        }
-
-        .pricing-table td {
-            padding: 12px 14px;
-            border-bottom: 1px solid var(--brand-border);
-            vertical-align: middle;
-            color: var(--text-main);
-        }
-
-        .pricing-table tr:hover td {
-            background: rgba(124, 58, 237, 0.04);
-        }
-
-        /* ── PRODUCT CARD ── */
-        .product-card {
-            background: var(--bg-card);
-            border: 1px solid var(--brand-border);
-            border-radius: 14px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            transition: all 0.25s ease;
-        }
-
-        .product-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--card-shadow-lg);
-            border-color: #a855f7;
-        }
-
-        .product-img-wrap {
-            position: relative;
-            height: 180px;
-            background: #0f172a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-
-        .product-img-wrap img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.3s ease;
-        }
-
-        .product-card:hover .product-img-wrap img {
-            transform: scale(1.05);
-        }
-
-        .product-warranty-tag {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(15, 23, 42, 0.85);
-            backdrop-filter: blur(4px);
-            color: #fbbf24;
-            font-size: 11px;
-            font-weight: 700;
-            padding: 3px 8px;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 0.35rem 0.75rem;
             border-radius: 6px;
-            border: 1px solid rgba(251, 191, 36, 0.4);
-        }
-
-        .btn-ecom {
-            background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
-            color: #ffffff !important;
-            border: none;
-            font-weight: 700;
-            border-radius: 8px;
-            padding: 8px 16px;
-            font-size: 13px;
-            transition: all 0.2s ease;
+            font-size: 0.8rem;
+            font-weight: 600;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            gap: 6px;
+            gap: 0.35rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
             text-decoration: none;
         }
 
-        .btn-ecom:hover {
-            background: linear-gradient(135deg, #6d28d9 0%, #4c1d95 100%);
-            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
-        }
-
-        .theme-toggle-btn {
-            background: var(--bg-card-alt);
-            border: 1px solid var(--brand-border);
-            color: var(--text-main);
-            padding: 6px 12px;
-            border-radius: 8px;
-            font-size: 12.5px;
-            font-weight: 600;
-            cursor: pointer;
+        .control-btn:hover {
+            border-color: var(--ev-green);
+            color: var(--ev-green-dark);
         }
 
         .lang-pill-btn {
             background: var(--bg-card-alt);
-            border: 1px solid var(--brand-border);
+            border: 1px solid var(--border-color);
             color: var(--text-secondary);
-            padding: 5px 11px;
-            border-radius: 6px;
-            font-size: 12px;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.78rem;
             font-weight: 700;
             cursor: pointer;
+            transition: all 0.2s ease;
         }
 
         .lang-pill-btn.active {
-            background: #7c3aed;
-            color: #fff;
-            border-color: #7c3aed;
+            background: var(--ev-green-dark);
+            color: #FFFFFF;
+            border-color: var(--ev-green-dark);
         }
+
+        /* Automotive CleanTech Hero */
+        .ev-hero {
+            background: linear-gradient(135deg, #0F172A 0%, #1E293B 70%, #0F172A 100%);
+            color: #FFFFFF;
+            padding: 3.5rem 0 3rem;
+            position: relative;
+            overflow: hidden;
+            border-bottom: 3px solid var(--ev-green);
+        }
+
+        .ev-hero::after {
+            content: "";
+            position: absolute;
+            bottom: -30%;
+            right: -10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(132, 204, 22, 0.18) 0%, rgba(132, 204, 22, 0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .cleantech-badge {
+            background: rgba(132, 204, 22, 0.15);
+            border: 1px solid var(--ev-green);
+            color: var(--ev-green);
+            font-size: 0.82rem;
+            font-weight: 700;
+            padding: 0.35rem 0.9rem;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .ev-hero-title {
+            font-size: 2.25rem;
+            font-weight: 800;
+            line-height: 1.2;
+            margin: 1rem 0;
+            letter-spacing: -0.02em;
+            color: #FFFFFF;
+        }
+
+        @media (min-width: 992px) {
+            .ev-hero-title { font-size: 3.2rem; }
+        }
+
+        .ev-hero-title span {
+            color: var(--ev-green);
+        }
+
+        .ev-hero-desc {
+            font-size: 1.05rem;
+            color: #E2E8F0;
+            max-width: 680px;
+            margin-bottom: 1.75rem;
+            line-height: 1.6;
+        }
+
+        /* Search & Voltage Bar */
+        .search-control-wrap {
+            background: #FFFFFF;
+            border: 2px solid #CBD5E1;
+            border-radius: 12px;
+            padding: 0.55rem 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: var(--shadow-sm);
+            transition: border-color 0.2s ease;
+        }
+
+        .search-control-wrap:focus-within {
+            border-color: var(--ev-green);
+            box-shadow: 0 0 0 3px rgba(132, 204, 22, 0.25);
+        }
+
+        .search-control-input {
+            border: none;
+            background: transparent;
+            width: 100%;
+            font-size: 0.92rem;
+            color: #0F172A;
+            outline: none;
+        }
+
+        .voltage-pill-btn {
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #FFFFFF;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 0.35rem 0.85rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .voltage-pill-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            color: #FFFFFF;
+        }
+
+        .voltage-pill-btn.active {
+            background: var(--ev-green);
+            color: #0F172A;
+            border-color: var(--ev-green);
+            box-shadow: var(--shadow-green);
+        }
+
+        /* Category Filter Tabs */
+        .category-tab-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.86rem;
+            font-weight: 600;
+            padding: 0.5rem 1.1rem;
+            border-radius: 8px;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .category-tab-btn:hover {
+            border-color: var(--ev-green);
+            color: var(--ev-green-dark);
+        }
+
+        .category-tab-btn.active {
+            background: var(--ev-graphite);
+            color: var(--ev-green);
+            border-color: var(--ev-graphite);
+            font-weight: 700;
+        }
+
+        [data-theme="dark"] .category-tab-btn.active {
+            background: var(--ev-green);
+            color: var(--ev-graphite);
+            border-color: var(--ev-green);
+        }
+
+        /* Technical Product Card */
+        .ev-part-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .ev-part-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--ev-green);
+        }
+
+        .part-img-stage {
+            position: relative;
+            background: linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%);
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            overflow: hidden;
+        }
+
+        [data-theme="dark"] .part-img-stage {
+            background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+        }
+
+        .part-img-stage img {
+            max-height: 100%;
+            max-width: 100%;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+        }
+
+        .ev-part-card:hover .part-img-stage img {
+            transform: scale(1.08);
+        }
+
+        .card-badge-top {
+            position: absolute;
+            top: 0.75rem;
+            left: 0.75rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.25rem 0.6rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .card-warranty-badge {
+            position: absolute;
+            bottom: 0.75rem;
+            right: 0.75rem;
+            background: rgba(15, 23, 42, 0.85);
+            color: #FFFFFF;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.2rem 0.55rem;
+            border-radius: 4px;
+        }
+
+        .part-card-body {
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .part-sku-text {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--ev-cyan-dark);
+            font-family: "JetBrains Mono", monospace;
+            text-transform: uppercase;
+        }
+
+        .part-name-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0.35rem 0 0.45rem;
+            line-height: 1.35;
+        }
+
+        .part-desc-text {
+            font-size: 0.84rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.95rem;
+            line-height: 1.45;
+        }
+
+        /* Direct Visible Quick Specs Grid */
+        .quick-specs-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.45rem;
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.6rem 0.75rem;
+        }
+
+        .q-spec-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .q-lbl {
+            font-size: 0.68rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-muted);
+        }
+
+        .q-val {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        /* Progressive Disclosure Specs */
+        .specs-disclosure-btn {
+            background: none;
+            border: none;
+            padding: 0;
+            color: var(--ev-cyan-dark);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .specs-drawer {
+            background: var(--bg-card-alt);
+            border: 1px dashed var(--border-color);
+            border-radius: 6px;
+            padding: 0.75rem;
+            font-size: 0.78rem;
+            margin-bottom: 0.85rem;
+            display: none;
+        }
+
+        .specs-drawer.show {
+            display: block;
+        }
+
+        .spec-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.2rem 0;
+            border-bottom: 1px dotted var(--border-color);
+        }
+
+        .spec-row:last-child {
+            border-bottom: none;
+        }
+
+        /* Direct Visible Pricing Breakdown Card */
+        .pricing-breakdown-card {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+        }
+
+        .price-section {
+            margin-top: auto;
+            padding-top: 0.75rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .mrp-strike {
+            text-decoration: line-through;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            margin-left: 0.4rem;
+        }
+
+        .wholesale-price {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--ev-green-dark);
+            font-family: "JetBrains Mono", monospace;
+        }
+
+        [data-theme="dark"] .wholesale-price {
+            color: var(--ev-green);
+        }
+
+        /* Action Buttons */
+        .btn-ev-ecom {
+            background: linear-gradient(135deg, #16A34A 0%, #15803D 100%);
+            color: #FFFFFF !important;
+            border: none;
+            padding: 0.55rem 0.85rem;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.84rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(22, 163, 74, 0.25);
+        }
+
+        .btn-ev-ecom:hover {
+            background: linear-gradient(135deg, #15803D 0%, #166534 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
+        }
+
+        .btn-ev-enquire {
+            background: var(--ev-graphite);
+            color: var(--ev-green);
+            border: 1px solid var(--ev-green);
+            padding: 0.55rem 0.85rem;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.84rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .btn-ev-enquire:hover {
+            background: var(--ev-green);
+            color: var(--ev-graphite);
+            box-shadow: var(--shadow-green);
+        }
+
+        .btn-ev-rfq-add {
+            background: var(--bg-card-alt);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 0.55rem 0.85rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.84rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-ev-rfq-add:hover {
+            border-color: var(--ev-green);
+            color: var(--ev-green-dark);
+        }
+
+        .btn-ev-rfq-add.added {
+            background: var(--ev-green);
+            color: #FFFFFF;
+            border-color: var(--ev-green);
+        }
+
+        /* Sticky RFQ Cart Float */
+        .sticky-rfq-counter {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: var(--ev-graphite);
+            border: 2px solid var(--ev-green);
+            color: #FFFFFF;
+            padding: 0.75rem 1.25rem;
+            border-radius: 30px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+            display: none;
+            align-items: center;
+            gap: 0.75rem;
+            z-index: 1030;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .sticky-rfq-counter:hover {
+            transform: scale(1.05);
+        }
+
+        /* Mobile Sticky Bottom Action Bar */
+        .mobile-sticky-action-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border-color);
+            padding: 0.6rem 1rem;
+            display: flex;
+            gap: 0.75rem;
+            z-index: 1040;
+            box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        @media (min-width: 992px) {
+            .mobile-sticky-action-bar { display: none; }
+        }
+
+        /* Plain Text Terms & Conditions Rule */
+        .terms-plain-text {
+            color: #64748b;
+            font-size: 0.82rem;
+            cursor: default;
+            user-select: text;
+        }
+
+        /* Drawer Overlay */
+        .rfq-drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1060;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .rfq-drawer-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .rfq-drawer {
+            position: fixed;
+            top: 0;
+            right: -420px;
+            width: 100%;
+            max-width: 420px;
+            height: 100%;
+            background: var(--bg-card);
+            z-index: 1070;
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .rfq-drawer.active {
+            right: 0;
+        }
+
+        .max-w-650 { max-width: 650px; }
+        .max-w-600 { max-width: 600px; }
     </style>
 </head>
 <body>
 
-    <!-- ── 1. DYNAMIC DISCOUNT & PROMO BAR ── -->
-    <div class="promo-disc-strip">
+    <!-- ── 1. TOP ANNOUNCEMENT STRIP WITH /ECOM LINK ── -->
+    <div class="ev-discount-strip">
         <div class="container-xl d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-danger text-white"><i class="fas fa-bolt me-1"></i> EXCLUSIVE DISCOUNT</span>
-                <span id="promoBannerText">
-                    <strong>Dynamic B2B &amp; Partner Discounts Active:</strong> Save <strong>12% to 25% OFF</strong> Customer Retail with Promo / Partner ID!
-                </span>
+            <div>
+                <span class="badge-lime me-2 font-mono">B2B &amp; FLEET MARGINS</span>
+                <span>Direct OEM EV Spares: Save <strong>12% to 25% OFF</strong> Customer Retail with Authorized Workshop / Partner ID!</span>
             </div>
-            <div class="d-flex align-items-center gap-2">
-                <a href="/ecom?segment=ev-spares" class="promo-pill text-white text-decoration-none" title="Visit Marketplace">
-                    <i class="fas fa-shopping-cart me-1"></i> <span id="promoShopBtnText">Open EV Spares E-Com</span>
+            <div class="d-flex align-items-center gap-3">
+                <a href="/ecom?segment=ev-spares" class="badge bg-success text-white text-decoration-none fw-bold px-3 py-1 d-inline-flex align-items-center gap-1 shadow-sm" title="Browse Spares on E-Commerce Store">
+                    <i class="fas fa-shopping-cart"></i> Browse All Spares on /ecom &rarr;
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- ── 2. TOP NAVIGATION HEADER WITH CROSS-VERTICAL TABS ── -->
-    <header class="catalog-top-header">
-        <div class="container-fluid px-3 px-xl-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <!-- ── 2. STICKY TOP HEADER WITH PARITY NAVIGATION & /ECOM BUTTON ── -->
+    <header class="catalog-top-header py-2">
+        <div class="container-xl d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div class="d-flex align-items-center gap-3">
-                <a href="/catalog/ev-spares/ev-spares-and-chargers" class="d-flex align-items-center text-decoration-none">
-                    <img src="/public/hub/Assets/Myntreal.logo.png" alt="MyntReal" style="height: 40px; object-fit: contain;" onerror="this.src='/public/myntreal-logo.png'">
+                <a href="/catalog/ev-spares/ev-spares-and-chargers" class="d-inline-flex align-items-center text-decoration-none">
+                    <img class="brand-logo-light" src="/public/hub/Assets/Myntreal.logo.png" alt="MYNTREAL Logo" style="height: 32px;" onerror="this.src='/public/hub/Assets/Mynt Logo.png'">
+                    <img class="brand-logo-dark" src="/public/hub/Assets/Myntreal.logo-white.png" alt="MYNTREAL Logo" style="height: 32px;" onerror="this.src='/public/hub/Assets/Mynt Logo.png'">
                 </a>
-
-                <!-- Unified Cross-Vertical Navigation Tabs -->
-                <div class="d-flex align-items-center gap-2 overflow-x-auto pb-1" style="scrollbar-width: none;">
-                    <a href="/catalog/industrial-hub-franchise" class="catalog-header-tab" title="5-in-1 Franchise Overview">
-                        <i class="fas fa-building-columns text-warning"></i>
-                        <span>5-in-1 Franchise</span>
-                    </a>
-                    <a href="/catalog/ev-b2c-pricing" class="catalog-header-tab" title="Customer 2W EV Pricing">
-                        <i class="fas fa-motorcycle text-success"></i>
-                        <span>2W EV Pricing</span>
-                    </a>
-                    <a href="/catalog/hub-ev-pricing" class="catalog-header-tab" title="Hub Commercial Pricing (24h)">
-                        <i class="fas fa-tags text-success"></i>
-                        <span>Hub Pricing (24h)</span>
-                    </a>
-                    <a href="/catalog/ev-spares/ev-spares-and-chargers" class="catalog-header-tab active" title="EV Spares, Chargers & Batteries">
-                        <i class="fas fa-cogs" style="color: #a855f7;"></i>
-                        <span>EV Spares</span>
-                    </a>
-                    <a href="/catalog/real-dreams/real-dreams-premium-properties" class="catalog-header-tab" title="Real Dreams Premium Properties">
-                        <i class="fas fa-building text-danger"></i>
-                        <span>Real Dreams</span>
-                    </a>
-                    <a href="/catalog/insurance/comprehensive-insurance-advisory" class="catalog-header-tab" title="VGK Care Insurance Advisory">
-                        <i class="fas fa-shield-alt text-primary"></i>
-                        <span>VGK Care</span>
-                    </a>
-                </div>
+                
+                <nav class="d-none d-lg-flex align-items-center gap-2">
+                    <a href="/catalog/industrial-hub" class="catalog-header-tab"><i class="fas fa-landmark text-warning"></i> 5-in-1 Franchise</a>
+                    <a href="/catalog/ev-b2c-pricing" class="catalog-header-tab"><i class="fas fa-motorcycle text-success"></i> 2W EV Pricing</a>
+                    <a href="/catalog/hub-ev-pricing" class="catalog-header-tab"><i class="fas fa-tags text-info"></i> Hub Pricing</a>
+                    <a href="/catalog/ev-spares/ev-spares-and-chargers" class="catalog-header-tab active"><i class="fas fa-microchip"></i> EV Spares</a>
+                    <a href="/catalog/real-dreams/real-dreams-premium-properties" class="catalog-header-tab"><i class="fas fa-building text-danger"></i> Real Dreams</a>
+                    <a href="/catalog/insurance/comprehensive-insurance-advisory" class="catalog-header-tab"><i class="fas fa-shield-alt text-primary"></i> VGK Care</a>
+                    <a href="/ecom?segment=ev-spares" class="catalog-header-tab" style="background: #16A34A; color: #FFFFFF; font-weight: 700; border-color: #16A34A;" title="Go to E-Commerce Marketplace"><i class="fas fa-shopping-bag"></i> Shop on /ecom</a>
+                </nav>
             </div>
 
-            <!-- Controls: Theme Toggle & Language Switcher -->
             <div class="d-flex align-items-center gap-2">
-                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
-                    <i class="fas fa-moon text-warning" id="themeToggleIcon"></i>
-                    <span class="d-none d-sm-inline" id="themeToggleText">Dark Mode</span>
+                <button class="control-btn" onclick="toggleTheme()" id="themeToggleBtn">
+                    <i class="fas fa-moon" id="themeToggleIcon"></i> <span id="themeLabel">Dark Mode</span>
                 </button>
 
                 <div class="d-flex gap-1 align-items-center">
@@ -385,62 +741,965 @@
                     <button class="lang-pill-btn" data-lang="te" onclick="switchLanguage('te')">తెలుగు</button>
                 </div>
 
-                <img src="/public/vgk4u-logo.png" alt="VGK4U" class="d-none d-md-block ms-1" style="height: 26px;" onerror="this.style.display='none'">
+                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-success fw-bold text-white d-inline-flex align-items-center gap-1 shadow-sm px-3 py-1">
+                    <i class="fas fa-shopping-cart"></i> <span>Buy on /ecom</span>
+                </a>
+
+                <a href="tel:+918585852738" class="control-btn d-none d-md-inline-flex" title="Call Parts Desk">
+                    <i class="fas fa-phone-alt text-success"></i>
+                    <span>+91 858585 2738</span>
+                </a>
             </div>
         </div>
     </header>
 
-    <!-- ── 3. HERO SHOWCASE ── -->
-    <section class="hero-banner">
-        <div class="container-xl">
-            <div class="row align-items-center gy-4">
+    <!-- ── 3. AUTOMOTIVE CLEANTECH HERO (HIGH CONTRAST, DIRECT /ECOM LINK) ── -->
+    <section class="ev-hero">
+        <div class="container-xl position-relative z-1">
+            <div class="row align-items-center g-4">
                 <div class="col-lg-7">
-                    <span class="hero-badge mb-3">
-                        <i class="fas fa-shield-check"></i> AIS-156 Phase 2 Certified Components
-                    </span>
-                    <h1 class="display-6 fw-extrabold mb-3" id="heroTitle">
-                        Genuine EV Spares, High-Power Chargers &amp; Smart Batteries
+                    <div class="cleantech-badge">
+                        <i class="fas fa-microchip"></i> Automotive OEM Replacement Parts
+                    </div>
+                    <h1 class="ev-hero-title">
+                        Genuine EV Spares, <span>High-Power Chargers</span> &amp; Smart Batteries
                     </h1>
-                    <p class="lead text-light opacity-90 mb-4" id="heroSubtitle" style="font-size: 1.05rem;">
-                        Automotive-grade replacement parts, precision sine-wave controllers, intelligent Bluetooth BMS, and high-safety LFP &amp; Graphene battery packs. Available for immediate pan-India dispatch.
+                    <p class="ev-hero-desc">
+                        Explore automotive-grade replacement components, precision sine-wave controllers, intelligent Bluetooth BMS boards, and certified high-density LFP &amp; Graphene battery packs. Immediate pan-India dispatch with verified warranty protection.
                     </p>
-                    <div class="d-flex flex-wrap gap-3">
-                        <a href="/ecom?segment=ev-spares" class="btn btn-primary btn-lg fw-bold px-4 py-2" style="background:#7c3aed; border-color:#7c3aed;">
-                            <i class="fas fa-shopping-cart me-2"></i> <span id="heroBuyBtn">Shop on EV Spares Marketplace</span>
-                        </a>
-                        <a href="#pricing_breakdown" class="btn btn-outline-light btn-lg fw-bold px-4 py-2">
-                            <i class="fas fa-table me-2"></i> <span id="heroCompareBtn">Wholesale vs Retail Pricing</span>
+
+                    <!-- DIRECT PRIMARY ACTION: /ECOM PAGE LINK -->
+                    <div class="mb-3">
+                        <a href="/ecom?segment=ev-spares" class="btn btn-lg fw-bold d-inline-flex align-items-center gap-2 shadow" style="background: var(--ev-green); color: #0F172A; border: none; font-size: 1.05rem; padding: 0.7rem 1.6rem; border-radius: 10px;">
+                            <i class="fas fa-shopping-cart"></i> View &amp; Purchase All Spares on E-Com (/ecom) &rarr;
                         </a>
                     </div>
+                    
+                    <!-- Search Input -->
+                    <div class="search-control-wrap mb-3 max-w-600">
+                        <i class="fas fa-search text-muted"></i>
+                        <input type="text" class="search-control-input" id="partSearchInput" placeholder="Search by Part Name, SKU, Voltage (48V, 60V, 72V) or Model..." oninput="handleSearch(this.value)">
+                        <button class="btn btn-sm btn-dark text-white fw-bold px-3 py-1" onclick="clearSearch()" id="clearSearchBtn" style="display: none;">Clear</button>
+                    </div>
+
+                    <!-- Voltage Quick Filter Toggles -->
+                    <div class="d-flex flex-wrap align-items-center gap-2 pt-1">
+                        <span class="small fw-bold text-white text-uppercase me-1"><i class="fas fa-bolt text-warning me-1"></i> System Voltage:</span>
+                        <button class="voltage-pill-btn active" onclick="filterVoltage('ALL', this)">ALL</button>
+                        <button class="voltage-pill-btn" onclick="filterVoltage('48V', this)">48V</button>
+                        <button class="voltage-pill-btn" onclick="filterVoltage('60V', this)">60V</button>
+                        <button class="voltage-pill-btn" onclick="filterVoltage('72V', this)">72V</button>
+                        <button class="voltage-pill-btn" onclick="filterVoltage('UNIVERSAL', this)">Universal</button>
+                    </div>
                 </div>
-                <div class="col-lg-5">
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <div class="trust-stat-card">
-                                <i class="fas fa-boxes-stacked text-warning fs-3 mb-1"></i>
-                                <h3 class="fw-bold mb-0 text-white font-mono">1,500+</h3>
-                                <div class="text-white-50 small" id="statSkus">SKUs in Live Stock</div>
+
+                <div class="col-lg-5 text-center">
+                    <div class="position-relative d-inline-block p-4 rounded-4" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(10px);">
+                        <img src="/public/marketplace/cat-img/battery.png" alt="EV Smart Battery Pack" style="max-height: 220px; filter: drop-shadow(0 15px 30px rgba(0,0,0,0.5));" onerror="this.src='/public/hub/Assets/Battery.png'">
+                        <div class="mt-3 text-light small fw-semibold">
+                            <i class="fas fa-check-circle text-success me-1"></i> Automotive OEM Replacement &amp; Thermal Protection Standard
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 4. CATEGORY TABS ── -->
+    <section class="py-3 border-bottom" style="background: var(--bg-card);">
+        <div class="container-xl">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2 overflow-x-auto pb-1" style="scrollbar-width: none;" id="categoryFilterBar">
+                    <button class="category-tab-btn active" onclick="filterCategory('ALL', this)">All Components (<span id="totalCountBadge">11</span>)</button>
+                    <button class="category-tab-btn" onclick="filterCategory('BATTERY', this)">Smart Batteries &amp; BMS</button>
+                    <button class="category-tab-btn" onclick="filterCategory('CHARGER', this)">Fast &amp; Slow Chargers</button>
+                    <button class="category-tab-btn" onclick="filterCategory('CONTROLLER', this)">BLDC Controllers</button>
+                    <button class="category-tab-btn" onclick="filterCategory('MECHANICAL', this)">Brakes &amp; Harnesses</button>
+                </div>
+                <div>
+                    <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-success fw-bold d-inline-flex align-items-center gap-1">
+                        <i class="fas fa-store"></i> Open E-Com Store (/ecom) &rarr;
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 5. DYNAMIC TECHNICAL PRODUCT GRID ── -->
+    <section class="py-5" id="parts_grid_section">
+        <div class="container-xl">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+                <div>
+                    <h2 class="h3 fw-bold m-0">Verified Components Catalogue</h2>
+                    <p class="text-muted small m-0">Genuine OEM specifications, itemized statutory GST, wholesale costs, and direct purchase on /ecom.</p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <a href="/ecom?segment=ev-spares" class="btn btn-success fw-bold text-white shadow-sm d-inline-flex align-items-center gap-2">
+                        <i class="fas fa-shopping-cart"></i> View All Spares on /ecom
+                    </a>
+                    <a href="#commercial_table_section" class="btn btn-outline-secondary btn-sm fw-bold">
+                        <i class="fas fa-table me-1"></i> Pricing Table
+                    </a>
+                </div>
+            </div>
+
+            <!-- Product Cards Grid -->
+            <div class="row g-4" id="partsGridContainer">
+
+                <!-- Product Card: Graphene 48V 32Ah High-Density Module -->
+                <div class="col-md-6 col-lg-4 part-item" data-voltage="48V" data-category="BATTERY" data-name="graphene 48v 32ah high-density module gr-48v-32ah">
+                    <div class="ev-part-card">
+                        <div class="part-img-stage">
+                            <span class="card-badge-top bg-success">Lead-Carbon</span>
+                            <span class="card-warranty-badge"><i class="fas fa-shield-alt me-1"></i>9 Months</span>
+                            <img src="/public/marketplace/cat-img/battery.png" alt="Graphene 48V 32Ah High-Density Module">
+                        </div>
+                        <div class="part-card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="part-sku-text">SKU: GR-48V-32AH</span>
+                                <span class="badge bg-success-subtle text-success small"><i class="fas fa-check-circle me-1"></i>In Stock</span>
+                            </div>
+                            <h3 class="part-name-title">Graphene 48V 32Ah High-Density Module</h3>
+                            <p class="part-desc-text">Deep cycle lead-carbon series module engineered for high torque low-speed electric 2-wheelers.</p>
+                            
+                            <!-- DIRECT VISIBLE QUICK SPECS GRID -->
+                            <div class="quick-specs-grid mb-3">
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Voltage</span>
+                                    <span class="q-val font-mono">48V</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Capacity / Spec</span>
+                                    <span class="q-val font-mono">32Ah</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Statutory GST</span>
+                                    <span class="q-val fw-bold text-primary">18% GST</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Warranty</span>
+                                    <span class="q-val">9 Months</span>
+                                </div>
+                            </div>
+
+                            <!-- Expandable Technical Details -->
+                            <button class="specs-disclosure-btn" onclick="toggleSpecs(this)">
+                                <i class="fas fa-sliders me-1"></i> <span>View Pinout &amp; Configuration</span>
+                            </button>
+                            <div class="specs-drawer">
+                                <div class="spec-row"><span>Configuration</span><strong>4 x 12V 32Ah Series</strong></div>
+                                <div class="spec-row"><span>Product SKU</span><strong class="font-mono">GR-48V-32AH</strong></div>
+                                <div class="spec-row"><span>Invoicing</span><strong>Official GST Invoiced</strong></div>
+                                <div class="spec-row"><span>Dispatch SLA</span><strong>Same-Day AP / 24h Pan-India</strong></div>
+                            </div>
+
+                            <!-- DIRECT VISIBLE PRICING BREAKDOWN BOX -->
+                            <div class="price-section">
+                                <div class="pricing-breakdown-card p-2 mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Ex-Tax Base: <strong class="font-mono text-dark">₹10,169.49</strong></span>
+                                        <span>Tax: <strong class="font-mono text-dark">₹1,830.51 (18%)</strong></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <div>
+                                            <span class="small text-muted fw-bold">Wholesale:</span>
+                                            <span class="wholesale-price ms-1">₹12,000</span>
+                                            <span class="mrp-strike font-mono">₹14,100</span>
+                                        </div>
+                                        <span class="badge bg-success text-white small">Save ₹2,100 (15.0%)</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="/ecom?segment=ev-spares&search=Graphene" class="btn-ev-ecom flex-grow-1" title="Purchase directly on E-Commerce Store">
+                                        <i class="fas fa-shopping-cart"></i> Buy on /ecom
+                                    </a>
+                                    <button class="btn-ev-enquire flex-grow-1" onclick="quickEnquire('Graphene 48V 32Ah High-Density Module', 'GR-48V-32AH', 12000)">
+                                        <i class="fab fa-whatsapp"></i> RFQ
+                                    </button>
+                                    <button class="btn-ev-rfq-add" onclick="toggleAddToRfq('Graphene 48V 32Ah High-Density Module', 'GR-48V-32AH', 12000, this)" title="Add to Multi-Part RFQ">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-6">
-                            <div class="trust-stat-card">
-                                <i class="fas fa-certificate text-success fs-3 mb-1"></i>
-                                <h3 class="fw-bold mb-0 text-white font-mono">AIS-156</h3>
-                                <div class="text-white-50 small" id="statSafety">Phase 2 Certified</div>
+                    </div>
+                </div>
+                <!-- Product Card: Graphene 60V 32Ah 5-Battery Series Module -->
+                <div class="col-md-6 col-lg-4 part-item" data-voltage="60V" data-category="BATTERY" data-name="graphene 60v 32ah 5-battery series module gr-60v-32ah">
+                    <div class="ev-part-card">
+                        <div class="part-img-stage">
+                            <span class="card-badge-top bg-success">5-Battery Series</span>
+                            <span class="card-warranty-badge"><i class="fas fa-shield-alt me-1"></i>9 Months</span>
+                            <img src="/public/marketplace/cat-img/battery.png" alt="Graphene 60V 32Ah 5-Battery Series Module">
+                        </div>
+                        <div class="part-card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="part-sku-text">SKU: GR-60V-32AH</span>
+                                <span class="badge bg-success-subtle text-success small"><i class="fas fa-check-circle me-1"></i>In Stock</span>
+                            </div>
+                            <h3 class="part-name-title">Graphene 60V 32Ah 5-Battery Series Module</h3>
+                            <p class="part-desc-text">5-battery series module delivering enhanced range and high surge current tolerance.</p>
+                            
+                            <!-- DIRECT VISIBLE QUICK SPECS GRID -->
+                            <div class="quick-specs-grid mb-3">
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Voltage</span>
+                                    <span class="q-val font-mono">60V</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Capacity / Spec</span>
+                                    <span class="q-val font-mono">32Ah</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Statutory GST</span>
+                                    <span class="q-val fw-bold text-primary">18% GST</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Warranty</span>
+                                    <span class="q-val">9 Months</span>
+                                </div>
+                            </div>
+
+                            <!-- Expandable Technical Details -->
+                            <button class="specs-disclosure-btn" onclick="toggleSpecs(this)">
+                                <i class="fas fa-sliders me-1"></i> <span>View Pinout &amp; Configuration</span>
+                            </button>
+                            <div class="specs-drawer">
+                                <div class="spec-row"><span>Configuration</span><strong>5 x 12V 32Ah Series</strong></div>
+                                <div class="spec-row"><span>Product SKU</span><strong class="font-mono">GR-60V-32AH</strong></div>
+                                <div class="spec-row"><span>Invoicing</span><strong>Official GST Invoiced</strong></div>
+                                <div class="spec-row"><span>Dispatch SLA</span><strong>Same-Day AP / 24h Pan-India</strong></div>
+                            </div>
+
+                            <!-- DIRECT VISIBLE PRICING BREAKDOWN BOX -->
+                            <div class="price-section">
+                                <div class="pricing-breakdown-card p-2 mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Ex-Tax Base: <strong class="font-mono text-dark">₹12,711.86</strong></span>
+                                        <span>Tax: <strong class="font-mono text-dark">₹2,288.14 (18%)</strong></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <div>
+                                            <span class="small text-muted fw-bold">Wholesale:</span>
+                                            <span class="wholesale-price ms-1">₹15,000</span>
+                                            <span class="mrp-strike font-mono">₹17,600</span>
+                                        </div>
+                                        <span class="badge bg-success text-white small">Save ₹2,600 (14.8%)</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="/ecom?segment=ev-spares&search=Graphene" class="btn-ev-ecom flex-grow-1" title="Purchase directly on E-Commerce Store">
+                                        <i class="fas fa-shopping-cart"></i> Buy on /ecom
+                                    </a>
+                                    <button class="btn-ev-enquire flex-grow-1" onclick="quickEnquire('Graphene 60V 32Ah 5-Battery Series Module', 'GR-60V-32AH', 15000)">
+                                        <i class="fab fa-whatsapp"></i> RFQ
+                                    </button>
+                                    <button class="btn-ev-rfq-add" onclick="toggleAddToRfq('Graphene 60V 32Ah 5-Battery Series Module', 'GR-60V-32AH', 15000, this)" title="Add to Multi-Part RFQ">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-6">
-                            <div class="trust-stat-card">
-                                <i class="fas fa-shield-halved text-info fs-3 mb-1"></i>
-                                <h3 class="fw-bold mb-0 text-white font-mono">2+1 Years</h3>
-                                <div class="text-white-50 small" id="statLfpWarranty">LFP Battery Warranty</div>
+                    </div>
+                </div>
+                <!-- Product Card: LFP Smart Battery Pack 48V 30Ah -->
+                <div class="col-md-6 col-lg-4 part-item" data-voltage="48V" data-category="BATTERY" data-name="lfp smart battery pack 48v 30ah lfp-48v-30ah">
+                    <div class="ev-part-card">
+                        <div class="part-img-stage">
+                            <span class="card-badge-top bg-primary">Prismatic LiFePO4</span>
+                            <span class="card-warranty-badge"><i class="fas fa-shield-alt me-1"></i>2 + 1 Years</span>
+                            <img src="/public/marketplace/cat-img/battery.png" alt="LFP Smart Battery Pack 48V 30Ah">
+                        </div>
+                        <div class="part-card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="part-sku-text">SKU: LFP-48V-30AH</span>
+                                <span class="badge bg-success-subtle text-success small"><i class="fas fa-check-circle me-1"></i>In Stock</span>
+                            </div>
+                            <h3 class="part-name-title">LFP Smart Battery Pack 48V 30Ah</h3>
+                            <p class="part-desc-text">Grade-A Prismatic LiFePO4 cells with integrated Smart Bluetooth BMS and temperature cutoffs.</p>
+                            
+                            <!-- DIRECT VISIBLE QUICK SPECS GRID -->
+                            <div class="quick-specs-grid mb-3">
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Voltage</span>
+                                    <span class="q-val font-mono">48V</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Capacity / Spec</span>
+                                    <span class="q-val font-mono">30Ah (1.44 kWh)</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Statutory GST</span>
+                                    <span class="q-val fw-bold text-primary">18% GST</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Warranty</span>
+                                    <span class="q-val">2 + 1 Years</span>
+                                </div>
+                            </div>
+
+                            <!-- Expandable Technical Details -->
+                            <button class="specs-disclosure-btn" onclick="toggleSpecs(this)">
+                                <i class="fas fa-sliders me-1"></i> <span>View Pinout &amp; Configuration</span>
+                            </button>
+                            <div class="specs-drawer">
+                                <div class="spec-row"><span>Configuration</span><strong>15S / 16S LiFePO4 Modular</strong></div>
+                                <div class="spec-row"><span>Product SKU</span><strong class="font-mono">LFP-48V-30AH</strong></div>
+                                <div class="spec-row"><span>Invoicing</span><strong>Official GST Invoiced</strong></div>
+                                <div class="spec-row"><span>Dispatch SLA</span><strong>Same-Day AP / 24h Pan-India</strong></div>
+                            </div>
+
+                            <!-- DIRECT VISIBLE PRICING BREAKDOWN BOX -->
+                            <div class="price-section">
+                                <div class="pricing-breakdown-card p-2 mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Ex-Tax Base: <strong class="font-mono text-dark">₹15,932.20</strong></span>
+                                        <span>Tax: <strong class="font-mono text-dark">₹2,867.80 (18%)</strong></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <div>
+                                            <span class="small text-muted fw-bold">Wholesale:</span>
+                                            <span class="wholesale-price ms-1">₹18,800</span>
+                                            <span class="mrp-strike font-mono">₹22,100</span>
+                                        </div>
+                                        <span class="badge bg-success text-white small">Save ₹3,300 (14.9%)</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="/ecom?segment=ev-spares&search=LFP+Battery" class="btn-ev-ecom flex-grow-1" title="Purchase directly on E-Commerce Store">
+                                        <i class="fas fa-shopping-cart"></i> Buy on /ecom
+                                    </a>
+                                    <button class="btn-ev-enquire flex-grow-1" onclick="quickEnquire('LFP Smart Battery Pack 48V 30Ah', 'LFP-48V-30AH', 18800)">
+                                        <i class="fab fa-whatsapp"></i> RFQ
+                                    </button>
+                                    <button class="btn-ev-rfq-add" onclick="toggleAddToRfq('LFP Smart Battery Pack 48V 30Ah', 'LFP-48V-30AH', 18800, this)" title="Add to Multi-Part RFQ">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-6">
-                            <div class="trust-stat-card">
-                                <i class="fas fa-clock text-danger fs-3 mb-1"></i>
-                                <h3 class="fw-bold mb-0 text-white font-mono">9 Months</h3>
-                                <div class="text-white-50 small" id="statGrapheneWarranty">Graphene &amp; Chargers</div>
+                    </div>
+                </div>
+                <!-- Product Card: LFP Swappable Battery Pack 60V 30Ah -->
+                <div class="col-md-6 col-lg-4 part-item" data-voltage="60V" data-category="BATTERY" data-name="lfp swappable battery pack 60v 30ah lfp-60v-30ah">
+                    <div class="ev-part-card">
+                        <div class="part-img-stage">
+                            <span class="card-badge-top bg-primary">2,500+ Cycles</span>
+                            <span class="card-warranty-badge"><i class="fas fa-shield-alt me-1"></i>2 + 1 Years</span>
+                            <img src="/public/marketplace/cat-img/battery.png" alt="LFP Swappable Battery Pack 60V 30Ah">
+                        </div>
+                        <div class="part-card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="part-sku-text">SKU: LFP-60V-30AH</span>
+                                <span class="badge bg-success-subtle text-success small"><i class="fas fa-check-circle me-1"></i>In Stock</span>
+                            </div>
+                            <h3 class="part-name-title">LFP Swappable Battery Pack 60V 30Ah</h3>
+                            <p class="part-desc-text">High-density swappable battery pack with active thermal balancing and CAN/RS485 telemetry.</p>
+                            
+                            <!-- DIRECT VISIBLE QUICK SPECS GRID -->
+                            <div class="quick-specs-grid mb-3">
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Voltage</span>
+                                    <span class="q-val font-mono">60V</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Capacity / Spec</span>
+                                    <span class="q-val font-mono">30Ah (1.8 kWh)</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Statutory GST</span>
+                                    <span class="q-val fw-bold text-primary">18% GST</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Warranty</span>
+                                    <span class="q-val">2 + 1 Years</span>
+                                </div>
+                            </div>
+
+                            <!-- Expandable Technical Details -->
+                            <button class="specs-disclosure-btn" onclick="toggleSpecs(this)">
+                                <i class="fas fa-sliders me-1"></i> <span>View Pinout &amp; Configuration</span>
+                            </button>
+                            <div class="specs-drawer">
+                                <div class="spec-row"><span>Configuration</span><strong>20S LiFePO4 Modular Pack</strong></div>
+                                <div class="spec-row"><span>Product SKU</span><strong class="font-mono">LFP-60V-30AH</strong></div>
+                                <div class="spec-row"><span>Invoicing</span><strong>Official GST Invoiced</strong></div>
+                                <div class="spec-row"><span>Dispatch SLA</span><strong>Same-Day AP / 24h Pan-India</strong></div>
+                            </div>
+
+                            <!-- DIRECT VISIBLE PRICING BREAKDOWN BOX -->
+                            <div class="price-section">
+                                <div class="pricing-breakdown-card p-2 mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Ex-Tax Base: <strong class="font-mono text-dark">₹23,728.81</strong></span>
+                                        <span>Tax: <strong class="font-mono text-dark">₹4,271.19 (18%)</strong></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <div>
+                                            <span class="small text-muted fw-bold">Wholesale:</span>
+                                            <span class="wholesale-price ms-1">₹28,000</span>
+                                            <span class="mrp-strike font-mono">₹32,900</span>
+                                        </div>
+                                        <span class="badge bg-success text-white small">Save ₹4,900 (14.9%)</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="/ecom?segment=ev-spares&search=LFP+Battery" class="btn-ev-ecom flex-grow-1" title="Purchase directly on E-Commerce Store">
+                                        <i class="fas fa-shopping-cart"></i> Buy on /ecom
+                                    </a>
+                                    <button class="btn-ev-enquire flex-grow-1" onclick="quickEnquire('LFP Swappable Battery Pack 60V 30Ah', 'LFP-60V-30AH', 28000)">
+                                        <i class="fab fa-whatsapp"></i> RFQ
+                                    </button>
+                                    <button class="btn-ev-rfq-add" onclick="toggleAddToRfq('LFP Swappable Battery Pack 60V 30Ah', 'LFP-60V-30AH', 28000, this)" title="Add to Multi-Part RFQ">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Product Card: Graphene Smart Fast Charger 48V (3A/4A) -->
+                <div class="col-md-6 col-lg-4 part-item" data-voltage="48V" data-category="CHARGER" data-name="graphene smart fast charger 48v (3a/4a) chg-48v-4a">
+                    <div class="ev-part-card">
+                        <div class="part-img-stage">
+                            <span class="card-badge-top bg-info text-dark">5% GST Concession</span>
+                            <span class="card-warranty-badge"><i class="fas fa-shield-alt me-1"></i>9 Months</span>
+                            <img src="/public/marketplace/cat-img/charger.png" alt="Graphene Smart Fast Charger 48V (3A/4A)">
+                        </div>
+                        <div class="part-card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="part-sku-text">SKU: CHG-48V-4A</span>
+                                <span class="badge bg-success-subtle text-success small"><i class="fas fa-check-circle me-1"></i>In Stock</span>
+                            </div>
+                            <h3 class="part-name-title">Graphene Smart Fast Charger 48V (3A/4A)</h3>
+                            <p class="part-desc-text">Tuned CC/CV charging profile with reverse polarity and over-voltage protection.</p>
+                            
+                            <!-- DIRECT VISIBLE QUICK SPECS GRID -->
+                            <div class="quick-specs-grid mb-3">
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Voltage</span>
+                                    <span class="q-val font-mono">48V</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Capacity / Spec</span>
+                                    <span class="q-val font-mono">3A / 4A Auto-Tuned</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Statutory GST</span>
+                                    <span class="q-val fw-bold text-primary">5% GST</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Warranty</span>
+                                    <span class="q-val">9 Months</span>
+                                </div>
+                            </div>
+
+                            <!-- Expandable Technical Details -->
+                            <button class="specs-disclosure-btn" onclick="toggleSpecs(this)">
+                                <i class="fas fa-sliders me-1"></i> <span>View Pinout &amp; Configuration</span>
+                            </button>
+                            <div class="specs-drawer">
+                                <div class="spec-row"><span>Configuration</span><strong>CC/CV 58.4V Peak</strong></div>
+                                <div class="spec-row"><span>Product SKU</span><strong class="font-mono">CHG-48V-4A</strong></div>
+                                <div class="spec-row"><span>Invoicing</span><strong>Official GST Invoiced</strong></div>
+                                <div class="spec-row"><span>Dispatch SLA</span><strong>Same-Day AP / 24h Pan-India</strong></div>
+                            </div>
+
+                            <!-- DIRECT VISIBLE PRICING BREAKDOWN BOX -->
+                            <div class="price-section">
+                                <div class="pricing-breakdown-card p-2 mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Ex-Tax Base: <strong class="font-mono text-dark">₹1,523.81</strong></span>
+                                        <span>Tax: <strong class="font-mono text-dark">₹76.19 (5%)</strong></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <div>
+                                            <span class="small text-muted fw-bold">Wholesale:</span>
+                                            <span class="wholesale-price ms-1">₹1,600</span>
+                                            <span class="mrp-strike font-mono">₹1,950</span>
+                                        </div>
+                                        <span class="badge bg-success text-white small">Save ₹350 (17.9%)</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="/ecom?segment=ev-spares&search=Charger" class="btn-ev-ecom flex-grow-1" title="Purchase directly on E-Commerce Store">
+                                        <i class="fas fa-shopping-cart"></i> Buy on /ecom
+                                    </a>
+                                    <button class="btn-ev-enquire flex-grow-1" onclick="quickEnquire('Graphene Smart Fast Charger 48V (3A/4A)', 'CHG-48V-4A', 1600)">
+                                        <i class="fab fa-whatsapp"></i> RFQ
+                                    </button>
+                                    <button class="btn-ev-rfq-add" onclick="toggleAddToRfq('Graphene Smart Fast Charger 48V (3A/4A)', 'CHG-48V-4A', 1600, this)" title="Add to Multi-Part RFQ">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Product Card: Graphene High-Power Fast Charger 60V (3A/4A) -->
+                <div class="col-md-6 col-lg-4 part-item" data-voltage="60V" data-category="CHARGER" data-name="graphene high-power fast charger 60v (3a/4a) chg-60v-4a">
+                    <div class="ev-part-card">
+                        <div class="part-img-stage">
+                            <span class="card-badge-top bg-info text-dark">5% GST Concession</span>
+                            <span class="card-warranty-badge"><i class="fas fa-shield-alt me-1"></i>9 Months</span>
+                            <img src="/public/marketplace/cat-img/charger.png" alt="Graphene High-Power Fast Charger 60V (3A/4A)">
+                        </div>
+                        <div class="part-card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="part-sku-text">SKU: CHG-60V-4A</span>
+                                <span class="badge bg-success-subtle text-success small"><i class="fas fa-check-circle me-1"></i>In Stock</span>
+                            </div>
+                            <h3 class="part-name-title">Graphene High-Power Fast Charger 60V (3A/4A)</h3>
+                            <p class="part-desc-text">Dual-stage forced air cooling for high efficiency charging of 5-battery lead-carbon sets.</p>
+                            
+                            <!-- DIRECT VISIBLE QUICK SPECS GRID -->
+                            <div class="quick-specs-grid mb-3">
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Voltage</span>
+                                    <span class="q-val font-mono">60V</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Capacity / Spec</span>
+                                    <span class="q-val font-mono">3A / 4A Output</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Statutory GST</span>
+                                    <span class="q-val fw-bold text-primary">5% GST</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Warranty</span>
+                                    <span class="q-val">9 Months</span>
+                                </div>
+                            </div>
+
+                            <!-- Expandable Technical Details -->
+                            <button class="specs-disclosure-btn" onclick="toggleSpecs(this)">
+                                <i class="fas fa-sliders me-1"></i> <span>View Pinout &amp; Configuration</span>
+                            </button>
+                            <div class="specs-drawer">
+                                <div class="spec-row"><span>Configuration</span><strong>CC/CV 73.0V Peak</strong></div>
+                                <div class="spec-row"><span>Product SKU</span><strong class="font-mono">CHG-60V-4A</strong></div>
+                                <div class="spec-row"><span>Invoicing</span><strong>Official GST Invoiced</strong></div>
+                                <div class="spec-row"><span>Dispatch SLA</span><strong>Same-Day AP / 24h Pan-India</strong></div>
+                            </div>
+
+                            <!-- DIRECT VISIBLE PRICING BREAKDOWN BOX -->
+                            <div class="price-section">
+                                <div class="pricing-breakdown-card p-2 mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Ex-Tax Base: <strong class="font-mono text-dark">₹1,714.29</strong></span>
+                                        <span>Tax: <strong class="font-mono text-dark">₹85.71 (5%)</strong></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <div>
+                                            <span class="small text-muted fw-bold">Wholesale:</span>
+                                            <span class="wholesale-price ms-1">₹1,800</span>
+                                            <span class="mrp-strike font-mono">₹2,200</span>
+                                        </div>
+                                        <span class="badge bg-success text-white small">Save ₹400 (18.2%)</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="/ecom?segment=ev-spares&search=Charger" class="btn-ev-ecom flex-grow-1" title="Purchase directly on E-Commerce Store">
+                                        <i class="fas fa-shopping-cart"></i> Buy on /ecom
+                                    </a>
+                                    <button class="btn-ev-enquire flex-grow-1" onclick="quickEnquire('Graphene High-Power Fast Charger 60V (3A/4A)', 'CHG-60V-4A', 1800)">
+                                        <i class="fab fa-whatsapp"></i> RFQ
+                                    </button>
+                                    <button class="btn-ev-rfq-add" onclick="toggleAddToRfq('Graphene High-Power Fast Charger 60V (3A/4A)', 'CHG-60V-4A', 1800, this)" title="Add to Multi-Part RFQ">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Product Card: LFP Intelligent Smart Fast Charger 48V (5A/6A) -->
+                <div class="col-md-6 col-lg-4 part-item" data-voltage="48V" data-category="CHARGER" data-name="lfp intelligent smart fast charger 48v (5a/6a) chg-lfp-48v-6a">
+                    <div class="ev-part-card">
+                        <div class="part-img-stage">
+                            <span class="card-badge-top bg-info text-dark">5% GST Concession</span>
+                            <span class="card-warranty-badge"><i class="fas fa-shield-alt me-1"></i>1 Year</span>
+                            <img src="/public/marketplace/cat-img/charger.png" alt="LFP Intelligent Smart Fast Charger 48V (5A/6A)">
+                        </div>
+                        <div class="part-card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="part-sku-text">SKU: CHG-LFP-48V-6A</span>
+                                <span class="badge bg-success-subtle text-success small"><i class="fas fa-check-circle me-1"></i>In Stock</span>
+                            </div>
+                            <h3 class="part-name-title">LFP Intelligent Smart Fast Charger 48V (5A/6A)</h3>
+                            <p class="part-desc-text">Microcontroller regulated charger designed specifically for LiFePO4 chemistry with auto cut-off.</p>
+                            
+                            <!-- DIRECT VISIBLE QUICK SPECS GRID -->
+                            <div class="quick-specs-grid mb-3">
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Voltage</span>
+                                    <span class="q-val font-mono">48V</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Capacity / Spec</span>
+                                    <span class="q-val font-mono">5A / 6A Output</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Statutory GST</span>
+                                    <span class="q-val fw-bold text-primary">5% GST</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Warranty</span>
+                                    <span class="q-val">1 Year</span>
+                                </div>
+                            </div>
+
+                            <!-- Expandable Technical Details -->
+                            <button class="specs-disclosure-btn" onclick="toggleSpecs(this)">
+                                <i class="fas fa-sliders me-1"></i> <span>View Pinout &amp; Configuration</span>
+                            </button>
+                            <div class="specs-drawer">
+                                <div class="spec-row"><span>Configuration</span><strong>58.4V Cutoff (16S)</strong></div>
+                                <div class="spec-row"><span>Product SKU</span><strong class="font-mono">CHG-LFP-48V-6A</strong></div>
+                                <div class="spec-row"><span>Invoicing</span><strong>Official GST Invoiced</strong></div>
+                                <div class="spec-row"><span>Dispatch SLA</span><strong>Same-Day AP / 24h Pan-India</strong></div>
+                            </div>
+
+                            <!-- DIRECT VISIBLE PRICING BREAKDOWN BOX -->
+                            <div class="price-section">
+                                <div class="pricing-breakdown-card p-2 mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Ex-Tax Base: <strong class="font-mono text-dark">₹2,285.71</strong></span>
+                                        <span>Tax: <strong class="font-mono text-dark">₹114.29 (5%)</strong></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <div>
+                                            <span class="small text-muted fw-bold">Wholesale:</span>
+                                            <span class="wholesale-price ms-1">₹2,400</span>
+                                            <span class="mrp-strike font-mono">₹2,900</span>
+                                        </div>
+                                        <span class="badge bg-success text-white small">Save ₹500 (17.2%)</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="/ecom?segment=ev-spares&search=Charger" class="btn-ev-ecom flex-grow-1" title="Purchase directly on E-Commerce Store">
+                                        <i class="fas fa-shopping-cart"></i> Buy on /ecom
+                                    </a>
+                                    <button class="btn-ev-enquire flex-grow-1" onclick="quickEnquire('LFP Intelligent Smart Fast Charger 48V (5A/6A)', 'CHG-LFP-48V-6A', 2400)">
+                                        <i class="fab fa-whatsapp"></i> RFQ
+                                    </button>
+                                    <button class="btn-ev-rfq-add" onclick="toggleAddToRfq('LFP Intelligent Smart Fast Charger 48V (5A/6A)', 'CHG-LFP-48V-6A', 2400, this)" title="Add to Multi-Part RFQ">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Product Card: High-Torque Sine-Wave Controller 48V/60V 45A -->
+                <div class="col-md-6 col-lg-4 part-item" data-voltage="48V" data-category="CONTROLLER" data-name="high-torque sine-wave controller 48v/60v 45a ctrl-sw-4860v-45a">
+                    <div class="ev-part-card">
+                        <div class="part-img-stage">
+                            <span class="card-badge-top bg-warning text-dark">Vector Control</span>
+                            <span class="card-warranty-badge"><i class="fas fa-shield-alt me-1"></i>1 Year</span>
+                            <img src="/public/marketplace/cat-img/controller.png" alt="High-Torque Sine-Wave Controller 48V/60V 45A">
+                        </div>
+                        <div class="part-card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="part-sku-text">SKU: CTRL-SW-4860V-45A</span>
+                                <span class="badge bg-success-subtle text-success small"><i class="fas fa-check-circle me-1"></i>In Stock</span>
+                            </div>
+                            <h3 class="part-name-title">High-Torque Sine-Wave Controller 48V/60V 45A</h3>
+                            <p class="part-desc-text">Silent vector control with dynamic regenerative braking, 3-speed switch, and anti-theft telemetry.</p>
+                            
+                            <!-- DIRECT VISIBLE QUICK SPECS GRID -->
+                            <div class="quick-specs-grid mb-3">
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Voltage</span>
+                                    <span class="q-val font-mono">48V</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Capacity / Spec</span>
+                                    <span class="q-val font-mono">45A Peak Current</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Statutory GST</span>
+                                    <span class="q-val fw-bold text-primary">18% GST</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Warranty</span>
+                                    <span class="q-val">1 Year</span>
+                                </div>
+                            </div>
+
+                            <!-- Expandable Technical Details -->
+                            <button class="specs-disclosure-btn" onclick="toggleSpecs(this)">
+                                <i class="fas fa-sliders me-1"></i> <span>View Pinout &amp; Configuration</span>
+                            </button>
+                            <div class="specs-drawer">
+                                <div class="spec-row"><span>Configuration</span><strong>12-MOSFET Vector FOC</strong></div>
+                                <div class="spec-row"><span>Product SKU</span><strong class="font-mono">CTRL-SW-4860V-45A</strong></div>
+                                <div class="spec-row"><span>Invoicing</span><strong>Official GST Invoiced</strong></div>
+                                <div class="spec-row"><span>Dispatch SLA</span><strong>Same-Day AP / 24h Pan-India</strong></div>
+                            </div>
+
+                            <!-- DIRECT VISIBLE PRICING BREAKDOWN BOX -->
+                            <div class="price-section">
+                                <div class="pricing-breakdown-card p-2 mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Ex-Tax Base: <strong class="font-mono text-dark">₹2,711.86</strong></span>
+                                        <span>Tax: <strong class="font-mono text-dark">₹488.14 (18%)</strong></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <div>
+                                            <span class="small text-muted fw-bold">Wholesale:</span>
+                                            <span class="wholesale-price ms-1">₹3,200</span>
+                                            <span class="mrp-strike font-mono">₹4,200</span>
+                                        </div>
+                                        <span class="badge bg-success text-white small">Save ₹1,000 (23.8%)</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="/ecom?segment=ev-spares&search=Controller" class="btn-ev-ecom flex-grow-1" title="Purchase directly on E-Commerce Store">
+                                        <i class="fas fa-shopping-cart"></i> Buy on /ecom
+                                    </a>
+                                    <button class="btn-ev-enquire flex-grow-1" onclick="quickEnquire('High-Torque Sine-Wave Controller 48V/60V 45A', 'CTRL-SW-4860V-45A', 3200)">
+                                        <i class="fab fa-whatsapp"></i> RFQ
+                                    </button>
+                                    <button class="btn-ev-rfq-add" onclick="toggleAddToRfq('High-Torque Sine-Wave Controller 48V/60V 45A', 'CTRL-SW-4860V-45A', 3200, this)" title="Add to Multi-Part RFQ">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Product Card: Smart Bluetooth BMS Board (48V / 60V / 72V) -->
+                <div class="col-md-6 col-lg-4 part-item" data-voltage="UNIVERSAL" data-category="BATTERY" data-name="smart bluetooth bms board (48v / 60v / 72v) bms-bt-smart">
+                    <div class="ev-part-card">
+                        <div class="part-img-stage">
+                            <span class="card-badge-top bg-primary">Bluetooth App</span>
+                            <span class="card-warranty-badge"><i class="fas fa-shield-alt me-1"></i>1 Year</span>
+                            <img src="/public/marketplace/cat-img/bms.png" alt="Smart Bluetooth BMS Board (48V / 60V / 72V)">
+                        </div>
+                        <div class="part-card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="part-sku-text">SKU: BMS-BT-SMART</span>
+                                <span class="badge bg-success-subtle text-success small"><i class="fas fa-check-circle me-1"></i>In Stock</span>
+                            </div>
+                            <h3 class="part-name-title">Smart Bluetooth BMS Board (48V / 60V / 72V)</h3>
+                            <p class="part-desc-text">Real-time mobile app telemetry, cell balancing, dual temperature probes, and short-circuit cutoff.</p>
+                            
+                            <!-- DIRECT VISIBLE QUICK SPECS GRID -->
+                            <div class="quick-specs-grid mb-3">
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Voltage</span>
+                                    <span class="q-val font-mono">UNIVERSAL</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Capacity / Spec</span>
+                                    <span class="q-val font-mono">60A Continuous</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Statutory GST</span>
+                                    <span class="q-val fw-bold text-primary">18% GST</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Warranty</span>
+                                    <span class="q-val">1 Year</span>
+                                </div>
+                            </div>
+
+                            <!-- Expandable Technical Details -->
+                            <button class="specs-disclosure-btn" onclick="toggleSpecs(this)">
+                                <i class="fas fa-sliders me-1"></i> <span>View Pinout &amp; Configuration</span>
+                            </button>
+                            <div class="specs-drawer">
+                                <div class="spec-row"><span>Configuration</span><strong>14S-20S LiFePO4 / NMC</strong></div>
+                                <div class="spec-row"><span>Product SKU</span><strong class="font-mono">BMS-BT-SMART</strong></div>
+                                <div class="spec-row"><span>Invoicing</span><strong>Official GST Invoiced</strong></div>
+                                <div class="spec-row"><span>Dispatch SLA</span><strong>Same-Day AP / 24h Pan-India</strong></div>
+                            </div>
+
+                            <!-- DIRECT VISIBLE PRICING BREAKDOWN BOX -->
+                            <div class="price-section">
+                                <div class="pricing-breakdown-card p-2 mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Ex-Tax Base: <strong class="font-mono text-dark">₹1,567.80</strong></span>
+                                        <span>Tax: <strong class="font-mono text-dark">₹282.20 (18%)</strong></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <div>
+                                            <span class="small text-muted fw-bold">Wholesale:</span>
+                                            <span class="wholesale-price ms-1">₹1,850</span>
+                                            <span class="mrp-strike font-mono">₹2,450</span>
+                                        </div>
+                                        <span class="badge bg-success text-white small">Save ₹600 (24.5%)</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="/ecom?segment=ev-spares&search=BMS" class="btn-ev-ecom flex-grow-1" title="Purchase directly on E-Commerce Store">
+                                        <i class="fas fa-shopping-cart"></i> Buy on /ecom
+                                    </a>
+                                    <button class="btn-ev-enquire flex-grow-1" onclick="quickEnquire('Smart Bluetooth BMS Board (48V / 60V / 72V)', 'BMS-BT-SMART', 1850)">
+                                        <i class="fab fa-whatsapp"></i> RFQ
+                                    </button>
+                                    <button class="btn-ev-rfq-add" onclick="toggleAddToRfq('Smart Bluetooth BMS Board (48V / 60V / 72V)', 'BMS-BT-SMART', 1850, this)" title="Add to Multi-Part RFQ">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Product Card: Heavy-Duty Multi-Core Copper Wire Harness -->
+                <div class="col-md-6 col-lg-4 part-item" data-voltage="UNIVERSAL" data-category="MECHANICAL" data-name="heavy-duty multi-core copper wire harness harn-hd-copper">
+                    <div class="ev-part-card">
+                        <div class="part-img-stage">
+                            <span class="card-badge-top bg-secondary">Waterproof IP67</span>
+                            <span class="card-warranty-badge"><i class="fas fa-shield-alt me-1"></i>6 Months</span>
+                            <img src="/public/marketplace/cat-img/cable.png" alt="Heavy-Duty Multi-Core Copper Wire Harness">
+                        </div>
+                        <div class="part-card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="part-sku-text">SKU: HARN-HD-COPPER</span>
+                                <span class="badge bg-success-subtle text-success small"><i class="fas fa-check-circle me-1"></i>In Stock</span>
+                            </div>
+                            <h3 class="part-name-title">Heavy-Duty Multi-Core Copper Wire Harness</h3>
+                            <p class="part-desc-text">Flame-retardant automotive cabling with sealed waterproof connectors and pre-crimped terminals.</p>
+                            
+                            <!-- DIRECT VISIBLE QUICK SPECS GRID -->
+                            <div class="quick-specs-grid mb-3">
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Voltage</span>
+                                    <span class="q-val font-mono">UNIVERSAL</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Capacity / Spec</span>
+                                    <span class="q-val font-mono">Automotive Grade</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Statutory GST</span>
+                                    <span class="q-val fw-bold text-primary">18% GST</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Warranty</span>
+                                    <span class="q-val">6 Months</span>
+                                </div>
+                            </div>
+
+                            <!-- Expandable Technical Details -->
+                            <button class="specs-disclosure-btn" onclick="toggleSpecs(this)">
+                                <i class="fas fa-sliders me-1"></i> <span>View Pinout &amp; Configuration</span>
+                            </button>
+                            <div class="specs-drawer">
+                                <div class="spec-row"><span>Configuration</span><strong>Full Chassis Loom</strong></div>
+                                <div class="spec-row"><span>Product SKU</span><strong class="font-mono">HARN-HD-COPPER</strong></div>
+                                <div class="spec-row"><span>Invoicing</span><strong>Official GST Invoiced</strong></div>
+                                <div class="spec-row"><span>Dispatch SLA</span><strong>Same-Day AP / 24h Pan-India</strong></div>
+                            </div>
+
+                            <!-- DIRECT VISIBLE PRICING BREAKDOWN BOX -->
+                            <div class="price-section">
+                                <div class="pricing-breakdown-card p-2 mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Ex-Tax Base: <strong class="font-mono text-dark">₹550.85</strong></span>
+                                        <span>Tax: <strong class="font-mono text-dark">₹99.15 (18%)</strong></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <div>
+                                            <span class="small text-muted fw-bold">Wholesale:</span>
+                                            <span class="wholesale-price ms-1">₹650</span>
+                                            <span class="mrp-strike font-mono">₹950</span>
+                                        </div>
+                                        <span class="badge bg-success text-white small">Save ₹300 (31.6%)</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="/ecom?segment=ev-spares&search=Wire" class="btn-ev-ecom flex-grow-1" title="Purchase directly on E-Commerce Store">
+                                        <i class="fas fa-shopping-cart"></i> Buy on /ecom
+                                    </a>
+                                    <button class="btn-ev-enquire flex-grow-1" onclick="quickEnquire('Heavy-Duty Multi-Core Copper Wire Harness', 'HARN-HD-COPPER', 650)">
+                                        <i class="fab fa-whatsapp"></i> RFQ
+                                    </button>
+                                    <button class="btn-ev-rfq-add" onclick="toggleAddToRfq('Heavy-Duty Multi-Core Copper Wire Harness', 'HARN-HD-COPPER', 650, this)" title="Add to Multi-Part RFQ">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Product Card: Hydraulic Front & Rear Disc Brake Kit -->
+                <div class="col-md-6 col-lg-4 part-item" data-voltage="UNIVERSAL" data-category="MECHANICAL" data-name="hydraulic front & rear disc brake kit brk-hyd-fr-kit">
+                    <div class="ev-part-card">
+                        <div class="part-img-stage">
+                            <span class="card-badge-top bg-secondary">Ceramic Friction</span>
+                            <span class="card-warranty-badge"><i class="fas fa-shield-alt me-1"></i>6 Months</span>
+                            <img src="/public/marketplace/cat-img/disc-pad.png" alt="Hydraulic Front & Rear Disc Brake Kit">
+                        </div>
+                        <div class="part-card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="part-sku-text">SKU: BRK-HYD-FR-KIT</span>
+                                <span class="badge bg-success-subtle text-success small"><i class="fas fa-check-circle me-1"></i>In Stock</span>
+                            </div>
+                            <h3 class="part-name-title">Hydraulic Front & Rear Disc Brake Kit</h3>
+                            <p class="part-desc-text">Dual piston calipers with ceramic friction pads and integrated electronic motor cut-off sensors.</p>
+                            
+                            <!-- DIRECT VISIBLE QUICK SPECS GRID -->
+                            <div class="quick-specs-grid mb-3">
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Voltage</span>
+                                    <span class="q-val font-mono">UNIVERSAL</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Capacity / Spec</span>
+                                    <span class="q-val font-mono">Dual Piston</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Statutory GST</span>
+                                    <span class="q-val fw-bold text-primary">18% GST</span>
+                                </div>
+                                <div class="q-spec-item">
+                                    <span class="q-lbl">Warranty</span>
+                                    <span class="q-val">6 Months</span>
+                                </div>
+                            </div>
+
+                            <!-- Expandable Technical Details -->
+                            <button class="specs-disclosure-btn" onclick="toggleSpecs(this)">
+                                <i class="fas fa-sliders me-1"></i> <span>View Pinout &amp; Configuration</span>
+                            </button>
+                            <div class="specs-drawer">
+                                <div class="spec-row"><span>Configuration</span><strong>180mm Stainless Discs</strong></div>
+                                <div class="spec-row"><span>Product SKU</span><strong class="font-mono">BRK-HYD-FR-KIT</strong></div>
+                                <div class="spec-row"><span>Invoicing</span><strong>Official GST Invoiced</strong></div>
+                                <div class="spec-row"><span>Dispatch SLA</span><strong>Same-Day AP / 24h Pan-India</strong></div>
+                            </div>
+
+                            <!-- DIRECT VISIBLE PRICING BREAKDOWN BOX -->
+                            <div class="price-section">
+                                <div class="pricing-breakdown-card p-2 mb-3">
+                                    <div class="d-flex justify-content-between small text-muted mb-1">
+                                        <span>Ex-Tax Base: <strong class="font-mono text-dark">₹1,525.42</strong></span>
+                                        <span>Tax: <strong class="font-mono text-dark">₹274.58 (18%)</strong></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-baseline">
+                                        <div>
+                                            <span class="small text-muted fw-bold">Wholesale:</span>
+                                            <span class="wholesale-price ms-1">₹1,800</span>
+                                            <span class="mrp-strike font-mono">₹2,400</span>
+                                        </div>
+                                        <span class="badge bg-success text-white small">Save ₹600 (25.0%)</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <a href="/ecom?segment=ev-spares&search=Disc" class="btn-ev-ecom flex-grow-1" title="Purchase directly on E-Commerce Store">
+                                        <i class="fas fa-shopping-cart"></i> Buy on /ecom
+                                    </a>
+                                    <button class="btn-ev-enquire flex-grow-1" onclick="quickEnquire('Hydraulic Front & Rear Disc Brake Kit', 'BRK-HYD-FR-KIT', 1800)">
+                                        <i class="fab fa-whatsapp"></i> RFQ
+                                    </button>
+                                    <button class="btn-ev-rfq-add" onclick="toggleAddToRfq('Hydraulic Front & Rear Disc Brake Kit', 'BRK-HYD-FR-KIT', 1800, this)" title="Add to Multi-Part RFQ">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -449,272 +1708,222 @@
         </div>
     </section>
 
-    <!-- ── 4. DYNAMIC DISCOUNT VERIFIER / CALCULATOR STRIP ── -->
-    <div class="container-xl mt-4">
-        <div class="catalog-card" style="border-left: 5px solid #7c3aed; background: var(--bg-card);">
-            <div class="row align-items-center g-3">
-                <div class="col-md-5">
-                    <h5 class="fw-bold mb-1" id="discCalcTitle">
-                        <i class="fas fa-id-card text-purple me-2" style="color: #7c3aed;"></i> Unlock Dynamic Tier Discounts
-                    </h5>
-                    <p class="text-muted small mb-0" id="discCalcDesc">
-                        Enter your Registered Phone, MNR ID, or Student/Partner Code to calculate custom net costs.
-                    </p>
-                </div>
-                <div class="col-md-4">
-                    <div class="input-group">
-                        <input type="text" id="promoCodeInput" class="form-control font-mono" placeholder="e.g. MNR-DEALER or VGK-MEMBER" style="text-transform:uppercase;">
-                        <button class="btn btn-dark fw-bold" onclick="applyPromoCode()" id="btnApplyPromo">Apply</button>
-                    </div>
-                    <div id="promoStatusMsg" class="small mt-1" style="display:none;"></div>
-                </div>
-                <div class="col-md-3 text-md-end">
-                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-6 fw-bold" id="activeDiscountBadge">
-                        Standard Customer Retail
-                    </span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ── 5. WHOLESALE HUB COST VS RETAIL CUSTOMER COST BREAKDOWN ── -->
-    <div class="container-xl mt-3" id="pricing_breakdown">
-        <div class="catalog-card">
+    <!-- ── 6. COMPLETE COMMERCIAL INTELLIGENCE & STATUTORY GST TABLE ── -->
+    <section class="py-5 border-top border-bottom" style="background: var(--bg-card);" id="commercial_table_section">
+        <div class="container-xl">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <div>
-                    <span class="section-header-badge bg-primary-subtle text-primary">COMMERCIAL INTELLIGENCE</span>
-                    <h3 class="fw-bold mb-1" id="breakdownHeading">Hub Wholesale vs Customer Retail Cost Breakdown</h3>
-                    <p class="text-muted small mb-0" id="breakdownSubheading">
-                        Clear itemization of Statutory GST (Batteries 18%, Chargers 5%, Spares 18%), Hub Wholesale Invoiced Cost, and Customer Retail Pricing.
+                    <span class="badge bg-primary text-white text-uppercase px-2 py-1 mb-1 font-mono">Commercial Transparency</span>
+                    <h3 class="h4 fw-bold m-0">Hub Wholesale vs Customer Retail Cost Breakdown</h3>
+                    <p class="text-muted small m-0">
+                        Itemized Statutory GST (Batteries 18%, Chargers 5%, Spares 18%), Hub Wholesale Invoiced Cost, and Customer Retail MRP.
                     </p>
                 </div>
-                <div>
-                    <a href="/ecom?segment=ev-spares" class="btn btn-outline-primary btn-sm fw-bold">
-                        <i class="fas fa-external-link-alt me-1"></i> <span id="tableShopBtn">Order on E-Com</span>
-                    </a>
-                </div>
+                <a href="/ecom?segment=ev-spares" class="btn btn-success fw-bold text-white d-inline-flex align-items-center gap-1">
+                    <i class="fas fa-shopping-cart"></i> Order on E-Com (/ecom) &rarr;
+                </a>
             </div>
 
-            <!-- Detailed Cost Breakdown Table -->
-            <div class="pricing-table-container">
-                <table class="pricing-table">
-                    <thead>
+            <div class="table-responsive rounded border shadow-sm">
+                <table class="table table-hover align-middle m-0">
+                    <thead class="table-dark">
                         <tr>
                             <th>Item &amp; Specification</th>
                             <th>Warranty</th>
                             <th>Statutory GST</th>
                             <th>Hub Wholesale (Ex-Tax)</th>
                             <th>Total Hub Cost (Incl. Tax)</th>
-                            <th>Customer Retail (Incl. Tax)</th>
-                            <th>Dealer Margin / Customer Saving</th>
-                            <th>Action</th>
+                            <th>Customer Retail (MRP)</th>
+                            <th>Dealer Margin</th>
+                            <th class="text-center">Purchase Action</th>
                         </tr>
                     </thead>
-                    <tbody id="sparesTableBody">
-                        <!-- Batteries -->
-                        <tr class="table-group-header" style="background: rgba(124, 58, 237, 0.08);">
-                            <td colspan="8" class="fw-bold text-uppercase py-2" style="color:#7c3aed; font-size:12px;">
-                                <i class="fas fa-car-battery me-1"></i> OEM Batteries (18% Statutory GST Applicable)
-                            </td>
-                        </tr>
+                    <tbody>
+
                         <tr>
                             <td>
-                                <strong>Graphene 48V 32Ah</strong><br>
-                                <span class="text-muted small">Deep Cycle High-Density Lead-Carbon</span>
+                                <strong>Graphene 48V 32Ah High-Density Module</strong><br>
+                                <span class="text-muted small">SKU: GR-48V-32AH &bull; 4 x 12V 32Ah Series</span>
                             </td>
-                            <td><span class="badge bg-warning-subtle text-dark border border-warning">9 Months</span></td>
-                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
+                            <td><span class="badge bg-light text-dark border">9 Months</span></td>
+                            <td><span class="badge bg-primary-subtle text-primary border">18% GST</span></td>
                             <td class="font-mono">₹10,169.49</td>
                             <td class="font-mono fw-bold text-success">₹12,000.00</td>
-                            <td class="font-mono fw-bold text-primary">₹14,100.00</td>
-                            <td><span class="badge bg-success text-white">₹2,100 (15.0% Margin)</span></td>
-                            <td>
-                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
-                                    <i class="fas fa-cart-plus"></i> Buy
+                            <td class="font-mono fw-bold text-dark">₹14,100.00</td>
+                            <td><span class="badge bg-success text-white">Save ₹2,100 (15.0%)</span></td>
+                            <td class="text-center">
+                                <a href="/ecom?segment=ev-spares&search=Graphene" class="btn btn-sm btn-outline-success py-1 px-2 fw-bold text-decoration-none">
+                                    <i class="fas fa-cart-plus me-1"></i> Buy
                                 </a>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <strong>Graphene 60V 32Ah</strong><br>
-                                <span class="text-muted small">5-Battery Series Module for 2W High Torque</span>
+                                <strong>Graphene 60V 32Ah 5-Battery Series Module</strong><br>
+                                <span class="text-muted small">SKU: GR-60V-32AH &bull; 5 x 12V 32Ah Series</span>
                             </td>
-                            <td><span class="badge bg-warning-subtle text-dark border border-warning">9 Months</span></td>
-                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
+                            <td><span class="badge bg-light text-dark border">9 Months</span></td>
+                            <td><span class="badge bg-primary-subtle text-primary border">18% GST</span></td>
                             <td class="font-mono">₹12,711.86</td>
                             <td class="font-mono fw-bold text-success">₹15,000.00</td>
-                            <td class="font-mono fw-bold text-primary">₹17,600.00</td>
-                            <td><span class="badge bg-success text-white">₹2,600 (14.8% Margin)</span></td>
-                            <td>
-                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
-                                    <i class="fas fa-cart-plus"></i> Buy
+                            <td class="font-mono fw-bold text-dark">₹17,600.00</td>
+                            <td><span class="badge bg-success text-white">Save ₹2,600 (14.8%)</span></td>
+                            <td class="text-center">
+                                <a href="/ecom?segment=ev-spares&search=Graphene" class="btn btn-sm btn-outline-success py-1 px-2 fw-bold text-decoration-none">
+                                    <i class="fas fa-cart-plus me-1"></i> Buy
                                 </a>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <strong>LFP Smart Battery 48V 30Ah</strong><br>
-                                <span class="text-muted small">AIS-156 Phase 2 LiFePO4 with Smart BMS</span>
+                                <strong>LFP Smart Battery Pack 48V 30Ah</strong><br>
+                                <span class="text-muted small">SKU: LFP-48V-30AH &bull; 15S / 16S LiFePO4 Modular</span>
                             </td>
-                            <td><span class="badge bg-info-subtle text-dark border border-info">2 + 1 Years</span></td>
-                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
+                            <td><span class="badge bg-light text-dark border">2 + 1 Years</span></td>
+                            <td><span class="badge bg-primary-subtle text-primary border">18% GST</span></td>
                             <td class="font-mono">₹15,932.20</td>
                             <td class="font-mono fw-bold text-success">₹18,800.00</td>
-                            <td class="font-mono fw-bold text-primary">₹22,100.00</td>
-                            <td><span class="badge bg-success text-white">₹3,300 (14.9% Margin)</span></td>
-                            <td>
-                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
-                                    <i class="fas fa-cart-plus"></i> Buy
+                            <td class="font-mono fw-bold text-dark">₹22,100.00</td>
+                            <td><span class="badge bg-success text-white">Save ₹3,300 (14.9%)</span></td>
+                            <td class="text-center">
+                                <a href="/ecom?segment=ev-spares&search=LFP+Battery" class="btn btn-sm btn-outline-success py-1 px-2 fw-bold text-decoration-none">
+                                    <i class="fas fa-cart-plus me-1"></i> Buy
                                 </a>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <strong>LFP Smart Battery 60V 30Ah</strong><br>
-                                <span class="text-muted small">2,500+ Cycle Life, Swappable Architecture</span>
+                                <strong>LFP Swappable Battery Pack 60V 30Ah</strong><br>
+                                <span class="text-muted small">SKU: LFP-60V-30AH &bull; 20S LiFePO4 Modular Pack</span>
                             </td>
-                            <td><span class="badge bg-info-subtle text-dark border border-info">2 + 1 Years</span></td>
-                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
+                            <td><span class="badge bg-light text-dark border">2 + 1 Years</span></td>
+                            <td><span class="badge bg-primary-subtle text-primary border">18% GST</span></td>
                             <td class="font-mono">₹23,728.81</td>
                             <td class="font-mono fw-bold text-success">₹28,000.00</td>
-                            <td class="font-mono fw-bold text-primary">₹32,900.00</td>
-                            <td><span class="badge bg-success text-white">₹4,900 (14.9% Margin)</span></td>
-                            <td>
-                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
-                                    <i class="fas fa-cart-plus"></i> Buy
-                                </a>
-                            </td>
-                        </tr>
-
-                        <!-- Chargers -->
-                        <tr class="table-group-header" style="background: rgba(14, 165, 233, 0.08);">
-                            <td colspan="8" class="fw-bold text-uppercase py-2" style="color:#0284c7; font-size:12px;">
-                                <i class="fas fa-charging-station me-1"></i> Fast Chargers (5% Statutory GST Applicable)
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <strong>Graphene Charger 48V (3A/4A)</strong><br>
-                                <span class="text-muted small">Auto-Cutoff Constant Current Tuned Charger</span>
-                            </td>
-                            <td><span class="badge bg-warning-subtle text-dark border border-warning">9 Months</span></td>
-                            <td><span class="badge bg-light text-dark border">5% GST</span></td>
-                            <td class="font-mono">₹1,428.57</td>
-                            <td class="font-mono fw-bold text-success">₹1,500.00</td>
-                            <td class="font-mono fw-bold text-primary">₹1,575.00</td>
-                            <td><span class="badge bg-success text-white">₹75 (5.0% Margin)</span></td>
-                            <td>
-                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
-                                    <i class="fas fa-cart-plus"></i> Buy
+                            <td class="font-mono fw-bold text-dark">₹32,900.00</td>
+                            <td><span class="badge bg-success text-white">Save ₹4,900 (14.9%)</span></td>
+                            <td class="text-center">
+                                <a href="/ecom?segment=ev-spares&search=LFP+Battery" class="btn btn-sm btn-outline-success py-1 px-2 fw-bold text-decoration-none">
+                                    <i class="fas fa-cart-plus me-1"></i> Buy
                                 </a>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <strong>LFP Smart Fast Charger 60V 6A</strong><br>
-                                <span class="text-muted small">Aluminium Casing with Thermal Fan Control</span>
+                                <strong>Graphene Smart Fast Charger 48V (3A/4A)</strong><br>
+                                <span class="text-muted small">SKU: CHG-48V-4A &bull; CC/CV 58.4V Peak</span>
                             </td>
-                            <td><span class="badge bg-warning-subtle text-dark border border-warning">9 Months</span></td>
-                            <td><span class="badge bg-light text-dark border">5% GST</span></td>
-                            <td class="font-mono">₹2,666.67</td>
-                            <td class="font-mono fw-bold text-success">₹2,800.00</td>
-                            <td class="font-mono fw-bold text-primary">₹3,150.00</td>
-                            <td><span class="badge bg-success text-white">₹350 (11.1% Margin)</span></td>
-                            <td>
-                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
-                                    <i class="fas fa-cart-plus"></i> Buy
+                            <td><span class="badge bg-light text-dark border">9 Months</span></td>
+                            <td><span class="badge bg-primary-subtle text-primary border">5% GST</span></td>
+                            <td class="font-mono">₹1,523.81</td>
+                            <td class="font-mono fw-bold text-success">₹1,600.00</td>
+                            <td class="font-mono fw-bold text-dark">₹1,950.00</td>
+                            <td><span class="badge bg-success text-white">Save ₹350 (17.9%)</span></td>
+                            <td class="text-center">
+                                <a href="/ecom?segment=ev-spares&search=Charger" class="btn btn-sm btn-outline-success py-1 px-2 fw-bold text-decoration-none">
+                                    <i class="fas fa-cart-plus me-1"></i> Buy
                                 </a>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <strong>30 kW Dual-Gun CCS2 DC Fast Charger</strong><br>
-                                <span class="text-muted small">OCPP 1.6J RFID &amp; App Billing Commercial Unit</span>
+                                <strong>Graphene High-Power Fast Charger 60V (3A/4A)</strong><br>
+                                <span class="text-muted small">SKU: CHG-60V-4A &bull; CC/CV 73.0V Peak</span>
                             </td>
-                            <td><span class="badge bg-info-subtle text-dark border border-info">2 Years</span></td>
-                            <td><span class="badge bg-light text-dark border">5% GST</span></td>
-                            <td class="font-mono">₹3,28,571.43</td>
-                            <td class="font-mono fw-bold text-success">₹3,45,000.00</td>
-                            <td class="font-mono fw-bold text-primary">₹3,95,000.00</td>
-                            <td><span class="badge bg-success text-white">₹50,000 (12.7% Margin)</span></td>
-                            <td>
-                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
-                                    <i class="fas fa-cart-plus"></i> Buy
+                            <td><span class="badge bg-light text-dark border">9 Months</span></td>
+                            <td><span class="badge bg-primary-subtle text-primary border">5% GST</span></td>
+                            <td class="font-mono">₹1,714.29</td>
+                            <td class="font-mono fw-bold text-success">₹1,800.00</td>
+                            <td class="font-mono fw-bold text-dark">₹2,200.00</td>
+                            <td><span class="badge bg-success text-white">Save ₹400 (18.2%)</span></td>
+                            <td class="text-center">
+                                <a href="/ecom?segment=ev-spares&search=Charger" class="btn btn-sm btn-outline-success py-1 px-2 fw-bold text-decoration-none">
+                                    <i class="fas fa-cart-plus me-1"></i> Buy
                                 </a>
-                            </td>
-                        </tr>
-
-                        <!-- Key Components & Electronics -->
-                        <tr class="table-group-header" style="background: rgba(16, 185, 129, 0.08);">
-                            <td colspan="8" class="fw-bold text-uppercase py-2" style="color:#059669; font-size:12px;">
-                                <i class="fas fa-microchip me-1"></i> Controllers, BMS &amp; Spares (18% Statutory GST Applicable)
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <strong>Smart Bluetooth BMS Board (60V/72V)</strong><br>
-                                <span class="text-muted small">Active Cell Balancing &amp; Mobile App Telemetry</span>
+                                <strong>LFP Intelligent Smart Fast Charger 48V (5A/6A)</strong><br>
+                                <span class="text-muted small">SKU: CHG-LFP-48V-6A &bull; 58.4V Cutoff (16S)</span>
                             </td>
                             <td><span class="badge bg-light text-dark border">1 Year</span></td>
-                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
-                            <td class="font-mono">₹1,567.80</td>
-                            <td class="font-mono fw-bold text-success">₹1,850.00</td>
-                            <td class="font-mono fw-bold text-primary">₹2,450.00</td>
-                            <td><span class="badge bg-success text-white">₹600 (24.5% Margin)</span></td>
-                            <td>
-                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
-                                    <i class="fas fa-cart-plus"></i> Buy
+                            <td><span class="badge bg-primary-subtle text-primary border">5% GST</span></td>
+                            <td class="font-mono">₹2,285.71</td>
+                            <td class="font-mono fw-bold text-success">₹2,400.00</td>
+                            <td class="font-mono fw-bold text-dark">₹2,900.00</td>
+                            <td><span class="badge bg-success text-white">Save ₹500 (17.2%)</span></td>
+                            <td class="text-center">
+                                <a href="/ecom?segment=ev-spares&search=Charger" class="btn btn-sm btn-outline-success py-1 px-2 fw-bold text-decoration-none">
+                                    <i class="fas fa-cart-plus me-1"></i> Buy
                                 </a>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <strong>Sine Wave BLDC Controller (60V/72V 45A)</strong><br>
-                                <span class="text-muted small">Smooth Regenerative Braking &amp; High Torque</span>
+                                <strong>High-Torque Sine-Wave Controller 48V/60V 45A</strong><br>
+                                <span class="text-muted small">SKU: CTRL-SW-4860V-45A &bull; 12-MOSFET Vector FOC</span>
                             </td>
                             <td><span class="badge bg-light text-dark border">1 Year</span></td>
-                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
+                            <td><span class="badge bg-primary-subtle text-primary border">18% GST</span></td>
                             <td class="font-mono">₹2,711.86</td>
                             <td class="font-mono fw-bold text-success">₹3,200.00</td>
-                            <td class="font-mono fw-bold text-primary">₹4,200.00</td>
-                            <td><span class="badge bg-success text-white">₹1,000 (23.8% Margin)</span></td>
-                            <td>
-                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
-                                    <i class="fas fa-cart-plus"></i> Buy
+                            <td class="font-mono fw-bold text-dark">₹4,200.00</td>
+                            <td><span class="badge bg-success text-white">Save ₹1,000 (23.8%)</span></td>
+                            <td class="text-center">
+                                <a href="/ecom?segment=ev-spares&search=Controller" class="btn btn-sm btn-outline-success py-1 px-2 fw-bold text-decoration-none">
+                                    <i class="fas fa-cart-plus me-1"></i> Buy
                                 </a>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <strong>Heavy Duty Waterproof Wiring Harness (IP67)</strong><br>
-                                <span class="text-muted small">Automotive Standard Quick-Lock Connectors</span>
+                                <strong>Smart Bluetooth BMS Board (48V / 60V / 72V)</strong><br>
+                                <span class="text-muted small">SKU: BMS-BT-SMART &bull; 14S-20S LiFePO4 / NMC</span>
                             </td>
                             <td><span class="badge bg-light text-dark border">1 Year</span></td>
-                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
-                            <td class="font-mono">₹805.08</td>
-                            <td class="font-mono fw-bold text-success">₹950.00</td>
-                            <td class="font-mono fw-bold text-primary">₹1,350.00</td>
-                            <td><span class="badge bg-success text-white">₹400 (29.6% Margin)</span></td>
-                            <td>
-                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
-                                    <i class="fas fa-cart-plus"></i> Buy
+                            <td><span class="badge bg-primary-subtle text-primary border">18% GST</span></td>
+                            <td class="font-mono">₹1,567.80</td>
+                            <td class="font-mono fw-bold text-success">₹1,850.00</td>
+                            <td class="font-mono fw-bold text-dark">₹2,450.00</td>
+                            <td><span class="badge bg-success text-white">Save ₹600 (24.5%)</span></td>
+                            <td class="text-center">
+                                <a href="/ecom?segment=ev-spares&search=BMS" class="btn btn-sm btn-outline-success py-1 px-2 fw-bold text-decoration-none">
+                                    <i class="fas fa-cart-plus me-1"></i> Buy
                                 </a>
                             </td>
                         </tr>
                         <tr>
                             <td>
-                                <strong>Ventilated Front Disc Caliper &amp; Pads Assembly</strong><br>
-                                <span class="text-muted small">High Thermal Dissipation Ceramic Compound</span>
+                                <strong>Heavy-Duty Multi-Core Copper Wire Harness</strong><br>
+                                <span class="text-muted small">SKU: HARN-HD-COPPER &bull; Full Chassis Loom</span>
                             </td>
-                            <td><span class="badge bg-light text-dark border">1 Year</span></td>
-                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
-                            <td class="font-mono">₹1,016.95</td>
-                            <td class="font-mono fw-bold text-success">₹1,200.00</td>
-                            <td class="font-mono fw-bold text-primary">₹1,650.00</td>
-                            <td><span class="badge bg-success text-white">₹450 (27.2% Margin)</span></td>
+                            <td><span class="badge bg-light text-dark border">6 Months</span></td>
+                            <td><span class="badge bg-primary-subtle text-primary border">18% GST</span></td>
+                            <td class="font-mono">₹550.85</td>
+                            <td class="font-mono fw-bold text-success">₹650.00</td>
+                            <td class="font-mono fw-bold text-dark">₹950.00</td>
+                            <td><span class="badge bg-success text-white">Save ₹300 (31.6%)</span></td>
+                            <td class="text-center">
+                                <a href="/ecom?segment=ev-spares&search=Wire" class="btn btn-sm btn-outline-success py-1 px-2 fw-bold text-decoration-none">
+                                    <i class="fas fa-cart-plus me-1"></i> Buy
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
                             <td>
-                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
-                                    <i class="fas fa-cart-plus"></i> Buy
+                                <strong>Hydraulic Front & Rear Disc Brake Kit</strong><br>
+                                <span class="text-muted small">SKU: BRK-HYD-FR-KIT &bull; 180mm Stainless Discs</span>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">6 Months</span></td>
+                            <td><span class="badge bg-primary-subtle text-primary border">18% GST</span></td>
+                            <td class="font-mono">₹1,525.42</td>
+                            <td class="font-mono fw-bold text-success">₹1,800.00</td>
+                            <td class="font-mono fw-bold text-dark">₹2,400.00</td>
+                            <td><span class="badge bg-success text-white">Save ₹600 (25.0%)</span></td>
+                            <td class="text-center">
+                                <a href="/ecom?segment=ev-spares&search=Disc" class="btn btn-sm btn-outline-success py-1 px-2 fw-bold text-decoration-none">
+                                    <i class="fas fa-cart-plus me-1"></i> Buy
                                 </a>
                             </td>
                         </tr>
@@ -722,197 +1931,126 @@
                 </table>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- ── 6. FEATURED CATALOG PRODUCTS (DIRECT E-COM HOOKS) ── -->
-    <div class="container-xl mt-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <span class="section-header-badge bg-purple-subtle text-purple" style="background:#f3e8ff; color:#7c3aed;">CATALOG INVENTORY</span>
-                <h3 class="fw-bold mb-0" id="featuredHeading">Featured Spares &amp; Chargers</h3>
-            </div>
-            <a href="/ecom?segment=ev-spares" class="btn-ecom">
-                <i class="fas fa-store"></i> View All 1,500+ Items on E-Com
-            </a>
-        </div>
-
-        <div class="row g-4">
-            <!-- Product 1: 60V 30Ah LFP Battery -->
-            <div class="col-md-6 col-lg-3">
-                <div class="product-card">
-                    <div class="product-img-wrap">
-                        <span class="product-warranty-tag"><i class="fas fa-shield-alt me-1"></i>2+1 Yr Warranty</span>
-                        <img src="https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=600&q=80" alt="60V 30Ah LFP Battery">
-                    </div>
-                    <div class="p-3 d-flex flex-column flex-grow-1">
-                        <div class="badge bg-success-subtle text-success mb-2 align-self-start">AIS-156 Certified</div>
-                        <h6 class="fw-bold mb-1">60V 30Ah Smart LFP Battery Pack</h6>
-                        <p class="text-muted small mb-3">2,500+ cycles, Bluetooth telemetry &amp; active thermal balancing.</p>
-                        <div class="mt-auto pt-2 border-top">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted small">Hub Cost: <strong class="text-success font-mono">₹28,000</strong></span>
-                                <span class="text-primary fw-bold font-mono">₹32,900</span>
-                            </div>
-                            <a href="/ecom?segment=ev-spares" class="btn-ecom w-100">
-                                <i class="fas fa-cart-plus me-1"></i> Order on E-Com
-                            </a>
+    <!-- ── 7. BULK WORKSHOP RFQ & DIRECT LEAD SECTION ── -->
+    <section class="py-5" style="background: var(--bg-body);">
+        <div class="container-xl">
+            <div class="p-4 p-md-5 rounded-4 border shadow-sm" style="background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-alt) 100%); border-left: 6px solid var(--ev-green) !important;">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-7">
+                        <span class="badge bg-success-subtle text-success text-uppercase fw-bold px-2 py-1 mb-2">Authorised Workshop &amp; Fleet Service</span>
+                        <h3 class="h4 fw-bold mb-2">Need Bulk EV Spares, Battery Packs or Fleet Replacements?</h3>
+                        <p class="text-secondary mb-3">
+                            Our technical engineering desk at Pendurthi Hub coordinates bulk shipments, custom BMS firmware configurations, and priority shipping for fleets and dealerships across Andhra Pradesh &amp; Telangana.
+                        </p>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="badge bg-light text-dark border"><i class="fas fa-truck text-success me-1"></i> Same Day Coastal AP Dispatch</span>
+                            <span class="badge bg-light text-dark border"><i class="fas fa-file-invoice text-primary me-1"></i> 100% Tax Invoicing</span>
+                            <span class="badge bg-light text-dark border"><i class="fas fa-headset text-warning me-1"></i> Engineering Helpline: +91 858585 2738</span>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Product 2: 30kW Dual Gun DC Fast Charger -->
-            <div class="col-md-6 col-lg-3">
-                <div class="product-card">
-                    <div class="product-img-wrap">
-                        <span class="product-warranty-tag"><i class="fas fa-shield-alt me-1"></i>2 Yr Warranty</span>
-                        <img src="https://images.unsplash.com/photo-1558441719-8b449c6ff807?auto=format&fit=crop&w=600&q=80" alt="30kW Dual Gun DC Fast Charger">
-                    </div>
-                    <div class="p-3 d-flex flex-column flex-grow-1">
-                        <div class="badge bg-primary-subtle text-primary mb-2 align-self-start">Commercial Unit</div>
-                        <h6 class="fw-bold mb-1">30 kW Dual-Gun CCS2 DC Fast Charger</h6>
-                        <p class="text-muted small mb-3">OCPP 1.6J cloud connectivity, RFID cards, weather-resistant IP54.</p>
-                        <div class="mt-auto pt-2 border-top">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted small">Hub Cost: <strong class="text-success font-mono">₹3.45L</strong></span>
-                                <span class="text-primary fw-bold font-mono">₹3.95L</span>
-                            </div>
-                            <a href="/ecom?segment=ev-spares" class="btn-ecom w-100">
-                                <i class="fas fa-cart-plus me-1"></i> Order on E-Com
+                    <div class="col-lg-5 text-lg-end">
+                        <div class="d-flex flex-column flex-sm-row gap-2 justify-content-lg-end">
+                            <a href="/ecom?segment=ev-spares" class="btn btn-success btn-lg fw-bold d-inline-flex align-items-center justify-content-center gap-2 shadow">
+                                <i class="fas fa-shopping-cart"></i> Order on /ecom
                             </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Product 3: Smart Bluetooth BMS -->
-            <div class="col-md-6 col-lg-3">
-                <div class="product-card">
-                    <div class="product-img-wrap">
-                        <span class="product-warranty-tag"><i class="fas fa-shield-alt me-1"></i>1 Yr Warranty</span>
-                        <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80" alt="Smart Bluetooth BMS">
-                    </div>
-                    <div class="p-3 d-flex flex-column flex-grow-1">
-                        <div class="badge bg-info-subtle text-info mb-2 align-self-start">Intelligent Circuit</div>
-                        <h6 class="fw-bold mb-1">Smart Bluetooth BMS Board (60V/72V)</h6>
-                        <p class="text-muted small mb-3">Real-time mobile temperature &amp; individual cell voltage display.</p>
-                        <div class="mt-auto pt-2 border-top">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted small">Hub Cost: <strong class="text-success font-mono">₹1,850</strong></span>
-                                <span class="text-primary fw-bold font-mono">₹2,450</span>
-                            </div>
-                            <a href="/ecom?segment=ev-spares" class="btn-ecom w-100">
-                                <i class="fas fa-cart-plus me-1"></i> Order on E-Com
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Product 4: Sine Wave Motor Controller -->
-            <div class="col-md-6 col-lg-3">
-                <div class="product-card">
-                    <div class="product-img-wrap">
-                        <span class="product-warranty-tag"><i class="fas fa-shield-alt me-1"></i>1 Yr Warranty</span>
-                        <img src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80" alt="Motor Controller">
-                    </div>
-                    <div class="p-3 d-flex flex-column flex-grow-1">
-                        <div class="badge bg-warning-subtle text-dark mb-2 align-self-start">High Performance</div>
-                        <h6 class="fw-bold mb-1">Sine Wave BLDC Controller (60V/72V)</h6>
-                        <p class="text-muted small mb-3">45A high-torque, smooth regenerative throttle, low heat profile.</p>
-                        <div class="mt-auto pt-2 border-top">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted small">Hub Cost: <strong class="text-success font-mono">₹3,200</strong></span>
-                                <span class="text-primary fw-bold font-mono">₹4,200</span>
-                            </div>
-                            <a href="/ecom?segment=ev-spares" class="btn-ecom w-100">
-                                <i class="fas fa-cart-plus me-1"></i> Order on E-Com
+                            <a href="https://wa.me/918585852738?text=Hello%20MYNTREAL%20Parts%20Desk,%20I%20need%20bulk%20pricing%20for%20EV%20Spares" target="_blank" class="btn btn-dark btn-lg fw-bold d-inline-flex align-items-center justify-content-center gap-2">
+                                <i class="fab fa-whatsapp text-success"></i> WhatsApp Desk
                             </a>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- ── 7. DIRECT ORDER INQUIRY MODAL / LEAD FORM ── -->
-    <div class="container-xl mt-4">
-        <div class="catalog-card" style="background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-alt) 100%);">
-            <div class="row align-items-center">
-                <div class="col-lg-7">
-                    <h4 class="fw-bold mb-2">Need Bulk EV Spares, Battery Packs or Charging Stations?</h4>
-                    <p class="text-muted mb-3">
-                        Our technical engineering desk at Pendurthi Hub coordinates bulk orders, custom BMS firmware configurations, and priority shipping for fleets and dealerships across Andhra Pradesh &amp; Telangana.
-                    </p>
-                    <div class="d-flex flex-wrap gap-2">
-                        <span class="badge bg-light text-dark border"><i class="fas fa-truck text-primary me-1"></i> Same Day Dispatch</span>
-                        <span class="badge bg-light text-dark border"><i class="fas fa-file-invoice text-success me-1"></i> GST Invoicing</span>
-                        <span class="badge bg-light text-dark border"><i class="fas fa-headset text-purple me-1"></i> Technical Hotline: +91 858585 2738</span>
-                    </div>
+    <!-- ── 8. FOOTER WITH PLAIN-TEXT TERMS & CONDITIONS RULE ── -->
+    <footer class="py-4 border-top" style="background: var(--bg-card);">
+        <div class="container-xl">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 pb-3 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <img class="brand-logo-light" src="/public/hub/Assets/Myntreal.logo.png" alt="MYNTREAL Logo" style="height: 28px;" onerror="this.src='/public/hub/Assets/Mynt Logo.png'">
+                    <img class="brand-logo-dark" src="/public/hub/Assets/Myntreal.logo-white.png" alt="MYNTREAL Logo" style="height: 28px;" onerror="this.src='/public/hub/Assets/Mynt Logo.png'">
+                    <span class="fw-bold" style="color: var(--ev-green-dark);">EV Spares &amp; Chargers Division</span>
                 </div>
-                <div class="col-lg-5 text-lg-end mt-3 mt-lg-0">
-                    <a href="https://wa.me/918585852738?text=Hello%20MyntReal,%20I%20would%20like%20to%20order%20EV%20Spares%20and%20Batteries." target="_blank" class="btn btn-success btn-lg fw-bold px-4">
-                        <i class="fab fa-whatsapp me-2 fs-5"></i> Chat on WhatsApp
+                <div class="d-flex align-items-center gap-3">
+                    <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-success fw-bold text-decoration-none">
+                        <i class="fas fa-shopping-cart me-1"></i> Open /ecom Store
                     </a>
+                    <span class="text-muted small">Saripalli Hub Technical Desk: <strong class="text-primary">+91 858585 2738</strong></span>
                 </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 pt-3 small text-muted">
+                <div>
+                    &copy; 2026 MYNTREAL &amp; VGK4U Ecosystem. All rights reserved. Industrial EV Division.
+                </div>
+                <!-- STRICT PLAIN TEXT TERMS & CONDITIONS RULE -->
+                <div class="terms-plain-text m-0">
+                    * Terms &amp; Conditions Apply
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ── 9. MOBILE STICKY BOTTOM ACTION BAR WITH /ECOM & RFQ ── -->
+    <div class="mobile-sticky-action-bar">
+        <a href="/ecom?segment=ev-spares" class="btn btn-success flex-fill text-center py-2 fw-bold text-white text-decoration-none shadow-sm">
+            <i class="fas fa-shopping-cart me-1"></i> Buy on /ecom
+        </a>
+        <button class="btn btn-dark flex-fill text-center py-2 fw-bold text-white border border-secondary" onclick="openRfqDrawer()">
+            <i class="fab fa-whatsapp text-success me-1"></i> RFQ (<span class="rfq-count-badge">0</span>)
+        </button>
+    </div>
+
+    <!-- ── 10. STICKY MULTI-ITEM RFQ DRAWER TRIGGER ── -->
+    <div class="sticky-rfq-counter" id="stickyRfqCounter" onclick="openRfqDrawer()">
+        <i class="fab fa-whatsapp fs-4 text-success"></i>
+        <div>
+            <div class="fw-bold small">Multi-Item RFQ (<span class="rfq-count-badge">0</span>)</div>
+            <div class="text-muted" style="font-size: 0.72rem;" id="stickyRfqTotal">₹0 Total</div>
+        </div>
+        <i class="fas fa-chevron-right ms-2"></i>
+    </div>
+
+    <!-- ── 11. RFQ SLIDE-OVER DRAWER ── -->
+    <div class="rfq-drawer-overlay" id="rfqDrawerOverlay" onclick="closeRfqDrawer()"></div>
+    <div class="rfq-drawer" id="rfqDrawer">
+        <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-dark text-white">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fab fa-whatsapp text-success fs-5"></i>
+                <h5 class="m-0 fw-bold">Spares Quote Builder</h5>
+            </div>
+            <button class="btn-close btn-close-white" onclick="closeRfqDrawer()"></button>
+        </div>
+
+        <div class="p-3 flex-grow-1 overflow-y-auto" id="rfqItemListArea">
+            <p class="text-muted text-center py-5" id="emptyRfqMsg">No items added to RFQ yet. Browse cards and click '+' to assemble a multi-part order.</p>
+        </div>
+
+        <div class="p-3 border-top bg-light" id="rfqFooterArea" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="fw-bold text-secondary">Estimated Wholesale:</span>
+                <span class="fs-5 fw-bold text-success font-mono" id="rfqDrawerGrandTotal">₹0</span>
+            </div>
+            <div class="d-grid gap-2">
+                <button class="btn btn-success fw-bold py-2" onclick="dispatchRfqWhatsApp()">
+                    <i class="fab fa-whatsapp me-1"></i> Send WhatsApp RFQ
+                </button>
+                <a href="/ecom?segment=ev-spares" class="btn btn-outline-dark fw-bold py-2 text-decoration-none text-center">
+                    <i class="fas fa-store me-1"></i> Checkout on E-Com (/ecom)
+                </a>
             </div>
         </div>
     </div>
 
-    <!-- JavaScript for Theme & Multi-Language Switching -->
+    <!-- ── 12. LOGIC SCRIPT ── -->
     <script>
-        const TRANSLATIONS = {
-            en: {
-                promoBannerText: "<strong>Dynamic B2B & Partner Discounts Active:</strong> Save <strong>12% to 25% OFF</strong> Customer Retail with Promo / Partner ID!",
-                promoShopBtnText: "Open EV Spares E-Com",
-                heroTitle: "Genuine EV Spares, High-Power Chargers & Smart Batteries",
-                heroSubtitle: "Automotive-grade replacement parts, precision sine-wave controllers, intelligent Bluetooth BMS, and high-safety LFP & Graphene battery packs. Available for immediate pan-India dispatch.",
-                heroBuyBtn: "Shop on EV Spares Marketplace",
-                heroCompareBtn: "Wholesale vs Retail Pricing",
-                statSkus: "SKUs in Live Stock",
-                statSafety: "Phase 2 Certified",
-                statLfpWarranty: "LFP Battery Warranty",
-                statGrapheneWarranty: "Graphene & Chargers",
-                discCalcTitle: "Unlock Dynamic Tier Discounts",
-                discCalcDesc: "Enter your Registered Phone, MNR ID, or Student/Partner Code to calculate custom net costs.",
-                breakdownHeading: "Hub Wholesale vs Customer Retail Cost Breakdown",
-                breakdownSubheading: "Clear itemization of Statutory GST (Batteries 18%, Chargers 5%, Spares 18%), Hub Wholesale Invoiced Cost, and Customer Retail Pricing.",
-                tableShopBtn: "Order on E-Com",
-                featuredHeading: "Featured Spares & Chargers"
-            },
-            te: {
-                promoBannerText: "<strong>డైనమిక్ B2B & భాగస్వామ్య డిస్కౌంట్లు యాక్టివ్:</strong> ప్రోమో / పార్ట్‌నర్ ఐడీతో కస్టమర్ రిటైల్ ధరపై <strong>12% నుండి 25% వరకు తగ్గింపు</strong> పొందండి!",
-                promoShopBtnText: "ఈవీ స్పేర్స్ ఈ-కామ్ తెరవండి",
-                heroTitle: "జెన్యూయిన్ ఈవీ స్పేర్స్, హై-పవర్ ఛార్జర్లు & స్మార్ట్ బ్యాటరీలు",
-                heroSubtitle: "అత్యుత్తమ OEM-గ్రేడ్ స్పేర్ పార్ట్స్, ఖచ్చితమైన సైన్-వేవ్ కంట్రోలర్లు, స్మార్ట్ బ్లూటూత్ BMS మరియు అధిక భద్రత కలిగిన LFP & గ్రాఫీన్ బ్యాటరీ ప్యాక్స్. 24 గంటల్లో వేగవంతమైన డెలివరీ.",
-                heroBuyBtn: "స్పేర్స్ మార్కెట్‌ప్లేస్‌లో కొనుగోలు చేయండి",
-                heroCompareBtn: "హోల్‌సేల్ వర్సెస్ రిటైల్ ధరల పట్టిక",
-                statSkus: "స్టాక్‌లో అందుబాటులో ఉన్న స్పేర్స్",
-                statSafety: "AIS-156 ఫేజ్ 2 సర్టిఫైడ్",
-                statLfpWarranty: "LFP బ్యాటరీ వారంటీ",
-                statGrapheneWarranty: "గ్రాఫీన్ & ఛార్జర్లు",
-                discCalcTitle: "డైనమిక్ డిస్కౌంట్స్ పొందండి",
-                discCalcDesc: "మీ రిజిస్టర్డ్ ఫోన్ నంబర్, MNR ID లేదా పార్ట్‌నర్ కోడ్ ఎంటర్ చేసి ప్రత్యేక ధరలను పొందండి.",
-                breakdownHeading: "హబ్ హోల్‌సేల్ వర్సెస్ కస్టమర్ రిటైల్ ధరల విశ్లేషణ",
-                breakdownSubheading: "చట్టబద్ధమైన GST (బ్యాటరీలు 18%, ఛార్జర్లు 5%, స్పేర్స్ 18%), హబ్ హోల్‌సేల్ ఇన్వాయిస్ ధర మరియు కస్టమర్ రిటైల్ ధరల పూర్తి వివరాలు.",
-                tableShopBtn: "ఈ-కామ్‌లో ఆర్డర్ చేయండి",
-                featuredHeading: "ముఖ్యమైన స్పేర్స్ & ఛార్జర్లు"
-            }
-        };
-
-        let currentLang = 'en';
-
-        function switchLanguage(lang) {
-            currentLang = lang;
-            const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
-            for (let id in t) {
-                const el = document.getElementById(id);
-                if (el) el.innerHTML = t[id];
-            }
-            document.querySelectorAll('.lang-pill-btn').forEach(btn => {
-                btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
-            });
-        }
+        let selectedRfqItems = [];
+        let currentFilterCategory = 'ALL';
+        let currentFilterVoltage = 'ALL';
+        let currentSearchQuery = '';
 
         function toggleTheme() {
             const html = document.documentElement;
@@ -920,38 +2058,218 @@
             const next = isDark ? 'light' : 'dark';
             html.setAttribute('data-theme', next);
             const icon = document.getElementById('themeToggleIcon');
-            const txt = document.getElementById('themeToggleText');
-            if (icon) icon.className = next === 'dark' ? 'fas fa-sun text-warning' : 'fas fa-moon text-warning';
-            if (txt) txt.textContent = next === 'dark' ? 'Light Mode' : 'Dark Mode';
+            const label = document.getElementById('themeLabel');
+            if (next === 'dark') {
+                icon.className = 'fas fa-sun';
+                label.innerText = 'Light Mode';
+            } else {
+                icon.className = 'fas fa-moon';
+                label.innerText = 'Dark Mode';
+            }
         }
 
-        function applyPromoCode() {
-            const val = (document.getElementById('promoCodeInput').value || '').trim().toUpperCase();
-            const status = document.getElementById('promoStatusMsg');
-            const badge = document.getElementById('activeDiscountBadge');
-            if (!val) {
-                status.style.display = 'block';
-                status.className = 'small text-danger';
-                status.textContent = 'Please enter a valid Promo or ID code.';
+        function toggleSpecs(btn) {
+            const drawer = btn.nextElementSibling;
+            if (drawer.classList.contains('show')) {
+                drawer.classList.remove('show');
+                btn.querySelector('span').innerText = 'View Pinout & Configuration';
+            } else {
+                drawer.classList.add('show');
+                btn.querySelector('span').innerText = 'Hide Pinout & Configuration';
+            }
+        }
+
+        function filterCategory(cat, btn) {
+            currentFilterCategory = cat;
+            document.querySelectorAll('.category-tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            applyFilters();
+        }
+
+        function filterVoltage(v, btn) {
+            currentFilterVoltage = v;
+            document.querySelectorAll('.voltage-pill-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            applyFilters();
+        }
+
+        function handleSearch(q) {
+            currentSearchQuery = q.trim().toLowerCase();
+            const clearBtn = document.getElementById('clearSearchBtn');
+            clearBtn.style.display = currentSearchQuery ? 'inline-block' : 'none';
+            applyFilters();
+        }
+
+        function clearSearch() {
+            document.getElementById('partSearchInput').value = '';
+            currentSearchQuery = '';
+            document.getElementById('clearSearchBtn').style.display = 'none';
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const items = document.querySelectorAll('.part-item');
+            let visibleCount = 0;
+
+            items.forEach(card => {
+                const cat = card.getAttribute('data-category');
+                const v = card.getAttribute('data-voltage');
+                const name = card.getAttribute('data-name');
+
+                const matchesCat = (currentFilterCategory === 'ALL' || cat === currentFilterCategory);
+                const matchesVolt = (currentFilterVoltage === 'ALL' || v === currentFilterVoltage || v === 'UNIVERSAL' || (currentFilterVoltage !== 'UNIVERSAL' && v.includes(currentFilterVoltage)));
+                const matchesSearch = (!currentSearchQuery || name.includes(currentSearchQuery) || v.toLowerCase().includes(currentSearchQuery));
+
+                if (matchesCat && matchesVolt && matchesSearch) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            document.getElementById('totalCountBadge').innerText = visibleCount;
+        }
+
+        function toggleAddToRfq(name, sku, price, btn) {
+            const idx = selectedRfqItems.findIndex(i => i.sku === sku);
+            if (idx > -1) {
+                selectedRfqItems.splice(idx, 1);
+                btn.classList.remove('added');
+                btn.innerHTML = '<i class="fas fa-plus"></i>';
+            } else {
+                selectedRfqItems.push({ name, sku, price, qty: 1 });
+                btn.classList.add('added');
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+            }
+            updateRfqState();
+        }
+
+        function updateRfqState() {
+            const count = selectedRfqItems.length;
+            document.querySelectorAll('.rfq-count-badge').forEach(el => el.innerText = count);
+            
+            const sticky = document.getElementById('stickyRfqCounter');
+            if (count > 0) {
+                sticky.style.display = 'inline-flex';
+                const sum = selectedRfqItems.reduce((acc, i) => acc + (i.price * i.qty), 0);
+                document.getElementById('stickyRfqTotal').innerText = '₹' + sum.toLocaleString() + ' Total';
+            } else {
+                sticky.style.display = 'none';
+            }
+            renderRfqDrawerItems();
+        }
+
+        function openRfqDrawer() {
+            renderRfqDrawerItems();
+            document.getElementById('rfqDrawerOverlay').classList.add('active');
+            document.getElementById('rfqDrawer').classList.add('active');
+        }
+
+        function closeRfqDrawer() {
+            document.getElementById('rfqDrawerOverlay').classList.remove('active');
+            document.getElementById('rfqDrawer').classList.remove('active');
+        }
+
+        function renderRfqDrawerItems() {
+            const area = document.getElementById('rfqItemListArea');
+            const footer = document.getElementById('rfqFooterArea');
+            
+            if (selectedRfqItems.length === 0) {
+                area.innerHTML = '<p class="text-muted text-center py-5" id="emptyRfqMsg">No items added to RFQ yet. Browse cards and click "+" to assemble a multi-part order.</p>';
+                footer.style.display = 'none';
                 return;
             }
 
-            status.style.display = 'block';
-            if (val.includes('MNR') || val.includes('DEALER') || val.includes('HUB')) {
-                status.className = 'small text-success fw-bold';
-                status.textContent = '✓ Authorized Hub Dealer Code Verified: Unlocked 20% to 25% Wholesale Margin!';
-                badge.className = 'badge bg-success text-white px-3 py-2 fs-6 fw-bold';
-                badge.textContent = 'Hub Dealer Pricing Applied (-25%)';
-            } else if (val.includes('STUDENT') || val.includes('ETC')) {
-                status.className = 'small text-info fw-bold';
-                status.textContent = '✓ ETC Certified Student ID Verified: 10% Discount Applied!';
-                badge.className = 'badge bg-info text-dark px-3 py-2 fs-6 fw-bold';
-                badge.textContent = 'ETC Trainee Tier (-10%)';
-            } else {
-                status.className = 'small text-primary fw-bold';
-                status.textContent = '✓ Channel Partner Code Verified: 12% Discount Applied!';
-                badge.className = 'badge bg-primary text-white px-3 py-2 fs-6 fw-bold';
-                badge.textContent = 'Channel Partner Tier (-12%)';
+            footer.style.display = 'block';
+            let grandTotal = 0;
+            let html = '<div class="d-flex flex-column gap-2">';
+
+            selectedRfqItems.forEach((item, i) => {
+                const itemTotal = item.price * item.qty;
+                grandTotal += itemTotal;
+                html += `
+                    <div class="p-2 border rounded bg-light d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-bold small">${item.name}</div>
+                            <div class="font-mono text-muted" style="font-size: 0.72rem;">${item.sku} &bull; ₹${item.price.toLocaleString()}</div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="number" min="1" max="99" value="${item.qty}" class="form-control form-control-sm text-center font-mono" style="width: 55px;" onchange="updateItemQty(${i}, this.value)">
+                            <button class="btn btn-sm btn-outline-danger py-0 px-1" onclick="removeItemFromRfq(${i})">&times;</button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            area.innerHTML = html;
+            document.getElementById('rfqDrawerGrandTotal').innerText = '₹' + grandTotal.toLocaleString();
+        }
+
+        function updateItemQty(idx, val) {
+            const q = parseInt(val, 10);
+            if (q >= 1) {
+                selectedRfqItems[idx].qty = q;
+                updateRfqState();
+            }
+        }
+
+        function removeItemFromRfq(idx) {
+            const removed = selectedRfqItems.splice(idx, 1)[0];
+            document.querySelectorAll('.part-item').forEach(card => {
+                if (card.getAttribute('data-name').includes(removed.sku.toLowerCase())) {
+                    const btn = card.querySelector('.btn-ev-rfq-add');
+                    if (btn) {
+                        btn.classList.remove('added');
+                        btn.innerHTML = '<i class="fas fa-plus"></i>';
+                    }
+                }
+            });
+            updateRfqState();
+        }
+
+        function quickEnquire(name, sku, price) {
+            const text = encodeURIComponent(`Hello MYNTREAL Parts Desk, I require a quote for:
+• Component: ${name}
+• SKU: ${sku}
+• Wholesale Cost: ₹${price.toLocaleString()}
+Please confirm availability and dispatch SLA.`);
+            window.open(`https://wa.me/918585852738?text=${text}`, '_blank');
+        }
+
+        function dispatchRfqWhatsApp() {
+            if (selectedRfqItems.length === 0) return;
+            let msg = 'Hello MYNTREAL Technical Parts Desk, please provide a commercial quote for:\n\n';
+            let grandTotal = 0;
+            selectedRfqItems.forEach((i, idx) => {
+                const t = i.price * i.qty;
+                grandTotal += t;
+                msg += `${idx + 1}. ${i.name} (${i.sku}) x ${i.qty} = ₹${t.toLocaleString()}\n`;
+            });
+            msg += `\nTotal Estimated Wholesale: ₹${grandTotal.toLocaleString()}\nPlease share availability, official GST invoice, and freight charges.`;
+            window.open('https://wa.me/918585852738?text=' + encodeURIComponent(msg), '_blank');
+        }
+
+        const langDict = {
+            en: {
+                heroTitle: 'Genuine EV Spares, <span>High-Power Chargers</span> &amp; Smart Batteries',
+                heroDesc: 'Explore automotive-grade replacement components, precision sine-wave controllers, intelligent Bluetooth BMS boards, and certified high-density LFP &amp; Graphene battery packs. Immediate pan-India dispatch with verified warranty protection.'
+            },
+            te: {
+                heroTitle: 'అసలైన EV స్పేర్స్, <span>హై-పవర్ ఛార్జర్లు</span> &amp; స్మార్ట్ బ్యాటరీలు',
+                heroDesc: 'అధిక నాణ్యత కలిగిన ఎలక్ట్రిక్ వెహికల్ స్పేర్ పార్ట్స్, ధృవీకరించబడిన LFP &amp; గ్రాఫీన్ బ్యాటరీ ప్యాక్‌లు, కంట్రోలర్లు మరియు ఫాస్ట్ ఛార్జర్లు. తక్షణ డిస్పాచ్ మరియు వారంటీ సదుపాయం.'
+            }
+        };
+
+        function switchLanguage(lang) {
+            document.querySelectorAll('.lang-pill-btn').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-lang') === lang);
+            });
+            const hTitle = document.querySelector('.ev-hero-title');
+            const hDesc = document.querySelector('.ev-hero-desc');
+            if (langDict[lang]) {
+                hTitle.innerHTML = langDict[lang].heroTitle;
+                hDesc.innerHTML = langDict[lang].heroDesc;
             }
         }
     </script>
