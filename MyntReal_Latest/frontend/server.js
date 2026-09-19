@@ -30564,6 +30564,27 @@ async function processAction(id, action){
     res.end();
 
 
+  } else if (url.startsWith('/catalog/industrial-hub') || url.startsWith('/catalog/business-hub') || url.startsWith('/catalog/hub-franchise') || url === '/industrial-hub' || url === '/business-hub') {
+    // Dedicated MyntReal Business Hub / Industrial Hub Franchise Opportunity Digital Catalog Page
+    const hubPath = path.join(__dirname, 'industrial_hub_catalog.html');
+    fs.readFile(hubPath, 'utf8', (err, data) => {
+      if (err) {
+        const fallbackPath = path.join(__dirname, 'catalog_single_page.html');
+        fs.readFile(fallbackPath, 'utf8', (err2, data2) => {
+          if (err2) { res.writeHead(404); res.end('Hub catalog page not found'); return; }
+          res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate', 'X-Frame-Options': 'SAMEORIGIN' });
+          res.end(data2);
+        });
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
   } else if (url.startsWith('/catalog/solar') || url.startsWith('/catalog/hargharsolar') || url === '/solar' || url.startsWith('/solar?')) {
     // Dedicated MyntReal Solar Customer Digital Catalog Page
     const solarPath = path.join(__dirname, 'solar_pricing_catalog.html');
