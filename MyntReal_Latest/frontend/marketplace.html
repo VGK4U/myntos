@@ -1711,6 +1711,19 @@ async function loadCategories(){
     const cats=await r.json();
     if(!Array.isArray(cats)) throw new Error('Bad response');
     state.allCats=cats;
+
+    // Auto-select category if passed in URL query (e.g. ?category=spares or ?category=Spare+Part)
+    const urlCat = new URLSearchParams(location.search).get('category') || new URLSearchParams(location.search).get('cat');
+    if(urlCat && state.selectedCats.size === 0){
+      const match = cats.find(c => c.category_name.toLowerCase() === urlCat.toLowerCase() || 
+                                   (urlCat.toLowerCase().includes('spare') && c.category_name.toLowerCase().includes('spare')));
+      if(match){
+        state.selectedCats.add(match.category_name);
+        updateCatDdLabel();
+        renderActiveCatPills();
+      }
+    }
+
     renderCatCheckboxes(cats,'catList');
     renderCatCheckboxes(cats,'catListMobile');
   }catch(e){ console.error('[marketplace] loadCategories:',e); }

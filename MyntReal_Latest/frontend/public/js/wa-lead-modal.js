@@ -47,7 +47,6 @@
     '<select id="_lwaCatSel" onchange="window._lwaOnCatalogSelect(this.value)" style="flex:1;font-size:11.5px;font-weight:700;color:#166534;background:#fff;border:1.5px solid #86efac;border-radius:6px;padding:3px 6px;cursor:pointer;outline:none">',
     '<option value="solar">☀️ Solar Rooftop & EPC</option>',
     '<option value="industrial_hub">🏢 MyntReal Hub (5-in-1 Franchise)</option>',
-    '<option value="customer_ev_pricing">⚡ Customer 2W EV Pricing & Models</option>',
     '<option value="hub_pricing">🏷️ Hub Commercials & Pricing (24h)</option>',
     '<option value="ev_b2b">🚚 Commercial EV Fleet & Cargo (B2B)</option>',
     '<option value="ev_b2c">⚡ Smart Electric 2-Wheelers (B2C)</option>',
@@ -789,45 +788,54 @@
       messages: {
         te: function(cName, url) {
           return 'నమస్కారం ' + cName + ' గారు! 🙏\n\n' +
-            'MyntReal Real Dreams ప్రీమియం ప్రాపర్టీస్ డిజిటల్ క్యాటలాగ్ లింక్ ఇక్కడ చూడవచ్చు:\n' +
+            '🏡 *VGK Real Dreams — RERA & DTCP ఆమోదిత ప్రీమియం గేటెడ్ టౌన్‌షిప్స్*\n\n' +
+            'మీ కోసం అధికారిక రియల్ డ్రీమ్స్ డిజిటల్ క్యాటలాగ్ లింక్:\n' +
             '👉 ' + url + '\n\n' +
-            '🏡 ప్రాజెక్ట్ విశేషాలు:\n' +
-            '• RERA మరియు VMRDA/DTCP ఆమోదిత లేఅవుట్స్\n' +
-            '• గేటెడ్ కమ్యూనిటీ ఓపెన్ ప్లాట్స్, లగ్జరీ విల్లాస్ & కమర్షియల్ స్పేసెస్\n' +
-            '• సోలార్ స్ట్రీట్ లైటింగ్, భూగర్భ విద్యుత్ & 100% వాస్తు\n' +
-            '• వేగవంతమైన ల్యాండ్ అప్రిసియేషన్ & తక్షణ రిజిస్ట్రేషన్\n\n' +
-            'పై లింక్ ద్వారా లేఅవుట్ మ్యాప్స్, ధరలు మరియు సైట్ విజిట్ వివరాలు వీక్షించగలరు.';
+            '🌟 *ప్రాజెక్ట్ విశేషాలు & చట్టబద్ధత:*\n' +
+            '• 100% RERA & DTCP/VMRDA ఆమోదిత లేఅవుట్స్ & లగ్జరీ విల్లాస్\n' +
+            '• తక్షణ స్పాట్ రిజిస్ట్రేషన్ గ్యారెంటీ & 30 సం. క్లియర్ టైటిల్\n' +
+            '• SBI, HDFC, ICICI బ్యాంకుల ద్వారా 80% వరకు లోన్ సదుపాయం\n' +
+            '• 40+ ఆధునిక వసతులు: 40ft BT రోడ్లు, భూగర్భ విద్యుత్, సోలార్ లైట్లు, క్లబ్‌హౌస్\n' +
+            '• ప్లాట్ సైజులు: 167, 200, 267 & 500 చ.గ. (చ.గ. ₹18,500 నుండి)\n\n' +
+            '🔍 *ధృవీకరించబడిన స్టాఫ్ కాన్ఫిగరేషన్ పోర్టల్:*\n' +
+            '👉 http://localhost:5001/staff/configuration/catalog\n\n' +
+            '🛒 *రియల్ డ్రీమ్స్ ఈ-కామ్ మార్కెట్‌ప్లేస్‌లో ప్లాట్స్ చూడండి:*\n' +
+            '👉 http://localhost:5001/ecom?segment=real-dreams\n\n' +
+            'ఉచిత VIP సైట్ విజిట్ కోసం సంప్రదించండి.';
         },
         en: function(cName, url) {
           return 'Namaskaram ' + cName + '! 🙏\n\n' +
-            'Here is your official MyntReal Real Dreams Premium Properties Digital Catalog link:\n' +
+            '🏡 *VGK Real Dreams — Verified Gated Communities & Solar Townships*\n\n' +
+            'Here is your official Real Dreams Premium Properties Digital Catalog:\n' +
             '👉 ' + url + '\n\n' +
-            '🏡 Key Highlights:\n' +
-            '• RERA & DTCP/VMRDA Approved Premium Layouts\n' +
-            '• Gated Community Open Plots, Luxury Villas & Commercial Spaces\n' +
-            '• Solar-Powered Infrastructure & Underground Utilities\n' +
-            '• High Land Appreciation Potential & Clear Marketable Title\n\n' +
-            'Click the link above to explore master layouts, pricing & schedule a VIP site visit.';
+            '🌟 *Project Highlights & Legal Genuineness:*\n' +
+            '• 100% RERA & DTCP/VMRDA Approved Gated Villa Layouts\n' +
+            '• Immediate Spot Registration Guarantee with 30-year clear legal title\n' +
+            '• Bank Loan Approvals up to 80% from SBI, HDFC, and ICICI Bank\n' +
+            '• 40+ Lifestyle Amenities: 40ft/33ft BT roads, underground power, solar lighting\n' +
+            '• Plot Sizes: 167, 200, 267 & 500 Sq. Yards (from ₹18,500/yd)\n\n' +
+            '🔍 *Central Verified Property Configuration Portal:*\n' +
+            '👉 http://localhost:5001/staff/configuration/catalog\n\n' +
+            '🛒 *Browse Live Verified Listings on Real Dreams E-Com:*\n' +
+            '👉 http://localhost:5001/ecom?segment=real-dreams\n\n' +
+            'Complimentary chauffeur AC cab pickup available for site visits!';
         },
         hi: function(cName, url) {
           return 'नमस्ते ' + cName + ' जी! 🙏\n\n' +
-            'MyntReal Real Dreams प्रीमियम प्रॉपर्टीज डिजिटल कैटलॉग लिंक यहाँ देखें:\n' +
+            'VGK Real Dreams प्रीमियम प्रॉपर्टीज डिजिटल कैटलॉग लिंक:\n' +
             '👉 ' + url + '\n\n' +
-            '🏡 मुख्य विशेषताएं:\n' +
-            '• RERA और टाउनशिप अनुमोदित प्रीमियम प्लॉट्स एवं विला\n' +
-            '• गेटेड कम्युनिटी, सोलर इन्फ्रास्ट्रक्चर और आधुनिक सुविधाएं\n' +
-            '• उच्च पूंजी वृद्धि (Land Appreciation) एवं तत्काल रजिस्ट्री\n\n' +
-            'कृपया ऊपर दिए गए लिंक पर क्लिक करके लेआउट मैप्स और प्रोजेक्ट डिटेल्स देखें।';
+            '🏡 100% RERA & टाउनशिप अनुमोदित प्लॉट्स एवं विला\n' +
+            '• 80% तक बैंक लोन स्वीकृत (SBI, HDFC, ICICI)\n' +
+            '• तत्काल रजिस्ट्री एवं स्पष्ट मालिकाना हक\n\n' +
+            'ई-कॉमर्स पर प्लॉट्स देखें: http://localhost:5001/ecom?segment=real-dreams\n' +
+            'कैटलॉग वेरिफिकेशन: http://localhost:5001/staff/configuration/catalog';
         },
         ta: function(cName, url) {
           return 'வணக்கம் ' + cName + '! 🙏\n\n' +
-            'MyntReal Real Dreams பிரீமியம் ரியல் எஸ்டேட் டிஜிட்டல் கேட்லாக் லிங்க்:\n' +
+            'VGK Real Dreams பிரீமியம் ரியல் எஸ்டேட் டிஜிட்டல் கேட்லாக் லிங்க்:\n' +
             '👉 ' + url + '\n\n' +
-            '🏡 முக்கிய சிறப்பம்சங்கள்:\n' +
-            '• RERA & அரசு அங்கீகாரம் பெற்ற ஓபன் பிளாட்கள் & வில்லாக்கள்\n' +
-            '• நவீன வசதிகளுடன் கூடிய கேடட் கம்யூனிட்டி டவுன்ஷிப்\n' +
-            '• வேகமான முதலீட்டு மதிப்பு உயர்வு & உடனடி பதிவு\n\n' +
-            'மேலே உள்ள இணைப்பைக் கிளிக் செய்து விவரங்கள் மற்றும் விலைப்பட்டியலைக் காண்க.';
+            '100% RERA அங்கீகரிக்கப்பட்ட சொத்துக்கள் & 80% வங்கி கடன் வசதி!\n' +
+            'இ-காமர்ஸ் மூலம் பார்வையிட: http://localhost:5001/ecom?segment=real-dreams';
         }
       }
     },
@@ -944,45 +952,56 @@
       messages: {
         te: function(cName, url) {
           return 'నమస్కారం ' + cName + ' గారు! 🙏\n\n' +
-            'MyntReal Genuine EV Spares, Chargers & Batteries డిజిటల్ క్యాటలాగ్ లింక్ ఇక్కడ చూడవచ్చు:\n' +
+            '⚡ *MyntReal & VGK4U — జెన్యూయిన్ EV స్పేర్స్, ఛార్జర్లు & బ్యాటరీలు*\n\n' +
+            'మీ కోసం అఫీషియల్ డిజిటల్ క్యాటలాగ్ లింక్:\n' +
             '👉 ' + url + '\n\n' +
-            '⚙️ ప్రొడక్ట్ వివరాలు:\n' +
-            '• అన్ని ప్రముఖ బ్రాండ్ల ఒరిజినల్ OEM-గ్రేడ్ EV స్పేర్ పార్ట్స్\n' +
-            '• హై-పవర్ DC ఫాస్ట్ ఛార్జర్లు & పోర్టబుల్ హోమ్ ఛార్జర్లు\n' +
-            '• స్మార్ట్ BMS కలిగిన అధునాతన లిథియం-అయాన్ & LFP బ్యాటరీ ప్యాక్స్\n' +
-            '• కంట్రోలర్లు, వైరింగ్ హార్నెస్ & బ్రేకింగ్ కాంపోనెంట్స్\n\n' +
-            'పై లింక్ క్లిక్ చేసి కాంపోనెంట్స్ లిస్ట్, స్పెసిఫికేషన్స్ మరియు హోల్‌సేల్ ధరలు చూడగలరు.';
+            '🏷️ *డైనమిక్ డిస్కౌంట్లు & ధరల విశ్లేషణ (హబ్ హోల్‌సేల్ vs కస్టమర్ రిటైల్):*\n' +
+            '• గ్రాఫీన్ బ్యాటరీ 48V 32Ah (9 నెలల వారంటీ):\n' +
+            '   - హబ్ హోల్‌సేల్: ₹12,000 (18% GST కలిపి)\n' +
+            '   - కస్టమర్ రిటైల్: ₹14,100 → *ఆదా: ₹2,100 (15% తగ్గింపు)*\n' +
+            '• LFP లిథియం బ్యాటరీ 48V 30Ah (2+1 సం. వారంటీ, AIS-156):\n' +
+            '   - హబ్ హోల్‌సేల్: ₹18,800 (18% GST కలిపి)\n' +
+            '   - కస్టమర్ రిటైల్: ₹22,100 → *ఆదా: ₹3,300 (15% తగ్గింపు)*\n' +
+            '• ఫాస్ట్ ఛార్జర్ 48V (9 నెలల వారంటీ): హబ్ ₹1,500 | రిటైల్ ₹1,575\n' +
+            '• కంట్రోలర్లు & BMS స్పేర్స్: 20% నుండి 29% వరకు డైనమిక్ మార్జిన్!\n\n' +
+            '🛒 *EV స్పేర్స్ ఈ-కామ్ మార్కెట్‌ప్లేస్‌లో ఆర్డర్ చేయండి:*\n' +
+            '👉 http://localhost:5001/ecom?segment=ev-spares&category=spares\n\n' +
+            '24 గంటల్లో దేశవ్యాప్త డెలివరీ & అధికారిక GST ఇన్వాయిసింగ్.';
         },
         en: function(cName, url) {
           return 'Namaskaram ' + cName + '! 🙏\n\n' +
-            'Here is your official MyntReal EV Spares, Chargers & Battery Systems Digital Catalog link:\n' +
+            '⚡ *MyntReal & VGK4U — Genuine EV Spares, Chargers & Batteries*\n\n' +
+            'Here is your official EV Spares & Battery Systems Digital Catalog:\n' +
             '👉 ' + url + '\n\n' +
-            '⚙️ Component Highlights:\n' +
-            '• Certified OEM-grade replacement spares for all major EV makes\n' +
-            '• High-power DC Fast Chargers & Smart Home AC Charging units\n' +
-            '• Advanced Lithium-ion & LFP battery packs with intelligent BMS\n' +
-            '• High-efficiency motor controllers, harnesses & mechanical components\n\n' +
-            'Click the link above to view catalog inventory, compatibility & dealer pricing.';
+            '🏷️ *Dynamic Discount & Cost Breakdown (Hub Wholesale vs Customer Retail):*\n' +
+            '• *Graphene Battery 48V 32Ah (9 Mo. Warranty):*\n' +
+            '   - Hub Wholesale: ₹12,000 (Incl. 18% GST)\n' +
+            '   - Customer Retail: ₹14,100 → *Save ₹2,100 (15% Margin)*\n' +
+            '• *LFP Lithium Battery 48V 30Ah (2+1 Yr. Warranty, AIS-156):*\n' +
+            '   - Hub Wholesale: ₹18,800 (Incl. 18% GST)\n' +
+            '   - Customer Retail: ₹22,100 → *Save ₹3,300 (15% Margin)*\n' +
+            '• *Smart Fast Charger 48V (9 Mo. Warranty):* Hub ₹1,500 | Retail ₹1,575\n' +
+            '• *Controllers & BMS Spares:* 20% to 29% dynamic wholesale margin!\n\n' +
+            '🛒 *Order Online on EV Spares E-Com Marketplace:*\n' +
+            '👉 http://localhost:5001/ecom?segment=ev-spares&category=spares\n\n' +
+            'Immediate 24-Hour Pan-India Dispatch | Full GST Invoicing.';
         },
         hi: function(cName, url) {
           return 'नमस्ते ' + cName + ' जी! 🙏\n\n' +
             'MyntReal जेन्युइन ईवी स्पेयर पार्ट्स, चार्जर्स और बैटरी डिजिटल कैटलॉग लिंक यहाँ देखें:\n' +
             '👉 ' + url + '\n\n' +
-            '⚙️ मुख्य उत्पाद:\n' +
-            '• प्रमुख ईवी ब्रांड्स के लिए OEM-ग्रेड प्रमाणित स्पेयर पार्ट्स\n' +
-            '• हाई-पावर डीसी फास्ट चार्जर्स और स्मार्ट होम चार्जर्स\n' +
-            '• स्मार्ट बीएमएस (BMS) से लैस एडवांस लिथियम बैटरी पैक्स\n\n' +
-            'कृपया ऊपर दिए गए लिंक पर क्लिक करके पार्ट्स लिस्ट और कीमतें देखें।';
+            '⚙️ मुख्य उत्पाद एवं डायनामिक डिस्काउंट:\n' +
+            '• 15% से 25% तक की थोक (B2B) छूट\n' +
+            '• ग्रैफीन एवं LFP बैटरी पैक्स (9 माह से 3 साल वारंटी)\n' +
+            '• स्मार्ट बीएमएस एवं फास्ट चार्जर्स\n\n' +
+            'ई-कॉमर्स पर ऑर्डर करने के लिए: http://localhost:5001/ecom?segment=ev-spares&category=spares';
         },
         ta: function(cName, url) {
           return 'வணக்கம் ' + cName + '! 🙏\n\n' +
             'MyntReal ஈவி உதிரிபாகங்கள், சார்ஜர்கள் & பேட்டரி டிஜிட்டல் கேட்லாக் லிங்க்:\n' +
             '👉 ' + url + '\n\n' +
-            '⚙️ முக்கிய தயாரிப்புகள்:\n' +
-            '• அசல் OEM சான்றளிக்கப்பட்ட ஈவி உதிரிபாகங்கள்\n' +
-            '• அதிவேக DC ஃபாஸ்ட் சார்ஜர்கள் & ஸ்மார்ட் சார்ஜிங் சாதனங்கள்\n' +
-            '• ஸ்மார்ட் BMS கொண்ட லித்தியம் பேட்டரி பேக்குகள்\n\n' +
-            'மேலே உள்ள இணைப்பைக் கிளிக் செய்து முழு விவரங்களையும் காண்க.';
+            '15% முதல் 25% வரை தள்ளுபடி விலையில் ஈவி உதிரிபாகங்கள்!\n' +
+            'இ-காமர்ஸ் மூலம் ஆர்டர் செய்ய: http://localhost:5001/ecom?segment=ev-spares&category=spares';
         }
       }
     },
@@ -1052,27 +1071,29 @@
       messages: {
         te: function(cName, url) {
           return 'నమస్కారం ' + cName + ' గారు! 🙏\n\n' +
-            'MyntReal Comprehensive Insurance Advisory డిజిటల్ క్యాటలాగ్ లింక్ ఇక్కడ చూడవచ్చు:\n' +
+            '🛡️ *VGK Care — 360° సమగ్ర బీమా & రిస్క్ ప్రొటెక్షన్*\n\n' +
+            'మీ కోసం అధికారిక ఇన్సూరెన్స్ అడ్వైజరీ డిజిటల్ క్యాటలాగ్ లింక్:\n' +
             '👉 ' + url + '\n\n' +
-            '🛡️ ఇన్సూరెన్స్ రక్షణ వివరాలు:\n' +
-            '• ఎలక్ట్రిక్ వెహికల్స్ (EV) & కమర్షియల్ ఫ్లీట్ ఇన్సూరెన్స్\n' +
-            '• సోలార్ రూఫ్‌టాప్ ప్లాంట్ ఆల్-రిస్క్ ప్రొటెక్షన్ పాలసీలు\n' +
-            '• సమగ్ర హెల్త్ ఇన్సూరెన్స్ (Cashless Hospitalization) & టర్మ్ లైఫ్ కవర్\n' +
-            '• బిజినెస్, షాప్ & ఫ్యాక్టరీ ప్రాపర్టీ ఇన్సూరెన్స్\n' +
-            '• వేగవంతమైన క్లెయిమ్స్ అసిస్టెన్స్ & డెడికేటెడ్ రిలేషన్‌షిప్ మేనేజర్\n\n' +
-            'పై లింక్ క్లిక్ చేసి ఇన్సూరెన్స్ పాలసీల వివరాలు మరియు తక్షణ కొటేషన్ పొందండి.';
+            '✨ *ముఖ్య బీమా రంగాలు & ప్రయోజనాలు:*\n' +
+            '• *ఈవీ మోటార్ & బ్యాటరీ రీప్లేస్‌మెంట్ కవర్:* లిథియం బ్యాటరీ డ్యామేజ్, వాటర్ ఇన్‌గ్రెస్ & జీరో-డిప్రిసియేషన్ ప్రొటెక్షన్\n' +
+            '• *సోలార్ రూఫ్‌టాప్ EPC ఆల్-రిస్క్ ఇన్సూరెన్స్:* తుఫాను, వర్షం, పిడుగుపాటు & జనరేషన్ లాస్ నష్టపరిహారం\n' +
+            '• *ఫ్యామిలీ క్యాష్‌లెస్‌ హెల్త్ ఇన్సూరెన్స్:* 4,500+ నెట్‌వర్క్ హాస్పిటల్స్ & నో రూమ్ రెంట్ క్యాపింగ్\n' +
+            '• *కమర్షియల్ & ఫ్యాక్టరీ లయబిలిటీ:* అగ్నిప్రమాదాలు, దొంగతనం & పబ్లిక్ లయబిలిటీ షీల్డ్\n' +
+            '• *98.6% క్లెయిమ్ సెటిల్‌మెంట్ రేషియో* & తక్షణ డిజిటల్ స్పాట్ ఇన్సూరెన్స్ జారీ\n\n' +
+            'పై లింక్ ద్వారా ప్రీమియం కాలిక్యులేట్ చేసుకోండి మరియు తక్షణ పాలసీ పొందండి.';
         },
         en: function(cName, url) {
           return 'Namaskaram ' + cName + '! 🙏\n\n' +
-            'Here is your official MyntReal Comprehensive Insurance Advisory Digital Catalog link:\n' +
+            '🛡️ *VGK Care — 360° Comprehensive Insurance & Risk Protection*\n\n' +
+            'Here is your official VGK Care Insurance Advisory Digital Catalog link:\n' +
             '👉 ' + url + '\n\n' +
-            '🛡️ Advisory Highlights:\n' +
-            '• Specialized EV & Commercial Fleet motor insurance policies\n' +
-            '• Solar Rooftop Installation All-Risk & Generation Loss Protection\n' +
-            '• Comprehensive Health & Family Term Life plans with cashless network\n' +
-            '• Business, Warehouse & Commercial Property Risk Shield\n' +
-            '• Dedicated claims assistance team for rapid settlement\n\n' +
-            'Click the link above to view plans, compare coverage & receive a customized quote.';
+            '✨ *Core Advisory & Coverage Highlights:*\n' +
+            '• *EV Motor & Battery Zero-Dep Cover:* Explicit protection for lithium battery replacement, water ingress & thermal runaway\n' +
+            '• *Solar Rooftop EPC All-Risk Policy:* Protects against cyclones, storm damage & generation loss downtime\n' +
+            '• *Family Cashless Health Plans:* 4,500+ cashless network hospitals with zero room-rent cap\n' +
+            '• *Commercial & Factory Liability:* Comprehensive fire, burglary, stock & business interruption cover\n' +
+            '• *98.6% Claim Settlement Ratio* with instant spot digital policy issuance\n\n' +
+            'Click the link above to calculate customized premiums and issue policies on spot.';
         },
         hi: function(cName, url) {
           return 'नमस्ते ' + cName + ' जी! 🙏\n\n' +
@@ -1161,67 +1182,6 @@
             '💼 முதலீடு: ₹12–15 லட்சம் | முதலீடு மீட்பு: 6–9 மாதங்கள் | ஆண்டு நிகர வருமானம்: ₹19.80 லட்சம்+\n' +
             '🎁 கணினி, 43" ஸ்மார்ட் டிவி, கலர் பிரிண்டர், பிராண்டிங் மற்றும் 12 மாத லீட் ஆதரவு முற்றிலும் இலவசம்!\n\n' +
             'முழு விவரங்களையும் நிதி மாதிரியையும் காண மேலே உள்ள இணைப்பைக் கிளிக் செய்க.';
-        }
-      }
-    },
-    customer_ev_pricing: {
-      name: 'Customer 2W EV Pricing & Catalog',
-      btnLabel: 'Customer EV',
-      segmentSlug: 'customer-2w-ev-pricing',
-      catalogSlug: 'customer-2w-ev-pricing',
-      desc: 'Sends official retail Manthra EV 2-Wheeler catalog with customer on-road prices, battery specs (Graphene 9 Mo / LFP 3 Yrs), savings calculator & YouTube video.',
-      messages: {
-        te: function(cName, url) {
-          return 'నమస్కారం ' + cName + ' గారు! 🙏\n\n' +
-            'మాంత్రా EV (Manthra EV) అధికారిక 2-వీలర్ ఎలక్ట్రిక్ స్కూటర్లు & కస్టమర్ ధరల పట్టిక:\n' +
-            '👉 ' + url + '\n\n' +
-            '⚡ ప్రధాన ప్రయోజనాలు & 5 మోడల్స్:\n' +
-            '• 5 మోడల్స్: Pro GT, Power Plus (హెవీ కార్గో), M99 Flagship, Royal Sling, Beast Pro\n' +
-            '• నాన్-RTO లో-స్పీడ్ (<25 km/h) — డ్రైవింగ్ లైసెన్స్ & రిజిస్ట్రేషన్ అవసరం లేదు!\n' +
-            '• రన్నింగ్ ఖర్చు కేవలం ₹0.15/కి.మీ — నెలకు ₹3,000+ పెట్రోల్ ఆదా\n' +
-            '• గ్రాఫేన్ 48V 32Ah: 9 నెలల బ్యాటరీ & ఛార్జర్ వారంటీ\n' +
-            '• స్మార్ట్ LFP బ్యాటరీలు: 2+1 సంవత్సరాల (3 ఏళ్ల) వారంటీ & 4–5 గంటల ఫాస్ట్ ఛార్జ్\n' +
-            '• 3 సంవత్సరాల సమగ్ర వాహన వారంటీ & ఆథరైజ్డ్ సర్వీస్ నెట్‌వర్క్\n\n' +
-            'పై లింక్ క్లిక్ చేసి మోడల్-వైజ్ ధరలు, స్పెసిఫికేషన్లు & అధికారిక వీడియో చూడగలరు. ఉచిత టెస్ట్ డ్రైవ్ బుక్ చేసుకోండి!';
-        },
-        en: function(cName, url) {
-          return 'Namaskaram ' + cName + '! 🙏\n\n' +
-            'Here is your official Manthra EV 2-Wheeler Electric Scooters Customer Pricing & Specifications Catalog:\n' +
-            '👉 ' + url + '\n\n' +
-            '⚡ Customer Highlights & 5 Certified Models:\n' +
-            '• Models: Pro GT, Power Plus (Heavy Cargo), M99 Flagship, Royal Sling & Beast Pro\n' +
-            '• Certified Non-RTO Low-Speed (<25 km/h) — Zero Driving License & Zero RTO Needed!\n' +
-            '• Ultra-low running cost of ₹0.15 / km — Save ₹3,000+ every month vs petrol\n' +
-            '• Graphene 48V 32Ah: 9 Months Battery Warranty & 9 Months Charger Warranty\n' +
-            '• Smart LTM / LFP: 2+1 Years (3 Years) Battery Warranty & 4–5 Hrs Smart Fast Charge\n' +
-            '• 3 Years Comprehensive Vehicle Warranty with local authorized spares & service\n\n' +
-            'Click the link above to explore model-wise prices, interactive savings calculator & official video showcase. Book your free test ride today!';
-        },
-        hi: function(cName, url) {
-          return 'नमस्ते ' + cName + ' जी! 🙏\n\n' +
-            'मंत्रा EV (Manthra EV) आधिकारिक 2-व्हीलर इलेक्ट्रिक स्कूटर्स एवं कस्टमर प्राइसिंग कैटलॉग लिंक यहाँ देखें:\n' +
-            '👉 ' + url + '\n\n' +
-            '⚡ मुख्य विशेषताएं एवं 5 मॉडल:\n' +
-            '• 5 मॉडल्स: Pro GT, Power Plus (कार्गो), M99 Flagship, Royal Sling और Beast Pro\n' +
-            '• प्रमाणित नॉन-RTO (<25 km/h) — बिना ड्राइविंग लाइसेंस और बिना रजिस्ट्रेशन!\n' +
-            '• मात्र ₹0.15 प्रति किमी खर्च — हर महीने ₹3,000+ पेट्रोल की बचत\n' +
-            '• ग्रैफीन 48V 32Ah: 9 महीने की बैटरी एवं चार्जर वारंटी\n' +
-            '• स्मार्ट LFP बैटरियां: 2+1 वर्ष (3 साल) वारंटी एवं 4–5 घंटे में फास्ट चार्ज\n' +
-            '• 3 साल की व्यापक वाहन वारंटी एवं पूर्ण सर्विस सपोर्ट\n\n' +
-            'कृपया ऊपर दिए गए लिंक पर क्लिक करके मॉडल-वाइज कीमतें और वीडियो देखें। आज ही फ्री टेस्ट ड्राइव बुक करें!';
-        },
-        ta: function(cName, url) {
-          return 'வணக்கம் ' + cName + '! 🙏\n\n' +
-            'மாந்த்ரா EV (Manthra EV) அதிகாரப்பூர்வ இருசக்கர மின்சார வாகனங்கள் மற்றும் வாடிக்கையாளர் விலை பட்டியல்:\n' +
-            '👉 ' + url + '\n\n' +
-            '⚡ வாடிக்கையாளர் சிறப்பம்சங்கள்:\n' +
-            '• 5 சிறந்த மாடல்கள்: Pro GT, Power Plus, M99 Flagship, Royal Sling, Beast Pro\n' +
-            '• நான்-RTO குறைந்த வேகம் (<25 km/h) — ஓட்டுநர் உரிமம் அல்லது பதிவு தேவையில்லை!\n' +
-            '• கி.மீக்கு 15 பைசா மட்டுமே — மாதம் ₹3,000+ பெட்ரோல் செலவு மிச்சம்\n' +
-            '• கிராபீன் 48V 32Ah: 9 மாதங்கள் பேட்டரி மற்றும் சார்ஜர் உத்தரவாதம்\n' +
-            '• ஸ்மார்ட் LFP: 2+1 ஆண்டுகள் (3 ஆண்டுகள்) உத்தரவாதம் மற்றும் விரைவு சார்ஜிங்\n' +
-            '• 3 ஆண்டுகள் முழுமையான வாகன உத்தரவாதம்\n\n' +
-            'மேலே உள்ள இணைப்பைக் கிளிக் செய்து மாடல் விலைகளை அறிந்து இலவச டெஸ்ட் டிரைவ் முன்பதிவு செய்யுங்கள்!';
         }
       }
     },

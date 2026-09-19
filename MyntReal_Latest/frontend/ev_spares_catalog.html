@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>EV Spares, Fast Chargers & Battery Systems — Official Digital Catalog | MYNTREAL & VGK4U</title>
+    <meta name="description" content="Official OEM-grade electric vehicle spare parts, AIS-156 certified lithium batteries, DC fast chargers, smart BMS and controllers. Hub wholesale pricing vs retail breakdown.">
+    <link rel="icon" type="image/png" href="/public/favicon.ico">
+
+    <!-- Bootstrap 5.3 & FontAwesome 6 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-base: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-card-alt: #f1f5f9;
+            --text-main: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --brand-border: #e2e8f0;
+            --brand-purple: #7c3aed;
+            --brand-purple-hover: #6d28d9;
+            --brand-emerald: #059669;
+            --brand-amber: #b45309;
+            --brand-blue: #0284c7;
+            --brand-crimson: #b91c1c;
+            --card-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -2px rgba(15, 23, 42, 0.04);
+            --card-shadow-lg: 0 12px 30px -4px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
+        }
+
+        [data-theme="dark"] {
+            --bg-base: #0b0f19;
+            --bg-card: #131b2e;
+            --bg-card-alt: #1a233a;
+            --text-main: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --brand-border: #1e293b;
+            --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+            --card-shadow-lg: 0 16px 36px -4px rgba(0, 0, 0, 0.7);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            margin: 0;
+            padding-bottom: 80px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* ── TOP HEADER & TABS ── */
+        .catalog-top-header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--brand-border);
+            padding: 12px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1040;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+        }
+
+        .catalog-header-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 11px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 999px;
+            text-decoration: none;
+            border: 1px solid var(--brand-border);
+            background: var(--bg-card-alt);
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .catalog-header-tab:hover {
+            color: #7c3aed;
+            border-color: #7c3aed;
+        }
+
+        .catalog-header-tab.active {
+            background: rgba(124, 58, 237, 0.12);
+            border-color: rgba(124, 58, 237, 0.45);
+            color: #7c3aed;
+            box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.2);
+        }
+
+        /* ── DYNAMIC PROMO STRIP ── */
+        .promo-disc-strip {
+            background: linear-gradient(135deg, #4c1d95 0%, #31104b 100%);
+            color: #ffffff;
+            padding: 10px 16px;
+            font-size: 13.5px;
+            border-bottom: 2px solid #a855f7;
+        }
+
+        .promo-pill {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-weight: 700;
+        }
+
+        /* ── HERO BANNER ── */
+        .hero-banner {
+            background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+            color: #ffffff;
+            padding: 45px 0 35px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-banner::after {
+            content: "";
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(124, 58, 237, 0.25) 0%, rgba(0,0,0,0) 70%);
+            pointer-events: none;
+        }
+
+        .hero-badge {
+            background: rgba(124, 58, 237, 0.25);
+            border: 1px solid rgba(168, 85, 247, 0.5);
+            color: #c084fc;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .trust-stat-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 14px 16px;
+            text-align: center;
+        }
+
+        /* ── SECTION CARDS ── */
+        .catalog-card {
+            background: var(--bg-card);
+            border: 1px solid var(--brand-border);
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .catalog-card:hover {
+            box-shadow: var(--card-shadow-lg);
+        }
+
+        .section-header-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        /* ── TABLE STYLES ── */
+        .pricing-table-container {
+            border-radius: 12px;
+            overflow-x: auto;
+            border: 1px solid var(--brand-border);
+        }
+
+        .pricing-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+            margin: 0;
+        }
+
+        .pricing-table th {
+            background: var(--bg-card-alt);
+            color: var(--text-main);
+            font-weight: 700;
+            padding: 12px 14px;
+            border-bottom: 2px solid var(--brand-border);
+            white-space: nowrap;
+        }
+
+        .pricing-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--brand-border);
+            vertical-align: middle;
+            color: var(--text-main);
+        }
+
+        .pricing-table tr:hover td {
+            background: rgba(124, 58, 237, 0.04);
+        }
+
+        /* ── PRODUCT CARD ── */
+        .product-card {
+            background: var(--bg-card);
+            border: 1px solid var(--brand-border);
+            border-radius: 14px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            transition: all 0.25s ease;
+        }
+
+        .product-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--card-shadow-lg);
+            border-color: #a855f7;
+        }
+
+        .product-img-wrap {
+            position: relative;
+            height: 180px;
+            background: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .product-img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .product-card:hover .product-img-wrap img {
+            transform: scale(1.05);
+        }
+
+        .product-warranty-tag {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(4px);
+            color: #fbbf24;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(251, 191, 36, 0.4);
+        }
+
+        .btn-ecom {
+            background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+            color: #ffffff !important;
+            border: none;
+            font-weight: 700;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 13px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .btn-ecom:hover {
+            background: linear-gradient(135deg, #6d28d9 0%, #4c1d95 100%);
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+        }
+
+        .theme-toggle-btn {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--brand-border);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .lang-pill-btn {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--brand-border);
+            color: var(--text-secondary);
+            padding: 5px 11px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .lang-pill-btn.active {
+            background: #7c3aed;
+            color: #fff;
+            border-color: #7c3aed;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── 1. DYNAMIC DISCOUNT & PROMO BAR ── -->
+    <div class="promo-disc-strip">
+        <div class="container-xl d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-danger text-white"><i class="fas fa-bolt me-1"></i> EXCLUSIVE DISCOUNT</span>
+                <span id="promoBannerText">
+                    <strong>Dynamic B2B &amp; Partner Discounts Active:</strong> Save <strong>12% to 25% OFF</strong> Customer Retail with Promo / Partner ID!
+                </span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/ecom?segment=ev-spares" class="promo-pill text-white text-decoration-none" title="Visit Marketplace">
+                    <i class="fas fa-shopping-cart me-1"></i> <span id="promoShopBtnText">Open EV Spares E-Com</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 2. TOP NAVIGATION HEADER WITH CROSS-VERTICAL TABS ── -->
+    <header class="catalog-top-header">
+        <div class="container-fluid px-3 px-xl-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-3">
+                <a href="/catalog/ev-spares/ev-spares-and-chargers" class="d-flex align-items-center text-decoration-none">
+                    <img src="/public/hub/Assets/Myntreal.logo.png" alt="MyntReal" style="height: 40px; object-fit: contain;" onerror="this.src='/public/myntreal-logo.png'">
+                </a>
+
+                <!-- Unified Cross-Vertical Navigation Tabs -->
+                <div class="d-flex align-items-center gap-2 overflow-x-auto pb-1" style="scrollbar-width: none;">
+                    <a href="/catalog/industrial-hub-franchise" class="catalog-header-tab" title="5-in-1 Franchise Overview">
+                        <i class="fas fa-building-columns text-warning"></i>
+                        <span>5-in-1 Franchise</span>
+                    </a>
+                    <a href="/catalog/hub-ev-pricing" class="catalog-header-tab" title="Hub Commercial Pricing (24h)">
+                        <i class="fas fa-tags text-success"></i>
+                        <span>Hub Pricing (24h)</span>
+                    </a>
+                    <a href="/catalog/ev-b2b/ev-commercial-fleet" class="catalog-header-tab" title="EV B2B Fleets">
+                        <i class="fas fa-truck-moving text-info"></i>
+                        <span>EV B2B Fleets</span>
+                    </a>
+                    <a href="/catalog/ev-spares/ev-spares-and-chargers" class="catalog-header-tab active" title="EV Spares, Chargers & Batteries">
+                        <i class="fas fa-cogs" style="color: #a855f7;"></i>
+                        <span>EV Spares</span>
+                    </a>
+                    <a href="/catalog/real-dreams/real-dreams-premium-properties" class="catalog-header-tab" title="Real Dreams Premium Properties">
+                        <i class="fas fa-building text-danger"></i>
+                        <span>Real Dreams</span>
+                    </a>
+                    <a href="/catalog/insurance/comprehensive-insurance-advisory" class="catalog-header-tab" title="VGK Care Insurance Advisory">
+                        <i class="fas fa-shield-alt text-primary"></i>
+                        <span>VGK Care</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Controls: Theme Toggle & Language Switcher -->
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
+                    <i class="fas fa-moon text-warning" id="themeToggleIcon"></i>
+                    <span class="d-none d-sm-inline" id="themeToggleText">Dark Mode</span>
+                </button>
+
+                <div class="d-flex gap-1 align-items-center">
+                    <button class="lang-pill-btn active" data-lang="en" onclick="switchLanguage('en')">EN</button>
+                    <button class="lang-pill-btn" data-lang="te" onclick="switchLanguage('te')">తెలుగు</button>
+                </div>
+
+                <img src="/public/vgk4u-logo.png" alt="VGK4U" class="d-none d-md-block ms-1" style="height: 26px;" onerror="this.style.display='none'">
+            </div>
+        </div>
+    </header>
+
+    <!-- ── 3. HERO SHOWCASE ── -->
+    <section class="hero-banner">
+        <div class="container-xl">
+            <div class="row align-items-center gy-4">
+                <div class="col-lg-7">
+                    <span class="hero-badge mb-3">
+                        <i class="fas fa-shield-check"></i> AIS-156 Phase 2 Certified Components
+                    </span>
+                    <h1 class="display-6 fw-extrabold mb-3" id="heroTitle">
+                        Genuine EV Spares, High-Power Chargers &amp; Smart Batteries
+                    </h1>
+                    <p class="lead text-light opacity-90 mb-4" id="heroSubtitle" style="font-size: 1.05rem;">
+                        Automotive-grade replacement parts, precision sine-wave controllers, intelligent Bluetooth BMS, and high-safety LFP &amp; Graphene battery packs. Available for immediate pan-India dispatch.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="/ecom?segment=ev-spares" class="btn btn-primary btn-lg fw-bold px-4 py-2" style="background:#7c3aed; border-color:#7c3aed;">
+                            <i class="fas fa-shopping-cart me-2"></i> <span id="heroBuyBtn">Shop on EV Spares Marketplace</span>
+                        </a>
+                        <a href="#pricing_breakdown" class="btn btn-outline-light btn-lg fw-bold px-4 py-2">
+                            <i class="fas fa-table me-2"></i> <span id="heroCompareBtn">Wholesale vs Retail Pricing</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="trust-stat-card">
+                                <i class="fas fa-boxes-stacked text-warning fs-3 mb-1"></i>
+                                <h3 class="fw-bold mb-0 text-white font-mono">1,500+</h3>
+                                <div class="text-white-50 small" id="statSkus">SKUs in Live Stock</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="trust-stat-card">
+                                <i class="fas fa-certificate text-success fs-3 mb-1"></i>
+                                <h3 class="fw-bold mb-0 text-white font-mono">AIS-156</h3>
+                                <div class="text-white-50 small" id="statSafety">Phase 2 Certified</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="trust-stat-card">
+                                <i class="fas fa-shield-halved text-info fs-3 mb-1"></i>
+                                <h3 class="fw-bold mb-0 text-white font-mono">2+1 Years</h3>
+                                <div class="text-white-50 small" id="statLfpWarranty">LFP Battery Warranty</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="trust-stat-card">
+                                <i class="fas fa-clock text-danger fs-3 mb-1"></i>
+                                <h3 class="fw-bold mb-0 text-white font-mono">9 Months</h3>
+                                <div class="text-white-50 small" id="statGrapheneWarranty">Graphene &amp; Chargers</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 4. DYNAMIC DISCOUNT VERIFIER / CALCULATOR STRIP ── -->
+    <div class="container-xl mt-4">
+        <div class="catalog-card" style="border-left: 5px solid #7c3aed; background: var(--bg-card);">
+            <div class="row align-items-center g-3">
+                <div class="col-md-5">
+                    <h5 class="fw-bold mb-1" id="discCalcTitle">
+                        <i class="fas fa-id-card text-purple me-2" style="color: #7c3aed;"></i> Unlock Dynamic Tier Discounts
+                    </h5>
+                    <p class="text-muted small mb-0" id="discCalcDesc">
+                        Enter your Registered Phone, MNR ID, or Student/Partner Code to calculate custom net costs.
+                    </p>
+                </div>
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <input type="text" id="promoCodeInput" class="form-control font-mono" placeholder="e.g. MNR-DEALER or VGK-MEMBER" style="text-transform:uppercase;">
+                        <button class="btn btn-dark fw-bold" onclick="applyPromoCode()" id="btnApplyPromo">Apply</button>
+                    </div>
+                    <div id="promoStatusMsg" class="small mt-1" style="display:none;"></div>
+                </div>
+                <div class="col-md-3 text-md-end">
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-6 fw-bold" id="activeDiscountBadge">
+                        Standard Customer Retail
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 5. WHOLESALE HUB COST VS RETAIL CUSTOMER COST BREAKDOWN ── -->
+    <div class="container-xl mt-3" id="pricing_breakdown">
+        <div class="catalog-card">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div>
+                    <span class="section-header-badge bg-primary-subtle text-primary">COMMERCIAL INTELLIGENCE</span>
+                    <h3 class="fw-bold mb-1" id="breakdownHeading">Hub Wholesale vs Customer Retail Cost Breakdown</h3>
+                    <p class="text-muted small mb-0" id="breakdownSubheading">
+                        Clear itemization of Statutory GST (Batteries 18%, Chargers 5%, Spares 18%), Hub Wholesale Invoiced Cost, and Customer Retail Pricing.
+                    </p>
+                </div>
+                <div>
+                    <a href="/ecom?segment=ev-spares" class="btn btn-outline-primary btn-sm fw-bold">
+                        <i class="fas fa-external-link-alt me-1"></i> <span id="tableShopBtn">Order on E-Com</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Detailed Cost Breakdown Table -->
+            <div class="pricing-table-container">
+                <table class="pricing-table">
+                    <thead>
+                        <tr>
+                            <th>Item &amp; Specification</th>
+                            <th>Warranty</th>
+                            <th>Statutory GST</th>
+                            <th>Hub Wholesale (Ex-Tax)</th>
+                            <th>Total Hub Cost (Incl. Tax)</th>
+                            <th>Customer Retail (Incl. Tax)</th>
+                            <th>Dealer Margin / Customer Saving</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sparesTableBody">
+                        <!-- Batteries -->
+                        <tr class="table-group-header" style="background: rgba(124, 58, 237, 0.08);">
+                            <td colspan="8" class="fw-bold text-uppercase py-2" style="color:#7c3aed; font-size:12px;">
+                                <i class="fas fa-car-battery me-1"></i> OEM Batteries (18% Statutory GST Applicable)
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>Graphene 48V 32Ah</strong><br>
+                                <span class="text-muted small">Deep Cycle High-Density Lead-Carbon</span>
+                            </td>
+                            <td><span class="badge bg-warning-subtle text-dark border border-warning">9 Months</span></td>
+                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
+                            <td class="font-mono">₹10,169.49</td>
+                            <td class="font-mono fw-bold text-success">₹12,000.00</td>
+                            <td class="font-mono fw-bold text-primary">₹14,100.00</td>
+                            <td><span class="badge bg-success text-white">₹2,100 (15.0% Margin)</span></td>
+                            <td>
+                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
+                                    <i class="fas fa-cart-plus"></i> Buy
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>Graphene 60V 32Ah</strong><br>
+                                <span class="text-muted small">5-Battery Series Module for 2W High Torque</span>
+                            </td>
+                            <td><span class="badge bg-warning-subtle text-dark border border-warning">9 Months</span></td>
+                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
+                            <td class="font-mono">₹12,711.86</td>
+                            <td class="font-mono fw-bold text-success">₹15,000.00</td>
+                            <td class="font-mono fw-bold text-primary">₹17,600.00</td>
+                            <td><span class="badge bg-success text-white">₹2,600 (14.8% Margin)</span></td>
+                            <td>
+                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
+                                    <i class="fas fa-cart-plus"></i> Buy
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>LFP Smart Battery 48V 30Ah</strong><br>
+                                <span class="text-muted small">AIS-156 Phase 2 LiFePO4 with Smart BMS</span>
+                            </td>
+                            <td><span class="badge bg-info-subtle text-dark border border-info">2 + 1 Years</span></td>
+                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
+                            <td class="font-mono">₹15,932.20</td>
+                            <td class="font-mono fw-bold text-success">₹18,800.00</td>
+                            <td class="font-mono fw-bold text-primary">₹22,100.00</td>
+                            <td><span class="badge bg-success text-white">₹3,300 (14.9% Margin)</span></td>
+                            <td>
+                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
+                                    <i class="fas fa-cart-plus"></i> Buy
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>LFP Smart Battery 60V 30Ah</strong><br>
+                                <span class="text-muted small">2,500+ Cycle Life, Swappable Architecture</span>
+                            </td>
+                            <td><span class="badge bg-info-subtle text-dark border border-info">2 + 1 Years</span></td>
+                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
+                            <td class="font-mono">₹23,728.81</td>
+                            <td class="font-mono fw-bold text-success">₹28,000.00</td>
+                            <td class="font-mono fw-bold text-primary">₹32,900.00</td>
+                            <td><span class="badge bg-success text-white">₹4,900 (14.9% Margin)</span></td>
+                            <td>
+                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
+                                    <i class="fas fa-cart-plus"></i> Buy
+                                </a>
+                            </td>
+                        </tr>
+
+                        <!-- Chargers -->
+                        <tr class="table-group-header" style="background: rgba(14, 165, 233, 0.08);">
+                            <td colspan="8" class="fw-bold text-uppercase py-2" style="color:#0284c7; font-size:12px;">
+                                <i class="fas fa-charging-station me-1"></i> Fast Chargers (5% Statutory GST Applicable)
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>Graphene Charger 48V (3A/4A)</strong><br>
+                                <span class="text-muted small">Auto-Cutoff Constant Current Tuned Charger</span>
+                            </td>
+                            <td><span class="badge bg-warning-subtle text-dark border border-warning">9 Months</span></td>
+                            <td><span class="badge bg-light text-dark border">5% GST</span></td>
+                            <td class="font-mono">₹1,428.57</td>
+                            <td class="font-mono fw-bold text-success">₹1,500.00</td>
+                            <td class="font-mono fw-bold text-primary">₹1,575.00</td>
+                            <td><span class="badge bg-success text-white">₹75 (5.0% Margin)</span></td>
+                            <td>
+                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
+                                    <i class="fas fa-cart-plus"></i> Buy
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>LFP Smart Fast Charger 60V 6A</strong><br>
+                                <span class="text-muted small">Aluminium Casing with Thermal Fan Control</span>
+                            </td>
+                            <td><span class="badge bg-warning-subtle text-dark border border-warning">9 Months</span></td>
+                            <td><span class="badge bg-light text-dark border">5% GST</span></td>
+                            <td class="font-mono">₹2,666.67</td>
+                            <td class="font-mono fw-bold text-success">₹2,800.00</td>
+                            <td class="font-mono fw-bold text-primary">₹3,150.00</td>
+                            <td><span class="badge bg-success text-white">₹350 (11.1% Margin)</span></td>
+                            <td>
+                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
+                                    <i class="fas fa-cart-plus"></i> Buy
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>30 kW Dual-Gun CCS2 DC Fast Charger</strong><br>
+                                <span class="text-muted small">OCPP 1.6J RFID &amp; App Billing Commercial Unit</span>
+                            </td>
+                            <td><span class="badge bg-info-subtle text-dark border border-info">2 Years</span></td>
+                            <td><span class="badge bg-light text-dark border">5% GST</span></td>
+                            <td class="font-mono">₹3,28,571.43</td>
+                            <td class="font-mono fw-bold text-success">₹3,45,000.00</td>
+                            <td class="font-mono fw-bold text-primary">₹3,95,000.00</td>
+                            <td><span class="badge bg-success text-white">₹50,000 (12.7% Margin)</span></td>
+                            <td>
+                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
+                                    <i class="fas fa-cart-plus"></i> Buy
+                                </a>
+                            </td>
+                        </tr>
+
+                        <!-- Key Components & Electronics -->
+                        <tr class="table-group-header" style="background: rgba(16, 185, 129, 0.08);">
+                            <td colspan="8" class="fw-bold text-uppercase py-2" style="color:#059669; font-size:12px;">
+                                <i class="fas fa-microchip me-1"></i> Controllers, BMS &amp; Spares (18% Statutory GST Applicable)
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>Smart Bluetooth BMS Board (60V/72V)</strong><br>
+                                <span class="text-muted small">Active Cell Balancing &amp; Mobile App Telemetry</span>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">1 Year</span></td>
+                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
+                            <td class="font-mono">₹1,567.80</td>
+                            <td class="font-mono fw-bold text-success">₹1,850.00</td>
+                            <td class="font-mono fw-bold text-primary">₹2,450.00</td>
+                            <td><span class="badge bg-success text-white">₹600 (24.5% Margin)</span></td>
+                            <td>
+                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
+                                    <i class="fas fa-cart-plus"></i> Buy
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>Sine Wave BLDC Controller (60V/72V 45A)</strong><br>
+                                <span class="text-muted small">Smooth Regenerative Braking &amp; High Torque</span>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">1 Year</span></td>
+                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
+                            <td class="font-mono">₹2,711.86</td>
+                            <td class="font-mono fw-bold text-success">₹3,200.00</td>
+                            <td class="font-mono fw-bold text-primary">₹4,200.00</td>
+                            <td><span class="badge bg-success text-white">₹1,000 (23.8% Margin)</span></td>
+                            <td>
+                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
+                                    <i class="fas fa-cart-plus"></i> Buy
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>Heavy Duty Waterproof Wiring Harness (IP67)</strong><br>
+                                <span class="text-muted small">Automotive Standard Quick-Lock Connectors</span>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">1 Year</span></td>
+                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
+                            <td class="font-mono">₹805.08</td>
+                            <td class="font-mono fw-bold text-success">₹950.00</td>
+                            <td class="font-mono fw-bold text-primary">₹1,350.00</td>
+                            <td><span class="badge bg-success text-white">₹400 (29.6% Margin)</span></td>
+                            <td>
+                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
+                                    <i class="fas fa-cart-plus"></i> Buy
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>Ventilated Front Disc Caliper &amp; Pads Assembly</strong><br>
+                                <span class="text-muted small">High Thermal Dissipation Ceramic Compound</span>
+                            </td>
+                            <td><span class="badge bg-light text-dark border">1 Year</span></td>
+                            <td><span class="badge bg-light text-dark border">18% GST</span></td>
+                            <td class="font-mono">₹1,016.95</td>
+                            <td class="font-mono fw-bold text-success">₹1,200.00</td>
+                            <td class="font-mono fw-bold text-primary">₹1,650.00</td>
+                            <td><span class="badge bg-success text-white">₹450 (27.2% Margin)</span></td>
+                            <td>
+                                <a href="/ecom?segment=ev-spares" class="btn btn-sm btn-outline-secondary py-1 px-2">
+                                    <i class="fas fa-cart-plus"></i> Buy
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 6. FEATURED CATALOG PRODUCTS (DIRECT E-COM HOOKS) ── -->
+    <div class="container-xl mt-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <span class="section-header-badge bg-purple-subtle text-purple" style="background:#f3e8ff; color:#7c3aed;">CATALOG INVENTORY</span>
+                <h3 class="fw-bold mb-0" id="featuredHeading">Featured Spares &amp; Chargers</h3>
+            </div>
+            <a href="/ecom?segment=ev-spares" class="btn-ecom">
+                <i class="fas fa-store"></i> View All 1,500+ Items on E-Com
+            </a>
+        </div>
+
+        <div class="row g-4">
+            <!-- Product 1: 60V 30Ah LFP Battery -->
+            <div class="col-md-6 col-lg-3">
+                <div class="product-card">
+                    <div class="product-img-wrap">
+                        <span class="product-warranty-tag"><i class="fas fa-shield-alt me-1"></i>2+1 Yr Warranty</span>
+                        <img src="https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=600&q=80" alt="60V 30Ah LFP Battery">
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <div class="badge bg-success-subtle text-success mb-2 align-self-start">AIS-156 Certified</div>
+                        <h6 class="fw-bold mb-1">60V 30Ah Smart LFP Battery Pack</h6>
+                        <p class="text-muted small mb-3">2,500+ cycles, Bluetooth telemetry &amp; active thermal balancing.</p>
+                        <div class="mt-auto pt-2 border-top">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted small">Hub Cost: <strong class="text-success font-mono">₹28,000</strong></span>
+                                <span class="text-primary fw-bold font-mono">₹32,900</span>
+                            </div>
+                            <a href="/ecom?segment=ev-spares" class="btn-ecom w-100">
+                                <i class="fas fa-cart-plus me-1"></i> Order on E-Com
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product 2: 30kW Dual Gun DC Fast Charger -->
+            <div class="col-md-6 col-lg-3">
+                <div class="product-card">
+                    <div class="product-img-wrap">
+                        <span class="product-warranty-tag"><i class="fas fa-shield-alt me-1"></i>2 Yr Warranty</span>
+                        <img src="https://images.unsplash.com/photo-1558441719-8b449c6ff807?auto=format&fit=crop&w=600&q=80" alt="30kW Dual Gun DC Fast Charger">
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <div class="badge bg-primary-subtle text-primary mb-2 align-self-start">Commercial Unit</div>
+                        <h6 class="fw-bold mb-1">30 kW Dual-Gun CCS2 DC Fast Charger</h6>
+                        <p class="text-muted small mb-3">OCPP 1.6J cloud connectivity, RFID cards, weather-resistant IP54.</p>
+                        <div class="mt-auto pt-2 border-top">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted small">Hub Cost: <strong class="text-success font-mono">₹3.45L</strong></span>
+                                <span class="text-primary fw-bold font-mono">₹3.95L</span>
+                            </div>
+                            <a href="/ecom?segment=ev-spares" class="btn-ecom w-100">
+                                <i class="fas fa-cart-plus me-1"></i> Order on E-Com
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product 3: Smart Bluetooth BMS -->
+            <div class="col-md-6 col-lg-3">
+                <div class="product-card">
+                    <div class="product-img-wrap">
+                        <span class="product-warranty-tag"><i class="fas fa-shield-alt me-1"></i>1 Yr Warranty</span>
+                        <img src="https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80" alt="Smart Bluetooth BMS">
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <div class="badge bg-info-subtle text-info mb-2 align-self-start">Intelligent Circuit</div>
+                        <h6 class="fw-bold mb-1">Smart Bluetooth BMS Board (60V/72V)</h6>
+                        <p class="text-muted small mb-3">Real-time mobile temperature &amp; individual cell voltage display.</p>
+                        <div class="mt-auto pt-2 border-top">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted small">Hub Cost: <strong class="text-success font-mono">₹1,850</strong></span>
+                                <span class="text-primary fw-bold font-mono">₹2,450</span>
+                            </div>
+                            <a href="/ecom?segment=ev-spares" class="btn-ecom w-100">
+                                <i class="fas fa-cart-plus me-1"></i> Order on E-Com
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Product 4: Sine Wave Motor Controller -->
+            <div class="col-md-6 col-lg-3">
+                <div class="product-card">
+                    <div class="product-img-wrap">
+                        <span class="product-warranty-tag"><i class="fas fa-shield-alt me-1"></i>1 Yr Warranty</span>
+                        <img src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=600&q=80" alt="Motor Controller">
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <div class="badge bg-warning-subtle text-dark mb-2 align-self-start">High Performance</div>
+                        <h6 class="fw-bold mb-1">Sine Wave BLDC Controller (60V/72V)</h6>
+                        <p class="text-muted small mb-3">45A high-torque, smooth regenerative throttle, low heat profile.</p>
+                        <div class="mt-auto pt-2 border-top">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted small">Hub Cost: <strong class="text-success font-mono">₹3,200</strong></span>
+                                <span class="text-primary fw-bold font-mono">₹4,200</span>
+                            </div>
+                            <a href="/ecom?segment=ev-spares" class="btn-ecom w-100">
+                                <i class="fas fa-cart-plus me-1"></i> Order on E-Com
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 7. DIRECT ORDER INQUIRY MODAL / LEAD FORM ── -->
+    <div class="container-xl mt-4">
+        <div class="catalog-card" style="background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-alt) 100%);">
+            <div class="row align-items-center">
+                <div class="col-lg-7">
+                    <h4 class="fw-bold mb-2">Need Bulk EV Spares, Battery Packs or Charging Stations?</h4>
+                    <p class="text-muted mb-3">
+                        Our technical engineering desk at Pendurthi Hub coordinates bulk orders, custom BMS firmware configurations, and priority shipping for fleets and dealerships across Andhra Pradesh &amp; Telangana.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge bg-light text-dark border"><i class="fas fa-truck text-primary me-1"></i> Same Day Dispatch</span>
+                        <span class="badge bg-light text-dark border"><i class="fas fa-file-invoice text-success me-1"></i> GST Invoicing</span>
+                        <span class="badge bg-light text-dark border"><i class="fas fa-headset text-purple me-1"></i> Technical Hotline: +91 858585 2738</span>
+                    </div>
+                </div>
+                <div class="col-lg-5 text-lg-end mt-3 mt-lg-0">
+                    <a href="https://wa.me/918585852738?text=Hello%20MyntReal,%20I%20would%20like%20to%20order%20EV%20Spares%20and%20Batteries." target="_blank" class="btn btn-success btn-lg fw-bold px-4">
+                        <i class="fab fa-whatsapp me-2 fs-5"></i> Chat on WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Theme & Multi-Language Switching -->
+    <script>
+        const TRANSLATIONS = {
+            en: {
+                promoBannerText: "<strong>Dynamic B2B & Partner Discounts Active:</strong> Save <strong>12% to 25% OFF</strong> Customer Retail with Promo / Partner ID!",
+                promoShopBtnText: "Open EV Spares E-Com",
+                heroTitle: "Genuine EV Spares, High-Power Chargers & Smart Batteries",
+                heroSubtitle: "Automotive-grade replacement parts, precision sine-wave controllers, intelligent Bluetooth BMS, and high-safety LFP & Graphene battery packs. Available for immediate pan-India dispatch.",
+                heroBuyBtn: "Shop on EV Spares Marketplace",
+                heroCompareBtn: "Wholesale vs Retail Pricing",
+                statSkus: "SKUs in Live Stock",
+                statSafety: "Phase 2 Certified",
+                statLfpWarranty: "LFP Battery Warranty",
+                statGrapheneWarranty: "Graphene & Chargers",
+                discCalcTitle: "Unlock Dynamic Tier Discounts",
+                discCalcDesc: "Enter your Registered Phone, MNR ID, or Student/Partner Code to calculate custom net costs.",
+                breakdownHeading: "Hub Wholesale vs Customer Retail Cost Breakdown",
+                breakdownSubheading: "Clear itemization of Statutory GST (Batteries 18%, Chargers 5%, Spares 18%), Hub Wholesale Invoiced Cost, and Customer Retail Pricing.",
+                tableShopBtn: "Order on E-Com",
+                featuredHeading: "Featured Spares & Chargers"
+            },
+            te: {
+                promoBannerText: "<strong>డైనమిక్ B2B & భాగస్వామ్య డిస్కౌంట్లు యాక్టివ్:</strong> ప్రోమో / పార్ట్‌నర్ ఐడీతో కస్టమర్ రిటైల్ ధరపై <strong>12% నుండి 25% వరకు తగ్గింపు</strong> పొందండి!",
+                promoShopBtnText: "ఈవీ స్పేర్స్ ఈ-కామ్ తెరవండి",
+                heroTitle: "జెన్యూయిన్ ఈవీ స్పేర్స్, హై-పవర్ ఛార్జర్లు & స్మార్ట్ బ్యాటరీలు",
+                heroSubtitle: "అత్యుత్తమ OEM-గ్రేడ్ స్పేర్ పార్ట్స్, ఖచ్చితమైన సైన్-వేవ్ కంట్రోలర్లు, స్మార్ట్ బ్లూటూత్ BMS మరియు అధిక భద్రత కలిగిన LFP & గ్రాఫీన్ బ్యాటరీ ప్యాక్స్. 24 గంటల్లో వేగవంతమైన డెలివరీ.",
+                heroBuyBtn: "స్పేర్స్ మార్కెట్‌ప్లేస్‌లో కొనుగోలు చేయండి",
+                heroCompareBtn: "హోల్‌సేల్ వర్సెస్ రిటైల్ ధరల పట్టిక",
+                statSkus: "స్టాక్‌లో అందుబాటులో ఉన్న స్పేర్స్",
+                statSafety: "AIS-156 ఫేజ్ 2 సర్టిఫైడ్",
+                statLfpWarranty: "LFP బ్యాటరీ వారంటీ",
+                statGrapheneWarranty: "గ్రాఫీన్ & ఛార్జర్లు",
+                discCalcTitle: "డైనమిక్ డిస్కౌంట్స్ పొందండి",
+                discCalcDesc: "మీ రిజిస్టర్డ్ ఫోన్ నంబర్, MNR ID లేదా పార్ట్‌నర్ కోడ్ ఎంటర్ చేసి ప్రత్యేక ధరలను పొందండి.",
+                breakdownHeading: "హబ్ హోల్‌సేల్ వర్సెస్ కస్టమర్ రిటైల్ ధరల విశ్లేషణ",
+                breakdownSubheading: "చట్టబద్ధమైన GST (బ్యాటరీలు 18%, ఛార్జర్లు 5%, స్పేర్స్ 18%), హబ్ హోల్‌సేల్ ఇన్వాయిస్ ధర మరియు కస్టమర్ రిటైల్ ధరల పూర్తి వివరాలు.",
+                tableShopBtn: "ఈ-కామ్‌లో ఆర్డర్ చేయండి",
+                featuredHeading: "ముఖ్యమైన స్పేర్స్ & ఛార్జర్లు"
+            }
+        };
+
+        let currentLang = 'en';
+
+        function switchLanguage(lang) {
+            currentLang = lang;
+            const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+            for (let id in t) {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = t[id];
+            }
+            document.querySelectorAll('.lang-pill-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+            });
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.getAttribute('data-theme') === 'dark';
+            const next = isDark ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            const icon = document.getElementById('themeToggleIcon');
+            const txt = document.getElementById('themeToggleText');
+            if (icon) icon.className = next === 'dark' ? 'fas fa-sun text-warning' : 'fas fa-moon text-warning';
+            if (txt) txt.textContent = next === 'dark' ? 'Light Mode' : 'Dark Mode';
+        }
+
+        function applyPromoCode() {
+            const val = (document.getElementById('promoCodeInput').value || '').trim().toUpperCase();
+            const status = document.getElementById('promoStatusMsg');
+            const badge = document.getElementById('activeDiscountBadge');
+            if (!val) {
+                status.style.display = 'block';
+                status.className = 'small text-danger';
+                status.textContent = 'Please enter a valid Promo or ID code.';
+                return;
+            }
+
+            status.style.display = 'block';
+            if (val.includes('MNR') || val.includes('DEALER') || val.includes('HUB')) {
+                status.className = 'small text-success fw-bold';
+                status.textContent = '✓ Authorized Hub Dealer Code Verified: Unlocked 20% to 25% Wholesale Margin!';
+                badge.className = 'badge bg-success text-white px-3 py-2 fs-6 fw-bold';
+                badge.textContent = 'Hub Dealer Pricing Applied (-25%)';
+            } else if (val.includes('STUDENT') || val.includes('ETC')) {
+                status.className = 'small text-info fw-bold';
+                status.textContent = '✓ ETC Certified Student ID Verified: 10% Discount Applied!';
+                badge.className = 'badge bg-info text-dark px-3 py-2 fs-6 fw-bold';
+                badge.textContent = 'ETC Trainee Tier (-10%)';
+            } else {
+                status.className = 'small text-primary fw-bold';
+                status.textContent = '✓ Channel Partner Code Verified: 12% Discount Applied!';
+                badge.className = 'badge bg-primary text-white px-3 py-2 fs-6 fw-bold';
+                badge.textContent = 'Channel Partner Tier (-12%)';
+            }
+        }
+    </script>
+</body>
+</html>

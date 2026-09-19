@@ -1069,9 +1069,7 @@ def dispatch_catalog_whatsapp(
     cat_slug = catalog.slug
     segment_slug = catalog.segment_code.lower().replace('_', '-')
     ext_param = f"&ext={urllib.parse.quote(str(staff_ext))}" if staff_ext else ""
-    if catalog.segment_code == "CUSTOMER_EV_PRICING" or cat_slug == "customer-2w-ev-pricing":
-        web_catalog_url = f"{base_url}/catalog/customer-2w-ev-pricing?ref={share_ref_code}&name={urllib.parse.quote(recip_display)}&staff={urllib.parse.quote(staff_name)}{ext_param}&lang={payload.language_code}"
-    elif catalog.segment_code == "HUB_PRICING" or cat_slug == "hub-ev-pricing":
+    if catalog.segment_code == "HUB_PRICING" or cat_slug == "hub-ev-pricing":
         web_catalog_url = f"{base_url}/catalog/hub-ev-pricing?ref={share_ref_code}&name={urllib.parse.quote(recip_display)}&staff={urllib.parse.quote(staff_name)}{ext_param}&lang={payload.language_code}"
     else:
         web_catalog_url = f"{base_url}/catalog/{segment_slug}/{cat_slug}?ref={share_ref_code}&name={urllib.parse.quote(recip_display)}&staff={urllib.parse.quote(staff_name)}{ext_param}&lang={payload.language_code}"

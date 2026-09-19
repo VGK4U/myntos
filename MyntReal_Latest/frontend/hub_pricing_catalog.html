@@ -116,8 +116,8 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 6px 14px;
-            font-size: 13px;
+            padding: 5px 11px;
+            font-size: 12px;
             font-weight: 700;
             border-radius: 999px;
             text-decoration: none;
@@ -125,6 +125,7 @@
             border: 1px solid var(--brand-border);
             background: var(--bg-card-alt);
             color: var(--text-secondary);
+            white-space: nowrap;
         }
         .catalog-header-tab.active {
             background: rgba(16, 185, 129, 0.12);
@@ -572,30 +573,38 @@
 
     <!-- ── 2. TOP BRANDING HEADER WITH DUAL TABS ────────────────────────── -->
     <header class="catalog-top-header">
-        <div class="container-xl d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <!-- Left: Logo & Dual Navigation Tabs -->
+        <div class="container-fluid px-3 px-xl-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <!-- Left: Logo & Navigation Tabs -->
             <div class="d-flex align-items-center gap-3">
                 <a href="/catalog/industrial-hub-franchise" class="d-flex align-items-center text-decoration-none">
-                    <img src="/public/hub/Assets/Myntreal.logo.png" alt="MyntReal" style="height: 44px; object-fit: contain;" onerror="this.src='/public/myntreal-logo.png'">
+                    <img src="/public/hub/Assets/Myntreal.logo.png" alt="MyntReal" style="height: 40px; object-fit: contain;" onerror="this.src='/public/myntreal-logo.png'">
                 </a>
 
-                <!-- Navigation Tabs: Franchise Prospectus -> Customer 2W EV Pricing -> Pricing Commercials (24h) -> EV B2B Fleets -->
-                <div class="d-flex align-items-center gap-2" id="dualHeaderTabs">
+                <!-- Cross-Vertical Navigation Tabs -->
+                <div class="d-flex align-items-center gap-2 overflow-x-auto pb-1" id="dualHeaderTabs" style="scrollbar-width: none;">
                     <a href="/catalog/industrial-hub-franchise" class="catalog-header-tab" title="5-in-1 Franchise Overview">
                         <i class="fas fa-building-columns text-warning"></i>
-                        <span id="tabFranchiseText">5-in-1 Franchise Overview</span>
+                        <span>5-in-1 Franchise</span>
                     </a>
-                    <a href="/catalog/customer-2w-ev-pricing" class="catalog-header-tab" title="Customer 2-Wheeler EV Pricing & Catalog">
-                        <i class="fas fa-motorcycle text-primary"></i>
-                        <span>Customer 2W EV Pricing</span>
-                    </a>
-                    <a href="/catalog/hub-ev-pricing" class="catalog-header-tab active" title="EV & Solar Commercial Pricing (24-Hour Confidential Offer)">
+                    <a href="/catalog/hub-ev-pricing" class="catalog-header-tab active" title="Hub Commercial Pricing (24h)">
                         <i class="fas fa-tags text-success"></i>
-                        <span id="tabPricingText">EV &amp; Solar Pricing (24h)</span>
+                        <span>Hub Pricing (24h)</span>
                     </a>
-                    <a href="/catalog/ev-b2b/ev-commercial-fleet" class="catalog-header-tab" title="EV B2B Fleets & Commercial Cargo">
+                    <a href="/catalog/ev-b2b/ev-commercial-fleet" class="catalog-header-tab" title="EV B2B Fleets">
                         <i class="fas fa-truck-moving text-info"></i>
-                        <span id="tabB2BText">EV B2B Fleets</span>
+                        <span>EV B2B Fleets</span>
+                    </a>
+                    <a href="/catalog/ev-spares/ev-spares-and-chargers" class="catalog-header-tab" title="EV Spares, Chargers & Batteries">
+                        <i class="fas fa-cogs" style="color: #a855f7;"></i>
+                        <span>EV Spares</span>
+                    </a>
+                    <a href="/catalog/real-dreams/real-dreams-premium-properties" class="catalog-header-tab" title="Real Dreams Premium Properties">
+                        <i class="fas fa-building text-danger"></i>
+                        <span>Real Dreams</span>
+                    </a>
+                    <a href="/catalog/insurance/comprehensive-insurance-advisory" class="catalog-header-tab" title="VGK Care Insurance Advisory">
+                        <i class="fas fa-shield-alt text-primary"></i>
+                        <span>VGK Care</span>
                     </a>
                 </div>
             </div>

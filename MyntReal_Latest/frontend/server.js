@@ -9860,6 +9860,11 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     res.end();
     return;
   }
+  if (_hubCleanUrl === '/hub/catalog' || _hubCleanUrl === '/hub/catalog.html' || _hubCleanUrl === '/hub/pricing') {
+    res.writeHead(302, { 'Location': '/catalog/hub-ev-pricing' });
+    res.end();
+    return;
+  }
   if (HUB_PAGES[_hubCleanUrl]) {
     const filePath = path.join(__dirname, 'public', 'hub', HUB_PAGES[_hubCleanUrl]);
     fs.readFile(filePath, 'utf8', (err, data) => {
@@ -30559,28 +30564,7 @@ async function processAction(id, action){
     res.end();
 
 
-  } else if (url.startsWith('/catalog/customer-2w-ev-pricing') || url.startsWith('/catalog/customer-ev-pricing') || url.startsWith('/customer-ev-pricing') || url.startsWith('/catalog/customer_ev_pricing') || url.startsWith('/customer-2w-ev-pricing')) {
-    // Dedicated Customer 2-Wheeler EV Pricing & Specifications Catalog
-    const customerEvPath = path.join(__dirname, 'customer_ev_pricing_catalog.html');
-    fs.readFile(customerEvPath, 'utf8', (err, data) => {
-      if (err) {
-        const fallbackPath = path.join(__dirname, 'catalog_single_page.html');
-        fs.readFile(fallbackPath, 'utf8', (err2, data2) => {
-          if (err2) { res.writeHead(404); res.end('Customer EV catalog page not found'); return; }
-          res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate', 'X-Frame-Options': 'SAMEORIGIN' });
-          res.end(data2);
-        });
-        return;
-      }
-      res.writeHead(200, {
-        'Content-Type': 'text/html',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'X-Frame-Options': 'SAMEORIGIN'
-      });
-      res.end(data);
-    });
-
-  } else if (url.startsWith('/catalog/hub-ev-pricing') || url.startsWith('/catalog/hub-pricing') || url.startsWith('/hub-pricing') || url.startsWith('/catalog/hub_pricing')) {
+  } else if (url.startsWith('/catalog/hub-ev-pricing') || url.startsWith('/catalog/hub-pricing') || url.startsWith('/hub-pricing') || url.startsWith('/catalog/hub_pricing') || url.startsWith('/hub/catalog')) {
     // Dedicated Hub EV & Solar Commercial Pricing Catalog (24-Hour Confidential Link)
     const pricingPath = path.join(__dirname, 'hub_pricing_catalog.html');
     fs.readFile(pricingPath, 'utf8', (err, data) => {
@@ -30594,6 +30578,45 @@ async function processAction(id, action){
         });
         return;
       }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
+  } else if (url.startsWith('/catalog/ev-spares') || url.startsWith('/catalog/ev_spares') || url === '/ev-spares') {
+    // Dedicated EV Spares, Chargers & Battery Systems Catalog Page
+    const sparesPath = path.join(__dirname, 'ev_spares_catalog.html');
+    fs.readFile(sparesPath, 'utf8', (err, data) => {
+      if (err) { res.writeHead(404); res.end('EV Spares catalog page not found'); return; }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
+  } else if (url.startsWith('/catalog/real-dreams') || url.startsWith('/catalog/real_dreams') || url === '/real-dreams') {
+    // Dedicated Real Dreams Premium Properties Catalog Page
+    const rdPath = path.join(__dirname, 'real_dreams_catalog.html');
+    fs.readFile(rdPath, 'utf8', (err, data) => {
+      if (err) { res.writeHead(404); res.end('Real Dreams catalog page not found'); return; }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
+  } else if (url.startsWith('/catalog/insurance') || url.startsWith('/catalog/vgk-care') || url.startsWith('/catalog/vgk_care') || url === '/insurance') {
+    // Dedicated VGK Care Insurance Advisory Catalog Page
+    const insPath = path.join(__dirname, 'insurance_catalog.html');
+    fs.readFile(insPath, 'utf8', (err, data) => {
+      if (err) { res.writeHead(404); res.end('Insurance catalog page not found'); return; }
       res.writeHead(200, {
         'Content-Type': 'text/html',
         'Cache-Control': 'no-cache, no-store, must-revalidate',

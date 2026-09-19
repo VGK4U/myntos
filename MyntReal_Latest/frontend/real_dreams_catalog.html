@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Real Dreams Premium Townships & Luxury Villas — Official Digital Catalog | MYNTREAL & VGK4U</title>
+    <meta name="description" content="Official catalog of VGK Real Dreams premium gated community villa plots, commercial spaces, and solar townships. 100% RERA/DTCP approved, 80% bank loans, clear titles.">
+    <link rel="icon" type="image/png" href="/public/favicon.ico">
+
+    <!-- Bootstrap 5.3 & FontAwesome 6 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-base: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-card-alt: #f1f5f9;
+            --text-main: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --brand-border: #e2e8f0;
+            --brand-red: #e11d48;
+            --brand-gold: #d97706;
+            --brand-emerald: #059669;
+            --brand-blue: #0284c7;
+            --card-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -2px rgba(15, 23, 42, 0.04);
+            --card-shadow-lg: 0 12px 30px -4px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
+        }
+
+        [data-theme="dark"] {
+            --bg-base: #0b0f19;
+            --bg-card: #131b2e;
+            --bg-card-alt: #1a233a;
+            --text-main: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --brand-border: #1e293b;
+            --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+            --card-shadow-lg: 0 16px 36px -4px rgba(0, 0, 0, 0.7);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            margin: 0;
+            padding-bottom: 80px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* ── TOP HEADER & TABS ── */
+        .catalog-top-header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--brand-border);
+            padding: 12px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1040;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+        }
+
+        .catalog-header-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 11px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 999px;
+            text-decoration: none;
+            border: 1px solid var(--brand-border);
+            background: var(--bg-card-alt);
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .catalog-header-tab:hover {
+            color: #e11d48;
+            border-color: #e11d48;
+        }
+
+        .catalog-header-tab.active {
+            background: rgba(225, 29, 72, 0.12);
+            border-color: rgba(225, 29, 72, 0.45);
+            color: #e11d48;
+            box-shadow: 0 0 0 1px rgba(225, 29, 72, 0.2);
+        }
+
+        /* ── TOP ANNOUNCEMENT STRIP ── */
+        .rd-promo-strip {
+            background: linear-gradient(135deg, #881337 0%, #4c0519 100%);
+            color: #ffffff;
+            padding: 9px 16px;
+            font-size: 13px;
+            border-bottom: 2px solid #fb7185;
+        }
+
+        /* ── HERO BANNER ── */
+        .hero-banner {
+            background: linear-gradient(135deg, #1c1917 0%, #0f172a 100%);
+            color: #ffffff;
+            padding: 48px 0 38px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-banner::after {
+            content: "";
+            position: absolute;
+            top: -40%;
+            right: -10%;
+            width: 550px;
+            height: 550px;
+            background: radial-gradient(circle, rgba(225, 29, 72, 0.2) 0%, rgba(0,0,0,0) 70%);
+            pointer-events: none;
+        }
+
+        .hero-badge {
+            background: rgba(225, 29, 72, 0.22);
+            border: 1px solid rgba(251, 113, 133, 0.5);
+            color: #fda4af;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .trust-stat-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 14px 16px;
+            text-align: center;
+        }
+
+        /* ── CARDS ── */
+        .catalog-card {
+            background: var(--bg-card);
+            border: 1px solid var(--brand-border);
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .catalog-card:hover {
+            box-shadow: var(--card-shadow-lg);
+        }
+
+        .section-header-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        /* ── PROPERTY CARD ── */
+        .property-card {
+            background: var(--bg-card);
+            border: 1px solid var(--brand-border);
+            border-radius: 16px;
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.25s ease;
+        }
+
+        .property-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--card-shadow-lg);
+            border-color: #fb7185;
+        }
+
+        .property-img-wrap {
+            height: 200px;
+            position: relative;
+            background: #0f172a;
+            overflow: hidden;
+        }
+
+        .property-img-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .property-card:hover .property-img-wrap img {
+            transform: scale(1.05);
+        }
+
+        .rera-badge-pill {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: rgba(15, 23, 42, 0.9);
+            color: #34d399;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(52, 211, 153, 0.4);
+        }
+
+        .price-badge-pill {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 800;
+            padding: 4px 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(225, 29, 72, 0.4);
+        }
+
+        .btn-rd {
+            background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+            color: #ffffff !important;
+            border: none;
+            font-weight: 700;
+            border-radius: 8px;
+            padding: 9px 18px;
+            font-size: 13.5px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .btn-rd:hover {
+            background: linear-gradient(135deg, #be123c 0%, #9f1239 100%);
+            box-shadow: 0 4px 12px rgba(225, 29, 72, 0.4);
+        }
+
+        .amenity-chip {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--brand-border);
+            border-radius: 10px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .bank-badge {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--brand-border);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .theme-toggle-btn {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--brand-border);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .lang-pill-btn {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--brand-border);
+            color: var(--text-secondary);
+            padding: 5px 11px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .lang-pill-btn.active {
+            background: #e11d48;
+            color: #fff;
+            border-color: #e11d48;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── 1. TOP ANNOUNCEMENT STRIP ── -->
+    <div class="rd-promo-strip">
+        <div class="container-xl d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-warning text-dark fw-bold"><i class="fas fa-check-double me-1"></i> 100% GENUINE</span>
+                <span id="rdPromoBannerText">
+                    <strong>DTCP &amp; RERA Approved Villa Townships:</strong> Up to <strong>80% Bank Loans Approved</strong> (SBI, HDFC, ICICI) with Spot Registration Guarantee!
+                </span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="/ecom?segment=real-dreams" class="badge bg-white text-dark py-2 px-3 text-decoration-none fw-bold" title="Open Real Estate Marketplace">
+                    <i class="fas fa-search-location me-1 text-danger"></i> <span id="rdShopBtnText">Browse Properties on E-Com</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 2. TOP HEADER & CROSS-VERTICAL NAVIGATION TABS ── -->
+    <header class="catalog-top-header">
+        <div class="container-fluid px-3 px-xl-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-3">
+                <a href="/catalog/real-dreams/real-dreams-premium-properties" class="d-flex align-items-center text-decoration-none">
+                    <img src="/public/hub/Assets/Myntreal.logo.png" alt="MyntReal" style="height: 40px; object-fit: contain;" onerror="this.src='/public/myntreal-logo.png'">
+                </a>
+
+                <!-- Cross-Vertical Navigation Tabs -->
+                <div class="d-flex align-items-center gap-2 overflow-x-auto pb-1" style="scrollbar-width: none;">
+                    <a href="/catalog/industrial-hub-franchise" class="catalog-header-tab" title="5-in-1 Franchise Overview">
+                        <i class="fas fa-building-columns text-warning"></i>
+                        <span>5-in-1 Franchise</span>
+                    </a>
+                    <a href="/catalog/hub-ev-pricing" class="catalog-header-tab" title="Hub Commercial Pricing (24h)">
+                        <i class="fas fa-tags text-success"></i>
+                        <span>Hub Pricing (24h)</span>
+                    </a>
+                    <a href="/catalog/ev-b2b/ev-commercial-fleet" class="catalog-header-tab" title="EV B2B Fleets">
+                        <i class="fas fa-truck-moving text-info"></i>
+                        <span>EV B2B Fleets</span>
+                    </a>
+                    <a href="/catalog/ev-spares/ev-spares-and-chargers" class="catalog-header-tab" title="EV Spares, Chargers & Batteries">
+                        <i class="fas fa-cogs" style="color: #a855f7;"></i>
+                        <span>EV Spares</span>
+                    </a>
+                    <a href="/catalog/real-dreams/real-dreams-premium-properties" class="catalog-header-tab active" title="Real Dreams Premium Properties">
+                        <i class="fas fa-building text-danger"></i>
+                        <span>Real Dreams</span>
+                    </a>
+                    <a href="/catalog/insurance/comprehensive-insurance-advisory" class="catalog-header-tab" title="VGK Care Insurance Advisory">
+                        <i class="fas fa-shield-alt text-primary"></i>
+                        <span>VGK Care</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Theme Toggle & Languages -->
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
+                    <i class="fas fa-moon text-warning" id="themeToggleIcon"></i>
+                    <span class="d-none d-sm-inline" id="themeToggleText">Dark Mode</span>
+                </button>
+
+                <div class="d-flex gap-1 align-items-center">
+                    <button class="lang-pill-btn active" data-lang="en" onclick="switchLanguage('en')">EN</button>
+                    <button class="lang-pill-btn" data-lang="te" onclick="switchLanguage('te')">తెలుగు</button>
+                </div>
+
+                <img src="/public/vgk4u-logo.png" alt="VGK4U" class="d-none d-md-block ms-1" style="height: 26px;" onerror="this.style.display='none'">
+            </div>
+        </div>
+    </header>
+
+    <!-- ── 3. HERO SHOWCASE ── -->
+    <section class="hero-banner">
+        <div class="container-xl">
+            <div class="row align-items-center gy-4">
+                <div class="col-lg-7">
+                    <span class="hero-badge mb-3">
+                        <i class="fas fa-certificate"></i> RERA &amp; DTCP / VMRDA Approved Townships
+                    </span>
+                    <h1 class="display-6 fw-extrabold mb-3" id="heroTitle">
+                        VGK Real Dreams: Verified Gated Communities &amp; Solar Townships
+                    </h1>
+                    <p class="lead text-light opacity-90 mb-4" id="heroSubtitle" style="font-size: 1.05rem;">
+                        100% genuine legal clearance, spot registration, underground electrical cabling, and 40+ lifestyle amenities. Backed by bank loan approvals up to 80% from SBI, HDFC, and ICICI Bank.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="/ecom?segment=real-dreams" class="btn btn-danger btn-lg fw-bold px-4 py-2" style="background:#e11d48; border-color:#e11d48;">
+                            <i class="fas fa-map-marked-alt me-2"></i> <span id="heroBuyBtn">Explore Plots on E-Com Marketplace</span>
+                        </a>
+                        <a href="#featured_projects" class="btn btn-outline-light btn-lg fw-bold px-4 py-2">
+                            <i class="fas fa-layer-group me-2"></i> <span id="heroCompareBtn">Featured Layouts &amp; Master Plans</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="trust-stat-card">
+                                <i class="fas fa-shield-check text-success fs-3 mb-1"></i>
+                                <h3 class="fw-bold mb-0 text-white font-mono">100%</h3>
+                                <div class="text-white-50 small" id="statLegal">Clear Title &amp; RERA</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="trust-stat-card">
+                                <i class="fas fa-landmark text-warning fs-3 mb-1"></i>
+                                <h3 class="fw-bold mb-0 text-white font-mono">80%</h3>
+                                <div class="text-white-50 small" id="statLoan">Bank Loan Available</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="trust-stat-card">
+                                <i class="fas fa-tree-city text-info fs-3 mb-1"></i>
+                                <h3 class="fw-bold mb-0 text-white font-mono">40+</h3>
+                                <div class="text-white-50 small" id="statAmenities">Modern Amenities</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="trust-stat-card">
+                                <i class="fas fa-chart-line text-danger fs-3 mb-1"></i>
+                                <h3 class="fw-bold mb-0 text-white font-mono">25%+</h3>
+                                <div class="text-white-50 small" id="statRoi">Annual Land ROI</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 4. GENUINE LEGALITY & BANK APPROVALS SHIELD ── -->
+    <div class="container-xl mt-4">
+        <div class="catalog-card" style="border-left: 5px solid #e11d48;">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div>
+                    <span class="section-header-badge bg-danger-subtle text-danger">VERIFIED CREDENTIALS</span>
+                    <h4 class="fw-bold mb-1" id="bankHeading">Legal Genuineness, Clear Titles &amp; 80% Bank Loan Approvals</h4>
+                    <p class="text-muted small mb-0" id="bankSubheading">
+                        All Real Dreams properties undergo rigorous 30-year title searches by certified advocates and are fully configured at our central administrative catalog.
+                    </p>
+                </div>
+                <div>
+                    <a href="/staff/configuration/catalog" class="btn btn-outline-secondary btn-sm fw-bold">
+                        <i class="fas fa-sliders-h me-1"></i> Staff Configuration Portal
+                    </a>
+                </div>
+            </div>
+
+            <div class="row g-3 align-items-center">
+                <div class="col-lg-8">
+                    <div class="d-flex flex-wrap gap-2">
+                        <div class="bank-badge"><i class="fas fa-university text-primary"></i> State Bank of India (SBI) Approved</div>
+                        <div class="bank-badge"><i class="fas fa-university text-danger"></i> HDFC Bank Home Loans</div>
+                        <div class="bank-badge"><i class="fas fa-university text-warning"></i> ICICI Bank Approved</div>
+                        <div class="bank-badge"><i class="fas fa-university text-info"></i> Axis Bank &amp; LIC HFL</div>
+                    </div>
+                </div>
+                <div class="col-lg-4 text-lg-end">
+                    <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 fs-6 fw-bold">
+                        <i class="fas fa-stamp me-1"></i> Immediate Spot Registration
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 5. FEATURED TOWNSHIP LAYOUTS & PLOTS ── -->
+    <div class="container-xl mt-3" id="featured_projects">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <span class="section-header-badge bg-warning-subtle text-warning">FEATURED DEVELOPMENTS</span>
+                <h3 class="fw-bold mb-0" id="projectsHeading">Prime Villa Townships &amp; Open Layouts</h3>
+            </div>
+            <a href="/ecom?segment=real-dreams" class="btn-rd">
+                <i class="fas fa-shopping-bag"></i> View Live Listings on E-Com
+            </a>
+        </div>
+
+        <div class="row g-4">
+            <!-- Project 1: Green Meadows Gated Villa Plots -->
+            <div class="col-md-6 col-lg-4">
+                <div class="property-card">
+                    <div class="property-img-wrap">
+                        <span class="rera-badge-pill"><i class="fas fa-check-circle me-1"></i>RERA &amp; DTCP</span>
+                        <img src="https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=800&q=80" alt="Green Meadows Villa Plots">
+                        <span class="price-badge-pill font-mono">₹18,500 / Sq. Yd</span>
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <h5 class="fw-bold mb-1">Real Dreams Green Meadows</h5>
+                        <p class="text-muted small mb-2"><i class="fas fa-map-marker-alt text-danger me-1"></i> NH-16 Growth Corridor, Pendurthi Zone</p>
+                        <ul class="list-unstyled small text-secondary mb-3">
+                            <li><i class="fas fa-check text-success me-1"></i> Plot Sizes: 167, 200, 267 &amp; 500 Sq. Yards</li>
+                            <li><i class="fas fa-check text-success me-1"></i> 40ft Wide BT Roads &amp; Underground Cabling</li>
+                            <li><i class="fas fa-check text-success me-1"></i> 80% Bank Loan Approved with SBI &amp; HDFC</li>
+                        </ul>
+                        <div class="mt-auto pt-2 border-top">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted small">Plot Cost (200 Yd):</span>
+                                <strong class="text-success font-mono">₹37.00 Lakhs</strong>
+                            </div>
+                            <a href="/ecom?segment=real-dreams" class="btn-rd w-100">
+                                <i class="fas fa-arrow-right me-1"></i> View on Real Dreams E-Com
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project 2: Royal Palms Luxury Turnkey Villas -->
+            <div class="col-md-6 col-lg-4">
+                <div class="property-card">
+                    <div class="property-img-wrap">
+                        <span class="rera-badge-pill"><i class="fas fa-check-circle me-1"></i>Solar Powered Villa</span>
+                        <img src="https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=80" alt="Royal Palms Luxury Villas">
+                        <span class="price-badge-pill font-mono">₹78.50 Lakhs</span>
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <h5 class="fw-bold mb-1">Real Dreams Royal Palms Villas</h5>
+                        <p class="text-muted small mb-2"><i class="fas fa-map-marker-alt text-danger me-1"></i> Scenic Hillside Enclave, Vizag Growth Hub</p>
+                        <ul class="list-unstyled small text-secondary mb-3">
+                            <li><i class="fas fa-check text-success me-1"></i> 3 BHK Duplex (1800 sq ft on 200 sq yd plot)</li>
+                            <li><i class="fas fa-check text-success me-1"></i> Built-in 3 kW Solar Rooftop (Zero Bills)</li>
+                            <li><i class="fas fa-check text-success me-1"></i> Private Garden &amp; Covered EV Charging Port</li>
+                        </ul>
+                        <div class="mt-auto pt-2 border-top">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted small">Turnkey Package:</span>
+                                <strong class="text-success font-mono">₹78.50 Lakhs</strong>
+                            </div>
+                            <a href="/ecom?segment=real-dreams" class="btn-rd w-100">
+                                <i class="fas fa-arrow-right me-1"></i> View on Real Dreams E-Com
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project 3: Commercial Highstreet Frontage -->
+            <div class="col-md-6 col-lg-4">
+                <div class="property-card">
+                    <div class="property-img-wrap">
+                        <span class="rera-badge-pill"><i class="fas fa-check-circle me-1"></i>Highway Facing</span>
+                        <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=80" alt="Commercial Highstreet Plots">
+                        <span class="price-badge-pill font-mono">₹28,000 / Sq. Yd</span>
+                    </div>
+                    <div class="p-3 d-flex flex-column flex-grow-1">
+                        <h5 class="fw-bold mb-1">Real Dreams Commercial Highstreet</h5>
+                        <p class="text-muted small mb-2"><i class="fas fa-map-marker-alt text-danger me-1"></i> 60ft Express Master Plan Highway Road</p>
+                        <ul class="list-unstyled small text-secondary mb-3">
+                            <li><i class="fas fa-check text-success me-1"></i> Commercial Retail &amp; EV Hub Frontage</li>
+                            <li><i class="fas fa-check text-success me-1"></i> Ideal for Showrooms, Clinics &amp; Depots</li>
+                            <li><i class="fas fa-check text-success me-1"></i> High Visibility with Ample Customer Parking</li>
+                        </ul>
+                        <div class="mt-auto pt-2 border-top">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted small">Base Rate:</span>
+                                <strong class="text-success font-mono">₹28,000 / Yd</strong>
+                            </div>
+                            <a href="/ecom?segment=real-dreams" class="btn-rd w-100">
+                                <i class="fas fa-arrow-right me-1"></i> View on Real Dreams E-Com
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 6. 40+ TOWNSHIP LIFESTYLE AMENITIES ── -->
+    <div class="container-xl mt-4">
+        <div class="catalog-card">
+            <div class="text-center max-w-2xl mx-auto mb-4">
+                <span class="section-header-badge bg-success-subtle text-success">WORLD CLASS LIVING</span>
+                <h3 class="fw-bold mb-1" id="amenitiesHeading">40+ Integrated Township Amenities</h3>
+                <p class="text-muted small mb-0" id="amenitiesSubheading">
+                    Engineered for sustainable modern living with integrated clean energy, lush recreation zones, and multi-tier security.
+                </p>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-6 col-md-3">
+                    <div class="amenity-chip"><i class="fas fa-road text-primary"></i> 40ft &amp; 33ft Wide BT Roads</div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="amenity-chip"><i class="fas fa-bolt text-warning"></i> Underground Cabling</div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="amenity-chip"><i class="fas fa-solar-panel text-success"></i> Solar Street Lighting</div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="amenity-chip"><i class="fas fa-shield-alt text-danger"></i> 24/7 Security &amp; CCTV</div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="amenity-chip"><i class="fas fa-water text-info"></i> Overhead Water Tank</div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="amenity-chip"><i class="fas fa-child text-purple" style="color:#7c3aed;"></i> Children's Play Arena</div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="amenity-chip"><i class="fas fa-swimming-pool text-primary"></i> Clubhouse &amp; Pool</div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="amenity-chip"><i class="fas fa-leaf text-success"></i> Landscaped Avenue Parks</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 7. VIP SITE VISIT & CONSULTATION CTA ── -->
+    <div class="container-xl mt-3">
+        <div class="catalog-card" style="background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-alt) 100%);">
+            <div class="row align-items-center">
+                <div class="col-lg-7">
+                    <h4 class="fw-bold mb-2">Schedule a Free VIP Site Visit &amp; Documentation Review</h4>
+                    <p class="text-muted mb-3">
+                        Our real estate property advisory team provides complimentary chauffeur pickup from Visakhapatnam city center, on-site survey verification, and direct title inspection with legal advisors.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge bg-light text-dark border"><i class="fas fa-car text-primary me-1"></i> Complimentary AC Cab Pickup</span>
+                        <span class="badge bg-light text-dark border"><i class="fas fa-file-contract text-success me-1"></i> Free Legal Verification</span>
+                        <span class="badge bg-light text-dark border"><i class="fas fa-headset text-danger me-1"></i> Hotline: +91 858585 2738</span>
+                    </div>
+                </div>
+                <div class="col-lg-5 text-lg-end mt-3 mt-lg-0">
+                    <a href="https://wa.me/918585852738?text=Hello%20MyntReal,%20I%20would%20like%20to%20schedule%20a%20VIP%20Site%20Visit%20for%20Real%20Dreams%20Properties." target="_blank" class="btn btn-success btn-lg fw-bold px-4">
+                        <i class="fab fa-whatsapp me-2 fs-5"></i> Book Site Visit on WhatsApp
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Theme & Multi-Language Switching -->
+    <script>
+        const TRANSLATIONS = {
+            en: {
+                rdPromoBannerText: "<strong>DTCP & RERA Approved Villa Townships:</strong> Up to <strong>80% Bank Loans Approved</strong> (SBI, HDFC, ICICI) with Spot Registration Guarantee!",
+                rdShopBtnText: "Browse Properties on E-Com",
+                heroTitle: "VGK Real Dreams: Verified Gated Communities & Solar Townships",
+                heroSubtitle: "100% genuine legal clearance, spot registration, underground electrical cabling, and 40+ lifestyle amenities. Backed by bank loan approvals up to 80% from SBI, HDFC, and ICICI Bank.",
+                heroBuyBtn: "Explore Plots on E-Com Marketplace",
+                heroCompareBtn: "Featured Layouts & Master Plans",
+                statLegal: "Clear Title & RERA",
+                statLoan: "Bank Loan Available",
+                statAmenities: "Modern Amenities",
+                statRoi: "Annual Land ROI",
+                bankHeading: "Legal Genuineness, Clear Titles & 80% Bank Loan Approvals",
+                bankSubheading: "All Real Dreams properties undergo rigorous 30-year title searches by certified advocates and are fully configured at our central administrative catalog.",
+                projectsHeading: "Prime Villa Townships & Open Layouts",
+                amenitiesHeading: "40+ Integrated Township Amenities",
+                amenitiesSubheading: "Engineered for sustainable modern living with integrated clean energy, lush recreation zones, and multi-tier security."
+            },
+            te: {
+                rdPromoBannerText: "<strong>DTCP & RERA ఆమోదిత విల్లా లేఅవుట్స్:</strong> <strong>80% వరకు బ్యాంక్ లోన్ సదుపాయం</strong> (SBI, HDFC, ICICI) మరియు తక్షణ స్పాట్ రిజిస్ట్రేషన్!",
+                rdShopBtnText: "ఈ-కామ్‌లో ప్రాపర్టీస్ చూడండి",
+                heroTitle: "VGK రియల్ డ్రీమ్స్: ధృవీకరించబడిన గేటెడ్ కమ్యూనిటీలు & సోలార్ టౌన్‌షిప్స్",
+                heroSubtitle: "100% స్పష్టమైన టైటిల్స్, స్పాట్ రిజిస్ట్రేషన్, భూగర్భ విద్యుద్దీకరణ మరియు 40+ ఆధునిక వసతులు. ప్రముఖ బ్యాంకుల (SBI, HDFC, ICICI) ద్వారా 80% వరకు లోన్ సదుపాయం.",
+                heroBuyBtn: "ఈ-కామ్ మార్కెట్‌ప్లేస్‌లో ప్లాట్స్ చూడండి",
+                heroCompareBtn: "లేఅవుట్స్ & మాస్టర్ ప్లాన్స్",
+                statLegal: "క్లియర్ టైటిల్ & RERA",
+                statLoan: "80% బ్యాంక్ లోన్",
+                statAmenities: "40+ ఆధునిక వసతులు",
+                statRoi: "వార్షిక విలువ పెరుగుదల",
+                bankHeading: "చట్టబద్ధమైన పత్రాలు & 80% బ్యాంక్ లోన్ ఆమోదాలు",
+                bankSubheading: "ప్రతి ప్రాపర్టీ 30 సంవత్సరాల లీగల్ సెర్చ్ చేయబడి, పూర్తి పారదర్శకతతో సెంట్రల్ అడ్మినిస్ట్రేటివ్ క్యాటలాగ్‌లో ధృవీకరించబడింది.",
+                projectsHeading: "అద్భుతమైన విల్లా టౌన్‌షిప్స్ & ఓపెన్ ప్లాట్స్",
+                amenitiesHeading: "40+ సమీకృత టౌన్‌షిప్ సౌకర్యాలు",
+                amenitiesSubheading: "పరిశుభ్రమైన పర్యావరణం, సోలార్ ఎనర్జీ, విశాలమైన పార్కులు మరియు కట్టుదిట్టమైన భద్రతతో నిర్మితం."
+            }
+        };
+
+        let currentLang = 'en';
+
+        function switchLanguage(lang) {
+            currentLang = lang;
+            const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+            for (let id in t) {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = t[id];
+            }
+            document.querySelectorAll('.lang-pill-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+            });
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.getAttribute('data-theme') === 'dark';
+            const next = isDark ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            const icon = document.getElementById('themeToggleIcon');
+            const txt = document.getElementById('themeToggleText');
+            if (icon) icon.className = next === 'dark' ? 'fas fa-sun text-warning' : 'fas fa-moon text-warning';
+            if (txt) txt.textContent = next === 'dark' ? 'Light Mode' : 'Dark Mode';
+        }
+    </script>
+</body>
+</html>

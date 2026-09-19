@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>VGK Care Insurance Advisory — 360° Asset & Risk Protection | MYNTREAL & VGK4U</title>
+    <meta name="description" content="Specialized EV battery and motor insurance, solar rooftop EPC all-risk coverage, cashless health and commercial liability advisory. 98.6% claim settlement ratio.">
+    <link rel="icon" type="image/png" href="/public/favicon.ico">
+
+    <!-- Bootstrap 5.3 & FontAwesome 6 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-base: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-card-alt: #f1f5f9;
+            --text-main: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+            --brand-border: #e2e8f0;
+            --brand-blue: #0284c7;
+            --brand-emerald: #059669;
+            --brand-purple: #7c3aed;
+            --brand-amber: #d97706;
+            --card-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -2px rgba(15, 23, 42, 0.04);
+            --card-shadow-lg: 0 12px 30px -4px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.06);
+        }
+
+        [data-theme="dark"] {
+            --bg-base: #0b0f19;
+            --bg-card: #131b2e;
+            --bg-card-alt: #1a233a;
+            --text-main: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --brand-border: #1e293b;
+            --card-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+            --card-shadow-lg: 0 16px 36px -4px rgba(0, 0, 0, 0.7);
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            margin: 0;
+            padding-bottom: 80px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* ── TOP HEADER & TABS ── */
+        .catalog-top-header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--brand-border);
+            padding: 12px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1040;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+        }
+
+        .catalog-header-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 11px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 999px;
+            text-decoration: none;
+            border: 1px solid var(--brand-border);
+            background: var(--bg-card-alt);
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .catalog-header-tab:hover {
+            color: #0284c7;
+            border-color: #0284c7;
+        }
+
+        .catalog-header-tab.active {
+            background: rgba(2, 132, 199, 0.12);
+            border-color: rgba(2, 132, 199, 0.45);
+            color: #0284c7;
+            box-shadow: 0 0 0 1px rgba(2, 132, 199, 0.2);
+        }
+
+        /* ── TOP ANNOUNCEMENT STRIP ── */
+        .vgk-care-strip {
+            background: linear-gradient(135deg, #075985 0%, #0369a1 100%);
+            color: #ffffff;
+            padding: 9px 16px;
+            font-size: 13px;
+            border-bottom: 2px solid #38bdf8;
+        }
+
+        /* ── HERO BANNER ── */
+        .hero-banner {
+            background: linear-gradient(135deg, #0c4a6e 0%, #0f172a 100%);
+            color: #ffffff;
+            padding: 48px 0 38px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-banner::after {
+            content: "";
+            position: absolute;
+            top: -40%;
+            right: -10%;
+            width: 550px;
+            height: 550px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, rgba(0,0,0,0) 70%);
+            pointer-events: none;
+        }
+
+        .hero-badge {
+            background: rgba(2, 132, 199, 0.25);
+            border: 1px solid rgba(56, 189, 248, 0.5);
+            color: #7dd3fc;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .trust-stat-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 14px 16px;
+            text-align: center;
+        }
+
+        /* ── SECTION CARDS ── */
+        .catalog-card {
+            background: var(--bg-card);
+            border: 1px solid var(--brand-border);
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            padding: 24px;
+            margin-bottom: 24px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .catalog-card:hover {
+            box-shadow: var(--card-shadow-lg);
+        }
+
+        .section-header-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 4px 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        /* ── PILLAR CARD ── */
+        .pillar-card {
+            background: var(--bg-card);
+            border: 1px solid var(--brand-border);
+            border-radius: 16px;
+            padding: 24px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.25s ease;
+        }
+
+        .pillar-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--card-shadow-lg);
+            border-color: #0284c7;
+        }
+
+        .pillar-icon-wrap {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 18px;
+        }
+
+        .btn-care {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+            color: #ffffff !important;
+            border: none;
+            font-weight: 700;
+            border-radius: 8px;
+            padding: 9px 18px;
+            font-size: 13.5px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .btn-care:hover {
+            background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+            box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+        }
+
+        .partner-logo-chip {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--brand-border);
+            border-radius: 10px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-main);
+        }
+
+        .theme-toggle-btn {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--brand-border);
+            color: var(--text-main);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .lang-pill-btn {
+            background: var(--bg-card-alt);
+            border: 1px solid var(--brand-border);
+            color: var(--text-secondary);
+            padding: 5px 11px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .lang-pill-btn.active {
+            background: #0284c7;
+            color: #fff;
+            border-color: #0284c7;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── 1. TOP ANNOUNCEMENT STRIP ── -->
+    <div class="vgk-care-strip">
+        <div class="container-xl d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-warning text-dark fw-bold"><i class="fas fa-shield-heart me-1"></i> VGK CARE</span>
+                <span id="carePromoText">
+                    <strong>Multi-Insurer Digital Protection:</strong> Partnered with <strong>40+ National Insurers</strong> | <strong>98.6% Claim Settlement Ratio</strong> with Cashless Support!
+                </span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <a href="#quote_calculator" class="badge bg-white text-dark py-2 px-3 text-decoration-none fw-bold" title="Calculate Premium">
+                    <i class="fas fa-calculator me-1 text-primary"></i> <span id="careCalcBtnText">Calculate Quote</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 2. TOP HEADER & CROSS-VERTICAL TABS ── -->
+    <header class="catalog-top-header">
+        <div class="container-fluid px-3 px-xl-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-3">
+                <a href="/catalog/insurance/comprehensive-insurance-advisory" class="d-flex align-items-center text-decoration-none">
+                    <img src="/public/hub/Assets/Myntreal.logo.png" alt="MyntReal" style="height: 40px; object-fit: contain;" onerror="this.src='/public/myntreal-logo.png'">
+                </a>
+
+                <!-- Cross-Vertical Navigation Tabs -->
+                <div class="d-flex align-items-center gap-2 overflow-x-auto pb-1" style="scrollbar-width: none;">
+                    <a href="/catalog/industrial-hub-franchise" class="catalog-header-tab" title="5-in-1 Franchise Overview">
+                        <i class="fas fa-building-columns text-warning"></i>
+                        <span>5-in-1 Franchise</span>
+                    </a>
+                    <a href="/catalog/hub-ev-pricing" class="catalog-header-tab" title="Hub Commercial Pricing (24h)">
+                        <i class="fas fa-tags text-success"></i>
+                        <span>Hub Pricing (24h)</span>
+                    </a>
+                    <a href="/catalog/ev-b2b/ev-commercial-fleet" class="catalog-header-tab" title="EV B2B Fleets">
+                        <i class="fas fa-truck-moving text-info"></i>
+                        <span>EV B2B Fleets</span>
+                    </a>
+                    <a href="/catalog/ev-spares/ev-spares-and-chargers" class="catalog-header-tab" title="EV Spares, Chargers & Batteries">
+                        <i class="fas fa-cogs" style="color: #a855f7;"></i>
+                        <span>EV Spares</span>
+                    </a>
+                    <a href="/catalog/real-dreams/real-dreams-premium-properties" class="catalog-header-tab" title="Real Dreams Premium Properties">
+                        <i class="fas fa-building text-danger"></i>
+                        <span>Real Dreams</span>
+                    </a>
+                    <a href="/catalog/insurance/comprehensive-insurance-advisory" class="catalog-header-tab active" title="VGK Care Insurance Advisory">
+                        <i class="fas fa-shield-alt text-primary"></i>
+                        <span>VGK Care</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Theme Toggle & Language Switcher -->
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
+                    <i class="fas fa-moon text-warning" id="themeToggleIcon"></i>
+                    <span class="d-none d-sm-inline" id="themeToggleText">Dark Mode</span>
+                </button>
+
+                <div class="d-flex gap-1 align-items-center">
+                    <button class="lang-pill-btn active" data-lang="en" onclick="switchLanguage('en')">EN</button>
+                    <button class="lang-pill-btn" data-lang="te" onclick="switchLanguage('te')">తెలుగు</button>
+                </div>
+
+                <img src="/public/vgk4u-logo.png" alt="VGK4U" class="d-none d-md-block ms-1" style="height: 26px;" onerror="this.style.display='none'">
+            </div>
+        </div>
+    </header>
+
+    <!-- ── 3. HERO SHOWCASE ── -->
+    <section class="hero-banner">
+        <div class="container-xl">
+            <div class="row align-items-center gy-4">
+                <div class="col-lg-7">
+                    <span class="hero-badge mb-3">
+                        <i class="fas fa-award"></i> 98.6% Claim Settlement Ratio • Multi-Insurer Advisory
+                    </span>
+                    <h1 class="display-6 fw-extrabold mb-3" id="heroTitle">
+                        VGK Care: 360° Comprehensive Insurance &amp; Risk Protection
+                    </h1>
+                    <p class="lead text-light opacity-90 mb-4" id="heroSubtitle" style="font-size: 1.05rem;">
+                        Specialized zero-depreciation coverage for Electric Vehicle battery replacement, Solar Rooftop EPC all-risk damage, family cashless health, and commercial property liability. Instant digital policy issuance on spot.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="#quote_calculator" class="btn btn-primary btn-lg fw-bold px-4 py-2" style="background:#0284c7; border-color:#0284c7;">
+                            <i class="fas fa-calculator me-2"></i> <span id="heroCalcBtn">Calculate Policy Premium</span>
+                        </a>
+                        <a href="#insurance_pillars" class="btn btn-outline-light btn-lg fw-bold px-4 py-2">
+                            <i class="fas fa-shield-halved me-2"></i> <span id="heroPillarsBtn">Explore 4 Insurance Pillars</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="trust-stat-card">
+                                <i class="fas fa-check-to-slot text-success fs-3 mb-1"></i>
+                                <h3 class="fw-bold mb-0 text-white font-mono">98.6%</h3>
+                                <div class="text-white-50 small" id="statClaims">Claim Settlement Ratio</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="trust-stat-card">
+                                <i class="fas fa-handshake-angle text-info fs-3 mb-1"></i>
+                                <h3 class="fw-bold mb-0 text-white font-mono">40+</h3>
+                                <div class="text-white-50 small" id="statInsurers">Leading Insurers</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="trust-stat-card">
+                                <i class="fas fa-hospital text-warning fs-3 mb-1"></i>
+                                <h3 class="fw-bold mb-0 text-white font-mono">4,500+</h3>
+                                <div class="text-white-50 small" id="statNetwork">Cashless Network</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="trust-stat-card">
+                                <i class="fas fa-stopwatch text-danger fs-3 mb-1"></i>
+                                <h3 class="fw-bold mb-0 text-white font-mono">&lt; 4 Hours</h3>
+                                <div class="text-white-50 small" id="statSpeed">Digital Survey Turnaround</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 4. FOUR CORE INSURANCE PILLARS ── -->
+    <div class="container-xl mt-4" id="insurance_pillars">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <span class="section-header-badge bg-primary-subtle text-primary">COMPREHENSIVE COVERAGE</span>
+                <h3 class="fw-bold mb-0" id="pillarsHeading">Four Core Insurance Pillars</h3>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Pillar 1: EV Motor & Battery Protection -->
+            <div class="col-md-6 col-lg-3">
+                <div class="pillar-card">
+                    <div class="pillar-icon-wrap bg-primary-subtle text-primary">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">EV Motor &amp; Battery Shield</h5>
+                    <p class="text-muted small mb-3">
+                        Zero-depreciation motor insurance explicitly covering Lithium/Graphene battery replacement, thermal runaway, and water ingress.
+                    </p>
+                    <ul class="list-unstyled small text-secondary mb-4 flex-grow-1">
+                        <li><i class="fas fa-check text-success me-1"></i> Battery Degradation Rider</li>
+                        <li><i class="fas fa-check text-success me-1"></i> Roadside Charging Assistance</li>
+                        <li><i class="fas fa-check text-success me-1"></i> Cashless Service Hub Repair</li>
+                    </ul>
+                    <a href="#quote_calculator" class="btn-care w-100" onclick="selectAsset('ev')">
+                        <i class="fas fa-file-invoice me-1"></i> Get EV Quote
+                    </a>
+                </div>
+            </div>
+
+            <!-- Pillar 2: Solar Rooftop All-Risk -->
+            <div class="col-md-6 col-lg-3">
+                <div class="pillar-card">
+                    <div class="pillar-icon-wrap bg-warning-subtle text-warning">
+                        <i class="fas fa-solar-panel"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Solar EPC All-Risk Policy</h5>
+                    <p class="text-muted small mb-3">
+                        Protects solar plants from cyclone, hail, storm, fire, and module damage. Includes generation loss business interruption cover.
+                    </p>
+                    <ul class="list-unstyled small text-secondary mb-4 flex-grow-1">
+                        <li><i class="fas fa-check text-success me-1"></i> Natural Calamity Protection</li>
+                        <li><i class="fas fa-check text-success me-1"></i> Inverter &amp; Wiring Failure</li>
+                        <li><i class="fas fa-check text-success me-1"></i> Generation Loss Compensation</li>
+                    </ul>
+                    <a href="#quote_calculator" class="btn-care w-100" onclick="selectAsset('solar')">
+                        <i class="fas fa-file-invoice me-1"></i> Get Solar Quote
+                    </a>
+                </div>
+            </div>
+
+            <!-- Pillar 3: Cashless Health & Personal Accident -->
+            <div class="col-md-6 col-lg-3">
+                <div class="pillar-card">
+                    <div class="pillar-icon-wrap bg-success-subtle text-success">
+                        <i class="fas fa-heart-pulse"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Family Health &amp; Accidental</h5>
+                    <p class="text-muted small mb-3">
+                        Cashless hospitalization at 4,500+ top multi-specialty hospitals with zero room-rent capping and full pre/post treatment costs.
+                    </p>
+                    <ul class="list-unstyled small text-secondary mb-4 flex-grow-1">
+                        <li><i class="fas fa-check text-success me-1"></i> Cashless Hospitalization</li>
+                        <li><i class="fas fa-check text-success me-1"></i> No Room Rent Capping</li>
+                        <li><i class="fas fa-check text-success me-1"></i> Critical Illness Shield</li>
+                    </ul>
+                    <a href="#quote_calculator" class="btn-care w-100" onclick="selectAsset('health')">
+                        <i class="fas fa-file-invoice me-1"></i> Get Health Quote
+                    </a>
+                </div>
+            </div>
+
+            <!-- Pillar 4: Commercial Liability & Factory -->
+            <div class="col-md-6 col-lg-3">
+                <div class="pillar-card">
+                    <div class="pillar-icon-wrap bg-danger-subtle text-danger">
+                        <i class="fas fa-warehouse"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Commercial &amp; Factory Shield</h5>
+                    <p class="text-muted small mb-3">
+                        End-to-end fire, burglary, stock damage, and public liability protection designed for franchise hubs, warehouses &amp; MSMEs.
+                    </p>
+                    <ul class="list-unstyled small text-secondary mb-4 flex-grow-1">
+                        <li><i class="fas fa-check text-success me-1"></i> Fire &amp; Burglary Insurance</li>
+                        <li><i class="fas fa-check text-success me-1"></i> Transit &amp; Stock Shield</li>
+                        <li><i class="fas fa-check text-success me-1"></i> Public &amp; Product Liability</li>
+                    </ul>
+                    <a href="#quote_calculator" class="btn-care w-100" onclick="selectAsset('commercial')">
+                        <i class="fas fa-file-invoice me-1"></i> Get Business Quote
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 5. INTERACTIVE ESTIMATOR & QUOTATION CALCULATOR ── -->
+    <div class="container-xl mt-4" id="quote_calculator">
+        <div class="catalog-card" style="border-left: 5px solid #0284c7;">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div>
+                    <span class="section-header-badge bg-primary-subtle text-primary">INSTANT QUOTE ESTIMATOR</span>
+                    <h4 class="fw-bold mb-1" id="calcHeading">Interactive Premium &amp; Coverage Estimator</h4>
+                    <p class="text-muted small mb-0" id="calcSubheading">
+                        Select your asset category and coverage level to calculate estimated annual premium and bundled riders.
+                    </p>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Select Insurance Vertical:</label>
+                        <div class="d-flex flex-wrap gap-2" id="assetSelector">
+                            <button type="button" class="btn btn-outline-primary btn-sm active" data-asset="ev" onclick="selectAsset('ev')">
+                                <i class="fas fa-motorcycle me-1"></i> Electric 2W / 3W
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-asset="solar" onclick="selectAsset('solar')">
+                                <i class="fas fa-solar-panel me-1"></i> Solar Rooftop (3-10 kW)
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-asset="health" onclick="selectAsset('health')">
+                                <i class="fas fa-heart-pulse me-1"></i> Family Health (₹5-10L)
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" data-asset="commercial" onclick="selectAsset('commercial')">
+                                <i class="fas fa-warehouse me-1"></i> Commercial Property
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Coverage Tier:</label>
+                        <select class="form-select" id="tierSelector" onchange="computePremium()">
+                            <option value="standard">Standard Protection (Basic Damage + 3rd Party)</option>
+                            <option value="zero_dep" selected>Zero-Depreciation + Battery / Natural Calamity Cover (Recommended)</option>
+                            <option value="comprehensive_plus">Turnkey Platinum (Zero-Dep + Roadside + Generation Loss)</option>
+                        </select>
+                    </div>
+
+                    <div class="p-3 rounded bg-light border">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-muted small">Estimated Annual Premium:</span>
+                            <span class="fs-4 fw-extrabold text-primary font-mono" id="premiumDisplay">₹1,850 / yr</span>
+                        </div>
+                        <div class="small text-muted" id="premiumNotes">
+                            Includes 1-Year Comprehensive Own Damage, Zero-Depreciation &amp; Battery Fire Rider.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="p-3 rounded bg-light border h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <h6 class="fw-bold mb-2"><i class="fas fa-shield-check text-success me-1"></i> Included VGK Care Privileges:</h6>
+                            <ul class="list-unstyled small text-secondary mb-3" id="carePrivileges">
+                                <li><i class="fas fa-check text-success me-2"></i> Cashless claim settlement at 4,500+ authorized repair hubs</li>
+                                <li><i class="fas fa-check text-success me-2"></i> Dedicated Relationship Manager for fast 4-hour survey</li>
+                                <li><i class="fas fa-check text-success me-2"></i> Free mobile roadside assistance &amp; battery jump/towing</li>
+                                <li><i class="fas fa-check text-success me-2"></i> Instant spot issuance of digitally signed IRDAI policy</li>
+                            </ul>
+                        </div>
+                        <div class="text-end">
+                            <a href="https://wa.me/918585852738?text=Hello%20VGK%20Care,%20I%20would%20like%20to%20issue%20an%20Insurance%20Policy." target="_blank" class="btn btn-success fw-bold px-4">
+                                <i class="fab fa-whatsapp me-2 fs-5"></i> Issue Policy on WhatsApp
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 6. AUTHORIZED NATIONAL INSURANCE PARTNERS ── -->
+    <div class="container-xl mt-3">
+        <div class="catalog-card text-center">
+            <h5 class="fw-bold mb-3" id="partnersHeading">Our Authorized National Insurance Carrier Partners</h5>
+            <div class="d-flex flex-wrap justify-content-center gap-2">
+                <div class="partner-logo-chip"><i class="fas fa-shield-halved text-primary"></i> Bajaj Allianz General Insurance</div>
+                <div class="partner-logo-chip"><i class="fas fa-shield-halved text-danger"></i> HDFC ERGO General Insurance</div>
+                <div class="partner-logo-chip"><i class="fas fa-shield-halved text-warning"></i> ICICI Lombard General Insurance</div>
+                <div class="partner-logo-chip"><i class="fas fa-shield-halved text-info"></i> Tata AIG General Insurance</div>
+                <div class="partner-logo-chip"><i class="fas fa-shield-halved text-success"></i> Care Health Insurance</div>
+                <div class="partner-logo-chip"><i class="fas fa-shield-halved text-purple"></i> Star Health &amp; Allied Insurance</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 7. ADVISORY CONTACT CTA ── -->
+    <div class="container-xl mt-3">
+        <div class="catalog-card" style="background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-alt) 100%);">
+            <div class="row align-items-center">
+                <div class="col-lg-7">
+                    <h4 class="fw-bold mb-2">Speak to a Certified VGK Care Insurance Specialist</h4>
+                    <p class="text-muted mb-3">
+                        Whether renewing vehicle insurance, insuring a newly installed solar rooftop plant, or securing health coverage for your family, our licensed insurance advisory desk issues policies instantly with zero paperwork hassle.
+                    </p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge bg-light text-dark border"><i class="fas fa-bolt text-warning me-1"></i> Instant Spot Issuance</span>
+                        <span class="badge bg-light text-dark border"><i class="fas fa-percent text-success me-1"></i> Up to 65% NCB Discount</span>
+                        <span class="badge bg-light text-dark border"><i class="fas fa-phone-volume text-primary me-1"></i> Hotline: +91 858585 2738</span>
+                    </div>
+                </div>
+                <div class="col-lg-5 text-lg-end mt-3 mt-lg-0">
+                    <a href="https://wa.me/918585852738?text=Hello%20VGK%20Care,%20please%20connect%20me%20with%20an%20Insurance%20Advisor." target="_blank" class="btn btn-primary btn-lg fw-bold px-4" style="background:#0284c7; border-color:#0284c7;">
+                        <i class="fas fa-headset me-2"></i> Request Callback
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Theme & Multi-Language Switching -->
+    <script>
+        const TRANSLATIONS = {
+            en: {
+                carePromoText: "<strong>Multi-Insurer Digital Protection:</strong> Partnered with <strong>40+ National Insurers</strong> | <strong>98.6% Claim Settlement Ratio</strong> with Cashless Support!",
+                careCalcBtnText: "Calculate Quote",
+                heroTitle: "VGK Care: 360° Comprehensive Insurance & Risk Protection",
+                heroSubtitle: "Specialized zero-depreciation coverage for Electric Vehicle battery replacement, Solar Rooftop EPC all-risk damage, family cashless health, and commercial property liability. Instant digital policy issuance on spot.",
+                heroCalcBtn: "Calculate Policy Premium",
+                heroPillarsBtn: "Explore 4 Insurance Pillars",
+                statClaims: "Claim Settlement Ratio",
+                statInsurers: "Leading Insurers",
+                statNetwork: "Cashless Network",
+                statSpeed: "Digital Survey Turnaround",
+                pillarsHeading: "Four Core Insurance Pillars",
+                calcHeading: "Interactive Premium & Coverage Estimator",
+                calcSubheading: "Select your asset category and coverage level to calculate estimated annual premium and bundled riders.",
+                partnersHeading: "Our Authorized National Insurance Carrier Partners"
+            },
+            te: {
+                carePromoText: "<strong>బహుళ-బీమా డిజిటల్ రక్షణ:</strong> <strong>40+ ప్రముఖ జాతీయ బీమా సంస్థలతో</strong> భాగస్వామ్యం | <strong>98.6% క్లెయిమ్ సెటిల్‌మెంట్ రేషియో</strong> మరియు క్యాష్‌లెస్‌ సదుపాయం!",
+                careCalcBtnText: "కొటేషన్ కాలిక్యులేట్ చేయండి",
+                heroTitle: "VGK కేర్: 360° సమగ్ర బీమా & రిస్క్ ప్రొటెక్షన్",
+                heroSubtitle: "ఎలక్ట్రిక్ వెహికల్స్ బ్యాటరీ భద్రత, సోలార్ రూఫ్‌టాప్ ఆల్-రిస్క్ ప్రొటెక్షన్, కుటుంబ ఆరోగ్య బీమా (Cashless) మరియు వ్యాపార ఆస్తి రక్షణ. స్పాట్ పాలసీ జారీ సదుపాయం.",
+                heroCalcBtn: "ప్రీమియం లెక్కించండి",
+                heroPillarsBtn: "4 ముఖ్య బీమా రంగాలు",
+                statClaims: "క్లెయిమ్ సెటిల్‌మెంట్ రేషియో",
+                statInsurers: "ప్రముఖ బీమా కంపెనీలు",
+                statNetwork: "క్యాష్‌లెస్‌ నెట్‌వర్క్",
+                statSpeed: "వేగవంతమైన డిజిటల్ సర్వే",
+                pillarsHeading: "నాలుగు ప్రధాన బీమా విభాగాలు",
+                calcHeading: "ఇంటరాక్టివ్ ప్రీమియం & కవరేజ్ కాలిక్యులేటర్",
+                calcSubheading: "మీ వెహికల్, సోలార్ లేదా హెల్త్ ప్లాన్ ఎంచుకుని అంచనా వార్షిక ప్రీమియం వివరాలు తెలుసుకోండి.",
+                partnersHeading: "మా అధికారిక జాతీయ బీమా భాగస్వాములు"
+            }
+        };
+
+        let currentLang = 'en';
+        let currentAsset = 'ev';
+
+        const RATES = {
+            ev: { standard: '₹1,250 / yr', zero_dep: '₹1,850 / yr', comprehensive_plus: '₹2,450 / yr' },
+            solar: { standard: '₹2,400 / yr', zero_dep: '₹3,600 / yr', comprehensive_plus: '₹4,900 / yr' },
+            health: { standard: '₹4,800 / yr', zero_dep: '₹7,500 / yr', comprehensive_plus: '₹11,200 / yr' },
+            commercial: { standard: '₹3,500 / yr', zero_dep: '₹5,800 / yr', comprehensive_plus: '₹8,900 / yr' }
+        };
+
+        function selectAsset(asset) {
+            currentAsset = asset;
+            document.querySelectorAll('#assetSelector button').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-asset') === asset);
+            });
+            computePremium();
+        }
+
+        function computePremium() {
+            const tier = document.getElementById('tierSelector').value;
+            const rate = RATES[currentAsset][tier] || '₹1,850 / yr';
+            document.getElementById('premiumDisplay').textContent = rate;
+            const notes = document.getElementById('premiumNotes');
+            if (currentAsset === 'ev') {
+                notes.textContent = 'Includes 1-Year Comprehensive Own Damage, Zero-Depreciation & Battery Fire/Water Rider.';
+            } else if (currentAsset === 'solar') {
+                notes.textContent = 'Includes Storm, Cyclone, Lightning, Inverter Breakdown & Generation Loss Shield.';
+            } else if (currentAsset === 'health') {
+                notes.textContent = 'Includes ₹5L-₹10L Sum Insured, 4,500+ Cashless Hospitals & Zero Room Rent Cap.';
+            } else {
+                notes.textContent = 'Includes Fire, Burglary, Machinery Breakdown & Public Liability.';
+            }
+        }
+
+        function switchLanguage(lang) {
+            currentLang = lang;
+            const t = TRANSLATIONS[lang] || TRANSLATIONS.en;
+            for (let id in t) {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = t[id];
+            }
+            document.querySelectorAll('.lang-pill-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+            });
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const isDark = html.getAttribute('data-theme') === 'dark';
+            const next = isDark ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            const icon = document.getElementById('themeToggleIcon');
+            const txt = document.getElementById('themeToggleText');
+            if (icon) icon.className = next === 'dark' ? 'fas fa-sun text-warning' : 'fas fa-moon text-warning';
+            if (txt) txt.textContent = next === 'dark' ? 'Light Mode' : 'Dark Mode';
+        }
+    </script>
+</body>
+</html>

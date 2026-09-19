@@ -400,9 +400,6 @@
                                 <a id="btnPricingHubLink" href="/catalog/hub-ev-pricing" target="_blank" class="btn btn-sm btn-outline-warning text-warning" title="Open 24-Hour Confidential Commercial Pricing Page" style="display: none;">
                                     <i class="fas fa-tags me-1 text-warning"></i> 24h Commercials
                                 </a>
-                                <a id="btnCustomerEvLink" href="/catalog/customer-2w-ev-pricing" target="_blank" class="btn btn-sm btn-outline-success text-success" title="Open Customer 2-Wheeler EV Pricing Catalog" style="display: none;">
-                                    <i class="fas fa-motorcycle me-1 text-success"></i> Customer EV
-                                </a>
                                 <button class="btn btn-sm btn-brand-wa" onclick="openWhatsAppDispatchModal()">
                                     <i class="fab fa-whatsapp me-1"></i> Send WhatsApp
                                 </button>
@@ -828,7 +825,6 @@
         const VERTICALS = [
             { code: 'SOLAR', label: 'Solar Solutions', icon: 'fa-solar-panel', defaultSlug: 'commercial-residential-solar' },
             { code: 'INDUSTRIAL_HUB', label: 'MyntReal Hub', icon: 'fa-building-columns', defaultSlug: 'industrial-hub-franchise' },
-            { code: 'CUSTOMER_EV_PRICING', label: 'Customer 2W EV Pricing', icon: 'fa-motorcycle', defaultSlug: 'customer-2w-ev-pricing' },
             { code: 'HUB_PRICING', label: 'Hub Commercials (24h)', icon: 'fa-tags', defaultSlug: 'hub-ev-pricing' },
             { code: 'EV_B2B', label: 'EV B2B Fleets', icon: 'fa-truck-moving', defaultSlug: 'ev-commercial-fleet' },
             { code: 'EV_B2C', label: 'EV 2-Wheelers', icon: 'fa-motorcycle', defaultSlug: 'ev-smart-commuter' },
@@ -969,10 +965,6 @@
             if (pricingHubLink) {
                 pricingHubLink.style.display = (cat.segment_code === 'INDUSTRIAL_HUB' || cat.segment_code === 'HUB_PRICING') ? 'inline-flex' : 'none';
             }
-            const customerEvLink = document.getElementById('btnCustomerEvLink');
-            if (customerEvLink) {
-                customerEvLink.style.display = (cat.segment_code === 'CUSTOMER_EV_PRICING' || cat.segment_code === 'INDUSTRIAL_HUB' || cat.segment_code === 'HUB_PRICING') ? 'inline-flex' : 'none';
-            }
 
             document.getElementById('pdfBrochureUrlInput').value = cat.pdf_brochure_url || '';
             document.getElementById('seoTitleInput').value = cat.seo_title || '';
@@ -1063,10 +1055,6 @@
 
         function updatePreviewFrame(cat) {
             const iframe = document.getElementById('catalogPreviewIframe');
-            if (cat.segment_code === 'CUSTOMER_EV_PRICING' || cat.slug === 'customer-2w-ev-pricing') {
-                iframe.src = '/catalog/customer-2w-ev-pricing?preview=1';
-                return;
-            }
             if (cat.segment_code === 'HUB_PRICING' || cat.slug === 'hub-ev-pricing') {
                 iframe.src = '/catalog/hub-ev-pricing?preview=1';
                 return;
