@@ -235,7 +235,7 @@ def _get_catalog_branding(catalog: DigitalCatalog) -> dict:
 def get_public_catalog_by_slug(
     category_slug: str,
     catalog_slug: str,
-    lang: str = Query("en", regex="^(en|te|hi|ta)$"),
+    lang: str = Query("en", pattern="^(en|te|hi|ta)$"),
     ref: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
