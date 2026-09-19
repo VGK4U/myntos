@@ -26,47 +26,46 @@
             --brand-border: #e2e8f0;
             --border-subtle: #f1f5f9;
             
-            --brand-navy: #0b1f33;
-            --brand-navy-dark: #071321;
-            --brand-primary: #155eef;
-            --brand-primary-hover: #1048b8;
-            --brand-emerald: #059669;
-            --brand-emerald-light: #ecfdf5;
-            --brand-gold: #f59e0b;
-            --brand-gold-light: #fffbeb;
-            --brand-gold-dark: #b45309;
-            --brand-cyan: #0284c7;
-            --brand-purple: #7c3aed;
+            --brand-primary: #059669;
+            --brand-primary-hover: #047857;
+            --brand-warning: #d97706;
+            --brand-amber-text: #92400e;
+            --brand-emerald-text: #065f46;
+            --brand-blue-text: #0369a1;
+            --brand-indigo-text: #3730a3;
             --brand-danger: #ef4444;
+            --brand-navy: #0f172a;
 
             --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
             --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
-            --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
-            --shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.12);
-            --shadow-glow: 0 0 24px rgba(21, 94, 239, 0.15);
+            --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.08);
+            --shadow-lg: 0 10px 25px rgba(15, 23, 42, 0.1);
         }
 
         [data-theme="dark"] {
-            --bg-page: #080d17;
-            --bg-card: #0f172a;
-            --bg-card-alt: #162036;
-            --bg-header: #0d1526;
+            --bg-page: #0b0f17;
+            --bg-card: #151d2c;
+            --bg-card-alt: #1c273b;
+            --bg-header: #111827;
             --text-heading: #f8fafc;
             --text-body: #cbd5e1;
             --text-secondary: #94a3b8;
-            --brand-border: #1e293b;
-            --border-subtle: #141e30;
+            --brand-border: #26334a;
+            --border-subtle: #1e293b;
 
-            --brand-navy: #071321;
-            --brand-navy-dark: #040912;
-            --brand-emerald-light: rgba(5, 150, 105, 0.15);
-            --brand-gold-light: rgba(245, 158, 11, 0.15);
+            --brand-primary: #10b981;
+            --brand-primary-hover: #059669;
+            --brand-warning: #fbbf24;
+            --brand-amber-text: #fde68a;
+            --brand-emerald-text: #6ee7b7;
+            --brand-blue-text: #7dd3fc;
+            --brand-indigo-text: #a5b4fc;
+            --brand-navy: #0b0f17;
 
             --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
             --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
-            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.6);
-            --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.7);
-            --shadow-glow: 0 0 24px rgba(21, 94, 239, 0.3);
+            --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.6);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.7);
         }
 
         * {
@@ -102,11 +101,11 @@
             position: sticky;
             top: 0;
             z-index: 1060;
-            background: linear-gradient(135deg, #0b1f33 0%, #112946 100%);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: #ffffff;
             padding: 8px 16px;
             border-bottom: 2px solid #f59e0b;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
             font-size: 13px;
         }
         .countdown-chip {
@@ -137,8 +136,8 @@
         }
 
         .btn-action-sm {
-            padding: 3px 10px;
-            border-radius: 6px;
+            padding: 4px 12px;
+            border-radius: 999px;
             font-size: 12px;
             font-weight: 700;
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -157,168 +156,201 @@
         }
         .btn-action-whatsapp {
             background: #25d366;
-            color: #0b1f33;
+            color: #ffffff;
             border-color: #25d366;
             font-weight: 800;
         }
         .btn-action-whatsapp:hover {
-            background: #20ba59;
-            color: #0b1f33;
+            background: #1eb956;
+            color: #ffffff;
         }
 
-        /* ── EXECUTIVE TOP NAVIGATION ───────────────────────────────────── */
-        .prospectus-navbar {
-            background: var(--bg-header);
+        /* ── TOP HEADER MATCHING OTHER CATALOG STAGES ───────────────────── */
+        .catalog-top-header {
+            background: var(--bg-card);
             border-bottom: 1px solid var(--brand-border);
             padding: 10px 0;
             position: sticky;
             top: 42px;
             z-index: 1050;
             box-shadow: var(--shadow-xs);
+            transition: all 0.3s ease;
         }
-        .nav-chip-link {
+        .catalog-header-tab {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 4px 10px;
+            gap: 6px;
+            padding: 5px 12px;
             font-size: 12px;
             font-weight: 700;
             border-radius: 999px;
             text-decoration: none;
+            transition: all 0.2s ease;
             border: 1px solid var(--brand-border);
             background: var(--bg-card-alt);
             color: var(--text-secondary);
             white-space: nowrap;
-            transition: all 0.2s ease;
         }
-        .nav-chip-link:hover, .nav-chip-link.active {
-            border-color: var(--brand-primary);
-            background: rgba(21, 94, 239, 0.08);
-            color: var(--brand-primary);
+        .catalog-header-tab.active {
+            background: rgba(16, 185, 129, 0.12);
+            border-color: rgba(16, 185, 129, 0.45);
+            color: #059669;
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2);
+        }
+        .catalog-header-tab:hover {
+            color: #059669;
+            border-color: #059669;
+        }
+        [data-theme="dark"] .catalog-header-tab.active {
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
         }
 
-        .lang-btn {
-            border: 1px solid var(--brand-border);
-            background: var(--bg-card);
-            color: var(--text-secondary);
-            font-size: 11.5px;
-            font-weight: 700;
-            padding: 3px 8px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .lang-btn.active {
-            background: var(--brand-primary);
-            color: #ffffff;
-            border-color: var(--brand-primary);
-        }
-        .theme-btn {
+        .lang-pill-btn {
             border: 1px solid var(--brand-border);
             background: var(--bg-card);
             color: var(--text-secondary);
             font-size: 12px;
-            padding: 4px 9px;
+            font-weight: 700;
+            padding: 3px 9px;
             border-radius: 6px;
+            transition: all 0.2s;
             cursor: pointer;
+        }
+        .lang-pill-btn.active {
+            background: #059669;
+            color: #ffffff;
+            border-color: #059669;
+        }
+        .theme-toggle-btn {
+            border: 1px solid var(--brand-border);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        /* ── HIGH-CONTRAST FOOLPROOF BADGES (NO INVISIBLE TEXT!) ────────── */
+        .badge-pill-emerald {
+            background: #ecfdf5 !important;
+            color: #065f46 !important;
+            border: 1px solid #a7f3d0 !important;
+            font-weight: 700 !important;
+            padding: 4px 10px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .badge-pill-amber {
+            background: #fef3c7 !important;
+            color: #92400e !important;
+            border: 1px solid #fde68a !important;
+            font-weight: 700 !important;
+            padding: 4px 10px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .badge-pill-cyan {
+            background: #e0f2fe !important;
+            color: #0369a1 !important;
+            border: 1px solid #bae6fd !important;
+            font-weight: 700 !important;
+            padding: 4px 10px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .badge-pill-indigo {
+            background: #e0e7ff !important;
+            color: #3730a3 !important;
+            border: 1px solid #c7d2fe !important;
+            font-weight: 700 !important;
+            padding: 4px 10px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .badge-pill-slate {
+            background: #f1f5f9 !important;
+            color: #334155 !important;
+            border: 1px solid #cbd5e1 !important;
+            font-weight: 700 !important;
+            padding: 4px 10px;
+            border-radius: 999px;
             display: inline-flex;
             align-items: center;
             gap: 5px;
         }
 
-        /* ── BADGES & ACCENTS ───────────────────────────────────────────── */
-        .pill-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            border-radius: 999px;
-            font-size: 11.5px;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
+        [data-theme="dark"] .badge-pill-emerald {
+            background: rgba(16, 185, 129, 0.2) !important;
+            color: #6ee7b7 !important;
+            border-color: rgba(16, 185, 129, 0.4) !important;
         }
-        .pill-gold {
-            background: var(--brand-gold-light);
-            color: var(--brand-gold-dark);
-            border: 1px solid rgba(245, 158, 11, 0.4);
+        [data-theme="dark"] .badge-pill-amber {
+            background: rgba(245, 158, 11, 0.2) !important;
+            color: #fde68a !important;
+            border-color: rgba(245, 158, 11, 0.4) !important;
         }
-        .pill-emerald {
-            background: var(--brand-emerald-light);
-            color: var(--brand-emerald);
-            border: 1px solid rgba(5, 150, 105, 0.4);
+        [data-theme="dark"] .badge-pill-cyan {
+            background: rgba(2, 132, 199, 0.2) !important;
+            color: #7dd3fc !important;
+            border-color: rgba(2, 132, 199, 0.4) !important;
         }
-        .pill-navy {
-            background: rgba(11, 31, 51, 0.08);
-            color: #0b1f33;
-            border: 1px solid rgba(11, 31, 51, 0.2);
+        [data-theme="dark"] .badge-pill-indigo {
+            background: rgba(99, 102, 241, 0.2) !important;
+            color: #a5b4fc !important;
+            border-color: rgba(99, 102, 241, 0.4) !important;
         }
-        [data-theme="dark"] .pill-navy {
-            background: rgba(255, 255, 255, 0.1);
-            color: #f8fafc;
-            border-color: rgba(255, 255, 255, 0.2);
-        }
-        .pill-cyan {
-            background: rgba(2, 132, 199, 0.1);
-            color: #0284c7;
-            border: 1px solid rgba(2, 132, 199, 0.35);
+        [data-theme="dark"] .badge-pill-slate {
+            background: rgba(100, 116, 139, 0.25) !important;
+            color: #cbd5e1 !important;
+            border-color: rgba(100, 116, 139, 0.4) !important;
         }
 
         /* ── SECTION COMMON ─────────────────────────────────────────────── */
-        .prospectus-section {
+        .commercial-hero {
+            background: linear-gradient(180deg, rgba(5, 150, 105, 0.05) 0%, rgba(245, 158, 11, 0.03) 100%);
+            padding: 40px 0 32px 0;
+            border-bottom: 1px solid var(--brand-border);
+        }
+        .commercial-section {
             padding: 48px 0;
             border-bottom: 1px solid var(--brand-border);
         }
-        .prospectus-section:nth-child(even) {
+        .commercial-section:nth-child(even) {
             background: var(--bg-card);
         }
-        .prospectus-section:nth-child(odd) {
+        .commercial-section:nth-child(odd) {
             background: var(--bg-page);
         }
 
-        /* ── HERO SECTION ───────────────────────────────────────────────── */
-        .prospectus-hero {
-            background: linear-gradient(180deg, rgba(11, 31, 51, 0.04) 0%, rgba(21, 94, 239, 0.04) 50%, rgba(5, 150, 105, 0.03) 100%);
-            padding: 44px 0 36px 0;
-            border-bottom: 1px solid var(--brand-border);
-            position: relative;
-        }
-        .hero-title {
-            font-size: clamp(26px, 4vw, 38px);
-            font-weight: 900;
-            letter-spacing: -0.02em;
-            color: var(--text-heading);
-            line-height: 1.25;
-        }
-
-        /* ── STAT & METRIC CARDS ────────────────────────────────────────── */
-        .metric-card {
+        .stat-card {
             background: var(--bg-card);
             border: 1px solid var(--brand-border);
             border-radius: 16px;
             padding: 20px;
-            height: 100%;
             box-shadow: var(--shadow-sm);
-            transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-            position: relative;
-            overflow: hidden;
+            height: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
-        .metric-card:hover {
+        .stat-card:hover {
             transform: translateY(-2px);
             box-shadow: var(--shadow-md);
-            border-color: rgba(21, 94, 239, 0.4);
-        }
-        .metric-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--metric-color, var(--brand-primary));
         }
 
-        /* ── 5-STREAM REVENUE ARCHITECTURE ──────────────────────────────── */
+        /* ── 5-STREAM REVENUE CARDS ──────────────────────────────────────── */
         .stream-card {
             background: var(--bg-card);
             border: 1px solid var(--brand-border);
@@ -335,13 +367,13 @@
         .stream-card:hover {
             transform: translateY(-3px);
             box-shadow: var(--shadow-md);
-            border-color: var(--stream-accent, var(--brand-primary));
+            border-color: #059669;
         }
         .stream-badge-num {
             width: 32px;
             height: 32px;
             border-radius: 8px;
-            background: var(--stream-accent, var(--brand-primary));
+            background: #059669;
             color: #ffffff;
             font-weight: 900;
             display: flex;
@@ -351,7 +383,7 @@
         }
 
         /* ── VEHICLE SWITCHER & TABLE ───────────────────────────────────── */
-        .filter-chip-btn {
+        .filter-btn {
             border: 1px solid var(--brand-border);
             background: var(--bg-card);
             color: var(--text-secondary);
@@ -363,22 +395,18 @@
             transition: all 0.2s ease;
             white-space: nowrap;
         }
-        .filter-chip-btn:hover {
-            border-color: var(--brand-primary);
-            color: var(--brand-primary);
+        .filter-btn:hover {
+            border-color: #059669;
+            color: #059669;
         }
-        .filter-chip-btn.active {
-            background: var(--brand-navy);
+        .filter-btn.active {
+            background: #059669;
             color: #ffffff;
-            border-color: var(--brand-navy);
-            box-shadow: 0 2px 8px rgba(11, 31, 51, 0.25);
-        }
-        [data-theme="dark"] .filter-chip-btn.active {
-            background: var(--brand-primary);
-            border-color: var(--brand-primary);
+            border-color: #059669;
+            box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
         }
 
-        .table-prospectus {
+        .table-commercial {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
@@ -387,43 +415,69 @@
             border: 1px solid var(--brand-border);
             background: var(--bg-card);
             box-shadow: var(--shadow-sm);
-            font-size: 13.5px;
+            font-size: 13px;
         }
-        .table-prospectus th {
+        .table-commercial th {
             background: rgba(15, 23, 42, 0.04);
             color: var(--text-heading);
             font-size: 11.5px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            padding: 12px 14px;
+            padding: 12px 12px;
             border-bottom: 2px solid var(--brand-border);
             white-space: nowrap;
         }
-        [data-theme="dark"] .table-prospectus th {
+        [data-theme="dark"] .table-commercial th {
             background: rgba(255, 255, 255, 0.04);
         }
-        .table-prospectus td {
-            padding: 12px 14px;
+        .table-commercial td {
+            padding: 12px 12px;
             border-bottom: 1px solid var(--border-subtle);
             vertical-align: middle;
         }
-        .table-prospectus tr:last-child td {
+        .table-commercial tr:last-child td {
             border-bottom: none;
         }
-        .table-prospectus tr:hover td {
-            background: rgba(21, 94, 239, 0.02);
+        .table-commercial tbody tr:hover {
+            background: rgba(5, 150, 105, 0.02);
         }
 
         .ev-thumb-img {
-            width: 58px;
-            height: 48px;
+            width: 52px;
+            height: 44px;
             object-fit: contain;
             border-radius: 8px;
             background: #ffffff;
             border: 1px solid var(--brand-border);
             padding: 2px;
             flex-shrink: 0;
+        }
+
+        /* High-Contrast Table Highlights */
+        .highlight-retail {
+            color: var(--text-heading);
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .highlight-base {
+            color: var(--text-secondary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .highlight-hub {
+            color: #d97706;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .highlight-margin {
+            color: #059669;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .highlight-vgk {
+            color: #0284c7;
+            font-weight: 800;
+            font-family: 'JetBrains Mono', monospace;
         }
 
         /* Mobile Stacked Card for EV pricing */
@@ -440,9 +494,9 @@
         .accounting-notice-box {
             background: rgba(2, 132, 199, 0.06);
             border: 1px solid rgba(2, 132, 199, 0.25);
-            border-left: 4px solid var(--brand-cyan);
+            border-left: 4px solid #0284c7;
             border-radius: 12px;
-            padding: 16px 20px;
+            padding: 14px 18px;
         }
 
         /* ── SOLAR HIGHLIGHT CARD ───────────────────────────────────────── */
@@ -451,7 +505,7 @@
             border: 2px solid rgba(245, 158, 11, 0.5);
             border-radius: 18px;
             padding: 24px;
-            box-shadow: var(--shadow-md);
+            box-shadow: var(--shadow-sm);
             position: relative;
         }
 
@@ -460,7 +514,7 @@
             background: var(--bg-card);
             border: 1px solid var(--brand-border);
             border-radius: 14px;
-            padding: 18px 16px;
+            padding: 18px 14px;
             height: 100%;
             text-align: center;
             box-shadow: var(--shadow-xs);
@@ -470,7 +524,7 @@
             width: 32px;
             height: 32px;
             border-radius: 50%;
-            background: var(--brand-navy);
+            background: #059669;
             color: #ffffff;
             display: inline-flex;
             align-items: center;
@@ -478,9 +532,6 @@
             font-weight: 800;
             font-size: 13px;
             margin-bottom: 10px;
-        }
-        [data-theme="dark"] .flow-step-num {
-            background: var(--brand-primary);
         }
 
         /* ── UNIT ECONOMICS SCENARIO CARDS ──────────────────────────────── */
@@ -497,8 +548,8 @@
             position: relative;
         }
         .scenario-card.highlight-target {
-            border: 2px solid var(--brand-emerald);
-            box-shadow: 0 6px 24px rgba(5, 150, 105, 0.15);
+            border: 2px solid #059669;
+            box-shadow: 0 6px 20px rgba(5, 150, 105, 0.15);
         }
 
         /* ── CALCULATOR SIMULATOR ───────────────────────────────────────── */
@@ -509,16 +560,16 @@
             padding: 14px 16px;
             margin-bottom: 12px;
         }
-        .calc-slider-input {
+        .calc-range-input {
             width: 100%;
-            accent-color: var(--brand-emerald);
+            accent-color: #059669;
             cursor: pointer;
             height: 6px;
             border-radius: 3px;
         }
 
         /* ── BOTTOM STICKY ACTION BAR ───────────────────────────────────── */
-        .bottom-prospectus-bar {
+        .bottom-action-bar {
             position: fixed;
             bottom: 0;
             left: 0;
@@ -526,8 +577,27 @@
             z-index: 1040;
             background: var(--bg-card);
             border-top: 1px solid var(--brand-border);
-            padding: 10px 16px;
+            padding: 10px 20px;
             box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+        }
+        .btn-whatsapp-action {
+            background: #25d366;
+            color: #ffffff;
+            font-weight: 800;
+            border-radius: 999px;
+            padding: 8px 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+            border: none;
+            transition: all 0.2s;
+        }
+        .btn-whatsapp-action:hover {
+            background: #1eb956;
+            color: #ffffff;
+            transform: translateY(-1px);
         }
 
         /* ── EXPIRED OVERLAY MODAL ──────────────────────────────────────── */
@@ -537,7 +607,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(11, 31, 51, 0.88);
+            background: rgba(15, 23, 42, 0.88);
             backdrop-filter: blur(8px);
             z-index: 2000;
             display: flex;
@@ -565,21 +635,23 @@
         }
 
         /* Utilities */
-        .color-emerald { color: var(--brand-emerald); }
-        .color-gold { color: var(--brand-gold-dark); }
-        .color-navy { color: var(--brand-navy); }
-        .color-cyan { color: var(--brand-cyan); }
-        .bg-emerald-soft { background: var(--brand-emerald-light); }
-        .bg-gold-soft { background: var(--brand-gold-light); }
-        
         .fw-black { font-weight: 900; }
-        .fw-extrabold { font-weight: 800; }
+        .text-amber-contrast { color: #92400e !important; }
+        .text-emerald-contrast { color: #065f46 !important; }
+        .text-blue-contrast { color: #0369a1 !important; }
+        .text-indigo-contrast { color: #3730a3 !important; }
+        .text-danger-contrast { color: #b91c1c !important; }
+
+        [data-theme="dark"] .text-amber-contrast { color: #fde68a !important; }
+        [data-theme="dark"] .text-emerald-contrast { color: #6ee7b7 !important; }
+        [data-theme="dark"] .text-blue-contrast { color: #7dd3fc !important; }
+        [data-theme="dark"] .text-indigo-contrast { color: #a5b4fc !important; }
 
         @media (max-width: 767.98px) {
-            .prospectus-navbar {
+            .catalog-top-header {
                 top: 48px;
             }
-            .prospectus-section {
+            .commercial-section {
                 padding: 32px 0;
             }
         }
@@ -588,15 +660,17 @@
 <body>
 
     <!-- ── 1. STICKY TOP 24-HOUR EXPIRY BAR ────────────────────────────── -->
-    <div class="expiry-sticky-bar">
-        <div class="container-xl d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="expiry-sticky-bar" id="expiryStickyBar">
+        <div class="container-fluid px-3 px-xl-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2">
                 <span class="pulse-dot"></span>
-                <strong class="font-sans" id="lblConfidential">🔒 CONFIDENTIAL DEALERSHIP COMMERCIALS</strong>
-                <span class="d-none d-md-inline text-white-50">|</span>
-                <span class="d-none d-sm-inline text-white-50" id="lblValidityNotice">24-Hour Verified Commercial Access</span>
+                <span class="fw-bold text-uppercase" style="font-size: 11.5px; letter-spacing: 0.6px;" id="lblConfidential">
+                    🔒 Confidential Franchise Commercials
+                </span>
+                <span class="d-none d-md-inline text-white-50">•</span>
+                <span class="d-none d-md-inline text-white-50 small" id="lblValidity">Valid for 24 Hours Only</span>
             </div>
-            <div class="d-flex align-items-center gap-2 ms-auto">
+            <div class="d-flex align-items-center gap-2">
                 <div class="countdown-chip" id="lblCountdown">
                     <i class="fas fa-clock"></i> Expires in: 23h 59m 59s
                 </div>
@@ -604,123 +678,134 @@
                     <i class="fas fa-link"></i> <span id="lblCopyLink">Copy 24h Link</span>
                 </button>
                 <button type="button" class="btn-action-sm btn-action-whatsapp" onclick="whatsappExpiringLink()" title="Share Link on WhatsApp">
-                    <i class="fab fa-whatsapp"></i> <span id="lblRenewWhatsApp">Share</span>
+                    <i class="fab fa-whatsapp"></i> <span id="lblRenewWhatsApp">Share 24h Offer</span>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- ── 2. EXECUTIVE TOP NAVIGATION & CONTROLS ───────────────────────── -->
-    <header class="prospectus-navbar">
-        <div class="container-xl d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <!-- Left: Logo & Sub-tag -->
+    <!-- ── 2. TOP HEADER WITH CROSS-VERTICAL TABS (EXACT MATCH TO OTHER STAGES) ─ -->
+    <header class="catalog-top-header">
+        <div class="container-fluid px-3 px-xl-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <!-- Left: Authentic MyntReal Logo & Ecosystem Tabs -->
             <div class="d-flex align-items-center gap-3">
-                <a href="/" class="d-flex align-items-center gap-2 text-decoration-none">
-                    <img src="/public/hub/Assets/ManthraEV-logo.png" alt="MyntReal Hub" style="height: 34px;" onerror="this.src='/public/favicon.ico'">
-                    <div>
-                        <strong class="text-heading d-block lh-1 fw-black" style="font-size: 15px;">MYNTREAL HUB</strong>
-                        <small class="text-secondary font-mono" style="font-size: 10px; letter-spacing: 0.5px;">COMMERCIAL PROSPECTUS</small>
-                    </div>
+                <a href="/catalog/industrial-hub-franchise" class="d-flex align-items-center text-decoration-none">
+                    <img src="/public/hub/Assets/Myntreal.logo.png" alt="MyntReal Hub" style="height: 38px; object-fit: contain;" onerror="this.src='/public/myntreal-logo.png'">
                 </a>
-                <span class="badge d-none d-lg-inline-flex bg-success bg-opacity-10 text-success border border-success border-opacity-25 py-1 px-2" style="font-size: 11px;">
-                    <i class="fas fa-certificate me-1"></i> ISO 9001:2015 Certified
-                </span>
-            </div>
 
-            <!-- Middle: Quick Anchor Navigation Chips -->
-            <div class="d-none d-xl-flex align-items-center gap-1">
-                <a href="#section_streams" class="nav-chip-link"><i class="fas fa-th-large text-primary"></i> <span id="navStreams">5 Streams</span></a>
-                <a href="#section_ev_matrix" class="nav-chip-link"><i class="fas fa-motorcycle text-success"></i> <span id="navEv">EV Models</span></a>
-                <a href="#section_batteries" class="nav-chip-link"><i class="fas fa-car-battery text-warning"></i> <span id="navBatt">Batteries &amp; Chargers</span></a>
-                <a href="#section_solar" class="nav-chip-link"><i class="fas fa-solar-panel text-warning"></i> <span id="navSolar">Solar EPC</span></a>
-                <a href="#section_economics" class="nav-chip-link"><i class="fas fa-chart-line text-info"></i> <span id="navEconomics">Unit Economics</span></a>
-                <a href="#section_simulator" class="nav-chip-link"><i class="fas fa-calculator text-emerald"></i> <span id="navSimulator">ROI Simulator</span></a>
-            </div>
-
-            <!-- Right: Theme, Language & Helplines -->
-            <div class="d-flex align-items-center gap-2">
-                <button type="button" class="theme-btn" id="themeToggleBtn" onclick="toggleProspectusTheme()">
-                    <i class="fas fa-moon text-warning" id="themeToggleIcon"></i>
-                    <span class="d-none d-sm-inline" id="themeToggleText">Dark</span>
-                </button>
-                <div class="d-flex gap-1 align-items-center">
-                    <button class="lang-btn active" data-lang="en" onclick="switchProspectusLanguage('en')">EN</button>
-                    <button class="lang-btn" data-lang="te" onclick="switchProspectusLanguage('te')">తెలుగు</button>
+                <!-- Cross-Vertical Navigation Tabs matching all catalog stages -->
+                <div class="d-flex align-items-center gap-2 overflow-x-auto pb-1" id="dualHeaderTabs" style="scrollbar-width: none;">
+                    <a href="/catalog/industrial-hub-franchise" class="catalog-header-tab" title="5-in-1 Franchise Overview">
+                        <i class="fas fa-building-columns text-warning"></i>
+                        <span id="tabFranchiseText">5-in-1 Franchise</span>
+                    </a>
+                    <a href="/catalog/ev-b2c-pricing" class="catalog-header-tab" title="Customer 2W EV Pricing">
+                        <i class="fas fa-motorcycle text-success"></i>
+                        <span id="tabEvText">2W EV Pricing</span>
+                    </a>
+                    <a href="/catalog/hub-ev-pricing" class="catalog-header-tab active" title="Hub Commercial Pricing (24h)">
+                        <i class="fas fa-tags text-success"></i>
+                        <span id="tabPricingText">Hub Pricing (24h)</span>
+                    </a>
+                    <a href="/catalog/ev-spares/ev-spares-and-chargers" class="catalog-header-tab" title="EV Spares, Chargers & Batteries">
+                        <i class="fas fa-cogs" style="color: #a855f7;"></i>
+                        <span>EV Spares</span>
+                    </a>
+                    <a href="/catalog/real-dreams/real-dreams-premium-properties" class="catalog-header-tab" title="Real Dreams Premium Properties">
+                        <i class="fas fa-building text-danger"></i>
+                        <span>Real Dreams</span>
+                    </a>
+                    <a href="/catalog/insurance/comprehensive-insurance-advisory" class="catalog-header-tab" title="VGK Care Insurance Advisory">
+                        <i class="fas fa-shield-alt text-primary"></i>
+                        <span>VGK Care</span>
+                    </a>
                 </div>
-                <a href="tel:+918585852738" class="btn btn-outline-secondary btn-sm rounded-pill px-2 py-1 fw-bold d-none d-sm-inline-flex" style="font-size: 11.5px;">
-                    <i class="fas fa-phone-alt me-1 text-success"></i> +91 85858 52738
-                </a>
+            </div>
+
+            <!-- Right: Theme, Language & VGK4U Logo -->
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="togglePricingTheme()">
+                    <i class="fas fa-moon text-warning" id="themeToggleIcon"></i>
+                    <span class="d-none d-sm-inline" id="themeToggleText">Dark Mode</span>
+                </button>
+
+                <div class="d-flex gap-1 align-items-center">
+                    <button class="lang-pill-btn lang-btn active" data-lang="en" onclick="switchPricingLanguage('en')">EN</button>
+                    <button class="lang-pill-btn lang-btn" data-lang="te" onclick="switchPricingLanguage('te')">తెలుగు</button>
+                </div>
+                
+                <img src="/public/vgk4u-logo.png" alt="VGK4U" class="d-none d-md-block ms-1" style="height: 28px;" onerror="this.style.display='none'">
             </div>
         </div>
     </header>
 
     <!-- ── 3. HERO COMMERCIAL HIGHLIGHT STRIP ───────────────────────────── -->
-    <section class="prospectus-hero">
+    <section class="commercial-hero">
         <div class="container-xl">
             <div class="text-center max-w-3xl mx-auto mb-4">
                 <div class="mb-2">
-                    <span class="pill-badge pill-gold">
-                        <i class="fas fa-shield-alt"></i> <span id="heroBadge">CONFIDENTIAL REGIONAL FRANCHISE COMMERCIALS</span>
+                    <span class="badge-pill-amber">
+                        <i class="fas fa-shield-alt"></i> <span id="heroBadge">CONFIDENTIAL FRANCHISE COMMERCIALS</span>
                     </span>
-                    <span class="pill-badge pill-emerald ms-1">
-                        <i class="fas fa-map-marker-alt"></i> <span id="heroMandalBadge">Mandal Exclusivity Protected</span>
+                    <span class="badge-pill-emerald ms-1">
+                        <i class="fas fa-map-marker-alt"></i> <span id="heroMandalBadge">MANDAL EXCLUSIVITY PROTECTED</span>
                     </span>
                 </div>
-                <h1 class="hero-title mb-2" id="heroTitle">
+                <h1 class="fw-black text-heading mb-2" style="font-size: clamp(26px, 4vw, 36px); letter-spacing: -0.02em;" id="heroTitle">
                     Turnkey CleanTech Franchise: 5 High-Margin Revenue Streams in One Protected Mandal
                 </h1>
-                <p class="text-secondary mb-3" style="max-width: 860px; margin: 0 auto; font-size: 14.5px;" id="heroSubtitle">
+                <p class="text-secondary mb-3 small" style="max-width: 860px; margin: 0 auto; font-size: 14.5px;" id="heroSubtitle">
                     Authorized wholesale dealer purchase costs (OEM central pricing), certified customer retail matrix, 12% Hub showroom margin, 10.5% VGK4U direct sale commission, rooftop solar EPC spreads, recurring EV workshop margins, and live investor unit economics.
                 </p>
                 <div class="d-flex justify-content-center gap-2 flex-wrap">
-                    <a href="#section_simulator" class="btn btn-primary rounded-pill px-3 py-2 fw-bold text-nowrap" style="font-size: 13px;">
+                    <a href="#section_interactive_simulator" class="btn btn-success rounded-pill px-3 py-2 fw-bold text-nowrap shadow-sm" style="font-size: 13px; background: #059669; border-color: #059669;">
                         <i class="fas fa-calculator me-1"></i> <span id="heroBtnSim">Simulate Your Hub Cash Flow</span>
                     </a>
-                    <a href="https://wa.me/918585852738?text=Hello%20MyntReal!%20I%20am%20reviewing%20the%2024-Hour%20Confidential%20Hub%20Commercial%20Prospectus.%20Please%20verify%20mandal%20exclusivity%20for%20my%20area." target="_blank" class="btn btn-success rounded-pill px-3 py-2 fw-bold text-nowrap" style="font-size: 13px; background: #25d366; border-color: #25d366;">
+                    <a href="https://wa.me/918585852738?text=Hello%20MyntReal!%20I%20am%20reviewing%20the%2024-Hour%20Confidential%20Hub%20Commercial%20Prospectus.%20Please%20verify%20mandal%20exclusivity%20for%20my%20area." target="_blank" class="btn btn-outline-success rounded-pill px-3 py-2 fw-bold text-nowrap" style="font-size: 13px;">
                         <i class="fab fa-whatsapp me-1"></i> <span id="heroBtnWa">Verify Mandal Availability</span>
                     </a>
                 </div>
             </div>
 
-            <!-- 4 Quick Key Commercial Metrics Cards -->
+            <!-- 4 Quick Key Commercial Metrics Cards with High-Contrast Colors -->
             <div class="row g-3 text-start">
                 <div class="col-lg-3 col-sm-6">
-                    <div class="metric-card" style="--metric-color: #f59e0b;">
+                    <div class="stat-card" style="border-top: 3px solid #d97706;">
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <small class="text-secondary text-uppercase fw-extrabold" style="font-size: 11px;" id="c1Title">Hub Dealer Margin</small>
-                            <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25 font-mono" style="font-size: 10px;">Ex-Tax Base</span>
+                            <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;" id="c1Title">Hub Dealer Margin</small>
+                            <span class="badge-pill-amber" style="font-size: 10px; padding: 2px 8px;">Ex-Tax Base</span>
                         </div>
-                        <div class="fs-4 fw-black text-warning font-mono mt-1" id="c1Val">12.0% Margin</div>
+                        <div class="fs-4 fw-black font-mono mt-1 text-amber-contrast" id="c1Val">12.0% Margin</div>
                         <small class="text-secondary d-block" id="c1Sub">~₹6,850 – ₹9,600 avg per scooter + spares</small>
                     </div>
                 </div>
                 <div class="col-lg-3 col-sm-6">
-                    <div class="metric-card" style="--metric-color: #155eef;">
+                    <div class="stat-card" style="border-top: 3px solid #0284c7;">
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <small class="text-secondary text-uppercase fw-extrabold" style="font-size: 11px;" id="c2Title">Direct Customer Sale</small>
-                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 font-mono" style="font-size: 10px;">+10.5% Extra</span>
+                            <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;" id="c2Title">Direct Customer Sale</small>
+                            <span class="badge-pill-cyan" style="font-size: 10px; padding: 2px 8px;">+10.5% Extra</span>
                         </div>
-                        <div class="fs-4 fw-black text-primary font-mono mt-1" id="c2Val">22.5% Spread</div>
+                        <div class="fs-4 fw-black font-mono mt-1 text-blue-contrast" id="c2Val">22.5% Spread</div>
                         <small class="text-secondary d-block" id="c2Sub">Showroom 12% + Field Agent 10.5% combined</small>
                     </div>
                 </div>
                 <div class="col-lg-3 col-sm-6">
-                    <div class="metric-card" style="--metric-color: #059669;">
+                    <div class="stat-card" style="border-top: 3px solid #059669;">
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <small class="text-secondary text-uppercase fw-extrabold" style="font-size: 11px;" id="c3Title">Har Ghar Solar EPC</small>
-                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 font-mono" style="font-size: 10px;">PM Surya Ghar</span>
+                            <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;" id="c3Title">Har Ghar Solar EPC</small>
+                            <span class="badge-pill-emerald" style="font-size: 10px; padding: 2px 8px;">PM Surya Ghar</span>
                         </div>
-                        <div class="fs-4 fw-black text-success font-mono mt-1" id="c3Val">3.5% + 6.5%</div>
+                        <div class="fs-4 fw-black font-mono mt-1 text-emerald-contrast" id="c3Val">3.5% + 6.5%</div>
                         <small class="text-secondary d-block" id="c3Sub">₹7,000 In-Store | ₹20,000 Direct (3kW Gold)</small>
                     </div>
                 </div>
                 <div class="col-lg-3 col-sm-6">
-                    <div class="metric-card" style="--metric-color: #7c3aed;">
+                    <div class="stat-card" style="border-top: 3px solid #7c3aed;">
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <small class="text-secondary text-uppercase fw-extrabold" style="font-size: 11px;" id="c4Title">Workshop &amp; Spares</small>
-                            <span class="badge bg-info bg-opacity-10 text-info border border-info border-opacity-25 font-mono" style="font-size: 10px;">Recurring Flow</span>
+                            <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;" id="c4Title">Workshop &amp; Spares</small>
+                            <span class="badge-pill-indigo" style="font-size: 10px; padding: 2px 8px;">Recurring Flow</span>
                         </div>
-                        <div class="fs-4 fw-black font-mono mt-1" style="color: #7c3aed;" id="c4Val">15% – 25%</div>
+                        <div class="fs-4 fw-black font-mono mt-1 text-indigo-contrast" id="c4Val">15% – 25%</div>
                         <small class="text-secondary d-block" id="c4Sub">Diagnostic lab + instant B2B cart on /ecom</small>
                     </div>
                 </div>
@@ -729,13 +814,13 @@
     </section>
 
     <!-- ── 4. SECTION 1: 5-STREAM REVENUE ARCHITECTURE ─────────────────── -->
-    <section class="prospectus-section" id="section_streams">
+    <section class="commercial-section" id="section_streams">
         <div class="container-xl">
             <div class="text-center max-w-3xl mx-auto mb-4">
-                <div class="pill-badge pill-navy mb-1">
+                <div class="badge-pill-emerald mb-1">
                     <i class="fas fa-cubes"></i> <span id="s1Badge">Revenue Architecture</span>
                 </div>
-                <h2 class="fw-black text-heading fs-4 mb-1" id="s1Title">What Your Hub Can Sell &amp; Earn From (5 Integrated Streams)</h2>
+                <h2 class="fw-bold text-heading fs-4 mb-1" id="s1Title">What Your Hub Can Sell &amp; Earn From (5 Integrated Streams)</h2>
                 <p class="small text-secondary mb-0" id="s1Subtitle">
                     Unlike single-product dealerships vulnerable to seasonal slumps, a MyntReal Hub operates five complementary CleanTech and financial verticals under one roof.
                 </p>
@@ -744,11 +829,11 @@
             <div class="row g-3">
                 <!-- Stream 1 -->
                 <div class="col-lg-4 col-md-6">
-                    <div class="stream-card" style="--stream-accent: #059669;">
+                    <div class="stream-card">
                         <div>
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <div class="stream-badge-num">1</div>
-                                <span class="badge bg-success bg-opacity-10 text-success fw-bold font-mono">12% to 22.5% Spread</span>
+                                <span class="badge-pill-emerald" style="font-size: 11px;">12% to 22.5% Spread</span>
                             </div>
                             <h3 class="fs-5 fw-bold text-heading mb-2"><i class="fas fa-motorcycle text-success me-2"></i> Manthra EV 2-Wheelers</h3>
                             <p class="small text-secondary mb-3">
@@ -770,11 +855,11 @@
 
                 <!-- Stream 2 -->
                 <div class="col-lg-4 col-md-6">
-                    <div class="stream-card" style="--stream-accent: #f59e0b;">
+                    <div class="stream-card">
                         <div>
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <div class="stream-badge-num" style="background: #f59e0b;">2</div>
-                                <span class="badge bg-warning bg-opacity-15 text-dark fw-bold font-mono">Up to ₹20,000 / Install</span>
+                                <div class="stream-badge-num" style="background: #d97706;">2</div>
+                                <span class="badge-pill-amber" style="font-size: 11px;">Up to ₹20,000 / Install</span>
                             </div>
                             <h3 class="fs-5 fw-bold text-heading mb-2"><i class="fas fa-solar-panel text-warning me-2"></i> Har Ghar Rooftop Solar EPC</h3>
                             <p class="small text-secondary mb-3">
@@ -796,11 +881,11 @@
 
                 <!-- Stream 3 -->
                 <div class="col-lg-4 col-md-6">
-                    <div class="stream-card" style="--stream-accent: #0284c7;">
+                    <div class="stream-card">
                         <div>
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <div class="stream-badge-num" style="background: #0284c7;">3</div>
-                                <span class="badge bg-info bg-opacity-10 text-info fw-bold font-mono">15% – 25% Margins</span>
+                                <span class="badge-pill-cyan" style="font-size: 11px;">15% – 25% Margins</span>
                             </div>
                             <h3 class="fs-5 fw-bold text-heading mb-2"><i class="fas fa-tools text-info me-2"></i> EV Workshop &amp; Spares (/ecom)</h3>
                             <p class="small text-secondary mb-3">
@@ -822,13 +907,13 @@
 
                 <!-- Stream 4 -->
                 <div class="col-lg-6 col-md-6">
-                    <div class="stream-card" style="--stream-accent: #155eef;">
+                    <div class="stream-card">
                         <div>
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <div class="stream-badge-num" style="background: #155eef;">4</div>
-                                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold font-mono">₹1,500 Avg / Policy</span>
+                                <div class="stream-badge-num" style="background: #059669;">4</div>
+                                <span class="badge-pill-emerald" style="font-size: 11px;">₹1,500 Avg / Policy</span>
                             </div>
-                            <h3 class="fs-5 fw-bold text-heading mb-2"><i class="fas fa-shield-alt text-primary me-2"></i> VGK Care Insurance Advisory</h3>
+                            <h3 class="fs-5 fw-bold text-heading mb-2"><i class="fas fa-shield-alt text-success me-2"></i> VGK Care Insurance Advisory</h3>
                             <p class="small text-secondary mb-3">
                                 In-house motor insurance for every EV delivery, renewal policies, personal accident cover, and family health insurance advisory in tie-up with national insurers (HDFC ERGO, Bajaj Allianz, ICICI Lombard).
                             </p>
@@ -848,11 +933,11 @@
 
                 <!-- Stream 5 -->
                 <div class="col-lg-6 col-md-12">
-                    <div class="stream-card" style="--stream-accent: #b45309;">
+                    <div class="stream-card">
                         <div>
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <div class="stream-badge-num" style="background: #b45309;">5</div>
-                                <span class="badge bg-warning bg-opacity-20 text-dark fw-bold font-mono">₹50,000 / Closed Deal</span>
+                                <span class="badge-pill-amber" style="font-size: 11px;">₹50,000 / Closed Deal</span>
                             </div>
                             <h3 class="fs-5 fw-bold text-heading mb-2"><i class="fas fa-building text-warning me-2"></i> Real Dreams Open Plots &amp; Farmland</h3>
                             <p class="small text-secondary mb-3">
@@ -876,14 +961,14 @@
     </section>
 
     <!-- ── 5. SECTION 2: PRIMARY PRODUCT — MANTHRA EV 5-MODEL PRICING ──── -->
-    <section class="prospectus-section" id="section_ev_matrix">
+    <section class="commercial-section" id="section_ev_matrix">
         <div class="container-xl">
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                 <div>
-                    <div class="pill-badge pill-gold mb-1">
+                    <div class="badge-pill-amber mb-1">
                         <i class="fas fa-motorcycle"></i> <span id="s2Badge">Primary EV Product Commercials</span>
                     </div>
-                    <h2 class="fw-black text-heading fs-4 mb-1" id="s2Title">Manthra EV 5-Model Commercial Pricing &amp; Margin Matrix</h2>
+                    <h2 class="fw-bold text-heading fs-4 mb-1" id="s2Title">Manthra EV 5-Model Commercial Pricing &amp; Margin Matrix</h2>
                     <p class="small text-secondary mb-0" id="s2Subtitle">
                         Comparison of Central Hub Purchase Cost (OEM wholesale) vs Customer Retail Price with transparent margin breakdown.
                     </p>
@@ -891,12 +976,12 @@
 
                 <!-- Model Switcher Chips -->
                 <div class="d-flex gap-1 flex-wrap" id="evModelFilters">
-                    <button type="button" class="filter-chip-btn active" onclick="filterEvModel('ALL')">All Models (5)</button>
-                    <button type="button" class="filter-chip-btn" onclick="filterEvModel('GT_PRO')">GT Pro</button>
-                    <button type="button" class="filter-chip-btn" onclick="filterEvModel('POWER')">Power Plus</button>
-                    <button type="button" class="filter-chip-btn" onclick="filterEvModel('M99')">M99 Flagship</button>
-                    <button type="button" class="filter-chip-btn" onclick="filterEvModel('SLING')">Royal Sling</button>
-                    <button type="button" class="filter-chip-btn" onclick="filterEvModel('BEAST')">Beast Pro</button>
+                    <button type="button" class="filter-btn active" onclick="filterEvModel('ALL')">All Models (5)</button>
+                    <button type="button" class="filter-btn" onclick="filterEvModel('GT_PRO')">GT Pro</button>
+                    <button type="button" class="filter-btn" onclick="filterEvModel('POWER')">Power Plus</button>
+                    <button type="button" class="filter-btn" onclick="filterEvModel('M99')">M99 Flagship</button>
+                    <button type="button" class="filter-btn" onclick="filterEvModel('SLING')">Royal Sling</button>
+                    <button type="button" class="filter-btn" onclick="filterEvModel('BEAST')">Beast Pro</button>
                 </div>
             </div>
 
@@ -910,24 +995,24 @@
                             Customer Retail Prices are inclusive of <strong>5% Vehicle GST</strong>. Per automotive dealership accounting principles, dealer earnings (<strong>12% Hub Margin</strong> and <strong>10.5% VGK4U Direct Sale Commission</strong>) are computed strictly on the <strong>Ex-Tax Base Price</strong> (Retail Price ÷ 1.05).
                         </span>
                     </div>
-                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 font-mono px-3 py-2 fw-bold">
+                    <span class="badge-pill-cyan">
                         <i class="fas fa-calculator me-1"></i> Base = Retail ÷ 1.05
                     </span>
                 </div>
             </div>
 
-            <!-- Desktop View: High-Density Table -->
+            <!-- Desktop View: High-Density Table with Optimized Widths -->
             <div class="table-responsive d-none d-lg-block mb-3">
-                <table class="table-prospectus" id="evDesktopTable">
+                <table class="table-commercial" id="evDesktopTable">
                     <thead>
                         <tr>
-                            <th style="min-width: 240px;">Vehicle &amp; Model</th>
+                            <th style="min-width: 210px;">Vehicle &amp; Model</th>
                             <th>Battery &amp; Range</th>
-                            <th>Customer Retail (5% GST Incl.)</th>
-                            <th>Ex-Tax Base Price</th>
-                            <th>Central Hub Purchase Cost</th>
-                            <th>Hub Margin (12% Ex-Tax)</th>
-                            <th>Direct Margin (+10.5%)</th>
+                            <th>Customer Retail (5% GST)</th>
+                            <th>Ex-Tax Base</th>
+                            <th>Central Hub Cost</th>
+                            <th>Hub Margin (12%)</th>
+                            <th>Direct (+10.5%)</th>
                             <th>Total Margin (22.5%)</th>
                         </tr>
                     </thead>
@@ -957,25 +1042,25 @@
     </section>
 
     <!-- ── 6. SECTION 3: OEM BATTERIES, CHARGERS & TURNKEY BUNDLES ─────── -->
-    <section class="prospectus-section" id="section_batteries">
+    <section class="commercial-section" id="section_batteries">
         <div class="container-xl">
             <div class="mb-3">
-                <div class="pill-badge pill-cyan mb-1">
+                <div class="badge-pill-cyan mb-1">
                     <i class="fas fa-car-battery"></i> <span id="s3Badge">OEM Components &amp; Combos</span>
                 </div>
-                <h2 class="fw-black text-heading fs-4 mb-1" id="s3Title">OEM Standalone Batteries, Smart Fast Chargers &amp; Turnkey Bundles</h2>
+                <h2 class="fw-bold text-heading fs-4 mb-1" id="s3Title">OEM Standalone Batteries, Smart Fast Chargers &amp; Turnkey Bundles</h2>
                 <p class="small text-secondary mb-0" id="s3Subtitle">
                     Component wholesale pricing with statutory GST breakdown (Batteries: 18% GST, Chargers: 5% GST) and factory pre-configured turnkey package combos ready for showroom stocking.
                 </p>
             </div>
 
-            <!-- 3 Stat Highlight Mini-Cards -->
+            <!-- 3 Stat Highlight Mini-Cards with Crisp High-Contrast Badges -->
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
-                    <div class="metric-card" style="--metric-color: #f59e0b;">
+                    <div class="stat-card" style="border-top: 3px solid #d97706;">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <span class="fw-bold text-heading small"><i class="fas fa-car-battery text-warning me-1"></i> Standalone Battery Packs</span>
-                            <span class="badge bg-warning bg-opacity-20 text-dark font-mono fw-bold">18% GST</span>
+                            <span class="badge-pill-amber" style="font-size: 11px;">18% GST</span>
                         </div>
                         <p class="small text-secondary mb-2">Automotive-grade Smart LFP cells with intelligent active BMS &amp; heavy-duty Graphene.</p>
                         <div class="pt-2 border-top small d-flex justify-content-between font-mono">
@@ -985,10 +1070,10 @@
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="metric-card" style="--metric-color: #0284c7;">
+                    <div class="stat-card" style="border-top: 3px solid #0284c7;">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <span class="fw-bold text-heading small"><i class="fas fa-charging-station text-info me-1"></i> Smart Fast Chargers</span>
-                            <span class="badge bg-info bg-opacity-20 text-info font-mono fw-bold">5% GST</span>
+                            <span class="badge-pill-cyan" style="font-size: 11px;">5% GST</span>
                         </div>
                         <p class="small text-secondary mb-2">Auto thermal cut-off, reverse polarity, and ultra-fast 3–4 hour intelligent charging curves.</p>
                         <div class="pt-2 border-top small d-flex justify-content-between font-mono">
@@ -998,10 +1083,10 @@
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="metric-card" style="--metric-color: #059669;">
+                    <div class="stat-card" style="border-top: 3px solid #059669;">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <span class="fw-bold text-heading small"><i class="fas fa-cubes text-success me-1"></i> Turnkey Package Bundles</span>
-                            <span class="badge bg-success bg-opacity-20 text-success font-mono fw-bold">Ready-to-Fit</span>
+                            <span class="badge-pill-emerald" style="font-size: 11px;">Ready-to-Fit</span>
                         </div>
                         <p class="small text-secondary mb-2">Factory-matched battery + tuned charger combos ready for immediate showroom stocking.</p>
                         <div class="pt-2 border-top small d-flex justify-content-between font-mono">
@@ -1018,10 +1103,10 @@
                     <div class="fw-bold text-heading fs-6">
                         <i class="fas fa-battery-three-quarters text-warning me-2"></i> OEM Standalone Battery Packs — Price &amp; 18% GST Breakdown
                     </div>
-                    <span class="badge bg-warning bg-opacity-20 text-dark font-mono fw-bold">18% GST Applicable</span>
+                    <span class="badge-pill-amber">18% GST Applicable</span>
                 </div>
                 <div class="table-responsive">
-                    <table class="table-prospectus mb-0" style="border: none;">
+                    <table class="table-commercial mb-0" style="border: none;">
                         <thead>
                             <tr>
                                 <th>Battery Model &amp; SKU</th>
@@ -1029,61 +1114,61 @@
                                 <th>Voltage &amp; Capacity</th>
                                 <th>Certified Range</th>
                                 <th>Base Cost (Ex-Tax)</th>
-                                <th>18% GST Amount</th>
-                                <th>Total Hub Cost (Incl. GST)</th>
+                                <th>18% GST</th>
+                                <th>Total Hub Cost</th>
                                 <th>Warranty</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td class="fw-bold text-heading">GRAPHENE 48V 32Ah</td>
-                                <td><span class="badge bg-secondary bg-opacity-10 text-secondary">Graphene</span></td>
+                                <td><span class="badge-pill-slate" style="font-size: 11px;">Graphene</span></td>
                                 <td class="font-mono fw-bold">48V 32Ah</td>
-                                <td><span class="badge bg-success bg-opacity-10 text-success"><i class="fas fa-route me-1"></i> 50 – 60 km</span></td>
-                                <td class="font-mono fw-bold text-primary">₹12,000/-</td>
+                                <td><span class="badge-pill-emerald" style="font-size: 11px;"><i class="fas fa-route me-1"></i> 50 – 60 km</span></td>
+                                <td class="font-mono fw-bold highlight-hub">₹12,000/-</td>
                                 <td class="font-mono text-secondary">₹2,160/-</td>
-                                <td class="font-mono fw-black text-success fs-6">₹14,160/-</td>
-                                <td><span class="badge bg-warning bg-opacity-25 text-dark fw-bold">9 Months</span></td>
+                                <td class="font-mono fw-black text-emerald-contrast fs-6">₹14,160/-</td>
+                                <td><span class="badge-pill-amber" style="font-size: 11px;">9 Months</span></td>
                             </tr>
                             <tr>
                                 <td class="fw-bold text-heading">BATTERY - LFP 48V 30Ah</td>
-                                <td><span class="badge bg-success bg-opacity-15 text-success">LFP / LTM Smart</span></td>
+                                <td><span class="badge-pill-emerald" style="font-size: 11px;">LFP / LTM Smart</span></td>
                                 <td class="font-mono fw-bold">48V 30Ah</td>
-                                <td><span class="badge bg-success bg-opacity-10 text-success"><i class="fas fa-route me-1"></i> 50 – 60 km</span></td>
-                                <td class="font-mono fw-bold text-primary">₹18,809/-</td>
+                                <td><span class="badge-pill-emerald" style="font-size: 11px;"><i class="fas fa-route me-1"></i> 50 – 60 km</span></td>
+                                <td class="font-mono fw-bold highlight-hub">₹18,809/-</td>
                                 <td class="font-mono text-secondary">₹3,386/-</td>
-                                <td class="font-mono fw-black text-success fs-6">₹22,195/-</td>
-                                <td><span class="badge bg-warning bg-opacity-20 text-dark fw-bold">2+1 Yrs</span></td>
+                                <td class="font-mono fw-black text-emerald-contrast fs-6">₹22,195/-</td>
+                                <td><span class="badge-pill-amber" style="font-size: 11px;">2+1 Yrs</span></td>
                             </tr>
                             <tr>
                                 <td class="fw-bold text-heading">BATTERY - LFP 48V 45Ah</td>
-                                <td><span class="badge bg-success bg-opacity-15 text-success">LFP / LTM Smart</span></td>
+                                <td><span class="badge-pill-emerald" style="font-size: 11px;">LFP / LTM Smart</span></td>
                                 <td class="font-mono fw-bold">48V 45Ah</td>
-                                <td><span class="badge bg-success bg-opacity-10 text-success"><i class="fas fa-route me-1"></i> 80 – 90 km</span></td>
-                                <td class="font-mono fw-bold text-primary">₹27,937/-</td>
+                                <td><span class="badge-pill-emerald" style="font-size: 11px;"><i class="fas fa-route me-1"></i> 80 – 90 km</span></td>
+                                <td class="font-mono fw-bold highlight-hub">₹27,937/-</td>
                                 <td class="font-mono text-secondary">₹5,029/-</td>
-                                <td class="font-mono fw-black text-success fs-6">₹32,966/-</td>
-                                <td><span class="badge bg-warning bg-opacity-20 text-dark fw-bold">2+1 Yrs</span></td>
+                                <td class="font-mono fw-black text-emerald-contrast fs-6">₹32,966/-</td>
+                                <td><span class="badge-pill-amber" style="font-size: 11px;">2+1 Yrs</span></td>
                             </tr>
                             <tr>
                                 <td class="fw-bold text-heading">BATTERY - LFP 60V 30Ah</td>
-                                <td><span class="badge bg-success bg-opacity-15 text-success">LFP / LTM Smart</span></td>
+                                <td><span class="badge-pill-emerald" style="font-size: 11px;">LFP / LTM Smart</span></td>
                                 <td class="font-mono fw-bold">60V 30Ah</td>
-                                <td><span class="badge bg-success bg-opacity-10 text-success"><i class="fas fa-route me-1"></i> 60 – 70 km</span></td>
-                                <td class="font-mono fw-bold text-primary">₹23,373/-</td>
+                                <td><span class="badge-pill-emerald" style="font-size: 11px;"><i class="fas fa-route me-1"></i> 60 – 70 km</span></td>
+                                <td class="font-mono fw-bold highlight-hub">₹23,373/-</td>
                                 <td class="font-mono text-secondary">₹4,207/-</td>
-                                <td class="font-mono fw-black text-success fs-6">₹27,580/-</td>
-                                <td><span class="badge bg-warning bg-opacity-20 text-dark fw-bold">2+1 Yrs</span></td>
+                                <td class="font-mono fw-black text-emerald-contrast fs-6">₹27,580/-</td>
+                                <td><span class="badge-pill-amber" style="font-size: 11px;">2+1 Yrs</span></td>
                             </tr>
                             <tr>
                                 <td class="fw-bold text-heading">BATTERY - LFP 60V 45Ah</td>
-                                <td><span class="badge bg-success bg-opacity-15 text-success">LFP / LTM Smart</span></td>
+                                <td><span class="badge-pill-emerald" style="font-size: 11px;">LFP / LTM Smart</span></td>
                                 <td class="font-mono fw-bold">60V 45Ah</td>
-                                <td><span class="badge bg-success bg-opacity-10 text-success"><i class="fas fa-route me-1"></i> 90 – 100 km</span></td>
-                                <td class="font-mono fw-bold text-primary">₹34,784/-</td>
+                                <td><span class="badge-pill-emerald" style="font-size: 11px;"><i class="fas fa-route me-1"></i> 90 – 100 km</span></td>
+                                <td class="font-mono fw-bold highlight-hub">₹34,784/-</td>
                                 <td class="font-mono text-secondary">₹6,261/-</td>
-                                <td class="font-mono fw-black text-success fs-6">₹41,045/-</td>
-                                <td><span class="badge bg-warning bg-opacity-20 text-dark fw-bold">2+1 Yrs</span></td>
+                                <td class="font-mono fw-black text-emerald-contrast fs-6">₹41,045/-</td>
+                                <td><span class="badge-pill-amber" style="font-size: 11px;">2+1 Yrs</span></td>
                             </tr>
                         </tbody>
                     </table>
@@ -1099,42 +1184,42 @@
                             <div class="fw-bold text-heading">
                                 <i class="fas fa-charging-station text-info me-2"></i> Smart Fast Chargers (5% GST)
                             </div>
-                            <span class="badge bg-info bg-opacity-20 text-info font-mono fw-bold">5% GST</span>
+                            <span class="badge-pill-cyan">5% GST</span>
                         </div>
                         <div class="table-responsive">
-                            <table class="table-prospectus mb-0" style="border: none;">
+                            <table class="table-commercial mb-0" style="border: none;">
                                 <thead>
                                     <tr>
                                         <th>Charger Model</th>
                                         <th>Output / Speed</th>
                                         <th>Base Cost</th>
-                                        <th>Total Cost (5% GST)</th>
+                                        <th>Total Cost</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr>
                                         <td class="fw-bold text-heading">CHARGER GRAPHENE</td>
                                         <td><span class="small text-secondary">48V Standard (8 Hrs)</span></td>
-                                        <td class="font-mono">₹1,500/-</td>
-                                        <td class="font-mono fw-black text-primary">₹1,575/-</td>
+                                        <td class="font-mono highlight-hub">₹1,500/-</td>
+                                        <td class="font-mono fw-black text-blue-contrast">₹1,575/-</td>
                                     </tr>
                                     <tr>
                                         <td class="fw-bold text-heading">CHARGER LFP 6A</td>
                                         <td><span class="small text-secondary">Smart Fast (4–5 Hrs)</span></td>
-                                        <td class="font-mono">₹2,315/-</td>
-                                        <td class="font-mono fw-black text-primary">₹2,431/-</td>
+                                        <td class="font-mono highlight-hub">₹2,315/-</td>
+                                        <td class="font-mono fw-black text-blue-contrast">₹2,431/-</td>
                                     </tr>
                                     <tr>
                                         <td class="fw-bold text-heading">CHARGER LFP 10A</td>
                                         <td><span class="small text-secondary">Ultra-Fast (3–4 Hrs)</span></td>
-                                        <td class="font-mono">₹3,418/-</td>
-                                        <td class="font-mono fw-black text-primary">₹3,589/-</td>
+                                        <td class="font-mono highlight-hub">₹3,418/-</td>
+                                        <td class="font-mono fw-black text-blue-contrast">₹3,589/-</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
                         <div class="p-3 bg-light border-top small text-secondary">
-                            <i class="fas fa-shield-alt text-info me-1"></i> All chargers include auto-thermal cut-off, reverse polarity &amp; 9-Month Comprehensive Warranty.
+                            <i class="fas fa-shield-alt text-success me-1"></i> All chargers include auto-thermal cut-off, reverse polarity &amp; 9-Month Comprehensive Warranty.
                         </div>
                     </div>
                 </div>
@@ -1146,10 +1231,10 @@
                             <div class="fw-bold text-heading">
                                 <i class="fas fa-cubes text-success me-2"></i> Factory Package Bundles (Battery + Tuned Charger)
                             </div>
-                            <span class="badge bg-success bg-opacity-20 text-success font-mono fw-bold">Turnkey Ready</span>
+                            <span class="badge-pill-emerald">Turnkey Ready</span>
                         </div>
                         <div class="table-responsive">
-                            <table class="table-prospectus mb-0" style="border: none;">
+                            <table class="table-commercial mb-0" style="border: none;">
                                 <thead>
                                     <tr>
                                         <th>Bundle Configuration</th>
@@ -1164,45 +1249,45 @@
                                             <strong class="text-heading d-block">Graphene 48V 32Ah Bundle</strong>
                                             <small class="text-secondary">48V Battery + 48V Charger (9 Mo Warranty)</small>
                                         </td>
-                                        <td class="font-mono fw-bold">₹13,500/-</td>
+                                        <td class="font-mono fw-bold highlight-hub">₹13,500/-</td>
                                         <td class="font-mono text-secondary small">₹2,235/-</td>
-                                        <td class="font-mono fw-black text-success fs-6">₹15,735/-</td>
+                                        <td class="font-mono fw-black text-emerald-contrast fs-6">₹15,735/-</td>
                                     </tr>
                                     <tr>
                                         <td>
                                             <strong class="text-heading d-block">LFP 48V 30Ah Bundle</strong>
                                             <small class="text-secondary">48V 30Ah Battery + 6A Fast Charger (2+1 Yr / 9 Mo)</small>
                                         </td>
-                                        <td class="font-mono fw-bold">₹21,124/-</td>
+                                        <td class="font-mono fw-bold highlight-hub">₹21,124/-</td>
                                         <td class="font-mono text-secondary small">₹3,502/-</td>
-                                        <td class="font-mono fw-black text-success fs-6">₹24,626/-</td>
+                                        <td class="font-mono fw-black text-emerald-contrast fs-6">₹24,626/-</td>
                                     </tr>
                                     <tr>
                                         <td>
                                             <strong class="text-heading d-block">LFP 48V 45Ah Bundle</strong>
                                             <small class="text-secondary">48V 45Ah Battery + 10A Fast Charger (2+1 Yr / 9 Mo)</small>
                                         </td>
-                                        <td class="font-mono fw-bold">₹31,355/-</td>
+                                        <td class="font-mono fw-bold highlight-hub">₹31,355/-</td>
                                         <td class="font-mono text-secondary small">₹5,200/-</td>
-                                        <td class="font-mono fw-black text-success fs-6">₹36,555/-</td>
+                                        <td class="font-mono fw-black text-emerald-contrast fs-6">₹36,555/-</td>
                                     </tr>
                                     <tr>
                                         <td>
                                             <strong class="text-heading d-block">LFP 60V 30Ah Bundle</strong>
                                             <small class="text-secondary">60V 30Ah Battery + 6A Fast Charger (2+1 Yr / 9 Mo)</small>
                                         </td>
-                                        <td class="font-mono fw-bold">₹25,688/-</td>
+                                        <td class="font-mono fw-bold highlight-hub">₹25,688/-</td>
                                         <td class="font-mono text-secondary small">₹4,323/-</td>
-                                        <td class="font-mono fw-black text-success fs-6">₹30,011/-</td>
+                                        <td class="font-mono fw-black text-emerald-contrast fs-6">₹30,011/-</td>
                                     </tr>
                                     <tr>
                                         <td>
                                             <strong class="text-heading d-block">LFP 60V 45Ah Bundle</strong>
                                             <small class="text-secondary">60V 45Ah Battery + 10A Fast Charger (2+1 Yr / 9 Mo)</small>
                                         </td>
-                                        <td class="font-mono fw-bold">₹38,202/-</td>
+                                        <td class="font-mono fw-bold highlight-hub">₹38,202/-</td>
                                         <td class="font-mono text-secondary small">₹6,432/-</td>
-                                        <td class="font-mono fw-black text-success fs-6">₹44,634/-</td>
+                                        <td class="font-mono fw-black text-emerald-contrast fs-6">₹44,634/-</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -1214,13 +1299,13 @@
     </section>
 
     <!-- ── 7. SECTION 4: HAR GHAR SOLAR EPC REVENUE ENGINE ─────────────── -->
-    <section class="prospectus-section" id="section_solar">
+    <section class="commercial-section" id="section_solar">
         <div class="container-xl">
             <div class="mb-3">
-                <div class="pill-badge pill-gold mb-1">
+                <div class="badge-pill-amber mb-1">
                     <i class="fas fa-solar-panel"></i> <span id="s4Badge">Solar EPC High-Ticket Engine</span>
                 </div>
-                <h2 class="fw-black text-heading fs-4 mb-1" id="s4Title">Har Ghar Rooftop Solar EPC Capacity Pricing &amp; Commission Matrix</h2>
+                <h2 class="fw-bold text-heading fs-4 mb-1" id="s4Title">Har Ghar Rooftop Solar EPC Capacity Pricing &amp; Commission Matrix</h2>
                 <p class="small text-secondary mb-0" id="s4Subtitle">
                     Turnkey package costs across 1 kW to 10 kW under PM Surya Ghar Muft Bijli Yojana, showing 3.5% Showroom In-Store Margin, 6.5% VGK4U Direct Sale Commission, and combined 10% partner earnings.
                 </p>
@@ -1230,30 +1315,30 @@
             <div class="solar-flagship-card mb-4">
                 <div class="row align-items-center g-3">
                     <div class="col-lg-7">
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <span class="badge bg-warning text-dark fw-black px-3 py-1 font-mono fs-6">FLAGSHIP 3 kW GOLD PACKAGE</span>
-                            <span class="badge bg-success bg-opacity-20 text-success fw-bold">PM Surya Ghar Yojana</span>
+                        <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                            <span class="badge-pill-amber fw-bold fs-6 font-mono">FLAGSHIP 3 kW GOLD PACKAGE</span>
+                            <span class="badge-pill-emerald font-sans">PM Surya Ghar Muft Bijli Yojana</span>
                         </div>
-                        <h3 class="fs-4 fw-black text-heading mb-2">Zero-Electricity Bill Guarantee for Residential Homes</h3>
+                        <h3 class="fs-4 fw-bold text-heading mb-2">Zero-Electricity Bill Guarantee for Residential Homes</h3>
                         <p class="small text-secondary mb-3">
                             The customer pays only a nominal ₹1 initial token scheme with pre-approved nationalised bank loans (SBI, Canara, PNB, APGB). The ₹78,000 Govt. DBT subsidy is credited directly to the customer's bank account.
                         </p>
                         <div class="d-flex flex-wrap gap-2 small font-mono">
                             <span class="p-2 rounded-2 bg-white border">System Price: <strong>₹1,99,999</strong></span>
-                            <span class="p-2 rounded-2 bg-white border text-success">Govt. Subsidy: <strong>-₹78,000</strong></span>
-                            <span class="p-2 rounded-2 bg-white border text-primary">Net Loan: <strong>₹1,21,999</strong></span>
-                            <span class="p-2 rounded-2 bg-white border text-warning">Customer EMI: <strong>₹1,350/mo</strong></span>
+                            <span class="p-2 rounded-2 bg-white border text-emerald-contrast">Govt. Subsidy: <strong>-₹78,000</strong></span>
+                            <span class="p-2 rounded-2 bg-white border text-blue-contrast">Net Loan: <strong>₹1,21,999</strong></span>
+                            <span class="p-2 rounded-2 bg-white border text-amber-contrast">Customer EMI: <strong>₹1,350/mo</strong></span>
                         </div>
                     </div>
                     <div class="col-lg-5 text-lg-end">
                         <div class="p-3 rounded-3 bg-white border shadow-sm text-center text-lg-start">
-                            <small class="text-secondary text-uppercase fw-extrabold d-block" style="font-size: 11px;">Partner Earning per 3 kW Project</small>
-                            <div class="fs-2 fw-black text-success font-mono mt-1">₹20,000/-</div>
+                            <small class="text-secondary text-uppercase fw-bold d-block" style="font-size: 11px;">Partner Earning per 3 kW Project</small>
+                            <div class="fs-2 fw-black text-emerald-contrast font-mono mt-1">₹20,000/-</div>
                             <div class="d-flex justify-content-between small text-secondary pt-2 border-top mt-1">
                                 <span>Showroom Margin (3.5%):</span>
                                 <strong class="text-heading font-mono">₹7,000</strong>
                             </div>
-                            <div class="d-flex justify-content-between small text-success pt-1 font-mono fw-bold">
+                            <div class="d-flex justify-content-between small text-emerald-contrast pt-1 font-mono fw-bold">
                                 <span>Direct Field Sale (+6.5%):</span>
                                 <strong>+₹13,000</strong>
                             </div>
@@ -1267,92 +1352,92 @@
 
             <!-- Complete Solar Tier Table (1 kW to 10 kW) -->
             <div class="table-responsive mb-3">
-                <table class="table-prospectus" id="solarTierTable">
+                <table class="table-commercial" id="solarTierTable">
                     <thead>
                         <tr>
                             <th>Capacity Tier</th>
-                            <th>Turnkey System Price</th>
+                            <th>Turnkey Price</th>
                             <th>Govt. DBT Subsidy</th>
                             <th>Net Customer Price</th>
-                            <th>Showroom Margin (3.5%)</th>
-                            <th>VGK4U Direct Margin (6.5%)</th>
-                            <th>Combined Direct Earning (10%)</th>
-                            <th>10-Yr Approx EMI</th>
+                            <th>Showroom (3.5%)</th>
+                            <th>Direct (+6.5%)</th>
+                            <th>Combined (10%)</th>
+                            <th>Approx EMI</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td><strong>1 kW Rooftop</strong> <small class="text-muted d-block">Basic Home Tier</small></td>
                             <td class="font-mono fw-bold">₹90,000/-</td>
-                            <td class="font-mono text-success">₹30,000/-</td>
+                            <td class="font-mono text-emerald-contrast">₹30,000/-</td>
                             <td class="font-mono fw-bold">₹60,000/-</td>
-                            <td class="font-mono text-primary">₹3,150/-</td>
-                            <td class="font-mono text-secondary">₹5,850/-</td>
-                            <td class="font-mono fw-bold text-success fs-6">₹9,000/-</td>
+                            <td class="font-mono highlight-margin">₹3,150/-</td>
+                            <td class="font-mono highlight-vgk">₹5,850/-</td>
+                            <td class="font-mono fw-bold text-emerald-contrast fs-6">₹9,000/-</td>
                             <td class="font-mono text-secondary">₹600 / mo</td>
                         </tr>
                         <tr>
                             <td><strong>2 kW Rooftop</strong> <small class="text-muted d-block">Medium Household</small></td>
                             <td class="font-mono fw-bold">₹1,70,000/-</td>
-                            <td class="font-mono text-success">₹60,000/-</td>
+                            <td class="font-mono text-emerald-contrast">₹60,000/-</td>
                             <td class="font-mono fw-bold">₹1,10,000/-</td>
-                            <td class="font-mono text-primary">₹5,950/-</td>
-                            <td class="font-mono text-secondary">₹11,050/-</td>
-                            <td class="font-mono fw-bold text-success fs-6">₹17,000/-</td>
+                            <td class="font-mono highlight-margin">₹5,950/-</td>
+                            <td class="font-mono highlight-vgk">₹11,050/-</td>
+                            <td class="font-mono fw-bold text-emerald-contrast fs-6">₹17,000/-</td>
                             <td class="font-mono text-secondary">₹1,140 / mo</td>
                         </tr>
-                        <tr style="background: rgba(245, 158, 11, 0.08); border-left: 4px solid #f59e0b;">
+                        <tr style="background: rgba(245, 158, 11, 0.08); border-left: 4px solid #d97706;">
                             <td>
                                 <strong class="text-heading">3 kW Rooftop</strong>
-                                <span class="badge bg-warning text-dark px-2 py-0 ms-1 fw-bold" style="font-size: 10px;">Flagship ₹1,99,999</span>
+                                <span class="badge-pill-amber" style="font-size: 10px; padding: 2px 6px;">Flagship ₹1,99,999</span>
                                 <small class="text-muted d-block">PM Surya Ghar Gold</small>
                             </td>
-                            <td class="font-mono fw-black text-warning fs-6">₹1,99,999/-</td>
-                            <td class="font-mono text-success fw-bold">₹78,000/-</td>
+                            <td class="font-mono fw-black text-amber-contrast fs-6">₹1,99,999/-</td>
+                            <td class="font-mono text-emerald-contrast fw-bold">₹78,000/-</td>
                             <td class="font-mono fw-black text-heading fs-6">₹1,21,999/-</td>
-                            <td class="font-mono fw-bold text-primary fs-6">₹7,000/- (3.5%)</td>
-                            <td class="font-mono fw-bold text-secondary fs-6">₹13,000/- (6.5%)</td>
-                            <td class="font-mono fw-black text-success fs-5">₹20,000/- (10%)</td>
-                            <td class="font-mono fw-bold text-primary">₹1,350 / mo</td>
+                            <td class="font-mono fw-bold highlight-margin fs-6">₹7,000/- (3.5%)</td>
+                            <td class="font-mono fw-bold highlight-vgk fs-6">₹13,000/- (6.5%)</td>
+                            <td class="font-mono fw-black text-emerald-contrast fs-5">₹20,000/- (10%)</td>
+                            <td class="font-mono fw-bold text-blue-contrast">₹1,350 / mo</td>
                         </tr>
                         <tr>
                             <td><strong>4 kW Rooftop</strong> <small class="text-muted d-block">Large Villa / Business</small></td>
                             <td class="font-mono fw-bold">₹2,95,000/-</td>
-                            <td class="font-mono text-success">₹78,000/-</td>
+                            <td class="font-mono text-emerald-contrast">₹78,000/-</td>
                             <td class="font-mono fw-bold">₹2,17,000/-</td>
-                            <td class="font-mono text-primary">₹10,325/-</td>
-                            <td class="font-mono text-secondary">₹19,175/-</td>
-                            <td class="font-mono fw-bold text-success fs-6">₹29,500/-</td>
+                            <td class="font-mono highlight-margin">₹10,325/-</td>
+                            <td class="font-mono highlight-vgk">₹19,175/-</td>
+                            <td class="font-mono fw-bold text-emerald-contrast fs-6">₹29,500/-</td>
                             <td class="font-mono text-secondary">₹2,010 / mo</td>
                         </tr>
                         <tr>
                             <td><strong>5 kW Rooftop</strong> <small class="text-muted d-block">Commercial / Multi-Floor</small></td>
                             <td class="font-mono fw-bold">₹3,60,000/-</td>
-                            <td class="font-mono text-success">₹78,000/-</td>
+                            <td class="font-mono text-emerald-contrast">₹78,000/-</td>
                             <td class="font-mono fw-bold">₹2,82,000/-</td>
-                            <td class="font-mono text-primary">₹12,600/-</td>
-                            <td class="font-mono text-secondary">₹23,400/-</td>
-                            <td class="font-mono fw-bold text-success fs-6">₹36,000/-</td>
+                            <td class="font-mono highlight-margin">₹12,600/-</td>
+                            <td class="font-mono highlight-vgk">₹23,400/-</td>
+                            <td class="font-mono fw-bold text-emerald-contrast fs-6">₹36,000/-</td>
                             <td class="font-mono text-secondary">₹2,590 / mo</td>
                         </tr>
                         <tr>
                             <td><strong>6 kW Rooftop</strong> <small class="text-muted d-block">Light Industrial</small></td>
                             <td class="font-mono fw-bold">₹4,35,000/-</td>
-                            <td class="font-mono text-success">₹78,000/-</td>
+                            <td class="font-mono text-emerald-contrast">₹78,000/-</td>
                             <td class="font-mono fw-bold">₹3,57,000/-</td>
-                            <td class="font-mono text-primary">₹15,225/-</td>
-                            <td class="font-mono text-secondary">₹28,275/-</td>
-                            <td class="font-mono fw-bold text-success fs-6">₹43,500/-</td>
+                            <td class="font-mono highlight-margin">₹15,225/-</td>
+                            <td class="font-mono highlight-vgk">₹28,275/-</td>
+                            <td class="font-mono fw-bold text-emerald-contrast fs-6">₹43,500/-</td>
                             <td class="font-mono text-secondary">₹3,253 / mo</td>
                         </tr>
                         <tr>
                             <td><strong>10 kW Rooftop</strong> <small class="text-muted d-block">Commercial Enterprise</small></td>
                             <td class="font-mono fw-bold">₹6,20,000/-</td>
-                            <td class="font-mono text-success">₹78,000/-</td>
+                            <td class="font-mono text-emerald-contrast">₹78,000/-</td>
                             <td class="font-mono fw-bold">₹5,42,000/-</td>
-                            <td class="font-mono text-primary">₹21,700/-</td>
-                            <td class="font-mono text-secondary">₹40,300/-</td>
-                            <td class="font-mono fw-bold text-success fs-6">₹62,000/-</td>
+                            <td class="font-mono highlight-margin">₹21,700/-</td>
+                            <td class="font-mono highlight-vgk">₹40,300/-</td>
+                            <td class="font-mono fw-bold text-emerald-contrast fs-6">₹62,000/-</td>
                             <td class="font-mono text-secondary">₹4,902 / mo</td>
                         </tr>
                     </tbody>
@@ -1363,13 +1448,13 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <div class="p-3 rounded-3 bg-white border small">
-                        <strong class="text-success d-block mb-1"><i class="fas fa-store me-1"></i> Showroom Lead Margin Policy (3.5% Standard)</strong>
+                        <strong class="text-emerald-contrast d-block mb-1"><i class="fas fa-store me-1"></i> Showroom Lead Margin Policy (3.5% Standard)</strong>
                         <span class="text-secondary">The franchise showroom receives 3.5% (e.g. ₹7,000 on 3kW) on all rooftop solar bookings generated via retail store walk-ins. Zero execution liability: central engineering handles permits and installation.</span>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="p-3 rounded-3 bg-white border small">
-                        <strong class="text-primary d-block mb-1"><i class="fas fa-handshake me-1"></i> Direct Field Sale Commission (+6.5% VGK4U)</strong>
+                        <strong class="text-blue-contrast d-block mb-1"><i class="fas fa-handshake me-1"></i> Direct Field Sale Commission (+6.5% VGK4U)</strong>
                         <span class="text-secondary">When your field team actively markets and closes the customer end-to-end, an additional 6.5% VGK4U commission (₹13,000 on 3kW) is credited, generating a combined 10% (₹20,000 per project)!</span>
                     </div>
                 </div>
@@ -1378,25 +1463,25 @@
     </section>
 
     <!-- ── 8. SECTION 5: WORKSHOP, DIAGNOSTICS & /ecom SPARES ──────────── -->
-    <section class="prospectus-section" id="section_workshop">
+    <section class="commercial-section" id="section_workshop">
         <div class="container-xl">
-            <div class="card rounded-4 border overflow-hidden p-4 shadow-sm" style="background: linear-gradient(135deg, rgba(11, 31, 51, 0.03) 0%, rgba(5, 150, 105, 0.05) 100%); border-color: rgba(5, 150, 105, 0.3) !important;">
+            <div class="card rounded-4 border overflow-hidden p-4 shadow-sm" style="background: linear-gradient(135deg, rgba(15, 23, 42, 0.02) 0%, rgba(5, 150, 105, 0.04) 100%); border-color: rgba(5, 150, 105, 0.3) !important;">
                 <div class="row align-items-center g-4">
                     <div class="col-lg-7">
-                        <div class="pill-badge pill-emerald mb-2">
+                        <div class="badge-pill-emerald mb-2">
                             <i class="fas fa-wrench"></i> <span>Recurring Cash Flow Engine</span>
                         </div>
-                        <h2 class="fw-black text-heading fs-4 mb-2">
+                        <h2 class="fw-bold text-heading fs-4 mb-2">
                             Authorized EV Diagnostic Workshop &amp; B2B Spares on <code class="text-success">/ecom</code>
                         </h2>
                         <p class="text-secondary small mb-3">
                             Every MyntReal Hub includes an authorized EV Certified Technician Lab. Fast-moving consumables (Brake Pads, BLDC Motors, Waterproof Sine-Wave Controllers, Smart Throttle Assemblies, Tubeless Tires, Lithium Cell Balancing) generate recurring monthly cash flow with <strong>15% – 25% service margins</strong>.
                         </p>
                         <div class="d-flex flex-wrap gap-2 mb-3">
-                            <span class="badge bg-white text-dark border px-3 py-2 small fw-semibold"><i class="fas fa-check text-success me-1"></i> OEM Genuine Spares</span>
-                            <span class="badge bg-white text-dark border px-3 py-2 small fw-semibold"><i class="fas fa-check text-success me-1"></i> B2B Wholesale Dealer Cart</span>
-                            <span class="badge bg-white text-dark border px-3 py-2 small fw-semibold"><i class="fas fa-check text-success me-1"></i> 48-Hr Central Dispatch</span>
-                            <span class="badge bg-white text-dark border px-3 py-2 small fw-semibold"><i class="fas fa-check text-success me-1"></i> Direct GST Invoicing</span>
+                            <span class="badge-pill-slate"><i class="fas fa-check text-success me-1"></i> OEM Genuine Spares</span>
+                            <span class="badge-pill-slate"><i class="fas fa-check text-success me-1"></i> B2B Wholesale Cart</span>
+                            <span class="badge-pill-slate"><i class="fas fa-check text-success me-1"></i> 48-Hr Central Dispatch</span>
+                            <span class="badge-pill-slate"><i class="fas fa-check text-success me-1"></i> Direct GST Invoicing</span>
                         </div>
                     </div>
                     <div class="col-lg-5 text-center">
@@ -1411,13 +1496,13 @@
     </section>
 
     <!-- ── 9. SECTION 6: HOW THE MONEY FLOWS (PROCESS PIPELINE) ────────── -->
-    <section class="prospectus-section" id="section_flow">
+    <section class="commercial-section" id="section_flow">
         <div class="container-xl">
             <div class="text-center max-w-3xl mx-auto mb-4">
-                <div class="pill-badge pill-navy mb-1">
+                <div class="badge-pill-emerald mb-1">
                     <i class="fas fa-stream"></i> <span id="s6Badge">Operational Flow</span>
                 </div>
-                <h2 class="fw-black text-heading fs-4 mb-1" id="s6Title">How the Money Flows: Lead-to-Margin Settlement Cycle</h2>
+                <h2 class="fw-bold text-heading fs-4 mb-1" id="s6Title">How the Money Flows: Lead-to-Margin Settlement Cycle</h2>
                 <p class="small text-secondary mb-0" id="s6Subtitle">
                     Transparent, frictionless 5-step operational pipeline connecting showroom sales to automated dealer bank credits.
                 </p>
@@ -1455,7 +1540,7 @@
                 <div class="col-lg col-md-6 col-sm-12">
                     <div class="flow-step-card" style="border-color: rgba(5, 150, 105, 0.4); background: rgba(5, 150, 105, 0.04);">
                         <div class="flow-step-num" style="background: #059669;">5</div>
-                        <h4 class="fs-6 fw-bold text-success mb-1">Margin Settlement</h4>
+                        <h4 class="fs-6 fw-bold text-emerald-contrast mb-1">Margin Settlement</h4>
                         <p class="small text-secondary mb-0">12% Showroom Margin + 10.5% VGK4U Direct Sale Commission are credited weekly direct to Hub bank account.</p>
                     </div>
                 </div>
@@ -1464,13 +1549,13 @@
     </section>
 
     <!-- ── 10. SECTION 7: 3-SCENARIO UNIT ECONOMICS ────────────────────── -->
-    <section class="prospectus-section" id="section_economics">
+    <section class="commercial-section" id="section_economics">
         <div class="container-xl">
             <div class="text-center max-w-3xl mx-auto mb-4">
-                <div class="pill-badge pill-gold mb-1">
+                <div class="badge-pill-amber mb-1">
                     <i class="fas fa-chart-pie"></i> <span id="s7Badge">Unit Economics Analysis</span>
                 </div>
-                <h2 class="fw-black text-heading fs-4 mb-1" id="s7Title">Financial Viability: 3 Realistic Operational Scenarios</h2>
+                <h2 class="fw-bold text-heading fs-4 mb-1" id="s7Title">Financial Viability: 3 Realistic Operational Scenarios</h2>
                 <p class="small text-secondary mb-0" id="s7Subtitle">
                     Conservative, Target, and Aggressive unit economics modeled from our operating regional dealership network.
                 </p>
@@ -1485,7 +1570,7 @@
                     <div class="scenario-card">
                         <div>
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="badge px-3 py-1 rounded-pill fw-bold bg-secondary text-white">Scenario A</span>
+                                <span class="badge-pill-slate">Scenario A</span>
                                 <span class="text-secondary small fw-semibold">Conservative</span>
                             </div>
                             <h3 class="fs-5 fw-bold text-heading mb-1">Baseline Model</h3>
@@ -1508,7 +1593,7 @@
                                     <span>Insurance &amp; Real Estate:</span>
                                     <strong class="font-mono text-heading">₹40,000</strong>
                                 </div>
-                                <div class="d-flex justify-content-between py-2 border-top mt-2 fw-bold text-warning">
+                                <div class="d-flex justify-content-between py-2 border-top mt-2 fw-bold text-amber-contrast">
                                     <span>Gross Monthly Revenue:</span>
                                     <span class="font-mono">₹2,21,750</span>
                                 </div>
@@ -1516,7 +1601,7 @@
                                     <span>Estimated Store OpEx:</span>
                                     <span class="font-mono">-₹60,000</span>
                                 </div>
-                                <div class="d-flex justify-content-between py-2 border-top mt-2 fw-black text-success fs-6">
+                                <div class="d-flex justify-content-between py-2 border-top mt-2 fw-black text-emerald-contrast fs-6">
                                     <span>Net In-Pocket Profit:</span>
                                     <span class="font-mono">₹1,61,750 / mo</span>
                                 </div>
@@ -1525,8 +1610,8 @@
 
                         <div class="text-center pt-3 border-top mt-2">
                             <small class="text-secondary d-block fw-semibold">Capital Payback Horizon</small>
-                            <span class="fs-4 fw-black font-mono text-warning">6–8 Months</span>
-                            <small class="text-success d-block fw-bold mt-1">~140% Annualized ROI</small>
+                            <span class="fs-4 fw-black font-mono text-amber-contrast">6–8 Months</span>
+                            <small class="text-emerald-contrast d-block fw-bold mt-1">~140% Annualized ROI</small>
                         </div>
                     </div>
                 </div>
@@ -1536,8 +1621,8 @@
                     <div class="scenario-card highlight-target">
                         <div>
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="badge px-3 py-1 rounded-pill fw-bold bg-success text-white">Scenario B (Target)</span>
-                                <span class="badge bg-warning text-dark px-2 py-1 small fw-bold">Most Likely</span>
+                                <span class="badge-pill-emerald">Scenario B (Target)</span>
+                                <span class="badge-pill-amber" style="font-size: 11px;">Most Likely</span>
                             </div>
                             <h3 class="fs-5 fw-bold text-heading mb-1">Moderate Traction</h3>
                             <p class="small text-secondary mb-3">10 EVs + 8 Solar Projects + 8 Policies/mo</p>
@@ -1559,7 +1644,7 @@
                                     <span>Insurance &amp; Real Estate:</span>
                                     <strong class="font-mono text-heading">₹80,000</strong>
                                 </div>
-                                <div class="d-flex justify-content-between py-2 border-top mt-2 fw-bold text-warning">
+                                <div class="d-flex justify-content-between py-2 border-top mt-2 fw-bold text-amber-contrast">
                                     <span>Gross Monthly Revenue:</span>
                                     <span class="font-mono">₹4,23,500</span>
                                 </div>
@@ -1567,7 +1652,7 @@
                                     <span>Store OpEx (Rent, Staff, Ad):</span>
                                     <span class="font-mono">-₹1,00,000</span>
                                 </div>
-                                <div class="d-flex justify-content-between py-2 border-top mt-2 fw-black text-success fs-6">
+                                <div class="d-flex justify-content-between py-2 border-top mt-2 fw-black text-emerald-contrast fs-6">
                                     <span>Net In-Pocket Profit:</span>
                                     <span class="font-mono">₹3,23,500 / mo</span>
                                 </div>
@@ -1576,8 +1661,8 @@
 
                         <div class="text-center pt-3 border-top mt-2">
                             <small class="text-secondary d-block fw-semibold">Capital Payback Horizon</small>
-                            <span class="fs-4 fw-black font-mono text-success">4–5 Months</span>
-                            <small class="text-success d-block fw-bold mt-1">~260% Annualized ROI</small>
+                            <span class="fs-4 fw-black font-mono text-emerald-contrast">4–5 Months</span>
+                            <small class="text-emerald-contrast d-block fw-bold mt-1">~260% Annualized ROI</small>
                         </div>
                     </div>
                 </div>
@@ -1587,7 +1672,7 @@
                     <div class="scenario-card">
                         <div>
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <span class="badge px-3 py-1 rounded-pill fw-bold bg-primary text-white">Scenario C</span>
+                                <span class="badge-pill-indigo">Scenario C</span>
                                 <span class="text-secondary small fw-semibold">Peak Season</span>
                             </div>
                             <h3 class="fs-5 fw-bold text-heading mb-1">Aggressive Expansion</h3>
@@ -1610,7 +1695,7 @@
                                     <span>Insurance &amp; Real Estate:</span>
                                     <strong class="font-mono text-heading">₹1,50,000</strong>
                                 </div>
-                                <div class="d-flex justify-content-between py-2 border-top mt-2 fw-bold text-warning">
+                                <div class="d-flex justify-content-between py-2 border-top mt-2 fw-bold text-amber-contrast">
                                     <span>Gross Monthly Revenue:</span>
                                     <span class="font-mono">₹7,97,000</span>
                                 </div>
@@ -1618,7 +1703,7 @@
                                     <span>Store OpEx (Expanded):</span>
                                     <span class="font-mono">-₹1,50,000</span>
                                 </div>
-                                <div class="d-flex justify-content-between py-2 border-top mt-2 fw-black text-success fs-6">
+                                <div class="d-flex justify-content-between py-2 border-top mt-2 fw-black text-emerald-contrast fs-6">
                                     <span>Net In-Pocket Profit:</span>
                                     <span class="font-mono">₹6,47,000 / mo</span>
                                 </div>
@@ -1627,8 +1712,8 @@
 
                         <div class="text-center pt-3 border-top mt-2">
                             <small class="text-secondary d-block fw-semibold">Capital Payback Horizon</small>
-                            <span class="fs-4 fw-black font-mono text-primary">2.5–3 Months</span>
-                            <small class="text-success d-block fw-bold mt-1">~500%+ Annualized ROI</small>
+                            <span class="fs-4 fw-black font-mono text-indigo-contrast">2.5–3 Months</span>
+                            <small class="text-emerald-contrast d-block fw-bold mt-1">~500%+ Annualized ROI</small>
                         </div>
                     </div>
                 </div>
@@ -1637,13 +1722,13 @@
     </section>
 
     <!-- ── 11. SECTION 8: INTERACTIVE INVESTOR ROI SIMULATOR ───────────── -->
-    <section class="prospectus-section" id="section_simulator">
+    <section class="commercial-section" id="section_interactive_simulator">
         <div class="container-xl">
             <div class="text-center max-w-3xl mx-auto mb-4">
-                <div class="pill-badge pill-emerald mb-1">
+                <div class="badge-pill-emerald mb-1">
                     <i class="fas fa-calculator"></i> <span id="s8Badge">Interactive Investor Model</span>
                 </div>
-                <h2 class="fw-black text-heading fs-4 mb-1" id="s8Title">Interactive Investor ROI &amp; Cash Flow Simulator</h2>
+                <h2 class="fw-bold text-heading fs-4 mb-1" id="s8Title">Interactive Investor ROI &amp; Cash Flow Simulator</h2>
                 <p class="small text-secondary mb-0" id="s8Subtitle">
                     Adjust the volume sliders across all 5 franchise streams to simulate monthly gross revenues, store OpEx, net profits, and capital break-even timeline in real time.
                 </p>
@@ -1672,12 +1757,12 @@
                         <div class="calc-range-card">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="fw-bold text-heading small"><i class="fas fa-solar-panel text-warning me-1"></i> 1. Har Ghar Rooftop Solar EPC</span>
-                                <span class="badge bg-warning text-dark font-mono fw-bold fs-6" id="simValSolarText">4 Projects / mo</span>
+                                <span class="badge-pill-amber font-mono fw-bold fs-6" id="simValSolarText">4 Projects / mo</span>
                             </div>
-                            <input type="range" class="calc-slider-input" id="simSliderSolar" min="0" max="25" value="4" step="1" oninput="calcProspectusSimulator()">
+                            <input type="range" class="calc-range-input" id="simSliderSolar" min="0" max="25" value="4" step="1" oninput="calcProspectusSimulator()">
                             <div class="d-flex justify-content-between small text-secondary mt-1 font-mono">
                                 <span>0</span>
-                                <span class="text-warning fw-bold" id="simMarginSolarLabel">Margin: ₹20,000 / project</span>
+                                <span class="text-amber-contrast fw-bold" id="simMarginSolarLabel">Margin: ₹20,000 / project</span>
                                 <span>25 projects</span>
                             </div>
                         </div>
@@ -1686,12 +1771,12 @@
                         <div class="calc-range-card">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="fw-bold text-heading small"><i class="fas fa-motorcycle text-success me-1"></i> 2. Manthra Electric 2-Wheelers</span>
-                                <span class="badge bg-success text-white font-mono fw-bold fs-6" id="simValEvText">5 Scooters / mo</span>
+                                <span class="badge-pill-emerald font-mono fw-bold fs-6" id="simValEvText">5 Scooters / mo</span>
                             </div>
-                            <input type="range" class="calc-slider-input" id="simSliderEv" min="0" max="40" value="5" step="1" oninput="calcProspectusSimulator()">
+                            <input type="range" class="calc-range-input" id="simSliderEv" min="0" max="40" value="5" step="1" oninput="calcProspectusSimulator()">
                             <div class="d-flex justify-content-between small text-secondary mt-1 font-mono">
                                 <span>0</span>
-                                <span class="text-success fw-bold" id="simMarginEvLabel">Dealer Margin: 12% (~₹6,857/unit ex-tax)</span>
+                                <span class="text-emerald-contrast fw-bold" id="simMarginEvLabel">Dealer Margin: 12% (~₹6,857/unit ex-tax)</span>
                                 <span>40 scooters</span>
                             </div>
                         </div>
@@ -1700,12 +1785,12 @@
                         <div class="calc-range-card">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="fw-bold text-heading small"><i class="fas fa-wrench text-info me-1"></i> 3. EV Workshop &amp; Spares Service</span>
-                                <span class="badge bg-info text-white font-mono fw-bold fs-6" id="simValEtcText">8 Services / mo</span>
+                                <span class="badge-pill-cyan font-mono fw-bold fs-6" id="simValEtcText">8 Services / mo</span>
                             </div>
-                            <input type="range" class="calc-slider-input" id="simSliderEtc" min="0" max="30" value="8" step="1" oninput="calcProspectusSimulator()">
+                            <input type="range" class="calc-range-input" id="simSliderEtc" min="0" max="30" value="8" step="1" oninput="calcProspectusSimulator()">
                             <div class="d-flex justify-content-between small text-secondary mt-1 font-mono">
                                 <span>0</span>
-                                <span class="text-info fw-bold">Avg Margin: ₹6,000 / service batch</span>
+                                <span class="text-blue-contrast fw-bold">Avg Margin: ₹6,000 / service batch</span>
                                 <span>30 jobs</span>
                             </div>
                         </div>
@@ -1714,12 +1799,12 @@
                         <div class="calc-range-card">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="fw-bold text-heading small"><i class="fas fa-shield-alt text-primary me-1"></i> 4. Insurance Policies (General &amp; Health)</span>
-                                <span class="badge bg-primary text-white font-mono fw-bold fs-6" id="simValInsText">15 Policies / mo</span>
+                                <span class="badge-pill-indigo font-mono fw-bold fs-6" id="simValInsText">15 Policies / mo</span>
                             </div>
-                            <input type="range" class="calc-slider-input" id="simSliderIns" min="0" max="60" value="15" step="1" oninput="calcProspectusSimulator()">
+                            <input type="range" class="calc-range-input" id="simSliderIns" min="0" max="60" value="15" step="1" oninput="calcProspectusSimulator()">
                             <div class="d-flex justify-content-between small text-secondary mt-1 font-mono">
                                 <span>0</span>
-                                <span class="text-primary fw-bold">Commission: ₹1,500 / policy</span>
+                                <span class="text-indigo-contrast fw-bold">Commission: ₹1,500 / policy</span>
                                 <span>60 policies</span>
                             </div>
                         </div>
@@ -1728,12 +1813,12 @@
                         <div class="calc-range-card mb-0">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <span class="fw-bold text-heading small"><i class="fas fa-building text-warning me-1"></i> 5. Real Dreams Plots &amp; Farmlands</span>
-                                <span class="badge bg-warning bg-opacity-20 text-dark font-mono fw-bold fs-6" id="simValRdText">1 Plot / Quarter</span>
+                                <span class="badge-pill-amber font-mono fw-bold fs-6" id="simValRdText">1 Plot / Quarter</span>
                             </div>
-                            <input type="range" class="calc-slider-input" id="simSliderRd" min="0" max="10" value="1" step="1" oninput="calcProspectusSimulator()">
+                            <input type="range" class="calc-range-input" id="simSliderRd" min="0" max="10" value="1" step="1" oninput="calcProspectusSimulator()">
                             <div class="d-flex justify-content-between small text-secondary mt-1 font-mono">
                                 <span>0</span>
-                                <span class="text-warning fw-bold">Margin: ₹50,000 / closed plot</span>
+                                <span class="text-amber-contrast fw-bold">Margin: ₹50,000 / closed plot</span>
                                 <span>10 plots</span>
                             </div>
                         </div>
@@ -1747,10 +1832,10 @@
                         <div>
                             <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-3">
                                 <div>
-                                    <small class="text-secondary text-uppercase fw-extrabold" style="font-size: 11px;">Simulated Monthly Income</small>
-                                    <div class="fs-1 fw-black font-mono mt-1 text-success" id="simNetMonthlyProfit">₹1,63,500</div>
+                                    <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;">Simulated Monthly Income</small>
+                                    <div class="fs-1 fw-black font-mono mt-1 text-emerald-contrast" id="simNetMonthlyProfit">₹1,41,417</div>
                                 </div>
-                                <span class="badge bg-success bg-opacity-15 text-success px-3 py-1 fw-bold">Net In-Pocket</span>
+                                <span class="badge-pill-emerald">Net In-Pocket</span>
                             </div>
 
                             <!-- Revenue Breakdown Lines -->
@@ -1775,7 +1860,7 @@
                                     <span><i class="fas fa-building text-warning me-1"></i> Real Estate Referrals:</span>
                                     <strong class="font-mono text-heading" id="simBreakdownRd">₹16,667</strong>
                                 </div>
-                                <div class="d-flex justify-content-between py-2 border-top mt-2 fw-bold text-warning">
+                                <div class="d-flex justify-content-between py-2 border-top mt-2 fw-bold text-amber-contrast">
                                     <span>Gross Monthly Revenue:</span>
                                     <strong class="font-mono" id="simGrossMonthly">₹2,01,417</strong>
                                 </div>
@@ -1792,13 +1877,13 @@
                                 <div class="col-6">
                                     <div class="p-2 rounded-3 bg-light border">
                                         <small class="text-secondary d-block font-sans" style="font-size: 11px;">Annual Net Profit</small>
-                                        <span class="fs-5 fw-black text-success" id="simAnnualNet">₹19,62,000</span>
+                                        <span class="fs-5 fw-black text-emerald-contrast" id="simAnnualNet">₹16,97,000</span>
                                     </div>
                                 </div>
                                 <div class="col-6">
                                     <div class="p-2 rounded-3 bg-light border">
                                         <small class="text-secondary d-block font-sans" style="font-size: 11px;">Capital Payback</small>
-                                        <span class="fs-5 fw-black text-warning" id="simPaybackHorizon">6–8 Months</span>
+                                        <span class="fs-5 fw-black text-amber-contrast" id="simPaybackHorizon">6–8 Months</span>
                                     </div>
                                 </div>
                             </div>
@@ -1814,13 +1899,13 @@
     </section>
 
     <!-- ── 12. SECTION 9: MANDAL TERRITORY PROTECTION & REQUIREMENTS ──── -->
-    <section class="prospectus-section" id="section_requirements">
+    <section class="commercial-section" id="section_requirements">
         <div class="container-xl">
             <div class="text-center max-w-3xl mx-auto mb-4">
-                <div class="pill-badge pill-navy mb-1">
+                <div class="badge-pill-emerald mb-1">
                     <i class="fas fa-handshake"></i> <span id="s9Badge">Territory Exclusivity</span>
                 </div>
-                <h2 class="fw-black text-heading fs-4 mb-1" id="s9Title">Mandal Exclusivity Rights &amp; Hub Space Requirements</h2>
+                <h2 class="fw-bold text-heading fs-4 mb-1" id="s9Title">Mandal Exclusivity Rights &amp; Hub Space Requirements</h2>
                 <p class="small text-secondary mb-0" id="s9Subtitle">
                     To maintain premium profitability, MyntReal grants exclusive dealership rights to only ONE authorized Business Hub per designated revenue mandal.
                 </p>
@@ -1829,7 +1914,7 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <div class="p-3 rounded-3 bg-white border h-100 shadow-sm">
-                        <div class="d-flex align-items-center gap-2 mb-2 text-primary">
+                        <div class="d-flex align-items-center gap-2 mb-2 text-success">
                             <i class="fas fa-map-marked-alt fs-5"></i>
                             <strong class="text-heading">100% Mandal Protection</strong>
                         </div>
@@ -1851,7 +1936,7 @@
                 </div>
                 <div class="col-md-4">
                     <div class="p-3 rounded-3 bg-white border h-100 shadow-sm">
-                        <div class="d-flex align-items-center gap-2 mb-2 text-success">
+                        <div class="d-flex align-items-center gap-2 mb-2 text-info">
                             <i class="fas fa-graduation-cap fs-5"></i>
                             <strong class="text-heading">Central OEM Onboarding</strong>
                         </div>
@@ -1865,13 +1950,13 @@
     </section>
 
     <!-- ── 13. SECTION 10: INVESTOR FAQS ACCORDION ────────────────────── -->
-    <section class="prospectus-section" id="section_faqs">
+    <section class="commercial-section" id="section_faqs">
         <div class="container-xl">
             <div class="text-center max-w-3xl mx-auto mb-4">
-                <div class="pill-badge pill-gold mb-1">
+                <div class="badge-pill-amber mb-1">
                     <i class="fas fa-question-circle"></i> <span id="s10Badge">Commercial Clarity</span>
                 </div>
-                <h2 class="fw-black text-heading fs-4 mb-1" id="s10Title">Frequently Asked Commercial Questions (Investor FAQs)</h2>
+                <h2 class="fw-bold text-heading fs-4 mb-1" id="s10Title">Frequently Asked Commercial Questions (Investor FAQs)</h2>
                 <p class="small text-secondary mb-0" id="s10Subtitle">
                     Key contractual, tax, operational, and warranty policies addressed for prospective franchise partners.
                 </p>
@@ -1952,12 +2037,12 @@
     </section>
 
     <!-- ── 14. SECTION 11: FINAL COMMERCIAL CTA & TERRITORY DESK ───────── -->
-    <section class="prospectus-section text-center" id="section_cta" style="background: linear-gradient(180deg, var(--bg-card) 0%, rgba(11, 31, 51, 0.05) 100%);">
+    <section class="commercial-section text-center" id="section_cta" style="background: linear-gradient(180deg, var(--bg-card) 0%, rgba(5, 150, 105, 0.04) 100%);">
         <div class="container-xl" style="max-width: 860px;">
-            <div class="pill-badge pill-emerald mb-2">
+            <div class="badge-pill-emerald mb-2">
                 <i class="fas fa-lock"></i> <span>CONFIDENTIAL ACCESS PORTAL</span>
             </div>
-            <h2 class="fw-black text-heading fs-3 mb-2">Secure Exclusive CleanTech Dealership Rights in Your Mandal</h2>
+            <h2 class="fw-bold text-heading fs-3 mb-2">Secure Exclusive CleanTech Dealership Rights in Your Mandal</h2>
             <p class="text-secondary small mb-4">
                 Review complete wholesale inventory lists, schedule a physical showroom territory survey with our regional franchise coordinator, or submit your mandal token deposit today.
             </p>
@@ -1981,7 +2066,7 @@
     </section>
 
     <!-- ── 15. BOTTOM STICKY ACTION BAR ────────────────────────────────── -->
-    <div class="bottom-prospectus-bar">
+    <div class="bottom-action-bar">
         <div class="container-xl d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div class="small">
                 <strong class="text-heading d-block" id="btmBarTitle">Ready to Secure Mandal Exclusive Rights?</strong>
@@ -1991,8 +2076,8 @@
                 <a href="tel:+918585852738" class="btn btn-outline-secondary rounded-pill px-3 py-1 small fw-bold text-nowrap">
                     <i class="fas fa-phone-alt me-1 text-success"></i> +91 85858 52738
                 </a>
-                <a href="https://wa.me/918585852738?text=Hello%20MyntReal!%20I%20am%20reviewing%20the%2024-Hour%20Confidential%20Hub%20Commercial%20Prospectus.%20Please%20confirm%20mandal%20availability%20for%20my%20area." target="_blank" class="btn btn-success rounded-pill px-3 py-1 small fw-bold text-nowrap" style="background: #25d366; border-color: #25d366;">
-                    <i class="fab fa-whatsapp me-1"></i> WhatsApp Advisor
+                <a href="https://wa.me/918585852738?text=Hello%20MyntReal!%20I%20am%20reviewing%20the%2024-Hour%20Confidential%20Hub%20Commercial%20Prospectus.%20Please%20confirm%20mandal%20availability%20for%20my%20area." target="_blank" class="btn-whatsapp-action text-nowrap">
+                    <i class="fab fa-whatsapp fs-5"></i> WhatsApp Advisor
                 </a>
             </div>
         </div>
@@ -2371,31 +2456,31 @@
                                 </div>
                             </td>
                             <td>
-                                <strong class="text-heading d-block">${escapeHtml(item.variant)}</strong>
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25" style="font-size: 11px;">
+                                <strong class="text-heading d-block small">${escapeHtml(item.variant)}</strong>
+                                <span class="badge-pill-emerald" style="font-size: 10.5px; padding: 2px 8px;">
                                     <i class="fas fa-route me-1"></i> ${escapeHtml(item.range)}
                                 </span>
                             </td>
-                            <td class="font-mono fw-black text-heading fs-6">
+                            <td class="font-mono fw-black highlight-retail fs-6">
                                 ₹${item.retailPrice.toLocaleString('en-IN')}/-
                             </td>
-                            <td class="font-mono text-secondary">
+                            <td class="font-mono highlight-base small">
                                 ₹${basePrice.toLocaleString('en-IN')}/-
                             </td>
-                            <td class="font-mono fw-bold text-primary fs-6">
+                            <td class="font-mono fw-bold highlight-hub fs-6">
                                 ₹${item.hubPrice.toLocaleString('en-IN')}/-
                             </td>
-                            <td class="font-mono fw-bold text-warning">
+                            <td class="font-mono fw-bold highlight-margin">
                                 ₹${hubMargin.toLocaleString('en-IN')}/-
-                                <small class="text-secondary d-block font-sans" style="font-size: 10.5px;">(12% Ex-Tax)</small>
+                                <small class="text-secondary d-block font-sans" style="font-size: 10px;">(12% Ex-Tax)</small>
                             </td>
-                            <td class="font-mono fw-bold text-info">
+                            <td class="font-mono fw-bold highlight-vgk">
                                 ₹${vgkMargin.toLocaleString('en-IN')}/-
-                                <small class="text-secondary d-block font-sans" style="font-size: 10.5px;">(+10.5% Ex-Tax)</small>
+                                <small class="text-secondary d-block font-sans" style="font-size: 10px;">(+10.5% Ex-Tax)</small>
                             </td>
-                            <td class="font-mono fw-black text-success fs-6">
+                            <td class="font-mono fw-black text-emerald-contrast fs-6">
                                 ₹${totalDirectMargin.toLocaleString('en-IN')}/-
-                                <span class="badge bg-success bg-opacity-15 text-success d-block font-sans" style="font-size: 10px;">22.5% Spread</span>
+                                <span class="badge-pill-emerald d-block font-sans" style="font-size: 9.5px; padding: 1px 6px;">22.5% Spread</span>
                             </td>
                         </tr>
                     `;
@@ -2413,11 +2498,11 @@
                     return `
                         <div class="ev-mobile-card">
                             <div class="d-flex align-items-center gap-3 border-bottom pb-2 mb-2">
-                                <img src="${escapeHtml(item.img)}" alt="${escapeHtml(item.model)}" class="ev-thumb-img" style="width: 64px; height: 52px;" onerror="this.src='/public/favicon.ico'">
+                                <img src="${escapeHtml(item.img)}" alt="${escapeHtml(item.model)}" class="ev-thumb-img" style="width: 58px; height: 48px;" onerror="this.src='/public/favicon.ico'">
                                 <div>
                                     <strong class="text-heading d-block fs-6">${escapeHtml(item.model)}</strong>
                                     <small class="text-secondary d-block">${escapeHtml(item.variant)}</small>
-                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25" style="font-size: 10.5px;">
+                                    <span class="badge-pill-emerald" style="font-size: 10px; padding: 2px 7px;">
                                         <i class="fas fa-route me-1"></i> ${escapeHtml(item.range)}
                                     </span>
                                 </div>
@@ -2429,15 +2514,15 @@
                                 </div>
                                 <div class="col-6 text-end">
                                     <span class="text-secondary d-block font-sans" style="font-size: 11px;">Hub Wholesale Cost:</span>
-                                    <strong class="text-primary fs-6">₹${item.hubPrice.toLocaleString('en-IN')}/-</strong>
+                                    <strong class="highlight-hub fs-6">₹${item.hubPrice.toLocaleString('en-IN')}/-</strong>
                                 </div>
                                 <div class="col-6 pt-1 border-top">
                                     <span class="text-secondary d-block font-sans" style="font-size: 11px;">Hub Margin (12%):</span>
-                                    <strong class="text-warning">₹${hubMargin.toLocaleString('en-IN')}/-</strong>
+                                    <strong class="highlight-margin">₹${hubMargin.toLocaleString('en-IN')}/-</strong>
                                 </div>
                                 <div class="col-6 pt-1 border-top text-end">
                                     <span class="text-secondary d-block font-sans" style="font-size: 11px;">Total Direct (22.5%):</span>
-                                    <strong class="text-success fs-6">₹${totalDirectMargin.toLocaleString('en-IN')}/-</strong>
+                                    <strong class="text-emerald-contrast fs-6">₹${totalDirectMargin.toLocaleString('en-IN')}/-</strong>
                                 </div>
                             </div>
                         </div>
@@ -2448,7 +2533,7 @@
 
         function filterEvModel(filterCode) {
             activeEvFilter = filterCode;
-            document.querySelectorAll('#evModelFilters .filter-chip-btn').forEach(btn => {
+            document.querySelectorAll('#evModelFilters .filter-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.getAttribute('onclick').includes(`'${filterCode}'`));
             });
             renderEvPricing();
@@ -2521,7 +2606,7 @@
         }
 
         // ── 4. THEME & LANGUAGE CONTROLS ───────────────────────────────────
-        function toggleProspectusTheme() {
+        function togglePricingTheme() {
             const html = document.documentElement;
             const currentTheme = html.getAttribute('data-theme') || 'light';
             const nextTheme = (currentTheme === 'dark') ? 'light' : 'dark';
@@ -2531,25 +2616,29 @@
             const text = document.getElementById('themeToggleText');
             if (nextTheme === 'dark') {
                 icon.className = 'fas fa-sun text-warning';
-                text.textContent = 'Light';
+                text.textContent = 'Light Mode';
             } else {
                 icon.className = 'fas fa-moon text-warning';
-                text.textContent = 'Dark';
+                text.textContent = 'Dark Mode';
             }
         }
 
-        function switchProspectusLanguage(lang) {
+        function switchPricingLanguage(lang) {
             currentLanguage = lang;
-            document.querySelectorAll('.lang-btn').forEach(btn => {
+            document.querySelectorAll('.lang-pill-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
             });
 
             const isTe = (lang === 'te');
             if (isTe) {
                 document.getElementById('lblConfidential').textContent = '🔒 గోప్యమైన డీలర్‌షిప్ కమర్షియల్స్';
-                document.getElementById('lblValidityNotice').textContent = '24-గంటల ధృవీకరించిన కమర్షియల్ యాక్సెస్';
+                document.getElementById('lblValidity').textContent = '24-గంటల మాత్రమే చెల్లుబాటు అవుతుంది';
                 document.getElementById('lblCopyLink').textContent = 'లింక్ కాపీ';
-                document.getElementById('lblRenewWhatsApp').textContent = 'వాట్సాప్';
+                document.getElementById('lblRenewWhatsApp').textContent = 'వాట్సాప్ ఆఫర్';
+
+                document.getElementById('tabFranchiseText').textContent = '5-in-1 ఫ్రాంచైజ్';
+                document.getElementById('tabEvText').textContent = '2W EV ధరలు';
+                document.getElementById('tabPricingText').textContent = 'హబ్ ధరల పట్టిక (24గం)';
 
                 document.getElementById('heroBadge').textContent = 'గోప్యమైన ప్రాంతీయ ఫ్రాంచైజ్ కమర్షియల్స్';
                 document.getElementById('heroMandalBadge').textContent = 'మండల ప్రత్యేక హక్కులు';
@@ -2573,13 +2662,17 @@
                 document.getElementById('btmBarTitle').textContent = 'మండల ప్రత్యేక హక్కులను పొందాలనుకుంటున్నారా?';
                 document.getElementById('btmBarSub').textContent = 'టోకెన్ డిపాజిట్ సమర్పణతో మండల ఎక్స్‌క్లూజివిటీ గ్యారెంటీ.';
             } else {
-                document.getElementById('lblConfidential').textContent = '🔒 CONFIDENTIAL DEALERSHIP COMMERCIALS';
-                document.getElementById('lblValidityNotice').textContent = '24-Hour Verified Commercial Access';
+                document.getElementById('lblConfidential').textContent = '🔒 Confidential Franchise Commercials';
+                document.getElementById('lblValidity').textContent = 'Valid for 24 Hours Only';
                 document.getElementById('lblCopyLink').textContent = 'Copy 24h Link';
-                document.getElementById('lblRenewWhatsApp').textContent = 'Share';
+                document.getElementById('lblRenewWhatsApp').textContent = 'Share 24h Offer';
 
-                document.getElementById('heroBadge').textContent = 'CONFIDENTIAL REGIONAL FRANCHISE COMMERCIALS';
-                document.getElementById('heroMandalBadge').textContent = 'Mandal Exclusivity Protected';
+                document.getElementById('tabFranchiseText').textContent = '5-in-1 Franchise';
+                document.getElementById('tabEvText').textContent = '2W EV Pricing';
+                document.getElementById('tabPricingText').textContent = 'Hub Pricing (24h)';
+
+                document.getElementById('heroBadge').textContent = 'CONFIDENTIAL FRANCHISE COMMERCIALS';
+                document.getElementById('heroMandalBadge').textContent = 'MANDAL EXCLUSIVITY PROTECTED';
                 document.getElementById('heroTitle').textContent = 'Turnkey CleanTech Franchise: 5 High-Margin Revenue Streams in One Protected Mandal';
                 document.getElementById('heroSubtitle').textContent = 'Authorized wholesale dealer purchase costs (OEM central pricing), certified customer retail matrix, 12% Hub showroom margin, 10.5% VGK4U direct sale commission, rooftop solar EPC spreads, recurring EV workshop margins, and live investor unit economics.';
                 document.getElementById('heroBtnSim').textContent = 'Simulate Your Hub Cash Flow';
@@ -2616,7 +2709,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const lang = urlParams.get('lang');
             if (lang === 'te') {
-                switchProspectusLanguage('te');
+                switchPricingLanguage('te');
             }
         });
     </script>
