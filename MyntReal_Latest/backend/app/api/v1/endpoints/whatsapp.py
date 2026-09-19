@@ -7422,6 +7422,44 @@ def search_directory_contacts(
     except Exception as e:
         logger.warning(f"Error searching staff employees: {e}")
 
+    # 3b. Search Official Partners (Channel / Franchise / Dealer Partners)
+    try:
+        from sqlalchemy import text
+        part_sql = text("""
+            SELECT id, partner_name, partner_code, phone, contact_person_1_phone, city, category
+            FROM official_partners
+            WHERE partner_name ILIKE :q_like
+               OR partner_code ILIKE :q_like
+               OR contact_person_1_name ILIKE :q_like
+               OR city ILIKE :q_like
+               OR (:digits <> '' AND (REGEXP_REPLACE(phone, '[^0-9]', '', 'g') LIKE :d_like OR REGEXP_REPLACE(contact_person_1_phone, '[^0-9]', '', 'g') LIKE :d_like))
+            LIMIT 15;
+        """)
+        part_rows = db.execute(part_sql, {
+            "q_like": f"%{query_str}%",
+            "digits": clean_digits,
+            "d_like": f"%{clean_digits}%"
+        }).fetchall()
+
+        for pid, p_name, p_code, p_ph, p_alt, p_city, p_cat in part_rows:
+            for ph in (p_ph, p_alt):
+                if not ph: continue
+                cp = ''.join(filter(str.isdigit, str(ph)))[-10:]
+                if len(cp) == 10 and cp not in seen_phones:
+                    seen_phones.add(cp)
+                    masked = f"+91 {cp[:4]}••••{cp[-2:]}"
+                    results.append({
+                        "id": pid,
+                        "name": f"{(p_name or '').strip()} ({p_code or 'Partner'})",
+                        "phone": cp,
+                        "masked_phone": masked,
+                        "source": "Channel Partner",
+                        "status": f"{p_cat or 'Partner'} • {p_city or ''}".strip(" •"),
+                        "badge_color": "#9333ea"
+                    })
+    except Exception as e:
+        logger.warning(f"Error searching official partners: {e}")
+
     # 4. Search Past Message Logs (Name, Phone, and Message Content)
     try:
         from sqlalchemy import text

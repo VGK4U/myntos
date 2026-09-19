@@ -2599,6 +2599,7 @@ DEFAULT_STAFF_MENUS = [
     {"menu_code": "staff_auto_dialer", "menu_name": "Auto Dialer", "menu_category": "crm", "menu_icon": "fas fa-phone-volume", "route_path": "/staff/dialer", "display_order": 286, "is_default_visible": True, "is_default_accessible": True},
     {"menu_code": "call_quality_review", "menu_name": "Call Quality Review", "menu_category": "crm", "menu_icon": "fas fa-clipboard-check", "route_path": "/staff/call-quality", "display_order": 287},
     {"menu_code": "sales_team_report", "menu_name": "Sales Team Report", "menu_category": "crm", "menu_icon": "fas fa-chart-bar", "route_path": "/staff/crm/sales-report", "display_order": 288},
+    {"menu_code": "STAFF_CATALOG_LIBRARY", "menu_name": "Catalog Library", "menu_category": "crm", "menu_icon": "fas fa-book-open", "route_path": "/staff/catalog-library", "display_order": 288, "is_default_visible": True, "is_default_accessible": True, "audience_scope": "staff", "sidebar_section": "crm", "sidebar_section_title": "CRM & LEADS", "sidebar_section_order": 4},
     {"menu_code": "crm_whatsapp_bot_hub", "menu_name": "WhatsApp Bot Hub", "menu_category": "crm", "menu_icon": "fab fa-whatsapp", "route_path": "/staff/crm/whatsapp-bot", "display_order": 289, "is_default_visible": True, "is_default_accessible": True, "audience_scope": "staff", "sidebar_section": "crm", "sidebar_section_title": "CRM & LEADS", "sidebar_section_order": 4},
 
     # ===================== USER PAGES (290-309) =====================

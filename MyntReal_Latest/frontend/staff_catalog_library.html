@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,12 +21,49 @@
             --card-bg-light: #283548;
             --text-main: #f1f5f9;
             --text-muted: #94a3b8;
-            --border-color: rgba(255, 255, 255, 0.08);
+            --border-color: rgba(255, 255, 255, 0.12);
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
             --info: #0284c7;
             --brand-gold: #fbbf24;
+        }
+
+        .form-label, label {
+            color: #e2e8f0 !important;
+            font-weight: 600 !important;
+            font-size: 13px !important;
+            margin-bottom: 5px !important;
+        }
+
+        .text-muted {
+            color: #94a3b8 !important;
+        }
+
+        .form-control, .form-select {
+            background-color: #0b1329 !important;
+            border: 1px solid rgba(255, 255, 255, 0.22) !important;
+            color: #ffffff !important;
+            font-size: 14px !important;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background-color: #0b1329 !important;
+            border-color: #10b981 !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
+        }
+
+        .form-control::placeholder {
+            color: #64748b !important;
+            opacity: 1 !important;
+        }
+
+        .input-group-text {
+            background-color: #1e293b !important;
+            border: 1px solid rgba(255, 255, 255, 0.22) !important;
+            color: #10b981 !important;
+            font-weight: 700 !important;
         }
 
         body {
@@ -264,6 +301,44 @@
             padding: 16px 24px;
         }
 
+        /* Recipient Search Dropdown */
+        .recipient-dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 1060;
+            background: #0d1527;
+            border: 1px solid rgba(16, 185, 129, 0.45);
+            border-radius: 12px;
+            margin-top: 6px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+            overflow: hidden;
+        }
+
+        .recipient-search-item {
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .recipient-search-item:hover, .recipient-search-item.active {
+            background: rgba(16, 185, 129, 0.15);
+        }
+
+        .recipient-search-item:last-child {
+            border-bottom: none;
+        }
+
+        .badge-lead { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); }
+        .badge-call { background: rgba(2, 132, 199, 0.2); color: #38bdf8; border: 1px solid rgba(2, 132, 199, 0.4); }
+        .badge-partner { background: rgba(147, 51, 234, 0.2); color: #c084fc; border: 1px solid rgba(147, 51, 234, 0.4); }
+        .badge-staff { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); }
+
         .form-control, .form-select {
             background-color: #0f172a;
             border: 1px solid var(--border-color);
@@ -412,20 +487,20 @@
                         <!-- Quick Meta Stats Row -->
                         <div class="row g-2 mb-4">
                             <div class="col-4">
-                                <div class="p-2 rounded bg-dark text-center border border-secondary border-opacity-25">
-                                    <small class="text-muted d-block">Sections</small>
+                                <div class="p-2 rounded-3 text-center" style="background: #111a2e; border: 1px solid rgba(255, 255, 255, 0.15);">
+                                    <small class="d-block text-uppercase fw-bold" style="color: #94a3b8; font-size: 11px; letter-spacing: 0.5px;">Sections</small>
                                     <span class="fw-bold fs-5 text-white" id="statSectionsCount">0</span>
                                 </div>
                             </div>
                             <div class="col-4">
-                                <div class="p-2 rounded bg-dark text-center border border-secondary border-opacity-25">
-                                    <small class="text-muted d-block">Items / Plans</small>
+                                <div class="p-2 rounded-3 text-center" style="background: #111a2e; border: 1px solid rgba(255, 255, 255, 0.15);">
+                                    <small class="d-block text-uppercase fw-bold" style="color: #94a3b8; font-size: 11px; letter-spacing: 0.5px;">Items / Plans</small>
                                     <span class="fw-bold fs-5 text-white" id="statItemsCount">0</span>
                                 </div>
                             </div>
                             <div class="col-4">
-                                <div class="p-2 rounded bg-dark text-center border border-secondary border-opacity-25">
-                                    <small class="text-muted d-block">Total Dispatches</small>
+                                <div class="p-2 rounded-3 text-center" style="background: #111a2e; border: 1px solid rgba(255, 255, 255, 0.15);">
+                                    <small class="d-block text-uppercase fw-bold" style="color: #94a3b8; font-size: 11px; letter-spacing: 0.5px;">Total Dispatches</small>
                                     <span class="fw-bold fs-5 text-emerald text-success" id="statDispatchesCount">0</span>
                                 </div>
                             </div>
@@ -718,23 +793,72 @@
                     <h5 class="modal-title fw-bold"><i class="fab fa-whatsapp text-success me-2"></i>Send Digital Catalog</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label small text-muted">Recipient Mobile Number (10 Digits)</label>
+                <div class="modal-body p-4">
+                    <!-- 1. Smart Contact / Lead / Partner Search -->
+                    <div class="mb-3 position-relative" id="recipientSearchWrapper">
+                        <label class="form-label d-flex justify-content-between align-items-center mb-1">
+                            <span><i class="fas fa-search text-success me-1"></i> Search Recipient (Name or 3+ Digits)</span>
+                            <span class="badge bg-success bg-opacity-20 text-success border border-success border-opacity-35" style="font-size: 11px;">Leads • Calls • Partners</span>
+                        </label>
                         <div class="input-group">
-                            <span class="input-group-text bg-dark border-secondary text-muted">+91</span>
-                            <input type="text" class="form-control" id="dispatchPhoneInput" placeholder="9876543210" maxlength="10">
+                            <span class="input-group-text"><i class="fas fa-user-search"></i></span>
+                            <input type="text" class="form-control" id="recipientSearchInput" placeholder="Search by name or 3+ digits (e.g. Ramesh, 987, etc.)..." autocomplete="off">
+                            <button class="btn btn-outline-secondary" type="button" id="btnClearRecipientSearch" onclick="clearRecipientSearch()" style="display: none;">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        <!-- Autocomplete Dropdown Menu -->
+                        <div id="recipientSearchDropdown" class="recipient-dropdown-menu" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom border-secondary border-opacity-25" style="background: #09101f;">
+                                <small class="text-uppercase fw-bold text-muted" id="searchDropdownHeading" style="font-size: 11px;">Recent Contacts &amp; Leads</small>
+                                <span class="badge bg-secondary bg-opacity-25 text-light font-mono" id="searchResultCountBadge" style="font-size: 10px;">0 results</span>
+                            </div>
+                            <div id="recipientResultsList" style="max-height: 240px; overflow-y: auto;">
+                                <!-- Dynamically populated by JS -->
+                            </div>
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label small text-muted">Recipient Name (Optional)</label>
-                        <input type="text" class="form-control" id="dispatchNameInput" placeholder="e.g. Ramesh Kumar">
+                    <!-- Selected Recipient Active Card -->
+                    <div id="selectedRecipientCard" class="p-2 mb-3 rounded-3 border border-success border-opacity-50 d-flex justify-content-between align-items-center" style="background: rgba(16, 185, 129, 0.12); display: none;">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 13px;">
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-white fs-6" id="selectedRecipientName">Selected Contact</div>
+                                <div class="small font-mono text-secondary" id="selectedRecipientDetails">+91 98765 43210 • <span class="badge bg-success bg-opacity-25 text-success" id="selectedRecipientSource">CRM Lead</span></div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-light py-1 px-2" onclick="clearSelectedRecipient()" title="Change contact">
+                            <i class="fas fa-undo me-1"></i> Change
+                        </button>
                     </div>
 
+                    <!-- Hidden IDs -->
+                    <input type="hidden" id="dispatchLeadId" value="">
+                    <input type="hidden" id="dispatchPartnerId" value="">
+
+                    <!-- 2. Direct Mobile & Name Entry -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-sm-6">
+                            <label class="form-label">Recipient Mobile Number (10 Digits)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">+91</span>
+                                <input type="text" class="form-control font-mono" id="dispatchPhoneInput" placeholder="9876543210" maxlength="10">
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label">Recipient Name (Optional)</label>
+                            <input type="text" class="form-control" id="dispatchNameInput" placeholder="e.g. Ramesh Kumar">
+                        </div>
+                    </div>
+
+                    <!-- 3. Format & Language -->
                     <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label small text-muted">Catalog Language</label>
+                            <label class="form-label">Catalog Language</label>
                             <select class="form-select" id="dispatchLangSelect">
                                 <option value="en">English</option>
                                 <option value="te">తెలుగు (Telugu)</option>
@@ -743,7 +867,7 @@
                             </select>
                         </div>
                         <div class="col-6">
-                            <label class="form-label small text-muted">Delivery Format (Option A)</label>
+                            <label class="form-label">Delivery Format (Option A)</label>
                             <select class="form-select" id="dispatchMethodSelect">
                                 <option value="web_link">Interactive Web Link (Primary)</option>
                                 <option value="both">Web Link + PDF Brochure</option>
@@ -752,14 +876,16 @@
                         </div>
                     </div>
 
+                    <!-- 4. Staff Note -->
                     <div class="mb-3">
-                        <label class="form-label small text-muted">Personalized Note from Staff (Optional)</label>
+                        <label class="form-label">Personalized Note from Staff (Optional)</label>
                         <textarea class="form-control" id="dispatchCustomNote" rows="2" placeholder="e.g. It was a pleasure speaking with you today. Review the solar options on this link."></textarea>
                     </div>
 
-                    <div class="p-3 bg-dark rounded border border-secondary border-opacity-25 small" id="dispatchResultBox" style="display: none;">
+                    <!-- 5. Result Confirmation Box -->
+                    <div class="p-3 rounded-3 border border-success border-opacity-35 small" id="dispatchResultBox" style="background: rgba(16, 185, 129, 0.08); display: none;">
                         <div class="fw-bold text-success mb-1"><i class="fas fa-check-circle me-1"></i> Link Generated Successfully!</div>
-                        <div class="text-muted text-break mb-2" id="dispatchLinkDisplay"></div>
+                        <div class="text-light text-break mb-2 p-2 rounded bg-dark font-mono small border border-secondary border-opacity-25" id="dispatchLinkDisplay"></div>
                         <a href="#" target="_blank" class="btn btn-sm btn-brand-wa w-100" id="btnOpenWhatsAppDirect">
                             <i class="fab fa-whatsapp me-1"></i> Open in WhatsApp Web / App
                         </a>
@@ -1570,26 +1696,189 @@
             }
         }
 
-        // WhatsApp Dispatch Modal
-        function openWhatsAppDispatchModal() {
+        // ── WhatsApp Dispatch Modal with Multi-Source Recipient Search ────
+        let recipientSearchTimer = null;
+        let recipientSearchInitialized = false;
+
+        function initRecipientSearch() {
+            if (recipientSearchInitialized) return;
+            recipientSearchInitialized = true;
+
+            const input = document.getElementById('recipientSearchInput');
+            const clearBtn = document.getElementById('btnClearRecipientSearch');
+            const dropdown = document.getElementById('recipientSearchDropdown');
+
+            input.addEventListener('input', (e) => {
+                const val = e.target.value.trim();
+                clearBtn.style.display = val ? 'inline-block' : 'none';
+                clearTimeout(recipientSearchTimer);
+                recipientSearchTimer = setTimeout(() => {
+                    performRecipientSearch(val);
+                }, 250);
+            });
+
+            input.addEventListener('focus', () => {
+                performRecipientSearch(input.value.trim());
+            });
+
+            // Close on click outside
+            document.addEventListener('click', (e) => {
+                const searchWrapper = document.getElementById('recipientSearchWrapper');
+                if (searchWrapper && !searchWrapper.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                }
+            });
+
+            // Close on Escape key
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    dropdown.style.display = 'none';
+                }
+            });
+        }
+
+        async function performRecipientSearch(query) {
+            const dropdown = document.getElementById('recipientSearchDropdown');
+            const listEl = document.getElementById('recipientResultsList');
+            const headingEl = document.getElementById('searchDropdownHeading');
+            const countBadge = document.getElementById('searchResultCountBadge');
+
+            listEl.innerHTML = `<div class="p-3 text-center text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Searching contacts...</div>`;
+            dropdown.style.display = 'block';
+
+            try {
+                const url = `/api/v1/digital-catalogs/recipients/search?q=${encodeURIComponent(query || '')}`;
+                const res = await staffFetch(url);
+                if (!res.ok) throw new Error('Search failed');
+                const data = await res.json();
+                const results = data.results || [];
+
+                headingEl.textContent = data.is_recent ? 'Recent Contacts, Calls & Leads' : 'Search Results';
+                countBadge.textContent = `${results.length} found`;
+
+                if (results.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="p-3 text-center text-muted small">
+                            <i class="fas fa-user-slash me-1"></i> No matching leads, calls, or partners found.
+                            <div class="mt-1" style="font-size: 11px;">You can type the 10-digit number directly below.</div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                listEl.innerHTML = results.map((item, idx) => `
+                    <div class="recipient-search-item" onclick="selectRecipientByIndex(${idx})" id="recip-item-${idx}">
+                        <div class="d-flex align-items-center gap-2 overflow-hidden">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center text-white" 
+                                 style="width: 32px; height: 32px; min-width: 32px; background: ${item.badge_color || '#059669'}; font-size: 12px;">
+                                ${item.source === 'CRM Lead' ? '<i class="fas fa-user-tag"></i>' : 
+                                  item.source === 'Recent Call' ? '<i class="fas fa-phone-alt"></i>' : 
+                                  item.source === 'Channel Partner' ? '<i class="fas fa-handshake"></i>' : '<i class="fas fa-user-shield"></i>'}
+                            </div>
+                            <div class="overflow-hidden">
+                                <div class="fw-bold text-white text-truncate" style="font-size: 13px;">${escapeHtml(item.name)}</div>
+                                <div class="text-secondary small font-mono" style="font-size: 11px;">
+                                    ${item.formatted_phone} ${item.subtitle ? `<span class="text-muted ms-1">• ${escapeHtml(item.subtitle)}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <span class="badge ${item.badge_class || 'badge-lead'} ms-2" style="font-size: 10px; white-space: nowrap;">
+                            ${escapeHtml(item.source)}
+                        </span>
+                    </div>
+                `).join('');
+
+                // Cache current results for index selection
+                window._currentRecipientResults = results;
+
+            } catch (err) {
+                listEl.innerHTML = `<div class="p-3 text-center text-danger small"><i class="fas fa-exclamation-triangle me-1"></i> ${escapeHtml(err.message)}</div>`;
+            }
+        }
+
+        function selectRecipientByIndex(index) {
+            if (!window._currentRecipientResults || !window._currentRecipientResults[index]) return;
+            const item = window._currentRecipientResults[index];
+
+            document.getElementById('dispatchPhoneInput').value = item.phone || '';
+            document.getElementById('dispatchNameInput').value = item.name || '';
+            document.getElementById('dispatchLeadId').value = item.lead_id || '';
+            document.getElementById('dispatchPartnerId').value = item.partner_id || '';
+
+            // Update and show selected card
+            document.getElementById('selectedRecipientName').textContent = item.name;
+            document.getElementById('selectedRecipientDetails').innerHTML = `
+                ${item.formatted_phone} • <span class="badge ${item.badge_class || 'badge-lead'}">${escapeHtml(item.source)}</span>
+                ${item.subtitle ? `<span class="text-muted ms-1">(${escapeHtml(item.subtitle)})</span>` : ''}
+            `;
+            document.getElementById('selectedRecipientCard').style.display = 'flex';
+
+            // Hide dropdown and reset search input text
+            document.getElementById('recipientSearchDropdown').style.display = 'none';
+            document.getElementById('recipientSearchInput').value = '';
+            document.getElementById('btnClearRecipientSearch').style.display = 'none';
+        }
+
+        function clearSelectedRecipient() {
+            document.getElementById('selectedRecipientCard').style.display = 'none';
             document.getElementById('dispatchPhoneInput').value = '';
             document.getElementById('dispatchNameInput').value = '';
+            document.getElementById('dispatchLeadId').value = '';
+            document.getElementById('dispatchPartnerId').value = '';
+
+            const searchInp = document.getElementById('recipientSearchInput');
+            searchInp.value = '';
+            searchInp.focus();
+            performRecipientSearch('');
+        }
+
+        function clearRecipientSearch() {
+            const input = document.getElementById('recipientSearchInput');
+            input.value = '';
+            document.getElementById('btnClearRecipientSearch').style.display = 'none';
+            document.getElementById('recipientSearchDropdown').style.display = 'none';
+        }
+
+        function openWhatsAppDispatchModal() {
+            initRecipientSearch();
+
+            document.getElementById('dispatchPhoneInput').value = '';
+            document.getElementById('dispatchNameInput').value = '';
+            document.getElementById('dispatchLeadId').value = '';
+            document.getElementById('dispatchPartnerId').value = '';
             document.getElementById('dispatchCustomNote').value = '';
+            document.getElementById('recipientSearchInput').value = '';
+            document.getElementById('btnClearRecipientSearch').style.display = 'none';
+            document.getElementById('selectedRecipientCard').style.display = 'none';
+            document.getElementById('recipientSearchDropdown').style.display = 'none';
+
             document.getElementById('dispatchResultBox').style.display = 'none';
             document.getElementById('btnExecuteDispatch').style.display = 'inline-flex';
+            document.getElementById('btnExecuteDispatch').disabled = false;
+            document.getElementById('btnExecuteDispatch').innerHTML = '<i class="fab fa-whatsapp me-1"></i> Send Catalog Now';
+
             dispatchModalInstance.show();
+
+            // Pre-load recent calls and leads into dropdown
+            setTimeout(() => {
+                performRecipientSearch('');
+            }, 300);
         }
 
         async function executeWhatsAppDispatch() {
             const phone = document.getElementById('dispatchPhoneInput').value.trim();
             if (!phone || phone.length < 10) {
                 alert('Please enter a valid 10-digit mobile number.');
+                document.getElementById('dispatchPhoneInput').focus();
                 return;
             }
 
             const btn = document.getElementById('btnExecuteDispatch');
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending...';
             btn.disabled = true;
+
+            const leadId = document.getElementById('dispatchLeadId').value;
+            const partnerId = document.getElementById('dispatchPartnerId').value;
 
             try {
                 const res = await staffFetch(`/api/v1/digital-catalogs/${activeCatalog.id}/dispatch-whatsapp`, {
@@ -1600,7 +1889,9 @@
                         recipient_name: document.getElementById('dispatchNameInput').value.trim(),
                         language_code: document.getElementById('dispatchLangSelect').value,
                         delivery_method: document.getElementById('dispatchMethodSelect').value,
-                        custom_note: document.getElementById('dispatchCustomNote').value.trim()
+                        custom_note: document.getElementById('dispatchCustomNote').value.trim(),
+                        lead_id: leadId ? parseInt(leadId) : null,
+                        partner_id: partnerId ? parseInt(partnerId) : null
                     })
                 });
 

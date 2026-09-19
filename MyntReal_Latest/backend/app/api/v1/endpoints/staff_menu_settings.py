@@ -3883,19 +3883,20 @@ async def get_my_menus(
                 'VGK_TEAM_MEMBERS'
             ])
 
-        # DC Protocol: Auto-grant VGK_TEAM_MEMBERS & Auto Dialer to Sales & Tele Sales departments
+        # DC Protocol: Auto-grant VGK_TEAM_MEMBERS, Auto Dialer & Catalog Library to Sales & Tele Sales departments
         _dept_name_lower = (getattr(current_user.department, 'name', '') or '').lower()
-        if current_user.department_id in (13, 14) or 'sale' in _dept_name_lower or 'sale' in _role_lower:
+        if current_user.department_id in (1, 13, 14) or 'sale' in _dept_name_lower or 'sale' in _role_lower or 'leader' in _role_lower or 'director' in _role_lower or 'manager' in _role_lower:
             _dept_auto_codes.update([
                 'VGK_TEAM_MEMBERS', 'staff_vgk_members', 'vgk_members',
-                'staff_auto_dialer', 'staff_dialer', 'AUTO_DIALER'
+                'staff_auto_dialer', 'staff_dialer', 'AUTO_DIALER',
+                'STAFF_CATALOG_LIBRARY', 'staff_catalog_library', 'DIGITAL_CATALOG_MANAGEMENT', 'digital_catalog'
             ])
 
         # DC Protocol Aug 2026: Explicit menu grants for MN10009 and MN10008
         if _emp_code_upper == 'MN10009':
-            _dept_auto_codes.update(['VGK_TEAM_MEMBERS', 'staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS'])
+            _dept_auto_codes.update(['VGK_TEAM_MEMBERS', 'staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS', 'STAFF_CATALOG_LIBRARY'])
         elif _emp_code_upper == 'MN10008':
-            _dept_auto_codes.update(['staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS'])
+            _dept_auto_codes.update(['staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS', 'STAFF_CATALOG_LIBRARY'])
         if _dept_auto_codes:
             logger.info(f"[DC-ROLE-AUTO-GRANT] Employee {employee_id} ({current_user.emp_code}) role/emp auto-granted menus: {_dept_auto_codes}")
     except Exception as _re:
@@ -3973,7 +3974,7 @@ async def get_my_menus(
         granted_menu_codes.update(_dept_auto_codes)
         logger.info(f"[DC-DEPT-AUTO-GRANT] Merged {len(_dept_auto_codes)} dept-auto codes into granted_menu_codes for employee {employee_id}")
     
-    # DC Protocol: Auto-grant ALL Staff Dashboard items to every logged-in user
+    # DC Protocol: Auto-grant ALL Staff Dashboard items and Catalog Library to every logged-in user
     _STAFF_DASHBOARD_AUTO_CODES = {
         'staff_dashboard', 'DASHBOARD',
         'staff_employees', 'EMPLOYEES',
@@ -3988,7 +3989,8 @@ async def get_my_menus(
         'staff_reimbursement_approvals', 'REIMBURSEMENT_APPROVALS', 'reimbursement_approvals',
         'staff_accounts_expense_entries', 'sfms_expense_entries',
         'staff_my_leads',
-        'staff_my_attendance', 'staff_attendance_sheet', 'staff_attendance_reports'
+        'staff_my_attendance', 'staff_attendance_sheet', 'staff_attendance_reports',
+        'STAFF_CATALOG_LIBRARY', 'staff_catalog_library', 'DIGITAL_CATALOG_MANAGEMENT', 'digital_catalog'
     }
     granted_menu_codes.update(_STAFF_DASHBOARD_AUTO_CODES)
     logger.info(f"[DC-MY-MENUS] Resolved {len(granted_menu_codes)} unique menu_codes from {len(employee_settings)} settings")

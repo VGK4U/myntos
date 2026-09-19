@@ -244,6 +244,7 @@ const MENU_MASTER: MenuSection[] = [
     items: [
       { menu_code: "MY_CRM_DASHBOARD", label: "CRM Dashboard", route: "staff-crm" },
       { menu_code: "MY_LEADS", label: "My Leads", route: "staff-my-leads" },
+      { menu_code: "DIGITAL_CATALOG", label: "Digital Catalog", route: "digital-catalog" },
       { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "auto-dialer" },
       { menu_code: "SOFTPHONE", label: "Calling & Softphone", route: "softphone" },
       { menu_code: "BANK_WISE_LEADS", label: "Field staff leads", route: "staff-bank-wise-leads" },
@@ -967,6 +968,16 @@ export class SideDrawer {
           menu_code: "SOFTPHONE",
           label: `<i class="fas fa-headset" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Calling & Softphone`,
           route: "softphone"
+        });
+      }
+
+      // Guarantee Digital Catalog as distinct standalone item for sales staff & leadership
+      const hasCatalog = crmSec.items.some(i => i.route === 'digital-catalog' || (i.menu_code && (i.menu_code.toUpperCase().includes('CATALOG'))));
+      if (!hasCatalog) {
+        crmSec.items.push({
+          menu_code: "DIGITAL_CATALOG",
+          label: `<i class="fas fa-book-open" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>Digital Catalog`,
+          route: "digital-catalog"
         });
       }
     }

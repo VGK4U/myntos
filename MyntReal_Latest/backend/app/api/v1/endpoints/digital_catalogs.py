@@ -15,6 +15,7 @@ import sys
 import uuid
 import json
 import logging
+import re
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -172,6 +173,7 @@ class ItemUpdateRequest(BaseModel):
 
 class WhatsAppDispatchRequest(BaseModel):
     lead_id: Optional[int] = None
+    partner_id: Optional[int] = None
     recipient_phone: str = Field(..., min_length=10, max_length=20)
     recipient_name: Optional[str] = None
     language_code: str = "en"
@@ -1100,16 +1102,20 @@ def dispatch_catalog_whatsapp(
             f"_{payload.custom_note}_"
         ])
 
+    branding = _get_catalog_branding(catalog)
+    platform_label = branding.get("platform_name", "MYNTREAL")
+    helpline = branding.get("primary_contact_phone", "+91 858585 2738")
+    consult_text = "site audit" if catalog.segment_code == "SOLAR" else "consultation"
     sig_lines = [
         "",
-        "For queries or an immediate site audit, feel free to reply directly.",
+        f"For queries or an immediate {consult_text}, feel free to reply directly.",
         "Best regards,",
         f"*{staff_name}*",
-        "📞 Helpline: +91 858585 2738"
+        f"📞 Helpline: {helpline}"
     ]
     if staff_ext:
         sig_lines.append(f"Ext: {staff_ext}")
-    sig_lines.append("MYNTREAL Har Ghar Solar")
+    sig_lines.append(platform_label)
     message_lines.extend(sig_lines)
 
     full_message = "\n".join(message_lines)
@@ -1192,3 +1198,330 @@ def dispatch_catalog_whatsapp(
         "delivery_status": lead_send.status,
         "whatsapp_api_result": wa_result
     }
+
+
+# ── Smart Recipient Directory Search (Leads, Calls, Partners, Directory) ───
+
+@router.get("/recipients/search")
+def search_catalog_recipients(
+    q: str = Query("", description="Name or phone digit search query"),
+    limit: int = Query(25, ge=1, le=50),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Intelligent recipient search for Digital Catalog WhatsApp sharing.
+    Multi-source lookup across:
+    1. CRM Leads (name, city, and phone digits)
+    2. Recent Calls / Call Logs (contact name, phone digits, call time)
+    3. Official Partners (partner name, contact person, partner code, city, and phone digits)
+    4. Staff Team Colleagues (colleague name, employee code, and phone digits)
+
+    - If query is empty: returns recent active interactions (recent calls & leads) for 1-click selection.
+    - If 3+ digits entered: matches against phone numbers across all sources.
+    - If letters entered: performs case-insensitive search across contact & entity names.
+    - Automatically deduplicates by 10-digit mobile number.
+    """
+    query_str = (q or "").strip()
+    clean_digits = re.sub(r'[^0-9]', '', query_str)
+    has_digits = len(clean_digits) >= 3
+    q_like = f"%{query_str}%"
+    d_like = f"%{clean_digits}%" if has_digits else ""
+    seen_phones = set()
+    results = []
+
+    # Case A: Empty query -> Return recent active contacts (recent calls & active leads)
+    if not query_str:
+        # 1. Recent Call Logs (calls from staff)
+        try:
+            calls_sql = text("""
+                SELECT contact_name, phone_number, call_datetime, call_type
+                FROM (
+                    SELECT contact_name, phone_number, call_datetime, call_type,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY RIGHT(REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g'), 10)
+                               ORDER BY id DESC
+                           ) as rn
+                    FROM staff_call_logs
+                    WHERE phone_number IS NOT NULL 
+                      AND LENGTH(REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g')) >= 10
+                ) sub
+                WHERE rn = 1
+                ORDER BY call_datetime DESC NULLS LAST
+                LIMIT 10;
+            """)
+            call_rows = db.execute(calls_sql).fetchall()
+            for c_name, c_ph, c_dt, c_type in call_rows:
+                if not c_ph:
+                    continue
+                cp = re.sub(r'[^0-9]', '', str(c_ph))[-10:]
+                if len(cp) == 10 and cp not in seen_phones:
+                    seen_phones.add(cp)
+                    time_str = c_dt.strftime("%d %b, %I:%M %p") if c_dt else "Recent"
+                    c_type_label = (c_type or "Call").capitalize()
+                    disp_name = (c_name or "").strip()
+                    results.append({
+                        "name": disp_name if disp_name else f"Caller ({cp})",
+                        "phone": cp,
+                        "formatted_phone": f"+91 {cp[:5]} {cp[5:]}",
+                        "source": "Recent Call",
+                        "badge_class": "badge-call",
+                        "badge_color": "#0284c7",
+                        "subtitle": f"{c_type_label} • {time_str}",
+                        "lead_id": None,
+                        "partner_id": None,
+                        "city": ""
+                    })
+        except Exception as e:
+            logger.warning(f"[RECIPIENT-SEARCH] Error loading recent calls: {e}")
+
+        # 2. Recent Active CRM Leads
+        try:
+            leads_sql = text("""
+                SELECT id, name, phone, alternate_phone, city, status
+                FROM crm_leads
+                WHERE phone IS NOT NULL AND LENGTH(REGEXP_REPLACE(phone, '[^0-9]', '', 'g')) >= 10
+                ORDER BY id DESC
+                LIMIT 10;
+            """)
+            lead_rows = db.execute(leads_sql).fetchall()
+            for lid, l_name, l_ph, l_alt, l_city, l_stat in lead_rows:
+                for ph in (l_ph, l_alt):
+                    if not ph:
+                        continue
+                    cp = re.sub(r'[^0-9]', '', str(ph))[-10:]
+                    if len(cp) == 10 and cp not in seen_phones:
+                        seen_phones.add(cp)
+                        disp_name = (l_name or "Valued Lead").strip()
+                        sub = f"{l_stat or 'Active'} • {l_city or ''}".strip(" •")
+                        results.append({
+                            "name": disp_name,
+                            "phone": cp,
+                            "formatted_phone": f"+91 {cp[:5]} {cp[5:]}",
+                            "source": "CRM Lead",
+                            "badge_class": "badge-lead",
+                            "badge_color": "#059669",
+                            "subtitle": sub if sub else "Active Lead",
+                            "lead_id": lid,
+                            "partner_id": None,
+                            "city": l_city or ""
+                        })
+        except Exception as e:
+            logger.warning(f"[RECIPIENT-SEARCH] Error loading recent leads: {e}")
+
+        # 3. Key Partners
+        try:
+            part_sql = text("""
+                SELECT id, partner_name, partner_code, phone, city, category
+                FROM official_partners
+                WHERE phone IS NOT NULL AND LENGTH(REGEXP_REPLACE(phone, '[^0-9]', '', 'g')) >= 10
+                  AND is_active = TRUE
+                ORDER BY id DESC
+                LIMIT 6;
+            """)
+            part_rows = db.execute(part_sql).fetchall()
+            for pid, p_name, p_code, p_ph, p_city, p_cat in part_rows:
+                if not p_ph:
+                    continue
+                cp = re.sub(r'[^0-9]', '', str(p_ph))[-10:]
+                if len(cp) == 10 and cp not in seen_phones:
+                    seen_phones.add(cp)
+                    disp_name = f"{(p_name or '').strip()} ({p_code or 'Partner'})"
+                    sub = f"{p_cat or 'Partner'} • {p_city or ''}".strip(" •")
+                    results.append({
+                        "name": disp_name,
+                        "phone": cp,
+                        "formatted_phone": f"+91 {cp[:5]} {cp[5:]}",
+                        "source": "Channel Partner",
+                        "badge_class": "badge-partner",
+                        "badge_color": "#7c3aed",
+                        "subtitle": sub if sub else "Channel Partner",
+                        "lead_id": None,
+                        "partner_id": pid,
+                        "city": p_city or ""
+                    })
+        except Exception as e:
+            logger.warning(f"[RECIPIENT-SEARCH] Error loading key partners: {e}")
+
+        return {
+            "success": True,
+            "results": results[:limit],
+            "total": len(results),
+            "is_recent": True
+        }
+
+    # Case B: Search active query (Names or Phone Digits)
+    # 1. Search CRM Leads (matches name, city, or phone digits)
+    try:
+        leads_sql = text("""
+            SELECT id, name, phone, alternate_phone, city, status
+            FROM crm_leads
+            WHERE (name ILIKE :q_like OR city ILIKE :q_like)
+               OR (:has_digits AND (phone LIKE :d_like OR alternate_phone LIKE :d_like))
+            ORDER BY id DESC
+            LIMIT 20;
+        """)
+        lead_rows = db.execute(leads_sql, {
+            "q_like": q_like,
+            "has_digits": has_digits,
+            "d_like": d_like
+        }).fetchall()
+        for lid, l_name, l_ph, l_alt, l_city, l_stat in lead_rows:
+            for ph in (l_ph, l_alt):
+                if not ph:
+                    continue
+                cp = re.sub(r'[^0-9]', '', str(ph))[-10:]
+                if len(cp) == 10 and cp not in seen_phones:
+                    seen_phones.add(cp)
+                    disp_name = (l_name or "Valued Lead").strip()
+                    sub = f"{l_stat or 'Lead'} • {l_city or ''}".strip(" •")
+                    results.append({
+                        "name": disp_name,
+                        "phone": cp,
+                        "formatted_phone": f"+91 {cp[:5]} {cp[5:]}",
+                        "source": "CRM Lead",
+                        "badge_class": "badge-lead",
+                        "badge_color": "#059669",
+                        "subtitle": sub if sub else "CRM Lead",
+                        "lead_id": lid,
+                        "partner_id": None,
+                        "city": l_city or ""
+                    })
+    except Exception as e:
+        logger.warning(f"[RECIPIENT-SEARCH] Error searching CRM leads: {e}")
+
+    # 2. Search Staff Call Logs (matches contact name or phone digits)
+    try:
+        calls_sql = text("""
+            SELECT contact_name, phone_number, call_datetime, call_type
+            FROM (
+                SELECT contact_name, phone_number, call_datetime, call_type,
+                       ROW_NUMBER() OVER (
+                           PARTITION BY RIGHT(REGEXP_REPLACE(phone_number, '[^0-9]', '', 'g'), 10)
+                           ORDER BY id DESC
+                       ) as rn
+                FROM staff_call_logs
+                WHERE (contact_name IS NOT NULL AND contact_name ILIKE :q_like)
+                   OR (:has_digits AND phone_number LIKE :d_like)
+            ) sub
+            WHERE rn = 1
+            ORDER BY call_datetime DESC NULLS LAST
+            LIMIT 15;
+        """)
+        call_rows = db.execute(calls_sql, {
+            "q_like": q_like,
+            "has_digits": has_digits,
+            "d_like": d_like
+        }).fetchall()
+        for c_name, c_ph, c_dt, c_type in call_rows:
+            if not c_ph:
+                continue
+            cp = re.sub(r'[^0-9]', '', str(c_ph))[-10:]
+            if len(cp) == 10 and cp not in seen_phones:
+                seen_phones.add(cp)
+                time_str = c_dt.strftime("%d %b") if c_dt else "Call"
+                c_type_label = (c_type or "Call").capitalize()
+                disp_name = (c_name or "").strip()
+                results.append({
+                    "name": disp_name if disp_name else f"Caller ({cp})",
+                    "phone": cp,
+                    "formatted_phone": f"+91 {cp[:5]} {cp[5:]}",
+                    "source": "Recent Call",
+                    "badge_class": "badge-call",
+                    "badge_color": "#0284c7",
+                    "subtitle": f"{c_type_label} • {time_str}",
+                    "lead_id": None,
+                    "partner_id": None,
+                    "city": ""
+                })
+    except Exception as e:
+        logger.warning(f"[RECIPIENT-SEARCH] Error searching call logs: {e}")
+
+    # 3. Search Official Partners (matches partner name, code, contact person, or phone digits)
+    try:
+        part_sql = text("""
+            SELECT id, partner_name, partner_code, phone, contact_person_1_phone, city, category
+            FROM official_partners
+            WHERE partner_name ILIKE :q_like
+               OR partner_code ILIKE :q_like
+               OR contact_person_1_name ILIKE :q_like
+               OR city ILIKE :q_like
+               OR (:has_digits AND (phone LIKE :d_like OR contact_person_1_phone LIKE :d_like))
+            ORDER BY id DESC
+            LIMIT 15;
+        """)
+        part_rows = db.execute(part_sql, {
+            "q_like": q_like,
+            "has_digits": has_digits,
+            "d_like": d_like
+        }).fetchall()
+        for pid, p_name, p_code, p_ph, p_alt, p_city, p_cat in part_rows:
+            for ph in (p_ph, p_alt):
+                if not ph:
+                    continue
+                cp = re.sub(r'[^0-9]', '', str(ph))[-10:]
+                if len(cp) == 10 and cp not in seen_phones:
+                    seen_phones.add(cp)
+                    disp_name = f"{(p_name or '').strip()} ({p_code or 'Partner'})"
+                    sub = f"{p_cat or 'Partner'} • {p_city or ''}".strip(" •")
+                    results.append({
+                        "name": disp_name,
+                        "phone": cp,
+                        "formatted_phone": f"+91 {cp[:5]} {cp[5:]}",
+                        "source": "Channel Partner",
+                        "badge_class": "badge-partner",
+                        "badge_color": "#7c3aed",
+                        "subtitle": sub if sub else "Channel Partner",
+                        "lead_id": None,
+                        "partner_id": pid,
+                        "city": p_city or ""
+                    })
+    except Exception as e:
+        logger.warning(f"[RECIPIENT-SEARCH] Error searching partners: {e}")
+
+    # 4. Search Staff Colleagues (matches first/last name, emp_code, or phone digits)
+    try:
+        staff_sql = text("""
+            SELECT id, first_name, last_name, emp_code, phone, designation
+            FROM staff_employees
+            WHERE first_name ILIKE :q_like
+               OR last_name ILIKE :q_like
+               OR emp_code ILIKE :q_like
+               OR (:has_digits AND phone LIKE :d_like)
+            ORDER BY id DESC
+            LIMIT 10;
+        """)
+        staff_rows = db.execute(staff_sql, {
+            "q_like": q_like,
+            "has_digits": has_digits,
+            "d_like": d_like
+        }).fetchall()
+        for sid, fn, ln, ecode, sph, desig in staff_rows:
+            if not sph:
+                continue
+            cp = re.sub(r'[^0-9]', '', str(sph))[-10:]
+            if len(cp) == 10 and cp not in seen_phones:
+                seen_phones.add(cp)
+                disp_name = f"{(fn or '').strip()} {(ln or '').strip()} ({ecode or ''})".strip()
+                results.append({
+                    "name": disp_name,
+                    "phone": cp,
+                    "formatted_phone": f"+91 {cp[:5]} {cp[5:]}",
+                    "source": "Staff Team",
+                    "badge_class": "badge-staff",
+                    "badge_color": "#f59e0b",
+                    "subtitle": desig or "Staff Colleague",
+                    "lead_id": None,
+                    "partner_id": None,
+                    "city": ""
+                })
+    except Exception as e:
+        logger.warning(f"[RECIPIENT-SEARCH] Error searching staff: {e}")
+
+    return {
+        "success": True,
+        "results": results[:limit],
+        "total": len(results),
+        "is_recent": False
+    }
+

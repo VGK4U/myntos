@@ -88,7 +88,7 @@ var MENU_MASTER = _win.MENU_MASTER = _win.MENU_MASTER || [
       { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "/staff/dialer", audience: ["STAFF"] },
       { menu_code: "CALL_QUALITY_REVIEW", label: "Call Quality Review", route: "/staff/call-quality", audience: ["STAFF"] },
       { menu_code: "STAFF_OPERATOR_CALLS", label: "Operator Calls", route: "/staff/operator-calls", audience: ["STAFF"] },
-      { menu_code: "STAFF_CATALOG_LIBRARY", label: "Catalog Library", route: "/staff/configuration/catalog", icon: "fas fa-book-open", audience: ["STAFF"] }
+      { menu_code: "STAFF_CATALOG_LIBRARY", label: "Catalog Library", route: "/staff/catalog-library", icon: "fas fa-book-open", audience: ["STAFF"] }
     ]
   },
   {

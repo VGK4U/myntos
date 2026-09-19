@@ -3489,6 +3489,9 @@ def seed_default_catalogs(db_session=None):
                         )
                         db.add(new_item)
 
+        # Also ensure StaffMenuRegistry has STAFF_CATALOG_LIBRARY
+        seed_catalog_menu_registry(db)
+
         db.commit()
         logger.info(f"Catalog seeding complete. Created: {created_count}, Existing: {updated_count}")
 
@@ -3501,5 +3504,59 @@ def seed_default_catalogs(db_session=None):
             db.close()
 
 
+def seed_catalog_menu_registry(db=None):
+    """Ensure STAFF_CATALOG_LIBRARY is in StaffMenuRegistry so sales staff and leadership see it in sidebar/drawer."""
+    close_db = False
+    if db is None:
+        db = SessionLocal()
+        close_db = True
+    try:
+        from app.models.staff import StaffMenuRegistry
+        reg = db.query(StaffMenuRegistry).filter(StaffMenuRegistry.menu_code == 'STAFF_CATALOG_LIBRARY').first()
+        if not reg:
+            reg = StaffMenuRegistry(
+                menu_code='STAFF_CATALOG_LIBRARY',
+                menu_name='Catalog Library',
+                route_path='/staff/catalog-library',
+                menu_category='crm',
+                menu_icon='fas fa-book-open',
+                sidebar_section='crm',
+                sidebar_section_title='CRM & LEADS',
+                sidebar_section_order=4,
+                display_order=288,
+                audience_scope='staff',
+                source='discovered',
+                source_file='backend/scripts/seed_digital_catalogs.py',
+                is_default_visible=True,
+                is_default_accessible=True,
+                is_active=True,
+                is_system_default=True,
+                created_at=get_indian_time(),
+                updated_at=get_indian_time()
+            )
+            db.add(reg)
+            logger.info("Created StaffMenuRegistry entry for STAFF_CATALOG_LIBRARY")
+        else:
+            reg.menu_name = 'Catalog Library'
+            reg.route_path = '/staff/catalog-library'
+            reg.sidebar_section = 'crm'
+            reg.sidebar_section_title = 'CRM & LEADS'
+            reg.sidebar_section_order = 4
+            reg.display_order = 288
+            reg.is_default_visible = True
+            reg.is_default_accessible = True
+            reg.is_active = True
+            reg.updated_at = get_indian_time()
+            logger.info("Updated existing StaffMenuRegistry entry for STAFF_CATALOG_LIBRARY")
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"Error seeding catalog menu registry: {e}")
+    finally:
+        if close_db:
+            db.close()
+
+
 if __name__ == "__main__":
     seed_default_catalogs()
+
