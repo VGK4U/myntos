@@ -30688,6 +30688,27 @@ async function processAction(id, action){
       res.end(data);
     });
 
+  } else if (url.startsWith('/catalog/etc-training') || url.startsWith('/catalog/etc') || url.startsWith('/catalog/etc-renewable-certifications') || url === '/training' || url.startsWith('/training?') || url.startsWith('/training/')) {
+    // Dedicated EVolution Training Centre (ETC) / MYNTREAL Digital Training & Career Catalogue Page
+    const etcPath = path.join(__dirname, 'etc_training_catalog.html');
+    fs.readFile(etcPath, 'utf8', (err, data) => {
+      if (err) {
+        const fallbackPath = path.join(__dirname, 'catalog_single_page.html');
+        fs.readFile(fallbackPath, 'utf8', (err2, data2) => {
+          if (err2) { res.writeHead(404); res.end('ETC Training catalog page not found'); return; }
+          res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate', 'X-Frame-Options': 'SAMEORIGIN' });
+          res.end(data2);
+        });
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
   } else if (url.startsWith('/catalog/') || url.toLowerCase() === '/catalog' || url.toLowerCase().startsWith('/catalog?') || url.toLowerCase() === '/mnrcatalog' || url.toLowerCase().startsWith('/mnrcatalog?')) {
     // Single-Page Digital Catalog Platform (Public Interactive Web Catalog — no auth required)
     const isLegacy = url.toLowerCase().startsWith('/mnrcatalog');
