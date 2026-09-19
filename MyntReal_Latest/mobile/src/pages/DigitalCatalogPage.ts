@@ -60,9 +60,9 @@ export class DigitalCatalogPage {
   private readonly verticals = [
     { code: 'SOLAR', label: 'Solar' },
     { code: 'INDUSTRIAL_HUB', label: 'MyntReal Hub' },
+    { code: 'EV_B2C', label: 'EV 2W Pricing' },
     { code: 'HUB_PRICING', label: 'Hub Commercials (24h)' },
     { code: 'EV_B2B', label: 'EV B2B' },
-    { code: 'EV_B2C', label: 'EV 2W' },
     { code: 'EV_SPARES', label: 'EV Spares' },
     { code: 'ETC_TRAINING', label: 'ETC Training' },
     { code: 'REAL_DREAMS', label: 'Real Dreams' },
@@ -184,6 +184,8 @@ export class DigitalCatalogPage {
     let publicUrl = `/catalog/${cat.segment_code.toLowerCase().replace(/_/g, '-')}/${cat.slug}`;
     if (cat.segment_code === 'HUB_PRICING' || cat.slug === 'hub-ev-pricing') {
       publicUrl = '/catalog/hub-ev-pricing';
+    } else if (cat.segment_code === 'EV_B2C' || cat.slug === 'ev-b2c-pricing') {
+      publicUrl = '/catalog/ev-b2c-pricing';
     }
 
     area.innerHTML = `

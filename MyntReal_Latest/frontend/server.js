@@ -30564,6 +30564,27 @@ async function processAction(id, action){
     res.end();
 
 
+  } else if (url.startsWith('/catalog/ev-b2c-pricing') || url.startsWith('/catalog/ev-b2c') || url.startsWith('/ev-b2c-pricing') || url.startsWith('/ev-b2c') || url.startsWith('/catalog/customer-2w-ev-pricing')) {
+    // Dedicated Manthra EV B2C Customer Pricing Catalog Page
+    const evB2cPath = path.join(__dirname, 'ev_b2c_pricing_catalog.html');
+    fs.readFile(evB2cPath, 'utf8', (err, data) => {
+      if (err) {
+        const fallbackPath = path.join(__dirname, 'catalog_single_page.html');
+        fs.readFile(fallbackPath, 'utf8', (err2, data2) => {
+          if (err2) { res.writeHead(404); res.end('EV B2C catalog page not found'); return; }
+          res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate', 'X-Frame-Options': 'SAMEORIGIN' });
+          res.end(data2);
+        });
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
   } else if (url.startsWith('/catalog/hub-ev-pricing') || url.startsWith('/catalog/hub-pricing') || url.startsWith('/hub-pricing') || url.startsWith('/catalog/hub_pricing') || url.startsWith('/hub/catalog')) {
     // Dedicated Hub EV & Solar Commercial Pricing Catalog (24-Hour Confidential Link)
     const pricingPath = path.join(__dirname, 'hub_pricing_catalog.html');

@@ -2152,153 +2152,154 @@ SEED_CATALOGS_DATA = [
     },
     {
         "segment_code": "EV_B2C",
-        "slug": "ev-smart-commuter",
-        "title": "Smart Electric 2-Wheelers & Passenger EVs",
-        "subtitle": "Next-Gen High-Speed Commuter Electric Scooters & Bikes for Everyday Riders",
-        "summary": "Experience the ultimate daily commute. Modern styling, fast acceleration, 120km real-world range, mobile app tracking, and zero maintenance with long-lasting LFP battery tech.",
-        "hero_media_url": "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=1600&q=80",
-        "theme_config": {"primary_color": "#7c3aed", "accent_color": "#ec4899", "dark_mode": False},
+        "slug": "ev-b2c-pricing",
+        "title": "Manthra EV — Smart Electric 2-Wheelers & Customer Pricing",
+        "subtitle": "Certified Non-RTO Low-Speed (<25 km/h) Electric Scooters with Graphene & LFP Dual Battery Options",
+        "summary": "Official customer pricing and vehicle catalog for Manthra EV electric scooters. Non-RTO (<25 km/h) requiring zero driving license, ultra-low ₹0.15/km running cost, Graphene 48V 32Ah (9 Mo warranty) and Smart LFP (3 Yrs warranty) options.",
+        "hero_media_url": "/public/hub/Assets/manthra-fleet-lineup.webp",
+        "theme_config": {"primary_color": "#059669", "accent_color": "#f59e0b", "dark_mode": False},
         "default_language": "en",
         "active_languages": ["en", "te", "hi", "ta"],
         "sections": [
             {
                 "section_type": "hero",
                 "section_key": "hero",
-                "title": "Style, Power & Unlimited Savings — Meet Zynova Smart EVs",
-                "subtitle": "120 km True Range, ₹0.20 per Kilometer Commute, 3-Year Comprehensive Warranty",
+                "title": "Style, Power & Unlimited Savings — Meet Manthra EV",
+                "subtitle": "Non-RTO Low-Speed (<25 km/h) • Zero Driving License • ₹0.15/km Commute Cost",
                 "content_variants": {
-                    "en": {"title": "Style, Power & Unlimited Savings — Meet Zynova Smart EVs", "subtitle": "120 km True Range, ₹0.20 per Kilometer Commute, 3-Year Comprehensive Warranty"},
-                    "te": {"title": "స్టైల్, శక్తి మరియు అపారమైన పొదుపు — జైనోవా స్మార్ట్ ఈవీలు", "subtitle": "120 కి.మీ నిజమైన రేంజ్, కి.మీకి కేవలం 20 పైసల ఖర్చు మరియు 3 ఏళ్ళ వారంటీ"},
-                    "hi": {"title": "स्टाइल, पावर और बेमिसाल बचत — ज़ाइनोवा स्मार्ट इलेक्ट्रिक स्कूटर्स", "subtitle": "120 किमी की रियल रेंज, मात्र 20 पैसे प्रति किमी खर्च और 3 साल की वारंटी"},
-                    "ta": {"title": "அழகும் ஆற்றலும் நிறைந்த ஜைனோவா ஸ்மார்ட் மின்சார வாகனங்கள்", "subtitle": "120 கி.மீ தூர இயக்கம், கி.மீக்கு 20 பைசா மட்டுமே மற்றும் 3 ஆண்டுகள் உத்தரவாதம்"}
+                    "en": {"title": "Style, Power & Unlimited Savings — Meet Manthra EV", "subtitle": "Non-RTO Low-Speed (<25 km/h) • Zero Driving License • ₹0.15/km Commute Cost"},
+                    "te": {"title": "స్టైల్, శక్తి మరియు అపారమైన పొదుపు — మాంత్రా EV", "subtitle": "నాన్-RTO లో-స్పీడ్ (<25 km/h) • డ్రైవింగ్ లైసెన్స్ అవసరం లేదు • కి.మీకి 15 పైసల ఖర్చు"},
+                    "hi": {"title": "स्टाइल, पावर और बेमिसाल बचत — मंत्रा EV", "subtitle": "नॉन-RTO लो-स्पीड (<25 km/h) • बिना ड्राइविंग लाइसेंस • 15 पैसे प्रति किमी खर्च"},
+                    "ta": {"title": "அழகும் ஆற்றலும் நிறைந்த மாந்த்ரா EV", "subtitle": "நான்-RTO குறைந்த வேகம் • ஓட்டுநர் உரிமம் தேவையில்லை • கி.மீக்கு 15 பைசா"}
                 },
                 "configuration": {
-                    "badge": "🌟 Premium Commuter Electric Scooters",
+                    "badge": "⚡ Certified Non-RTO Commuter Electric Scooters",
                     "stats": [
-                        {"label": "True Range", "value": "120 km"},
-                        {"label": "Top Speed", "value": "65 km/h"},
-                        {"label": "Charging Time", "value": "3.5 Hours"},
-                        {"label": "Warranty", "value": "3 Years / 50k km"}
+                        {"label": "Running Cost", "value": "₹0.15 / km"},
+                        {"label": "Top Speed", "value": "<25 km/h (Non-RTO)"},
+                        {"label": "Charging Time", "value": "4 – 5 Hours"},
+                        {"label": "Warranty", "value": "9 Mo / 3 Yrs"}
                     ]
-                }
+                },
+                "sort_order": 0
             },
             {
-                "section_type": "media_gallery",
-                "section_key": "installation_gallery",
-                "title": "Smart Commuter EV Scooters Gallery (స్మార్ట్ ఈవీ స్కూటర్స్ గ్యాలరీ)",
-                "subtitle": "High-speed commuter electric scooters designed for daily comfort, style and savings",
-                "content_variants": {
-                    "en": {
-                        "title": "Smart Commuter EV Scooters Gallery",
-                        "subtitle": "Explore stylish commuter scooters, vibrant color variants, digital cockpit features and happy rider deliveries."
-                    },
-                    "te": {
-                        "title": "స్మార్ట్ కమ్యూటర్ ఈవీ స్కూటర్ల గ్యాలరీ",
-                        "subtitle": "స్టైలిష్ డిజైన్, డిజిటల్ ఫీచర్లు మరియు రోజువారీ ప్రయాణానికి అత్యుత్తమ స్కూటర్లు."
-                    }
-                },
-                "media_gallery": [
-                    {
-                        "url": "https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=1200&q=80",
-                        "caption": "Zynova EcoRide City Commuter in Pearl White — Daily Urban Mobility",
-                        "tag": "Commuter EV"
-                    },
-                    {
-                        "url": "https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=1200&q=80",
-                        "caption": "Zynova Sprint XR Sport Flagship in Crimson Red — 65 km/h Top Speed",
-                        "tag": "Flagship Sport"
-                    },
-                    {
-                        "url": "https://images.unsplash.com/photo-1508873696983-2df5293cb32f?auto=format&fit=crop&w=1200&q=80",
-                        "caption": "All-Digital Full-Color LCD Dashboard with Navigation & Call Alerts",
-                        "tag": "Digital Cockpit"
-                    },
-                    {
-                        "url": "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=1200&q=80",
-                        "caption": "Compact Portable 60V Lithium Battery Pack with Home Wall Charger",
-                        "tag": "Home Charging"
-                    },
-                    {
-                        "url": "https://images.unsplash.com/photo-1558441719-8b449c6ff807?auto=format&fit=crop&w=1200&q=80",
-                        "caption": "Dual Front & Rear Hydraulic Disc Brakes with CBS Braking Safety",
-                        "tag": "Safety Features"
-                    },
-                    {
-                        "url": "https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?auto=format&fit=crop&w=1200&q=80",
-                        "caption": "Spacious 28L Under-Seat Storage Accommodating Full-Face Helmet",
-                        "tag": "Utility Design"
-                    },
-                    {
-                        "url": "https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?auto=format&fit=crop&w=1200&q=80",
-                        "caption": "Night-Ride High-Intensity Dual LED Projector Headlamp Beam",
-                        "tag": "LED Lighting"
-                    },
-                    {
-                        "url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=1200&q=80",
-                        "caption": "College Students Test Riding the Zynova Sprint XR — Smooth Acceleration",
-                        "tag": "Test Drive"
-                    },
-                    {
-                        "url": "https://images.unsplash.com/photo-1521791136064-7986c2920216?auto=format&fit=crop&w=1200&q=80",
-                        "caption": "Happy Family Festive Delivery Key Handover Ceremony — Vizag Showroom",
-                        "tag": "Customer Delivery"
-                    },
-                    {
-                        "url": "https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&w=1200&q=80",
-                        "caption": "Zero Petrol Expense Milestone — Customer Celebrating 10,000 Clean KM",
-                        "tag": "Green Milestone"
-                    }
-                ],
+                "section_type": "video_showcase",
+                "section_key": "video_showcase",
+                "title": "Official Video Showcase — Ride Experience & Build Quality",
+                "subtitle": "Watch Manthra EV in action on Indian roads",
                 "configuration": {
-                    "auto_play_interval_ms": 3000,
-                    "enable_lightbox": True,
-                    "videos": [
-                        {
-                            "title": "Zynova Smart Commuter Electric Scooter Comprehensive Review & Range Test",
-                            "youtube_id": "kYJmQ6X2q38",
-                            "url": "https://www.youtube.com/watch?v=kYJmQ6X2q38",
-                            "embed_url": "https://www.youtube-nocookie.com/embed/kYJmQ6X2q38"
-                        },
-                        {
-                            "title": "Smart Connectivity, Mobile App & Portable Battery Demonstration",
-                            "youtube_id": "0k7yF_G0lQ8",
-                            "url": "https://www.youtube.com/watch?v=0k7yF_G0lQ8",
-                            "embed_url": "https://www.youtube-nocookie.com/embed/0k7yF_G0lQ8"
-                        }
-                    ]
-                }
+                    "youtube_url": "https://www.youtube.com/embed/FzKh_AVXiRo?rel=0&modestbranding=1"
+                },
+                "sort_order": 1
+            },
+            {
+                "section_type": "pricing_matrix",
+                "section_key": "pricing_matrix",
+                "title": "5 Certified Manthra EV Models & Customer Price Matrix",
+                "subtitle": "Complete breakdown with Graphene 48V 32Ah (9 Mo) & LFP (3 Yrs) Warranties",
+                "sort_order": 2
+            },
+            {
+                "section_type": "standalone_batteries",
+                "section_key": "standalone_batteries",
+                "title": "Standalone OEM Batteries & Smart Fast Chargers",
+                "subtitle": "Graphene 48V 32Ah (9 Mo) & Smart LFP 48V/60V (3 Yrs) replacement packs",
+                "sort_order": 3
+            },
+            {
+                "section_type": "other_services",
+                "section_key": "other_services",
+                "title": "Our Integrated Customer Services: Solar, Insurance & Spares",
+                "subtitle": "Rooftop Solar EPC (PM Surya Ghar Subsidy), Zero-Dep EV Insurance & Genuine OEM Spares",
+                "sort_order": 4
             }
         ],
         "items": [
             {
                 "item_type": "PRODUCT",
-                "item_code": "EV-B2C-ECORIDE",
-                "title": "Zynova EcoRide City",
-                "subtitle": "Effortless city mobility with digital speedometer, reverse assist, and USB charging",
+                "item_code": "EV-PRO-GT",
+                "title": "Manthra EV Pro GT",
+                "subtitle": "Sport Street Commuter (Low-Speed Non-RTO)",
+                "summary": "Aerodynamic urban street commuter with matrix LED headlamp, digital LCD cluster, and disc CBS braking.",
                 "specifications": [
-                    {"label": "Range", "value": "90 km True Range"},
-                    {"label": "Top Speed", "value": "45 km/h"},
-                    {"label": "Battery", "value": "60V 26Ah Portable Lithium"},
-                    {"label": "Brakes", "value": "Front Disc + Rear Drum with CBS"}
+                    {"label": "Top Speed", "value": "<25 km/h (Non-RTO)"},
+                    {"label": "Range", "value": "65 – 125 km (Battery Dependent)"},
+                    {"label": "Battery Options", "value": "Graphene 48V 32Ah (9M) / Smart LFP (3Y)"},
+                    {"label": "License", "value": "Zero License Required"}
                 ],
-                "pricing": {"base_price": 68999, "currency": "INR"},
-                "media_urls": ["https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80"],
-                "badges": ["Daily Commuter", "Portable Battery"]
+                "pricing": {"base_price": 49999, "max_price": 81999, "currency": "INR", "price_text": "₹49,999 – ₹81,999"},
+                "media_urls": ["/public/hub/Assets/manthra-pro-gt-real.webp"],
+                "badges": ["Sport Commuter", "Non-RTO", "Zero License"],
+                "sort_order": 0
             },
             {
                 "item_type": "PRODUCT",
-                "item_code": "EV-B2C-SPRINTXR",
-                "title": "Zynova Sprint XR Sport",
-                "subtitle": "High-speed flagship electric scooter with cruise control and smartphone connectivity",
+                "item_code": "EV-POWER-PLUS",
+                "title": "Manthra EV Power Plus",
+                "subtitle": "Heavy-Duty Cargo & Delivery (200kg Load)",
+                "summary": "Engineered for last-mile commercial delivery, farm utility and heavy cargo with reinforced suspension.",
                 "specifications": [
-                    {"label": "Range", "value": "125 km Sport Range"},
-                    {"label": "Top Speed", "value": "65 km/h"},
-                    {"label": "Motor", "value": "2.5 kW Peak BLDC Hub Motor"},
-                    {"label": "App Features", "value": "GPS Navigation, Anti-theft Geofence"}
+                    {"label": "Payload", "value": "200 kg Certified"},
+                    {"label": "Top Speed", "value": "<25 km/h (Non-RTO)"},
+                    {"label": "Carrier", "value": "Heavy Steel Extended Rack"},
+                    {"label": "License", "value": "Zero License Required"}
                 ],
-                "pricing": {"base_price": 89999, "currency": "INR"},
-                "media_urls": ["https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=800&q=80"],
-                "badges": ["Flagship Sport", "App Connected"]
+                "pricing": {"base_price": 51499, "max_price": 83499, "currency": "INR", "price_text": "₹51,499 – ₹83,499"},
+                "media_urls": ["/public/hub/Assets/manthra-power-plus-real.webp"],
+                "badges": ["200kg Payload", "Heavy Cargo", "Non-RTO"],
+                "sort_order": 1
+            },
+            {
+                "item_type": "PRODUCT",
+                "item_code": "EV-M99",
+                "title": "Manthra EV M99 Flagship",
+                "subtitle": "Next-Gen Urban Flagship with Reverse Assist",
+                "summary": "Aerodynamic flagship scooter with 1-touch Reverse Assist, full-color digital cockpit, and smart remote keyless fob.",
+                "specifications": [
+                    {"label": "Features", "value": "Reverse Assist, Keyless Remote Fob"},
+                    {"label": "Top Speed", "value": "<25 km/h (Non-RTO)"},
+                    {"label": "Storage", "value": "26L Full Helmet Space"},
+                    {"label": "License", "value": "Zero License Required"}
+                ],
+                "pricing": {"base_price": 80999, "max_price": 96999, "currency": "INR", "price_text": "₹80,999 – ₹96,999"},
+                "media_urls": ["/public/hub/Assets/manthra-m99-real.webp"],
+                "badges": ["Urban Flagship", "Reverse Assist", "Non-RTO"],
+                "sort_order": 2
+            },
+            {
+                "item_type": "PRODUCT",
+                "item_code": "EV-ROYAL-SLING",
+                "title": "Manthra EV Royal Sling",
+                "subtitle": "Vintage Classic Luxury with Double Contour Seat",
+                "summary": "Timeless retro luxury styling with chrome mirrors, premium double-contour cushion seat, and USB mobile charger.",
+                "specifications": [
+                    {"label": "Style", "value": "Retro Vintage Classic"},
+                    {"label": "Comfort", "value": "Double Contour Seat Cushion"},
+                    {"label": "Charging", "value": "Built-in Fast USB Port"},
+                    {"label": "License", "value": "Zero License Required"}
+                ],
+                "pricing": {"base_price": 80999, "max_price": 96999, "currency": "INR", "price_text": "₹80,999 – ₹96,999"},
+                "media_urls": ["/public/hub/Assets/manthra-royal-real.webp"],
+                "badges": ["Vintage Luxury", "Retro Classic", "Non-RTO"],
+                "sort_order": 3
+            },
+            {
+                "item_type": "PRODUCT",
+                "item_code": "EV-BEAST-PRO",
+                "title": "Manthra EV Beast Pro",
+                "subtitle": "Aggressive Street Flagship with Dual-Disc CBS",
+                "summary": "Aggressive street styling with dual front & rear hydraulic disc brakes, nitrogen gas shocks, and CBS safety.",
+                "specifications": [
+                    {"label": "Brakes", "value": "Dual Front & Rear Hydraulic Disc CBS"},
+                    {"label": "Suspension", "value": "Nitrogen Gas Charged Dampers"},
+                    {"label": "Headlamp", "value": "Quad Projector LED Beam"},
+                    {"label": "License", "value": "Zero License Required"}
+                ],
+                "pricing": {"base_price": 82999, "max_price": 99499, "currency": "INR", "price_text": "₹82,999 – ₹99,499"},
+                "media_urls": ["/public/hub/Assets/manthra-beast-real.webp"],
+                "badges": ["Street Fighter", "Dual Disc CBS", "Non-RTO"],
+                "sort_order": 4
             }
         ]
     },
