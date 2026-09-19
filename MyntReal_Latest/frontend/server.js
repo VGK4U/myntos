@@ -30564,6 +30564,27 @@ async function processAction(id, action){
     res.end();
 
 
+  } else if (url.startsWith('/catalog/solar') || url.startsWith('/catalog/hargharsolar') || url === '/solar' || url.startsWith('/solar?')) {
+    // Dedicated MyntReal Solar Customer Digital Catalog Page
+    const solarPath = path.join(__dirname, 'solar_pricing_catalog.html');
+    fs.readFile(solarPath, 'utf8', (err, data) => {
+      if (err) {
+        const fallbackPath = path.join(__dirname, 'catalog_single_page.html');
+        fs.readFile(fallbackPath, 'utf8', (err2, data2) => {
+          if (err2) { res.writeHead(404); res.end('Solar catalog page not found'); return; }
+          res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate', 'X-Frame-Options': 'SAMEORIGIN' });
+          res.end(data2);
+        });
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
   } else if (url.startsWith('/catalog/ev-b2c-pricing') || url.startsWith('/catalog/ev-b2c') || url.startsWith('/ev-b2c-pricing') || url.startsWith('/ev-b2c') || url.startsWith('/catalog/customer-2w-ev-pricing')) {
     // Dedicated Manthra EV B2C Customer Pricing Catalog Page
     const evB2cPath = path.join(__dirname, 'ev_b2c_pricing_catalog.html');
