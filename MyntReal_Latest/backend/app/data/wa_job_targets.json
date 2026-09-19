@@ -26,9 +26,9 @@
   "wa_daily_morning_wish": [
     {
       "id": "t6",
-      "type": "group",
-      "name": "Executive Team Announcements",
-      "identifier": "7702830269"
+      "type": "api",
+      "name": "Dynamic CRM Leads (Meta WhatsApp Cloud API)",
+      "identifier": "Dynamic Eligible CRM Leads (Bilingual 4-Day Rotation)"
     }
   ],
   "vgk4u_morning_wish": [

@@ -193,11 +193,32 @@ def run_vgk_member_daily_morning_statement_dispatch(db: Session, trigger_type: s
                 bonus_total_amt=f"{int(f.get('bonus_total_amt', 0)):,}"
             )
 
-            from app.services.whatsapp_auto_service import send_direct_whatsapp
-            wa_res = send_direct_whatsapp(
+            from app.services.whatsapp_canonical_service import WhatsAppCanonicalService
+            from app.core.timezone import get_indian_time
+            catalog_link = "https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te"
+            components = [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {"type": "text", "text": str(p_name or "Partner")},
+                        {"type": "text", "text": f"{int(b.get('overall_gross_earned', 0)):,}"},
+                        {"type": "text", "text": f"{int(b.get('earned_till_date_net', 0)):,}"},
+                        {"type": "text", "text": f"{int(b.get('net_pending', 0)):,}"},
+                        {"type": "text", "text": catalog_link}
+                    ]
+                }
+            ]
+
+            wa_res = WhatsAppCanonicalService.send_meta_template_message(
                 db=db,
                 phone=clean_phone,
-                message=msg_text,
+                template_name="vgk_partner_morning_statement_v1",
+                language_code="en",
+                components=components,
+                user_name=p_name,
+                sender_type="bot",
+                idempotency_key=f"morning_statement:{clean_phone}:{get_indian_time().strftime('%Y%m%d')}",
+                raw_body_fallback=msg_text,
                 job_id="vgk_member_morning_statement",
                 execution_id=exec_rec.id
             )

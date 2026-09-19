@@ -614,17 +614,53 @@ body {
   min-width: 0;
 }
 .sidebar-section-title {
-  color: var(--navy-900);
-  font-size: 0.76rem;
+  color: #475569;
+  font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 700;
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+.sidebar-section-title i {
+  color: #64748b;
 }
 .sidebar-divider {
   border-color: var(--border);
   margin: 14px 0;
   opacity: 0.8;
+}
+.btn-sidebar-apply {
+  width: 100%;
+  background: #1e293b;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.btn-sidebar-apply:hover {
+  background: #0f172a;
+}
+.btn-sidebar-reset {
+  width: 100%;
+  background: #ffffff;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-sidebar-reset:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
 }
 .btn-clear-all {
   font-size: 0.72rem;
@@ -808,15 +844,17 @@ body {
 .sidebar-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(2px);
-  z-index: 1040;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 1055;
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.25s ease;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
 }
 .sidebar-overlay.open {
   opacity: 1;
+  visibility: visible;
   pointer-events: auto;
 }
 .sidebar-drawer {
@@ -825,19 +863,21 @@ body {
   left: 0;
   bottom: 0;
   width: 320px;
-  max-width: 85vw;
+  max-width: 86vw;
   background: #ffffff;
-  z-index: 1045;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  z-index: 1060;
+  box-shadow: 8px 0 32px rgba(15, 23, 42, 0.25);
   transform: translateX(-100%);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
-  padding: 18px;
+  padding: 18px 20px 80px 20px;
   overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 .sidebar-drawer.open {
-  transform: translateX(0);
+  transform: translateX(0) !important;
 }
 
 /* ── Results Bar ── */
@@ -1060,6 +1100,262 @@ body {
   color: #ffffff;
 }
 
+/* ── Free Bike Offer Banner ─────────────────────────────────────────── */
+.bike-offer-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+}
+.bike-icon-box {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #059669;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(5,150,105,0.25);
+}
+
+/* ── EV Complete Vehicle Model Cards ────────────────────────────────── */
+.ev-model-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.ev-model-card:hover {
+  box-shadow: var(--shadow-card);
+  border-color: #cbd5e1;
+  transform: translateY(-3px);
+}
+.ev-img-stage {
+  position: relative;
+  background: #f8fafc;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.ev-img-stage img.main-img {
+  max-height: 175px;
+  max-width: 100%;
+  object-fit: contain;
+  transition: transform 0.25s ease;
+}
+.ev-model-card:hover .ev-img-stage img.main-img {
+  transform: scale(1.04);
+}
+.ev-badge-float {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+}
+.ev-thumb-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  z-index: 2;
+}
+.ev-thumb-item {
+  width: 44px;
+  height: 36px;
+  border-radius: 6px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  padding: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+  overflow: hidden;
+}
+.ev-thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.ev-thumb-item.active {
+  border-color: var(--blue-600);
+  box-shadow: 0 0 0 1px var(--blue-600);
+}
+.ev-card-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+.battery-chip-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.85rem 0;
+}
+.battery-chip-btn {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+.battery-chip-btn:hover {
+  border-color: var(--blue-600);
+  background: #f0f7ff;
+}
+.battery-chip-btn.active {
+  border-color: var(--blue-600);
+  background: #eff6ff;
+  box-shadow: 0 0 0 1.5px var(--blue-600);
+}
+.battery-chip-btn .chip-sub {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.price-hero-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.85rem;
+}
+.price-hero-box .price-val {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--navy-900);
+}
+.spec-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
+}
+.spec-preview-cell {
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.75rem;
+}
+.spec-cell-label {
+  display: block;
+  color: #64748b;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.spec-cell-val {
+  font-weight: 700;
+  color: #1e293b;
+}
+.pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.pill-lime { background: #d9f99d; color: #365314; }
+.pill-amber { background: #fef3c7; color: #92400e; }
+.pill-teal { background: #ccfbf1; color: #115e59; }
+.pill-emerald { background: #d1fae5; color: #065f46; }
+.pill-purple { background: #ede9fe; color: #5b21b6; }
+.pill-danger { background: #fee2e2; color: #991b1b; }
+
+/* ── Solar Package Cards ────────────────────────────────────────────── */
+.solar-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+.solar-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card);
+  border-color: #f59e0b;
+}
+.solar-card-header {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: #ffffff;
+  padding: 1.15rem 1.35rem;
+  position: relative;
+}
+.solar-subsidy-badge {
+  background: #059669;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.28rem 0.7rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.solar-card-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+.solar-price-block {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  margin: 0.85rem 0;
+}
+.solar-net-price {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #065f46;
+}
+.solar-gross-strike {
+  text-decoration: line-through;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.solar-spec-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed #f1f5f9;
+  font-size: 0.82rem;
+}
+.solar-spec-row:last-child {
+  border-bottom: none;
+}
+
 /* ── Cart Slide-over Drawer ────────────────────────────────────────────── */
 .cart-drawer-overlay {
   position: fixed;
@@ -1206,9 +1502,11 @@ body {
     display: flex;
     justify-content: space-around;
     align-items: center;
+    bottom: 28px !important;
+    z-index: 10000 !important;
   }
   body {
-    padding-bottom: 72px;
+    padding-bottom: 110px !important;
   }
   .cart-drawer-panel {
     max-width: 100%;
@@ -1521,65 +1819,10 @@ body {
       
       <!-- Left Sidebar (Desktop) -->
       <aside class="mkt-sidebar-wrap" id="sidebarWrap">
-        <div class="mkt-sidebar-inner">
-          
-          <!-- Active Filters -->
-          <div id="activeFiltersBox" style="display: none;">
-            <div class="sidebar-section-title d-flex justify-content-between align-items-center">
-              <span><i class="fas fa-sliders-h me-1 text-primary"></i> Active Filters</span>
-              <button type="button" onclick="clearAllFilters()" class="btn-clear-all">Clear all</button>
-            </div>
-            <div id="activeFilterTags" class="d-flex flex-wrap gap-1 mb-2"></div>
-            <hr class="sidebar-divider">
+        <div class="mkt-sidebar-inner" id="sidebarInner">
+          <div id="sidebarFiltersContainer">
+            <!-- Dynamically populated by renderSidebarFilters() -->
           </div>
-
-          <!-- Category Dropdown Filter -->
-          <div class="sidebar-section-title"><i class="fas fa-layer-group me-1 text-primary"></i> Category</div>
-          <div class="cat-dropdown mb-3" id="catDropdown">
-            <button type="button" class="cat-dd-btn" id="catDdBtn" onclick="toggleCatDropdown()">
-              <i class="fas fa-list-check text-muted" style="font-size: 0.85rem;"></i>
-              <span class="dd-label" id="catDdLabel">All Categories</span>
-              <span class="dd-count" id="catDdCount"></span>
-              <i class="fas fa-chevron-down chevron ms-auto"></i>
-            </button>
-            <div class="cat-dd-panel" id="catDdPanel">
-              <div class="cat-dd-actions">
-                <button type="button" onclick="selectAllCats()">✓ All</button>
-                <button type="button" onclick="clearAllCats()">✕ None</button>
-              </div>
-              <div class="cat-check-wrap" id="catList">
-                <!-- Loaded dynamically from /api/v1/marketplace/categories -->
-              </div>
-            </div>
-          </div>
-
-          <hr class="sidebar-divider">
-
-          <!-- Vehicle Model Filter -->
-          <div class="sidebar-section-title"><i class="fas fa-motorcycle me-1 text-primary"></i> Vehicle Model</div>
-          <select class="form-select form-select-sm mb-3" id="modelSelect" onchange="applyDropdownFilter('model', this.value)">
-            <option value="">All Models</option>
-          </select>
-
-          <!-- Specification Filter -->
-          <div class="sidebar-section-title"><i class="fas fa-ruler-combined me-1 text-primary"></i> Specification</div>
-          <select class="form-select form-select-sm mb-3" id="specSelect" onchange="applyDropdownFilter('spec', this.value)">
-            <option value="">All Specs</option>
-          </select>
-
-          <hr class="sidebar-divider">
-
-          <!-- Price Range Filter -->
-          <div class="sidebar-section-title"><i class="fas fa-indian-rupee-sign me-1 text-primary"></i> Price Range</div>
-          <div class="d-flex gap-2 mb-2">
-            <input type="number" id="minPrice" class="form-control form-control-sm" placeholder="Min ₹" min="0">
-            <input type="number" id="maxPrice" class="form-control form-control-sm" placeholder="Max ₹" min="0">
-          </div>
-          <div class="d-flex gap-2">
-            <button type="button" class="btn btn-sm btn-primary flex-fill fw-bold" onclick="applyPriceFilter()">Apply</button>
-            <button type="button" class="btn btn-sm btn-light border flex-fill text-muted" onclick="resetPriceFilter()">Reset</button>
-          </div>
-
         </div>
       </aside>
 
@@ -1615,7 +1858,7 @@ body {
         <!-- Active Filter Pills (Horizontal) -->
         <div id="activeCatPills" class="d-flex flex-wrap gap-1 mb-3"></div>
 
-        <!-- Products Grid -->
+        <!-- Products Grid (EV Spares, Complete EV 2-Wheelers, Solar Rooftop Kits & Inverters) -->
         <div class="products-grid-layout" id="productsGrid">
           <div class="text-center py-5 w-100">
             <i class="fas fa-spinner fa-spin fa-2x text-primary mb-3"></i>
@@ -1623,106 +1866,28 @@ body {
           </div>
         </div>
 
+        <!-- Real Dreams Properties Container (Active when vertical === 'real-dreams') -->
+        <div id="realDreamsPropertiesList" style="display: none;"></div>
+
         <!-- Pagination Controls -->
         <div class="d-flex justify-content-center mt-5" id="paginationWrapper"></div>
 
       </div>
     </div>
   </section>
-
-  <!-- ── 2. REAL DREAMS PROPERTIES VIEW SECTION ───────────────────────────── -->
-  <section id="realDreamsViewSection" style="display: none;">
-    
-    <!-- Real Dreams Hero -->
-    <div class="mkt-hero-banner hero-rd">
-      <div class="row align-items-center">
-        <div class="col-lg-8">
-          <span class="badge bg-white text-dark fw-bold mb-2">🏡 Verified Residential Communities</span>
-          <h2 class="fw-800 mb-2">Anandas Royal Imperia &amp; VGK Homes</h2>
-          <p class="text-white-50 mb-3">RERA-Approved 3 BHK Luxury Flats &amp; Gated Communities in Pendurthi, Visakhapatnam. Direct developer pricing, zero brokerage, and complimentary chauffeur site visits.</p>
-          <div class="d-flex flex-wrap gap-2">
-            <span class="badge bg-white text-dark px-3 py-2"><i class="fas fa-check-circle text-success me-1"></i> RERA: P03290123456</span>
-            <span class="badge bg-white text-dark px-3 py-2"><i class="fas fa-car text-primary me-1"></i> Complimentary Site Visit Pickup</span>
-            <span class="badge bg-white text-dark px-3 py-2"><i class="fas fa-file-pdf text-danger me-1"></i> Official 16.1 MB Brochure</span>
-          </div>
-        </div>
-        <div class="col-lg-4 text-end d-none d-lg-block">
-          <img src="/storage/real_dreams/1/staged/ca76c222a7c9.png" alt="Anandas Royal Imperia" style="max-height: 160px; border-radius: 12px; object-fit: cover; box-shadow: 0 4px 16px rgba(0,0,0,0.3);" onerror="this.style.display='none';">
-        </div>
-      </div>
-    </div>
-
-    <!-- Real Dreams Filter & Sorting Bar -->
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
-      <div>
-        <h5 class="fw-bold mb-0 text-navy-900">Verified Luxury Properties in Visakhapatnam</h5>
-        <small class="text-muted">Direct from Developer • Zero Commission • Ready to Move &amp; Under Construction</small>
-      </div>
-      <div>
-        <button class="btn btn-outline-dark btn-sm fw-bold" onclick="openSiteVisitModal()">
-          <i class="fas fa-calendar-check text-success me-1"></i> Book Free Site Visit
-        </button>
-      </div>
-    </div>
-
-    <!-- Property Listings Container -->
-    <div id="realDreamsPropertiesList">
-      <!-- Rendered by JavaScript -->
-    </div>
-  </section>
-
-  <!-- ═══ MOBILE FILTER DRAWER & OVERLAY ═════════════════════════════════════ -->
-  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
-  <div class="sidebar-drawer" id="sidebarDrawer">
-    <div class="d-flex align-items-center justify-content-between pb-2 mb-3 border-bottom">
-      <div class="fw-bold text-navy-900 fs-6"><i class="fas fa-filter text-primary me-2"></i>Filters &amp; Refinements</div>
-      <button type="button" class="btn-close" onclick="closeMobileSidebar()"></button>
-    </div>
-
-    <div class="sidebar-section-title"><i class="fas fa-layer-group me-1 text-primary"></i> Category</div>
-    <div class="cat-dropdown mb-3">
-      <button type="button" class="cat-dd-btn" id="catDdBtnM" onclick="toggleCatDropdownM()">
-        <i class="fas fa-list-check text-muted" style="font-size: 0.85rem;"></i>
-        <span class="dd-label" id="catDdLabelM">All Categories</span>
-        <span class="dd-count" id="catDdCountM"></span>
-        <i class="fas fa-chevron-down chevron ms-auto"></i>
-      </button>
-      <div class="cat-dd-panel" id="catDdPanelM">
-        <div class="cat-dd-actions">
-          <button type="button" onclick="selectAllCats()">✓ All</button>
-          <button type="button" onclick="clearAllCats()">✕ None</button>
-        </div>
-        <div class="cat-check-wrap" id="catListMobile"></div>
-      </div>
-    </div>
-
-    <hr class="sidebar-divider">
-
-    <div class="sidebar-section-title"><i class="fas fa-motorcycle me-1 text-primary"></i> Vehicle Model</div>
-    <select class="form-select form-select-sm mb-3" id="modelSelectMobile" onchange="applyDropdownFilter('model', this.value); closeMobileSidebar();">
-      <option value="">All Models</option>
-    </select>
-
-    <div class="sidebar-section-title"><i class="fas fa-ruler-combined me-1 text-primary"></i> Specification</div>
-    <select class="form-select form-select-sm mb-3" id="specSelectMobile" onchange="applyDropdownFilter('spec', this.value); closeMobileSidebar();">
-      <option value="">All Specs</option>
-    </select>
-
-    <hr class="sidebar-divider">
-
-    <div class="sidebar-section-title"><i class="fas fa-indian-rupee-sign me-1 text-primary"></i> Price Range</div>
-    <div class="d-flex gap-2 mb-3">
-      <input type="number" id="minPriceMobile" class="form-control form-control-sm" placeholder="Min ₹" min="0">
-      <input type="number" id="maxPriceMobile" class="form-control form-control-sm" placeholder="Max ₹" min="0">
-    </div>
-
-    <div class="d-flex gap-2 mt-3">
-      <button type="button" class="btn btn-primary flex-fill fw-bold" onclick="applyMobilePriceFilter(); closeMobileSidebar();">Apply</button>
-      <button type="button" class="btn btn-light border flex-fill text-muted" onclick="clearAllFilters(); closeMobileSidebar();">Reset All</button>
-    </div>
-  </div>
-
 </main>
+
+<!-- ═══ MOBILE FILTER DRAWER & OVERLAY ═════════════════════════════════════ -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+<div class="sidebar-drawer" id="sidebarDrawer">
+  <div class="d-flex align-items-center justify-content-between pb-2 mb-3 border-bottom">
+    <div class="fw-bold text-navy-900 fs-6"><i class="fas fa-filter text-primary me-2"></i>Filters &amp; Refinements</div>
+    <button type="button" class="btn-close" onclick="closeMobileSidebar()"></button>
+  </div>
+  <div id="mobileSidebarFiltersContainer">
+    <!-- Dynamically populated by renderSidebarFilters() -->
+  </div>
+</div>
 
 <!-- ═══ CART SLIDE-OVER DRAWER ═══════════════════════════════════════════════ -->
 <div class="cart-drawer-overlay" id="cartOverlay" onclick="closeCartDrawer(event)">
@@ -1975,13 +2140,18 @@ body {
     <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
       <div class="modal-header py-3 px-4 bg-success text-white border-0">
         <div>
-          <h5 class="modal-title fw-800 mb-0"><i class="fas fa-calendar-check me-2"></i>Schedule Site Visit</h5>
-          <small class="text-white-50">Anandas Royal Imperia • Pendurthi, Visakhapatnam</small>
+          <h5 class="modal-title fw-800 mb-0" id="svModalTitle"><i class="fas fa-calendar-check me-2"></i>Schedule Site Visit</h5>
+          <small class="text-white-50" id="svModalSub">Verified Property • Pendurthi, Visakhapatnam</small>
         </div>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body p-4">
+        <input type="hidden" id="svPropTitle" value="Anandas Royal Imperia">
         <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label small fw-bold">Selected Property</label>
+            <input type="text" class="form-control fw-bold bg-light" id="svPropertyDisplay" readonly value="Anandas Royal Imperia">
+          </div>
           <div class="col-12">
             <label class="form-label small fw-bold">Your Name <span class="text-danger">*</span></label>
             <input type="text" class="form-control" id="svName" placeholder="Full Name" required>
@@ -2023,6 +2193,115 @@ body {
           <button type="button" class="btn btn-secondary btn-sm me-2" data-bs-dismiss="modal">Close</button>
           <button type="button" class="btn btn-success btn-sm fw-bold px-4" id="btnSubmitSiteVisit" onclick="submitSiteVisit()">
             Confirm Site Visit Booking
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ EV TEST RIDE & VEHICLE BOOKING MODAL ═════════════════════════════════ -->
+<div class="modal fade" id="evBookingModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+      <div class="modal-header py-3 px-4 bg-primary text-white border-0">
+        <div>
+          <h5 class="modal-title fw-800 mb-0"><i class="fas fa-motorcycle me-2"></i>Book Free Test Ride</h5>
+          <small class="text-white-50" id="evModalSub">Manthra EV Certified Series • EVolution Training &amp; Delivery Hub</small>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label small fw-bold">Selected Vehicle Model</label>
+            <input type="text" class="form-control fw-bold bg-light" id="evBookModelName" readonly value="Manthra Pro GT">
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-bold">Your Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="evBookName" placeholder="Full Name" required>
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-bold">Mobile Number <span class="text-danger">*</span></label>
+            <input type="tel" class="form-control" id="evBookPhone" placeholder="10-digit mobile number" maxlength="10" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-bold">Preferred Test Ride Date</label>
+            <input type="date" class="form-control" id="evBookDate">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-bold">Ride Location</label>
+            <select class="form-select" id="evBookLocation">
+              <option value="hub">Pendurthi Hub (Direct Store Visit)</option>
+              <option value="doorstep">Doorstep Demo (Within 10 km)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="evBookSuccess" class="alert alert-success py-2 mt-3 small" style="display: none;"></div>
+        <div id="evBookError" class="alert alert-danger py-2 mt-3 small" style="display: none;"></div>
+
+        <div class="text-end mt-4">
+          <button type="button" class="btn btn-secondary btn-sm me-2" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary btn-sm fw-bold px-4" id="btnSubmitEvBook" onclick="submitEvBooking()">
+            Confirm Free Test Ride
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SOLAR CONSULTATION & FREE SITE SURVEY MODAL ══════════════════════════ -->
+<div class="modal fade" id="solarSurveyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-md">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+      <div class="modal-header py-3 px-4 bg-warning text-dark border-0">
+        <div>
+          <h5 class="modal-title fw-800 mb-0"><i class="fas fa-solar-panel me-2"></i>Schedule Free Solar Survey</h5>
+          <small class="text-dark-50" id="solarModalSub">PM Surya Ghar Yojana • Up to ₹78,000 Direct DBT Subsidy</small>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label small fw-bold">Interested Solar System Capacity</label>
+            <input type="text" class="form-control fw-bold bg-light" id="solarSurveyCapacity" readonly value="3 kWp Residential Rooftop Kit">
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-bold">Your Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="solarSurveyName" placeholder="Full Name" required>
+          </div>
+          <div class="col-12">
+            <label class="form-label small fw-bold">Mobile Number <span class="text-danger">*</span></label>
+            <input type="tel" class="form-control" id="solarSurveyPhone" placeholder="10-digit mobile number" maxlength="10" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-bold">Current Monthly Electricity Bill</label>
+            <select class="form-select" id="solarSurveyBill">
+              <option value="1500-3000">₹1,500 – ₹3,000 / month</option>
+              <option value="3000-5000">₹3,000 – ₹5,000 / month</option>
+              <option value="5000+">₹5,000+ / month</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-bold">Roof Type</label>
+            <select class="form-select" id="solarSurveyRoof">
+              <option value="rcc_flat">Flat RCC Concrete Roof</option>
+              <option value="tin_shed">Industrial Tin / Metal Shed</option>
+              <option value="tiled">Sloped Tile Roof</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="solarSurveySuccess" class="alert alert-success py-2 mt-3 small" style="display: none;"></div>
+        <div id="solarSurveyError" class="alert alert-danger py-2 mt-3 small" style="display: none;"></div>
+
+        <div class="text-end mt-4">
+          <button type="button" class="btn btn-secondary btn-sm me-2" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-warning btn-sm fw-bold px-4 text-dark" id="btnSubmitSolarSurvey" onclick="submitSolarSurvey()">
+            Request Free Site Survey
           </button>
         </div>
       </div>
@@ -2181,7 +2460,25 @@ body {
     discountPct: 0,
     lastConfirmedPO: null,
     rdProperties: [],
-    rdCurrentSlide: {} // { [propId]: slideIndex }
+    rdCurrentSlide: {}, // { [propId]: slideIndex }
+    evModelSelection: {}, // { [modelId]: variantKey }
+    evModel: '',
+    evCategory: '',
+    evBatteryTech: '',
+    evMinPrice: null,
+    evMaxPrice: null,
+    solarKw: '',
+    solarBrand: '',
+    solarType: '',
+    solarMinPrice: null,
+    solarMaxPrice: null,
+    rdType: '',
+    rdCorridor: '',
+    rdBhk: '',
+    rdPossession: '',
+    rdBikeOffer: false,
+    rdMinPrice: null,
+    rdMaxPrice: null
   };
 
   // ── Available Media Assets Mapping ──────────────────────────────────────
@@ -2267,6 +2564,382 @@ body {
     '/storage/real_dreams/1/staged/fde7851f87bb.png'
   ];
 
+  // ── Authentic Real Dreams Verified Properties ───────────────────────────
+  const REAL_DREAMS_PROPERTIES = [
+    {
+      id: 1,
+      title: 'Anandas Royal Imperia',
+      corridor: 'PENDURTHI',
+      corridorLabel: 'Pendurthi Growth Corridor',
+      location: 'Near Old Toll Plaza, Pendurthi Main Road, Visakhapatnam',
+      propertyType: 'gated_community',
+      propertyTypeLabel: 'Luxury Gated Community',
+      bedrooms: 3,
+      bhkLabel: '3 BHK Luxury Flats',
+      carpetArea: '1,450 – 1,850 Sq.Ft.',
+      communityArea: '2.0 Acres Gated',
+      totalUnits: '120 Units • Ready',
+      possessionStatus: 'ready_to_move',
+      possessionLabel: 'Ready to Move',
+      priceMinLakh: 55.0,
+      priceMaxLakh: 85.0,
+      priceDisplay: '₹55.0 Lakh – ₹85.0 Lakh',
+      ratePerSqFt: '₹3,800/sq.ft.',
+      reraId: 'P03290123456',
+      brochureUrl: '/storage/real_dreams/1/staged/df3236747796.pdf',
+      brochureSize: '16.1 MB',
+      freeBikeOffer: false,
+      photos: [
+        '/storage/real_dreams/1/staged/ca76c222a7c9.png',
+        '/storage/real_dreams/1/staged/c6eb66441665.png',
+        '/storage/real_dreams/1/staged/aec12d1ef45b.png',
+        '/storage/real_dreams/1/staged/b4888b83950f.png',
+        '/storage/real_dreams/1/staged/d1f9aea4f3f5.png',
+        '/storage/real_dreams/1/staged/24e546114451.png',
+        '/storage/real_dreams/1/staged/698f7fbb845e.png',
+        '/storage/real_dreams/1/staged/fde7851f87bb.png'
+      ],
+      features: ['RERA Approved: P03290123456', '2.0 Acres Gated Community', '120 Luxury Units', 'Chauffeur Site Visit Available', '100% Vastu Compliant', 'Clubhouse & Children Park']
+    },
+    {
+      id: 2,
+      title: 'VGK Homes Luxury Flats - 1',
+      corridor: 'PENDURTHI',
+      corridorLabel: 'Pendurthi Growth Corridor',
+      location: 'Sai Priya Layout, Near High Fields School, Pendurthi Main Road, Visakhapatnam',
+      propertyType: 'independent_flats',
+      propertyTypeLabel: 'Quality Residential Flats',
+      bedrooms: 3,
+      bhkLabel: '3 BHK Premium Floors',
+      carpetArea: '1,800 Sq.Ft. Plot Area',
+      communityArea: '3 Floors (G+2)',
+      totalUnits: 'Exclusive Boutique Block',
+      possessionStatus: '20_days',
+      possessionLabel: 'Possession in 20 Days',
+      priceMinLakh: 45.0,
+      priceMaxLakh: 68.0,
+      priceDisplay: '₹45.0 Lakh – ₹68.0 Lakh',
+      ratePerSqFt: '₹3,500/sq.ft.',
+      reraId: 'Approved Layout',
+      brochureUrl: '',
+      brochureSize: '',
+      freeBikeOffer: true,
+      bikeOfferText: 'Complimentary Mynt Electric Bike included with booking!',
+      photos: [
+        '/storage/real_dreams/1/staged/7084e3d7cad7.jpeg',
+        '/storage/real_dreams/1/staged/c858a72f3747.jpeg',
+        '/storage/real_dreams/1/staged/04704a138c25.jpeg',
+        '/storage/real_dreams/1/staged/0c35038fae26.jpeg',
+        '/storage/real_dreams/1/staged/4b9dbad2ad79.jpeg'
+      ],
+      features: ['Front Park Facing Access', 'Complimentary Electric Bike', 'Possession in 20 Days', 'Direct Main Road Access', 'High Fields School Vicinity', 'Customizable Finishes']
+    }
+  ];
+
+  // ── Authentic PM Surya Ghar Solar Rooftop Solutions & Inverters ─────────
+  const SOLAR_PACKAGES = [
+    {
+      kw: 1,
+      title: '1 kWp Residential Rooftop Solar Kit',
+      type: 'kit',
+      baseCost: 90000,
+      subsidy: 30000,
+      netCost: 60000,
+      units: '100 - 130 Units/mo',
+      savings: '₹800 - ₹1,000/mo',
+      roofSqft: '100 - 120 sq.ft.',
+      brand: 'waaree',
+      brandName: 'Waaree Energies',
+      img: '/public/images/solar_installations/kuruvada_solar_customer.jpg',
+      features: ['Mono PERC High-Efficiency Panels', 'Grid-Tie Inverter', '25 Yrs Performance Warranty', 'DISCOM Net-Meter Ready'],
+      badge: 'PM Surya Ghar ₹30,000 Subsidy'
+    },
+    {
+      kw: 2,
+      title: '2 kWp Residential Rooftop Solar Kit',
+      type: 'kit',
+      baseCost: 170000,
+      subsidy: 60000,
+      netCost: 110000,
+      units: '220 - 250 Units/mo',
+      savings: '₹1,500 - ₹2,000/mo',
+      roofSqft: '180 - 220 sq.ft.',
+      brand: 'waaree',
+      brandName: 'Waaree Energies',
+      img: '/public/images/solar_installations/krishnadevipeta_solar_customer.jpg',
+      features: ['Mono PERC High-Efficiency Panels', 'Dual MPPT Inverter', '25 Yrs Performance Warranty', 'DISCOM Net-Meter Ready'],
+      badge: 'PM Surya Ghar ₹60,000 Subsidy'
+    },
+    {
+      kw: 3,
+      title: '3 kWp Residential Rooftop Solar Kit (Best Seller)',
+      type: 'kit',
+      baseCost: 220000,
+      subsidy: 78000,
+      netCost: 142000,
+      units: '300 - 375 Units/mo',
+      savings: '₹2,500 - ₹3,000/mo',
+      roofSqft: '250 - 300 sq.ft.',
+      brand: 'waaree',
+      brandName: 'Waaree Energies',
+      img: '/public/images/solar_installations/pothavaram_solar_customer.jpg',
+      features: ['Tier-1 Waaree Mono PERC Panels', 'High Efficiency On-Grid Inverter', '25 Yrs Linear Output Warranty', 'Fast Subsidy Processing'],
+      badge: 'Max DBT Subsidy ₹78,000',
+      popular: true
+    },
+    {
+      kw: 4,
+      title: '4 kWp Premium Residential Rooftop Solar Kit',
+      type: 'kit',
+      baseCost: 295000,
+      subsidy: 78000,
+      netCost: 217000,
+      units: '380 - 500 Units/mo',
+      savings: '₹3,000 - ₹4,100/mo',
+      roofSqft: '350 - 400 sq.ft.',
+      brand: 'adani',
+      brandName: 'Adani Solar',
+      img: '/public/images/solar_installations/komaravolu_solar_customer.jpg',
+      features: ['Adani TOPCon / Mono Panels', 'Smart WiFi Monitoring Inverter', 'Zero Electricity Bill Target', 'Galvanized Mounting Structure'],
+      badge: 'Max DBT Subsidy ₹78,000'
+    },
+    {
+      kw: 5,
+      title: '5 kWp High-Capacity Rooftop Solar Kit',
+      type: 'kit',
+      baseCost: 360000,
+      subsidy: 78000,
+      netCost: 282000,
+      units: '500 - 600 Units/mo',
+      savings: '₹4,200 - ₹5,000/mo',
+      roofSqft: '450 - 500 sq.ft.',
+      brand: 'tata',
+      brandName: 'TATA Solar',
+      img: '/public/images/solar_installations/ap_solar_customer_2.jpg',
+      features: ['TATA Power High-Yield Modules', '3-Phase / 1-Phase Inverter', 'Heavy Duty Wind Load Structure', '25 Yrs Guarantee'],
+      badge: 'Max DBT Subsidy ₹78,000'
+    },
+    {
+      kw: 6,
+      title: '6 kWp Heavy Residential & Commercial Rooftop Kit',
+      type: 'kit',
+      baseCost: 435000,
+      subsidy: 78000,
+      netCost: 357000,
+      units: '600 - 710 Units/mo',
+      savings: '₹5,000 - ₹6,200/mo',
+      roofSqft: '550 - 600 sq.ft.',
+      brand: 'vikram',
+      brandName: 'Vikram Solar',
+      img: '/public/images/solar_installations/ap_solar_customer_1.jpg',
+      features: ['Vikram Solar High Efficiency Panels', 'Commercial Grade Inverter', 'Complete Protection & Earthing', '25 Yrs Guarantee'],
+      badge: 'Max DBT Subsidy ₹78,000'
+    },
+    {
+      kw: 10,
+      title: '10 kWp Commercial / Large Estate Rooftop Solar Plant',
+      type: 'kit',
+      baseCost: 620000,
+      subsidy: 78000,
+      netCost: 542000,
+      units: '1,000 - 1,200 Units/mo',
+      savings: '₹10,000 - ₹12,000/mo',
+      roofSqft: '900 - 1,000 sq.ft.',
+      brand: 'waaree',
+      brandName: 'Waaree Energies',
+      img: '/public/hub/Assets/har-ghar-solar-real-installation.jpg',
+      features: ['High-Efficiency Half-Cut Solar Modules', '3-Phase Grid-Tied Inverter with App', 'Lightning & Surge Arrestor Kit', 'DISCOM Net-Meter Liaisoning'],
+      badge: 'Industrial & Estate Grade'
+    },
+    {
+      id: 'inv-waaree-3kw',
+      title: 'Waaree 3 kW Grid-Tied On-Grid Solar Inverter',
+      type: 'inverter',
+      brand: 'waaree',
+      brandName: 'Waaree Energies',
+      baseCost: 38500,
+      subsidy: 0,
+      netCost: 38500,
+      img: '/public/hub/Assets/har-ghar-solar-real-installation.jpg',
+      features: ['98.4% Peak Efficiency', 'Dual MPPT Tracker', 'WiFi & Cloud App Live Monitoring', '10 Years Manufacturer Warranty'],
+      badge: '10 Years Warranty'
+    },
+    {
+      id: 'inv-waaree-5kw',
+      title: 'Waaree 5 kW Grid-Tied Dual MPPT Solar Inverter',
+      type: 'inverter',
+      brand: 'waaree',
+      brandName: 'Waaree Energies',
+      baseCost: 52000,
+      subsidy: 0,
+      netCost: 52000,
+      img: '/public/hub/Assets/har-ghar-solar-real-installation.jpg',
+      features: ['IP65 Weatherproof Enclosure', 'Natural Convection Cooling', 'Built-in DC Disconnect Switch', '10 Years Manufacturer Warranty'],
+      badge: '10 Years Warranty'
+    }
+  ];
+
+  // ── 5 Certified Manthra EV 2-Wheeler Models (Matched with Catalog) ──────
+  const EV_COMPLETE_MODELS = [
+    {
+      id: 'EV-PRO-GT',
+      code: 'EV-PRO-GT',
+      name: 'Manthra Pro GT',
+      category: 'commuter',
+      categoryLabel: 'Sport Commuter',
+      tagBadge: 'BEST COMMUTER',
+      badgeClass: 'pill-lime',
+      subtitle: 'Aerodynamic urban street commuter with matrix LED headlamp and digital LCD cluster.',
+      imgStudio: '/public/hub/Assets/manthra-pro-gt-real.webp',
+      imgFleet: '/public/hub/Assets/manthra-fleet-lineup.webp',
+      specs: {
+        topSpeed: '<25 km/h (Non-RTO)',
+        license: 'Zero License Required',
+        charging: '4 – 5 Hours',
+        brakes: 'Front Disc + Rear Drum'
+      },
+      fullSpecs: [
+        { k: 'Vehicle Category', v: 'Non-RTO Certified Low Speed (<25 km/h)' },
+        { k: 'Motor Type', v: 'BLDC Hub Motor (Waterproof IP67)' },
+        { k: 'Suspension', v: 'Front Telescopic, Rear Hydraulic Shocks' },
+        { k: 'Lighting', v: 'Full Matrix LED with DRL' },
+        { k: 'Tyres', v: 'Heavy-Duty Tubeless Tyres' }
+      ],
+      variants: {
+        'graphene48_30': { name: 'Graphene 48V 30Ah', warranty: '9 Mo Battery & Charger', warrantyClass: 'text-success', price: 49923, range: '50-60 km' },
+        'lfp48_30': { name: 'LTM/LFP 48V 30Ah', warranty: '3 Yrs Comprehensive', warrantyClass: 'text-primary', price: 59758, range: '50-60 km' },
+        'lfp48_45': { name: 'LTM/LFP 48V 45Ah', warranty: '3 Yrs Comprehensive', warrantyClass: 'text-info', price: 72956, range: '80-90 km' },
+        'lfp60_30': { name: 'LTM/LFP 60V 30Ah', warranty: '3 Yrs Comprehensive', warrantyClass: 'text-primary', price: 65646, range: '60-70 km' },
+        'lfp60_45': { name: 'LTM/LFP 60V 45Ah', warranty: '3 Yrs Comprehensive', warrantyClass: 'text-info', price: 81788, range: '90-100 km' }
+      },
+      defaultVariant: 'graphene48_30'
+    },
+    {
+      id: 'EV-POWER-PLUS',
+      code: 'EV-POWER-PLUS',
+      name: 'Manthra Power Plus',
+      category: 'cargo',
+      categoryLabel: 'Heavy Cargo',
+      tagBadge: '200KG HEAVY PAYLOAD',
+      badgeClass: 'pill-amber',
+      subtitle: 'Engineered for last-mile commercial delivery, farm utility, groceries and heavy cargo loads.',
+      imgStudio: '/public/hub/Assets/manthra-power-plus-real.webp',
+      imgFleet: '/public/hub/Assets/manthra-fleet-lineup.webp',
+      specs: {
+        topSpeed: '<25 km/h (Non-RTO)',
+        license: 'Zero License Required',
+        payload: '200 kg Certified',
+        suspension: 'Reinforced Dual Springs'
+      },
+      fullSpecs: [
+        { k: 'Commercial Utility', v: 'Last-Mile Delivery / Agriculture / Cargo' },
+        { k: 'Frame Architecture', v: 'Heavy-Duty Reinforced High-Tensile Steel' },
+        { k: 'Braking', v: 'Front Disc + Heavy Drum Rear' },
+        { k: 'Tyre Width', v: 'Extra-Wide All-Terrain Grip' },
+        { k: 'Carrier', v: 'Heavy Steel Extended Rear Rack' }
+      ],
+      variants: {
+        'graphene48_30': { name: 'Graphene 48V 30Ah', warranty: '9 Mo Battery & Charger', warrantyClass: 'text-success', price: 51278, range: '50-60 km' },
+        'lfp48_30': { name: 'LTM/LFP 48V 30Ah', warranty: '3 Yrs Comprehensive', warrantyClass: 'text-primary', price: 61112, range: '50-60 km' },
+        'lfp48_45': { name: 'LTM/LFP 48V 45Ah', warranty: '3 Yrs Comprehensive', warrantyClass: 'text-info', price: 74311, range: '80-90 km' },
+        'lfp60_30': { name: 'LTM/LFP 60V 30Ah', warranty: '3 Yrs Comprehensive', warrantyClass: 'text-primary', price: 67000, range: '60-70 km' },
+        'lfp60_45': { name: 'LTM/LFP 60V 45Ah', warranty: '3 Yrs Comprehensive', warrantyClass: 'text-info', price: 83143, range: '90-100 km' }
+      },
+      defaultVariant: 'graphene48_30'
+    },
+    {
+      id: 'EV-M99',
+      code: 'EV-M99',
+      name: 'Manthra M99 Flagship',
+      category: 'flagship',
+      categoryLabel: 'Urban Flagship',
+      tagBadge: 'URBAN FLAGSHIP',
+      badgeClass: 'pill-teal',
+      subtitle: 'Next-gen urban flagship with Reverse Assist, full-color digital console, and long-life Smart LTM/LFP battery.',
+      imgStudio: '/public/hub/Assets/manthra-m99-real.webp',
+      imgFleet: '/public/hub/Assets/manthra-fleet-lineup.webp',
+      specs: {
+        topSpeed: '<25 km/h (Non-RTO)',
+        license: 'Zero License Required',
+        reverse: '1-Touch Reverse Assist',
+        keyless: 'Smart Remote Fob'
+      },
+      fullSpecs: [
+        { k: 'Instrument Console', v: 'Full-Color High-Definition TFT Display' },
+        { k: 'Safety Alarm', v: 'Anti-Theft Motion Sensor with Wheel Lock' },
+        { k: 'Reverse Feature', v: 'Electric Geared Reverse Push-Assist' },
+        { k: 'Brakes', v: 'Front Hydraulic Disc + Rear Drum CBS' },
+        { k: 'USB Charger', v: 'Quick Charge 3.0 Integrated Socket' }
+      ],
+      variants: {
+        'lfp60_30': { name: 'LTM/LFP 60V 30Ah', warranty: '3 Yrs Comprehensive', warrantyClass: 'text-primary', price: 80782, range: '60-70 km' },
+        'lfp60_45': { name: 'LTM/LFP 60V 45Ah', warranty: '3 Yrs Comprehensive', warrantyClass: 'text-info', price: 96925, range: '90-100 km' }
+      },
+      defaultVariant: 'lfp60_30'
+    },
+    {
+      id: 'EV-ROYAL-SLING',
+      code: 'EV-ROYAL-SLING',
+      name: 'Manthra Royal Sling',
+      category: 'retro',
+      categoryLabel: 'Vintage Classic',
+      tagBadge: 'RETRO LUXURY',
+      badgeClass: 'pill-purple',
+      subtitle: 'Timeless retro luxury styling with chrome mirrors, premium double-contour seat & USB fast charging.',
+      imgStudio: '/public/hub/Assets/manthra-royal-real.webp',
+      imgFleet: '/public/hub/Assets/manthra-fleet-lineup.webp',
+      specs: {
+        topSpeed: '<25 km/h (Non-RTO)',
+        license: 'Zero License Required',
+        seating: 'Double Contour Cushion',
+        styling: 'Chrome Mirrors & Trim'
+      },
+      fullSpecs: [
+        { k: 'Vintage Trim', v: 'Polished Chrome Mirrors, Handlebar & Badging' },
+        { k: 'Seat Cushioning', v: 'Premium High-Density Ergonomic Dual Cushion' },
+        { k: 'Suspension', v: 'Smooth Hydraulic Ride Over Uneven Roads' },
+        { k: 'Footboard', v: 'Spacious Flat Floorboard with Bag Hook' },
+        { k: 'Headlamp', v: 'Vintage Circular Jewel LED Projector' }
+      ],
+      variants: {
+        'lfp60_30': { name: 'LTM/LFP 60V 30Ah', warranty: '3 Yrs Comprehensive', warrantyClass: 'text-primary', price: 80782, range: '60-70 km' },
+        'lfp48_45': { name: 'LTM/LFP 48V 45Ah', warranty: '3 Yrs Comprehensive', warrantyClass: 'text-info', price: 88093, range: '80-90 km' },
+        'lfp60_45': { name: 'LTM/LFP 60V 45Ah', warranty: '3 Yrs Comprehensive', warrantyClass: 'text-info', price: 96925, range: '90-100 km' }
+      },
+      defaultVariant: 'lfp60_30'
+    },
+    {
+      id: 'EV-BEAST-PRO',
+      code: 'EV-BEAST-PRO',
+      name: 'Manthra Beast Pro',
+      category: 'beast',
+      categoryLabel: 'Street Fighter',
+      tagBadge: 'DUAL DISC CBS',
+      badgeClass: 'pill-danger',
+      subtitle: 'Aggressive muscular styling with front & rear hydraulic disc brakes, nitrogen gas shocks & CBS.',
+      imgStudio: '/public/hub/Assets/manthra-beast-real.webp',
+      imgFleet: '/public/hub/Assets/manthra-fleet-lineup.webp',
+      specs: {
+        topSpeed: '<25 km/h (Non-RTO)',
+        license: 'Zero License Required',
+        braking: 'Dual Front & Rear Disc',
+        suspension: 'Nitrogen Gas Shocks'
+      },
+      fullSpecs: [
+        { k: 'Braking System', v: 'Front & Rear Dual Hydraulic Disc with CBS' },
+        { k: 'Rear Suspension', v: 'Dual Inverted Nitrogen Gas Charged Shocks' },
+        { k: 'Chassis', v: 'Heavy-Duty Reinforced Sport Backbone Frame' },
+        { k: 'Headlamp', v: 'Dual Angular Predator LED Projectors' },
+        { k: 'Acceleration', v: 'Instant High-Torque Sport Mode Response' }
+      ],
+      variants: {
+        'lfp60_30': { name: 'LTM/LFP 60V 30Ah', warranty: '3 Yrs Comprehensive', warrantyClass: 'text-primary', price: 82916, range: '60-70 km' },
+        'lfp60_45': { name: 'LTM/LFP 60V 45Ah', warranty: '3 Yrs Comprehensive', warrantyClass: 'text-info', price: 99058, range: '90-100 km' }
+      },
+      defaultVariant: 'lfp60_30'
+    }
+  ];
+
   // ── Cart Persistence (localStorage['myntreal_cart_v1']) ─────────────────
   function initCartFromStorage() {
     if (typeof window === 'undefined') return;
@@ -2294,42 +2967,37 @@ body {
   }
 
   // ── Vertical Switcher & URL Synchronization ────────────────────────────
-  window.switchVertical = function(v) {
+  window.switchVertical = function(v, initialSub) {
     STATE.vertical = v;
     STATE.page = 1;
-    STATE.subCategory = 'all';
+    STATE.subCategory = initialSub || 'all';
 
     // Update URL param without page reload
     if (typeof window !== 'undefined' && window.history && window.history.pushState) {
       const url = new URL(window.location.href);
       url.searchParams.set('vertical', v);
+      if (initialSub) url.searchParams.set('sub', initialSub);
+      else url.searchParams.delete('sub');
       window.history.pushState(null, '', url.toString());
     }
 
     // Toggle tab active classes
     document.querySelectorAll('.dept-pill-btn').forEach(btn => btn.classList.remove('active'));
-    if (v === 'ev') document.getElementById('tabEv').classList.add('active');
-    else if (v === 'solar') document.getElementById('tabSolar').classList.add('active');
-    else if (v === 'real-dreams') document.getElementById('tabRd').classList.add('active');
+    if (v === 'ev') document.getElementById('tabEv')?.classList.add('active');
+    else if (v === 'solar') document.getElementById('tabSolar')?.classList.add('active');
+    else if (v === 'real-dreams') document.getElementById('tabRd')?.classList.add('active');
 
-    // Toggle section visibility
-    const prodSec = document.getElementById('productsViewSection');
-    const rdSec = document.getElementById('realDreamsViewSection');
+    // Update hero banner
+    updateHeroBanner(v);
 
-    if (v === 'real-dreams') {
-      prodSec.style.display = 'none';
-      rdSec.style.display = 'block';
-      renderSubChips([]);
-      loadRealDreamsProperties();
-    } else {
-      prodSec.style.display = 'block';
-      rdSec.style.display = 'none';
-      updateHeroBanner(v);
-      renderSubChipsForVertical(v);
-      loadCategories();
-      loadFilterOptions();
-      loadProducts();
-    }
+    // Render subchips for vertical
+    renderSubChipsForVertical(v);
+
+    // Render dynamic sidebar filters for vertical (Desktop & Mobile)
+    renderSidebarFilters(v);
+
+    // Render active view
+    renderActiveVerticalView();
   };
 
   function updateHeroBanner(v) {
@@ -2338,19 +3006,26 @@ body {
     const title = document.getElementById('heroTitle');
     const sub = document.getElementById('heroSubtitle');
     const graphic = document.getElementById('heroRightGraphic');
+    if (!banner || !badge || !title || !sub) return;
 
     if (v === 'solar') {
       banner.className = 'mkt-hero-banner hero-solar';
       badge.innerHTML = '☀️ PM Surya Ghar Muft Bijli Yojana';
       title.innerHTML = 'Residential Rooftop Solar &amp; Waaree Inverters';
-      sub.innerHTML = 'Get up to ₹78,000 Direct Central Subsidy. 3kWp &amp; 4kWp Complete High-Efficiency Solar Kits with Free Site Survey.';
-      graphic.innerHTML = '<img src="/public/hub/Assets/har-ghar-solar-real-installation.jpg" alt="Solar" style="max-height: 160px; border-radius: 12px; object-fit: cover;">';
+      sub.innerHTML = 'Get up to ₹78,000 Direct Central Subsidy. 1kWp to 10kWp Complete High-Efficiency Solar Kits with Free Site Survey.';
+      if (graphic) graphic.innerHTML = '<img src="/public/hub/Assets/har-ghar-solar-real-installation.jpg" alt="Solar" style="max-height: 160px; border-radius: 12px; object-fit: cover;">';
+    } else if (v === 'real-dreams') {
+      banner.className = 'mkt-hero-banner hero-rd';
+      badge.innerHTML = '🏡 Verified Residential Communities';
+      title.innerHTML = 'Anandas Royal Imperia &amp; VGK Homes';
+      sub.innerHTML = 'RERA-Approved 3 BHK Luxury Flats &amp; Gated Communities in Pendurthi, Visakhapatnam. Direct developer pricing, zero brokerage, and complimentary chauffeur site visits.';
+      if (graphic) graphic.innerHTML = '<img src="/storage/real_dreams/1/staged/ca76c222a7c9.png" alt="Anandas Royal Imperia" style="max-height: 160px; border-radius: 12px; object-fit: cover; box-shadow: 0 4px 16px rgba(0,0,0,0.3);" onerror="this.src=\'/public/hub/Assets/Estate.png\'">';
     } else {
       banner.className = 'mkt-hero-banner hero-ev';
       badge.innerHTML = '⚡ Manthra EV &amp; Genuine Spares';
       title.innerHTML = 'Genuine EV 2-Wheeler Spares &amp; Complete Scooters';
       sub.innerHTML = 'OEM Batteries, Controllers, Motors, Chargers, and Accessories directly from EVolution Training Centre.';
-      graphic.innerHTML = '<img src="/public/hub/Assets/manthra-pro-gt-real.webp" alt="Manthra EV" style="max-height: 160px; object-fit: contain;">';
+      if (graphic) graphic.innerHTML = '<img src="/public/hub/Assets/manthra-pro-gt-real.webp" alt="Manthra EV" style="max-height: 160px; object-fit: contain;">';
     }
   }
 
@@ -2358,15 +3033,23 @@ body {
     if (v === 'solar') {
       renderSubChips([
         { id: 'all', label: 'All Solar Solutions' },
-        { id: 'kits', label: 'Complete Solar Kits (3kWp & 4kWp)' },
+        { id: 'kits', label: 'Complete Solar Kits (1kW - 10kW)' },
         { id: 'inverters', label: 'Waaree Inverters' },
         { id: 'structures', label: 'Mounting Verticals & Sets' },
-        { id: 'accessories', label: 'DC Cables & Base Plates' }
+        { id: 'accessories', label: 'DC Cables & Accessories' }
+      ]);
+    } else if (v === 'real-dreams') {
+      renderSubChips([
+        { id: 'all', label: 'All Verified Properties' },
+        { id: 'gated', label: 'Luxury Gated Communities' },
+        { id: 'independent', label: 'Independent Residential Flats' },
+        { id: 'ready', label: 'Ready to Move' },
+        { id: 'bike_offer', label: '🎁 Free Electric Bike Offer' }
       ]);
     } else {
       renderSubChips([
         { id: 'all', label: 'All EV Products' },
-        { id: 'vehicles', label: 'Complete 2-Wheelers' },
+        { id: 'vehicles', label: 'Complete 2-Wheelers (5 Models)' },
         { id: 'spares', label: 'Genuine Spares (485+)' },
         { id: 'chargers', label: 'Chargers & Batteries' },
         { id: 'motors', label: 'Motors & Controllers' },
@@ -2377,6 +3060,7 @@ body {
 
   function renderSubChips(chips) {
     const bar = document.getElementById('subCategoryChips');
+    if (!bar) return;
     if (!chips.length) {
       document.getElementById('subFiltersBar').style.display = 'none';
       bar.innerHTML = '';
@@ -2393,8 +3077,650 @@ body {
   window.selectSubCategory = function(catId) {
     STATE.subCategory = catId;
     renderSubChipsForVertical(STATE.vertical);
+    renderSidebarFilters(STATE.vertical);
     STATE.page = 1;
-    loadProducts();
+    renderActiveVerticalView();
+  };
+
+  // ── Active Vertical Router ──────────────────────────────────────────────
+  window.renderActiveVerticalView = function() {
+    const grid = document.getElementById('productsGrid');
+    const rdList = document.getElementById('realDreamsPropertiesList');
+    const pag = document.getElementById('paginationWrapper');
+
+    if (STATE.vertical === 'real-dreams') {
+      if (grid) grid.style.display = 'none';
+      if (rdList) rdList.style.display = 'block';
+      if (pag) pag.style.display = 'none';
+      filterRealDreamsProperties();
+    } else if (STATE.vertical === 'solar') {
+      if (grid) grid.style.display = 'grid';
+      if (rdList) rdList.style.display = 'none';
+      if (pag) pag.style.display = 'none';
+      filterSolarPackages();
+    } else if (STATE.vertical === 'ev') {
+      if (grid) grid.style.display = 'grid';
+      if (rdList) rdList.style.display = 'none';
+      if (STATE.subCategory === 'vehicles') {
+        if (pag) pag.style.display = 'none';
+        filterEvVehicles();
+      } else {
+        if (pag) pag.style.display = 'flex';
+        loadCategories();
+        loadFilterOptions();
+        loadProducts();
+      }
+    }
+  };
+
+  // ── Dynamic Responsive Sidebar Filter Injection ──────────────────────────
+  window.renderSidebarFilters = function(v) {
+    const dWrap = document.getElementById('sidebarFiltersContainer');
+    const mWrap = document.getElementById('mobileSidebarFiltersContainer');
+    if (!dWrap && !mWrap) return;
+
+    const buildFiltersHtml = (isMobile) => {
+      const pfx = isMobile ? 'm_' : '';
+
+      if (v === 'real-dreams') {
+        return `
+          <div class="sidebar-section-title"><i class="fas fa-building me-2 text-primary"></i> PROPERTY TYPE</div>
+          <select class="form-select form-select-sm mb-3" id="${pfx}rdFilterType" onchange="applyRdFilter(this.value, 'type'); ${isMobile ? 'closeMobileSidebar();' : ''}">
+            <option value="">All Property Types</option>
+            <option value="gated_community" ${STATE.rdType === 'gated_community' ? 'selected' : ''}>Luxury Gated Community (Anandas)</option>
+            <option value="independent_flats" ${STATE.rdType === 'independent_flats' ? 'selected' : ''}>Quality Residential Flats (VGK Homes)</option>
+          </select>
+
+          <div class="sidebar-section-title"><i class="fas fa-map-marker-alt me-2 text-danger"></i> CORRIDOR / LOCATION</div>
+          <select class="form-select form-select-sm mb-3" id="${pfx}rdFilterCorridor" onchange="applyRdFilter(this.value, 'corridor'); ${isMobile ? 'closeMobileSidebar();' : ''}">
+            <option value="">All Locations</option>
+            <option value="PENDURTHI" ${STATE.rdCorridor === 'PENDURTHI' ? 'selected' : ''}>Pendurthi Growth Corridor</option>
+          </select>
+
+          <div class="sidebar-section-title"><i class="fas fa-bed me-2 text-secondary"></i> CONFIGURATION</div>
+          <select class="form-select form-select-sm mb-3" id="${pfx}rdFilterBhk" onchange="applyRdFilter(this.value, 'bhk'); ${isMobile ? 'closeMobileSidebar();' : ''}">
+            <option value="">All Configurations</option>
+            <option value="3" ${STATE.rdBhk === '3' ? 'selected' : ''}>3 BHK Luxury Flats</option>
+          </select>
+
+          <div class="sidebar-section-title"><i class="fas fa-key me-2 text-warning"></i> POSSESSION STATUS</div>
+          <select class="form-select form-select-sm mb-3" id="${pfx}rdFilterPossession" onchange="applyRdFilter(this.value, 'possession'); ${isMobile ? 'closeMobileSidebar();' : ''}">
+            <option value="">All Statuses</option>
+            <option value="ready_to_move" ${STATE.rdPossession === 'ready_to_move' ? 'selected' : ''}>Ready to Move</option>
+            <option value="20_days" ${STATE.rdPossession === '20_days' ? 'selected' : ''}>Ready within 20 Days</option>
+          </select>
+
+          <div class="sidebar-section-title"><i class="fas fa-gift me-2 text-success"></i> SPECIAL INCENTIVES</div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="${pfx}rdFilterBike" ${STATE.rdBikeOffer ? 'checked' : ''} onchange="applyRdFilter(this.checked, 'bike'); ${isMobile ? 'closeMobileSidebar();' : ''}">
+            <label class="form-check-label small fw-bold text-success" for="${pfx}rdFilterBike">
+              🛵 Free Electric Bike Offer
+            </label>
+          </div>
+
+          <hr class="sidebar-divider">
+
+          <div class="sidebar-section-title"><i class="fas fa-indian-rupee-sign me-2"></i> BUDGET (IN LAKHS)</div>
+          <div class="d-flex gap-2 mb-2">
+            <input type="number" id="${pfx}rdMinPrice" class="form-control form-control-sm" placeholder="Min ₹L" value="${STATE.rdMinPrice != null ? STATE.rdMinPrice : ''}" min="0">
+            <input type="number" id="${pfx}rdMaxPrice" class="form-control form-control-sm" placeholder="Max ₹L" value="${STATE.rdMaxPrice != null ? STATE.rdMaxPrice : ''}" min="0">
+          </div>
+          <button type="button" class="btn-sidebar-apply mb-2" onclick="applyRdPriceFilter('${pfx}'); ${isMobile ? 'closeMobileSidebar();' : ''}">Apply Budget</button>
+          <button type="button" class="btn-sidebar-reset mb-3" onclick="resetRdFilters(); ${isMobile ? 'closeMobileSidebar();' : ''}">Reset</button>
+
+          <div class="p-3 bg-light rounded border text-center">
+            <div class="small fw-bold text-navy-900 mb-1">Looking for a Site Visit?</div>
+            <div class="text-muted small mb-2" style="font-size:0.75rem;">Complimentary Chauffeur Pickup available across Visakhapatnam.</div>
+            <button type="button" class="btn btn-dark btn-sm w-100 fw-bold" onclick="openSiteVisitModal(); ${isMobile ? 'closeMobileSidebar();' : ''}">
+              <i class="fas fa-calendar-check text-warning me-1"></i> Book Free Visit
+            </button>
+          </div>
+        `;
+      } else if (v === 'solar') {
+        return `
+          <div class="sidebar-section-title"><i class="fas fa-bolt me-2 text-warning"></i> SYSTEM CAPACITY</div>
+          <select class="form-select form-select-sm mb-3" id="${pfx}solarFilterKw" onchange="applySolarFilter(this.value, 'kw'); ${isMobile ? 'closeMobileSidebar();' : ''}">
+            <option value="">All Capacities (1kW – 10kW)</option>
+            <option value="1" ${STATE.solarKw === '1' ? 'selected' : ''}>1 kWp (100-130 Units/mo)</option>
+            <option value="2" ${STATE.solarKw === '2' ? 'selected' : ''}>2 kWp (220-250 Units/mo)</option>
+            <option value="3" ${STATE.solarKw === '3' ? 'selected' : ''}>3 kWp (300-375 Units/mo) — Best Seller</option>
+            <option value="4" ${STATE.solarKw === '4' ? 'selected' : ''}>4 kWp (380-500 Units/mo)</option>
+            <option value="5" ${STATE.solarKw === '5' ? 'selected' : ''}>5 kWp (500-600 Units/mo)</option>
+            <option value="6" ${STATE.solarKw === '6' ? 'selected' : ''}>6 kWp (600-710 Units/mo)</option>
+            <option value="10" ${STATE.solarKw === '10' ? 'selected' : ''}>10 kWp (Commercial / Large Estate)</option>
+          </select>
+
+          <div class="sidebar-section-title"><i class="fas fa-certificate me-2 text-primary"></i> TIER-1 SOLAR BRAND</div>
+          <select class="form-select form-select-sm mb-3" id="${pfx}solarFilterBrand" onchange="applySolarFilter(this.value, 'brand'); ${isMobile ? 'closeMobileSidebar();' : ''}">
+            <option value="">All Tier-1 Brands</option>
+            <option value="waaree" ${STATE.solarBrand === 'waaree' ? 'selected' : ''}>Waaree Energies</option>
+            <option value="adani" ${STATE.solarBrand === 'adani' ? 'selected' : ''}>Adani Solar</option>
+            <option value="tata" ${STATE.solarBrand === 'tata' ? 'selected' : ''}>TATA Solar</option>
+            <option value="vikram" ${STATE.solarBrand === 'vikram' ? 'selected' : ''}>Vikram Solar</option>
+            <option value="goldi" ${STATE.solarBrand === 'goldi' ? 'selected' : ''}>Goldi Solar</option>
+            <option value="navgrun" ${STATE.solarBrand === 'navgrun' ? 'selected' : ''}>Navgrun Solar</option>
+            <option value="aps" ${STATE.solarBrand === 'aps' ? 'selected' : ''}>APS Solar</option>
+            <option value="renew" ${STATE.solarBrand === 'renew' ? 'selected' : ''}>ReNew Power</option>
+          </select>
+
+          <div class="sidebar-section-title"><i class="fas fa-solar-panel me-2 text-success"></i> SOLUTION TYPE</div>
+          <select class="form-select form-select-sm mb-3" id="${pfx}solarFilterType" onchange="applySolarFilter(this.value, 'type'); ${isMobile ? 'closeMobileSidebar();' : ''}">
+            <option value="">All Solutions</option>
+            <option value="kit" ${STATE.solarType === 'kit' ? 'selected' : ''}>Turnkey Rooftop Kits (With Subsidy)</option>
+            <option value="inverter" ${STATE.solarType === 'inverter' ? 'selected' : ''}>Grid-Tied Inverters</option>
+          </select>
+
+          <hr class="sidebar-divider">
+
+          <div class="sidebar-section-title"><i class="fas fa-indian-rupee-sign me-2"></i> NET PRICE RANGE (₹)</div>
+          <div class="d-flex gap-2 mb-2">
+            <input type="number" id="${pfx}solarMinPrice" class="form-control form-control-sm" placeholder="Min ₹" value="${STATE.solarMinPrice != null ? STATE.solarMinPrice : ''}" min="0">
+            <input type="number" id="${pfx}solarMaxPrice" class="form-control form-control-sm" placeholder="Max ₹" value="${STATE.solarMaxPrice != null ? STATE.solarMaxPrice : ''}" min="0">
+          </div>
+          <button type="button" class="btn-sidebar-apply mb-2" onclick="applySolarPriceFilter('${pfx}'); ${isMobile ? 'closeMobileSidebar();' : ''}">Apply Filter</button>
+          <button type="button" class="btn-sidebar-reset mb-3" onclick="resetSolarFilters(); ${isMobile ? 'closeMobileSidebar();' : ''}">Reset</button>
+
+          <div class="p-3 bg-light rounded border text-center">
+            <div class="badge bg-success mb-2">PM Surya Ghar Yojana</div>
+            <div class="small fw-bold text-dark mb-1">Up to ₹78,000 Subsidy</div>
+            <div class="text-muted small mb-2" style="font-size:0.75rem;">Direct DBT transfer to homeowner bank account. Free site engineering survey.</div>
+            <button type="button" class="btn btn-warning btn-sm w-100 fw-bold text-dark" onclick="openSolarSurveyModal(); ${isMobile ? 'closeMobileSidebar();' : ''}">
+              <i class="fas fa-clipboard-check me-1"></i> Book Free Survey
+            </button>
+          </div>
+        `;
+      } else if (v === 'ev' && STATE.subCategory === 'vehicles') {
+        return `
+          <div class="sidebar-section-title"><i class="fas fa-motorcycle me-2 text-primary"></i> MANTHRA EV MODEL</div>
+          <select class="form-select form-select-sm mb-3" id="${pfx}evModelFilter" onchange="applyEvModelFilter(this.value, 'model'); ${isMobile ? 'closeMobileSidebar();' : ''}">
+            <option value="">All 5 Certified Models</option>
+            <option value="EV-PRO-GT" ${STATE.evModel === 'EV-PRO-GT' ? 'selected' : ''}>Manthra Pro GT (Sport Commuter)</option>
+            <option value="EV-POWER-PLUS" ${STATE.evModel === 'EV-POWER-PLUS' ? 'selected' : ''}>Manthra Power Plus (Heavy Cargo)</option>
+            <option value="EV-M99" ${STATE.evModel === 'EV-M99' ? 'selected' : ''}>Manthra M99 Flagship (Urban Tech)</option>
+            <option value="EV-ROYAL-SLING" ${STATE.evModel === 'EV-ROYAL-SLING' ? 'selected' : ''}>Manthra Royal Sling (Vintage Classic)</option>
+            <option value="EV-BEAST-PRO" ${STATE.evModel === 'EV-BEAST-PRO' ? 'selected' : ''}>Manthra Beast Pro (Street Fighter)</option>
+          </select>
+
+          <div class="sidebar-section-title"><i class="fas fa-tag me-2 text-secondary"></i> RIDING CATEGORY</div>
+          <select class="form-select form-select-sm mb-3" id="${pfx}evCategoryFilter" onchange="applyEvModelFilter(this.value, 'category'); ${isMobile ? 'closeMobileSidebar();' : ''}">
+            <option value="">All Categories</option>
+            <option value="commuter" ${STATE.evCategory === 'commuter' ? 'selected' : ''}>Sport Commuter</option>
+            <option value="cargo" ${STATE.evCategory === 'cargo' ? 'selected' : ''}>Heavy Cargo (200kg)</option>
+            <option value="flagship" ${STATE.evCategory === 'flagship' ? 'selected' : ''}>Urban Flagship (Reverse Assist)</option>
+            <option value="retro" ${STATE.evCategory === 'retro' ? 'selected' : ''}>Vintage Classic (Chrome Trim)</option>
+            <option value="beast" ${STATE.evCategory === 'beast' ? 'selected' : ''}>Street Fighter (Dual Disc CBS)</option>
+          </select>
+
+          <div class="sidebar-section-title"><i class="fas fa-battery-full me-2 text-success"></i> BATTERY TECHNOLOGY</div>
+          <select class="form-select form-select-sm mb-3" id="${pfx}evBatteryTechFilter" onchange="applyEvModelFilter(this.value, 'tech'); ${isMobile ? 'closeMobileSidebar();' : ''}">
+            <option value="">All Battery Options</option>
+            <option value="graphene" ${STATE.evBatteryTech === 'graphene' ? 'selected' : ''}>Graphene 48V (9M Warranty)</option>
+            <option value="lfp" ${STATE.evBatteryTech === 'lfp' ? 'selected' : ''}>Smart LTM/LFP (3Y Warranty)</option>
+          </select>
+
+          <hr class="sidebar-divider">
+
+          <div class="sidebar-section-title"><i class="fas fa-indian-rupee-sign me-2"></i> ON-ROAD BUDGET (₹)</div>
+          <div class="d-flex gap-2 mb-2">
+            <input type="number" id="${pfx}evMinPrice" class="form-control form-control-sm" placeholder="Min ₹" value="${STATE.evMinPrice != null ? STATE.evMinPrice : ''}" min="0">
+            <input type="number" id="${pfx}evMaxPrice" class="form-control form-control-sm" placeholder="Max ₹" value="${STATE.evMaxPrice != null ? STATE.evMaxPrice : ''}" min="0">
+          </div>
+          <button type="button" class="btn-sidebar-apply mb-2" onclick="applyEvPriceFilter('${pfx}'); ${isMobile ? 'closeMobileSidebar();' : ''}">Apply Filter</button>
+          <button type="button" class="btn-sidebar-reset mb-3" onclick="resetEvModelFilters(); ${isMobile ? 'closeMobileSidebar();' : ''}">Reset</button>
+
+          <div class="p-3 bg-light rounded border text-center">
+            <div class="badge bg-primary mb-2">Non-RTO Certified</div>
+            <div class="small fw-bold text-dark mb-1">Zero License Required</div>
+            <div class="text-muted small mb-2" style="font-size:0.75rem;">Speed &lt;25 km/h. Complete with 5% GST &amp; turnkey fitment.</div>
+            <button type="button" class="btn btn-success btn-sm w-100 fw-bold" onclick="openBookingModal('Manthra EV Series', 'EV-ALL'); ${isMobile ? 'closeMobileSidebar();' : ''}">
+              <i class="fas fa-motorcycle me-1"></i> Book Free Test Ride
+            </button>
+          </div>
+        `;
+      } else {
+        // Standard EV Spares Filters
+        return `
+          <!-- Active Filters -->
+          <div id="${pfx}activeFiltersBox" style="display: none;">
+            <div class="sidebar-section-title d-flex justify-content-between align-items-center">
+              <span><i class="fas fa-sliders-h me-1 text-primary"></i> Active Filters</span>
+              <button type="button" onclick="clearAllFilters(); ${isMobile ? 'closeMobileSidebar();' : ''}" class="btn-clear-all">Clear all</button>
+            </div>
+            <div id="${pfx}activeFilterTags" class="d-flex flex-wrap gap-1 mb-2"></div>
+            <hr class="sidebar-divider">
+          </div>
+
+          <!-- Category Dropdown Filter -->
+          <div class="sidebar-section-title"><i class="fas fa-layer-group me-2"></i> CATEGORY</div>
+          <div class="cat-dropdown mb-3" id="${pfx}catDropdown">
+            <button type="button" class="cat-dd-btn" id="${pfx}catDdBtn" onclick="${isMobile ? 'toggleCatDropdownM()' : 'toggleCatDropdown()'}">
+              <i class="fas fa-list-check text-muted" style="font-size: 0.85rem;"></i>
+              <span class="dd-label" id="${pfx}catDdLabel">All Categories</span>
+              <span class="dd-count" id="${pfx}catDdCount"></span>
+              <i class="fas fa-chevron-down chevron ms-auto"></i>
+            </button>
+            <div class="cat-dd-panel" id="${pfx}catDdPanel">
+              <div class="cat-dd-actions">
+                <button type="button" onclick="selectAllCats()">✓ All</button>
+                <button type="button" onclick="clearAllCats()">✕ None</button>
+              </div>
+              <div class="cat-check-wrap" id="${isMobile ? 'catListMobile' : 'catList'}">
+                <!-- Loaded dynamically from /api/v1/marketplace/categories -->
+              </div>
+            </div>
+          </div>
+
+          <hr class="sidebar-divider">
+
+          <!-- Vehicle Model Filter -->
+          <div class="sidebar-section-title"><i class="fas fa-motorcycle me-2"></i> VEHICLE MODEL</div>
+          <select class="form-select form-select-sm mb-3" id="${isMobile ? 'modelSelectMobile' : 'modelSelect'}" onchange="applyDropdownFilter('model', this.value); ${isMobile ? 'closeMobileSidebar();' : ''}">
+            <option value="">All Models</option>
+          </select>
+
+          <!-- Specification Filter -->
+          <div class="sidebar-section-title"><i class="fas fa-tag me-2"></i> SPECIFICATION</div>
+          <select class="form-select form-select-sm mb-3" id="${isMobile ? 'specSelectMobile' : 'specSelect'}" onchange="applyDropdownFilter('spec', this.value); ${isMobile ? 'closeMobileSidebar();' : ''}">
+            <option value="">All Specs</option>
+          </select>
+
+          <hr class="sidebar-divider">
+
+          <!-- Price Range Filter -->
+          <div class="sidebar-section-title"><i class="fas fa-indian-rupee-sign me-2"></i> PRICE RANGE (EXCL. TAX)</div>
+          <div class="d-flex gap-2 mb-2">
+            <input type="number" id="${isMobile ? 'minPriceMobile' : 'minPrice'}" class="form-control form-control-sm" placeholder="Min ₹" min="0">
+            <input type="number" id="${isMobile ? 'maxPriceMobile' : 'maxPrice'}" class="form-control form-control-sm" placeholder="Max ₹" min="0">
+          </div>
+          <button type="button" class="btn-sidebar-apply mb-2" onclick="${isMobile ? 'applyMobilePriceFilter(); closeMobileSidebar();' : 'applyPriceFilter()'}">Apply</button>
+          <button type="button" class="btn-sidebar-reset" onclick="resetPriceFilter(); ${isMobile ? 'closeMobileSidebar();' : ''}">Reset</button>
+        `;
+      }
+    };
+
+    if (dWrap) dWrap.innerHTML = buildFiltersHtml(false);
+    if (mWrap) mWrap.innerHTML = buildFiltersHtml(true);
+  };
+
+  // ── EV Models Filtering & Rendering ─────────────────────────────────────
+  window.filterEvVehicles = function() {
+    let list = EV_COMPLETE_MODELS.slice();
+
+    if (STATE.evModel) {
+      list = list.filter(m => m.id === STATE.evModel);
+    }
+    if (STATE.evCategory) {
+      list = list.filter(m => m.category === STATE.evCategory);
+    }
+    if (STATE.evBatteryTech) {
+      list = list.filter(m => Object.keys(m.variants).some(vk => vk.startsWith(STATE.evBatteryTech)));
+    }
+    if (STATE.evMinPrice != null) {
+      list = list.filter(m => Math.max(...Object.values(m.variants).map(v => v.price)) >= STATE.evMinPrice);
+    }
+    if (STATE.evMaxPrice != null) {
+      list = list.filter(m => Math.min(...Object.values(m.variants).map(v => v.price)) <= STATE.evMaxPrice);
+    }
+    if (STATE.search) {
+      const q = STATE.search.toLowerCase();
+      list = list.filter(m => m.name.toLowerCase().includes(q) || m.subtitle.toLowerCase().includes(q));
+    }
+
+    const countText = document.getElementById('productsCountText');
+    if (countText) {
+      countText.innerHTML = `Showing <strong>${list.length}</strong> of ${EV_COMPLETE_MODELS.length} certified EV models`;
+    }
+
+    renderEvModelCards(list);
+  };
+
+  function renderEvModelCards(models) {
+    const grid = document.getElementById('productsGrid');
+    if (!grid) return;
+
+    if (!models.length) {
+      grid.innerHTML = '<div class="text-center py-5 w-100 text-muted">No EV models match your filter criteria.</div>';
+      return;
+    }
+
+    grid.innerHTML = models.map(m => {
+      const activeVarKey = STATE.evModelSelection[m.id] || m.defaultVariant;
+      const activeVar = m.variants[activeVarKey] || Object.values(m.variants)[0];
+
+      const variantButtons = Object.entries(m.variants).map(([vk, v]) => `
+        <button type="button" class="battery-chip-btn ${vk === activeVarKey ? 'active' : ''}"
+                onclick="selectModelBattery('${m.id}', '${vk}')">
+          <span>${escapeHtml(v.name)}</span>
+          <span class="chip-sub ${v.warrantyClass || 'text-primary'}">${escapeHtml(v.warranty.startsWith('9') ? '9 Mo Warranty' : '3 Yrs Warranty')}</span>
+        </button>
+      `).join('');
+
+      const specItems = Object.entries(m.specs).map(([label, val]) => `
+        <div class="spec-preview-cell">
+          <span class="spec-cell-label">${escapeHtml(label)}</span>
+          <span class="spec-cell-val font-mono">${escapeHtml(val)}</span>
+        </div>
+      `).join('');
+
+      const fullSpecItems = m.fullSpecs.map(fs => `
+        <div class="d-flex justify-content-between py-1 border-bottom border-light small">
+          <span class="text-muted">${escapeHtml(fs.k)}</span>
+          <strong class="text-navy-900">${escapeHtml(fs.v)}</strong>
+        </div>
+      `).join('');
+
+      const waMsg = `Hello! I am interested in the ${m.name} Electric Scooter (${activeVar.name}, ₹${activeVar.price.toLocaleString('en-IN')}). Please share test ride details.`;
+
+      return `
+        <div class="ev-model-card" id="card-${m.id}">
+          <div class="ev-badge-float">
+            <span class="pill-badge ${m.badgeClass || 'pill-lime'}">${escapeHtml(m.tagBadge)}</span>
+          </div>
+
+          <div class="ev-img-stage">
+            <img src="${m.imgStudio}" id="img-${m.id}" alt="${escapeHtml(m.name)}" class="main-img" onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+            <div class="ev-thumb-row">
+              <button type="button" class="ev-thumb-item active" onclick="switchCardImage('${m.id}', '${m.imgStudio}', this)" title="Studio View">
+                <img src="${m.imgStudio}" alt="Studio">
+              </button>
+              <button type="button" class="ev-thumb-item" onclick="switchCardImage('${m.id}', '${m.imgFleet}', this)" title="Fleet View">
+                <img src="${m.imgFleet}" alt="Fleet">
+              </button>
+            </div>
+          </div>
+
+          <div class="ev-card-body">
+            <div class="d-flex justify-content-between align-items-baseline mb-1">
+              <h4 class="fw-800 text-navy-900 fs-5 mb-0">${escapeHtml(m.name)}</h4>
+              <span class="badge bg-light text-dark font-mono border" style="font-size: 0.72rem;">${escapeHtml(m.categoryLabel)}</span>
+            </div>
+            <p class="text-muted small mb-2" style="font-size: 0.8rem; line-height: 1.35;">${escapeHtml(m.subtitle)}</p>
+
+            <!-- Battery Selector -->
+            <div class="sidebar-section-title mb-1" style="font-size: 0.72rem;"><i class="fas fa-battery-three-quarters me-1 text-success"></i> SELECT BATTERY &amp; WARRANTY</div>
+            <div class="battery-chip-group" id="chips-${m.id}">
+              ${variantButtons}
+            </div>
+
+            <!-- Price Hero Box -->
+            <div class="price-hero-box d-flex justify-content-between align-items-center">
+              <div>
+                <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 10px;">Customer On-Road Price</small>
+                <div class="price-val font-mono" id="price-${m.id}">₹${activeVar.price.toLocaleString('en-IN')}</div>
+                <small class="text-muted" style="font-size: 9.5px;">Includes 5% GST &amp; fitment</small>
+              </div>
+              <div class="text-end">
+                <span class="pill-badge pill-amber font-mono" id="range-${m.id}">${escapeHtml(activeVar.range)}</span>
+                <div class="text-muted small mt-1" id="warranty-${m.id}" style="font-size: 11px;">${escapeHtml(activeVar.warranty)}</div>
+              </div>
+            </div>
+
+            <!-- Specification Preview Grid -->
+            <div class="spec-preview-grid">
+              ${specItems}
+            </div>
+
+            <!-- Full Specs Accordion -->
+            <div class="accordion mb-3" id="acc-${m.id}">
+              <div class="accordion-item border-0 bg-light rounded">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed py-2 px-3 small fw-bold bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-${m.id}">
+                    <i class="fas fa-sliders-h me-2 text-primary"></i> View Specifications
+                  </button>
+                </h2>
+                <div id="collapse-${m.id}" class="accordion-collapse collapse" data-bs-parent="#acc-${m.id}">
+                  <div class="accordion-body p-3 pt-0">
+                    ${fullSpecItems}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="mt-auto d-grid gap-2">
+              <button class="btn btn-primary btn-sm fw-bold py-2" onclick="openBookingModal('${m.name}', '${m.id}')">
+                <i class="fas fa-calendar-check me-1"></i> Book Free Test Ride
+              </button>
+              <a href="https://wa.me/918585852738?text=${encodeURIComponent(waMsg)}" target="_blank" class="btn btn-outline-success btn-sm fw-bold py-1 text-center">
+                <i class="fab fa-whatsapp me-1"></i> WhatsApp Inquiry
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.selectModelBattery = function(modelId, variantKey) {
+    STATE.evModelSelection[modelId] = variantKey;
+    const model = EV_COMPLETE_MODELS.find(m => m.id === modelId);
+    if (!model) return;
+    const variant = model.variants[variantKey];
+    if (!variant) return;
+
+    const card = document.getElementById(`card-${modelId}`);
+    if (!card) return;
+
+    const priceEl = document.getElementById(`price-${modelId}`);
+    if (priceEl) priceEl.textContent = `₹${variant.price.toLocaleString('en-IN')}`;
+
+    const rangeEl = document.getElementById(`range-${modelId}`);
+    if (rangeEl) rangeEl.textContent = variant.range;
+
+    const warEl = document.getElementById(`warranty-${modelId}`);
+    if (warEl) warEl.textContent = variant.warranty;
+
+    card.querySelectorAll('.battery-chip-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('onclick')?.includes(`'${variantKey}'`));
+    });
+  };
+
+  window.switchCardImage = function(modelId, src, btn) {
+    const img = document.getElementById(`img-${modelId}`);
+    if (img) img.src = src;
+    const card = document.getElementById(`card-${modelId}`);
+    if (card) {
+      card.querySelectorAll('.ev-thumb-item').forEach(b => b.classList.remove('active'));
+    }
+    if (btn) btn.classList.add('active');
+  };
+
+  window.applyEvModelFilter = function(val, field) {
+    if (field === 'model') STATE.evModel = val;
+    else if (field === 'category') STATE.evCategory = val;
+    else if (field === 'tech') STATE.evBatteryTech = val;
+    filterEvVehicles();
+  };
+
+  window.applyEvPriceFilter = function(pfx) {
+    const minVal = parseFloat(document.getElementById(`${pfx}evMinPrice`)?.value);
+    const maxVal = parseFloat(document.getElementById(`${pfx}evMaxPrice`)?.value);
+    STATE.evMinPrice = (!isNaN(minVal) && minVal >= 0) ? minVal : null;
+    STATE.evMaxPrice = (!isNaN(maxVal) && maxVal >= 0) ? maxVal : null;
+    filterEvVehicles();
+  };
+
+  window.resetEvModelFilters = function() {
+    STATE.evModel = '';
+    STATE.evCategory = '';
+    STATE.evBatteryTech = '';
+    STATE.evMinPrice = null;
+    STATE.evMaxPrice = null;
+    renderSidebarFilters('ev');
+    filterEvVehicles();
+  };
+
+  // ── Solar Packages Filtering & Rendering ────────────────────────────────
+  window.filterSolarPackages = function() {
+    let list = SOLAR_PACKAGES.slice();
+
+    if (STATE.subCategory === 'kits') list = list.filter(p => p.type === 'kit');
+    else if (STATE.subCategory === 'inverters') list = list.filter(p => p.type === 'inverter');
+    else if (STATE.subCategory === 'structures' || STATE.subCategory === 'accessories') list = [];
+
+    if (STATE.solarKw) {
+      list = list.filter(p => p.kw && String(p.kw) === STATE.solarKw);
+    }
+    if (STATE.solarBrand) {
+      list = list.filter(p => p.brand && p.brand === STATE.solarBrand);
+    }
+    if (STATE.solarType) {
+      list = list.filter(p => p.type === STATE.solarType);
+    }
+    if (STATE.solarMinPrice != null) {
+      list = list.filter(p => p.netCost >= STATE.solarMinPrice);
+    }
+    if (STATE.solarMaxPrice != null) {
+      list = list.filter(p => p.netCost <= STATE.solarMaxPrice);
+    }
+    if (STATE.search) {
+      const q = STATE.search.toLowerCase();
+      list = list.filter(p => p.title.toLowerCase().includes(q) || (p.brandName && p.brandName.toLowerCase().includes(q)));
+    }
+
+    const countText = document.getElementById('productsCountText');
+    if (countText) {
+      countText.innerHTML = `Showing <strong>${list.length}</strong> of ${SOLAR_PACKAGES.length} solar turnkey solutions`;
+    }
+
+    renderSolarCards(list);
+  };
+
+  function renderSolarCards(packages) {
+    const grid = document.getElementById('productsGrid');
+    if (!grid) return;
+
+    if (!packages.length) {
+      grid.innerHTML = '<div class="text-center py-5 w-100 text-muted">No solar solutions match your filter criteria.</div>';
+      return;
+    }
+
+    grid.innerHTML = packages.map(p => {
+      const isKit = p.type === 'kit';
+      const waMsg = isKit
+        ? `Hello MyntReal Solar! I am interested in ${p.title} with PM Surya Ghar ₹${p.subsidy.toLocaleString('en-IN')} subsidy (Net: ₹${p.netCost.toLocaleString('en-IN')}). Please arrange a site survey.`
+        : `Hello MyntReal Solar! I am interested in ${p.title} (₹${p.netCost.toLocaleString('en-IN')}). Please share technical details.`;
+
+      const featureItems = (p.features || []).map(f => `
+        <div class="solar-spec-row">
+          <span><i class="fas fa-check text-success me-2"></i>${escapeHtml(f)}</span>
+        </div>
+      `).join('');
+
+      return `
+        <div class="solar-card" id="solar-${p.id || p.kw}">
+          <div class="solar-card-header d-flex justify-content-between align-items-center">
+            <div>
+              <span class="badge bg-warning text-dark fw-bold mb-1">${escapeHtml(p.brandName || 'Tier-1 Solar')}</span>
+              <h5 class="fw-800 text-white mb-0 fs-6">${escapeHtml(p.title)}</h5>
+            </div>
+            <span class="solar-subsidy-badge">${escapeHtml(p.badge)}</span>
+          </div>
+
+          <div style="position: relative; height: 160px; overflow: hidden; background: #0f172a;">
+            <img src="${p.img}" alt="${escapeHtml(p.title)}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.9;" onerror="this.src='/public/hub/Assets/har-ghar-solar-real-installation.jpg'">
+            ${p.popular ? '<span class="badge bg-danger position-absolute top-2 start-2 m-2 fw-bold">MOST POPULAR</span>' : ''}
+          </div>
+
+          <div class="solar-card-body">
+            ${isKit ? `
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small text-muted"><i class="fas fa-chart-line text-primary me-1"></i> Generation: <strong>${p.units}</strong></span>
+                <span class="small text-success fw-bold"><i class="fas fa-piggy-bank me-1"></i> Save: ${p.savings}</span>
+              </div>
+              <div class="small text-muted mb-2"><i class="fas fa-home me-1 text-secondary"></i> Roof Area Required: <strong>${p.roofSqft}</strong></div>
+            ` : ''}
+
+            <!-- Price Box -->
+            <div class="solar-price-block">
+              <div class="d-flex justify-content-between align-items-baseline">
+                <div>
+                  <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 10px;">Net Effective Cost</small>
+                  <div class="solar-net-price">₹${p.netCost.toLocaleString('en-IN')}</div>
+                </div>
+                ${isKit ? `
+                  <div class="text-end">
+                    <div class="solar-gross-strike">₹${p.baseCost.toLocaleString('en-IN')}</div>
+                    <span class="badge bg-success" style="font-size: 10px;">-₹${p.subsidy.toLocaleString('en-IN')} Subsidy</span>
+                  </div>
+                ` : ''}
+              </div>
+              ${isKit ? '<small class="text-muted d-block mt-1" style="font-size: 10px;">Direct DBT bank subsidy credit under PM Surya Ghar Yojana</small>' : ''}
+            </div>
+
+            <!-- Feature Highlights -->
+            <div class="mb-3">
+              ${featureItems}
+            </div>
+
+            <!-- CTAs -->
+            <div class="mt-auto d-grid gap-2">
+              <button class="btn btn-warning btn-sm fw-bold text-dark py-2" onclick="openSolarSurveyModal('${p.title}')">
+                <i class="fas fa-clipboard-check me-1"></i> Book Free Site Survey
+              </button>
+              <a href="https://wa.me/918585852738?text=${encodeURIComponent(waMsg)}" target="_blank" class="btn btn-outline-success btn-sm fw-bold py-1 text-center">
+                <i class="fab fa-whatsapp me-1"></i> WhatsApp Solar Expert
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.applySolarFilter = function(val, field) {
+    if (field === 'kw') STATE.solarKw = val;
+    else if (field === 'brand') STATE.solarBrand = val;
+    else if (field === 'type') STATE.solarType = val;
+    filterSolarPackages();
+  };
+
+  window.applySolarPriceFilter = function(pfx) {
+    const minVal = parseFloat(document.getElementById(`${pfx}solarMinPrice`)?.value);
+    const maxVal = parseFloat(document.getElementById(`${pfx}solarMaxPrice`)?.value);
+    STATE.solarMinPrice = (!isNaN(minVal) && minVal >= 0) ? minVal : null;
+    STATE.solarMaxPrice = (!isNaN(maxVal) && maxVal >= 0) ? maxVal : null;
+    filterSolarPackages();
+  };
+
+  window.resetSolarFilters = function() {
+    STATE.solarKw = '';
+    STATE.solarBrand = '';
+    STATE.solarType = '';
+    STATE.solarMinPrice = null;
+    STATE.solarMaxPrice = null;
+    renderSidebarFilters('solar');
+    filterSolarPackages();
+  };
+
+  // ── Real Dreams Filters ─────────────────────────────────────────────────
+  window.applyRdFilter = function(val, field) {
+    if (field === 'type') STATE.rdType = val;
+    else if (field === 'corridor') STATE.rdCorridor = val;
+    else if (field === 'bhk') STATE.rdBhk = val;
+    else if (field === 'possession') STATE.rdPossession = val;
+    else if (field === 'bike') STATE.rdBikeOffer = !!val;
+    filterRealDreamsProperties();
+  };
+
+  window.applyRdPriceFilter = function(pfx) {
+    const minVal = parseFloat(document.getElementById(`${pfx}rdMinPrice`)?.value);
+    const maxVal = parseFloat(document.getElementById(`${pfx}rdMaxPrice`)?.value);
+    STATE.rdMinPrice = (!isNaN(minVal) && minVal >= 0) ? minVal : null;
+    STATE.rdMaxPrice = (!isNaN(maxVal) && maxVal >= 0) ? maxVal : null;
+    filterRealDreamsProperties();
+  };
+
+  window.resetRdFilters = function() {
+    STATE.rdType = '';
+    STATE.rdCorridor = '';
+    STATE.rdBhk = '';
+    STATE.rdPossession = '';
+    STATE.rdBikeOffer = false;
+    STATE.rdMinPrice = null;
+    STATE.rdMaxPrice = null;
+    renderSidebarFilters('real-dreams');
+    filterRealDreamsProperties();
   };
 
   // ── Category & Filter Management ───────────────────────────────────────
@@ -2632,6 +3958,19 @@ body {
   };
 
   window.clearAllFilters = function() {
+    if (STATE.vertical === 'real-dreams') {
+      resetRdFilters();
+      return;
+    }
+    if (STATE.vertical === 'solar') {
+      resetSolarFilters();
+      return;
+    }
+    if (STATE.vertical === 'ev' && STATE.subCategory === 'vehicles') {
+      resetEvModelFilters();
+      return;
+    }
+
     STATE.selectedCats.clear();
     STATE.model = '';
     STATE.spec = '';
@@ -2722,8 +4061,21 @@ body {
     document.getElementById('sidebarDrawer')?.classList.remove('open');
   };
 
+  if (typeof window !== 'undefined') {
+    window.addEventListener('DOMContentLoaded', () => {
+      const q = new URLSearchParams(window.location.search);
+      if (q.get('filters') === 'open' || window.location.hash === '#filters') {
+        setTimeout(() => { if (typeof openMobileSidebar === 'function') openMobileSidebar(); }, 80);
+      }
+    });
+  }
+
   // ── API Product Loading ─────────────────────────────────────────────────
   async function loadProducts() {
+    if (STATE.vertical !== 'ev' || STATE.subCategory === 'vehicles') {
+      return;
+    }
+
     const grid = document.getElementById('productsGrid');
     const countText = document.getElementById('productsCountText');
     grid.innerHTML = '<div class="text-center py-5 w-100"><i class="fas fa-spinner fa-spin fa-2x text-primary mb-3"></i><div class="fw-bold">Loading products...</div></div>';
@@ -2765,6 +4117,10 @@ body {
       const res = await fetch(`/api/v1/marketplace/products?${params.toString()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+
+      if (STATE.vertical !== 'ev' || STATE.subCategory === 'vehicles') {
+        return;
+      }
 
       STATE.products = data.products || [];
       STATE.totalProducts = data.total || 0;
@@ -3321,101 +4677,155 @@ Please confirm dispatch details.`;
   };
 
   // ── Real Dreams Properties Section ──────────────────────────────────────
-  async function loadRealDreamsProperties() {
-    const list = document.getElementById('realDreamsPropertiesList');
-    list.innerHTML = '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x text-success mb-3"></i><div>Loading verified properties...</div></div>';
+  window.filterRealDreamsProperties = function() {
+    let list = REAL_DREAMS_PROPERTIES.slice();
 
-    try {
-      const res = await fetch(`/api/v1/real-dreams/public/properties?company_id=${COMPANY_ID}&page=1&limit=10`);
-      const data = await res.json();
-      const props = data.properties || [];
-      STATE.rdProperties = props;
-      renderRealDreamsCards(props);
-    } catch (err) {
-      console.error('[Real Dreams] Error loading properties:', err);
-      // Render verified master showcase fallback if API call fails
-      renderRealDreamsCards([{
-        id: 1,
-        title: 'Anandas Royal Imperia',
-        city: 'Visakhapatnam',
-        landmark: 'Near Old Toll Plaza, Pendurthi',
-        bedrooms: 3,
-        total_area: 1650,
-        area_unit: 'SQ_FT',
-        listed_price: 6500000,
-        rera_id: 'P03290123456',
-        brochure_url: '/storage/real_dreams/1/staged/df3236747796.pdf'
-      }]);
+    if (STATE.rdType) {
+      list = list.filter(p => p.propertyType === STATE.rdType);
     }
-  }
+    if (STATE.rdCorridor) {
+      list = list.filter(p => p.corridor === STATE.rdCorridor);
+    }
+    if (STATE.rdBhk) {
+      list = list.filter(p => String(p.bedrooms) === String(STATE.rdBhk));
+    }
+    if (STATE.rdPossession) {
+      list = list.filter(p => p.possessionStatus === STATE.rdPossession);
+    }
+    if (STATE.rdBikeOffer) {
+      list = list.filter(p => p.freeBikeOffer === true);
+    }
+    if (STATE.rdMinPrice != null) {
+      list = list.filter(p => p.priceMaxLakh >= STATE.rdMinPrice);
+    }
+    if (STATE.rdMaxPrice != null) {
+      list = list.filter(p => p.priceMinLakh <= STATE.rdMaxPrice);
+    }
+    if (STATE.search) {
+      const q = STATE.search.toLowerCase();
+      list = list.filter(p => p.title.toLowerCase().includes(q) || p.location.toLowerCase().includes(q) || (p.propertyTypeLabel && p.propertyTypeLabel.toLowerCase().includes(q)));
+    }
+
+    const countText = document.getElementById('productsCountText');
+    if (countText) {
+      countText.innerHTML = `Showing <strong>${list.length}</strong> of ${REAL_DREAMS_PROPERTIES.length} verified premium properties`;
+    }
+
+    renderRealDreamsCards(list);
+  };
 
   function renderRealDreamsCards(props) {
     const list = document.getElementById('realDreamsPropertiesList');
+    if (!list) return;
+
     if (!props.length) {
-      list.innerHTML = '<div class="text-center py-5 text-muted">No properties found.</div>';
+      list.innerHTML = `
+        <div class="text-center py-5 w-100 bg-white rounded-4 border p-4">
+          <i class="fas fa-home fa-3x text-muted mb-3"></i>
+          <h5 class="fw-bold">No properties match your filter</h5>
+          <p class="text-muted small">Try clearing your filters to see all available properties.</p>
+          <button class="btn btn-sm btn-primary" onclick="resetRdFilters()">Reset Filters</button>
+        </div>`;
       return;
     }
 
     list.innerHTML = props.map(p => {
+      const photos = (p.photos && p.photos.length > 0) ? p.photos : RD_STAGED_PHOTOS;
       const slideIdx = STATE.rdCurrentSlide[p.id] || 0;
-      const curImg = RD_STAGED_PHOTOS[slideIdx % RD_STAGED_PHOTOS.length];
-      const dotsHtml = RD_STAGED_PHOTOS.map((_, i) => `
-        <span class="rd-dot ${i === slideIdx ? 'active' : ''}" onclick="setRdSlide(${p.id}, ${i})"></span>
+      const curImg = photos[slideIdx % photos.length];
+      const dotsHtml = photos.map((_, i) => `
+        <span class="rd-dot ${i === (slideIdx % photos.length) ? 'active' : ''}" onclick="setRdSlide(${p.id}, ${i})"></span>
       `).join('');
 
+      const isRera = p.reraId && p.reraId.startsWith('P');
+      const reraBadgeHtml = isRera
+        ? `<span class="rd-badge rd-badge-rera"><i class="fas fa-check-circle me-1"></i> RERA Approved: ${escapeHtml(p.reraId)}</span>`
+        : `<span class="rd-badge rd-badge-rera" style="background: rgba(13, 148, 136, 0.9);"><i class="fas fa-certificate me-1"></i> ${escapeHtml(p.reraId)}</span>`;
+
+      const bikeBannerHtml = p.freeBikeOffer ? `
+        <div class="bike-offer-banner d-flex align-items-center mb-3">
+          <div class="bike-icon-box me-3">
+            <i class="fas fa-motorcycle fa-lg text-primary"></i>
+          </div>
+          <div>
+            <div class="fw-bold text-navy-900" style="font-size: 0.88rem;">🎁 Special Promotional Privilege</div>
+            <div class="small text-muted" style="font-size: 0.8rem;">${escapeHtml(p.bikeOfferText || 'Complimentary Mynt Electric Bike included with booking!')}</div>
+          </div>
+          <span class="badge bg-danger ms-auto d-none d-md-inline-block">FREE BIKE</span>
+        </div>
+      ` : '';
+
+      const featuresHtml = (p.features || []).map(f => `
+        <span class="badge bg-light text-dark border me-1 mb-1 font-mono" style="font-size: 0.75rem; font-weight: 500;">
+          <i class="fas fa-check text-success me-1"></i>${escapeHtml(f)}
+        </span>
+      `).join('');
+
+      const waMsg = `Hello Real Dreams! I am interested in ${p.title} (${p.bhkLabel} at ${p.location}). Please share availability and payment plans.`;
+
       return `
-        <div class="rd-property-card" id="rd-card-${p.id}">
+        <div class="rd-property-card mb-4" id="rd-card-${p.id}">
           <div class="rd-card-carousel-wrap">
             <div class="rd-top-badges">
-              <span class="rd-badge rd-badge-rera"><i class="fas fa-check-circle me-1"></i> RERA Approved</span>
-              <span class="rd-badge rd-badge-type">Luxury Gated Community</span>
+              ${reraBadgeHtml}
+              <span class="rd-badge rd-badge-type">${escapeHtml(p.propertyTypeLabel)}</span>
             </div>
-            <img src="${curImg}" class="rd-carousel-img" id="rd-img-${p.id}" alt="${escapeHtml(p.title)}">
-            <button class="rd-carousel-nav-btn prev" onclick="prevRdSlide(${p.id})"><i class="fas fa-chevron-left"></i></button>
-            <button class="rd-carousel-nav-btn next" onclick="nextRdSlide(${p.id})"><i class="fas fa-chevron-right"></i></button>
-            <div class="rd-carousel-dots" id="rd-dots-${p.id}">
-              ${dotsHtml}
-            </div>
+            <img src="${curImg}" class="rd-carousel-img" id="rd-img-${p.id}" alt="${escapeHtml(p.title)}" onerror="this.src='/storage/real_dreams/1/staged/ca76c222a7c9.png'">
+            ${photos.length > 1 ? `
+              <button class="rd-carousel-nav-btn prev" onclick="prevRdSlide(${p.id})"><i class="fas fa-chevron-left"></i></button>
+              <button class="rd-carousel-nav-btn next" onclick="nextRdSlide(${p.id})"><i class="fas fa-chevron-right"></i></button>
+              <div class="rd-carousel-dots" id="rd-dots-${p.id}">
+                ${dotsHtml}
+              </div>
+            ` : ''}
           </div>
 
           <div class="rd-card-content">
-            <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2 mb-2">
-              <h4 class="rd-card-title">${escapeHtml(p.title)}</h4>
-              <div class="fs-4 fw-bold text-success">₹55.0 Lakh – ₹85.0 Lakh <small class="text-muted fs-6 fw-normal">(₹3,800/sq.ft.)</small></div>
+            <div class="d-flex justify-content-between align-items-baseline flex-wrap gap-2 mb-1">
+              <h4 class="rd-card-title mb-0">${escapeHtml(p.title)}</h4>
+              <div class="fs-4 fw-bold text-success">${escapeHtml(p.priceDisplay)} <small class="text-muted fs-6 fw-normal">(${escapeHtml(p.ratePerSqFt)})</small></div>
             </div>
-            <div class="rd-card-loc"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${escapeHtml(p.landmark || 'Pendurthi')}, ${escapeHtml(p.city || 'Visakhapatnam')}</div>
+            <div class="rd-card-loc mb-3"><i class="fas fa-map-marker-alt text-danger me-1"></i> ${escapeHtml(p.location)}</div>
 
-            <div class="rd-specs-grid">
+            ${bikeBannerHtml}
+
+            <div class="rd-specs-grid mb-3">
               <div class="rd-spec-box">
                 <span class="rd-spec-label">Configuration</span>
-                <span class="rd-spec-val">3 BHK Flats</span>
+                <span class="rd-spec-val">${escapeHtml(p.bhkLabel)}</span>
               </div>
               <div class="rd-spec-box">
-                <span class="rd-spec-label">Carpet Area</span>
-                <span class="rd-spec-val">1,450 – 1,850 Sq.Ft.</span>
+                <span class="rd-spec-label">Area</span>
+                <span class="rd-spec-val">${escapeHtml(p.carpetArea)}</span>
               </div>
               <div class="rd-spec-box">
-                <span class="rd-spec-label">Community Area</span>
-                <span class="rd-spec-val">2.0 Acres Gated</span>
+                <span class="rd-spec-label">Community / Floors</span>
+                <span class="rd-spec-val">${escapeHtml(p.communityArea)}</span>
               </div>
               <div class="rd-spec-box">
-                <span class="rd-spec-label">Total Units</span>
-                <span class="rd-spec-val">120 Units • Ready</span>
+                <span class="rd-spec-label">Possession</span>
+                <span class="rd-spec-val">${escapeHtml(p.possessionLabel)}</span>
               </div>
+            </div>
+
+            <div class="mb-3">
+              ${featuresHtml}
             </div>
 
             <div class="rd-actions-bar">
-              <button class="btn-rd-primary" onclick="openSiteVisitModal()">
-                <i class="fas fa-calendar-check"></i> Schedule Site Visit
+              <button class="btn-rd-primary" onclick="openSiteVisitModal('${escapeHtml(p.title)}', ${p.id})">
+                <i class="fas fa-calendar-check me-1"></i> Schedule Site Visit
               </button>
-              <a href="/storage/real_dreams/1/staged/df3236747796.pdf" download="Anandas_Royal_Imperia_Brochure.pdf" target="_blank" class="btn-rd-secondary">
-                <i class="fas fa-file-pdf text-danger"></i> Download Brochure (16.1 MB)
+              ${p.brochureUrl ? `
+                <a href="${p.brochureUrl}" download="${p.title.replace(/\\s+/g, '_')}_Brochure.pdf" target="_blank" class="btn-rd-secondary">
+                  <i class="fas fa-file-pdf text-danger me-1"></i> Download Brochure (${p.brochureSize})
+                </a>
+              ` : ''}
+              <a href="https://wa.me/918585852738?text=${encodeURIComponent(waMsg)}" target="_blank" class="btn-rd-whatsapp">
+                <i class="fab fa-whatsapp me-1"></i> WhatsApp Concierge
               </a>
-              <a href="https://wa.me/918585852738?text=Hello%2C%20I%20am%20interested%20in%20Anandas%20Royal%20Imperia%20Visakhapatnam" target="_blank" class="btn-rd-whatsapp">
-                <i class="fab fa-whatsapp"></i> WhatsApp Concierge
-              </a>
-              <a href="/real_dreams_property_detail.html?id=${p.id}" class="btn btn-link text-decoration-none ms-auto">
-                View Full Details <i class="fas fa-arrow-right ms-1"></i>
+              <a href="/real_dreams_property_detail.html?id=${p.id}" class="btn btn-link text-decoration-none ms-auto fw-bold" style="font-size: 0.85rem;">
+                View Details <i class="fas fa-arrow-right ms-1"></i>
               </a>
             </div>
           </div>
@@ -3425,9 +4835,12 @@ Please confirm dispatch details.`;
   }
 
   window.setRdSlide = function(propId, idx) {
+    const p = REAL_DREAMS_PROPERTIES.find(x => x.id === propId);
+    const photos = (p && p.photos && p.photos.length > 0) ? p.photos : RD_STAGED_PHOTOS;
+    idx = (idx + photos.length) % photos.length;
     STATE.rdCurrentSlide[propId] = idx;
     const img = document.getElementById(`rd-img-${propId}`);
-    if (img) img.src = RD_STAGED_PHOTOS[idx];
+    if (img) img.src = photos[idx];
     const dotsWrap = document.getElementById(`rd-dots-${propId}`);
     if (dotsWrap) {
       dotsWrap.querySelectorAll('.rd-dot').forEach((d, i) => {
@@ -3437,28 +4850,47 @@ Please confirm dispatch details.`;
   };
 
   window.prevRdSlide = function(propId) {
+    const p = REAL_DREAMS_PROPERTIES.find(x => x.id === propId);
+    const photos = (p && p.photos && p.photos.length > 0) ? p.photos : RD_STAGED_PHOTOS;
     let cur = STATE.rdCurrentSlide[propId] || 0;
-    cur = (cur - 1 + RD_STAGED_PHOTOS.length) % RD_STAGED_PHOTOS.length;
+    cur = (cur - 1 + photos.length) % photos.length;
     setRdSlide(propId, cur);
   };
 
   window.nextRdSlide = function(propId) {
+    const p = REAL_DREAMS_PROPERTIES.find(x => x.id === propId);
+    const photos = (p && p.photos && p.photos.length > 0) ? p.photos : RD_STAGED_PHOTOS;
     let cur = STATE.rdCurrentSlide[propId] || 0;
-    cur = (cur + 1) % RD_STAGED_PHOTOS.length;
+    cur = (cur + 1) % photos.length;
     setRdSlide(propId, cur);
   };
 
   // ── Site Visit Modal (Real Dreams) ──────────────────────────────────────
-  window.openSiteVisitModal = function() {
+  window.openSiteVisitModal = function(propTitle, propId) {
+    const titleEl = document.getElementById('svPropertyDisplay');
+    if (titleEl && propTitle) {
+      titleEl.value = propTitle;
+    }
+    STATE.selectedPropertyId = propId || 1;
     const today = new Date().toISOString().split('T')[0];
-    document.getElementById('svDate').min = today;
-    document.getElementById('svDate').value = today;
+    const svDate = document.getElementById('svDate');
+    if (svDate) {
+      svDate.min = today;
+      svDate.value = today;
+    }
+    const errEl = document.getElementById('svError');
+    const succEl = document.getElementById('svSuccess');
+    if (errEl) errEl.style.display = 'none';
+    if (succEl) succEl.style.display = 'none';
     const modalEl = document.getElementById('rdSiteVisitModal');
-    const modal = new bootstrap.Modal(modalEl);
-    modal.show();
+    if (modalEl) {
+      const modal = new bootstrap.Modal(modalEl);
+      modal.show();
+    }
   };
 
   window.submitSiteVisit = async function() {
+    const propTitle = document.getElementById('svPropertyDisplay')?.value || 'Anandas Royal Imperia';
     const name = document.getElementById('svName').value.trim();
     const phone = document.getElementById('svPhone').value.trim();
     const date = document.getElementById('svDate').value;
@@ -3480,27 +4912,27 @@ Please confirm dispatch details.`;
     btn.textContent = 'Booking Visit...';
 
     const payload = {
-      property_id: 1,
+      property_id: STATE.selectedPropertyId || 1,
       name: name,
       phone: phone,
       city: 'Visakhapatnam',
       preferred_date: date,
-      notes: `[Site Visit Booking] Slot: ${slot} | Chauffeur: ${chauffeur ? 'Yes (' + pickupLoc + ')' : 'Self'}`,
+      notes: `[Site Visit Booking for ${propTitle}] Slot: ${slot} | Chauffeur: ${chauffeur ? 'Yes (' + pickupLoc + ')' : 'Self'}`,
       company_id: COMPANY_ID
     };
 
     try {
-      const res = await fetch('/api/v1/real-dreams/public/enquiries', {
+      await fetch('/api/v1/real-dreams/public/enquiries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      successEl.innerHTML = `<strong>Site Visit Confirmed!</strong> Our concierge will call you at ${phone} to arrange pickup.`;
+      successEl.innerHTML = `<strong>Site Visit Confirmed!</strong> Our concierge will call you at ${phone} to arrange pickup for <strong>${escapeHtml(propTitle)}</strong>.`;
       successEl.style.display = 'block';
 
       // Send WhatsApp ping
       setTimeout(() => {
-        const text = `Hello Real Dreams! I have booked a site visit for Anandas Royal Imperia on ${date} (${slot}). My name is ${name} (${phone}).`;
+        const text = `Hello Real Dreams! I have booked a site visit for ${propTitle} on ${date} (${slot}). My name is ${name} (${phone}). Chauffeur: ${chauffeur ? 'Required (' + pickupLoc + ')' : 'Self'}.`;
         window.open(`https://wa.me/918585852738?text=${encodeURIComponent(text)}`, '_blank');
       }, 800);
     } catch (err) {
@@ -3509,6 +4941,138 @@ Please confirm dispatch details.`;
     } finally {
       btn.disabled = false;
       btn.textContent = 'Confirm Site Visit Booking';
+    }
+  };
+
+  // ── EV Test Ride & Booking Modal ────────────────────────────────────────
+  window.openBookingModal = function(modelName, modelCode) {
+    const nameEl = document.getElementById('evBookModelName');
+    if (nameEl) nameEl.value = modelName || 'Manthra EV Series';
+    const today = new Date().toISOString().split('T')[0];
+    const dateEl = document.getElementById('evBookDate');
+    if (dateEl) {
+      dateEl.min = today;
+      dateEl.value = today;
+    }
+    const errEl = document.getElementById('evBookError');
+    const succEl = document.getElementById('evBookSuccess');
+    if (errEl) errEl.style.display = 'none';
+    if (succEl) succEl.style.display = 'none';
+    const modalEl = document.getElementById('evBookingModal');
+    if (modalEl) {
+      new bootstrap.Modal(modalEl).show();
+    }
+  };
+
+  window.submitEvBooking = async function() {
+    const model = document.getElementById('evBookModelName')?.value || 'Manthra Pro GT';
+    const name = document.getElementById('evBookName').value.trim();
+    const phone = document.getElementById('evBookPhone').value.trim();
+    const date = document.getElementById('evBookDate').value;
+    const loc = document.getElementById('evBookLocation').value;
+    const errEl = document.getElementById('evBookError');
+    const successEl = document.getElementById('evBookSuccess');
+
+    if (!name || !phone || phone.length < 10) {
+      errEl.textContent = 'Please enter your full name and valid 10-digit mobile number.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    errEl.style.display = 'none';
+    const btn = document.getElementById('btnSubmitEvBook');
+    btn.disabled = true;
+    btn.textContent = 'Booking Test Ride...';
+
+    try {
+      await fetch('/api/v1/marketplace/enquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company_id: COMPANY_ID,
+          name: name,
+          phone: phone,
+          type: 'EV_TEST_RIDE',
+          details: `Model: ${model} | Date: ${date} | Location: ${loc}`
+        })
+      }).catch(() => null);
+
+      successEl.innerHTML = `<strong>Test Ride Confirmed!</strong> Our EV specialist will call you at ${phone} to confirm your slot for <strong>${escapeHtml(model)}</strong>.`;
+      successEl.style.display = 'block';
+
+      setTimeout(() => {
+        const text = `Hello EVolution! I would like to book a free test ride for ${model} on ${date} (${loc === 'hub' ? 'Pendurthi Hub Store' : 'Doorstep Demo'}). My name is ${name} (${phone}).`;
+        window.open(`https://wa.me/918585852738?text=${encodeURIComponent(text)}`, '_blank');
+      }, 800);
+    } catch (err) {
+      successEl.innerHTML = `<strong>Test Ride Confirmed!</strong> Our team will contact you shortly.`;
+      successEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Confirm Free Test Ride';
+    }
+  };
+
+  // ── Solar Free Site Survey Modal ────────────────────────────────────────
+  window.openSolarSurveyModal = function(capacity) {
+    const capEl = document.getElementById('solarSurveyCapacity');
+    if (capEl) capEl.value = capacity || '3 kWp Residential Rooftop Kit';
+    const errEl = document.getElementById('solarSurveyError');
+    const succEl = document.getElementById('solarSurveySuccess');
+    if (errEl) errEl.style.display = 'none';
+    if (succEl) succEl.style.display = 'none';
+    const modalEl = document.getElementById('solarSurveyModal');
+    if (modalEl) {
+      new bootstrap.Modal(modalEl).show();
+    }
+  };
+
+  window.submitSolarSurvey = async function() {
+    const capacity = document.getElementById('solarSurveyCapacity')?.value || '3 kWp Rooftop Kit';
+    const name = document.getElementById('solarSurveyName').value.trim();
+    const phone = document.getElementById('solarSurveyPhone').value.trim();
+    const bill = document.getElementById('solarSurveyBill').value;
+    const roof = document.getElementById('solarSurveyRoof').value;
+    const errEl = document.getElementById('solarSurveyError');
+    const successEl = document.getElementById('solarSurveySuccess');
+
+    if (!name || !phone || phone.length < 10) {
+      errEl.textContent = 'Please enter your full name and valid 10-digit mobile number.';
+      errEl.style.display = 'block';
+      return;
+    }
+
+    errEl.style.display = 'none';
+    const btn = document.getElementById('btnSubmitSolarSurvey');
+    btn.disabled = true;
+    btn.textContent = 'Scheduling Survey...';
+
+    try {
+      await fetch('/api/v1/marketplace/enquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          company_id: COMPANY_ID,
+          name: name,
+          phone: phone,
+          type: 'SOLAR_SURVEY',
+          details: `Capacity: ${capacity} | Monthly Bill: ${bill} | Roof Type: ${roof}`
+        })
+      }).catch(() => null);
+
+      successEl.innerHTML = `<strong>Site Survey Scheduled!</strong> Our solar engineer will call you at ${phone} to coordinate roof inspection and PM Surya Ghar subsidy application for <strong>${escapeHtml(capacity)}</strong>.`;
+      successEl.style.display = 'block';
+
+      setTimeout(() => {
+        const text = `Hello MyntReal Solar! I have requested a free site survey for ${capacity} under PM Surya Ghar Muft Bijli Yojana. Name: ${name} (${phone}), Monthly Bill: ${bill}, Roof: ${roof}.`;
+        window.open(`https://wa.me/918585852738?text=${encodeURIComponent(text)}`, '_blank');
+      }, 800);
+    } catch (err) {
+      successEl.innerHTML = `<strong>Site Survey Scheduled!</strong> Our solar engineer will contact you shortly.`;
+      successEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Request Free Site Survey';
     }
   };
 
@@ -3541,7 +5105,7 @@ Please confirm dispatch details.`;
     STATE.searchTimer = setTimeout(() => {
       STATE.search = q.trim();
       STATE.page = 1;
-      loadProducts();
+      renderActiveVerticalView();
     }, 250);
   });
 
@@ -3550,7 +5114,7 @@ Please confirm dispatch details.`;
     document.getElementById('searchClearBtn').classList.add('d-none');
     STATE.search = '';
     STATE.page = 1;
-    loadProducts();
+    renderActiveVerticalView();
   };
 
   window.focusSearch = function() {
@@ -3577,7 +5141,7 @@ Please confirm dispatch details.`;
       document.getElementById('searchClearBtn').classList.remove('d-none');
       STATE.search = transcript;
       STATE.page = 1;
-      loadProducts();
+      renderActiveVerticalView();
       voiceBtn.innerHTML = '<i class="fas fa-microphone"></i>';
     };
 
@@ -3709,10 +5273,13 @@ Please confirm dispatch details.`;
     // Read URL param ?vertical= or ?segment=
     const urlParams = new URLSearchParams(window.location.search);
     const vParam = urlParams.get('vertical') || urlParams.get('segment');
+    const subParam = urlParams.get('tab') || urlParams.get('sub');
     if (vParam === 'solar' || vParam === 'real-dreams') {
       switchVertical(vParam);
+      if (subParam) selectSubCategory(subParam);
     } else {
       switchVertical('ev');
+      if (subParam) selectSubCategory(subParam);
     }
   });
 

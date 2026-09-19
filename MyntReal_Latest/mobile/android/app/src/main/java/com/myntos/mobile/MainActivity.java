@@ -6,6 +6,7 @@ import com.getcapacitor.BridgeActivity;
 import com.myntos.mobile.plugins.AudioRoutingPlugin;
 import com.myntos.mobile.plugins.BackgroundLocationPlugin;
 import com.myntos.mobile.plugins.ContactsPlugin;
+import com.myntos.mobile.plugins.SecureStoragePlugin;
 
 public class MainActivity extends BridgeActivity {
     @Override
@@ -13,6 +14,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(AudioRoutingPlugin.class);
         registerPlugin(BackgroundLocationPlugin.class);
         registerPlugin(ContactsPlugin.class);
+        registerPlugin(SecureStoragePlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

@@ -427,11 +427,17 @@ def run_migrations():
                 # 4.14 SaaS Phase 1 Foundation Migration (Authoritative Integration)
                 saas_sql_file = _backend_dir / "migrations" / "add_saas_phase1_foundation_20260914.sql"
                 if saas_sql_file.exists():
-                    logger.info(f"Executing SaaS Phase 1 Foundation migration from {saas_sql_file.name}...")
-                    with open(saas_sql_file, "r", encoding="utf-8") as f:
-                        saas_sql = f.read()
-                    conn.execute(text(saas_sql))
-                    logger.info("✅ SaaS Phase 1 Foundation migration executed successfully")
+                    has_saas = conn.execute(text(
+                        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'staff_company_memberships'"
+                    )).scalar()
+                    if has_saas:
+                        logger.info("⏭️ SaaS Phase 1 Foundation migration already applied — skipping")
+                    else:
+                        logger.info(f"Executing SaaS Phase 1 Foundation migration from {saas_sql_file.name}...")
+                        with open(saas_sql_file, "r", encoding="utf-8") as f:
+                            saas_sql = f.read()
+                        conn.execute(text(saas_sql))
+                        logger.info("✅ SaaS Phase 1 Foundation migration executed successfully")
                 else:
                     logger.warning(f"⚠️ SaaS Phase 1 SQL migration file not found at {saas_sql_file}")
 
@@ -730,8 +736,8 @@ def run_migrations():
                 """))
                 logger.info(f"✅ VGK member staff assignment backfill complete: {upd1.rowcount} via reg_by code, {upd2.rowcount} via points creator")
 
-                # 4.21 Synchronize Sales Incharge access for MR10036 (Anushka Karri)
-                upd_anushka = conn.execute(text("""
+                # 4.21 Synchronize Sales Incharge access for MR10036 (Anushka Karri) & MN10009 (Nandana)
+                upd_sales_incharges = conn.execute(text("""
                     UPDATE staff_employees
                     SET role_id = (SELECT id FROM staff_roles WHERE role_code = 'sales_incharge'),
                         staff_type = 'SALES_INCHARGE',
@@ -739,11 +745,11 @@ def run_migrations():
                         data_companies = '[1, 2, 3, 4, 88, 92, 93, 94]'::jsonb,
                         admin_scope = 'SEGMENT_A',
                         updated_at = NOW()
-                    WHERE emp_code = 'MR10036'
+                    WHERE emp_code IN ('MR10036', 'MN10009')
                       AND (role_id != (SELECT id FROM staff_roles WHERE role_code = 'sales_incharge') OR staff_type != 'SALES_INCHARGE');
                 """))
-                if upd_anushka.rowcount > 0:
-                    logger.info("✅ MR10036 (Anushka Karri) synchronized to Sales Incharge")
+                if upd_sales_incharges.rowcount > 0:
+                    logger.info("✅ MR10036 (Anushka Karri) & MN10009 (Nandana) synchronized to Sales Incharge")
 
                 # 4.22 Ensure recharge_transactions unified services columns (DTH, FASTag, Electricity, Gas)
                 conn.execute(text("""
@@ -888,6 +894,29 @@ def run_migrations():
                 """))
                 logger.info("✅ digital_catalogs, catalog_sections, catalog_items, catalog_lead_sends tables ensured")
 
+                # 4.25 mobile_device_sessions (Persistent Mobile Sessions & Token Rotation)
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS mobile_device_sessions (
+                        id SERIAL PRIMARY KEY,
+                        staff_id INTEGER NOT NULL REFERENCES staff_employees(id) ON DELETE CASCADE,
+                        device_id VARCHAR(100) NOT NULL,
+                        platform VARCHAR(20) NOT NULL,
+                        refresh_token_hash VARCHAR(64) UNIQUE NOT NULL,
+                        device_name VARCHAR(100),
+                        app_version VARCHAR(30),
+                        token_version INTEGER NOT NULL DEFAULT 1,
+                        is_revoked BOOLEAN NOT NULL DEFAULT FALSE,
+                        expires_at TIMESTAMP NOT NULL,
+                        last_used_at TIMESTAMP NOT NULL DEFAULT NOW(),
+                        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    );
+                    CREATE INDEX IF NOT EXISTS ix_mobile_device_sessions_staff_id ON mobile_device_sessions(staff_id);
+                    CREATE INDEX IF NOT EXISTS ix_mobile_device_sessions_device_id ON mobile_device_sessions(device_id);
+                    CREATE INDEX IF NOT EXISTS ix_mobile_device_sessions_token_hash ON mobile_device_sessions(refresh_token_hash);
+                    CREATE INDEX IF NOT EXISTS ix_mds_staff_active ON mobile_device_sessions(staff_id, is_revoked, expires_at);
+                """))
+                logger.info("✅ mobile_device_sessions table ensured")
+
         logger.info("✅ Feature-specific schema migrations complete")
         
         # 4.20 Staff cash balance zero adjustments as of 16-Sep-2026
@@ -931,7 +960,7 @@ def run_migrations():
                 raise RuntimeError("Gate Failed: crm_leads missing tenant_id column")
 
             # Check 3: required tables exist
-            required_tables = ['staff_company_memberships', 'crm_lead_phones', 'crm_lead_phone_provenances']
+            required_tables = ['staff_company_memberships', 'crm_lead_phones', 'crm_lead_phone_provenances', 'mobile_device_sessions']
             res_tbls = conn.execute(text(f"""
                 SELECT table_name FROM information_schema.tables 
                 WHERE table_name IN ({', '.join(repr(t) for t in required_tables)})

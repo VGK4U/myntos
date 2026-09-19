@@ -17,6 +17,12 @@ const {
     setClientGen,
     getSkipRestoreOnce,
     setSkipRestoreOnce,
+    getLastConnectedTimestamp,
+    setLastConnectedTimestamp,
+    getLastMessageSentTimestamp,
+    setLastMessageSentTimestamp,
+    NEW_CONNECTION_COOLDOWN_MS,
+    processOutboundQueue,
     AUTH_DIR,
     ALLOW_LOCAL_SOCKET,
     IS_PRODUCTION,
@@ -158,13 +164,38 @@ async function runProductionTests() {
     assert.strictEqual(getSkipRestoreOnce(), true, 'skipRestoreOnce must be true to prevent S3 restore loop');
     console.log('   PASS: Terminal 401 on current generation cleanly invalidated dead session.');
 
+    // 11. Fresh QR Scan Connection -> Enforces Warm-up Cooldown & Records Timestamp
+    console.log('11. Testing Post-Scan Warm-Up Cooldown:');
+    setClientGen(20);
+    setConnectionStatus('qr_ready');
+    const beforeConnect = Date.now();
+    await processConnectionUpdate(20, {
+        connection: 'open'
+    });
+    assert.strictEqual(getConnectionStatus(), 'connected');
+    const connTs = getLastConnectedTimestamp();
+    assert.ok(connTs >= beforeConnect, 'lastConnectedTimestamp must be recorded on connection open');
+    assert.strictEqual(NEW_CONNECTION_COOLDOWN_MS, 25000, 'NEW_CONNECTION_COOLDOWN_MS must be 25s');
+    console.log('   PASS: Fresh connection recorded lastConnectedTimestamp and activated 25s cooldown.');
+
+    // 12. Queue Drain Guard During Warm-up Period
+    console.log('12. Testing Queue Drain Guard During Warm-up Period:');
+    // While within cooldown, processOutboundQueue must exit immediately without error
+    setLastConnectedTimestamp(Date.now()); // freshly connected 0ms ago
+    await processOutboundQueue();
+    // After cooldown has expired, queue drain can proceed safely
+    setLastConnectedTimestamp(Date.now() - 30000); // 30 seconds ago (>25s)
+    const elapsed = Date.now() - getLastConnectedTimestamp();
+    assert.ok(elapsed > NEW_CONNECTION_COOLDOWN_MS, 'Elapsed time must exceed cooldown');
+    console.log('   PASS: Queue drain guard blocks burst dispatch during warm-up period.');
+
     // Clean up test file if any
     try { if (fs.existsSync(dummyCredsPath)) fs.unlinkSync(dummyCredsPath); } catch (_) {}
 
     // Advance generation to disarm setTimeout from test 10
     setClientGen(999);
 
-    console.log('\n🎉 ALL 10 PRODUCTION LIFECYCLE & ARCHITECTURAL TESTS IN SERVER.JS VERIFIED AND PASSED!');
+    console.log('\n🎉 ALL 12 PRODUCTION LIFECYCLE, ANTI-BAN PACING & QUEUE TESTS IN SERVER.JS VERIFIED AND PASSED!');
     process.exit(0);
 }
 

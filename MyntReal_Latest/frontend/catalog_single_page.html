@@ -3618,13 +3618,10 @@
                         <a href="/catalog/hub-ev-pricing" class="px-2 py-1 rounded-pill small fw-bold" style="background: rgba(245, 158, 11, 0.15) !important; color: #d97706 !important; border: 1px solid rgba(245, 158, 11, 0.45) !important; text-decoration: none; font-size: 12px;" title="View 24-Hour Confidential EV & Solar Commercial Pricing">
                             <i class="fas fa-tags me-1 text-warning"></i> Pricing &amp; Margins (24h)
                         </a>
-                        <a href="/catalog/ev-b2b/ev-commercial-fleet" class="px-2 py-1 rounded-pill small fw-bold" style="background: rgba(14, 165, 233, 0.12) !important; color: #0284c7 !important; border: 1px solid rgba(14, 165, 233, 0.4) !important; text-decoration: none; font-size: 12px;" title="View EV B2B Fleets & Logistics Catalog">
-                            <i class="fas fa-truck-moving me-1 text-info"></i> EV B2B Fleets <i class="fas fa-arrow-right ms-1" style="font-size: 10px;"></i>
-                        </a>
                     `;
                 }
                 if (nav) {
-                    nav.innerHTML = '<a href="#hero" class="jump-link active">Overview</a><a href="#investment_thesis" class="jump-link">Why 5-in-1</a><a href="#stream_ev" class="jump-link">1. Manthra EV</a><a href="/catalog/ev-b2c-pricing" class="jump-link text-success fw-bold" style="border: 1px dashed rgba(16, 185, 129, 0.4); border-radius: 999px; padding: 4px 12px; background: rgba(16, 185, 129, 0.08);"><i class="fas fa-motorcycle me-1"></i> 2W EV Pricing</a><a href="/catalog/hub-ev-pricing" class="jump-link text-warning fw-bold" style="border: 1px dashed rgba(245, 158, 11, 0.4); border-radius: 999px; padding: 4px 12px; background: rgba(245, 158, 11, 0.08);"><i class="fas fa-tags me-1"></i> Commercials (24h)</a><a href="/catalog/ev-b2b/ev-commercial-fleet" class="jump-link text-info"><i class="fas fa-truck-moving me-1"></i> EV B2B Fleets</a><a href="#roi_financials" class="jump-link">3-Scenario ROI</a><a href="#interactive_calculator" class="jump-link">ROI Simulator</a><a href="#packages" class="jump-link">Franchise Models</a><a href="#cta" class="jump-link">Apply Mandate</a>';
+                    nav.innerHTML = '<a href="#hero" class="jump-link active">Overview</a><a href="#investment_thesis" class="jump-link">Why 5-in-1</a><a href="#stream_ev" class="jump-link">1. Manthra EV</a><a href="/catalog/ev-b2c-pricing" class="jump-link text-success fw-bold" style="border: 1px dashed rgba(16, 185, 129, 0.4); border-radius: 999px; padding: 4px 12px; background: rgba(16, 185, 129, 0.08);"><i class="fas fa-motorcycle me-1"></i> 2W EV Pricing</a><a href="/catalog/hub-ev-pricing" class="jump-link text-warning fw-bold" style="border: 1px dashed rgba(245, 158, 11, 0.4); border-radius: 999px; padding: 4px 12px; background: rgba(245, 158, 11, 0.08);"><i class="fas fa-tags me-1"></i> Commercials (24h)</a><a href="#roi_financials" class="jump-link">3-Scenario ROI</a><a href="#interactive_calculator" class="jump-link">ROI Simulator</a><a href="#packages" class="jump-link">Franchise Models</a><a href="#cta" class="jump-link">Apply Mandate</a>';
                 }
             } else if (catType === 'etc' || catType === 'etc-training') {
                 document.title = 'EVolution Training Centre — Professional EV Certifications';
@@ -4136,9 +4133,6 @@
                         <a href="/catalog/hub-ev-pricing" class="px-2 py-1 rounded-pill small fw-bold" style="background: rgba(245, 158, 11, 0.15) !important; color: #d97706 !important; border: 1px solid rgba(245, 158, 11, 0.45) !important; text-decoration: none; font-size: 12px;" title="View 24-Hour Confidential EV & Solar Commercial Pricing">
                             <i class="fas fa-tags me-1 text-warning"></i> Pricing &amp; Margins (24h)
                         </a>
-                        <a href="/catalog/ev-b2b/ev-commercial-fleet" class="px-2 py-1 rounded-pill small fw-bold" style="background: rgba(14, 165, 233, 0.12) !important; color: #0284c7 !important; border: 1px solid rgba(14, 165, 233, 0.4) !important; text-decoration: none; font-size: 12px;" title="View EV B2B Fleets & Logistics Catalog">
-                            <i class="fas fa-truck-moving me-1 text-info"></i> EV B2B Fleets <i class="fas fa-arrow-right ms-1" style="font-size: 10px;"></i>
-                        </a>
                     `;
                 }
                 if (footerLogoLight) { footerLogoLight.src = '/public/hub/Assets/Myntreal.logo.png'; footerLogoLight.style.height = '46px'; }
@@ -4468,7 +4462,6 @@
                 });
                 links.push(`<a href="/catalog/ev-b2c-pricing" class="jump-link text-success fw-bold" style="border: 1px dashed rgba(16, 185, 129, 0.4); border-radius: 999px; padding: 4px 12px; background: rgba(16, 185, 129, 0.08);"><i class="fas fa-motorcycle me-1"></i> 2W EV Pricing</a>`);
                 links.push(`<a href="/catalog/hub-ev-pricing" class="jump-link text-warning fw-bold" style="border: 1px dashed rgba(245, 158, 11, 0.4); border-radius: 999px; padding: 4px 12px; background: rgba(245, 158, 11, 0.08);"><i class="fas fa-tags me-1"></i> Commercials (24h)</a>`);
-                links.push(`<a href="/catalog/ev-b2b/ev-commercial-fleet" class="jump-link text-info" style="border-radius: 999px; padding: 4px 12px;"><i class="fas fa-truck-moving me-1"></i> EV B2B Fleets</a>`);
                 nav.innerHTML = links.join('');
                 setupScrollSpy();
                 return;

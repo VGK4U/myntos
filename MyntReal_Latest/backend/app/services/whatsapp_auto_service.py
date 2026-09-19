@@ -672,6 +672,22 @@ def send_auto_whatsapp(
         if lead_id and result.get("success"):
             _log_to_crm_note(db, lead_id, message, event_key, staff_id, result.get("wamid"))
 
+        if not result.get("success") and (lead_id or event_key.startswith("crm_lead_")):
+            logger.warning(
+                "[WA-AUTO] Meta API failed for lead event '%s' (%s). Executing Scanned WhatsApp fallback with pacing delay...",
+                event_key, phone
+            )
+            fb_res = dispatch_scanned_lead_fallback(
+                db=db,
+                phone=phone,
+                message=message,
+                lead_id=lead_id,
+                staff_id=staff_id,
+                event_key=event_key,
+                reason=result.get("reason")
+            )
+            return fb_res
+
         logger.info("[WA-AUTO] %s → %s: %s", event_key, phone, "OK" if result.get("success") else "FAIL")
 
     except Exception as e:
@@ -830,6 +846,204 @@ def send_staff_morning_reminder(db: Session, staff_employee, portal_base_url: st
     except Exception as e:
         logger.error("[WA-MORNING] Error for %s: %s", name, str(e))
         return {"success": False, "reason": str(e)}
+
+
+def dispatch_scanned_lead_fallback(
+    db: Session,
+    phone: str,
+    message: str,
+    lead_id: Optional[int] = None,
+    staff_id: Optional[int] = None,
+    event_key: str = "lead_welcome",
+    reason: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    DC Anti-Ban Protocol Apr 2026:
+    When Meta WhatsApp Cloud API fails for a new lead message (e.g., Error 131031 deadlock,
+    unapproved template, 24h window expiry, or network error), safely failover to dispatch
+    the same message via Scanned WhatsApp Bot Gateway (port 5002) or whatsapp_bot_queue.
+
+    Enforces:
+    - Canonical 10-digit phone normalization and target JID generation (91XXXXXXXXXX@s.whatsapp.net).
+    - Gateway health check with safe fallback to PostgreSQL whatsapp_bot_queue if bot is offline.
+    - Pacing delay / time gap to prevent instant burst spam triggers on the scanned SIM.
+    - Full persistence into MessageLog with provider="SCANNED_FALLBACK" or "SCANNED_QUEUE".
+    - Logging failover note into CRM lead history.
+    """
+    import os
+    import re as _re
+    import time
+    from datetime import datetime
+    import json
+    from sqlalchemy import text
+
+    clean_digits = _re.sub(r'\D', '', str(phone or ''))
+    if len(clean_digits) < 10:
+        logger.warning("[WA-LEAD-FALLBACK] Invalid phone '%s' — skipping fallback", phone)
+        return {"success": False, "reason": "invalid_phone_number"}
+
+    clean_10 = clean_digits[-10:]
+    clean_p = "91" + clean_10
+    target_jid = f"{clean_p}@s.whatsapp.net"
+    now_ts = int(datetime.utcnow().timestamp())
+    exec_id = f"lead_fb_{clean_10}_{now_ts}"
+
+    logger.info(
+        "[WA-LEAD-FALLBACK] Initiating Scanned WhatsApp fallback for lead #%s (%s). Reason: %s",
+        lead_id or "N/A", clean_10, reason or "Meta API failed"
+    )
+
+    # 1. Fast Gateway Health Check
+    env_url = os.getenv("WHATSAPP_BOT_URL") or os.getenv("WA_BOT_URL")
+    urls = []
+    if env_url:
+        urls.append(env_url if env_url.endswith("/api/send-message") else f"{env_url.rstrip('/')}/api/send-message")
+    urls.extend([
+        "http://127.0.0.1:5002/api/send-message",
+        "http://localhost:5002/api/send-message"
+    ])
+
+    gateway_online = False
+    can_send_now = False
+    status_urls = ["http://127.0.0.1:5002/status", "http://localhost:5002/status"]
+    for s_url in status_urls:
+        try:
+            s_resp = requests.get(s_url, timeout=1.5)
+            if s_resp.status_code == 200:
+                gateway_online = True
+                s_data = s_resp.json()
+                can_send_now = bool(s_data.get("can_send_now")) or (s_data.get("connection_state") == "connected")
+                break
+        except Exception:
+            continue
+
+    dispatched = False
+    last_err = None
+    wamid = None
+
+    if gateway_online and can_send_now:
+        # Enforce anti-ban pacing delay before dispatching to port 5002
+        time.sleep(3.0)
+        for bot_url in urls:
+            try:
+                bot_payload = {
+                    "phone": clean_p,
+                    "message": message,
+                    "lead_id": lead_id,
+                    "job_id": "lead_welcome_fallback",
+                    "execution_id": exec_id,
+                    "skip_backend_log": True
+                }
+                resp = requests.post(bot_url, json=bot_payload, timeout=12)
+                if resp.status_code == 200:
+                    raw = resp.json()
+                    if raw.get("success"):
+                        dispatched = True
+                        wamid = raw.get("message_id") or (raw.get("key") or {}).get("id") or exec_id
+                        break
+                    else:
+                        last_err = raw.get("error") or "Bot rejected message"
+                else:
+                    last_err = f"HTTP {resp.status_code}: {resp.text[:100]}"
+            except Exception as e:
+                last_err = str(e)
+                continue
+    else:
+        last_err = "Scanned WhatsApp bot offline / disconnected / standby mode"
+
+    now_utc = datetime.utcnow()
+    from app.models.whatsapp import MessageLog
+
+    if dispatched and wamid:
+        try:
+            ml = MessageLog(
+                message_sid=wamid,
+                message_type=f"fallback_{event_key}",
+                mobile_number=clean_10,
+                message_body=message,
+                from_number="8897797667",
+                to_number=f"+{clean_p}",
+                provider="SCANNED_FALLBACK",
+                initial_status="sent",
+                current_status="sent",
+                status_source="LEAD_FALLBACK_API",
+                sent_at=now_utc,
+                sent_by_staff_id=staff_id,
+                sent_by_name="System/Fallback",
+                sender_type="system",
+                job_id="lead_welcome_fallback",
+                execution_id=exec_id
+            )
+            db.add(ml)
+            if lead_id:
+                _log_to_crm_note(
+                    db, lead_id,
+                    f"📲 [Meta API Failover] Sent via Scanned WhatsApp (Paced). WAMID: {wamid}",
+                    event_key, staff_id=staff_id, wamid=wamid
+                )
+            db.commit()
+            logger.info("✅ [WA-LEAD-FALLBACK] Successfully dispatched to %s via Scanned Bot", clean_10)
+            return {"success": True, "wamid": wamid, "channel": "scanned_fallback", "via": "direct_gateway"}
+        except Exception as _log_e:
+            db.rollback()
+            logger.warning("[WA-LEAD-FALLBACK] MessageLog write warning: %s", _log_e)
+            return {"success": True, "wamid": wamid, "channel": "scanned_fallback", "via": "direct_gateway"}
+
+    # Scanned bot offline or direct dispatch failed -> Safely enqueue into PostgreSQL whatsapp_bot_queue!
+    try:
+        rp = {
+            "phone": clean_10,
+            "clean_phone": clean_p,
+            "source": "lead_fallback",
+            "lead_id": lead_id,
+            "event_key": event_key,
+            "enqueued_reason": last_err or reason or "Meta API failure failover",
+            "enqueued_at": now_utc.isoformat()
+        }
+        db.execute(text("""
+            INSERT INTO whatsapp_bot_queue (
+                target_type, target_jid, message, status, created_at, result_payload, job_id, execution_id
+            ) VALUES (
+                'direct', :target_jid, :message, 'pending', NOW(), CAST(:rp AS jsonb), 'lead_welcome_fallback', :execution_id
+            )
+        """), {
+            "target_jid": target_jid,
+            "message": message,
+            "rp": json.dumps(rp),
+            "execution_id": exec_id
+        })
+
+        ml = MessageLog(
+            message_sid=exec_id,
+            message_type=f"fallback_{event_key}",
+            mobile_number=clean_10,
+            message_body=message,
+            from_number="8897797667",
+            to_number=f"+{clean_p}",
+            provider="SCANNED_QUEUE",
+            initial_status="queued",
+            current_status="queued",
+            status_source="LEAD_FALLBACK_QUEUE",
+            sent_by_staff_id=staff_id,
+            sent_by_name="System/FallbackQueue",
+            sender_type="system",
+            job_id="lead_welcome_fallback",
+            execution_id=exec_id
+        )
+        db.add(ml)
+        if lead_id:
+            _log_to_crm_note(
+                db, lead_id,
+                f"⏳ [Meta API Failover] Queued in Scanned WhatsApp queue (will auto-send with safe pacing once connected). Exec: {exec_id}",
+                event_key, staff_id=staff_id, wamid=exec_id
+            )
+        db.commit()
+        logger.info("⏳ [WA-LEAD-FALLBACK] Enqueued into whatsapp_bot_queue for %s (will auto-send with pacing)", clean_10)
+        return {"success": True, "queued": True, "execution_id": exec_id, "channel": "scanned_fallback", "via": "bot_queue"}
+    except Exception as q_err:
+        db.rollback()
+        logger.error("[WA-LEAD-FALLBACK] Failed to enqueue into whatsapp_bot_queue: %s", q_err)
+        return {"success": False, "reason": str(q_err), "error_code": "FALLBACK_QUEUE_ERROR"}
 
 
 def send_lead_welcome(
@@ -994,8 +1208,25 @@ def send_lead_welcome(
 
         if result.get("success"):
             _sent_cache[dedup] = datetime.utcnow()
-        logger.info("[WA-WELCOME] %s → %s: %s", event_key, phone, "OK" if result.get("success") else result.get("reason", "FAIL"))
-        return result
+            logger.info("[WA-WELCOME] %s → %s: OK", event_key, phone)
+            return result
+        else:
+            logger.warning(
+                "[WA-WELCOME] Meta API failed for %s (%s). Executing Scanned WhatsApp fallback with anti-ban pacing...",
+                phone, result.get("reason")
+            )
+            fb_res = dispatch_scanned_lead_fallback(
+                db=db,
+                phone=phone,
+                message=message,
+                lead_id=lead_id,
+                staff_id=staff_id,
+                event_key=event_key,
+                reason=result.get("reason")
+            )
+            if fb_res.get("success"):
+                _sent_cache[dedup] = datetime.utcnow()
+            return fb_res
     except Exception as e:
         logger.error("[WA-WELCOME] Exception for %s: %s", phone, str(e))
         return {"success": False, "reason": str(e)}

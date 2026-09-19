@@ -72,6 +72,115 @@ def test_persistent_welcome_deduplication():
     assert res["message_log_id"] == 9999
 
 
+def test_lead_welcome_failover_to_scanned_when_meta_fails():
+    """Verify that when Meta Cloud API fails, send_lead_welcome automatically fails over to Scanned WhatsApp."""
+    from app.services.whatsapp_auto_service import dispatch_scanned_lead_fallback
+
+    mock_db = MagicMock()
+    # Mock dedup checks passing (no prior message)
+    mock_db.query.return_value.filter.return_value.first.return_value = None
+    mock_template = MagicMock()
+    mock_template.id = 1
+    mock_template.body_text = "Welcome {{name}}"
+    mock_template.is_meta_approved = True
+    mock_template.meta_template_name = "myntreal_lead_welcome_solar"
+    mock_template.meta_template_language = "en"
+    mock_db.query.return_value.filter_by.return_value.first.return_value = mock_template
+
+    with patch("app.services.whatsapp_auto_service._send_meta") as mock_meta, \
+         patch("app.services.whatsapp_auto_service.dispatch_scanned_lead_fallback") as mock_fallback:
+        
+        # Meta returns error (e.g. 131031 deadlock or unapproved)
+        mock_meta.return_value = {"success": False, "reason": "Error 131031: Payment Deadlock", "error_code": "131031"}
+        mock_fallback.return_value = {
+            "success": True,
+            "queued": True,
+            "execution_id": "lead_fb_9876543210_12345",
+            "channel": "scanned_fallback",
+            "via": "bot_queue"
+        }
+
+        res = send_lead_welcome(
+            db=mock_db,
+            phone="9876543210",
+            lead_name="Praveen Varma",
+            lead_id=77889
+        )
+
+        assert res["success"] is True
+        assert res["channel"] == "scanned_fallback"
+        assert res["queued"] is True
+        mock_fallback.assert_called_once()
+
+
+def test_lead_fallback_enqueues_when_bot_offline():
+    """Verify dispatch_scanned_lead_fallback safely enqueues into whatsapp_bot_queue when gateway is offline."""
+    from app.services.whatsapp_auto_service import dispatch_scanned_lead_fallback
+
+    mock_db = MagicMock()
+
+    with patch("requests.get", side_effect=Exception("Connection Refused (Offline)")), \
+         patch("app.models.whatsapp.MessageLog") as mock_ml_cls:
+        
+        res = dispatch_scanned_lead_fallback(
+            db=mock_db,
+            phone="9123456780",
+            message="Welcome to MyntReal!",
+            lead_id=55443,
+            event_key="lead_welcome_solar",
+            reason="Meta API 131031 payment deadlock"
+        )
+
+        assert res["success"] is True
+        assert res["queued"] is True
+        assert res["via"] == "bot_queue"
+        assert res["channel"] == "scanned_fallback"
+
+        # Verify SQL INSERT into whatsapp_bot_queue was executed
+        assert mock_db.execute.called
+        call_args = mock_db.execute.call_args
+        sql_text = str(call_args[0][0])
+        assert "INSERT INTO whatsapp_bot_queue" in sql_text
+        assert mock_db.commit.called
+
+
+def test_lead_fallback_dispatches_with_pacing_when_bot_online():
+    """Verify dispatch_scanned_lead_fallback dispatches to port 5002 with pacing when bot is online."""
+    from app.services.whatsapp_auto_service import dispatch_scanned_lead_fallback
+
+    mock_db = MagicMock()
+
+    # Mock gateway /status as online and ready
+    mock_status_resp = MagicMock()
+    mock_status_resp.status_code = 200
+    mock_status_resp.json.return_value = {"can_send_now": True, "connection_state": "connected"}
+
+    # Mock /api/send-message response
+    mock_send_resp = MagicMock()
+    mock_send_resp.status_code = 200
+    mock_send_resp.json.return_value = {"success": True, "message_id": "scanned_wamid_12345"}
+
+    with patch("requests.get", return_value=mock_status_resp), \
+         patch("requests.post", return_value=mock_send_resp), \
+         patch("time.sleep") as mock_sleep:
+        
+        res = dispatch_scanned_lead_fallback(
+            db=mock_db,
+            phone="9123456780",
+            message="Welcome to MyntReal!",
+            lead_id=55443,
+            event_key="lead_welcome_solar",
+            reason="Meta API 131031 payment deadlock"
+        )
+
+        assert res["success"] is True
+        assert res["channel"] == "scanned_fallback"
+        assert res["via"] == "direct_gateway"
+        assert res["wamid"] == "scanned_wamid_12345"
+        # Verify pacing delay was applied
+        mock_sleep.assert_called_with(3.0)
+
+
 if __name__ == "__main__":
     print("Running WhatsApp Anti-Ban Hardening Tests...")
     test_render_body_placeholders()
@@ -80,4 +189,10 @@ if __name__ == "__main__":
     print("✅ test_baileys_customer_fallback_disabled passed")
     test_persistent_welcome_deduplication()
     print("✅ test_persistent_welcome_deduplication passed")
-    print("🎉 All Anti-Ban Hardening tests PASSED successfully!")
+    test_lead_welcome_failover_to_scanned_when_meta_fails()
+    print("✅ test_lead_welcome_failover_to_scanned_when_meta_fails passed")
+    test_lead_fallback_enqueues_when_bot_offline()
+    print("✅ test_lead_fallback_enqueues_when_bot_offline passed")
+    test_lead_fallback_dispatches_with_pacing_when_bot_online()
+    print("✅ test_lead_fallback_dispatches_with_pacing_when_bot_online passed")
+    print("🎉 All Anti-Ban Hardening & Failover tests PASSED successfully!")

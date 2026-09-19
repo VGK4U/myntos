@@ -11114,8 +11114,14 @@ def _startup_worker():
             _sia.execute(text("""
                 UPDATE staff_employees
                 SET role_id = (SELECT id FROM staff_roles WHERE role_code = 'sales_incharge'),
+                    staff_type = 'SALES_INCHARGE',
+                    designation = COALESCE(NULLIF(TRIM(designation), ''), 'Sales Incharge'),
+                    data_companies = '[1, 2, 3, 4, 88, 92, 93, 94]'::jsonb
+                WHERE emp_code IN ('MN10009', 'MR10036');
+                UPDATE staff_employees
+                SET role_id = (SELECT id FROM staff_roles WHERE role_code = 'sales_incharge'),
                     staff_type = 'SALES_INCHARGE'
-                WHERE emp_code IN ('MN10003', 'MN10009', 'MR10036')
+                WHERE emp_code = 'MN10003'
                   AND (role_id != (SELECT id FROM staff_roles WHERE role_code = 'sales_incharge') OR staff_type != 'SALES_INCHARGE');
             """))
         print("[DC-SALES-INCHARGE-ASSIGN-001] ✅ Sales incharge roles synchronized (MN10003, MN10009, MR10036)", flush=True)

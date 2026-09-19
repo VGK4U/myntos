@@ -272,11 +272,28 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
             )
 
         try:
-            from app.services.whatsapp_auto_service import send_direct_whatsapp
-            wa_res = send_direct_whatsapp(
+            from app.services.whatsapp_canonical_service import WhatsAppCanonicalService
+            catalog_link = "https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te"
+            components = [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {"type": "text", "text": str(p_name or "Partner")},
+                        {"type": "text", "text": catalog_link}
+                    ]
+                }
+            ]
+
+            wa_res = WhatsAppCanonicalService.send_meta_template_message(
                 db=db,
                 phone=clean_phone,
-                message=msg_text,
+                template_name="vgk_partner_morning_motivation_v1",
+                language_code="en",
+                components=components,
+                user_name=p_name,
+                sender_type="bot",
+                idempotency_key=f"zero_lead_motivational:{clean_phone}:{get_indian_time().strftime('%Y%m%d')}",
+                raw_body_fallback=msg_text,
                 job_id="vgk_member_zero_lead_motivational",
                 execution_id=exec_rec.id
             )

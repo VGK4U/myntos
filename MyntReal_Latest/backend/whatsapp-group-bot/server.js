@@ -103,16 +103,35 @@ function stopWhatsAppSocket() {
     connectionStatus = 'disconnected';
 }
 
+let lastConnectedTimestamp = 0;
+let lastMessageSentTimestamp = 0;
+const NEW_CONNECTION_COOLDOWN_MS = 25000; // 25s post-scan stabilization cooldown
+
 let isProcessingQueue = false;
 async function processOutboundQueue() {
     if (isProcessingQueue || !sock || connectionStatus !== 'connected') return;
+
+    // [ANTI-BAN-PACING] Guard: Ensure initial warm-up cooldown has elapsed on new connection
+    const elapsedSinceConnect = Date.now() - lastConnectedTimestamp;
+    if (lastConnectedTimestamp > 0 && elapsedSinceConnect < NEW_CONNECTION_COOLDOWN_MS) {
+        const remainingWarmup = Math.ceil((NEW_CONNECTION_COOLDOWN_MS - elapsedSinceConnect) / 1000);
+        console.log(`⏳ [ANTI-BAN-PACING] Socket recently connected (${Math.round(elapsedSinceConnect / 1000)}s ago). Holding queue drain for ${remainingWarmup}s more to protect account.`);
+        return;
+    }
+
     isProcessingQueue = true;
     try {
-        const resp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-poll?limit=25&instance_id=${encodeURIComponent(INSTANCE_ID)}`);
+        // Poll small batch (5 items max) to prevent sudden message spikes
+        const resp = await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-poll?limit=5&instance_id=${encodeURIComponent(INSTANCE_ID)}`);
         if (!resp.ok) return;
         const data = await resp.json();
         const items = data.items || [];
-        for (const item of items) {
+        if (items.length === 0) return;
+
+        console.log(`📬 [ANTI-BAN-PACING] Processing ${items.length} queued messages with staggered anti-ban time gaps...`);
+
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
             let target = item.target_jid || item.phone;
             if (!target) continue;
             if (!target.includes('@')) {
@@ -120,6 +139,22 @@ async function processOutboundQueue() {
                 if (cleanPhone.length === 10) cleanPhone = '91' + cleanPhone;
                 target = `${cleanPhone}@s.whatsapp.net`;
             }
+
+            // Anti-ban pacing: Wait between consecutive messages (10–18 seconds jittered delay)
+            const timeSinceLastSend = Date.now() - lastMessageSentTimestamp;
+            const requiredDelayMs = 10000 + Math.floor(Math.random() * 8000); // 10-18s humanized delay
+            if (lastMessageSentTimestamp > 0 && timeSinceLastSend < requiredDelayMs) {
+                const waitMs = requiredDelayMs - timeSinceLastSend;
+                console.log(`⏳ [ANTI-BAN-PACING] Staggered dispatch: waiting ${(waitMs / 1000).toFixed(1)}s before sending item #${item.id} to ${target}...`);
+                await new Promise(r => setTimeout(r, waitMs));
+            }
+
+            // Re-verify socket connection before each send in case socket disconnected during pacing delay
+            if (!sock || connectionStatus !== 'connected') {
+                console.warn(`⚠️ [ANTI-BAN-PACING] Socket connection dropped during pacing interval. Aborting remaining batch.`);
+                break;
+            }
+
             try {
                 let contentPayload = { text: item.message || '' };
                 if (item.media_url) {
@@ -153,7 +188,10 @@ async function processOutboundQueue() {
                 }
 
                 const sentMsg = await sock.sendMessage(target, contentPayload);
+                lastMessageSentTimestamp = Date.now();
                 const wamid = sentMsg?.key?.id || null;
+                console.log(`✅ [ANTI-BAN-PACING] Successfully dispatched queued message #${item.id} to ${target} (WAMID: ${wamid})`);
+
                 await fetch(`${BACKEND_API_BASE}/api/v1/whatsapp/bot-queue-complete`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -554,6 +592,8 @@ async function processConnectionUpdate(thisGen, update) {
     }
 
     if (connection === 'open') {
+        const wasNewlyScanned = (currentQr !== null || connectionStatus === 'qr_ready');
+        lastConnectedTimestamp = Date.now();
         connectionStatus = 'connected';
         currentQr = null;
         console.log(`✅ [WA-LIFECYCLE] WHATSAPP CONNECTED (Gen ${thisGen})! Session is active and authoritative.`);
@@ -575,7 +615,23 @@ async function processConnectionUpdate(thisGen, update) {
             }
         }
         syncClusterCoordinator();
-        processOutboundQueue();
+
+        if (wasNewlyScanned) {
+            console.log(`🛡️ [ANTI-BAN-PACING] Fresh QR scan connection established! Holding queue processing for ${NEW_CONNECTION_COOLDOWN_MS / 1000}s warm-up cooldown to protect newly scanned account...`);
+            setTimeout(() => {
+                if (connectionStatus === 'connected' && sock) {
+                    console.log(`🚀 [ANTI-BAN-PACING] Post-scan warm-up complete. Initializing paced queue dispatch...`);
+                    processOutboundQueue();
+                }
+            }, NEW_CONNECTION_COOLDOWN_MS);
+        } else {
+            // Reconnection of existing session - short safety buffer
+            setTimeout(() => {
+                if (connectionStatus === 'connected' && sock) {
+                    processOutboundQueue();
+                }
+            }, 5000);
+        }
     }
 
     if (connection === 'close') {
@@ -916,6 +972,11 @@ app.get('/status', (req, res) => {
     const effectiveGen = isLeader ? clientGen : clusterState.generation_id;
     const effectiveTargetJid = isLeader ? targetJid : clusterState.target_jid;
 
+    const elapsedSinceConnect = lastConnectedTimestamp > 0 ? (Date.now() - lastConnectedTimestamp) : null;
+    const cooldownRemainingSec = (lastConnectedTimestamp > 0 && elapsedSinceConnect < NEW_CONNECTION_COOLDOWN_MS)
+        ? Math.ceil((NEW_CONNECTION_COOLDOWN_MS - elapsedSinceConnect) / 1000)
+        : 0;
+
     return res.json({
         status: effectiveStatus,
         connection_state: effectiveStatus,
@@ -929,6 +990,10 @@ app.get('/status', (req, res) => {
         is_leader: isLeader,
         leader_host: leaderHost,
         instance_id: INSTANCE_ID,
+        last_connected_at: lastConnectedTimestamp || null,
+        warmup_cooldown_remaining_sec: cooldownRemainingSec,
+        last_message_sent_at: lastMessageSentTimestamp || null,
+        anti_ban_pacing_enabled: true,
         timestamp: Date.now()
     });
 });
@@ -1745,6 +1810,17 @@ app.post('/api/send-message', async (req, res) => {
             // Non-blocking fallback if backend check momentarily unreachable
         }
 
+        // [ANTI-BAN-PROTECTION-001] Automated Morning Wishes & Partner Statements MUST run via Meta WhatsApp Cloud API
+        const jobId = (req.body.job_id || req.body.jobId || '').toLowerCase();
+        if (jobId.includes('morning_wish') || jobId.includes('morning_statement') || jobId.includes('zero_lead')) {
+            console.log(`[WA-BOT] 🛡️ [ANTI-BAN-GUARD] Deflected automated job '${jobId}' from Scanned WhatsApp to protect SIM. Use Meta Cloud API.`);
+            return res.status(400).json({
+                success: false,
+                deflected: true,
+                error: `Automated job '${jobId}' is restricted to official Meta Cloud API to protect Scanned SIM from WhatsApp bans.`
+            });
+        }
+
         if (!ALLOW_LOCAL_SOCKET) {
             console.log(`[WA-BOT] 🛡️ [DEV-STANDBY] Mocked direct message dispatch to ${cleanPhone}: ${message || '[Media]'}`);
             return res.json({
@@ -1859,7 +1935,17 @@ app.post('/api/send-message', async (req, res) => {
             };
         }
 
+        // Anti-ban pacing: enforce minimum interval since last send
+        const timeSinceLastSend = Date.now() - lastMessageSentTimestamp;
+        const minDirectPacing = 6000 + Math.floor(Math.random() * 4000); // 6-10s safe inter-message pacing
+        if (lastMessageSentTimestamp > 0 && timeSinceLastSend < minDirectPacing) {
+            const waitDirect = minDirectPacing - timeSinceLastSend;
+            console.log(`⏳ [ANTI-BAN-PACING] Direct send pacing: waiting ${(waitDirect / 1000).toFixed(1)}s to maintain safe send interval...`);
+            await new Promise(r => setTimeout(r, waitDirect));
+        }
+
         const sentMsg = await sock.sendMessage(recipientJid, contentPayload, sendOptions);
+        lastMessageSentTimestamp = Date.now();
         if (!req.body.skip_backend_log && !req.body.skipBackendLog) {
             logDispatchToBackend(cleanPhone, message || '[Media Attachment]', req.body.recipientName || 'Staff Lead Dispatch');
         }
@@ -1906,6 +1992,11 @@ module.exports = {
     setIsLeader: (l) => { isLeader = l; },
     getClusterState: () => clusterState,
     setClusterState: (s) => { clusterState = s; },
+    getLastConnectedTimestamp: () => lastConnectedTimestamp,
+    setLastConnectedTimestamp: (t) => { lastConnectedTimestamp = t; },
+    getLastMessageSentTimestamp: () => lastMessageSentTimestamp,
+    setLastMessageSentTimestamp: (t) => { lastMessageSentTimestamp = t; },
+    NEW_CONNECTION_COOLDOWN_MS,
     AUTH_DIR,
     ALLOW_LOCAL_SOCKET,
     IS_PRODUCTION,

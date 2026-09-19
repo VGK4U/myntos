@@ -2984,8 +2984,9 @@
             }
 
             // Check if loading existing registration for VIEW or EDIT
-            const regIdParam = urlParams.get('id') || urlParams.get('reg_id');
-            const modeParam = urlParams.get('mode') || (urlParams.has('edit') ? 'edit' : (urlParams.has('view') ? 'view' : (regIdParam ? 'view' : 'create')));
+            const editVal = urlParams.get('edit');
+            const regIdParam = urlParams.get('id') || urlParams.get('reg_id') || (editVal && !isNaN(editVal) ? editVal : null);
+            const modeParam = urlParams.get('mode') || (editVal || urlParams.has('edit') ? 'edit' : (urlParams.has('view') ? 'view' : (regIdParam ? 'view' : 'create')));
             if (regIdParam) {
                 loadRegistrationForViewOrEdit(regIdParam, modeParam);
             }

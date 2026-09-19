@@ -6,9 +6,12 @@
 
 import { NativeBiometric, BiometryType } from 'capacitor-native-biometric';
 import { Preferences } from '@capacitor/preferences';
+import { Capacitor } from '@capacitor/core';
 import { apiService } from './api.service';
 import { PortalType } from './portal.service';
 import { mobileScheduler, authLifecycle } from '../runtime';
+import { secureStorageService } from './secure-storage.service';
+import { APP_CONFIG } from '../config/app.config';
 
 const SCHEDULER_SESSION_ID = 'auth-session-monitor';
 
@@ -77,7 +80,17 @@ class AuthService {
       if (value) {
         const restored = JSON.parse(value);
         if (restored.isLoggedIn && restored.tokenExpiresAt > 0 && Date.now() >= restored.tokenExpiresAt) {
-          console.log('[DC_AUTH] Restored session has expired token, clearing stale state');
+          console.log('[DC_AUTH] Restored session access token expired. Checking persistent refresh token...');
+          const refreshToken = await secureStorageService.getRefreshToken();
+          if (refreshToken) {
+            this.authState = restored;
+            const refreshed = await this.refreshMobileSession();
+            if (refreshed) {
+              console.log('[DC_AUTH] Persistent session refreshed successfully on startup');
+              return;
+            }
+          }
+          console.log('[DC_AUTH] No valid persistent session or refresh failed, clearing state');
           restored.isLoggedIn = false;
           restored.user = null;
           restored.tokenExpiresAt = 0;
@@ -241,8 +254,28 @@ class AuthService {
         case 'vgk':
           response = await apiService.vgkLogin(userId, password);
           break;
-        default:
-          response = await apiService.staffLogin(userId, password);
+        default: {
+          let deviceMeta: any = undefined;
+          try {
+            const deviceId = await secureStorageService.getDeviceId();
+            const platform = Capacitor.getPlatform();
+            let deviceName = platform;
+            try {
+              const { Device } = await import('@capacitor/device');
+              const info = await Device.getInfo();
+              deviceName = `${info.manufacturer || ''} ${info.model || ''}`.trim() || platform;
+            } catch {}
+            deviceMeta = {
+              device_id: deviceId,
+              platform,
+              device_name: deviceName,
+              app_version: APP_CONFIG.getFullVersion()
+            };
+          } catch (devErr) {
+            console.warn('[DC_AUTH] Device metadata extraction error:', devErr);
+          }
+          response = await apiService.staffLogin(userId, password, deviceMeta);
+        }
       }
       
       if (!response.success) {
@@ -251,6 +284,11 @@ class AuthService {
 
       // Store token
       await apiService.setToken(response.data.access_token);
+
+      // Store rotating refresh token in hardware Keystore/Keychain if provided
+      if (response.data.refresh_token) {
+        await secureStorageService.setRefreshToken(response.data.refresh_token);
+      }
 
       // DC Protocol: Extract user data based on portal type
       // Staff uses 'employee', MNR uses 'user', Partner uses 'partner'
@@ -343,21 +381,89 @@ class AuthService {
     window.dispatchEvent(new CustomEvent('login-success'));
   }
 
+  async refreshMobileSession(): Promise<boolean> {
+    try {
+      const refreshToken = await secureStorageService.getRefreshToken();
+      const deviceId = await secureStorageService.getDeviceId();
+
+      if (!refreshToken) {
+        console.log('[DC_AUTH] No refresh token available in secure storage, checking biometric fallback');
+        return await this.attemptSilentReAuth();
+      }
+
+      console.log('[DC_AUTH] Calling /staff/auth/mobile/refresh to rotate token...');
+      const response = await apiService.refreshMobileToken(refreshToken, deviceId);
+
+      if (response && response.success && response.data) {
+        const { access_token, refresh_token: new_refresh_token, expires_in } = response.data;
+        
+        // 1. Store rotated one-time refresh token in hardware Keystore / Keychain
+        await secureStorageService.setRefreshToken(new_refresh_token);
+        
+        // 2. Set new short-lived JWT access token
+        await apiService.setToken(access_token);
+        
+        // 3. Update authState
+        const tokenExpiresIn = expires_in || 1800;
+        this.authState.tokenExpiresAt = Date.now() + (tokenExpiresIn * 1000);
+        this.authState.lastActivity = Date.now();
+        this.authState.isLoggedIn = true;
+        await this.saveAuthState();
+        
+        // 4. Reset session expired flags
+        apiService.resetSessionExpiredFlag();
+        
+        console.log('[DC_AUTH] Successfully refreshed mobile session and rotated token');
+        window.dispatchEvent(new CustomEvent('auth-changed'));
+        return true;
+      } else {
+        console.warn('[DC_AUTH] Refresh token rejected or expired on server:', response.error);
+        await this.logout();
+        return false;
+      }
+    } catch (e) {
+      console.error('[DC_AUTH] Exception during mobile session refresh:', e);
+      return false;
+    }
+  }
+
   async logout(): Promise<void> {
+    try {
+      const refreshToken = await secureStorageService.getRefreshToken();
+      const deviceId = await secureStorageService.getDeviceId();
+      if (refreshToken || deviceId) {
+        await apiService.revokeMobileToken(refreshToken || undefined, deviceId, false);
+      }
+    } catch (e) {
+      console.warn('[DC_AUTH] Revoke mobile token failed during logout:', e);
+    }
+
     await apiService.clearToken();
     await apiService.clearCompanyId();
+    await secureStorageService.clearAll();
+
     try { localStorage.removeItem('mnr_staff_menu_tree_cache'); } catch (e) {}
+    try { localStorage.removeItem('staff_token'); } catch (e) {}
+    try { localStorage.removeItem('token'); } catch (e) {}
+    try { localStorage.removeItem('staff_user'); } catch (e) {}
+    try { sessionStorage.clear(); } catch (e) {}
     
     try {
-      const { Capacitor } = await import('@capacitor/core');
       if (Capacitor.isNativePlatform()) {
         await NativeBiometric.deleteCredentials({ server: 'myntreal-app' });
+        await NativeBiometric.deleteCredentials({ server: 'myntreal-app-staff' });
+        await NativeBiometric.deleteCredentials({ server: 'myntreal-app-mnr' });
+        await NativeBiometric.deleteCredentials({ server: 'myntreal-app-partner' });
+        await NativeBiometric.deleteCredentials({ server: 'myntreal-app-vgk' });
       }
     } catch (e) {
       // Ignore - biometric not available on web
     }
     
     await Preferences.remove({ key: CREDENTIALS_KEY });
+    await Preferences.remove({ key: BIOMETRIC_CREDENTIALS_BY_PORTAL });
+    await Preferences.remove({ key: BIOMETRIC_PORTAL_KEY });
+    await Preferences.remove({ key: AUTH_STATE_KEY });
     
     this.authState = {
       isLoggedIn: false,
@@ -369,6 +475,7 @@ class AuthService {
     };
     await this.saveAuthState();
     window.dispatchEvent(new CustomEvent('logout'));
+    window.dispatchEvent(new CustomEvent('auth-changed'));
   }
 
   updateActivity(): void {
@@ -428,16 +535,15 @@ class AuthService {
   }
 
   isSessionValid(): boolean {
+    if (!this.authState.isLoggedIn) {
+      return false;
+    }
     if (this.authState.isClockedIn || this.authState.hasActiveJourney) {
       return true;
     }
-
-    if (this.authState.tokenExpiresAt > 0 && Date.now() >= this.authState.tokenExpiresAt) {
-      return false;
-    }
-
-    const elapsed = Date.now() - this.authState.lastActivity;
-    return elapsed < SESSION_TIMEOUT_MS;
+    // Mobile persistent authentication: session remains valid and short-lived access tokens
+    // are automatically renewed via rotating refresh tokens stored in native Keystore/Keychain.
+    return true;
   }
 
   isTokenExpired(): boolean {
@@ -530,11 +636,13 @@ class AuthService {
         const loginGrace = Date.now() - this.authState.lastActivity < 60000;
         if (loginGrace) return;
 
-        if (this.isTokenExpired()) {
-          console.log('[DC_AUTH] JWT token expired, attempting silent re-auth');
-          const reAuthed = await this.attemptSilentReAuth();
-          if (!reAuthed) {
-            console.log('[DC_AUTH] Silent re-auth failed, showing re-auth banner');
+        // Proactively refresh access token if expired or expiring within 5 minutes (300,000 ms)
+        const needsRefresh = this.isTokenExpired() || (this.authState.tokenExpiresAt > 0 && Date.now() >= this.authState.tokenExpiresAt - 300000);
+        if (needsRefresh) {
+          console.log('[DC_AUTH] Access token needs refresh, attempting proactive refresh...');
+          const reAuthed = await this.refreshMobileSession();
+          if (!reAuthed && this.isTokenExpired()) {
+            console.log('[DC_AUTH] Mobile session refresh failed and access token is expired, emitting session-expired');
             window.dispatchEvent(new CustomEvent('session-expired'));
           }
           return;

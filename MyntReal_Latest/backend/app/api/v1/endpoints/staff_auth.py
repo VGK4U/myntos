@@ -10,6 +10,9 @@ from typing import Optional, Any, List, Dict, Union
 from pydantic import BaseModel, EmailStr, Field
 import pyotp
 
+import secrets
+import hashlib
+
 from app.core.database import get_db, SessionLocal
 from app.core.security import SecurityManager
 from app.core.config import settings
@@ -18,6 +21,8 @@ from app.models.staff import (
     StaffAuditLog, log_staff_audit, check_nda_acceptance, check_all_pending_agreements
 )
 from app.models.staff_accounts import AssociatedCompany
+from app.models.mobile_device_session import MobileDeviceSession
+from app.core.timezone import get_indian_time
 
 router = APIRouter(prefix="/staff", tags=["Staff Auth"])
 
@@ -26,12 +31,17 @@ class StaffLoginRequest(BaseModel):
     employee_id: str = Field(..., min_length=1, description="Employee ID (e.g., MR10001)")
     password: str = Field(..., min_length=1)
     totp_code: Optional[str] = Field(None, min_length=6, max_length=6)
+    device_id: Optional[str] = Field(None, description="Mobile device unique hardware UUID")
+    platform: Optional[str] = Field(None, description="'android' | 'ios' | 'web'")
+    device_name: Optional[str] = None
+    app_version: Optional[str] = None
 
 
 class StaffLoginResponse(BaseModel):
     success: bool
     message: str
     access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
     expires_in: Optional[int] = None
     requires_2fa: bool = False
@@ -40,6 +50,17 @@ class StaffLoginResponse(BaseModel):
     nda_version_id: Optional[int] = None
     nda_version_number: Optional[str] = None
     nda_data: Optional[dict] = None
+
+
+class StaffMobileRefreshRequest(BaseModel):
+    refresh_token: str = Field(..., min_length=16, description="Mobile rotating refresh token")
+    device_id: str = Field(..., min_length=1, description="Device UUID")
+
+
+class StaffMobileRevokeRequest(BaseModel):
+    refresh_token: Optional[str] = None
+    device_id: Optional[str] = None
+    revoke_all_devices: bool = False
 
 
 class StaffProfileResponse(BaseModel):
@@ -798,6 +819,47 @@ def staff_login(
     total_ms = (time.time() - t0) * 1000
     print(f"[LOGIN TRACE] Total: {total_ms:.1f}ms (lookup: {t_lookup_ms:.1f}ms, pw: {t_pw_ms:.1f}ms, token: {t_token_ms:.1f}ms, sync: {t_sync_ms:.1f}ms, nda: {t_nda_ms:.1f}ms)", flush=True)
     
+    # DC Protocol: Mobile Persistent Device Session (Rotating Refresh Token)
+    mobile_refresh_token = None
+    if getattr(login_data, 'device_id', None):
+        try:
+            mobile_refresh_token = secrets.token_hex(32)
+            h = hashlib.sha256(mobile_refresh_token.encode()).hexdigest()
+            now_ist = get_indian_time()
+            expires_ist = now_ist + timedelta(days=180)
+            existing_sess = db.query(MobileDeviceSession).filter_by(
+                staff_id=employee.id,
+                device_id=login_data.device_id
+            ).with_for_update().first()
+            if existing_sess:
+                existing_sess.refresh_token_hash = h
+                existing_sess.platform = login_data.platform or existing_sess.platform or 'android'
+                existing_sess.device_name = login_data.device_name or existing_sess.device_name
+                existing_sess.app_version = login_data.app_version or existing_sess.app_version
+                existing_sess.token_version = getattr(employee, "token_version", 1) or 1
+                existing_sess.is_revoked = False
+                existing_sess.expires_at = expires_ist
+                existing_sess.last_used_at = now_ist
+            else:
+                new_sess = MobileDeviceSession(
+                    staff_id=employee.id,
+                    device_id=login_data.device_id,
+                    platform=login_data.platform or 'android',
+                    refresh_token_hash=h,
+                    device_name=login_data.device_name,
+                    app_version=login_data.app_version,
+                    token_version=getattr(employee, "token_version", 1) or 1,
+                    is_revoked=False,
+                    expires_at=expires_ist,
+                    last_used_at=now_ist,
+                    created_at=now_ist
+                )
+                db.add(new_sess)
+            db.commit()
+        except Exception as _e:
+            print(f"[LOGIN MOBILE SESS ERROR] {_e}", flush=True)
+            db.rollback()
+
     # DC Protocol (ARCHITECTURAL FIX - Sep 2026):
     # Deterministically end session transaction before returning response.
     # Ensures zero locks are held while FastAPI serializes JSON or sends response over network.
@@ -810,6 +872,7 @@ def staff_login(
         success=True,
         message=message,
         access_token=token,
+        refresh_token=mobile_refresh_token,
         token_type="bearer",
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         employee=employee_data,
@@ -1039,6 +1102,176 @@ async def refresh_staff_token(
             detail="Could not refresh token. Please login again.",
             headers={"WWW-Authenticate": "Bearer"}
         )
+
+
+@router.post("/auth/mobile/refresh")
+async def refresh_staff_mobile_session(
+    payload: StaffMobileRefreshRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Rotating Refresh Token Endpoint for MyntOS Mobile App.
+    - Validates hardware-stored refresh token and device UUID.
+    - Rotates the refresh token (one-time use, replacing with new random 64-byte hex token).
+    - Checks staff active status, lock state, and token_version.
+    - Invalidates session if employee token_version has been bumped (password changed or logged out).
+    - Extends 180-day sliding window.
+    - Returns fresh 30-minute access token and new rotated refresh token.
+    """
+    clean_token = (payload.refresh_token or "").strip()
+    clean_device = (payload.device_id or "").strip()
+    if not clean_token or not clean_device:
+        raise HTTPException(status_code=400, detail="refresh_token and device_id are required")
+
+    h = hashlib.sha256(clean_token.encode()).hexdigest()
+    session = db.query(MobileDeviceSession).filter_by(
+        refresh_token_hash=h,
+        device_id=clean_device
+    ).with_for_update().first()
+
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or unrecognized mobile session. Please login again.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    if session.is_revoked:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session has been revoked. Please login again.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    now_ist = get_indian_time()
+    if session.expires_at <= now_ist:
+        session.is_revoked = True
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Mobile session expired. Please login again.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    employee = db.query(StaffEmployee).filter_by(id=session.staff_id).first()
+    if not employee:
+        session.is_revoked = True
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Staff employee record not found.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    if employee.status != 'active':
+        session.is_revoked = True
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Account is {employee.status}. Access denied.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    is_locked = employee.is_locked() if callable(getattr(employee, 'is_locked', None)) else bool(getattr(employee, 'is_locked', False))
+    if is_locked:
+        session.is_revoked = True
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Account is locked. Access denied.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    db_token_version = getattr(employee, "token_version", 1) or 1
+    if session.token_version < db_token_version:
+        session.is_revoked = True
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session revoked due to password change or security update. Please login again.",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+    # 1. Rotate refresh token (One-time use)
+    new_refresh_token = secrets.token_hex(32)
+    new_h = hashlib.sha256(new_refresh_token.encode()).hexdigest()
+
+    session.refresh_token_hash = new_h
+    session.token_version = db_token_version
+    session.last_used_at = now_ist
+    session.expires_at = now_ist + timedelta(days=180)  # 180-day sliding window renewal
+
+    # 2. Issue fresh JWT access token (30 min)
+    new_jwt = SecurityManager.create_access_token(
+        data={
+            "sub": str(employee.id),
+            "emp_code": employee.emp_code,
+            "email": employee.email,
+            "role": employee.role.role_code if employee.role else "junior_executive",
+            "staff_type": getattr(employee, "staff_type", "MN_STAFF"),
+            "admin_scope": getattr(employee, "admin_scope", "CLIENT_SPECIFIC"),
+            "base_company_id": employee.base_company_id,
+            "tenant_id": getattr(employee, "tenant_id", 1) or 1,
+            "token_version": db_token_version,
+            "team_tag": employee.team_tag,
+            "user_type": "staff"
+        },
+        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    )
+
+    db.commit()
+
+    return {
+        "success": True,
+        "access_token": new_jwt,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer",
+        "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "employee": employee.to_dict()
+    }
+
+
+@router.post("/auth/mobile/revoke")
+async def revoke_staff_mobile_session(
+    payload: StaffMobileRevokeRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Revokes mobile device session(s).
+    Called upon explicit mobile logout or remote session termination.
+    """
+    clean_token = (payload.refresh_token or "").strip()
+    clean_device = (payload.device_id or "").strip()
+
+    if payload.revoke_all_devices:
+        staff_id_to_revoke = None
+        auth_header = request.headers.get("Authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            tok_payload = SecurityManager.verify_token(auth_header[7:])
+            if tok_payload and "sub" in tok_payload:
+                try:
+                    staff_id_to_revoke = int(tok_payload["sub"])
+                except (ValueError, TypeError):
+                    pass
+        if not staff_id_to_revoke and clean_token:
+            h = hashlib.sha256(clean_token.encode()).hexdigest()
+            sess = db.query(MobileDeviceSession).filter_by(refresh_token_hash=h).first()
+            if sess:
+                staff_id_to_revoke = sess.staff_id
+        if staff_id_to_revoke:
+            db.query(MobileDeviceSession).filter_by(
+                staff_id=staff_id_to_revoke
+            ).update({"is_revoked": True})
+    elif clean_token:
+        h = hashlib.sha256(clean_token.encode()).hexdigest()
+        db.query(MobileDeviceSession).filter_by(refresh_token_hash=h).update({"is_revoked": True})
+    elif clean_device:
+        db.query(MobileDeviceSession).filter_by(device_id=clean_device).update({"is_revoked": True})
+
+    db.commit()
+    return {"success": True, "message": "Mobile session revoked successfully."}
 
 
 @router.get("/auth/roles")

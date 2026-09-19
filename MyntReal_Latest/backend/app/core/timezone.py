@@ -132,16 +132,16 @@ def normalize_date_input(val: Union[str, date, datetime, None]) -> Optional[str]
     if not raw:
         return None
     import re
-    # Match YYYY-MM-DD or YYYY/MM/DD
-    m_iso = re.match(r'^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$', raw)
+    # Match YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD
+    m_iso = re.match(r'^(\d{4})[-/. ](\d{1,2})[-/. ](\d{1,2})$', raw)
     if m_iso:
         y, m, d = int(m_iso.group(1)), int(m_iso.group(2)), int(m_iso.group(3))
         try:
             return date(y, m, d).isoformat()
         except ValueError:
             return None
-    # Match DD-MM-YYYY or DD/MM/YYYY or DD-MM-YY or DD/MM/YY
-    m_dmy = re.match(r'^(\d{1,2})[-/](\d{1,2})[-/](\d{2,4})$', raw)
+    # Match DD-MM-YYYY, DD/MM/YYYY, DD.MM.YYYY or DD-MM-YY, DD/MM/YY, DD.MM.YY
+    m_dmy = re.match(r'^(\d{1,2})[-/. ](\d{1,2})[-/. ](\d{2,4})$', raw)
     if m_dmy:
         d, m, y = int(m_dmy.group(1)), int(m_dmy.group(2)), int(m_dmy.group(3))
         if y < 100:

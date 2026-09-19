@@ -512,8 +512,8 @@
 
                 <!-- Channel / Sender Identity Selector -->
                 <select id="msgChannelSel" class="composer-input channel-select-compact" title="Select WhatsApp Sender Identity" onchange="onMsgChannelChange(this.value)">
+                  <option value="official" selected>🏢 Official WhatsApp</option>
                   <option value="scanned">📱 Scanned WhatsApp</option>
-                  <option value="official">🏢 Official WhatsApp</option>
                 </select>
 
                 <!-- Template Selector Button (Opens Unified CRM Template Modal) -->
@@ -528,7 +528,7 @@
                 
                 <!-- Send Button -->
                 <button class="btn-custom btn-green msg-send-btn" id="msgSendBtn" onclick="sendChatMessage()">
-                  <i class="fas fa-paper-plane"></i> Send
+                  <i class="fas fa-building text-primary me-1"></i> Send Official
                 </button>
               </div>
             </div>
@@ -2009,10 +2009,16 @@ async function selectChat(phone, recType, name, isUnassigned = false, channel = 
   // Sync composer channel selection to conversation channel if available
   const chanSel = document.getElementById('msgChannelSel');
   if (chanSel) {
-    if (channel === 'META_API' || channel === 'official') {
-      chanSel.value = 'official';
+    if (isGroupOrChan) {
+      chanSel.value = 'scanned';
     } else if (channel === 'SCANNED' || channel === 'scanned') {
       chanSel.value = 'scanned';
+    } else {
+      // Default to official Meta API for all individual leads/contacts
+      chanSel.value = 'official';
+    }
+    if (typeof onMsgChannelChange === 'function') {
+      onMsgChannelChange(chanSel.value);
     }
   }
 
@@ -2386,7 +2392,7 @@ function getStaffSignature() {
 async function sendChatMessage() {
   const textInput = document.getElementById('msgTextInput');
   const rawMsgText = (textInput?.value || '').trim();
-  const selectedChannel = document.getElementById('msgChannelSel')?.value || 'scanned';
+  const selectedChannel = document.getElementById('msgChannelSel')?.value || 'official';
 
   if (!activeChatPhone) return showToast('Please select a chat first', 'red');
   if (!rawMsgText && !activeMediaUrl) return showToast('Please type a message or attach media', 'red');

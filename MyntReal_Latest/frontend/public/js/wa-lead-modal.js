@@ -184,7 +184,7 @@
     '</div>',
     '<div style="display:flex;gap:8px">',
     '<button onclick="window._lwaClose()" style="padding:8px 16px;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;color:#374151;font-size:12px;cursor:pointer">Cancel</button>',
-    '<button id="_lwaSend" onclick="window._lwaDoSend()" style="padding:8px 20px;background:#25D366;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;min-width:140px"><i class="fab fa-whatsapp"></i> <span id="_lwaSendLbl">Send via 📱 Scanned WhatsApp</span></button>',
+    '<button id="_lwaSend" onclick="window._lwaDoSend()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;min-width:140px"><i class="fab fa-whatsapp"></i> <span id="_lwaSendLbl">Send via 🏢 Official WhatsApp</span></button>',
     '</div>',
     '</div>',
 
@@ -192,7 +192,7 @@
   ].join('');
 
   /* ── State ───────────────────────────────────────────────────────────────── */
-  var _s = { leadId: null, phone: null, name: null, companyId: null, mode: 'scanned', tpls: [], bodyTpl: '' };
+  var _s = { leadId: null, phone: null, name: null, companyId: null, mode: 'company', tpls: [], bodyTpl: '' };
 
   /* ── Inject modal ────────────────────────────────────────────────────────── */
   function _ensure() {
@@ -648,32 +648,32 @@
     if (action === 'thanks_connecting') {
       switch (vertical) {
         case 'solar':
-          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal Solar Rooftop గురించి మాతో మాట్లాడినందుకు ధన్యవాదాలు. మీ ఇంటి లేదా కమర్షియల్ కరెంట్ బిల్లును 90% వరకు తగ్గించుకుంటూ, Government Subsidy పొందే పూర్తి వివరాలు & Customized Solar Quotation త్వరలోనే మా సోలార్ ఎక్స్‌పర్ట్ మీకు షేర్ చేస్తారు. ఏవైనా డౌట్స్ ఉంటే దయచేసి ఇక్కడ మెసేజ్ చేయండి.';
+          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal Solar Rooftop గురించి మాతో మాట్లాడినందుకు ధన్యవాదాలు. మీ ఇంటి లేదా కమర్షియల్ కరెంట్ బిల్లును 90% వరకు తగ్గించుకుంటూ, Government Subsidy పొందే పూర్తి వివరాలు & Customized Solar Quotation త్వరలోనే మా సోలార్ ఎక్స్‌పర్ట్ మీకు షేర్ చేస్తారు. ఏవైనా డౌట్స్ ఉంటే దయచేసి ఇక్కడ మెసేజ్ చేయండి.\n\n☀️ మా అధికారిక సోలార్ క్యాటలాగ్ & సబ్సిడీ వివరాలు:\n👉 https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te';
         case 'real_estate':
-          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal Properties తో కనెక్ట్ అయినందుకు ధన్యవాదాలు. మీ బడ్జెట్ మరియు రిక్వైర్‌మెంట్‌కు తగినట్లుగా బెస్ట్ వెరిఫైడ్ ఓపెన్ ప్లాట్స్, గేటెడ్ కమ్యూనిటీ విల్లాస్ మరియు అపార్ట్‌మెంట్స్ వివరాలను మా ప్రాపర్టీ స్పెషలిస్ట్ త్వరలోనే మీకు షేర్ చేస్తారు. సైట్ విజిట్ కోసం ఎప్పుడైనా సంప్రదించవచ్చు.';
+          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal Properties తో కనెక్ట్ అయినందుకు ధన్యవాదాలు. మీ బడ్జెట్ మరియు రిక్వైర్‌మెంట్‌కు తగినట్లుగా బెస్ట్ వెరిఫైడ్ ఓపెన్ ప్లాట్స్, గేటెడ్ కమ్యూనిటీ విల్లాస్ మరియు అపార్ట్‌మెంట్స్ వివరాలను మా ప్రాపర్టీ స్పెషలిస్ట్ త్వరలోనే మీకు షేర్ చేస్తారు. సైట్ విజిట్ కోసం ఎప్పుడైనా సంప్రదించవచ్చు.\n\n🏡 మా అధికారిక రియల్ ఎస్టేట్ క్యాటలాగ్:\n👉 https://www.myntreal.com/catalog/real-dreams/real-dreams-premium-properties?lang=te';
         case 'insurance':
-          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal Insurance & Protection తో మాట్లాడినందుకు ధన్యవాదాలు. మీకు మరియు మీ కుటుంబానికి సరిపోయే బెస్ట్ Health, Life మరియు General Insurance పాలసీ కొటేషన్లను మా ఇన్సూరెన్స్ అడ్వైజర్ మీకు పంపిస్తారు. పూర్తి క్లెయిమ్ సపోర్ట్ మా బాధ్యత.';
+          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal Insurance & Protection తో మాట్లాడినందుకు ధన్యవాదాలు. మీకు మరియు మీ కుటుంబానికి సరిపోయే బెస్ట్ Health, Life మరియు General Insurance పాలసీ కొటేషన్లను మా ఇన్సూరెన్స్ అడ్వైజర్ మీకు పంపిస్తారు. పూర్తి క్లెయిమ్ సపోర్ట్ మా బాధ్యత.\n\n🛡️ మా అధికారిక ఇన్సూరెన్స్ గైడ్ & సేవలు:\n👉 https://www.myntreal.com/catalog/insurance/comprehensive-insurance-advisory?lang=te';
         case 'ev':
-          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal EV & Spares గురించి మాతో కనెక్ట్ అయినందుకు ధన్యవాదాలు. లేటెస్ట్ ఎలక్ట్రిక్ వెహికల్ మోడల్స్, రేంజ్, బ్యాటరీ వారంటీ, ఫైనాన్స్ ఆప్షన్స్ మరియు టెస్ట్ రైడ్ వివరాలను మా ఈవీ స్పెషలిస్ట్ మీకు త్వరలోనే అందిస్తారు.';
+          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal EV & Spares గురించి మాతో కనెక్ట్ అయినందుకు ధన్యవాదాలు. లేటెస్ట్ ఎలక్ట్రిక్ వెహికల్ మోడల్స్, రేంజ్, బ్యాటరీ వారంటీ, ఫైనాన్స్ ఆప్షన్స్ మరియు టెస్ట్ రైడ్ వివరాలను మా ఈవీ స్పెషలిస్ట్ మీకు త్వరలోనే అందిస్తారు.\n\n⚡ మా అధికారిక ఈవీ ప్రైసింగ్ & క్యాటలాగ్:\n👉 https://www.myntreal.com/catalog/ev-b2c-pricing?lang=te';
         case 'etc':
-          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal ETC Skill Training ప్రోగ్రామ్స్ గురించి మాట్లాడినందుకు ధన్యవాదాలు. మీ కెరీర్ గ్రోత్‌కు అవసరమైన సర్టిఫైడ్ ట్రైనింగ్ కోర్సులు, బ్యాచ్ టైమింగ్స్ మరియు జాబ్ అసిస్టెన్స్ వివరాలు మా కోఆర్డినేటర్ మీకు పంపిస్తారు.';
+          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal ETC Skill Training ప్రోగ్రామ్స్ గురించి మాట్లాడినందుకు ధన్యవాదాలు. మీ కెరీర్ గ్రోత్‌కు అవసరమైన సర్టిఫైడ్ ట్రైనింగ్ కోర్సులు, బ్యాచ్ టైమింగ్స్ మరియు జాబ్ అసిస్టెన్స్ వివరాలు మా కోఆర్డినేటర్ మీకు పంపిస్తారు.\n\n🎓 మా అధికారిక ఈటీసీ సర్టిఫికేషన్ ప్రోగ్రామ్స్:\n👉 https://www.myntreal.com/catalog/etc/etc-renewable-certifications?lang=te';
         default:
-          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal తో కనెక్ట్ అయినందుకు చాలా ధన్యవాదాలు. మా అన్ని ప్రీమియర్ సర్వీసెస్ మీ సేవలో అందుబాటులో ఉన్నాయి:\n☀️ Solar Rooftop & Renewable Energy (కరెంట్ బిల్లు 90% వరకు ఆదా & Govt సబ్సిడీ)\n🏡 Real Estate & Premier Properties (ఓపెన్ ప్లాట్స్, విల్లాస్ & అపార్ట్‌మెంట్స్)\n🛡️ Insurance & Protection Solutions (హెల్త్, లైఫ్ & జనరల్ పాలసీలు)\n🛵 EV Vehicles & Genuine Spares (ఎకో-ఫ్రెండ్లీ ఎలక్ట్రిక్ బైక్స్ & సర్వీస్)\n🎓 ETC Skill Training & Career Certifications (ఉద్యోగ నైపుణ్య శిక్షణ)\n\nమా Relationship Manager మీకు పూర్తి వివరాలు అందిస్తారు. మీకు ఏ సమాచారం కావాలన్నా దయచేసి ఇక్కడ మెసేజ్ చేయగలరు!';
+          return 'నమస్కారం ' + cName + ' గారు! 🙏 MyntReal తో కనెక్ట్ అయినందుకు చాలా ధన్యవాదాలు. మా అన్ని ప్రీమియర్ సర్వీసెస్ మీ సేవలో అందుబాటులో ఉన్నాయి:\n☀️ Solar Rooftop & Renewable Energy (కరెంట్ బిల్లు 90% వరకు ఆదా & Govt సబ్సిడీ)\n🏡 Real Estate & Premier Properties (ఓపెన్ ప్లాట్స్, విల్లాస్ & అపార్ట్‌మెంట్స్)\n🛡️ Insurance & Protection Solutions (హెల్త్, లైఫ్ & జనరల్ పాలసీలు)\n🛵 EV Vehicles & Genuine Spares (ఎకో-ఫ్రెండ్లీ ఎలక్ట్రిక్ బైక్స్ & సర్వీస్)\n🎓 ETC Skill Training & Career Certifications (ఉద్యోగ నైపుణ్య శిక్షణ)\n\n👉 https://www.myntreal.com/catalog/industrial-hub/industrial-hub-franchise?lang=te\n\nమా Relationship Manager మీకు పూర్తి వివరాలు అందిస్తారు. మీకు ఏ సమాచారం కావాలన్నా దయచేసి ఇక్కడ మెసేజ్ చేయగలరు!';
       }
     } else {
       switch (vertical) {
         case 'solar':
-          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ Solar Rooftop ఎంక్వైరీ కోసం MyntReal నుండి ఇప్పుడే కాల్ చేశాము, కానీ కాల్ కలవలేదు. మీరు ఫ్రీగా ఉన్నప్పుడు దయచేసి ఈ మెసేజ్‌కి రిప్లై ఇవ్వండి లేదా కాల్ బ్యాక్ చేయండి. సోలార్ సబ్సిడీ మరియు సేవింగ్స్ వివరాలు తెలియజేస్తాము.';
+          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ Solar Rooftop ఎంక్వైరీ కోసం MyntReal నుండి ఇప్పుడే కాల్ చేశాము, కానీ కాల్ కలవలేదు. మీరు ఫ్రీగా ఉన్నప్పుడు దయచేసి ఈ మెసేజ్‌కి రిప్లై ఇవ్వండి లేదా కాల్ బ్యాక్ చేయండి. సోలార్ సబ్సిడీ మరియు సేవింగ్స్ వివరాలు తెలియజేస్తాము.\n\n☀️ మా సోలార్ క్యాటలాగ్ ఇక్కడ చూడండి:\n👉 https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te';
         case 'real_estate':
-          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ Real Estate ప్రాపర్టీ ఎంక్వైరీ గురించి MyntReal నుండి కాల్ చేశాము, మాట్లాడటం కుదరలేదు. మీకు అనుకూలమైన టైమ్‌లో దయచేసి రిప్లై ఇవ్వండి లేదా కాల్ చేయండి. మీ రిక్వైర్‌మెంట్‌కు సరిపడే బెస్ట్ ప్రాపర్టీ ఆప్షన్స్ మీకు పంపిస్తాము.';
+          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ Real Estate ప్రాపర్టీ ఎంక్వైరీ గురించి MyntReal నుండి కాల్ చేశాము, మాట్లాడటం కుదరలేదు. మీకు అనుకూలమైన టైమ్‌లో దయచేసి రిప్లై ఇవ్వండి లేదా కాల్ చేయండి. మీ రిక్వైర్‌మెంట్‌కు సరిపడే బెస్ట్ ప్రాపర్టీ ఆప్షన్స్ మీకు పంపిస్తాము.\n\n🏡 మా రియల్ ఎస్టేట్ క్యాటలాగ్:\n👉 https://www.myntreal.com/catalog/real-dreams/real-dreams-premium-properties?lang=te';
         case 'insurance':
-          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ Insurance ఎంక్వైరీ గురించి MyntReal నుండి కాల్ చేశాము, కాల్ కలవలేదు. మీకు ఫ్రీ టైమ్ ఉన్నప్పుడు దయచేసి ఇక్కడ రిప్లై ఇవ్వండి. మీకు అనువైన బెస్ట్ ఇన్సూరెన్స్ ప్లాన్స్ వివరాలు చర్చిద్దాం.';
+          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ Insurance ఎంక్వైరీ గురించి MyntReal నుండి కాల్ చేశాము, కాల్ కలవలేదు. మీకు ఫ్రీ టైమ్ ఉన్నప్పుడు దయచేసి ఇక్కడ రిప్లై ఇవ్వండి. మీకు అనువైన బెస్ట్ ఇన్సూరెన్స్ ప్లాన్స్ వివరాలు చర్చిద్దాం.\n\n🛡️ ఇన్సూరెన్స్ వివరాలు:\n👉 https://www.myntreal.com/catalog/insurance/comprehensive-insurance-advisory?lang=te';
         case 'ev':
-          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ EV Vehicle & Spares ఎంక్వైరీ కోసం MyntReal నుండి కాల్ చేశాము, మాట్లాడటం వీలుపడలేదు. మీరు వీలైనప్పుడు రిప్లై ఇవ్వండి లేదా కాల్ చేయండి. టెస్ట్ రైడ్ మరియు మోడల్స్ వివరాలు మీకు తెలియజేస్తాము.';
+          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ EV Vehicle & Spares ఎంక్వైరీ కోసం MyntReal నుండి కాల్ చేశాము, మాట్లాడటం వీలుపడలేదు. మీరు వీలైనప్పుడు రిప్లై ఇవ్వండి లేదా కాల్ చేయండి. టెస్ట్ రైడ్ మరియు మోడల్స్ వివరాలు మీకు తెలియజేస్తాము.\n\n⚡ ఈవీ మోడల్స్ & ప్రైసింగ్:\n👉 https://www.myntreal.com/catalog/ev-b2c-pricing?lang=te';
         case 'etc':
-          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ ETC Skill Training కోర్సు వివరాల కోసం MyntReal నుండి కాల్ చేశాము, కాల్ కనెక్ట్ అవ్వలేదు. మీరు ఫ్రీగా ఉన్నప్పుడు దయచేసి మెసేజ్ చేయండి. అప్‌కమింగ్ బ్యాచ్ టైమింగ్స్ మరియు ఫీజు వివరాలు చర్చిద్దాం.';
+          return 'నమస్కారం ' + cName + ' గారు! 📞 మీ ETC Skill Training కోర్సు వివరాల కోసం MyntReal నుండి కాల్ చేశాము, కాల్ కనెక్ట్ అవ్వలేదు. మీరు ఫ్రీగా ఉన్నప్పుడు దయచేసి మెసేజ్ చేయండి. అప్‌కమింగ్ బ్యాచ్ టైమింగ్స్ మరియు ఫీజు వివరాలు చర్చిద్దాం.\n\n🎓 ట్రైనింగ్ కోర్సులు:\n👉 https://www.myntreal.com/catalog/etc/etc-renewable-certifications?lang=te';
         default:
-          return 'నమస్కారం ' + cName + ' గారు! 📞 MyntReal నుండి మీతో మాట్లాడటానికి ఇప్పుడే కాల్ చేశాము, కానీ కాల్ కలవలేదు / మీరు బిజీగా ఉన్నట్లున్నారు. మేము మీకు క్రింది సర్వీసెస్‌లో ఉత్తమ సేవలు అందిస్తున్నాము:\n☀️ Solar Energy (సోలార్ రూఫ్‌టాప్ & సబ్సిడీ)\n🏡 Real Estate (వెరిఫైడ్ ప్రాపర్టీస్ & సైట్ విజిట్స్)\n🛡️ Insurance (హెల్త్ & లైఫ్ ఇన్సూరెన్స్)\n🛵 EV Vehicles & Spares (ఎలక్ట్రిక్ స్కూటర్లు & స్పేర్స్)\n🎓 ETC Skill Training (నైపుణ్య శిక్షణ & కెరీర్)\n\nమీకు అనుకూలమైన సమయంలో దయచేసి ఇక్కడ మెసేజ్ చేయండి లేదా కాల్ బ్యాక్ చేయగలరు!';
+          return 'నమస్కారం ' + cName + ' గారు! 📞 MyntReal నుండి మీతో మాట్లాడటానికి ఇప్పుడే కాల్ చేశాము, కానీ కాల్ కలవలేదు / మీరు బిజీగా ఉన్నట్లున్నారు. మేము మీకు క్రింది సర్వీసెస్‌లో ఉత్తమ సేవలు అందిస్తున్నాము:\n☀️ Solar Energy (సోలార్ రూఫ్‌టాప్ & సబ్సిడీ)\n🏡 Real Estate (వెరిఫైడ్ ప్రాపర్టీస్ & సైట్ విజిట్స్)\n🛡️ Insurance (హెల్త్ & లైఫ్ ఇన్సూరెన్స్)\n🛵 EV Vehicles & Spares (ఎలక్ట్రిక్ స్కూటర్లు & స్పేర్స్)\n🎓 ETC Skill Training (నైపుణ్య శిక్షణ & కెరీర్)\n\n👉 https://www.myntreal.com/catalog/industrial-hub/industrial-hub-franchise?lang=te\n\nమీకు అనుకూలమైన సమయంలో దయచేసి ఇక్కడ మెసేజ్ చేయండి లేదా కాల్ బ్యాక్ చేయగలరు!';
       }
     }
   }
@@ -788,19 +788,17 @@
       messages: {
         te: function(cName, url) {
           return 'నమస్కారం ' + cName + ' గారు! 🙏\n\n' +
-            '🏡 *VGK Real Dreams — RERA & DTCP ఆమోదిత ప్రీమియం గేటెడ్ టౌన్‌షిప్స్*\n\n' +
-            'మీ కోసం అధికారిక రియల్ డ్రీమ్స్ డిజిటల్ క్యాటలాగ్ లింక్:\n' +
+            '🏡 *VGK Real Dreams — ధృవీకరించబడిన గేటెడ్ కమ్యూనిటీలు & సోలార్ టౌన్‌షిప్స్*\n\n' +
+            'మీ కోసం అధికారిక రియల్ డ్రీమ్స్ ప్రీమియం ప్రాపర్టీస్ డిజిటల్ క్యాటలాగ్ లింక్:\n' +
             '👉 ' + url + '\n\n' +
-            '🌟 *ప్రాజెక్ట్ విశేషాలు & చట్టబద్ధత:*\n' +
-            '• 100% RERA & DTCP/VMRDA ఆమోదిత లేఅవుట్స్ & లగ్జరీ విల్లాస్\n' +
-            '• తక్షణ స్పాట్ రిజిస్ట్రేషన్ గ్యారెంటీ & 30 సం. క్లియర్ టైటిల్\n' +
-            '• SBI, HDFC, ICICI బ్యాంకుల ద్వారా 80% వరకు లోన్ సదుపాయం\n' +
-            '• 40+ ఆధునిక వసతులు: 40ft BT రోడ్లు, భూగర్భ విద్యుత్, సోలార్ లైట్లు, క్లబ్‌హౌస్\n' +
-            '• ప్లాట్ సైజులు: 167, 200, 267 & 500 చ.గ. (చ.గ. ₹18,500 నుండి)\n\n' +
-            '🔍 *ధృవీకరించబడిన స్టాఫ్ కాన్ఫిగరేషన్ పోర్టల్:*\n' +
-            '👉 http://localhost:5001/staff/configuration/catalog\n\n' +
+            '🌟 *ప్రాజెక్ట్ హైలైట్స్ & చట్టపరమైన భద్రత:*\n' +
+            '• 100% RERA & DTCP/VMRDA ఆమోదం పొందిన గేటెడ్ విల్లా లేఅవుట్లు\n' +
+            '• 30 ఏళ్ల స్పష్టమైన లీగల్ టైటిల్‌తో తక్షణ స్పాట్ రిజిస్ట్రేషన్ గ్యారెంటీ\n' +
+            '• SBI, HDFC మరియు ICICI బ్యాంకుల ద్వారా 80% వరకు హోమ్ లోన్ సదుపాయం\n' +
+            '• 40+ లైఫ్‌స్టైల్ సౌకర్యాలు: 40ft/33ft BT రోడ్లు, అండర్‌గ్రౌండ్ పవర్, సోలార్ లైటింగ్\n' +
+            '• ప్లాట్ సైజులు: 167, 200, 267 & 500 చదరపు గజాలు (₹18,500/గజం నుండి ప్రారంభం)\n\n' +
             '🛒 *రియల్ డ్రీమ్స్ ఈ-కామ్ మార్కెట్‌ప్లేస్‌లో ప్లాట్స్ చూడండి:*\n' +
-            '👉 http://localhost:5001/ecom?segment=real-dreams\n\n' +
+            '👉 https://www.myntreal.com/ecom?vertical=realestate\n\n' +
             'ఉచిత VIP సైట్ విజిట్ కోసం సంప్రదించండి.';
         },
         en: function(cName, url) {
@@ -814,10 +812,8 @@
             '• Bank Loan Approvals up to 80% from SBI, HDFC, and ICICI Bank\n' +
             '• 40+ Lifestyle Amenities: 40ft/33ft BT roads, underground power, solar lighting\n' +
             '• Plot Sizes: 167, 200, 267 & 500 Sq. Yards (from ₹18,500/yd)\n\n' +
-            '🔍 *Central Verified Property Configuration Portal:*\n' +
-            '👉 http://localhost:5001/staff/configuration/catalog\n\n' +
             '🛒 *Browse Live Verified Listings on Real Dreams E-Com:*\n' +
-            '👉 http://localhost:5001/ecom?segment=real-dreams\n\n' +
+            '👉 https://www.myntreal.com/ecom?vertical=realestate\n\n' +
             'Complimentary chauffeur AC cab pickup available for site visits!';
         },
         hi: function(cName, url) {
@@ -827,15 +823,14 @@
             '🏡 100% RERA & टाउनशिप अनुमोदित प्लॉट्स एवं विला\n' +
             '• 80% तक बैंक लोन स्वीकृत (SBI, HDFC, ICICI)\n' +
             '• तत्काल रजिस्ट्री एवं स्पष्ट मालिकाना हक\n\n' +
-            'ई-कॉमर्स पर प्लॉट्स देखें: http://localhost:5001/ecom?segment=real-dreams\n' +
-            'कैटलॉग वेरिफिकेशन: http://localhost:5001/staff/configuration/catalog';
+            'ई-कॉमर्स पर प्लॉट्स देखें: https://www.myntreal.com/ecom?vertical=realestate';
         },
         ta: function(cName, url) {
           return 'வணக்கம் ' + cName + '! 🙏\n\n' +
             'VGK Real Dreams பிரீமியம் ரியல் எஸ்டேட் டிஜிட்டல் கேட்லாக் லிங்க்:\n' +
             '👉 ' + url + '\n\n' +
             '100% RERA அங்கீகரிக்கப்பட்ட சொத்துக்கள் & 80% வங்கி கடன் வசதி!\n' +
-            'இ-காமர்ஸ் மூலம் பார்வையிட: http://localhost:5001/ecom?segment=real-dreams';
+            'இ-காமர்ஸ் மூலம் பார்வையிட: https://www.myntreal.com/ecom?vertical=realestate';
         }
       }
     },
@@ -974,7 +969,7 @@
             '• ఫాస్ట్ ఛార్జర్ 48V (9 నెలల వారంటీ): హబ్ ₹1,500 | రిటైల్ ₹1,575\n' +
             '• కంట్రోలర్లు & BMS స్పేర్స్: 20% నుండి 29% వరకు డైనమిక్ మార్జిన్!\n\n' +
             '🛒 *EV స్పేర్స్ ఈ-కామ్ మార్కెట్‌ప్లేస్‌లో ఆర్డర్ చేయండి:*\n' +
-            '👉 http://localhost:5001/ecom?segment=ev-spares&category=spares\n\n' +
+            '👉 https://www.myntreal.com/ecom?vertical=ev&category=spares\n\n' +
             '24 గంటల్లో దేశవ్యాప్త డెలివరీ & అధికారిక GST ఇన్వాయిసింగ్.';
         },
         en: function(cName, url) {
@@ -992,7 +987,7 @@
             '• *Smart Fast Charger 48V (9 Mo. Warranty):* Hub ₹1,500 | Retail ₹1,575\n' +
             '• *Controllers & BMS Spares:* 20% to 29% dynamic wholesale margin!\n\n' +
             '🛒 *Order Online on EV Spares E-Com Marketplace:*\n' +
-            '👉 http://localhost:5001/ecom?segment=ev-spares&category=spares\n\n' +
+            '👉 https://www.myntreal.com/ecom?vertical=ev&category=spares\n\n' +
             'Immediate 24-Hour Pan-India Dispatch | Full GST Invoicing.';
         },
         hi: function(cName, url) {
@@ -1003,14 +998,14 @@
             '• 15% से 25% तक की थोक (B2B) छूट\n' +
             '• ग्रैफीन एवं LFP बैटरी पैक्स (9 माह से 3 साल वारंटी)\n' +
             '• स्मार्ट बीएमएस एवं फास्ट चार्जर्स\n\n' +
-            'ई-कॉमर्स पर ऑर्डर करने के लिए: http://localhost:5001/ecom?segment=ev-spares&category=spares';
+            'ई-कॉमर्स पर ऑर्डर करने के लिए: https://www.myntreal.com/ecom?vertical=ev&category=spares';
         },
         ta: function(cName, url) {
           return 'வணக்கம் ' + cName + '! 🙏\n\n' +
             'MyntReal ஈவி உதிரிபாகங்கள், சார்ஜர்கள் & பேட்டரி டிஜிட்டல் கேட்லாக் லிங்க்:\n' +
             '👉 ' + url + '\n\n' +
             '15% முதல் 25% வரை தள்ளுபடி விலையில் ஈவி உதிரிபாகங்கள்!\n' +
-            'இ-காமர்ஸ் மூலம் ஆர்டர் செய்ய: http://localhost:5001/ecom?segment=ev-spares&category=spares';
+            'இ-காமர்ஸ் மூலம் ஆர்டர் செய்ய: https://www.myntreal.com/ecom?vertical=ev&category=spares';
         }
       }
     },
@@ -1347,7 +1342,7 @@
     _ensure();
     _bindGlobals();
     var cleanP = phone ? String(phone).replace(/\D/g, '').slice(-10) : '';
-    _s = { leadId: leadId, phone: cleanP, name: name, companyId: companyId, mode: 'scanned', tpls: [], bodyTpl: '', context: context || '' };
+    _s = { leadId: leadId, phone: cleanP, name: name, companyId: companyId, mode: 'company', tpls: [], bodyTpl: '', context: context || '' };
 
     /* reset UI */
     document.getElementById('_lwaSub').textContent     = (name || 'Contact') + (cleanP ? (' · ' + _maskPhone(cleanP)) : '');

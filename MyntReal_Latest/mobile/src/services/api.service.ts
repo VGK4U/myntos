@@ -33,6 +33,8 @@ class ApiService {
   private companyId: string | null = null;
   private sessionExpiredListeners: Set<SessionExpiredListener> = new Set();
   private sessionExpiredNotified: boolean = false;
+  private isRefreshing: boolean = false;
+  private refreshSubscribers: Array<(refreshed: boolean) => void> = [];
 
   async init(): Promise<void> {
     // DC_BRIDGE_READY_001: Read from localStorage first (synchronous, never hangs).
@@ -143,6 +145,32 @@ class ApiService {
     return this.sessionExpiredNotified;
   }
 
+  private async enqueueOrRefresh(endpoint: string): Promise<boolean> {
+    if (this.isRefreshing) {
+      return new Promise<boolean>((resolve) => {
+        this.refreshSubscribers.push((refreshed: boolean) => {
+          resolve(refreshed);
+        });
+      });
+    }
+
+    this.isRefreshing = true;
+    try {
+      const { authService } = await import('./auth.service');
+      const refreshed = await authService.refreshMobileSession();
+      this.refreshSubscribers.forEach(cb => cb(refreshed));
+      this.refreshSubscribers = [];
+      return refreshed;
+    } catch (e) {
+      console.error('[DC_MOBILE_API] Mobile token refresh error:', e);
+      this.refreshSubscribers.forEach(cb => cb(false));
+      this.refreshSubscribers = [];
+      return false;
+    } finally {
+      this.isRefreshing = false;
+    }
+  }
+
   private async request<T>(
     method: string,
     endpoint: string,
@@ -228,6 +256,15 @@ class ApiService {
         error.status = response.status;
         
         if (response.status === 401) {
+          const isAuthEndpoint = normalizedEndpoint.includes('/auth/login') ||
+                                 normalizedEndpoint.includes('/auth/mobile/refresh') ||
+                                 normalizedEndpoint.includes('/auth/mobile/revoke');
+          if (!isAuthEndpoint && retryable) {
+            const refreshed = await this.enqueueOrRefresh(normalizedEndpoint);
+            if (refreshed) {
+              return this.request<T>(method, endpoint, body, isFormData, false, timeoutMs);
+            }
+          }
           this.handleSessionExpired(endpoint);
         }
         
@@ -368,8 +405,29 @@ class ApiService {
   }
 
   // Staff Authentication
-  async staffLogin(employeeId: string, password: string): Promise<ApiResponse<any>> {
-    return this.request('POST', '/staff/auth/login', { employee_id: employeeId, password }, false, false, 15000);
+  async staffLogin(employeeId: string, password: string, deviceMeta?: any): Promise<ApiResponse<any>> {
+    const payload: any = { employee_id: employeeId, password };
+    if (deviceMeta) {
+      Object.assign(payload, deviceMeta);
+    }
+    return this.request('POST', '/staff/auth/login', payload, false, false, 15000);
+  }
+
+  // Mobile Session Refresh
+  async refreshMobileToken(refreshToken: string, deviceId: string): Promise<ApiResponse<any>> {
+    return this.request('POST', '/staff/auth/mobile/refresh', {
+      refresh_token: refreshToken,
+      device_id: deviceId
+    }, false, false, 15000);
+  }
+
+  // Mobile Session Revocation
+  async revokeMobileToken(refreshToken?: string, deviceId?: string, revokeAll: boolean = false): Promise<ApiResponse<any>> {
+    return this.request('POST', '/staff/auth/mobile/revoke', {
+      refresh_token: refreshToken || null,
+      device_id: deviceId || null,
+      revoke_all_devices: revokeAll
+    }, false, false, 15000);
   }
 
   // MNR Authentication

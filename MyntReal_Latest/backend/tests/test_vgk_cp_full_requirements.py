@@ -50,6 +50,7 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
         cls.ea_mr10016 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MR10016').first()
         cls.jagannath_mr10018 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MR10018').first()
         cls.anushka_mr10036 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MR10036').first()
+        cls.nandana_mn10009 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MN10009').first()
         cls.poojitha_mn10016 = cls.db.query(StaffEmployee).filter(StaffEmployee.emp_code == 'MN10016').first()
         cls.regular_agent = next(
             (u for u in cls.db.query(StaffEmployee).filter(StaffEmployee.status == 'active').all() if not _is_vgk_admin(u)),
@@ -116,6 +117,11 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
         if self.anushka_mr10036:
             self.assertTrue(_is_vgk_admin(self.anushka_mr10036))
             self.assertTrue(_has_full_vgk_visibility(self.anushka_mr10036))
+
+        # MN10009 (Nandana) -> Full Visibility (Parity with Anushka)
+        if self.nandana_mn10009:
+            self.assertTrue(_is_vgk_admin(self.nandana_mn10009))
+            self.assertTrue(_has_full_vgk_visibility(self.nandana_mn10009))
 
         # MN10016 (Poojitha) -> Authority revoked from whitelist; restricted to assigned/registered
         if self.poojitha_mn10016:
@@ -378,6 +384,14 @@ class TestVGKChannelPartnersRequirements(unittest.TestCase):
                 db=self.db
             )
             self.assertEqual(res_anushka["total"], total_admin)
+
+        # Nandana (MN10009) is in whitelist -> Sees full platform members (Parity with Anushka)
+        if self.nandana_mn10009:
+            res_nandana = list_vgk_members(
+                current_user=self.nandana_mn10009,
+                db=self.db
+            )
+            self.assertEqual(res_nandana["total"], total_admin)
 
         # Poojitha (MN10016) is NOT in whitelist -> Restricted to assigned/registered members
         if self.poojitha_mn10016:

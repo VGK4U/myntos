@@ -1960,7 +1960,7 @@ export class StaffWhatsAppInboxPage {
 
     let activeModalEmojiCat = 'smileys';
     let showModalEmoji = false;
-    let currentMode: 'scanned' | 'company' = 'scanned';
+    let currentMode: 'scanned' | 'company' = 'company';
     let selectedContactPhone = (phoneNum || '').replace(/[^0-9]/g, '').slice(-10);
     let selectedContactName = '';
     let selectedContactLeadId: string | null = null;
@@ -1991,11 +1991,11 @@ export class StaffWhatsAppInboxPage {
             
             <!-- Mode Switcher (Scan WhatsApp vs WhatsApp API) -->
             <div style="display: flex; gap: 8px; background: #0f172a; border-radius: 10px; padding: 4px; border: 1px solid #334155;">
-              <button id="waModeScanBtn" style="flex: 1; padding: 8px 6px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; background: #059669; color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2);">
+              <button id="waModeScanBtn" style="flex: 1; padding: 8px 6px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; background: transparent; color: #94a3b8;">
                 <i class="fas fa-qrcode text-success"></i> Scan WhatsApp
                 <small style="display: block; font-weight: 400; font-size: 10px; opacity: 0.9; margin-top: 2px;">Common Number · Gateway</small>
               </button>
-              <button id="waModeCompBtn" style="flex: 1; padding: 8px 6px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; background: transparent; color: #94a3b8;">
+              <button id="waModeCompBtn" style="flex: 1; padding: 8px 6px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; background: #2563eb; color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2);">
                 <i class="fas fa-building text-primary"></i> WhatsApp API
                 <small style="display: block; font-weight: 400; font-size: 10px; opacity: 0.9; margin-top: 2px;">Meta Cloud API</small>
               </button>
@@ -2179,9 +2179,9 @@ export class StaffWhatsAppInboxPage {
 
             <!-- Send Action Button -->
             <div style="display: flex; gap: 8px;">
-              <button id="waModalSendBtn" style="flex: 1; padding: 12px; border-radius: 10px; background: linear-gradient(135deg, #059669, #10b981); color: #fff; font-size: 14px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(5,150,105,0.4);">
+              <button id="waModalSendBtn" style="flex: 1; padding: 12px; border-radius: 10px; background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; font-size: 14px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(37,99,235,0.4);">
                 <i class="fab fa-whatsapp" style="font-size: 18px;"></i>
-                <span id="waModalSendBtnText">Send via Scan WhatsApp</span>
+                <span id="waModalSendBtnText">Send via WhatsApp API</span>
               </button>
             </div>
 
@@ -2294,7 +2294,7 @@ export class StaffWhatsAppInboxPage {
 
     segSelect?.addEventListener('change', loadCrmTemplates);
     catSelect?.addEventListener('change', loadCrmTemplates);
-    loadCrmTemplates();
+    applyMode('company');
 
     // Template Change Handler with Variable Extraction
     tplSelect?.addEventListener('change', () => {
