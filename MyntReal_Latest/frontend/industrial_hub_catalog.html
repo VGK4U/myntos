@@ -494,11 +494,56 @@
             border: 1px solid rgba(255,255,255,0.14);
             backdrop-filter: blur(16px);
             border-radius: var(--radius-xl);
-            padding: 28px;
+            padding: 22px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.3);
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
+        }
+
+        .hero-showroom-frame {
+            position: relative;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+            background: #000;
+        }
+
+        .hero-showroom-img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            object-position: center top;
+            display: block;
+            transition: transform 0.4s ease;
+        }
+
+        .hero-showroom-frame:hover .hero-showroom-img {
+            transform: scale(1.03);
+        }
+
+        .hero-showroom-tag {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(11, 31, 51, 0.88);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            color: #FFFFFF;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .hero-showroom-tag i {
+            color: var(--hub-gold-accent);
         }
 
         .hero-card-header {
@@ -634,33 +679,103 @@
             background: #FFFFFF;
             border: 1px solid var(--hub-border);
             border-radius: var(--radius-xl);
-            padding: 40px;
+            padding: 36px;
             box-shadow: var(--shadow-md);
             margin-bottom: 30px;
         }
 
         @media (max-width: 768px) {
             .concept-card {
-                padding: 24px 18px;
+                padding: 20px 16px;
             }
         }
 
-        .concept-flow-grid {
+        .concept-experience-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            position: relative;
-            margin-top: 30px;
+            grid-template-columns: 1fr 1.05fr;
+            gap: 28px;
+            align-items: stretch;
         }
 
-        @media (max-width: 900px) {
-            .concept-flow-grid {
-                grid-template-columns: 1fr 1fr;
+        @media (max-width: 960px) {
+            .concept-experience-grid {
+                grid-template-columns: 1fr;
+                gap: 24px;
             }
+        }
+
+        .concept-photo-column {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .concept-photo-frame {
+            position: relative;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            border: 1px solid var(--hub-border);
+            box-shadow: var(--shadow-sm);
+            background: #000;
+            flex: 1;
+            min-height: 280px;
+        }
+
+        .concept-showroom-img {
+            width: 100%;
+            height: 100%;
+            min-height: 280px;
+            max-height: 420px;
+            object-fit: cover;
+            object-position: center center;
+            display: block;
+            transition: transform 0.4s ease;
+        }
+
+        .concept-photo-frame:hover .concept-showroom-img {
+            transform: scale(1.02);
+        }
+
+        .concept-photo-badge {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            background: rgba(11, 31, 51, 0.88);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #FFFFFF;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-transform: uppercase;
+        }
+
+        .concept-photo-badge i {
+            color: var(--hub-cyan-tech);
+        }
+
+        .concept-photo-caption {
+            font-size: 13px;
+            color: var(--hub-text-secondary);
+            line-height: 1.5;
+            background: var(--hub-canvas);
+            border: 1px solid var(--hub-border);
+            border-radius: var(--radius-md);
+            padding: 12px 16px;
+        }
+
+        .concept-steps-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
         }
 
         @media (max-width: 540px) {
-            .concept-flow-grid {
+            .concept-steps-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -669,34 +784,39 @@
             background: var(--hub-canvas);
             border: 1px solid var(--hub-border);
             border-radius: var(--radius-lg);
-            padding: 24px 20px;
-            text-align: center;
+            padding: 20px 16px;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            gap: 12px;
+            gap: 10px;
             position: relative;
             transition: transform 0.25s, box-shadow 0.25s;
         }
 
         .flow-step-box:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-md);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-sm);
             border-color: var(--hub-blue-primary);
         }
 
+        .flow-step-top {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         .flow-icon-circle {
-            width: 56px;
-            height: 56px;
+            width: 44px;
+            height: 44px;
             border-radius: 50%;
             background: #FFFFFF;
             color: var(--hub-blue-primary);
-            border: 2px solid var(--hub-border);
+            border: 1.5px solid var(--hub-border);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 22px;
+            font-size: 17px;
             box-shadow: var(--shadow-sm);
+            flex-shrink: 0;
         }
 
         .flow-step-num {
@@ -709,15 +829,17 @@
 
         .flow-step-box h4 {
             font-family: var(--font-heading);
-            font-size: 17px;
+            font-size: 16px;
             font-weight: 700;
             color: var(--hub-text-main);
+            margin: 0;
         }
 
         .flow-step-box p {
-            font-size: 13px;
+            font-size: 12.5px;
             color: var(--hub-text-secondary);
             line-height: 1.5;
+            margin: 0;
         }
 
         /* ── SECTION 2: COMPARISON MATRIX ─────────────────────────────────── */
@@ -1221,6 +1343,23 @@
             font-size: 12px;
             font-weight: 700;
             text-transform: uppercase;
+        }
+
+        .showroom-disclaimer-bar {
+            background: #F8FAFC;
+            border-top: 1px solid var(--hub-border);
+            border-bottom: 1px solid var(--hub-border);
+            padding: 12px 24px;
+            font-size: 12px;
+            color: var(--hub-text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .showroom-disclaimer-bar i {
+            color: var(--hub-blue-primary);
+            flex-shrink: 0;
         }
 
         .showroom-details-strip {
@@ -2727,7 +2866,14 @@
                 </div>
 
                 <div class="hero-card-right">
-                    <div class="hero-card-header">
+                    <div class="hero-showroom-frame">
+                        <img src="/public/hub/Assets/myntreal-hub-exterior-storefront.jpg" alt="Actual MYNTREAL Business Hub Storefront" class="hero-showroom-img">
+                        <div class="hero-showroom-tag">
+                            <i class="fas fa-store-alt"></i> Actual MYNTREAL Showroom
+                        </div>
+                    </div>
+
+                    <div class="hero-card-header" style="padding-top: 4px; padding-bottom: 12px;">
                         <h3>Investment Highlights</h3>
                         <span class="turnkey-tag"><i class="fas fa-check-circle"></i> Turnkey Model</span>
                     </div>
@@ -2775,7 +2921,7 @@
             <a href="#economics" class="nav-chip"><i class="fas fa-chart-line"></i> Economics &amp; ROI</a>
             <a href="#calculator" class="nav-chip"><i class="fas fa-calculator"></i> ROI Simulator</a>
             <a href="#packages" class="nav-chip"><i class="fas fa-tags"></i> Packages</a>
-            <a href="#videos" class="nav-chip"><i class="fas fa-video"></i> Hub in Action</a>
+            <a href="#videos" class="nav-chip"><i class="fas fa-video"></i> See in Action</a>
             <a href="#roadmap" class="nav-chip"><i class="fas fa-calendar-check"></i> 30-Day Launch</a>
             <a href="#faqs" class="nav-chip"><i class="fas fa-question-circle"></i> FAQs</a>
             <a href="#apply" class="nav-chip" style="background: var(--hub-blue-primary); color: #FFFFFF;"><i class="fas fa-paper-plane" style="color: #FFFFFF;"></i> Apply Now</a>
@@ -2787,35 +2933,65 @@
         <div class="container">
             <div class="section-header">
                 <span class="section-eyebrow"><i class="fas fa-store-alt"></i> Single Store Architecture</span>
-                <h2>What is the MyntReal Business Hub?</h2>
-                <p>A unified retail and commercial ecosystem bringing together 5 non-seasonal, high-growth industries under one commercial roof. Entrepreneurs eliminate single-product risk while multiplying footfall monetization.</p>
+                <h2>The Business Hub Experience: One Location, Multiple Opportunities</h2>
+                <p>Not merely an office—a vibrant customer-facing business environment where walk-ins discover EV Scooters, Rooftop Solar, Insurance, Real Estate, and Training under one roof.</p>
             </div>
 
             <div class="concept-card">
-                <div class="concept-flow-grid">
-                    <div class="flow-step-box">
-                        <div class="flow-icon-circle"><i class="fas fa-map-marker-alt"></i></div>
-                        <span class="flow-step-num">Step 01</span>
-                        <h4>One Showroom</h4>
-                        <p>500 to 1,000 sq.ft prime commercial space in your town or mandal headquarters.</p>
+                <div class="concept-experience-grid">
+                    <!-- Left: Authentic Interior Experience Photo -->
+                    <div class="concept-photo-column">
+                        <div class="concept-photo-frame">
+                            <img src="/public/hub/Assets/myntreal-hub-interior-experience.jpg" alt="Active Customer-Facing MyntReal Showroom Floor" class="concept-showroom-img">
+                            <div class="concept-photo-badge">
+                                <i class="fas fa-store-alt"></i> Operational Showroom Floor
+                            </div>
+                        </div>
+                        <div class="concept-photo-caption">
+                            <i class="fas fa-check-circle" style="color: var(--hub-green-energy); margin-right: 4px;"></i>
+                            <strong>Active Customer Touchpoint —</strong> Walk-ins discover Manthra EV scooters, discuss rooftop solar savings, and consult on insurance or property under one roof.
+                        </div>
                     </div>
-                    <div class="flow-step-box">
-                        <div class="flow-icon-circle"><i class="fas fa-network-wired"></i></div>
-                        <span class="flow-step-num">Step 02</span>
-                        <h4>5 High-Growth Verticals</h4>
-                        <p>EV Scooters, Solar Rooftop Plants, Insurance, Real Estate &amp; Technical Skill Training.</p>
-                    </div>
-                    <div class="flow-step-box">
-                        <div class="flow-icon-circle"><i class="fas fa-users"></i></div>
-                        <span class="flow-step-num">Step 03</span>
-                        <h4>Multi-Segment Walk-ins</h4>
-                        <p>Students, homeowners, commuters, farmers, and commercial fleet owners all enter one hub.</p>
-                    </div>
-                    <div class="flow-step-box">
-                        <div class="flow-icon-circle"><i class="fas fa-coins"></i></div>
-                        <span class="flow-step-num">Step 04</span>
-                        <h4>Diversified Cash Flow</h4>
-                        <p>Steady year-round profits. If EV sales are quiet, solar installations or insurance renewals generate cash.</p>
+
+                    <!-- Right: The 4 Strategic Flow Steps -->
+                    <div class="concept-steps-column">
+                        <div class="concept-steps-grid">
+                            <div class="flow-step-box">
+                                <div class="flow-step-top">
+                                    <div class="flow-icon-circle"><i class="fas fa-map-marker-alt"></i></div>
+                                    <span class="flow-step-num">Step 01</span>
+                                </div>
+                                <h4>One Prime Showroom</h4>
+                                <p>500 to 1,000 sq.ft prime commercial space in your town or mandal headquarters.</p>
+                            </div>
+
+                            <div class="flow-step-box">
+                                <div class="flow-step-top">
+                                    <div class="flow-icon-circle"><i class="fas fa-network-wired"></i></div>
+                                    <span class="flow-step-num">Step 02</span>
+                                </div>
+                                <h4>5 Growth Verticals</h4>
+                                <p>EV Scooters, Solar Rooftop EPC, Insurance, Real Estate &amp; Technical Skill Training.</p>
+                            </div>
+
+                            <div class="flow-step-box">
+                                <div class="flow-step-top">
+                                    <div class="flow-icon-circle"><i class="fas fa-users"></i></div>
+                                    <span class="flow-step-num">Step 03</span>
+                                </div>
+                                <h4>Multi-Segment Walk-ins</h4>
+                                <p>Students, homeowners, commuters, farmers, and commercial fleet owners enter one hub.</p>
+                            </div>
+
+                            <div class="flow-step-box">
+                                <div class="flow-step-top">
+                                    <div class="flow-icon-circle"><i class="fas fa-coins"></i></div>
+                                    <span class="flow-step-num">Step 04</span>
+                                </div>
+                                <h4>Diversified Cash Flow</h4>
+                                <p>Steady year-round profits. If EV sales are quiet, solar or insurance renewals generate cash.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3294,15 +3470,18 @@
     <section class="section-padding" id="showroom">
         <div class="container">
             <div class="section-header">
-                <span class="section-eyebrow"><i class="fas fa-store"></i> Store Experience</span>
-                <h2>Integrated Showroom Layout &amp; Ambiance</h2>
-                <p>Designed to provide customers with an elite, corporate-grade retail experience in semi-urban and mandal centers.</p>
+                <span class="section-eyebrow"><i class="fas fa-store"></i> Multi-Vertical Ecosystem in Action</span>
+                <h2>Our Multi-Vertical Business Ecosystem in Action</h2>
+                <p>Experience how all 5 revenue verticals operate cohesively from a single customer-facing showroom floor—creating an elite, corporate-grade destination in semi-urban and mandal centers.</p>
             </div>
 
             <div class="showroom-feature-box">
                 <div class="showroom-image-container">
-                    <span class="showroom-badge-overlay"><i class="fas fa-cubes"></i> 3D Architectural Visualization</span>
-                    <img src="/public/hub/Assets/hero-bg.webp" alt="MyntReal Showroom 3D Architecture" onerror="this.onerror=null; this.src='/public/hub/Assets/hero-bg-orig.webp';">
+                    <span class="showroom-badge-overlay"><i class="fas fa-store-alt"></i> Authentic Showroom Centerpiece</span>
+                    <img src="/public/hub/Assets/myntreal-hub-interior-5offerings.jpg" alt="MYNTREAL Multi-Vertical Showroom Centerpiece" class="showroom-feature-img">
+                </div>
+                <div class="showroom-disclaimer-bar">
+                    <i class="fas fa-info-circle"></i> <span>* Example of an operational MYNTREAL multi-vertical showroom experience. Store dimensions and vertical displays adapt flexibly to local site conditions.</span>
                 </div>
                 <div class="showroom-details-strip">
                     <div class="showroom-zone-item">
@@ -3670,13 +3849,13 @@
         </div>
     </section>
 
-    <!-- ── 14. AUTHENTIC VIDEO SHOWCASE ("HUB IN ACTION") ─────────────────── -->
+    <!-- ── 14. AUTHENTIC VIDEO SHOWCASE ("SEE MYNTREAL IN ACTION") ─────────── -->
     <section class="section-padding" id="videos">
         <div class="container">
             <div class="section-header">
-                <span class="section-eyebrow"><i class="fas fa-play-circle"></i> Video Walkthroughs</span>
-                <h2>Watch MyntReal Hub in Action</h2>
-                <p>Experience the operational ambiance of a live showroom and hear executive leadership explain the multi-income model.</p>
+                <span class="section-eyebrow"><i class="fas fa-play-circle"></i> Authentic Video Evidence</span>
+                <h2>SEE MYNTREAL IN ACTION</h2>
+                <p>Experience the operational ambiance of a live showroom, witness real customer interactions, and discover how our multi-income model works on the ground.</p>
             </div>
 
             <div class="video-grid">
