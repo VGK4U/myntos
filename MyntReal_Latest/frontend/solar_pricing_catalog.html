@@ -11,7 +11,7 @@
     <!-- Open Graph Metadata for Social / WhatsApp Sharing -->
     <meta property="og:title" content="MYNTREAL Har Ghar Solar — Rooftop Solar Digital Catalogue">
     <meta property="og:description" content="Cut power bills up to 90% with ₹78,000 Govt Subsidy & 'Solar for ₹1' bank financing. Explore 3kW, 5kW & 10kW systems with 25-year warranty.">
-    <meta property="og:image" content="/public/images/solar_installations/ap_solar_customer_2.jpg">
+    <meta property="og:image" content="/public/images/solar_installations/krishnadevipeta_solar_customer.jpg">
     <meta property="og:type" content="website">
 
     <!-- Preconnect & Web Fonts -->
@@ -577,6 +577,7 @@
             margin-bottom: 16px;
         }
         .overview-image-box {
+            position: relative;
             border-radius: var(--radius-lg);
             overflow: hidden;
             box-shadow: var(--shadow-md);
@@ -587,6 +588,21 @@
             height: 320px;
             object-fit: cover;
             display: block;
+        }
+        .overview-photo-tag {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(4px);
+            color: #ffffff;
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            pointer-events: none;
+            z-index: 2;
         }
 
         /* Before vs After Comparison Grid */
@@ -2011,6 +2027,44 @@
             color: #cbd5e1;
         }
 
+        /* ── SCROLL TO TOP OVERLAY BUTTON ──────────────────────────────────── */
+        .btn-scroll-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #ffffff;
+            border: 2px solid #ffffff;
+            box-shadow: 0 4px 16px rgba(217, 119, 6, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            z-index: 1040;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(16px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-scroll-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .btn-scroll-to-top:hover {
+            background: linear-gradient(135deg, #fbbf24 0%, #b45309 100%);
+            box-shadow: 0 6px 20px rgba(217, 119, 6, 0.6);
+            transform: translateY(-3px);
+            color: #ffffff;
+        }
+        .btn-scroll-to-top:active {
+            transform: translateY(0) scale(0.96);
+        }
+
         /* ── RESPONSIVE MEDIA QUERIES ─────────────────────────────────────── */
 
         /* TABLET (768px to 1024px) */
@@ -2043,6 +2097,7 @@
             .catalog-nav-links, .btn-header-wa { display: none; }
             .mobile-menu-toggle { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; }
             .mobile-sticky-bar { display: flex; }
+            .btn-scroll-to-top { bottom: 78px; right: 18px; width: 42px; height: 42px; font-size: 16px; }
 
             .brand-logo-img { height: 32px; max-width: 130px; }
             .lang-switch-group { padding: 2px; gap: 1px; }
@@ -2281,10 +2336,10 @@
                     <!-- Right Column: Realistic Rooftop Photography & Floating Trust Badges -->
                     <div>
                         <div class="hero-visual-frame">
-                            <img src="/public/images/solar_installations/ap_solar_customer_2.jpg" alt="MYNTREAL Rooftop Solar Installation in Andhra Pradesh" class="hero-main-photo">
+                            <img src="/public/images/solar_installations/krishnadevipeta_solar_customer.jpg" alt="MYNTREAL Rooftop Solar Installation in Krishnadevipeta, Andhra Pradesh" class="hero-main-photo">
                             <div class="hero-visual-tag">
                                 <div>
-                                    <i class="fas fa-map-marker-alt text-warning me-1"></i> Andhra Pradesh • Residential Rooftop Array
+                                    <i class="fas fa-map-marker-alt text-warning me-1"></i> Krishnadevipeta, AP • 3 kW On-Grid Plant
                                 </div>
                                 <div class="badge bg-success">
                                     <i class="fas fa-check-circle me-1"></i> DISCOM Net-Metered
@@ -2421,7 +2476,10 @@
                         <p>Under PM Surya Ghar Muft Bijli Yojana, residential homeowners receive a direct cash subsidy of up to <strong>₹78,000</strong> directly deposited into their bank account, while our authorized partner banks provide collateral-free financing where monthly electricity savings exceed the monthly loan EMI!</p>
                     </div>
                     <div class="overview-image-box">
-                        <img src="/public/images/solar_installations/ap_solar_customer_1.jpg" alt="MyntReal Residential Rooftop Solar Installation in Andhra Pradesh">
+                        <img src="/public/images/solar_installations/pothavaram_solar_customer.jpg" alt="MyntReal Residential Rooftop Solar Installation in Pothavaram, Andhra Pradesh">
+                        <div class="overview-photo-tag">
+                            <i class="fas fa-map-marker-alt text-warning me-1"></i> Pothavaram, AP • Premium Rooftop Solar Array
+                        </div>
                     </div>
                 </div>
 
@@ -3204,10 +3262,28 @@
         </div>
     </div>
 
+    <!-- ── 18. SCROLL TO TOP OVERLAY BUTTON ──────────────────────────────── -->
+    <button type="button" class="btn-scroll-to-top" id="btnScrollToTop" onclick="scrollToTop()" aria-label="Scroll to top of page">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+
     <!-- Bootstrap Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        // Ensure page always starts at top upon refresh or initial load
+        if (typeof history !== 'undefined' && 'scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+        window.addEventListener('beforeunload', () => {
+            window.scrollTo(0, 0);
+        });
+        window.addEventListener('pageshow', () => {
+            if (!window.location.hash) {
+                window.scrollTo(0, 0);
+            }
+        });
+
         /* ── MULTI-LANGUAGE TRANSLATIONS (EN, TE, HI, TA) ─────────────────── */
         const SCHEME_TEXTS = {
             en: {
@@ -3550,6 +3626,9 @@
             updateCalculator();
             applyLanguage();
             setupScrollSpy();
+            if (!window.location.hash) {
+                window.scrollTo(0, 0);
+            }
         });
 
         /* ── LANGUAGE SWITCHER ENGINE ─────────────────────────────────────── */
@@ -4043,11 +4122,28 @@
             }, 800);
         }
 
-        /* ── SCROLLSPY ACTIVE NAV HIGHLIGHT ───────────────────────────────── */
+        /* ── SCROLL TO TOP ENGINE ─────────────────────────────────────────── */
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
+        /* ── SCROLLSPY ACTIVE NAV HIGHLIGHT & SCROLL-TOP MONITOR ──────────── */
         function setupScrollSpy() {
             const sections = document.querySelectorAll('section[id]');
+            const btnTop = document.getElementById('btnScrollToTop');
+
             window.addEventListener('scroll', () => {
                 const scrollY = window.pageYOffset;
+
+                // Toggle Scroll-to-top overlay button
+                if (btnTop) {
+                    btnTop.classList.toggle('visible', scrollY > 280);
+                }
+
+                // Section highlight
                 sections.forEach(sec => {
                     const top = sec.offsetTop - 120;
                     const height = sec.offsetHeight;
