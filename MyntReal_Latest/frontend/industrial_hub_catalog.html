@@ -69,7 +69,21 @@
 
         html {
             scroll-behavior: smooth;
+            scroll-padding-top: 136px;
             -webkit-text-size-adjust: 100%;
+        }
+
+        section[id] {
+            scroll-margin-top: 136px;
+        }
+
+        @media (max-width: 768px) {
+            html {
+                scroll-padding-top: 124px;
+            }
+            section[id] {
+                scroll-margin-top: 124px;
+            }
         }
 
         body {
@@ -331,11 +345,17 @@
 
         @media (max-width: 680px) {
             .announcement-right { display: none; }
+            .navbar-content { padding: 0 12px; }
+            .brand-logo-wrap { gap: 8px; }
+            .brand-logo-wrap img { height: 34px; }
+            .brand-title { font-size: 15px; }
             .brand-subtitle { display: none; }
+            .nav-actions { gap: 6px; }
+            .lang-select-wrap select { padding: 5px 6px; font-size: 11px; max-width: 82px; }
             .btn-header-advisor span { display: none; }
-            .btn-header-advisor { padding: 8px 12px; }
+            .btn-header-advisor { padding: 7px 10px; font-size: 12px; }
             .btn-header-share span { display: none; }
-            .btn-header-share { padding: 8px 12px; }
+            .btn-header-share { padding: 7px 10px; font-size: 12px; }
         }
 
         /* ── HERO SECTION ──────────────────────────────────────────────────── */
@@ -672,6 +692,35 @@
 
         .nav-chip:hover i, .nav-chip.active i {
             color: var(--hub-gold-accent);
+        }
+
+        .nav-chip.chip-apply {
+            background: var(--hub-blue-primary);
+            color: #FFFFFF;
+            border-color: var(--hub-blue-primary);
+        }
+
+        .nav-chip.chip-apply i {
+            color: #FFFFFF;
+        }
+
+        .nav-chip.chip-apply:hover, .nav-chip.chip-apply.active {
+            background: #0040C1;
+            color: #FFFFFF;
+            border-color: #0040C1;
+        }
+
+        .nav-chip.chip-apply:hover i, .nav-chip.chip-apply.active i {
+            color: #FFFFFF;
+        }
+
+        .explore-nav-wrapper::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .explore-nav-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.12);
+            border-radius: 4px;
         }
 
         /* ── SECTION 1: WHAT IS THE BUSINESS HUB? ─────────────────────────── */
@@ -3075,21 +3124,23 @@
     </section>
 
     <!-- ── 4. EXPLORE NAVIGATION BAR (STICKY CHIPS) ────────────────────────── -->
-    <div class="explore-nav-wrapper">
-        <div class="explore-nav-container">
-            <a href="#overview" class="nav-chip active"><i class="fas fa-info-circle"></i> Overview</a>
-            <a href="#comparison" class="nav-chip"><i class="fas fa-balance-scale"></i> Business Model</a>
-            <a href="#verticals" class="nav-chip"><i class="fas fa-cubes"></i> 5 Verticals</a>
-            <a href="#flywheel" class="nav-chip"><i class="fas fa-sync-alt"></i> Customer Flywheel</a>
-            <a href="#deliverables" class="nav-chip"><i class="fas fa-box-open"></i> What You Get</a>
-            <a href="#showroom" class="nav-chip"><i class="fas fa-store"></i> Showroom Concept</a>
-            <a href="#economics" class="nav-chip"><i class="fas fa-chart-line"></i> Economics &amp; ROI</a>
-            <a href="#calculator" class="nav-chip"><i class="fas fa-calculator"></i> ROI Simulator</a>
-            <a href="#packages" class="nav-chip"><i class="fas fa-tags"></i> Packages</a>
-            <a href="#videos" class="nav-chip"><i class="fas fa-video"></i> See in Action</a>
-            <a href="#roadmap" class="nav-chip"><i class="fas fa-calendar-check"></i> 30-Day Launch</a>
-            <a href="#faqs" class="nav-chip"><i class="fas fa-question-circle"></i> FAQs</a>
-            <a href="#apply" class="nav-chip" style="background: var(--hub-blue-primary); color: #FFFFFF;"><i class="fas fa-paper-plane" style="color: #FFFFFF;"></i> Apply Now</a>
+    <div class="explore-nav-wrapper" id="exploreNavWrapper">
+        <div class="explore-nav-container" id="exploreNavContainer">
+            <a href="#hero" class="nav-chip" data-target="hero"><i class="fas fa-home"></i> Home</a>
+            <a href="#overview" class="nav-chip" data-target="overview"><i class="fas fa-info-circle"></i> Overview</a>
+            <a href="#comparison" class="nav-chip" data-target="comparison"><i class="fas fa-balance-scale"></i> Business Model</a>
+            <a href="#verticals" class="nav-chip" data-target="verticals"><i class="fas fa-cubes"></i> 5 Verticals</a>
+            <a href="#flywheel" class="nav-chip" data-target="flywheel"><i class="fas fa-sync-alt"></i> Customer Flywheel</a>
+            <a href="#deliverables" class="nav-chip" data-target="deliverables"><i class="fas fa-box-open"></i> What You Get</a>
+            <a href="#showroom" class="nav-chip" data-target="showroom"><i class="fas fa-store"></i> Showroom Concept</a>
+            <a href="#economics" class="nav-chip" data-target="economics"><i class="fas fa-chart-line"></i> Economics &amp; ROI</a>
+            <a href="#calculator" class="nav-chip" data-target="calculator"><i class="fas fa-calculator"></i> ROI Simulator</a>
+            <a href="#packages" class="nav-chip" data-target="packages"><i class="fas fa-tags"></i> Packages</a>
+            <a href="#videos" class="nav-chip" data-target="videos"><i class="fas fa-video"></i> See in Action</a>
+            <a href="#roadmap" class="nav-chip" data-target="roadmap"><i class="fas fa-calendar-check"></i> 30-Day Launch</a>
+            <a href="#media" class="nav-chip" data-target="media"><i class="fas fa-newspaper"></i> Media &amp; PR</a>
+            <a href="#faqs" class="nav-chip" data-target="faqs"><i class="fas fa-question-circle"></i> FAQs</a>
+            <a href="#apply" class="nav-chip chip-apply" data-target="apply"><i class="fas fa-paper-plane"></i> Apply Now</a>
         </div>
     </div>
 
@@ -4690,25 +4741,165 @@
             }
         }
 
-        /* ── SCROLL RESTORATION & FLOATING TOP BUTTON ──────────────────────── */
-        // Explicit Requirement: Page refresh must load at top
+        /* ── EXPLORE NAVIGATION INTERACTIVITY & SCROLLSPY ─────────────────── */
+        const navContainer = document.getElementById('exploreNavContainer');
+        const navChips = document.querySelectorAll('.nav-chip');
+        const trackedSectionIds = [
+            'hero', 'overview', 'comparison', 'verticals', 'flywheel',
+            'deliverables', 'showroom', 'economics', 'calculator',
+            'packages', 'videos', 'roadmap', 'media', 'faqs', 'apply'
+        ];
+
+        let isProgrammaticScroll = false;
+        let programmaticTimer = null;
+
+        // Smooth click handler with fixed header offset (navbar 68px + explore nav 58px = 126px)
+        navChips.forEach(chip => {
+            chip.addEventListener('click', function(e) {
+                const targetId = this.getAttribute('data-target') || (this.getAttribute('href') ? this.getAttribute('href').substring(1) : '');
+                const targetEl = document.getElementById(targetId);
+                if (targetEl) {
+                    e.preventDefault();
+                    
+                    isProgrammaticScroll = true;
+                    clearTimeout(programmaticTimer);
+                    programmaticTimer = setTimeout(() => {
+                        isProgrammaticScroll = false;
+                    }, 850);
+
+                    // Set active chip immediately
+                    navChips.forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+
+                    const offset = window.innerWidth <= 768 ? 124 : 136;
+                    const elementPos = targetEl.getBoundingClientRect().top;
+                    const offsetPos = elementPos + window.pageYOffset - (targetId === 'hero' ? 0 : offset);
+                    
+                    window.scrollTo({
+                        top: Math.max(0, offsetPos),
+                        behavior: 'smooth'
+                    });
+                    
+                    // Auto-scroll chip into view horizontally in nav container
+                    if (navContainer && navContainer.parentElement) {
+                        const chipLeft = this.offsetLeft;
+                        const chipWidth = this.offsetWidth;
+                        const containerWidth = navContainer.parentElement.offsetWidth;
+                        navContainer.parentElement.scrollTo({
+                            left: chipLeft - (containerWidth / 2) + (chipWidth / 2),
+                            behavior: 'smooth'
+                        });
+                    }
+
+                    // Update URL hash without jumping
+                    if (history.pushState) {
+                        history.pushState(null, null, targetId === 'hero' ? window.location.pathname + window.location.search : '#' + targetId);
+                    }
+                }
+            });
+        });
+
+        // Dynamic Scrollspy: highlight active chip as user scrolls
+        function updateScrollspy() {
+            if (isProgrammaticScroll) return;
+
+            const offset = window.innerWidth <= 768 ? 130 : 145;
+            const scrollPos = window.scrollY + offset;
+            let activeId = 'hero';
+
+            for (let i = 0; i < trackedSectionIds.length; i++) {
+                const el = document.getElementById(trackedSectionIds[i]);
+                if (el) {
+                    const top = el.offsetTop;
+                    const height = el.offsetHeight;
+                    if (scrollPos >= top && scrollPos < top + height) {
+                        activeId = trackedSectionIds[i];
+                        break;
+                    }
+                }
+            }
+
+            // If scrolled to bottom of document, activate 'apply'
+            if ((window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 250)) {
+                activeId = 'apply';
+            }
+
+            navChips.forEach(chip => {
+                const targetId = chip.getAttribute('data-target') || (chip.getAttribute('href') ? chip.getAttribute('href').substring(1) : '');
+                if (targetId === activeId) {
+                    if (!chip.classList.contains('active')) {
+                        navChips.forEach(c => c.classList.remove('active'));
+                        chip.classList.add('active');
+                        // Scroll chip into horizontal view
+                        if (navContainer && navContainer.parentElement) {
+                            const chipLeft = chip.offsetLeft;
+                            const chipWidth = chip.offsetWidth;
+                            const containerWidth = navContainer.parentElement.offsetWidth;
+                            navContainer.parentElement.scrollTo({
+                                left: chipLeft - (containerWidth / 2) + (chipWidth / 2),
+                                behavior: 'smooth'
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+        /* ── SCROLL RESTORATION & TOP RESET ON RELOAD ─────────────────────── */
         if ('scrollRestoration' in history) {
             history.scrollRestoration = 'manual';
         }
-        window.scrollTo(0, 0);
 
+        // Always start cleanly at top on refresh or initial landing
+        window.addEventListener('pageshow', function(e) {
+            const navEntries = performance.getEntriesByType('navigation');
+            const isReload = (navEntries.length > 0 && navEntries[0].type === 'reload') || 
+                             (performance.navigation && performance.navigation.type === 1);
+            if (isReload) {
+                if (window.location.hash) {
+                    history.replaceState(null, document.title, window.location.pathname + window.location.search);
+                }
+                window.scrollTo(0, 0);
+            } else if (window.location.hash) {
+                const targetId = window.location.hash.substring(1);
+                const targetEl = document.getElementById(targetId);
+                if (targetEl) {
+                    setTimeout(() => {
+                        const offset = window.innerWidth <= 768 ? 124 : 136;
+                        const offsetPos = targetEl.getBoundingClientRect().top + window.pageYOffset - (targetId === 'hero' ? 0 : offset);
+                        window.scrollTo({ top: Math.max(0, offsetPos), behavior: 'smooth' });
+                    }, 100);
+                }
+            } else {
+                window.scrollTo(0, 0);
+            }
+            updateScrollspy();
+        });
+
+        // Floating scroll to top button
         function scrollToTop() {
             window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (history.pushState) {
+                history.pushState(null, document.title, window.location.pathname + window.location.search);
+            }
         }
 
         const btnScrollToTop = document.getElementById('btnScrollToTop');
+        let scrollTimeout;
         window.addEventListener('scroll', function() {
             if (window.scrollY > 300) {
                 btnScrollToTop.classList.add('visible');
             } else {
                 btnScrollToTop.classList.remove('visible');
             }
-        });
+
+            if (!scrollTimeout) {
+                scrollTimeout = setTimeout(function() {
+                    updateScrollspy();
+                    scrollTimeout = null;
+                }, 60);
+            }
+        }, { passive: true });
 
         /* ── SHARE BUTTON HANDLER ──────────────────────────────────────────── */
         function handleShareCatalog() {
