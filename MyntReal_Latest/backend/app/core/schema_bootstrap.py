@@ -862,6 +862,7 @@ def bootstrap_whatsapp_config_schema():
             # Lead Welcome messages (auto-sent on new lead creation)
             ("lead_welcome_general",         "Lead Welcome — General/Website/Social", "crm",     "customer"),
             ("lead_welcome_walkin",          "Lead Welcome — Walk-in via Partner",    "crm",     "customer"),
+            ("lead_welcome_solar",           "Lead Welcome — Solar Rooftop",          "crm",     "customer"),
         ]
         _trig_seeded = 0
         _trig_existing = 0
@@ -956,6 +957,37 @@ def bootstrap_whatsapp_config_schema():
                     "*— టీమ్ మింట్రియల్*"
                 ),
                 "meta_template_name": "myntreal_lead_welcome_walkin",
+                "meta_template_language": "en",
+                "is_meta_approved": False,
+            },
+            {
+                "slug":       "lead_welcome_solar",
+                "name":       "Lead Welcome — Solar Rooftop Inquiry",
+                "segment":    "solar",
+                "template_type": "text",
+                "body_text":  (
+                    "Hello {{name}}! ☀️\n\n"
+                    "Welcome to *MyntReal Har Ghar Solar* — India's trusted rooftop clean energy ecosystem.\n\n"
+                    "Explore our official Digital Catalog & Subsidy Calculator:\n"
+                    "👉 https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te\n\n"
+                    "⚡ Key Highlights:\n"
+                    "• Up to 90% power bill reduction\n"
+                    "• ₹78,000 Central Govt Subsidy (PM Surya Ghar)\n"
+                    "• ₹1 Solar Scheme & Zero-Down Payment Bank Loans\n"
+                    "• Tier-1 Brands (Tata, Adani, Waaree, Goldi) with 25-Year Warranty\n\n"
+                    "Our Solar Specialist will connect with you shortly for your free site survey.\n\n"
+                    "📞 Helpline: " + _COMPANY_NO + "\n"
+                    "🌐 " + _WEBSITE + "\n\n"
+                    "———————————————\n"
+                    "నమస్కారం {{name}}! ☀️\n\n"
+                    "*MyntReal హర్ ఘర్ సోలార్* కు స్వాగతం.\n\n"
+                    "మా డిజిటల్ క్యాటలాగ్ & సబ్సిడీ కాలిక్యులేటర్ లింక్ ఇక్కడ చూడండి:\n"
+                    "👉 https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te\n\n"
+                    "కరెంట్ బిల్లు 90% వరకు ఆదా, ₹78,000 కేంద్ర సబ్సిడీ మరియు ₹1 కే సోలార్ వివరాలను పై లింక్ ద్వారా తెలుసుకోండి. మా సోలార్ స్పెషలిస్ట్ త్వరలోనే మిమ్మల్ని సంప్రదిస్తారు!\n\n"
+                    "📞 సంప్రదించండి: " + _COMPANY_NO + "\n\n"
+                    "*— టీమ్ MyntReal Har Ghar Solar*"
+                ),
+                "meta_template_name": "myntreal_lead_welcome_solar",
                 "meta_template_language": "en",
                 "is_meta_approved": False,
             },

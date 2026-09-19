@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Official Terms &amp; Conditions, Policies &amp; Disclaimers — MyntReal Platform</title>
+    <meta name="description" content="Official regulatory disclosures, banking underwriting guidelines, DBT subsidy policies, and academic training terms for Har Ghar Solar and EVolution Training Centre.">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-navy: #0b1329;
+            --secondary-navy: #111d3d;
+            --accent-solar: #f59e0b;
+            --accent-green: #059669;
+            --accent-blue: #2563eb;
+            --bg-body: #f8fafc;
+            --card-bg: #ffffff;
+            --text-heading: #0f172a;
+            --text-body: #334155;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        html[data-bs-theme="dark"] {
+            --bg-body: #070d1f;
+            --card-bg: #0f172a;
+            --text-heading: #f8fafc;
+            --text-body: #cbd5e1;
+            --text-muted: #94a3b8;
+            --border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-body);
+            line-height: 1.7;
+            padding-bottom: 60px;
+        }
+
+        /* Top Brand Header */
+        .terms-header {
+            background: linear-gradient(135deg, #060b18 0%, #0f172a 50%, #1e293b 100%);
+            color: #ffffff;
+            padding: 32px 0 28px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .brand-logo-img {
+            height: 44px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        /* Segment Switcher Nav */
+        .segment-nav-container {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            padding: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            display: inline-flex;
+            gap: 8px;
+            max-width: 100%;
+        }
+
+        .segment-btn {
+            border: none;
+            background: transparent;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14.5px;
+            color: var(--text-muted);
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .segment-btn:hover {
+            color: var(--text-heading);
+            background: rgba(0, 0, 0, 0.03);
+        }
+
+        html[data-bs-theme="dark"] .segment-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .segment-btn.active.solar {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #ffffff !important;
+            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+        }
+
+        .segment-btn.active.etc {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff !important;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+        }
+
+        /* Policy Cards */
+        .policy-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+            margin-bottom: 24px;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .policy-card:hover {
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.07);
+        }
+
+        .policy-clause {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 18px;
+        }
+
+        .policy-clause::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 10px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-solar);
+        }
+
+        .policy-clause.etc::before {
+            background: var(--accent-blue);
+        }
+
+        .clause-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-heading);
+            margin-bottom: 4px;
+        }
+
+        .clause-body {
+            font-size: 14px;
+            color: var(--text-body);
+            line-height: 1.65;
+        }
+
+        .alert-highlight-box {
+            border-radius: 14px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .alert-solar {
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.25);
+            color: #b45309;
+        }
+
+        html[data-bs-theme="dark"] .alert-solar {
+            color: #fde68a;
+            background: rgba(245, 158, 11, 0.12);
+        }
+
+        .alert-etc {
+            background: rgba(37, 99, 235, 0.08);
+            border: 1px solid rgba(37, 99, 235, 0.25);
+            color: #1d4ed8;
+        }
+
+        html[data-bs-theme="dark"] .alert-etc {
+            color: #bfdbfe;
+            background: rgba(37, 99, 235, 0.12);
+        }
+
+        .theme-toggle-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .theme-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .policy-card {
+                padding: 22px 18px;
+            }
+            .segment-nav-container {
+                flex-direction: column;
+                width: 100%;
+            }
+            .segment-btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        @media print {
+            .terms-header, .segment-nav-container, .theme-toggle-btn, .action-toolbar {
+                display: none !important;
+            }
+            body {
+                background: white !important;
+                color: black !important;
+            }
+            .policy-card {
+                border: 1px solid #ccc !important;
+                box-shadow: none !important;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── 1. TOP HEADER & BRAND BAR ────────────────────────────────────── -->
+    <header class="terms-header">
+        <div class="container">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-3">
+                <div class="d-flex align-items-center gap-3">
+                    <a href="/hub/hgs" class="d-flex align-items-center text-decoration-none">
+                        <img src="/public/images/myntreal-har-ghar-solar-nav.png" alt="MyntReal Har Ghar Solar" class="brand-logo-img">
+                    </a>
+                    <div class="vr opacity-25 d-none d-sm-block" style="height: 30px;"></div>
+                    <a href="/catalog/etc/etc-renewable-certifications" class="d-flex align-items-center text-decoration-none">
+                        <img src="/public/images/etc_training/evolution_training_centre_logo.png" alt="EVolution Training Centre" class="brand-logo-img" style="height: 38px;" onerror="this.src='/hub/Assets/ETC.png'">
+                    </a>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary bg-opacity-25 text-light border border-primary border-opacity-50 px-3 py-2 rounded-pill small fw-bold">
+                        <i class="fas fa-award text-warning me-1"></i> ISO 9001:2015 Certified
+                    </span>
+                    <button class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Light/Dark Theme" aria-label="Toggle theme">
+                        <i class="fas fa-moon" id="themeIcon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <h1 class="fw-black mb-2" style="font-size: clamp(22px, 3.5vw, 32px); font-weight: 800;">
+                    Official Regulatory Disclosures &amp; Terms of Service
+                </h1>
+                <p class="text-light opacity-75 mb-0" style="font-size: 15px;">
+                    Statutory guidelines, banking underwriting criteria, DBT subsidy policies, and academic training rules (అధికారిక నిబంధనలు మరియు షరతులు).
+                </p>
+            </div>
+        </div>
+    </header>
+
+    <!-- ── 2. SEGMENT SWITCHER & ACTIONS ─────────────────────────────────── -->
+    <div class="container my-4">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <!-- Segment Switcher Tabs -->
+            <div class="segment-nav-container" role="tablist">
+                <button class="segment-btn active solar" id="btnTabSolar" onclick="switchSegment('solar')" role="tab" aria-selected="true">
+                    <i class="fas fa-solar-panel"></i>
+                    <span>Har Ghar Solar (Rooftop Platform)</span>
+                </button>
+                <button class="segment-btn etc" id="btnTabEtc" onclick="switchSegment('etc')" role="tab" aria-selected="false">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>EVolution Training Centre (ETC)</span>
+                </button>
+            </div>
+
+            <!-- Toolbar (Return to Catalog, Print) -->
+            <div class="action-toolbar d-flex align-items-center gap-2">
+                <a href="/catalog/solar/commercial-residential-solar" id="btnReturnCatalog" class="btn btn-outline-secondary rounded-pill px-3 py-2 small fw-bold text-decoration-none d-inline-flex align-items-center gap-2">
+                    <i class="fas fa-arrow-left"></i>
+                    <span id="returnCatalogLabel">Return to Solar Catalog</span>
+                </a>
+                <button onclick="window.print()" class="btn btn-outline-secondary rounded-pill px-3 py-2 small fw-bold d-inline-flex align-items-center gap-2" title="Print Official Policies">
+                    <i class="fas fa-print"></i>
+                    <span>Print</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 3. SEGMENT 1: HAR GHAR SOLAR TERMS ────────────────────────────── -->
+    <main class="container" id="segmentSolarContainer">
+        <!-- Summary Alert Box -->
+        <div class="alert-highlight-box alert-solar">
+            <div class="d-flex align-items-start gap-2">
+                <i class="fas fa-info-circle fs-5 mt-1 flex-shrink-0"></i>
+                <div>
+                    <strong class="d-block mb-1">Har Ghar Solar — Statutory Regulatory Notice:</strong>
+                    MyntReal (<a href="https://www.myntreal.com" target="_blank" rel="noopener" class="text-decoration-underline fw-bold">www.myntreal.com</a>) operates exclusively as an authorized clean energy facilitation, advisory, and marketplace aggregator platform. Bank loans, EMI terms, and interest rates are governed by lending partner underwriting. Central DBT subsidy is directly credited by MNRE into Aadhaar-linked beneficiary bank accounts.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 1 -->
+        <div class="policy-card">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                    <i class="fas fa-building"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0 text-heading fs-5">1. Clean Energy Facilitation &amp; Aggregator Platform Disclosure</h3>
+                    <div class="small text-muted">Legal role, marketplace status, and EPC contractor execution responsibilities</div>
+                </div>
+            </div>
+
+            <div class="policy-clause">
+                <div class="clause-title">Platform Status</div>
+                <div class="clause-body">
+                    MyntReal (<a href="https://www.myntreal.com" target="_blank" rel="noopener">www.myntreal.com</a>) is an authorized digital rooftop solar facilitation, advisory, and aggregator platform operated by an ISO 9001:2015 certified enterprise.
+                </div>
+            </div>
+
+            <div class="policy-clause">
+                <div class="clause-title">Aggregator Role</div>
+                <div class="clause-body">
+                    MyntReal is <strong>not</strong> an engineering EPC contractor, equipment manufacturer, or direct vendor. MyntReal acts as an authorized clean energy aggregator connecting consumers with DISCOM-empaneled, MNRE-certified EPC contractors and Tier-1 brand manufacturers.
+                </div>
+            </div>
+
+            <div class="policy-clause">
+                <div class="clause-title">Physical Engineering Execution</div>
+                <div class="clause-body">
+                    Physical rooftop site surveys, structural mounting, electrical integration, DISCOM paperwork, net-meter synchronization, and workmanship warranties are directly executed by certified empaneled EPC engineering partners under bilateral contracts.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2 -->
+        <div class="policy-card">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: rgba(16, 185, 129, 0.15); color: #059669;">
+                    <i class="fas fa-hand-holding-usd"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0 text-heading fs-5">2. Bank Financing, Interest Rates &amp; Individual CIBIL Underwriting</h3>
+                    <div class="small text-muted">Customer variation, priority clean energy loans, and indicative calculation terms</div>
+                </div>
+            </div>
+
+            <div class="policy-clause">
+                <div class="clause-title">Customer-to-Customer &amp; Bank-to-Bank Variation</div>
+                <div class="clause-body">
+                    EMI amounts, interest rates (typically 7%–10% p.a.), loan tenures (up to 5 or 10 years), and collateral-free loan sanction vary strictly from customer to customer and bank to bank based on individual CIBIL / credit bureau score (typically 700+ required), monthly household income, banking transactions, debt-to-income ratio, KYC verification, and individual bank underwriting policies.
+                </div>
+            </div>
+
+            <div class="policy-clause">
+                <div class="clause-title">Lending Institutions</div>
+                <div class="clause-body">
+                    Rooftop solar loans are underwritten and disbursed by nationalized partner banks (State Bank of India - SBI, Canara Bank, Punjab National Bank - PNB, Bank of Baroda, Union Bank of India, Indian Bank, Andhra Pragathi Grameena Bank - APGB, IREDA) and partner RBI-registered NBFCs under priority sector clean energy lending schemes.
+                </div>
+            </div>
+
+            <div class="policy-clause">
+                <div class="clause-title">Indicative Figures &amp; ₹1 Booking Scheme</div>
+                <div class="clause-body">
+                    All EMI values shown on this platform (e.g. ₹1,140/mo for 2 kW, ₹1,350/mo for 3 kW, or ₹1 booking schemes) are indicative illustrations computed on benchmark interest rates and are subject to final sanction and terms issued by the respective financing bank.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3 -->
+        <div class="policy-card">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: rgba(59, 130, 246, 0.15); color: #2563eb;">
+                    <i class="fas fa-landmark"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0 text-heading fs-5">3. PM Surya Ghar Muft Bijli Yojana Central DBT Subsidy Policy</h3>
+                    <div class="small text-muted">Ministry of New &amp; Renewable Energy (MNRE) guidelines and DBT disbursement process</div>
+                </div>
+            </div>
+
+            <div class="policy-clause">
+                <div class="clause-title">Official Subsidy Scale</div>
+                <div class="clause-body">
+                    Direct Benefit Transfer (DBT) central subsidy is governed strictly by Ministry of New &amp; Renewable Energy (MNRE) guidelines: <strong>₹30,000 for 1 kW</strong>, <strong>₹60,000 for 2 kW</strong>, and flat <strong>₹78,000 maximum for 3 kW up to 10 kW</strong> residential rooftop systems.
+                </div>
+            </div>
+
+            <div class="policy-clause">
+                <div class="clause-title">Direct Bank Credit</div>
+                <div class="clause-body">
+                    Subsidies are credited directly into the applicant's Aadhaar-linked savings bank account through the National Solar Portal following DISCOM site inspection, commissioning verification, and net-meter activation.
+                </div>
+            </div>
+
+            <div class="policy-clause">
+                <div class="clause-title">Commercial &amp; Industrial Establishments</div>
+                <div class="clause-body">
+                    Residential central DBT subsidies do not apply to commercial, institutional, or industrial connections. Commercial consumers benefit from Section 32 Accelerated Tax Depreciation (40%) and substantial operational tariff savings.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4 -->
+        <div class="policy-card">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: rgba(234, 88, 12, 0.15); color: #ea580c;">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0 text-heading fs-5">4. DISCOM Net-Metering &amp; Estimated Solar Generation</h3>
+                    <div class="small text-muted">Grid synchronization, transformer limits, and test conditions</div>
+                </div>
+            </div>
+
+            <div class="policy-clause">
+                <div class="clause-title">Grid Synchronization &amp; DISCOM Approvals</div>
+                <div class="clause-body">
+                    Installation of bi-directional net-meters and grid connection synchronization are subject to local power distribution company (DISCOM) approvals, distribution transformer (DTR) capacity availability, and state regulatory authority turnaround times.
+                </div>
+            </div>
+
+            <div class="policy-clause">
+                <div class="clause-title">Solar Generation Estimates</div>
+                <div class="clause-body">
+                    Quoted solar unit generation (approx. 4 to 4.5 units per day per kW, or 120–135 units/month) is calculated under Standard Test Conditions (STC) with unshaded south-facing rooftop installations. Actual generation may vary due to ambient temperature, seasonal weather, cloud cover, shadow patterns, and periodic panel cleaning.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 5 -->
+        <div class="policy-card">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: rgba(139, 92, 246, 0.15); color: #8b5cf6;">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0 text-heading fs-5">5. OEM Equipment &amp; Workmanship Warranties</h3>
+                    <div class="small text-muted">Tier-1 solar modules, grid-tied inverters, and structural engineering guarantees</div>
+                </div>
+            </div>
+
+            <div class="policy-clause">
+                <div class="clause-title">Solar Modules (Panels)</div>
+                <div class="clause-body">
+                    25 to 30 years linear performance warranty backed directly by Tier-1 OEM manufacturers (Tata Power Solar, Adani Solar, Waaree Energies, Vikram Solar, Goldi, Navgrun, APS), guaranteeing at least 80% to 84.8% power output at Year 25.
+                </div>
+            </div>
+
+            <div class="policy-clause">
+                <div class="clause-title">Grid-Tied Inverters</div>
+                <div class="clause-body">
+                    5 to 8 years manufacturer warranty with extended OEM warranty options available.
+                </div>
+            </div>
+
+            <div class="policy-clause">
+                <div class="clause-title">Installation Structure &amp; Workmanship</div>
+                <div class="clause-body">
+                    Comprehensive structural mounting, wind load resistance, and installation workmanship warranty is provided directly by the empaneled executing EPC contractor for 5 years.
+                </div>
+            </div>
+
+            <div class="policy-clause">
+                <div class="clause-title">Statutory Compliance</div>
+                <div class="clause-body">
+                    All modules and inverters are ALMM (Approved List of Models and Manufacturers) and Bureau of Indian Standards (BIS) certified.
+                </div>
+            </div>
+        </div>
+
+        <!-- Return to Solar Catalog Banner -->
+        <div class="text-center my-4 py-3">
+            <a href="/catalog/solar/commercial-residential-solar" class="btn btn-warning fw-bold px-4 py-3 rounded-pill text-dark d-inline-flex align-items-center gap-2 shadow-sm">
+                <i class="fas fa-solar-panel"></i>
+                <span>Explore Har Ghar Solar Digital Catalog</span>
+                <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+    </main>
+
+    <!-- ── 4. SEGMENT 2: EVOLUTION TRAINING CENTRE (ETC) TERMS ───────────── -->
+    <main class="container" id="segmentEtcContainer" style="display: none;">
+        <!-- Summary Alert Box -->
+        <div class="alert-highlight-box alert-etc">
+            <div class="d-flex align-items-start gap-2">
+                <i class="fas fa-graduation-cap fs-5 mt-1 flex-shrink-0"></i>
+                <div>
+                    <strong class="d-block mb-1">EVolution Training Centre (ETC) — Academic Quotation Notice:</strong>
+                    EVolution Training Centre operates in technical skill collaboration with <strong>Govt. Polytechnic College, Pendurthi, Visakhapatnam</strong>. Standard course fee is ₹19,999/- with a direct ₹10,000/- institutional scholarship voucher applied upfront, resulting in a net investment of ₹9,999/- all-inclusive (workshop practical lab, study manual, safety gear &amp; ISO 9001:2015 certificate).
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 1 -->
+        <div class="policy-card">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: rgba(37, 99, 235, 0.15); color: #2563eb;">
+                    <i class="fas fa-university"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0 text-heading fs-5">1. Institutional Academic Collaboration &amp; Campus Venue</h3>
+                    <div class="small text-muted">Campus facilities, workshop infrastructure, and polytechnic partner accreditation</div>
+                </div>
+            </div>
+
+            <div class="policy-clause etc">
+                <div class="clause-title">Official Training Campus Venue</div>
+                <div class="clause-body">
+                    Practical workshop training is conducted directly inside the engineering laboratories at <strong>Govt. Polytechnic College, Pendurthi, Visakhapatnam, Andhra Pradesh — 531173</strong>.
+                </div>
+            </div>
+
+            <div class="policy-clause etc">
+                <div class="clause-title">Hands-on Infrastructure</div>
+                <div class="clause-body">
+                    The campus workshop provides live electric two-wheelers, vehicle lifts, three-phase power stations, BLDC motor testing benches, and workshop safety apparatus for candidate use.
+                </div>
+            </div>
+
+            <div class="policy-clause etc">
+                <div class="clause-title">Institutional Collaboration Scope</div>
+                <div class="clause-body">
+                    Training is delivered by certified master technicians from EVolution Training Centre under an institutional outreach framework to empower polytechnic, ITI, engineering candidates, and independent mechanics with green mobility technical skills.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2 -->
+        <div class="policy-card">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: rgba(16, 185, 129, 0.15); color: #059669;">
+                    <i class="fas fa-receipt"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0 text-heading fs-5">2. Course Tuition, Institutional Scholarship Voucher &amp; Seat Reservation</h3>
+                    <div class="small text-muted">₹10,000 scholarship discount, net payable amount, and enrollment terms</div>
+                </div>
+            </div>
+
+            <div class="policy-clause etc">
+                <div class="clause-title">Tuition Fee &amp; Scholarship Voucher</div>
+                <div class="clause-body">
+                    The standard program tuition is ₹19,999/-. Enrolled students receive a direct institutional green skill scholarship grant of ₹10,000/-, making the final net payable course fee exactly <strong>₹9,999/-</strong>.
+                </div>
+            </div>
+
+            <div class="policy-clause etc">
+                <div class="clause-title">Batch Capacity &amp; Reservation</div>
+                <div class="clause-body">
+                    To ensure 1-on-1 practical lab attention, each workshop cohort is strictly capped at 20–25 candidates. Seats are confirmed on a first-come, first-served basis upon seat reservation.
+                </div>
+            </div>
+
+            <div class="policy-clause etc">
+                <div class="clause-title">Seat Reservation &amp; Cancellation Policy</div>
+                <div class="clause-body">
+                    Seat reservation amounts are dedicated toward laboratory workstation scheduling and materials allocation. Once a candidate's seat is reserved and assigned to a specific batch calendar, reservations are non-refundable but can be rescheduled to the immediate next batch upon written request at least 3 days before batch kickoff.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3 -->
+        <div class="policy-card">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                    <i class="fas fa-hard-hat"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0 text-heading fs-5">3. Practical Workshop Safety, Hardware Kit &amp; SOP</h3>
+                    <div class="small text-muted">Workshop standard operating procedures, lab tools, and personal kit pricing</div>
+                </div>
+            </div>
+
+            <div class="policy-clause etc">
+                <div class="clause-title">Workshop Safety &amp; PPE Compliance</div>
+                <div class="clause-body">
+                    Trainees must strictly adhere to high-voltage workshop safety guidelines. Insulated safety gloves and eye protection must be worn during high-voltage teardown, electrical continuity tests, and motor controller handling.
+                </div>
+            </div>
+
+            <div class="policy-clause etc">
+                <div class="clause-title">Laboratory Tools Provided During Training</div>
+                <div class="clause-body">
+                    All workshop tools, multimeters, battery testing benches, charging units, and vehicle hoists are provided free of cost for hands-on practice inside the Govt. Polytechnic workshop bays.
+                </div>
+            </div>
+
+            <div class="policy-clause etc">
+                <div class="clause-title">Professional Hardware Toolkit (Optional / Extra Pricing)</div>
+                <div class="clause-body">
+                    Enrolled candidates who wish to take home a personal professional technician toolkit (including high-precision digital multimeter, insulation tools, wire strippers, and crimping tools) can purchase one at special student-subsidized extra pricing upon enrollment or during the workshop.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4 -->
+        <div class="policy-card">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: rgba(139, 92, 246, 0.15); color: #8b5cf6;">
+                    <i class="fas fa-certificate"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0 text-heading fs-5">4. Attendance, Practical Assessment &amp; ISO 9001:2015 Certification</h3>
+                    <div class="small text-muted">ISO 9001:2015 accreditation, practical evaluation criteria, and credential issuance</div>
+                </div>
+            </div>
+
+            <div class="policy-clause etc">
+                <div class="clause-title">Attendance Requirement</div>
+                <div class="clause-body">
+                    A minimum attendance of 85% across the 7-day (36 Hours) practical program is mandatory to be eligible for certification and placement assistance.
+                </div>
+            </div>
+
+            <div class="policy-clause etc">
+                <div class="clause-title">Hands-on Diagnostic Evaluation</div>
+                <div class="clause-body">
+                    On the final day, candidates complete a live vehicle troubleshooting exam covering electrical diagnostics, wiring continuity, motor controller signal tracing, and training on basics of battery and chargers.
+                </div>
+            </div>
+
+            <div class="policy-clause etc">
+                <div class="clause-title">Accredited Certificate Issuance</div>
+                <div class="clause-body">
+                    Successful candidates receive an official ISO 9001:2015 Accredited 'Certified Electric Vehicle Technician &amp; Entrepreneur' certificate issued by EVolution Training Centre in technical collaboration with academic partners.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 5 -->
+        <div class="policy-card">
+            <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px; background: rgba(2, 132, 199, 0.15); color: #0284c7;">
+                    <i class="fas fa-briefcase"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-0 text-heading fs-5">5. Job Placement Assistance &amp; Spares Franchise Support</h3>
+                    <div class="small text-muted">Industry placement drives, wholesale spare parts pipeline, and workshop incubation</div>
+                </div>
+            </div>
+
+            <div class="policy-clause etc">
+                <div class="clause-title">Industry Job Placements</div>
+                <div class="clause-body">
+                    EVolution Training Centre facilitates interview drives with authorized multi-brand EV dealerships, commercial fleet hubs (including Manthra EV and quick-commerce fleets), and service workshops across Andhra Pradesh and Telangana.
+                </div>
+            </div>
+
+            <div class="policy-clause etc">
+                <div class="clause-title">Independent Workshop &amp; Spares Franchise Support</div>
+                <div class="clause-body">
+                    Graduates establishing their own EV service centers gain direct B2B wholesale access to 288+ genuine EV spare parts, workshop layout blueprints, and project report guidance for PM Mudra self-employment bank loans.
+                </div>
+            </div>
+
+            <div class="policy-clause etc">
+                <div class="clause-title">Lifetime Alumni Support</div>
+                <div class="clause-body">
+                    Graduates receive continuous access to master technical troubleshooting hotlines and wiring schematics for complex customer vehicle faults in the field.
+                </div>
+            </div>
+        </div>
+
+        <!-- Return to ETC Catalog Banner -->
+        <div class="text-center my-4 py-3">
+            <a href="/catalog/etc/etc-renewable-certifications" class="btn btn-primary fw-bold px-4 py-3 rounded-pill text-white d-inline-flex align-items-center gap-2 shadow-sm" style="background: #2563eb;">
+                <i class="fas fa-graduation-cap"></i>
+                <span>Explore EVolution Training Digital Catalog</span>
+                <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+    </main>
+
+    <!-- ── 5. FOOTER ─────────────────────────────────────────────────────── -->
+    <footer class="text-center text-muted small py-4 border-top border-secondary border-opacity-25 mt-5">
+        <div class="container">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                <div>
+                    &copy; 2026 MYNTREAL &bull; Har Ghar Solar &bull; EVolution Training Centre. All Rights Reserved.
+                </div>
+                <div class="d-flex gap-3">
+                    <a href="/catalog/solar/commercial-residential-solar" class="text-secondary text-decoration-none">Solar Catalog</a>
+                    <a href="/catalog/etc/etc-renewable-certifications" class="text-secondary text-decoration-none">ETC Catalog</a>
+                    <a href="/hub/about" class="text-secondary text-decoration-none">About Us</a>
+                    <a href="tel:+918585852738" class="text-secondary text-decoration-none">Helpline: +91 858585 2738</a>
+                </div>
+            </div>
+            <div class="opacity-75">
+                Quality Management System ISO 9001:2015 Accredited Organization &bull; Govt. Polytechnic Partner Campus, Pendurthi
+            </div>
+        </div>
+    </footer>
+
+    <!-- ── 6. JAVASCRIPT SEGMENT LOGIC ───────────────────────────────────── -->
+    <script>
+        function switchSegment(segment) {
+            const solarContainer = document.getElementById('segmentSolarContainer');
+            const etcContainer = document.getElementById('segmentEtcContainer');
+            const btnSolar = document.getElementById('btnTabSolar');
+            const btnEtc = document.getElementById('btnTabEtc');
+            const btnReturn = document.getElementById('btnReturnCatalog');
+            const returnLabel = document.getElementById('returnCatalogLabel');
+
+            if (segment === 'etc') {
+                if (solarContainer) solarContainer.style.display = 'none';
+                if (etcContainer) etcContainer.style.display = 'block';
+
+                if (btnSolar) {
+                    btnSolar.classList.remove('active');
+                    btnSolar.setAttribute('aria-selected', 'false');
+                }
+                if (btnEtc) {
+                    btnEtc.classList.add('active');
+                    btnEtc.setAttribute('aria-selected', 'true');
+                }
+
+                if (btnReturn) {
+                    btnReturn.href = '/catalog/etc/etc-renewable-certifications';
+                }
+                if (returnLabel) {
+                    returnLabel.textContent = 'Return to EVolution Training Catalog';
+                }
+
+                // Update URL parameter without reload
+                const url = new URL(window.location);
+                url.searchParams.set('segment', 'etc');
+                window.history.replaceState({}, '', url);
+            } else {
+                if (etcContainer) etcContainer.style.display = 'none';
+                if (solarContainer) solarContainer.style.display = 'block';
+
+                if (btnEtc) {
+                    btnEtc.classList.remove('active');
+                    btnEtc.setAttribute('aria-selected', 'false');
+                }
+                if (btnSolar) {
+                    btnSolar.classList.add('active');
+                    btnSolar.setAttribute('aria-selected', 'true');
+                }
+
+                if (btnReturn) {
+                    btnReturn.href = '/catalog/solar/commercial-residential-solar';
+                }
+                if (returnLabel) {
+                    returnLabel.textContent = 'Return to Solar Catalog';
+                }
+
+                // Update URL parameter without reload
+                const url = new URL(window.location);
+                url.searchParams.set('segment', 'solar');
+                window.history.replaceState({}, '', url);
+            }
+        }
+
+        // Initialize from URL parameters or hash
+        document.addEventListener('DOMContentLoaded', function() {
+            const params = new URLSearchParams(window.location.search);
+            const segmentParam = params.get('segment');
+            const hash = window.location.hash.toLowerCase();
+
+            if (segmentParam === 'etc' || hash === '#etc' || hash === '#evolution') {
+                switchSegment('etc');
+            } else {
+                switchSegment('solar');
+            }
+
+            // Theme Toggle Logic
+            const themeToggleBtn = document.getElementById('themeToggleBtn');
+            const themeIcon = document.getElementById('themeIcon');
+            const savedTheme = localStorage.getItem('mynt_theme') || 'light';
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+            if (themeIcon) {
+                themeIcon.className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            }
+
+            if (themeToggleBtn) {
+                themeToggleBtn.addEventListener('click', function() {
+                    const current = document.documentElement.getAttribute('data-bs-theme') || 'light';
+                    const next = current === 'dark' ? 'light' : 'dark';
+                    document.documentElement.setAttribute('data-bs-theme', next);
+                    localStorage.setItem('mynt_theme', next);
+                    if (themeIcon) {
+                        themeIcon.className = next === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

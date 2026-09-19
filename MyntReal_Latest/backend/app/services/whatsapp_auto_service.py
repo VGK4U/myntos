@@ -851,8 +851,9 @@ def send_lead_welcome(
             logger.warning("[WA-WELCOME] Invalid phone %s — skipping", phone)
             return {"success": False, "reason": "invalid_phone"}
 
-        # Detect ETC Training leads to use dedicated ETC Training welcome template
+        # Detect Solar lead or ETC Training lead
         is_etc_training = False
+        is_solar = False
         if lead_id:
             try:
                 from app.models.crm import CRMLead
@@ -860,10 +861,18 @@ def send_lead_welcome(
                 if lead_obj:
                     if lead_obj.category_id == 16 or lead_obj.company_id == 2 or 'etc' in (lead_obj.tags or '').lower() or 'training' in (lead_obj.tags or '').lower():
                         is_etc_training = True
+                    if (getattr(lead_obj, 'company_id', None) == 4 or
+                        'solar' in (getattr(lead_obj, 'tags', None) or '').lower() or
+                        getattr(lead_obj, 'solar_pipeline_status', None) or
+                        getattr(lead_obj, 'solar_brand_id', None) or
+                        getattr(lead_obj, 'solar_capacity', None)):
+                        is_solar = True
             except Exception:
                 pass
 
-        if is_etc_training:
+        if is_solar:
+            event_key = "lead_welcome_solar"
+        elif is_etc_training:
             event_key = "lead_welcome_etc_training"
         elif partner_phone:
             event_key = "lead_welcome_walkin"
@@ -911,12 +920,47 @@ def send_lead_welcome(
         from app.models.whatsapp import WhatsAppTemplate
         template = db.query(WhatsAppTemplate).filter_by(slug=event_key, is_active=True).first()
         if not template:
-            # Fallback to general template if specific ETC template is missing
-            template = db.query(WhatsAppTemplate).filter_by(slug="lead_welcome_general", is_active=True).first()
+            if event_key == "lead_welcome_solar":
+                _sol_body = (
+                    "Hello {{name}}! ☀️\n\n"
+                    "Welcome to *MyntReal Har Ghar Solar* — India's trusted clean energy platform.\n\n"
+                    "Explore our official Digital Catalog & Subsidy Calculator:\n"
+                    "👉 https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te\n\n"
+                    "⚡ Key Highlights:\n"
+                    "• 90% power bill reduction\n"
+                    "• ₹78,000 Central Govt Subsidy (PM Surya Ghar)\n"
+                    "• ₹1 Solar Scheme & Zero-Down Payment Bank Loans\n"
+                    "• Tier-1 Brands (Tata, Adani, Waaree, Goldi) with 25-Year Warranty\n\n"
+                    "Our Solar Specialist will connect with you shortly for your free site survey.\n\n"
+                    "📞 Helpline: +91 85858 52738\n"
+                    "🌐 www.myntreal.com\n\n"
+                    "———————————————\n"
+                    "నమస్కారం {{name}}! ☀️\n\n"
+                    "*MyntReal హర్ ఘర్ సోలార్* కు స్వాగతం.\n\n"
+                    "మా డిజిటల్ క్యాటలాగ్ & సబ్సిడీ కాలిక్యులేటర్ లింక్ ఇక్కడ చూడండి:\n"
+                    "👉 https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te\n\n"
+                    "కరెంట్ బిల్లు 90% వరకు ఆదా, ₹78,000 కేంద్ర సబ్సిడీ మరియు ₹1 కే సోలార్ వివరాలను పై లింక్ ద్వారా తెలుసుకోండి. మా సోలార్ స్పెషలిస్ట్ త్వరలోనే మిమ్మల్ని సంప్రదిస్తారు!\n\n"
+                    "📞 సంప్రదించండి: +91 85858 52738\n\n"
+                    "*— టీమ్ MyntReal Har Ghar Solar*"
+                )
+                template = WhatsAppTemplate(
+                    slug="lead_welcome_solar",
+                    name="Lead Welcome — Solar Rooftop Inquiry",
+                    segment="solar",
+                    template_type="text",
+                    body_text=_sol_body,
+                    meta_template_name="myntreal_lead_welcome_solar",
+                    meta_template_language="en",
+                    is_meta_approved=False,
+                    is_active=True
+                )
+            else:
+                # Fallback to general template if specific template is missing
+                template = db.query(WhatsAppTemplate).filter_by(slug="lead_welcome_general", is_active=True).first()
 
         # Fallback to approved myntreal_lead_thankyou_general if template is missing or unapproved
         if not template or not getattr(template, 'is_meta_approved', False):
-            if event_key == "lead_welcome_general" or not template or not getattr(template, 'is_meta_approved', False):
+            if (event_key in ("lead_welcome_general", "lead_welcome_solar") or not template or not getattr(template, 'is_meta_approved', False)):
                 fallback = db.query(WhatsAppTemplate).filter_by(slug="myntreal_lead_thankyou_general", is_active=True).first()
                 if fallback and getattr(fallback, 'is_meta_approved', False):
                     logger.info(
@@ -938,6 +982,7 @@ def send_lead_welcome(
             "lead_name": safe_lead_name,
             "customer_name": safe_lead_name,
             "lead_ref": f"#{lead_id}" if lead_id else "LEAD",
+            "catalog_url": "https://www.myntreal.com/catalog/solar/commercial-residential-solar?lang=te",
             "date": now_ist.strftime("%d-%m-%Y")
         }
         if partner_phone:

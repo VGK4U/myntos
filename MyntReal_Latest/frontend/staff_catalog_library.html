@@ -391,6 +391,18 @@
                                 <a id="btnPublicViewLink" href="#" target="_blank" class="btn btn-sm btn-ghost-dark" title="Open Public Single-Page Web Catalog">
                                     <i class="fas fa-external-link-alt me-1"></i> Public View
                                 </a>
+                                <a id="btnHgsHubLink" href="/hub/hgs" target="_blank" class="btn btn-sm btn-outline-success text-success" title="Open Unified /hub/hgs Route" style="display: none;">
+                                    <i class="fas fa-sun me-1 text-warning"></i> /hub/hgs
+                                </a>
+                                <a id="btnEtcHubLink" href="/hub/etc" target="_blank" class="btn btn-sm btn-outline-primary text-primary" title="Open Unified /hub/etc Route" style="display: none;">
+                                    <i class="fas fa-graduation-cap me-1 text-primary"></i> /hub/etc
+                                </a>
+                                <a id="btnPricingHubLink" href="/catalog/hub-ev-pricing" target="_blank" class="btn btn-sm btn-outline-warning text-warning" title="Open 24-Hour Confidential Commercial Pricing Page" style="display: none;">
+                                    <i class="fas fa-tags me-1 text-warning"></i> 24h Commercials
+                                </a>
+                                <a id="btnCustomerEvLink" href="/catalog/customer-2w-ev-pricing" target="_blank" class="btn btn-sm btn-outline-success text-success" title="Open Customer 2-Wheeler EV Pricing Catalog" style="display: none;">
+                                    <i class="fas fa-motorcycle me-1 text-success"></i> Customer EV
+                                </a>
                                 <button class="btn btn-sm btn-brand-wa" onclick="openWhatsAppDispatchModal()">
                                     <i class="fab fa-whatsapp me-1"></i> Send WhatsApp
                                 </button>
@@ -815,7 +827,9 @@
 
         const VERTICALS = [
             { code: 'SOLAR', label: 'Solar Solutions', icon: 'fa-solar-panel', defaultSlug: 'commercial-residential-solar' },
-            { code: 'INDUSTRIAL_HUB', label: 'Industrial Hub', icon: 'fa-industry', defaultSlug: 'industrial-hub-franchise' },
+            { code: 'INDUSTRIAL_HUB', label: 'MyntReal Hub', icon: 'fa-building-columns', defaultSlug: 'industrial-hub-franchise' },
+            { code: 'CUSTOMER_EV_PRICING', label: 'Customer 2W EV Pricing', icon: 'fa-motorcycle', defaultSlug: 'customer-2w-ev-pricing' },
+            { code: 'HUB_PRICING', label: 'Hub Commercials (24h)', icon: 'fa-tags', defaultSlug: 'hub-ev-pricing' },
             { code: 'EV_B2B', label: 'EV B2B Fleets', icon: 'fa-truck-moving', defaultSlug: 'ev-commercial-fleet' },
             { code: 'EV_B2C', label: 'EV 2-Wheelers', icon: 'fa-motorcycle', defaultSlug: 'ev-smart-commuter' },
             { code: 'EV_SPARES', label: 'EV Spares & Batteries', icon: 'fa-cogs', defaultSlug: 'ev-spares-and-chargers' },
@@ -871,6 +885,19 @@
             } else {
                 renderEmptyCatalogView();
             }
+        }
+
+        function renderEmptyCatalogView() {
+            document.getElementById('catalogSegmentBadge').textContent = activeSegment;
+            document.getElementById('catalogTitle').textContent = 'No Catalog Configured';
+            document.getElementById('catalogSubtitle').textContent = 'No active digital catalog found for this vertical segment.';
+            document.getElementById('statSectionsCount').textContent = '0';
+            document.getElementById('statItemsCount').textContent = '0';
+            document.getElementById('statDispatchesCount').textContent = '0';
+            document.getElementById('sectionsListContainer').innerHTML = `<div class="p-4 text-center text-muted">No sections available for ${activeSegment}.</div>`;
+            document.getElementById('itemsListContainer').innerHTML = `<div class="p-4 text-center text-muted">No products available for ${activeSegment}.</div>`;
+            const iframe = document.getElementById('catalogPreviewIframe');
+            if (iframe) iframe.src = 'about:blank';
         }
 
         async function loadCatalogLibrary() {
@@ -930,6 +957,22 @@
             const segmentSlug = cat.segment_code.toLowerCase().replace(/_/g, '-');
             const publicUrl = `/catalog/${segmentSlug}/${cat.slug}`;
             document.getElementById('btnPublicViewLink').href = publicUrl;
+            const hgsLink = document.getElementById('btnHgsHubLink');
+            if (hgsLink) {
+                hgsLink.style.display = (cat.segment_code === 'SOLAR') ? 'inline-flex' : 'none';
+            }
+            const etcLink = document.getElementById('btnEtcHubLink');
+            if (etcLink) {
+                etcLink.style.display = (cat.segment_code === 'ETC_TRAINING') ? 'inline-flex' : 'none';
+            }
+            const pricingHubLink = document.getElementById('btnPricingHubLink');
+            if (pricingHubLink) {
+                pricingHubLink.style.display = (cat.segment_code === 'INDUSTRIAL_HUB' || cat.segment_code === 'HUB_PRICING') ? 'inline-flex' : 'none';
+            }
+            const customerEvLink = document.getElementById('btnCustomerEvLink');
+            if (customerEvLink) {
+                customerEvLink.style.display = (cat.segment_code === 'CUSTOMER_EV_PRICING' || cat.segment_code === 'INDUSTRIAL_HUB' || cat.segment_code === 'HUB_PRICING') ? 'inline-flex' : 'none';
+            }
 
             document.getElementById('pdfBrochureUrlInput').value = cat.pdf_brochure_url || '';
             document.getElementById('seoTitleInput').value = cat.seo_title || '';
@@ -1020,6 +1063,14 @@
 
         function updatePreviewFrame(cat) {
             const iframe = document.getElementById('catalogPreviewIframe');
+            if (cat.segment_code === 'CUSTOMER_EV_PRICING' || cat.slug === 'customer-2w-ev-pricing') {
+                iframe.src = '/catalog/customer-2w-ev-pricing?preview=1';
+                return;
+            }
+            if (cat.segment_code === 'HUB_PRICING' || cat.slug === 'hub-ev-pricing') {
+                iframe.src = '/catalog/hub-ev-pricing?preview=1';
+                return;
+            }
             const segmentSlug = cat.segment_code.toLowerCase().replace(/_/g, '-');
             iframe.src = `/catalog/${segmentSlug}/${cat.slug}?preview=1`;
         }

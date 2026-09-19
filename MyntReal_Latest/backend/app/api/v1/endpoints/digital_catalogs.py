@@ -196,6 +196,37 @@ class AIDraftRequest(BaseModel):
     target_languages: List[str] = Field(default_factory=lambda: ["en", "te", "hi", "ta"])
 
 
+def _get_catalog_branding(catalog: DigitalCatalog) -> dict:
+    """Resolve vertical-specific brand identity, logo, and contacts."""
+    seg = (catalog.segment_code or "").upper()
+    if seg == "ETC_TRAINING":
+        return {
+            "platform_name": "EVolution Training Centre",
+            "tagline": "Evolve & Power Your Future — EV Technology & Entrepreneurship Certifications",
+            "logo_url": "/public/images/etc_training/evolution_training_centre_logo.png",
+            "primary_contact_phone": "+91 858585 2738",
+            "whatsapp_business_number": "918585852738",
+            "support_email": "contact@myntreal.com"
+        }
+    elif seg == "SOLAR":
+        return {
+            "platform_name": "MYNTREAL Har Ghar Solar",
+            "tagline": "MYNTREAL – Redefining Future",
+            "logo_url": "/public/images/myntreal-har-ghar-solar-nav.png",
+            "primary_contact_phone": "+91 858585 2738",
+            "whatsapp_business_number": "918585852738",
+            "support_email": "support@myntreal.com"
+        }
+    return {
+        "platform_name": catalog.title,
+        "tagline": catalog.subtitle or "MYNTREAL – Redefining Future",
+        "logo_url": "/public/vgk4u-logo.png",
+        "primary_contact_phone": "+91 858585 2738",
+        "whatsapp_business_number": "918585852738",
+        "support_email": "support@myntreal.com"
+    }
+
+
 # ════════════════════════════════════════════════════════════════════════════
 # 1. PUBLIC ENDPOINTS (Unauthenticated, Single-Page Responsive Web Catalog)
 # ════════════════════════════════════════════════════════════════════════════
@@ -220,21 +251,34 @@ def get_public_catalog_by_slug(
     ).first()
 
     if not catalog:
-        # Fallback: search by segment_code or category slug
+        # Fallback 1: match catalog_slug against slug or segment_code
         cat_match = db.query(DigitalCatalog).filter(
             or_(
-                DigitalCatalog.segment_code.ilike(category_slug.replace('-', '_')),
-                DigitalCatalog.slug.ilike(f"%{catalog_slug}%")
+                DigitalCatalog.slug.ilike(f"%{catalog_slug}%"),
+                DigitalCatalog.segment_code.ilike(catalog_slug.replace('-', '_'))
             ),
-            DigitalCatalog.is_active == True
+            DigitalCatalog.is_active == True,
+            DigitalCatalog.status == 'published'
         ).first()
+
+        # Fallback 2: search by category_slug against segment_code or slug
+        if not cat_match:
+            cat_match = db.query(DigitalCatalog).filter(
+                or_(
+                    DigitalCatalog.segment_code.ilike(category_slug.replace('-', '_')),
+                    DigitalCatalog.slug.ilike(f"%{category_slug}%")
+                ),
+                DigitalCatalog.is_active == True,
+                DigitalCatalog.status == 'published'
+            ).first()
+
         if not cat_match:
             raise HTTPException(status_code=404, detail="Catalog not found or is no longer active.")
         catalog = cat_match
 
     # If referral code provided, record view in ledger
     attribution = None
-    if ref:
+    if ref and isinstance(ref, str):
         send_record = db.query(CatalogLeadSend).filter(CatalogLeadSend.share_ref_code == ref).first()
         if send_record:
             send_record.view_count += 1
@@ -245,29 +289,28 @@ def get_public_catalog_by_slug(
             db.commit()
 
             staff_name = "MyntReal Specialist"
+            staff_ext = None
             if send_record.staff_id:
                 staff = db.query(StaffEmployee).filter(StaffEmployee.id == send_record.staff_id).first()
                 if staff:
                     staff_name = f"{staff.first_name} {staff.last_name or ''}".strip()
+                    try:
+                        from app.services.whatsapp_auto_service import resolve_staff_extension
+                        staff_ext = resolve_staff_extension(db, staff.id, company_id=getattr(staff, 'base_company_id', 1))
+                    except Exception:
+                        pass
 
             attribution = {
                 "ref_code": ref,
                 "staff_name": staff_name,
+                "extension": staff_ext,
                 "recipient_name": send_record.recipient_name,
                 "language_code": send_record.language_code
             }
 
     data = catalog.to_dict(include_sections=True, include_items=True, language=lang)
     data["attribution"] = attribution
-    data["branding"] = {
-        "platform_name": "VGK4U Platform & MYNTREAL",
-        "tagline": "MYNTREAL – Redefining Future",
-        "vgk4u_logo_url": "/public/vgk4u-logo.png",
-        "myntreal_logo_url": "/public/myntreal-logo.png",
-        "primary_contact_phone": "+91 90538 99899",
-        "whatsapp_business_number": "919053899899",
-        "support_email": "support@myntreal.com"
-    }
+    data["branding"] = _get_catalog_branding(catalog)
     return {"success": True, "catalog": data}
 
 
@@ -300,18 +343,26 @@ def get_public_catalog_by_ref(
     db.commit()
 
     staff_name = "MyntReal Specialist"
+    staff_ext = None
     if send_record.staff_id:
         staff = db.query(StaffEmployee).filter(StaffEmployee.id == send_record.staff_id).first()
         if staff:
             staff_name = f"{staff.first_name} {staff.last_name or ''}".strip()
+            try:
+                from app.services.whatsapp_auto_service import resolve_staff_extension
+                staff_ext = resolve_staff_extension(db, staff.id, company_id=getattr(staff, 'base_company_id', 1))
+            except Exception:
+                pass
 
     data = catalog.to_dict(include_sections=True, include_items=True, language=selected_lang)
     data["attribution"] = {
         "ref_code": share_ref_code,
         "staff_name": staff_name,
+        "extension": staff_ext,
         "recipient_name": send_record.recipient_name,
         "language_code": selected_lang
     }
+    data["branding"] = _get_catalog_branding(catalog)
     return {"success": True, "catalog": data}
 
 
@@ -1005,19 +1056,33 @@ def dispatch_catalog_whatsapp(
     if "localhost" in host:
         base_url = "http://localhost:5000"
 
+    staff_name = f"{current_user.first_name} {current_user.last_name or ''}".strip()
+    staff_ext = None
+    try:
+        from app.services.whatsapp_auto_service import resolve_staff_extension
+        staff_ext = resolve_staff_extension(db, current_user.id, company_id=getattr(current_user, 'base_company_id', 1))
+    except Exception:
+        pass
+
     # Single-page web catalog personalized link
+    import urllib.parse
     cat_slug = catalog.slug
     segment_slug = catalog.segment_code.lower().replace('_', '-')
-    web_catalog_url = f"{base_url}/catalog/{segment_slug}/{cat_slug}?ref={share_ref_code}&lang={payload.language_code}"
+    ext_param = f"&ext={urllib.parse.quote(str(staff_ext))}" if staff_ext else ""
+    if catalog.segment_code == "CUSTOMER_EV_PRICING" or cat_slug == "customer-2w-ev-pricing":
+        web_catalog_url = f"{base_url}/catalog/customer-2w-ev-pricing?ref={share_ref_code}&name={urllib.parse.quote(recip_display)}&staff={urllib.parse.quote(staff_name)}{ext_param}&lang={payload.language_code}"
+    elif catalog.segment_code == "HUB_PRICING" or cat_slug == "hub-ev-pricing":
+        web_catalog_url = f"{base_url}/catalog/hub-ev-pricing?ref={share_ref_code}&name={urllib.parse.quote(recip_display)}&staff={urllib.parse.quote(staff_name)}{ext_param}&lang={payload.language_code}"
+    else:
+        web_catalog_url = f"{base_url}/catalog/{segment_slug}/{cat_slug}?ref={share_ref_code}&name={urllib.parse.quote(recip_display)}&staff={urllib.parse.quote(staff_name)}{ext_param}&lang={payload.language_code}"
 
     # Build personalized WhatsApp message
     message_lines = [
-        f"Hello {recip_display}! 👋",
+        f"Dear {recip_display}! 👋",
         "",
-        f"Thank you for connecting with *MYNTREAL & VGK4U*.",
-        f"Here is your official *{catalog.title}* digital catalog:",
+        f"Here is your personalized *{catalog.title}* proposal prepared by *{staff_name}*:",
         "",
-        f"📱 *Interactive Web Catalog:*",
+        f"📱 *Interactive Web Proposal & Calculator:*",
         f"{web_catalog_url}"
     ]
 
@@ -1035,14 +1100,17 @@ def dispatch_catalog_whatsapp(
             f"_{payload.custom_note}_"
         ])
 
-    staff_name = f"{current_user.first_name} {current_user.last_name or ''}".strip()
-    message_lines.extend([
+    sig_lines = [
         "",
-        f"For any queries or an immediate site audit, feel free to reply directly.",
-        f"Best regards,",
+        "For queries or an immediate site audit, feel free to reply directly.",
+        "Best regards,",
         f"*{staff_name}*",
-        f"MYNTREAL – Redefining Future"
-    ])
+        "📞 Helpline: +91 858585 2738"
+    ]
+    if staff_ext:
+        sig_lines.append(f"Ext: {staff_ext}")
+    sig_lines.append("MYNTREAL Har Ghar Solar")
+    message_lines.extend(sig_lines)
 
     full_message = "\n".join(message_lines)
 

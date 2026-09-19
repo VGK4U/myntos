@@ -255,7 +255,7 @@
 
         const container = document.createElement('div');
         container.innerHTML = `
-            <div class="mynt-chatbot-btn" id="myntChatbotBtn" title="Chat with VGK4U Support">
+            <div class="mynt-chatbot-btn" id="myntChatbotBtn" title="Chat with MyntReal Support">
                 💬
                 <div class="mynt-chatbot-badge"></div>
             </div>
@@ -264,7 +264,7 @@
                     <div class="mynt-chatbot-header-info">
                         <div class="mynt-chatbot-avatar">🤖</div>
                         <div>
-                            <div class="mynt-chatbot-title">VGK4U Assistant</div>
+                            <div class="mynt-chatbot-title">MyntReal Assistant</div>
                             <div class="mynt-chatbot-status"><span class="mynt-chatbot-status-dot"></span> Online</div>
                         </div>
                     </div>
@@ -272,7 +272,7 @@
                 </div>
                 <div class="mynt-chatbot-body" id="myntChatbotBody">
                     <div class="mynt-chat-msg mynt-chat-bot">
-                        Hello! 👋 Welcome to VGK4U & Mynt OS. How can I help you today? Please choose an option below:
+                        Hello! 👋 Welcome to MyntReal Har Ghar Solar. How can I help you today? Please choose an option below:
                     </div>
                     <div class="mynt-chat-options" id="myntChatOptions">
                         <button class="mynt-chat-opt-btn" onclick="MyntWebsiteChatbot.selectOption('services')">🏢 1. Company Services & Offerings</button>

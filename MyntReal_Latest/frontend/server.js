@@ -5097,6 +5097,16 @@ function getUserRole(sessionToken) {
 // Uses lastIndexOf('</body>') — same safe pattern as NDA injection.
 function injectVgkAssistant(html) {
   if (!html) return html;
+
+  // Never inject VGK assistant or website chatbot into public single-page digital catalogs
+  const isCatalogPage = html.includes('Single-Page Digital Catalog') || 
+                        html.includes('catalogSectionsContainer') || 
+                        html.includes('promoOneRupeeBar') || 
+                        html.includes('catalog_single_page.html');
+  if (isCatalogPage) {
+    return html;
+  }
+
   let targetIdx = html.lastIndexOf('</body>');
   let closingTag = '</body>';
   if (targetIdx === -1) {
@@ -8297,6 +8307,26 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Terms & Conditions / Regulatory Policies (Segment-wise for Har Ghar Solar & EVolution Training)
+  if (
+    url === '/terms' || url.startsWith('/terms?') || url === '/terms.html' || url.startsWith('/terms.html?') ||
+    url === '/solar-terms' || url.startsWith('/solar-terms?') || url === '/solar-terms.html' || url.startsWith('/solar-terms.html?') ||
+    url === '/policies/solar-terms' || url.startsWith('/policies/solar-terms?') ||
+    url === '/policies/etc-terms' || url.startsWith('/policies/etc-terms?')
+  ) {
+    const filePath = path.join(__dirname, 'terms.html');
+    readFileWithRetry(filePath, (err, data) => {
+      if (err) {
+        res.writeHead(404);
+        res.end('Terms page not found');
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600' });
+      res.end(data);
+    });
+    return;
+  }
+
   // Delete Account page — Google Play compliance public page (/delete-account, /delete-account.html)
   if (url === '/delete-account' || url.startsWith('/delete-account?') || url === '/delete-account.html' || url.startsWith('/delete-account.html?')) {
     const filePath = path.join(__dirname, 'delete-account.html');
@@ -9822,6 +9852,14 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
     '/hub/verticals':  'verticals.html',
   };
   const _hubCleanUrl = url.split('?')[0];
+  if (_hubCleanUrl === '/hub/hgs' || _hubCleanUrl === '/hub/hgs.html') {
+    // DC-CONSOLIDATION-HGS: Consolidate /hub/hgs into single unified digital catalog
+    const _qIdx = url.indexOf('?');
+    const _targetParams = _qIdx >= 0 ? url.slice(_qIdx) : '?lang=te&brand=adani#faqs';
+    res.writeHead(302, { 'Location': `/catalog/solar/commercial-residential-solar${_targetParams}` });
+    res.end();
+    return;
+  }
   if (HUB_PAGES[_hubCleanUrl]) {
     const filePath = path.join(__dirname, 'public', 'hub', HUB_PAGES[_hubCleanUrl]);
     fs.readFile(filePath, 'utf8', (err, data) => {
@@ -20009,7 +20047,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
-  } else if (url.startsWith('/staff/softphone-center') || url.startsWith('/staff/softphone') || url.startsWith('/staff/softphone-hub') || url.startsWith('/staff/incoming-calls') || url.startsWith('/staff/calling') || url.startsWith('/staff/calling-page') || url.startsWith('/staff/telephony/incoming-calls') || url.startsWith('/staff/telephony/calls')) {
+  } else if (url.startsWith('/staff/softphone-center') || url.startsWith('/staff/softphone') || url.startsWith('/staff/softphone-hub') || url.startsWith('/staff_softphone_hub') || url.startsWith('/staff_incoming_calls') || url.startsWith('/staff/incoming-calls') || url.startsWith('/staff/calling') || url.startsWith('/staff/calling-page') || url.startsWith('/staff/telephony/incoming-calls') || url.startsWith('/staff/telephony/calls')) {
     const filePath = path.join(__dirname, 'staff_incoming_calls.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { res.writeHead(404); res.end('Softphone Center not found'); return; }
@@ -20423,7 +20461,7 @@ ${img ? `<meta property="og:image" content="${img}">` : ''}
       res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' });
       res.end(html);
     });
-  } else if (url.startsWith('/staff/configuration/catalog') || url.startsWith('/staff/catalog-library') || url.startsWith('/staff/catalog')) {
+  } else if (url.startsWith('/staff/configuration/catalog') || url.startsWith('/staff/catalog-library') || url.startsWith('/staff/catalog') || url.startsWith('/staff_catalog_library')) {
     const filePath = path.join(__dirname, 'staff_catalog_library.html');
     readFileWithRetry(filePath, (err, data) => {
       if (err) { console.error('[DC-ROUTE] File read error for ' + filePath + ':', err.message); res.writeHead(404); res.end('Page not found'); return; }
@@ -30521,30 +30559,71 @@ async function processAction(id, action){
     res.end();
 
 
-  } else if (url.startsWith('/catalog/') || url.toLowerCase() === '/catalog' || url.toLowerCase().startsWith('/catalog?') || url.toLowerCase() === '/mnrcatalog' || url.toLowerCase().startsWith('/mnrcatalog?')) {
-    // Single-Page Digital Catalog Platform (Public Interactive Web Catalog — no auth required)
-    const isLegacy = url.toLowerCase().startsWith('/mnrcatalog');
-    const targetFile = isLegacy ? 'catalog.html' : 'catalog_single_page.html';
-    const catalogPath = path.join(__dirname, targetFile);
-    readFileWithRetry(catalogPath, (err, data) => {
+  } else if (url.startsWith('/catalog/customer-2w-ev-pricing') || url.startsWith('/catalog/customer-ev-pricing') || url.startsWith('/customer-ev-pricing') || url.startsWith('/catalog/customer_ev_pricing') || url.startsWith('/customer-2w-ev-pricing')) {
+    // Dedicated Customer 2-Wheeler EV Pricing & Specifications Catalog
+    const customerEvPath = path.join(__dirname, 'customer_ev_pricing_catalog.html');
+    fs.readFile(customerEvPath, 'utf8', (err, data) => {
       if (err) {
-        // Fallback to catalog.html if catalog_single_page.html not found
-        const fallbackPath = path.join(__dirname, 'catalog.html');
-        readFileWithRetry(fallbackPath, (err2, data2) => {
-          if (err2) { res.writeHead(404); res.end('Catalog page not found'); return; }
-          let html = data2.toString();
+        const fallbackPath = path.join(__dirname, 'catalog_single_page.html');
+        fs.readFile(fallbackPath, 'utf8', (err2, data2) => {
+          if (err2) { res.writeHead(404); res.end('Customer EV catalog page not found'); return; }
           res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate', 'X-Frame-Options': 'SAMEORIGIN' });
-          res.end(html);
+          res.end(data2);
         });
         return;
       }
-      let html = data.toString();
       res.writeHead(200, {
         'Content-Type': 'text/html',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'X-Frame-Options': 'SAMEORIGIN'
       });
-      res.end(html);
+      res.end(data);
+    });
+
+  } else if (url.startsWith('/catalog/hub-ev-pricing') || url.startsWith('/catalog/hub-pricing') || url.startsWith('/hub-pricing') || url.startsWith('/catalog/hub_pricing')) {
+    // Dedicated Hub EV & Solar Commercial Pricing Catalog (24-Hour Confidential Link)
+    const pricingPath = path.join(__dirname, 'hub_pricing_catalog.html');
+    fs.readFile(pricingPath, 'utf8', (err, data) => {
+      if (err) {
+        // Fallback to catalog_single_page.html if not created yet
+        const fallbackPath = path.join(__dirname, 'catalog_single_page.html');
+        fs.readFile(fallbackPath, 'utf8', (err2, data2) => {
+          if (err2) { res.writeHead(404); res.end('Pricing catalog page not found'); return; }
+          res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate', 'X-Frame-Options': 'SAMEORIGIN' });
+          res.end(data2);
+        });
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
+  } else if (url.startsWith('/catalog/') || url.toLowerCase() === '/catalog' || url.toLowerCase().startsWith('/catalog?') || url.toLowerCase() === '/mnrcatalog' || url.toLowerCase().startsWith('/mnrcatalog?')) {
+    // Single-Page Digital Catalog Platform (Public Interactive Web Catalog — no auth required)
+    const isLegacy = url.toLowerCase().startsWith('/mnrcatalog');
+    const targetFile = isLegacy ? 'catalog.html' : 'catalog_single_page.html';
+    const catalogPath = path.join(__dirname, targetFile);
+    fs.readFile(catalogPath, 'utf8', (err, data) => {
+      if (err) {
+        // Fallback to catalog.html if catalog_single_page.html not found
+        const fallbackPath = path.join(__dirname, 'catalog.html');
+        fs.readFile(fallbackPath, 'utf8', (err2, data2) => {
+          if (err2) { res.writeHead(404); res.end('Catalog page not found'); return; }
+          res.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate', 'X-Frame-Options': 'SAMEORIGIN' });
+          res.end(data2);
+        });
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
     });
 
   } else if (url === '/lead-share.html' || url.startsWith('/lead-share.html?') || url === '/lead-share' || url.startsWith('/lead-share?')) {
@@ -30702,8 +30781,8 @@ server.listen(port, hostname, () => {
       secServer.on('error', (e) => {
         if (e.code !== 'EADDRINUSE') console.error('Secondary server (3000) error:', e.message);
       });
-      secServer.listen(3000, () => {
-        console.log('✅ Secondary static server running at http://localhost:3000/');
+      secServer.listen(3000, hostname, () => {
+        console.log('✅ Secondary static server running at http://0.0.0.0:3000/');
       });
     } catch (e) {
       /* ignore */

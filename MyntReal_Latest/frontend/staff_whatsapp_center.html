@@ -342,6 +342,20 @@
           </select>
           <select id="fDept" onchange="loadInbox(1)"><option value="">All Departments</option></select>
           <select id="fCat" onchange="loadInbox(1)"><option value="">All Categories</option></select>
+          <select id="fSegment" onchange="loadInbox(1)">
+            <option value="">🏢 All Segments</option>
+            <option value="solar">☀️ Solar</option>
+            <option value="myntreal_real">🏡 Real Estate</option>
+            <option value="ev_b2c">⚡ EV B2C</option>
+            <option value="ev_b2b">⚡ EV B2B</option>
+            <option value="EV_SPARES">🔧 EV Spares</option>
+            <option value="etc_training">🎓 ETC Training</option>
+            <option value="partner">🤝 Channel Partner</option>
+            <option value="leads">🎯 CRM Leads</option>
+            <option value="staff">👔 Internal Staff</option>
+            <option value="vgk">💼 VGK Executive</option>
+            <option value="general">💬 General</option>
+          </select>
           <select id="fStatus" onchange="loadInbox(1)">
             <option value="">All Statuses</option>
             <option value="new">New</option>
@@ -394,10 +408,27 @@
                 <button type="button" class="channel-pill-btn" id="bcFilt-api" onclick="onBroadcastFilter('api')">⚡ Meta API</button>
               </div>
 
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                <select id="msgSegmentFilter" onchange="onMsgSegmentChange(this.value)" style="flex:1;font-size:11.5px;padding:4px 8px;height:28px;border:1px solid #d1d5db;border-radius:6px;background:#fff;color:#374151;font-weight:500;">
+                  <option value="">🏢 All Segments</option>
+                  <option value="solar">☀️ Solar</option>
+                  <option value="myntreal_real">🏡 Real Estate</option>
+                  <option value="ev_b2c">⚡ EV B2C</option>
+                  <option value="ev_b2b">⚡ EV B2B</option>
+                  <option value="EV_SPARES">🔧 EV Spares</option>
+                  <option value="etc_training">🎓 ETC Training</option>
+                  <option value="partner">🤝 Channel Partner</option>
+                  <option value="leads">🎯 CRM Leads</option>
+                  <option value="staff">👔 Internal Staff</option>
+                  <option value="vgk">💼 VGK Executive</option>
+                  <option value="general">💬 General Inquiries</option>
+                </select>
+              </div>
+
               <div style="display:flex;align-items:center;gap:6px">
                 <div style="position:relative;flex:1">
                   <i class="fas fa-search" style="position:absolute;left:10px;top:8px;color:#9ca3af;font-size:11px"></i>
-                  <input type="text" class="msg-search-input" id="msgSearchInput" placeholder="Search contact, group, phone..." oninput="onMsgSearchInput(this.value)" style="padding-left:28px;width:100%">
+                  <input type="text" class="msg-search-input" id="msgSearchInput" placeholder="Search contact, phone, or message content..." oninput="onMsgSearchInput(this.value)" style="padding-left:28px;width:100%">
                 </div>
                 <button type="button" class="btn-custom btn-outline-custom" onclick="refreshWhatsAppCenter(this)" style="padding:6px 10px;height:32px;font-size:12px;border:1px solid #d1d5db;background:#fff;color:#374151;border-radius:6px;flex-shrink:0" title="Refresh conversations">
                   <i class="fas fa-sync-alt"></i>
@@ -508,13 +539,47 @@
 
       <!-- ═══ TAB 3: TEMPLATES ═════════════════════════════════════════════════ -->
       <div class="tab-pane" id="pane-templates">
-        <div style="background:#fff;border-radius:10px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.05);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+        <div style="background:#fff;border-radius:10px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.05);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
           <div>
             <h3 style="font-size:15px;font-weight:700;color:#111827;margin:0">Central WhatsApp Template Hub</h3>
-            <p style="font-size:12px;color:#6b7280;margin:2px 0 0 0">65 PostgreSQL templates synchronized with Meta Business API</p>
+            <p style="font-size:12px;color:#6b7280;margin:2px 0 0 0">77 PostgreSQL templates synchronized &amp; approved for Meta Business API &amp; Scanned WhatsApp</p>
           </div>
-          <button class="btn-custom btn-green" onclick="syncTemplatesFromMeta()"><i class="fas fa-sync"></i> Sync Meta Templates</button>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="btn-custom btn-green" onclick="openAddTemplateModal()"><i class="fas fa-plus"></i> Add New Template</button>
+            <button class="btn-custom btn-outline-custom" onclick="syncTemplatesFromMeta()"><i class="fas fa-sync"></i> Sync Meta Templates</button>
+          </div>
         </div>
+
+        <!-- Template Filters Bar -->
+        <div class="filter-wrap" style="margin-bottom:14px">
+          <div style="position:relative;flex:1;min-width:200px">
+            <i class="fas fa-search" style="position:absolute;left:10px;top:9px;color:#9ca3af;font-size:11px"></i>
+            <input type="text" id="tplSearchInput" placeholder="Search template name, body content, slug..." oninput="filterTemplatesHub()" style="padding-left:28px;width:100%">
+          </div>
+          <select id="tplSegmentFilter" onchange="filterTemplatesHub()">
+            <option value="">🏢 All Segments</option>
+            <option value="solar">☀️ Solar</option>
+            <option value="myntreal_real">🏡 Real Estate</option>
+            <option value="ev_b2c">⚡ EV B2C</option>
+            <option value="ev_b2b">⚡ EV B2B</option>
+            <option value="EV_SPARES">🔧 EV Spares</option>
+            <option value="etc_training">🎓 ETC Training</option>
+            <option value="partner">🤝 Channel Partner</option>
+            <option value="leads">🎯 CRM Leads</option>
+            <option value="staff">👔 Internal Staff</option>
+            <option value="vgk">💼 VGK Executive</option>
+            <option value="general">💬 General</option>
+            <option value="system">⚙️ System</option>
+          </select>
+          <select id="tplCategoryFilter" onchange="filterTemplatesHub()">
+            <option value="">All Categories</option>
+            <option value="MARKETING">Marketing</option>
+            <option value="UTILITY">Utility</option>
+            <option value="AUTHENTICATION">Authentication</option>
+          </select>
+          <button class="btn-custom btn-outline-custom" onclick="resetTemplateFilters()"><i class="fas fa-undo"></i> Reset</button>
+        </div>
+
         <div class="tpl-grid" id="tplGrid"><div style="padding:40px;text-align:center;color:#6b7280"><i class="fas fa-spinner fa-spin"></i> Loading Templates...</div></div>
       </div>
 
@@ -548,6 +613,20 @@
                 <option value="auto">🤖 Auto Event Bots (Lead &amp; CRM)</option>
                 <option value="manual">👤 Manual Staff Dispatches</option>
                 <option value="otp">🔐 OTP Authentication</option>
+              </select>
+              <select id="auditSegmentSel" onchange="loadAuditLogHub()">
+                <option value="" selected>🏢 All Segments</option>
+                <option value="solar">☀️ Solar</option>
+                <option value="myntreal_real">🏡 Real Estate</option>
+                <option value="ev_b2c">⚡ EV B2C</option>
+                <option value="ev_b2b">⚡ EV B2B</option>
+                <option value="EV_SPARES">🔧 EV Spares</option>
+                <option value="etc_training">🎓 ETC Training</option>
+                <option value="partner">🤝 Channel Partner</option>
+                <option value="leads">🎯 CRM Leads</option>
+                <option value="staff">👔 Internal Staff</option>
+                <option value="vgk">💼 VGK Executive</option>
+                <option value="general">💬 General</option>
               </select>
               <select id="auditStatusSel" onchange="loadAuditLogHub()">
                 <option value="" selected>All Statuses</option>
@@ -658,6 +737,63 @@
     <!-- Gallery Items Grid / List -->
     <div id="waGalleryItemsContainer" style="overflow-y:auto;padding:16px;flex:1;min-height:240px;background:#f8fafc;">
       <div style="padding:40px;text-align:center;color:#94a3b8"><i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>Loading media &amp; attachments...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ADD TEMPLATE MODAL ═══════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="addTemplateModal">
+  <div class="modal-box" style="max-width:540px;">
+    <div class="modal-head" style="background:#065f46;color:#fff;">
+      <h4 style="font-size:14px;font-weight:700;margin:0;"><i class="fas fa-plus-circle me-2"></i>Create New WhatsApp Template</h4>
+      <button type="button" onclick="closeModal('addTemplateModal')" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;">&times;</button>
+    </div>
+    <div class="modal-body" style="padding:16px;">
+      <div style="margin-bottom:10px;">
+        <label style="font-size:11.5px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Business Segment *</label>
+        <select id="newTplSegment" style="width:100%;padding:7px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;">
+          <option value="solar">☀️ Solar (Residential, Commercial, Net Metering)</option>
+          <option value="general">💬 General (MNR / Standard Customer)</option>
+          <option value="myntreal_real">🏡 Real Estate (Plots, Villas, Properties)</option>
+          <option value="ev_b2c">⚡ EV B2C (2-Wheelers & Retail)</option>
+          <option value="ev_b2b">⚡ EV B2B (Fleet, Dealerships)</option>
+          <option value="EV_SPARES">🔧 EV Spares & Components</option>
+          <option value="etc_training">🎓 ETC Training & Academy</option>
+          <option value="partner">🤝 Channel Partner</option>
+          <option value="leads">🎯 CRM Leads</option>
+          <option value="staff">👔 Staff & Internal Operations</option>
+          <option value="vgk">💼 VGK Executive</option>
+          <option value="system">⚙️ System & Notifications</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <div style="flex:2;">
+          <label style="font-size:11.5px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Template Name *</label>
+          <input type="text" id="newTplName" placeholder="e.g. Solar Rooftop Followup" style="width:100%;padding:7px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;">
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:11.5px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Category *</label>
+          <select id="newTplCategory" style="width:100%;padding:7px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;">
+            <option value="MARKETING">Marketing</option>
+            <option value="UTILITY">Utility</option>
+            <option value="AUTHENTICATION">Authentication</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="font-size:11.5px;font-weight:700;color:#374151;display:block;margin-bottom:4px;">Template Body (Message Content) *</label>
+        <textarea id="newTplBody" rows="5" placeholder="Hi {{1}}, thank you for your interest in {{2}}. We are glad to assist you with {{3}}..." style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;"></textarea>
+        <div style="font-size:10.5px;color:#6b7280;margin-top:2px;">
+          Use <code>{{1}}</code> for Customer Name, <code>{{2}}</code> for Product/Service, <code>{{3}}</code> for Details.
+        </div>
+      </div>
+      <div style="margin-bottom:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:8px 10px;font-size:11.5px;color:#166534;">
+        <i class="fas fa-check-circle me-1"></i> Auto-Approved: This template will automatically be registered as approved for WhatsApp Meta API & Scanned WA dispatches across all tabs and mobile.
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;">
+        <button type="button" class="btn-custom btn-outline-custom" onclick="closeModal('addTemplateModal')">Cancel</button>
+        <button type="button" class="btn-custom btn-green" onclick="submitNewTemplate()"><i class="fas fa-save"></i> Save &amp; Approve Template</button>
+      </div>
     </div>
   </div>
 </div>
@@ -912,6 +1048,12 @@ let pollTimer       = null;
 let debounceTimer   = null;
 let companyChannelFilter = 'all';
 let broadcastFilter      = 'all';
+let activeMsgSegment     = '';
+
+function onMsgSegmentChange(seg) {
+  activeMsgSegment = seg || '';
+  loadMessengerHub();
+}
 
 function maskPhone(p) {
   if (!p || p === '—' || p === '-' || p === 'null') return '—';
@@ -1501,6 +1643,7 @@ async function loadInbox(page = 1) {
     const phone  = document.getElementById('fPhone')?.value || '';
     const dept   = document.getElementById('fDept')?.value || '';
     const cat    = document.getElementById('fCat')?.value || '';
+    const seg    = document.getElementById('fSegment')?.value || '';
     const status = document.getElementById('fStatus')?.value || '';
     const source = document.getElementById('fSource')?.value || '';
     const exStaff = document.getElementById('fExcludeStaff')?.checked ? 'true' : 'false';
@@ -1509,6 +1652,7 @@ async function loadInbox(page = 1) {
     if (phone) url += `&phone=${encodeURIComponent(phone)}&search=${encodeURIComponent(phone)}`;
     if (dept) url += `&department_id=${dept}`;
     if (cat) url += `&category_id=${cat}`;
+    if (seg) url += `&segment=${encodeURIComponent(seg)}`;
     if (status) url += `&status=${status}`;
     if (source) url += `&source=${source}`;
 
@@ -1559,6 +1703,7 @@ function renderInboxRows(items) {
     const sourceType = (item.source_type || 'API').toUpperCase();
     const sourceChipClass = sourceType === 'BOT' ? 'ei-service' : (sourceType === 'MANUAL' ? 'ei-crm' : 'ei-contacts');
     const sourceIcon = sourceType === 'BOT' ? '🤖' : (sourceType === 'MANUAL' ? '👤' : '⚡');
+    const segChip = item.segment ? `<span class="ei-chip" style="background:#fef3c7;color:#92400e;font-size:10px;margin-left:4px;">${escapeHtml(item.segment)}</span>` : '';
 
     html += `
       <div class="inbox-row ${isUnread ? 'unread' : ''}" onclick="openChatFromInbox('${phone}')">
@@ -1570,7 +1715,7 @@ function renderInboxRows(items) {
         <div><span class="ei-chip ${sourceChipClass}">${sourceIcon} ${sourceType}</span></div>
         <div><span class="ei-chip ei-crm">CRM Lead</span></div>
         <div><span class="ei-chip ei-service">${item.department_name || '—'}</span></div>
-        <div><span class="ei-chip ei-contacts">${item.category_name || '—'}</span></div>
+        <div><span class="ei-chip ei-contacts">${item.category_name || '—'}</span>${segChip}</div>
         <div><span class="ei-chip" style="background:#e0e7ff;color:#3730a3">${status}</span></div>
         <div style="font-size:11px;color:#374151;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lastSentByName}</div>
         <div style="display:flex;gap:4px;align-items:center;">
@@ -1592,6 +1737,7 @@ function clearInboxFilters() {
   document.getElementById('fPhone').value = '';
   document.getElementById('fDept').value = '';
   document.getElementById('fCat').value = '';
+  if (document.getElementById('fSegment')) document.getElementById('fSegment').value = '';
   document.getElementById('fStatus').value = '';
   document.getElementById('fExcludeStaff').checked = false;
   document.getElementById('fExcludeReminders').checked = false;
@@ -1612,6 +1758,13 @@ async function loadMessengerHub() {
       url += `&source_filter=${companyChannelFilter}`;
     } else if (activeScope === 'broadcasts') {
       url += `&source_filter=${broadcastFilter}`;
+    }
+    if (activeMsgSegment) {
+      url += `&segment=${encodeURIComponent(activeMsgSegment)}`;
+    }
+    const searchVal = (document.getElementById('msgSearchInput')?.value || '').trim();
+    if (searchVal) {
+      url += `&search=${encodeURIComponent(searchVal)}`;
     }
     const data = await apiFetch(url);
     renderConversationsList(data.conversations || []);
@@ -1675,6 +1828,32 @@ function renderConversationsList(convs) {
     }
     const displayName = (isGroup || isChannel) ? (c.name || c.phone) : formatContactName(c.name, c.phone);
 
+    let segBadge = '';
+    if (c.segment && c.segment !== 'general') {
+      const segLabels = {
+        solar: '☀️ Solar',
+        myntreal_real: '🏡 Real Estate',
+        ev_b2c: '⚡ EV B2C',
+        ev_b2b: '⚡ EV B2B',
+        EV_SPARES: '🔧 EV Spares',
+        etc_training: '🎓 Training',
+        partner: '🤝 Partner',
+        leads: '🎯 Leads',
+        staff: '👔 Staff',
+        vgk: '💼 VGK',
+        general: '💬 General',
+        system: '⚙️ System'
+      };
+      const label = segLabels[c.segment] || c.segment;
+      segBadge = `<span class="type-badge" style="background:#fef3c7;color:#92400e;font-size:9.5px;padding:2px 6px;">${label}</span>`;
+    }
+
+    const matchedSnippetHtml = c.matched_snippet ? `
+      <div style="margin-top:3px;font-size:11px;color:#0284c7;background:#f0f9ff;padding:2px 6px;border-radius:4px;border-left:2px solid #0284c7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="Matched message content: ${escapeHtmlText(c.matched_snippet)}">
+        <i class="fas fa-search" style="font-size:9px;margin-right:3px;"></i>${escapeHtmlText(c.matched_snippet)}
+      </div>
+    ` : '';
+
     html += `
       <div class="conv-card ${activeChatPhone === c.phone ? 'active' : ''} ${isArchived ? 'conv-archived' : (isInProgress ? 'conv-in-progress' : '')}" onclick="selectChatByIndex(${idx})">
         <div class="conv-avatar" style="${isArchived ? 'filter:grayscale(100%);opacity:0.6;' : ''}">${isGroup ? '👥' : (isChannel ? '📢' : (isUnassigned ? '🏢' : (isArchived ? '📁' : (activeScope === 'all' ? '🌐' : (activeScope === 'broadcasts' ? '📡' : '👤')))))}</div>
@@ -1684,10 +1863,12 @@ function renderConversationsList(convs) {
             <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
               ${statusBadge}
               ${chanBadge}
+              ${segBadge}
               <span class="type-badge ${badgeClass}">${badgeLabel}</span>
             </div>
           </div>
           <div class="conv-snippet" style="${isArchived ? 'color:#94a3b8;' : ''}">${escapeHtmlText(c.last_message || '')}</div>
+          ${matchedSnippetHtml}
         </div>
         ${(!isGroup && !isChannel && c.phone && !c.phone.includes('@g.us')) ? `
           <button type="button" class="btn-card-call" onclick="event.stopPropagation(); callContactSoftphone('${c.phone}', '${escapeHtmlText(displayName)}');" title="Call via Softphone" style="border:none;background:#e0f2fe;color:#0284c7;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;flex-shrink:0;transition:all .15s;margin-left:6px;">
@@ -1728,6 +1909,9 @@ function onMsgSearchInput(val) {
       let url = `${API}/whatsapp/conversations-hub?scope=${activeScope}`;
       if (s) {
         url += `&search=${encodeURIComponent(s)}`;
+      }
+      if (activeMsgSegment) {
+        url += `&segment=${encodeURIComponent(activeMsgSegment)}`;
       }
       if (activeScope === 'company') {
         url += `&source_filter=${companyChannelFilter}`;
@@ -1885,10 +2069,44 @@ async function selectChat(phone, recType, name, isUnassigned = false, channel = 
     `;
   }
 
+  // In-Chat Message Search Input
+  actionsHtml += `
+    <div style="position:relative;display:inline-flex;align-items:center;">
+      <i class="fas fa-search" style="position:absolute;left:7px;color:#9ca3af;font-size:10px;"></i>
+      <input type="text" id="chatSearchInp" placeholder="Search chat..." oninput="onFilterChatMessages(this.value)" style="padding:4px 8px 4px 22px;font-size:11px;border:1px solid #cbd5e1;border-radius:6px;width:110px;height:28px;transition:width .2s ease;outline:none;" onfocus="this.style.width='150px'" onblur="if(!this.value)this.style.width='110px'">
+    </div>
+  `;
+
   actionsHtml += `</div>`;
   actionsContainer.innerHTML = actionsHtml;
 
   loadChatHistory(phone, recType);
+}
+
+function onFilterChatMessages(query) {
+  const q = (query || '').toLowerCase().trim();
+  const bubbles = document.querySelectorAll('#chatHistoryBox .chat-bubble');
+  let firstMatch = null;
+  bubbles.forEach(b => {
+    const text = b.textContent.toLowerCase();
+    if (!q) {
+      b.style.display = '';
+      b.style.outline = '';
+      b.style.boxShadow = '';
+    } else if (text.includes(q)) {
+      b.style.display = '';
+      b.style.outline = '2px solid #0284c7';
+      b.style.boxShadow = '0 0 6px rgba(2, 132, 199, 0.4)';
+      if (!firstMatch) firstMatch = b;
+    } else {
+      b.style.display = 'none';
+      b.style.outline = '';
+      b.style.boxShadow = '';
+    }
+  });
+  if (firstMatch) {
+    firstMatch.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
 }
 
 async function setConversationStatus(newStatus) {
@@ -2273,8 +2491,13 @@ let cachedTemplates = [];
 function populateTemplateDropdown(templates) {
   const sel = document.getElementById('msgTemplateSel');
   if (!sel) return;
-  sel.innerHTML = '<option value="">-- Choose Template --</option>' + 
-    (templates || []).map(t => `<option value="${escapeHtml(t.id || t.slug)}">${escapeHtml(t.name || t.template_name || 'Template')}</option>`).join('');
+  let optHtml = '<option value="">-- Choose Template --</option>';
+  optHtml += '<option value="__create_new__" style="font-weight:bold;color:#059669;">➕ Create / Add Template for Segment...</option>';
+  (templates || []).forEach(t => {
+    const seg = t.segment ? `[${t.segment}] ` : '';
+    optHtml += `<option value="${escapeHtml(t.id || t.slug)}">${escapeHtml(seg + (t.name || t.template_name || 'Template'))}</option>`;
+  });
+  sel.innerHTML = optHtml;
 }
 
 async function loadTemplatesHub() {
@@ -2282,7 +2505,7 @@ async function loadTemplatesHub() {
     const data = await apiFetch(`${API}/whatsapp-config/templates`);
     const templates = data.templates || [];
     cachedTemplates = templates;
-    renderTemplateCards(templates);
+    filterTemplatesHub();
     if (typeof populateTemplateDropdown === 'function') {
       populateTemplateDropdown(templates);
     }
@@ -2296,25 +2519,131 @@ function renderTemplateCards(tpls) {
   const grid = document.getElementById('tplGrid');
   if (!grid) return;
   if (!tpls.length) {
-    grid.innerHTML = '<div style="padding:20px;text-align:center;color:#9ca3af">No templates found.</div>';
+    grid.innerHTML = '<div style="padding:40px;text-align:center;color:#9ca3af;grid-column:1/-1"><i class="fas fa-search fa-2x" style="margin-bottom:8px;opacity:.5"></i><br>No templates found matching your filter criteria.</div>';
     return;
   }
 
   let html = '';
   tpls.forEach(t => {
+    const isApproved = t.meta_approval_status === 'APPROVED' || t.is_meta_approved;
+    const approvalBadge = isApproved 
+      ? `<span class="ei-chip ei-contacts" style="background:#ecfdf5;color:#065f46;font-size:10px;"><i class="fas fa-check-circle"></i> APPROVED</span>`
+      : `<span class="ei-chip" style="background:#fef3c7;color:#92400e;font-size:10px;"><i class="fas fa-clock"></i> PENDING</span>`;
+
     html += `
-      <div class="tpl-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <span class="ei-chip ei-crm">${escapeHtml(t.segment || 'General')}</span>
-          <span class="ei-chip ei-contacts" style="background:#ecfdf5;color:#065f46">${escapeHtml(t.status || 'APPROVED')}</span>
+      <div class="tpl-card" style="display:flex;flex-direction:column;justify-content:space-between;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04);">
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:6px;flex-wrap:wrap">
+            <span class="ei-chip ei-crm" style="font-weight:700;">${escapeHtml(t.segment || 'general')}</span>
+            <div style="display:flex;gap:4px;align-items:center;">
+              <span class="ei-chip ei-service" style="font-size:10px;">${escapeHtml(t.category || 'MARKETING')}</span>
+              ${approvalBadge}
+            </div>
+          </div>
+          <h4 style="font-size:13.5px;font-weight:700;color:#111827;margin-bottom:6px;">${escapeHtml(t.name || t.template_name || 'Template')}</h4>
+          <p style="font-size:12px;color:#374151;white-space:pre-wrap;margin-bottom:10px;line-height:1.45;max-height:140px;overflow-y:auto;">${escapeHtml(t.body_text || t.content || '')}</p>
         </div>
-        <h4>${escapeHtml(t.name || t.template_name || 'Template')}</h4>
-        <p>${escapeHtml(t.body_text || t.content || '')}</p>
-        <div style="font-size:11px;color:#6b7280">Slug: <code>${escapeHtml(t.slug || t.id)}</code></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px dashed #e2e8f0;margin-top:8px;">
+          <div style="font-size:10.5px;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">Slug: <code>${escapeHtml(t.slug || t.id)}</code></div>
+          <button type="button" class="btn-custom btn-outline-custom" style="padding:3px 8px;font-size:11px;" onclick="useTemplateInChat('${escapeHtml(t.id)}')">
+            <i class="fas fa-paper-plane me-1"></i> Use
+          </button>
+        </div>
       </div>
     `;
   });
   grid.innerHTML = html;
+}
+
+function filterTemplatesHub() {
+  const query = (document.getElementById('tplSearchInput')?.value || '').toLowerCase().trim();
+  const seg = (document.getElementById('tplSegmentFilter')?.value || '').toLowerCase().trim();
+  const cat = (document.getElementById('tplCategoryFilter')?.value || '').toUpperCase().trim();
+
+  let filtered = cachedTemplates || [];
+  if (seg) {
+    filtered = filtered.filter(t => (t.segment || '').toLowerCase() === seg);
+  }
+  if (cat) {
+    filtered = filtered.filter(t => (t.category || '').toUpperCase() === cat);
+  }
+  if (query) {
+    filtered = filtered.filter(t => {
+      const name = (t.name || t.template_name || '').toLowerCase();
+      const body = (t.body_text || t.content || '').toLowerCase();
+      const slug = (t.slug || '').toLowerCase();
+      return name.includes(query) || body.includes(query) || slug.includes(query);
+    });
+  }
+  renderTemplateCards(filtered);
+}
+
+function resetTemplateFilters() {
+  if (document.getElementById('tplSearchInput')) document.getElementById('tplSearchInput').value = '';
+  if (document.getElementById('tplSegmentFilter')) document.getElementById('tplSegmentFilter').value = '';
+  if (document.getElementById('tplCategoryFilter')) document.getElementById('tplCategoryFilter').value = '';
+  renderTemplateCards(cachedTemplates || []);
+}
+
+function openAddTemplateModal() {
+  const segFilter = document.getElementById('tplSegmentFilter')?.value || activeMsgSegment;
+  if (segFilter && document.getElementById('newTplSegment')) {
+    document.getElementById('newTplSegment').value = segFilter;
+  }
+  const modal = document.getElementById('addTemplateModal');
+  if (modal) modal.classList.add('open');
+}
+
+async function submitNewTemplate() {
+  const segment = document.getElementById('newTplSegment')?.value || 'general';
+  const name = (document.getElementById('newTplName')?.value || '').trim();
+  const category = document.getElementById('newTplCategory')?.value || 'MARKETING';
+  const bodyText = (document.getElementById('newTplBody')?.value || '').trim();
+
+  if (!name) {
+    showToast('Please enter a template name.', 'red');
+    return;
+  }
+  if (!bodyText) {
+    showToast('Please enter the template body text.', 'red');
+    return;
+  }
+
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+
+  try {
+    const res = await apiFetch(`${API}/whatsapp-config/templates`, {
+      method: 'POST',
+      body: {
+        name: name,
+        slug: slug,
+        category: category,
+        segment: segment,
+        body_text: bodyText,
+        language: 'en',
+        usage_scope: 'all'
+      }
+    });
+
+    if (res && res.success) {
+      showToast(`✅ Template "${name}" created & approved for WhatsApp API!`, 'green');
+      closeModal('addTemplateModal');
+      if (document.getElementById('newTplName')) document.getElementById('newTplName').value = '';
+      if (document.getElementById('newTplBody')) document.getElementById('newTplBody').value = '';
+      await loadTemplatesHub();
+    } else {
+      showToast(res.error || 'Failed to create template', 'red');
+    }
+  } catch(err) {
+    showToast('Error creating template: ' + err.message, 'red');
+  }
+}
+
+function useTemplateInChat(tplId) {
+  if (activeCenterTab !== 'messenger') {
+    switchCenterTab('messenger');
+  }
+  onMsgTemplateSelect(tplId);
 }
 
 function openComposerTemplateModal() {
@@ -2335,7 +2664,13 @@ function openComposerTemplateModal() {
 
 function onMsgTemplateSelect(tplId) {
   if (!tplId) return;
-  const tpl = cachedTemplates.find(t => String(t.id) === String(tplId));
+  if (tplId === '__create_new__') {
+    const sel = document.getElementById('msgTemplateSel');
+    if (sel) sel.value = '';
+    openAddTemplateModal();
+    return;
+  }
+  const tpl = cachedTemplates.find(t => String(t.id) === String(tplId) || String(t.slug) === String(tplId));
   if (!tpl) return;
 
   const rawBody = tpl.body_text || tpl.content || tpl.body || '';
@@ -3011,9 +3346,11 @@ async function loadAuditLogHub() {
     const days = document.getElementById('auditDaysSel')?.value || '3';
     const triggerType = document.getElementById('auditTriggerTypeSel')?.value || 'all';
     const statusFilter = document.getElementById('auditStatusSel')?.value || '';
+    const segment = document.getElementById('auditSegmentSel')?.value || '';
 
     let url = `${API}/whatsapp/delivery-logs?days=${days}&trigger_type=${triggerType}&limit=100`;
     if (statusFilter) url += `&status=${statusFilter}`;
+    if (segment) url += `&segment=${encodeURIComponent(segment)}`;
 
     const data = await apiFetch(url);
     auditLogsCache = data.logs || data.items || [];

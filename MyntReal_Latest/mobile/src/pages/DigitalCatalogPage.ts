@@ -59,7 +59,9 @@ export class DigitalCatalogPage {
 
   private readonly verticals = [
     { code: 'SOLAR', label: 'Solar' },
-    { code: 'INDUSTRIAL_HUB', label: 'Industrial Hub' },
+    { code: 'INDUSTRIAL_HUB', label: 'MyntReal Hub' },
+    { code: 'CUSTOMER_EV_PRICING', label: 'Customer 2W EV Pricing' },
+    { code: 'HUB_PRICING', label: 'Hub Commercials (24h)' },
     { code: 'EV_B2B', label: 'EV B2B' },
     { code: 'EV_B2C', label: 'EV 2W' },
     { code: 'EV_SPARES', label: 'EV Spares' },
@@ -180,8 +182,12 @@ export class DigitalCatalogPage {
     }
 
     const cat = this.activeCatalog!;
-    const segSlug = cat.segment_code.toLowerCase().replace(/_/g, '-');
-    const publicUrl = `/catalog/${segSlug}/${cat.slug}`;
+    let publicUrl = `/catalog/${cat.segment_code.toLowerCase().replace(/_/g, '-')}/${cat.slug}`;
+    if (cat.segment_code === 'CUSTOMER_EV_PRICING' || cat.slug === 'customer-2w-ev-pricing') {
+      publicUrl = '/catalog/customer-2w-ev-pricing';
+    } else if (cat.segment_code === 'HUB_PRICING' || cat.slug === 'hub-ev-pricing') {
+      publicUrl = '/catalog/hub-ev-pricing';
+    }
 
     area.innerHTML = `
       <div class="card bg-dark border-secondary border-opacity-25 rounded-4 shadow-sm mb-3">

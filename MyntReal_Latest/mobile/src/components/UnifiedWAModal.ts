@@ -19,6 +19,7 @@ export interface WAModalOptions {
   leadId?: number | string;
   context?: string;
   defaultMessage?: string;
+  segment?: string;
 }
 
 const QUICK_TEMPLATES: Record<string, { label: string; text: string }> = {
@@ -44,11 +45,162 @@ const QUICK_TEMPLATES: Record<string, { label: string; text: string }> = {
   }
 };
 
+interface DigitalCatalogInfo {
+  name: string;
+  btnLabel: string;
+  segmentSlug: string;
+  catalogSlug: string;
+  desc: string;
+  messages: {
+    te: (cName: string, url: string) => string;
+    en: (cName: string, url: string) => string;
+    hi: (cName: string, url: string) => string;
+    ta: (cName: string, url: string) => string;
+  };
+}
+
+const DIGITAL_CATALOGS: Record<string, DigitalCatalogInfo> = {
+  solar: {
+    name: 'Solar Rooftop & EPC',
+    btnLabel: 'Solar',
+    segmentSlug: 'solar',
+    catalogSlug: 'commercial-residential-solar',
+    desc: 'Sends personalized Har Ghar Solar Digital Catalog link with 90% savings, ₹78,000 subsidy & ₹1 scheme details.',
+    messages: {
+      te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nMyntReal Har Ghar Solar డిజిటల్ క్యాటలాగ్ & సబ్సిడీ కాలిక్యులేటర్ లింక్ ఇక్కడ చూడవచ్చు:\n👉 ${url}\n\n⚡ ముఖ్య వివరాలు:\n• కరెంట్ బిల్లు 90% వరకు ఆదా\n• ₹78,000 కేంద్ర ప్రభుత్వ సబ్సిడీ (PM Surya Ghar)\n• ₹1 కే సోలార్ & సులభ బ్యాంక్ లోన్ EMI ఆప్షన్స్\n• Tier-1 బ్రాండ్లు & 25 సంవత్సరాల వారంటీ\n\nపై లింక్ ఓపెన్ చేసి మీ ఇంటి కరెంట్ బిల్లుకు సరిపోయే ప్లాన్ మరియు సేవింగ్స్ కాలిక్యులేట్ చేసుకోగలరు.`,
+      en: (cName, url) => `Namaskaram ${cName}! 🙏\n\nHere is your official MyntReal Har Ghar Solar Digital Catalog & Subsidy Estimator link:\n👉 ${url}\n\n⚡ Highlights:\n• Reduce your power bill by up to 90%\n• Up to ₹78,000 Central Govt Subsidy (PM Surya Ghar)\n• "Solar for ₹1" zero-collateral bank EMI plans\n• Authorized Tier-1 Brands & 25-Year Performance Warranty\n\nClick the link above to calculate your recommended capacity, savings & instant quotation.`,
+      hi: (cName, url) => `नमस्ते ${cName} जी! 🙏\n\nMyntReal हर घर सोलर डिजिटल कैटलॉग और सब्सिडी कैलकुलेटर लिंक यहाँ देखें:\n👉 ${url}\n\n⚡ मुख्य लाभ:\n• बिजली बिल में 90% तक बचत\n• ₹78,000 तक केंद्र सरकारी सब्सिडी (PM सूर्य घर योजना)\n• ₹1 में सोलर और आसान बैंक लोन ईएमआई\n• टियर-1 सोलर ब्रांड्स और 25 साल की वारंटी\n\nकृपया ऊपर दिए गए लिंक पर क्लिक करें और अपनी मासिक बचत की गणना करें।`,
+      ta: (cName, url) => `வணக்கம் ${cName}! 🙏\n\nMyntReal ஹர் கர் சோலார் டிஜிட்டல் கேட்லாக் மற்றும் மானிய கால்குலேட்டர் லிங்க்:\n👉 ${url}\n\n⚡ முக்கிய சிறப்பம்சங்கள்:\n• 90% வரை மின் கட்டண சேமிப்பு\n• ₹78,000 மத்திய அரசு மானியம் (PM சூர்யா கர்)\n• ₹1 சோலார் & எளிய வங்கி லோன் EMI தவணைகள்\n• Tier-1 சோலார் பிராண்டுகள் & 25 வருட வாரண்டி\n\nமேலே உள்ள இணைப்பைக் கிளிக் செய்து உங்கள் மின்சார சேமிப்பைக் கணக்கிடுங்கள்.`
+    }
+  },
+  real_estate: {
+    name: 'Premium Real Estate & Townships',
+    btnLabel: 'Real Estate',
+    segmentSlug: 'real-dreams',
+    catalogSlug: 'real-dreams-premium-properties',
+    desc: 'Sends Real Dreams catalog with RERA-approved luxury villas, gated open plots & prime commercial spaces.',
+    messages: {
+      te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nMyntReal Real Dreams ప్రీమియం ప్రాపర్టీస్ డిజిటల్ క్యాటలాగ్ లింక్ ఇక్కడ చూడవచ్చు:\n👉 ${url}\n\n🏡 ప్రాజెక్ట్ విశేషాలు:\n• RERA మరియు VMRDA/DTCP ఆమోదిత లేఅవుట్స్\n• గేటెడ్ కమ్యూనిటీ ఓపెన్ ప్లాట్స్, లగ్జరీ విల్లాస్ & కమర్షియల్ స్పేసెస్\n• సోలార్ స్ట్రీట్ లైటింగ్, భూగర్భ విద్యుత్ & 100% వాస్తు\n• వేగవంతమైన ల్యాండ్ అప్రిసియేషన్ & తక్షణ రిజిస్ట్రేషన్\n\nపై లింక్ ద్వారా లేఅవుట్ మ్యాప్స్, ధరలు మరియు సైట్ విజిట్ వివరాలు వీక్షించగలరు.`,
+      en: (cName, url) => `Namaskaram ${cName}! 🙏\n\nHere is your official MyntReal Real Dreams Premium Properties Digital Catalog link:\n👉 ${url}\n\n🏡 Key Highlights:\n• RERA & DTCP/VMRDA Approved Premium Layouts\n• Gated Community Open Plots, Luxury Villas & Commercial Spaces\n• Solar-Powered Infrastructure & Underground Utilities\n• High Land Appreciation Potential & Clear Marketable Title\n\nClick the link above to explore master layouts, pricing & schedule a VIP site visit.`,
+      hi: (cName, url) => `नमस्ते ${cName} जी! 🙏\n\nMyntReal Real Dreams प्रीमियम प्रॉपर्टीज डिजिटल कैटलॉग लिंक यहाँ देखें:\n👉 ${url}\n\n🏡 मुख्य विशेषताएं:\n• RERA और टाउनशिप अनुमोदित प्रीमियम प्लॉट्स एवं विला\n• गेटेड कम्युनिटी, सोलर इन्फ्रास्ट्रक्चर और आधुनिक सुविधाएं\n• उच्च पूंजी वृद्धि (Land Appreciation) एवं तत्काल रजिस्ट्री\n\nकृपया ऊपर दिए गए लिंक पर क्लिक करके लेआउट मैप्स और प्रोजेक्ट डिटेल्स देखें।`,
+      ta: (cName, url) => `வணக்கம் ${cName}! 🙏\n\nMyntReal Real Dreams பிரீமியம் ரியல் எஸ்டேட் டிஜிட்டல் கேட்லாக் லிங்க்:\n👉 ${url}\n\n🏡 முக்கிய சிறப்பம்சங்கள்:\n• RERA & அரசு அங்கீகாரம் பெற்ற ஓபன் பிளாட்கள் & வில்லாக்கள்\n• நவீன வசதிகளுடன் கூடிய கேடட் கம்யூனிட்டி டவுன்ஷிப்\n• வேகமான முதலீட்டு மதிப்பு உயர்வு & உடனடி பதிவு\n\nமேலே உள்ள இணைப்பைக் கிளிக் செய்து விவரங்கள் மற்றும் விலைப்பட்டியலைக் காண்க.`
+    }
+  },
+  ev_b2c: {
+    name: 'Smart Electric 2-Wheelers (B2C)',
+    btnLabel: 'EV 2W',
+    segmentSlug: 'ev-b2c',
+    catalogSlug: 'ev-smart-commuter',
+    desc: 'Sends Smart Electric 2W catalog with 120km range, LFP battery, mobile app & ₹0.25/km running cost.',
+    messages: {
+      te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nMyntReal Smart Electric 2-Wheelers డిజిటల్ క్యాటలాగ్ లింక్ ఇక్కడ చూడవచ్చు:\n👉 ${url}\n\n⚡ ముఖ్య విశేషాలు:\n• ఒక్క ఛార్జ్‌తో 120+ కి.మీ రియల్-వరల్డ్ రేంజ్\n• అధునాతన LFP బ్యాటరీ టెక్నాలజీ & లాంగ్ లైఫ్\n• డిజిటల్ స్మార్ట్ కన్సోల్, GPS ట్రాకింగ్ & రీజెనరేటివ్ బ్రేకింగ్\n• అతి తక్కువ రన్నింగ్ కాస్ట్ — కి.మీ కి కేవలం 25 పైసలు\n\nపై లింక్ క్లిక్ చేసి లేటెస్ట్ ఈవీ మోడల్స్, ఫీచర్లు మరియు టెస్ట్ రైడ్ బుక్ చేసుకోండి.`,
+      en: (cName, url) => `Namaskaram ${cName}! 🙏\n\nHere is your official MyntReal Smart Electric 2-Wheelers Digital Catalog link:\n👉 ${url}\n\n⚡ Key Highlights:\n• 120+ km Real-World Range on a single charge\n• Ultra-safe LFP Battery with extended warranty\n• Smart Mobile App Connectivity, GPS & Digital Cockpit\n• Running cost as low as ₹0.25 per kilometer\n\nClick the link above to explore EV models, color variants & book your free test ride.`,
+      hi: (cName, url) => `नमस्ते ${cName} जी! 🙏\n\nMyntReal स्मार्ट इलेक्ट्रिक 2-व्हीलर्स डिजिटल कैटलॉग लिंक यहाँ देखें:\n👉 ${url}\n\n⚡ मुख्य विशेषताएं:\n• सिंगल चार्ज में 120+ किमी की रेंज\n• आधुनिक सुरक्षित LFP बैटरी एवं लंबी वारंटी\n• स्मार्ट मोबाइल कनेक्टिविटी और डिजिटल फीचर्स\n• पेट्रोल की तुलना में 85% तक की बचत (25 पैसे/किमी)\n\nकृपया ऊपर दिए गए लिंक पर क्लिक करें और मॉडल्स देखें व फ्री टेस्ट राइड बुक करें।`,
+      ta: (cName, url) => `வணக்கம் ${cName}! 🙏\n\nMyntReal ஸ்மார்ட் எலக்ட்ரிக் 2-வீலர் டிஜிட்டல் கேட்லாக் லிங்க்:\n👉 ${url}\n\n⚡ முக்கிய சிறப்பம்சங்கள்:\n• ஒரு சார்ஜில் 120+ கிமீ ரேஞ்ச்\n• அதிநவீன LFP பேட்டரி & நீண்ட கால உத்தரவாதம்\n• பெட்ரோல் செலவில் 85% மிச்சம்\n\nமேலே உள்ள இணைப்பைக் கிளிக் செய்து ஈவி மாடல்களைப் பார்வையிட்டு டெஸ்ட் ரைடு புக் செய்யுங்கள்.`
+    }
+  },
+  ev_b2b: {
+    name: 'Commercial EV Fleet & Cargo (B2B)',
+    btnLabel: 'EV Commercial Fleet',
+    segmentSlug: 'ev-b2b',
+    catalogSlug: 'ev-commercial-fleet',
+    desc: 'Sends Commercial Fleet catalog with 75% logistics savings, reinforced chassis & 2-min battery swap.',
+    messages: {
+      te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nMyntReal Commercial EV Fleet & B2B Cargo డిజిటల్ క్యాటలాగ్ లింక్ ఇక్కడ చూడవచ్చు:\n👉 ${url}\n\n🚚 ముఖ్య ప్రయోజనాలు:\n• లాజిస్టిక్స్ రన్నింగ్ ఖర్చుల్లో 75% భారీ ఆదా\n• భారీ పేలోడ్ సామర్థ్యం కలిగిన హెవీ-డ్యూటీ చాసిస్\n• 2 నిమిషాల క్విక్ బ్యాటరీ స్వాప్పింగ్ & స్మార్ట్ టెలిమాటిక్స్ ఫ్లీట్ ట్రాకింగ్\n• డెలివరీ & బిజినెస్ ఫ్లీట్‌లకు ప్రత్యేక కార్పొరేట్ ఫైనాన్స్\n\nపై లింక్ క్లిక్ చేసి B2B ఫ్లీట్ మోడల్స్ మరియు ROI కాలిక్యులేటర్ చూడండి.`,
+      en: (cName, url) => `Namaskaram ${cName}! 🙏\n\nHere is your official MyntReal Commercial EV Fleet & B2B Cargo Digital Catalog link:\n👉 ${url}\n\n🚚 Commercial Fleet Highlights:\n• Slash last-mile logistics operating expenses by 75%\n• Heavy-duty reinforced chassis engineered for Indian cargo loads\n• 2-Minute rapid battery swapping & real-time IoT fleet telematics\n• Attractive commercial leasing & zero-downpayment corporate finance\n\nClick the link above to review vehicle specifications & calculate fleet ROI.`,
+      hi: (cName, url) => `नमस्ते ${cName} जी! 🙏\n\nMyntReal कमर्शियल ईवी फ्लीट और B2B कार्गो डिजिटल कैटलॉग लिंक यहाँ देखें:\n👉 ${url}\n\n🚚 प्रमुख लाभ:\n• डिलीवरी और लॉजिस्टिक्स खर्च में 75% तक कटौती\n• भारी माल वहन क्षमता एवं मजबूत चेसिस\n• 2 मिनट की बैटरी स्वैपिंग और लाइव जीपीएस फ्लीट ट्रैकिंग\n• आकर्षक कॉर्पोरेट फाइनेंस और लीजिंग विकल्प\n\nकृपया ऊपर दिए गए लिंक पर क्लिक करके कमर्शियल वाहन विवरण देखें।`,
+      ta: (cName, url) => `வணக்கம் ${cName}! 🙏\n\nMyntReal கமர்ஷியல் இ-வாகன கடற்படை (EV Cargo) டிஜிட்டல் கேட்லாக் லிங்க்:\n👉 ${url}\n\n🚚 முக்கிய நன்மைகள்:\n• போக்குவரத்து செலவில் 75% பெரும் சேமிப்பு\n• அதிக எடை சுமக்கும் திறன் மற்றும் நீண்ட ஆயுள்\n• 2 நிமிட பேட்டரி ஸ்வாப் & லைவ் GPS டிராக்கிங்\n\nமேலே உள்ள இணைப்பைக் கிளிக் செய்து விவரங்கள் மற்றும் கார்ப்பரேட் சலுகைகளைக் காண்க.`
+    }
+  },
+  ev_spares: {
+    name: 'EV Spares, Chargers & Batteries',
+    btnLabel: 'EV Spares',
+    segmentSlug: 'ev-spares',
+    catalogSlug: 'ev-spares-and-chargers',
+    desc: 'Sends EV Spares catalog with OEM components, DC fast chargers, smart BMS & replacement lithium packs.',
+    messages: {
+      te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nMyntReal Genuine EV Spares, Chargers & Batteries డిజిటల్ క్యాటలాగ్ లింక్ ఇక్కడ చూడవచ్చు:\n👉 ${url}\n\n⚙️ ప్రొడక్ట్ వివరాలు:\n• అన్ని ప్రముఖ బ్రాండ్ల ఒరిజినల్ OEM-గ్రేడ్ EV స్పేర్ పార్ట్స్\n• హై-పవర్ DC ఫాస్ట్ ఛార్జర్లు & పోర్టబుల్ హోమ్ ఛార్జర్లు\n• స్మార్ట్ BMS కలిగిన అధునాతన లిథియం-అయాన్ & LFP బ్యాటరీ ప్యాక్స్\n• కంట్రోలర్లు, వైరింగ్ హార్నెస్ & బ్రేకింగ్ కాంపోనెంట్స్\n\nపై లింక్ క్లిక్ చేసి కాంపోనెంట్స్ లిస్ట్, స్పెసిఫికేషన్స్ మరియు హోల్‌సేల్ ధరలు చూడగలరు.`,
+      en: (cName, url) => `Namaskaram ${cName}! 🙏\n\nHere is your official MyntReal EV Spares, Chargers & Battery Systems Digital Catalog link:\n👉 ${url}\n\n⚙️ Component Highlights:\n• Certified OEM-grade replacement spares for all major EV makes\n• High-power DC Fast Chargers & Smart Home AC Charging units\n• Advanced Lithium-ion & LFP battery packs with intelligent BMS\n• High-efficiency motor controllers, harnesses & mechanical components\n\nClick the link above to view catalog inventory, compatibility & dealer pricing.`,
+      hi: (cName, url) => `नमस्ते ${cName} जी! 🙏\n\nMyntReal जेन्युइन ईवी स्पेयर पार्ट्स, चार्जर्स और बैटरी डिजिटल कैटलॉग लिंक यहाँ देखें:\n👉 ${url}\n\n⚙️ मुख्य उत्पाद:\n• प्रमुख ईवी ब्रांड्स के लिए OEM-ग्रेड प्रमाणित स्पेयर पार्ट्स\n• हाई-पावर डीसी फास्ट चार्जर्स और स्मार्ट होम चार्जर्स\n• स्मार्ट बीएमएस (BMS) से लैस एडवांस लिथियम बैटरी पैक्स\n\nकृपया ऊपर दिए गए लिंक पर क्लिक करके पार्ट्स लिस्ट और कीमतें देखें।`,
+      ta: (cName, url) => `வணக்கம் ${cName}! 🙏\n\nMyntReal ஈவி உதிரிபாகங்கள், சார்ஜர்கள் & பேட்டரி டிஜிட்டல் கேட்லாக் லிங்க்:\n👉 ${url}\n\n⚙️ முக்கிய தயாரிப்புகள்:\n• அசல் OEM சான்றளிக்கப்பட்ட ஈவி உதிரிபாகங்கள்\n• அதிவேக DC ஃபாஸ்ட் சார்ஜர்கள் & ஸ்மார்ட் சார்ஜிங் சாதனங்கள்\n• ஸ்மார்ட் BMS கொண்ட லித்தியம் பேட்டரி பேக்குகள்\n\nமேலே உள்ள இணைப்பைக் கிளிக் செய்து முழு விவரங்களையும் காண்க.`
+    }
+  },
+  etc_training: {
+    name: 'ETC EV Technician Certifications',
+    btnLabel: 'ETC Training',
+    segmentSlug: 'etc',
+    catalogSlug: 'etc-renewable-certifications',
+    desc: 'Sends ETC Training catalog: 1-week EV certification at Govt. Poly Pendurthi, ₹10,000 scholarship discount.',
+    messages: {
+      te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nEVolution Training Centre (ETC) ప్రొఫెషనల్ EV సర్టిఫికేషన్ డిజిటల్ క్యాటలాగ్ లింక్ ఇక్కడ చూడవచ్చు:\n👉 ${url}\n\n🎓 కోర్సు విశేషాలు:\n• 1-వారం ప్రాక్టికల్ EV టెక్నీషియన్ & ఎంటర్‌ప్రెన్యూర్‌షిప్ ప్రోగ్రామ్\n• Govt. Polytechnic College, Pendurthi లో ప్రత్యక్ష ప్రాక్టికల్ ల్యాబ్స్\n• BLDC మోటార్లు, బ్యాటరీ ప్యాక్ అసెంబ్లీ & BMS డయాగ్నోస్టిక్స్ లో శిక్షణ\n• ఫీజు ₹19,999 కి బదులుగా ₹10,000 స్కాలర్‌షిప్‌తో కేవలం ₹9,999 మాత్రమే!\n• 100% ప్లేస్‌మెంట్ అసిస్టెన్స్ & సర్వీస్ సెంటర్ బిజినెస్ గైడెన్స్\n\nపై లింక్ క్లిక్ చేసి సిలబస్ మరియు తదుపరి బ్యాచ్ వివరాలు చూడండి.`,
+      en: (cName, url) => `Namaskaram ${cName}! 🙏\n\nHere is your official MyntReal EVolution Training Centre (ETC) Professional EV Certifications Digital Catalog link:\n👉 ${url}\n\n🎓 Certification Highlights:\n• 1-Week Intensive Hands-on EV Technician & Entrepreneurship Certification\n• Conducted at Govt. Polytechnic College, Pendurthi with live lab equipment\n• Deep training on BLDC motors, Lithium battery pack assembly & BMS debugging\n• Standard Fee ₹19,999 discounted by ₹10,000 Scholarship — Final Fee ₹9,999 only!\n• 100% Career placement assistance & EV service franchise support\n\nClick the link above to view curriculum, batch dates & reserve your seat.`,
+      hi: (cName, url) => `नमस्ते ${cName} जी! 🙏\n\nEVolution Training Centre (ETC) प्रोफेशनल ईवी सर्टिफिकेशन डिजिटल कैटलॉग लिंक यहाँ देखें:\n👉 ${url}\n\n🎓 कोर्स की मुख्य विशेषताएं:\n• 1-सप्ताह का हैंड्स-ऑन ईवी तकनीशियन एवं उद्यमिता प्रमाणन\n• Govt. Polytechnic College, Pendurthi में व्यावहारिक प्रयोगशाला प्रशिक्षण\n• BLDC मोटर्स, लिथियम बैटरी पैक असेंबली और BMS डायग्नोस्टिक्स में महारत\n• ₹19,999 फीस पर ₹10,000 स्कॉलरशिप छूट — केवल ₹9,999!\n• 100% जॉब प्लेसमेंट सहायता एवं ईवी सर्विस सेंटर शुरू करने हेतु मार्गदर्शन\n\nकृपया ऊपर दिए गए लिंक पर क्लिक करके बैच डेट्स और सीट रिजर्व करें।`,
+      ta: (cName, url) => `வணக்கம் ${cName}! 🙏\n\nEVolution Training Centre (ETC) தொழில்முறை ஈவி சான்றிதழ் டிஜிட்டல் கேட்லாக் லிங்க்:\n👉 ${url}\n\n🎓 பாடப்பிரிவின் சிறப்பம்சங்கள்:\n• 1 வார தீவிர செய்முறை ஈவி தொழில்நுட்ப வல்லுநர் பயிற்சி\n• அரசு பாலிடெக்னிக் கல்லூரி, பெந்துர்த்தியில் நேரடி பயிற்சி கூடங்கள்\n• BLDC மோட்டார், லித்தியம் பேட்டரி மற்றும் BMS பழுதுபார்ப்பு பயிற்சி\n• ₹19,999 கட்டணத்தில் ₹10,000 கல்வி உதவித்தொகை — கட்டணம் ₹9,999 மட்டுமே!\n• 100% வேலைவாய்ப்பு உதவி & தொழில் தொடங்க ஆதரவு\n\nமேலே உள்ள இணைப்பைக் கிளிக் செய்து பாடத்திட்டம் மற்றும் சேர்க்கை விவரங்களை அறிக.`
+    }
+  },
+  insurance: {
+    name: 'Comprehensive Insurance Advisory',
+    btnLabel: 'Insurance',
+    segmentSlug: 'insurance',
+    catalogSlug: 'comprehensive-insurance-advisory',
+    desc: 'Sends Insurance catalog with complete risk protection for EV fleets, solar rooftop plants, health & life.',
+    messages: {
+      te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nMyntReal Comprehensive Insurance Advisory డిజిటల్ క్యాటలాగ్ లింక్ ఇక్కడ చూడవచ్చు:\n👉 ${url}\n\n🛡️ ఇన్సూరెన్స్ రక్షణ వివరాలు:\n• ఎలక్ట్రిక్ వెహికల్స్ (EV) & కమర్షియల్ ఫ్లీట్ ఇన్సూరెన్స్\n• సోలార్ రూఫ్‌టాప్ ప్లాంట్ ఆల్-రిస్క్ ప్రొటెక్షన్ పాలసీలు\n• సమగ్ర హెల్త్ ఇన్సూరెన్స్ (Cashless Hospitalization) & టర్మ్ లైఫ్ కవర్\n• బిజినెస్, షాప్ & ఫ్యాక్టరీ ప్రాపర్టీ ఇన్సూరెన్స్\n• వేగవంతమైన క్లెయిమ్స్ అసిస్టెన్స్ & డెడికేటెడ్ రిలేషన్‌షిప్ మేనేజర్\n\nపై లింక్ క్లిక్ చేసి ఇన్సూరెన్స్ పాలసీల వివరాలు మరియు తక్షణ కొటేషన్ పొందండి.`,
+      en: (cName, url) => `Namaskaram ${cName}! 🙏\n\nHere is your official MyntReal Comprehensive Insurance Advisory Digital Catalog link:\n👉 ${url}\n\n🛡️ Advisory Highlights:\n• Specialized EV & Commercial Fleet motor insurance policies\n• Solar Rooftop Installation All-Risk & Generation Loss Protection\n• Comprehensive Health & Family Term Life plans with cashless network\n• Business, Warehouse & Commercial Property Risk Shield\n• Dedicated claims assistance team for rapid settlement\n\nClick the link above to view plans, compare coverage & receive a customized quote.`,
+      hi: (cName, url) => `नमस्ते ${cName} जी! 🙏\n\nMyntReal व्यापक बीमा सलाहकार (Insurance Advisory) डिजिटल कैटलॉग लिंक यहाँ देखें:\n👉 ${url}\n\n🛡️ बीमा सुरक्षा के मुख्य लाभ:\n• इलेक्ट्रिक वाहन (EV) और कमर्शियल फ्लीट विशेष बीमा\n• सोलर रूफटॉप प्लांट ऑल-रिस्क कवरेज\n• फैमिली हेल्थ एवं टर्म लाइफ इंश्योरेंस प्लान्स (कैशलेस सुविधा)\n• व्यापार और कमर्शियल प्रॉपर्टी प्रोटेक्शन\n• त्वरित क्लेम निपटान सहायता\n\nकृपया ऊपर दिए गए लिंक पर क्लिक करके बीमा योजनाओं की तुलना करें और कोटेशन पाएं।`,
+      ta: (cName, url) => `வணக்கம் ${cName}! 🙏\n\nMyntReal விரிவான காப்பீட்டு ஆலோசனை (Insurance Advisory) டிஜிட்டல் கேட்லாக் லிங்க்:\n👉 ${url}\n\n🛡️ காப்பீட்டு சிறப்பம்சங்கள்:\n• எலக்ட்ரிக் வாகனங்கள் மற்றும் வணிக கடற்படைக்கான சிறப்பு காப்பீடு\n• சோலார் ஆலைக்கான முழுமையான இடர் பாதுகாப்பு\n• விரிவான மருத்துவ & ஆயுள் காப்பீட்டு திட்டங்கள்\n• உடனடி க்ளைம் தீர்வு உதவி\n\nமேலே உள்ள இணைப்பைக் கிளிக் செய்து பாலிசி விவரங்களை அறிந்து உடனடி கொட்டேஷன் பெறுங்கள்.`
+    }
+  },
+  industrial_hub: {
+    name: 'MyntReal Hub (5-in-1 Franchise)',
+    btnLabel: 'MyntReal Hub',
+    segmentSlug: 'industrial-hub',
+    catalogSlug: 'industrial-hub-franchise',
+    desc: 'Sends MyntReal Hub catalog: 5-in-1 investor franchise (EV, Solar, Insurance, Real Estate & Training) with ₹12–15L investment & 140% ROI.',
+    messages: {
+      te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nMyntReal Hub (5-in-1 ఇన్వెస్టర్ ఫ్రాంచైజ్) అధికారిక డిజిటల్ క్యాటలాగ్ లింక్:\n👉 ${url}\n\n🏢 ఒకే హబ్ — 5 లాభదాయక వ్యాపార మార్గాలు:\n• మంత్ర ఈవీ షోరూమ్ & స్పేర్స్ డిపో (యూనిట్‌కు ₹7,000 మార్జిన్)\n• హర్ ఘర్ సోలార్ రూఫ్‌టాప్ EPC (₹78,000 సబ్సిడీ & ప్రాజెక్ట్‌కు ₹20,000 మార్జిన్)\n• VGK కేర్ ఇన్సూరెన్స్ అడ్వైజరీ (40+ ఇన్సూరర్లు, పాలసీకి ₹3,000 మార్జిన్)\n• VGK రియల్ డ్రీమ్స్ టౌన్‌షిప్స్ & విల్లాస్ బ్రోకరేజ్\n• EVolution ట్రైనింగ్ సెంటర్ (గవర్నమెంట్ పాలిటెక్నిక్ కాలేజ్ పార్టనర్)\n\n💼 పెట్టుబడి: ₹12–15 లక్షలు | బ్రేక్-ఈవెన్: 6-9 నెలలు | వార్షిక నికర ఆదాయం: ₹19.8 లక్షలు+\n🎁 ఫ్రాంచైజీతో పాటు కంప్యూటర్, 43" స్మార్ట్ టీవీ, కలర్ ప్రింటర్, షోరూమ్ బ్రాండింగ్ & 12 నెలల లీడ్ సపోర్ట్ ఉచితం!\n\nపై లింక్ క్లిక్ చేసి పూర్తి ప్రాస్పెక్టస్, ROI మోడల్ & వివరాలు చూడగలరు.`,
+      en: (cName, url) => `Namaskaram ${cName}! 🙏\n\nHere is your official MyntReal Hub (5-in-1 Investor Franchise) Digital Catalog link:\n👉 ${url}\n\n🏢 One Hub — 5 High-Demand Business Streams:\n• Manthra EV Dealership & Spares (₹7,000 / unit margin)\n• Har Ghar Solar EPC (₹78,000 DBT subsidy & ₹20,000 / system margin)\n• VGK Care Insurance Advisory (40+ Insurers, ₹3,000 / policy margin)\n• VGK Real Dreams Townships & Luxury Villas (High-ticket brokerage)\n• EVolution Training Centre (Govt. Polytechnic College Campus)\n\n💼 Investment: ₹12 – 15 Lakhs | Break-even: 6–9 Months | Base Net: ₹19.80 Lakhs / yr\n🎁 Turnkey Setup: Business PC with MyntOS ERP, 43" Smart TV, Color Printer, Complete Showroom Branding & 12 Months Lead Support included!\n\nClick the link above to review complete deliverables, financial models & territory rights.`,
+      hi: (cName, url) => `नमस्ते ${cName} जी! 🙏\n\nMyntReal Hub (5-इन-1 इन्वेस्टर फ्रैंचाइज़) आधिकारिक डिजिटल कैटलॉग लिंक यहाँ देखें:\n👉 ${url}\n\n🏢 एक हब — 5 उच्च मुनाफे वाले व्यापार:\n• मंत्रा ईवी डीलरशिप एवं स्पेयर पार्ट्स (₹7,000 प्रति वाहन मार्जिन)\n• हर घर सोलर रूफटॉप ईपीसी (₹78,000 सब्सिडी एवं ₹20,000 प्रति सिस्टम मार्जिन)\n• वीजीके केयर बीमा सलाहकार (40+ बीमा कंपनियाँ, ₹3,000 प्रति पॉलिसी मार्जिन)\n• वीजीके रियल ड्रीम्स टाउनशिप एवं विला ब्रोकरेज\n• ईवीोल्यूशन ट्रेनिंग सेंटर (गवर्नमेंट पॉलिटेक्निक कॉलेज पार्टनर)\n\n💼 निवेश: ₹12–15 लाख | ब्रेक-ईवन: 6–9 महीने | अनुमानित शुद्ध वार्षिक आय: ₹19.8 लाख+\n🎁 टर्नकी सेटअप: बिजनेस पीसी, 43" स्मार्ट टीवी, कलर प्रिंटर, शोरूम ब्रांडिंग और 12 महीने का लीड सपोर्ट शामिल!\n\nकृपया ऊपर दिए गए लिंक पर क्लिक करके पूरी जानकारी और आरओआई मॉडल देखें।`,
+      ta: (cName, url) => `வணக்கம் ${cName}! 🙏\n\nMyntReal Hub (5-இன்-1 முதலீட்டு ஃபிரான்சைஸ்) அதிகாரப்பூர்வ டிஜிட்டல் கேட்லாக் லிங்க்:\n👉 ${url}\n\n🏢 ஒரே மையம் — 5 லாபகரமான வணிக வழிகள்:\n• மாந்த்ரா இ-வாகன விற்பனை & உதிரிபாகங்கள் மையம்\n• ஹர் கர் சோலார் கூரை மின் உற்பத்தி EPC (₹78,000 மானியம்)\n• VGK கேர் விரிவான காப்பீட்டு ஆலோசனை (40+ நிறுவனங்கள்)\n• VGK ரியல் ட்ரீம்ஸ் நிலம் & சொத்து விற்பனை\n• EVolution தொழில்முறை இ-வாகன பயிற்சி மையம்\n\n💼 முதலீடு: ₹12–15 லட்சம் | முதலீடு மீட்பு: 6–9 மாதங்கள் | ஆண்டு நிகர வருமானம்: ₹19.80 லட்சம்+\n🎁 கணினி, 43" ஸ்மார்ட் டிவி, கலர் பிரிண்டர், பிராண்டிங் மற்றும் 12 மாத லீட் ஆதரவு முற்றிலும் இலவசம்!\n\nமுழு விவரங்களையும் நிதி மாதிரியையும் காண மேலே உள்ள இணைப்பைக் கிளிக் செய்க.`
+    }
+  },
+  customer_ev_pricing: {
+    name: 'Customer 2W EV Pricing & Catalog',
+    btnLabel: 'Customer EV',
+    segmentSlug: 'customer-2w-ev-pricing',
+    catalogSlug: 'customer-2w-ev-pricing',
+    desc: 'Sends official retail Manthra EV 2-Wheeler catalog with customer on-road prices, battery specs (Graphene 9 Mo / LFP 3 Yrs), savings calculator & YouTube video.',
+    messages: {
+      te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nమాంత్రా EV (Manthra EV) అధికారిక 2-వీలర్ ఎలక్ట్రిక్ స్కూటర్లు & కస్టమర్ ధరల పట్టిక:\n👉 ${url}\n\n⚡ ప్రధాన ప్రయోజనాలు & 5 మోడల్స్:\n• 5 మోడల్స్: Pro GT, Power Plus (హెవీ కార్గో), M99 Flagship, Royal Sling, Beast Pro\n• నాన్-RTO లో-స్పీడ్ (<25 km/h) — డ్రైవింగ్ లైసెన్స్ & రిజిస్ట్రేషన్ అవసరం లేదు!\n• రన్నింగ్ ఖర్చు కేవలం ₹0.15/కి.మీ — నెలకు ₹3,000+ పెట్రోల్ ఆదా\n• గ్రాఫేన్ 48V 32Ah: 9 నెలల బ్యాటరీ & ఛార్జర్ వారంటీ\n• స్మార్ట్ LFP బ్యాటరీలు: 2+1 సంవత్సరాల (3 ఏళ్ల) వారంటీ & 4–5 గంటల ఫాస్ట్ ఛార్జ్\n• 3 సంవత్సరాల సమగ్ర వాహన వారంటీ & ఆథరైజ్డ్ సర్వీస్ నెట్‌వర్క్\n\nపై లింక్ క్లిక్ చేసి మోడల్-వైజ్ ధరలు, స్పెసిఫికేషన్లు & అధికారిక వీడియో చూడగలరు. ఉచిత టెస్ట్ డ్రైవ్ బుక్ చేసుకోండి!`,
+      en: (cName, url) => `Namaskaram ${cName}! 🙏\n\nHere is your official Manthra EV 2-Wheeler Electric Scooters Customer Pricing & Specifications Catalog:\n👉 ${url}\n\n⚡ Customer Highlights & 5 Certified Models:\n• Models: Pro GT, Power Plus (Heavy Cargo), M99 Flagship, Royal Sling & Beast Pro\n• Certified Non-RTO Low-Speed (<25 km/h) — Zero Driving License & Zero RTO Needed!\n• Ultra-low running cost of ₹0.15 / km — Save ₹3,000+ every month vs petrol\n• Graphene 48V 32Ah: 9 Months Battery Warranty & 9 Months Charger Warranty\n• Smart LTM / LFP: 2+1 Years (3 Years) Battery Warranty & 4–5 Hrs Smart Fast Charge\n• 3 Years Comprehensive Vehicle Warranty with local authorized spares & service\n\nClick the link above to explore model-wise prices, interactive savings calculator & official video showcase. Book your free test ride today!`,
+      hi: (cName, url) => `नमस्ते ${cName} जी! 🙏\n\nमंत्रा EV (Manthra EV) आधिकारिक 2-व्हीलर इलेक्ट्रिक स्कूटर्स एवं कस्टमर प्राइसिंग कैटलॉग लिंक यहाँ देखें:\n👉 ${url}\n\n⚡ मुख्य विशेषताएं एवं 5 मॉडल:\n• 5 मॉडल्स: Pro GT, Power Plus (कार्गो), M99 Flagship, Royal Sling और Beast Pro\n• प्रमाणित नॉन-RTO (<25 km/h) — बिना ड्राइविंग लाइसेंस और बिना रजिस्ट्रेशन!\n• मात्र ₹0.15 प्रति किमी खर्च — हर महीने ₹3,000+ पेट्रोल की बचत\n• ग्रैफीन 48V 32Ah: 9 महीने की बैटरी एवं चार्जर वारंटी\n• स्मार्ट LFP बैटरियां: 2+1 वर्ष (3 साल) वारंटी एवं 4–5 घंटे में फास्ट चार्ज\n• 3 साल की व्यापक वाहन वारंटी एवं पूर्ण सर्विस सपोर्ट\n\nकृपया ऊपर दिए गए लिंक पर क्लिक करके मॉडल-वाइज कीमतें और वीडियो देखें। आज ही फ्री टेस्ट ड्राइव बुक करें!`,
+      ta: (cName, url) => `வணக்கம் ${cName}! 🙏\n\nமாந்த்ரா EV (Manthra EV) அதிகாரப்பூர்வ இருசக்கர மின்சார வாகனங்கள் மற்றும் வாடிக்கையாளர் விலை பட்டியல்:\n👉 ${url}\n\n⚡ வாடிக்கையாளர் சிறப்பம்சங்கள்:\n• 5 சிறந்த மாடல்கள்: Pro GT, Power Plus, M99 Flagship, Royal Sling, Beast Pro\n• நான்-RTO குறைந்த வேகம் (<25 km/h) — ஓட்டுநர் உரிமம் அல்லது பதிவு தேவையில்லை!\n• கி.மீக்கு 15 பைசா மட்டுமே — மாதம் ₹3,000+ பெட்ரோல் செலவு மிச்சம்\n• கிராபீன் 48V 32Ah: 9 மாதங்கள் பேட்டரி மற்றும் சார்ஜர் உத்தரவாதம்\n• ஸ்மார்ட் LFP: 2+1 ஆண்டுகள் (3 ஆண்டுகள்) உத்தரவாதம் மற்றும் விரைவு சார்ஜிங்\n• 3 ஆண்டுகள் முழுமையான வாகன உத்தரவாதம்\n\nமேலே உள்ள இணைப்பைக் கிளிக் செய்து மாடல் விலைகளை அறிந்து இலவச டெஸ்ட் டிரைவ் முன்பதிவு செய்யுங்கள்!`
+    }
+  },
+  hub_pricing: {
+    name: 'Hub Commercials & Pricing (24h)',
+    btnLabel: 'Hub Pricing (24h)',
+    segmentSlug: 'hub-pricing',
+    catalogSlug: 'hub-ev-pricing',
+    desc: 'Sends confidential MyntReal Hub EV & Solar Commercial Pricing catalog with wholesale costs, dealer margins & 24h auto-expiry security.',
+    messages: {
+      te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nMyntReal Hub — గోప్యమైన EV & సోలార్ కమర్షియల్ ప్రైసింగ్ & డీలర్ మార్జిన్స్ క్యాటలాగ్ లింక్ (24 గంటలు మాత్రమే చెల్లుబాటు):\n👉 ${url}\n\n⚡ కమర్షియల్ ప్రైసింగ్ & మార్జిన్ వివరాలు:\n• 5 మోడల్స్ EV వాహనాల హోల్‌సేల్ ధరలు & 12% హబ్ మార్జిన్ (~₹7,200/వాహనం)\n• డైరెక్ట్ కస్టమర్ సేల్స్ పై +10.5% అదనపు VGK4U కమిషన్ (మొత్తం 22.5% మార్జిన్)\n• గ్రాఫేన్ & LFP బ్యాటరీలు మరియు ఫాస్ట్ ఛార్జర్ల విడి భాగాల ధరల పట్టిక\n• సోలార్ EPC 1kW–10kW మాతృక: ₹1,99,999 సిస్టమ్‌పై ₹7,000 షోరూమ్ + ₹13,000 డైరెక్ట్ మార్జిన్\n• 3-దశల యూనిట్ ఎకనామిక్స్ & లైవ్ డైరెక్ట్ సేల్స్ ROI సిమ్యులేటర్\n\n⚠️ గమనిక: ఈ లింక్ కేవలం 24 గంటలు మాత్రమే యాక్టివ్‌గా ఉంటుంది.\n\nపై లింక్ క్లిక్ చేసి పూర్తి హోల్‌సేల్ కాస్ట్ షీట్ & ROI వివరాలు వెంటనే చూడగలరు.`,
+      en: (cName, url) => `Namaskaram ${cName}! 🙏\n\nHere is your Confidential MyntReal Hub — EV & Solar Commercial Pricing & Dealer Margins Prospectus (Strictly Valid for 24 Hours):\n👉 ${url}\n\n⚡ Commercial Highlights:\n• OEM Wholesale Central Pricing & 12% Hub Dealer Margin (~₹7,200 avg/vehicle)\n• Direct Customer Sale: +10.5% VGK4U Bonus (Total 22.5% combined spread)\n• Standalone Graphene & LFP Batteries + Smart Fast Chargers Cost Matrix\n• Solar EPC 1kW–10kW: ₹1,99,999 Flagship gives ₹7,000 Showroom + ₹13,000 Direct Margin\n• 3-Scenario Financial Viability & Interactive Investor ROI Simulator\n\n⚠️ Note: This confidential link expires automatically in 24 hours.\n\nClick the link above to review wholesale cost sheets & calculate your net returns.`,
+      hi: (cName, url) => `नमस्ते ${cName} जी! 🙏\n\nMyntReal Hub — गोपनीय EV और सोलर कमर्शियल प्राइसिंग एवं डीलर मार्जिन कैटलॉग लिंक (केवल 24 घंटे मान्य):\n👉 ${url}\n\n⚡ मुख्य व्यावसायिक विवरण:\n• 5 मॉडल्स EV वाहनों की थोक खरीद लागत और 12% हब डीलर मार्जिन\n• डायरेक्ट सेल पर +10.5% अतिरिक्त VGK4U कमीशन (कुल 22.5% मार्जिन)\n• ग्रैफीन एवं LFP बैटरियां और फास्ट चार्जर कंपोनेंट लागत सूची\n• सोलर EPC 1kW–10kW: ₹1,99,999 प्लांट पर ₹7,000 शोरूम + ₹13,000 डायरेक्ट मार्जिन\n• 3-सिनेरियो यूनिट इकोनॉमिक्स और लाइव ROI सिम्युलेटर\n\n⚠️ ध्यान दें: यह लिंक केवल 24 घंटे के लिए सक्रिय है।\n\nकृपया तुरंत ऊपर दिए गए लिंक पर क्लिक करके पूरी कॉस्ट शीट देखें।`,
+      ta: (cName, url) => `வணக்கம் ${cName}! 🙏\n\nMyntReal Hub — ரகசியமான EV & சோலார் வணிக விலை & டீலர் மார்ஜின் கேட்லாக் லிங்க் (24 மணிநேரம் மட்டுமே செல்லுபடியாகும்):\n👉 ${url}\n\n⚡ வணிக சிறப்பம்சங்கள்:\n• 5 மாடல் மின்சார வாகன மொத்த விலை & 12% ஹப் டீலர் மார்ஜின்\n• நேரடி விற்பனையில் +10.5% கூடுதல் VGK4U கமிஷன் (மொத்தம் 22.5% லாபம்)\n• கிராபீன் & LFP பேட்டரிகள் மற்றும் பாஸ்ட் சார்ஜர் உதிரிபாகங்கள் விலை பட்டியல்\n• சோலார் EPC 1kW–10kW: ₹1,99,999 அமைப்பில் ₹7,000 ஷோரூம் + ₹13,000 நேரடி மார்ஜின்\n• 3-நிலை நிதி சாத்தியக்கூறு ஆய்வு & நேரடி ROI கால்குலேட்டர்\n\n⚠️ குறிப்பு: இந்த ரகசிய இணைப்பு 24 மணிநேரத்திற்கு மட்டுமே செல்லுபடியாகும்.\n\nமுழு விலை மற்றும் வருவாய் விவரங்களை அறிய மேலே உள்ள இணைப்பை கிளிக் செய்யவும்.`
+    }
+  }
+};
+
 class UnifiedWAModal {
   private modalEl: HTMLElement | null = null;
   private currentOptions: WAModalOptions | null = null;
   private activeMode: 'scanned' | 'meta_api' = 'scanned';
 
+  private selectedCatalogKey: string = 'solar';
+  private selectedCatalogLang: string = 'te';
+
+  private allCanonicalTemplates: any[] = [];
   private canonicalTemplates: any[] = [];
   private selectedCanonicalBody: string = '';
 
@@ -127,7 +279,77 @@ class UnifiedWAModal {
     }
   }
 
-  private async loadCanonicalTemplates(): Promise<void> {
+  private onDigitalCatalogSelect(catKey?: string): void {
+    if (catKey && DIGITAL_CATALOGS[catKey]) {
+      this.selectedCatalogKey = catKey;
+    }
+    const cat = DIGITAL_CATALOGS[this.selectedCatalogKey] || DIGITAL_CATALOGS.solar;
+    const descEl = document.getElementById('uwaDigitalCatDesc');
+    if (descEl) descEl.textContent = cat.desc;
+    const btnLabelEl = document.getElementById('uwaDigitalCatBtnLabel');
+    if (btnLabelEl) btnLabelEl.textContent = `Insert Personalized ${cat.btnLabel || cat.name} Catalog Link`;
+  }
+
+  private getDigitalCatalogMessage(catKey: string, lang: string): string {
+    const cat = DIGITAL_CATALOGS[catKey] || DIGITAL_CATALOGS.solar;
+    const cName = (this.currentOptions?.name || 'Customer').trim();
+    const origin = (typeof window !== 'undefined' && window.location && window.location.origin && !window.location.origin.includes('localhost') && !window.location.origin.includes('capacitor')) ? window.location.origin : 'https://www.myntreal.com';
+    let catalogUrl = `${origin}/catalog/${cat.segmentSlug}/${cat.catalogSlug}?lang=${encodeURIComponent(lang || 'te')}`;
+    if (catKey === 'hub_pricing' && !catalogUrl.includes('exp=')) {
+      catalogUrl += `&exp=${Math.floor(Date.now() / 1000) + 86400}`;
+    }
+
+    const l = (lang || 'te').toLowerCase() as 'te' | 'en' | 'hi' | 'ta';
+    const msgFn = cat.messages[l] || cat.messages.en;
+    if (typeof msgFn === 'function') {
+      return msgFn(cName, catalogUrl);
+    }
+    return `Namaskaram ${cName}! Here is your catalog link:\n👉 ${catalogUrl}`;
+  }
+
+  private applyDigitalCatalog(lang?: string): void {
+    if (lang) {
+      this.selectedCatalogLang = lang;
+      const pills = this.modalEl?.querySelectorAll('.uwa-cat-lang-btn');
+      pills?.forEach(b => {
+        const isThis = (b as HTMLElement).getAttribute('data-lang') === lang;
+        (b as HTMLElement).style.background = isThis ? '#16a34a' : '#fff';
+        (b as HTMLElement).style.color = isThis ? '#fff' : '#334155';
+        (b as HTMLElement).style.borderColor = isThis ? '#16a34a' : '#cbd5e1';
+        (b as HTMLElement).style.fontWeight = isThis ? '700' : '600';
+      });
+    }
+
+    const sel = document.getElementById('uwaDigitalCatSel') as HTMLSelectElement;
+    if (sel && sel.value) {
+      this.selectedCatalogKey = sel.value;
+    }
+
+    const msg = this.getDigitalCatalogMessage(this.selectedCatalogKey, this.selectedCatalogLang);
+    const sig = this.getSenderSignature();
+    const textEl = document.getElementById('uwaMessageText') as HTMLTextAreaElement;
+    if (textEl) {
+      textEl.value = msg + sig;
+      textEl.focus();
+    }
+  }
+
+  private detectCatalogKey(): string {
+    const ctx = (this.currentOptions?.context || '').toLowerCase();
+    const seg = (this.currentOptions?.segment || '').toLowerCase();
+    if (ctx.includes('solar') || seg === 'solar') return 'solar';
+    if (ctx.includes('real') || ctx.includes('property') || ctx.includes('estate') || seg === 'myntreal_real') return 'real_estate';
+    if (ctx.includes('spare') || seg === 'ev_spares') return 'ev_spares';
+    if (ctx.includes('cargo') || ctx.includes('fleet') || ctx.includes('b2b') || seg === 'ev_b2b') return 'ev_b2b';
+    if (ctx.includes('ev') || ctx.includes('zynova') || ctx.includes('vehicle') || seg === 'ev_b2c') return 'ev_b2c';
+    if (ctx.includes('train') || ctx.includes('skill') || ctx.includes('etc') || seg === 'etc_training') return 'etc_training';
+    if (ctx.includes('insur') || ctx.includes('policy') || ctx.includes('care')) return 'insurance';
+    if (ctx.includes('pricing') || ctx.includes('margin') || ctx.includes('commercial') || seg === 'hub_pricing') return 'hub_pricing';
+    if (ctx.includes('hub') || ctx.includes('franchise')) return 'industrial_hub';
+    return 'solar';
+  }
+
+  private async loadCanonicalTemplates(selectId?: string | number): Promise<void> {
     const sel = document.getElementById('uwaCanonicalTpl') as HTMLSelectElement;
     const noTpl = document.getElementById('uwaNoTplNotice');
     if (!sel) return;
@@ -135,35 +357,161 @@ class UnifiedWAModal {
     sel.innerHTML = '<option value="">— Loading templates… —</option>';
     if (noTpl) noTpl.style.display = 'none';
 
-    const segEl = document.getElementById('uwaCanonicalSeg') as HTMLSelectElement;
-    const catEl = document.getElementById('uwaCanonicalCat') as HTMLSelectElement;
-    const seg = segEl?.value || '';
-    const cat = catEl?.value || '';
     const mode = this.activeMode === 'scanned' ? 'scanned' : 'company';
-
     let url = `/whatsapp-config/templates?mode=${encodeURIComponent(mode)}`;
-    if (seg) url += `&segment=${encodeURIComponent(seg)}`;
-    if (cat) url += `&category=${encodeURIComponent(cat)}`;
 
     try {
       const res = await apiService.get<any>(url);
       const list = res?.templates || res?.data || res || [];
-      this.canonicalTemplates = Array.isArray(list) ? list : [];
-
-      if (!this.canonicalTemplates.length) {
-        sel.innerHTML = '<option value="">— No approved templates found —</option>';
-        if (noTpl) noTpl.style.display = 'block';
-        return;
-      }
-
-      let optHtml = `<option value="">— Select template (${this.canonicalTemplates.length} available) —</option>`;
-      this.canonicalTemplates.forEach(t => {
-        optHtml += `<option value="${t.id}">${this.escapeHtml(t.template_name || t.name || 'Template #' + t.id)} (${t.category || 'MARKETING'})</option>`;
-      });
-      sel.innerHTML = optHtml;
+      this.allCanonicalTemplates = Array.isArray(list) ? list : [];
+      this.filterCanonicalTemplates(selectId);
     } catch {
       sel.innerHTML = '<option value="">— Error loading templates —</option>';
     }
+  }
+
+  private filterCanonicalTemplates(selectId?: string | number): void {
+    const sel = document.getElementById('uwaCanonicalTpl') as HTMLSelectElement;
+    const noTpl = document.getElementById('uwaNoTplNotice');
+    if (!sel) return;
+
+    const segEl = document.getElementById('uwaCanonicalSeg') as HTMLSelectElement;
+    const catEl = document.getElementById('uwaCanonicalCat') as HTMLSelectElement;
+    const searchEl = document.getElementById('uwaCanonicalSearch') as HTMLInputElement;
+
+    const seg = (segEl?.value || '').toLowerCase().trim();
+    const cat = (catEl?.value || '').toUpperCase().trim();
+    const query = (searchEl?.value || '').toLowerCase().trim();
+
+    let filtered = this.allCanonicalTemplates || [];
+
+    if (seg) {
+      filtered = filtered.filter(t => (t.segment || '').toLowerCase() === seg);
+    }
+    if (cat) {
+      filtered = filtered.filter(t => (t.category || '').toUpperCase() === cat);
+    }
+    if (query) {
+      filtered = filtered.filter(t => {
+        const name = (t.template_name || t.name || '').toLowerCase();
+        const body = (t.body_text || t.content || t.body || '').toLowerCase();
+        const slug = (t.slug || '').toLowerCase();
+        return name.includes(query) || body.includes(query) || slug.includes(query);
+      });
+    }
+
+    this.canonicalTemplates = filtered;
+
+    if (!filtered.length) {
+      sel.innerHTML = `
+        <option value="">— No templates found for this filter —</option>
+        <option value="__create_new__" style="color:#16a34a; font-weight:700;">➕ Create / Add Template for this Segment...</option>
+      `;
+      if (noTpl) noTpl.style.display = 'block';
+      this.onCanonicalTplChange();
+      return;
+    }
+
+    if (noTpl) noTpl.style.display = 'none';
+
+    let optHtml = `<option value="">— Select template (${filtered.length} available) —</option>`;
+    optHtml += `<option value="__create_new__" style="color:#16a34a; font-weight:700;">➕ Create / Add Template for this Segment...</option>`;
+
+    filtered.forEach(t => {
+      const segLabel = t.segment ? `[${t.segment}] ` : '';
+      optHtml += `<option value="${t.id}">${segLabel}${this.escapeHtml(t.template_name || t.name || 'Template #' + t.id)} (${t.category || 'MARKETING'})</option>`;
+    });
+
+    sel.innerHTML = optHtml;
+
+    if (selectId) {
+      sel.value = String(selectId);
+      this.onCanonicalTplChange();
+    }
+  }
+
+  private toggleAddTemplateCard(show?: boolean): void {
+    const card = document.getElementById('uwaAddTplCard');
+    if (!card) return;
+    const isVisible = card.style.display !== 'none';
+    const nextShow = (show !== undefined) ? show : !isVisible;
+    card.style.display = nextShow ? 'block' : 'none';
+    if (nextShow) {
+      const curSeg = (document.getElementById('uwaCanonicalSeg') as HTMLSelectElement)?.value || this.detectSegment();
+      const newSegEl = document.getElementById('uwaNewTplSeg') as HTMLSelectElement;
+      if (newSegEl && curSeg) {
+        newSegEl.value = curSeg;
+      }
+      document.getElementById('uwaNewTplName')?.focus();
+    }
+  }
+
+  private async saveNewTemplate(): Promise<void> {
+    const nameEl = document.getElementById('uwaNewTplName') as HTMLInputElement;
+    const segEl = document.getElementById('uwaNewTplSeg') as HTMLSelectElement;
+    const bodyEl = document.getElementById('uwaNewTplBody') as HTMLTextAreaElement;
+    const saveBtn = document.getElementById('uwaSaveNewTplBtn') as HTMLButtonElement;
+
+    const name = (nameEl?.value || '').trim();
+    const seg = segEl?.value || 'general';
+    const body = (bodyEl?.value || '').trim();
+
+    if (!name) {
+      this.showFeedback('Please enter a template name.', 'error');
+      return;
+    }
+    if (!body) {
+      this.showFeedback('Please enter the template message body.', 'error');
+      return;
+    }
+
+    if (saveBtn) saveBtn.disabled = true;
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+
+    try {
+      const res = await apiService.post<any>('/whatsapp-config/templates', {
+        name: name,
+        slug: slug,
+        category: 'MARKETING',
+        segment: seg,
+        body_text: body,
+        language: 'en',
+        usage_scope: 'all'
+      });
+
+      if (res?.success) {
+        this.showFeedback(`✅ Template "${name}" created & approved for WhatsApp API!`, 'success');
+        this.toggleAddTemplateCard(false);
+        if (nameEl) nameEl.value = '';
+        if (bodyEl) bodyEl.value = '';
+
+        const canonicalSeg = document.getElementById('uwaCanonicalSeg') as HTMLSelectElement;
+        if (canonicalSeg) canonicalSeg.value = seg;
+
+        const newId = res.template?.id || res.id || slug;
+        await this.loadCanonicalTemplates(newId);
+      } else {
+        this.showFeedback(res?.error || 'Failed to create template', 'error');
+      }
+    } catch(err: any) {
+      this.showFeedback(`Error creating template: ${err.message || 'Server error'}`, 'error');
+    } finally {
+      if (saveBtn) saveBtn.disabled = false;
+    }
+  }
+
+  private detectSegment(): string {
+    if (this.currentOptions?.segment) return this.currentOptions.segment;
+    const ctx = (this.currentOptions?.context || '').toLowerCase();
+    if (ctx.includes('solar')) return 'solar';
+    if (ctx.includes('real') || ctx.includes('property') || ctx.includes('estate')) return 'myntreal_real';
+    if (ctx.includes('spare')) return 'EV_SPARES';
+    if (ctx.includes('ev') || ctx.includes('vehicle') || ctx.includes('zynova')) return 'ev_b2c';
+    if (ctx.includes('train') || ctx.includes('skill') || ctx.includes('etc')) return 'etc_training';
+    if (ctx.includes('partner')) return 'partner';
+    if (ctx.includes('staff')) return 'staff';
+    if (ctx.includes('vgk')) return 'vgk';
+    return 'general';
   }
 
   private onCanonicalTplChange(): void {
@@ -172,13 +520,19 @@ class UnifiedWAModal {
     const varsBox = document.getElementById('uwaCanonicalVarsBox');
     const tplId = sel?.value;
 
+    if (tplId === '__create_new__') {
+      this.toggleAddTemplateCard(true);
+      sel.value = '';
+      return;
+    }
+
     if (!tplId) {
       if (varsWrap) varsWrap.style.display = 'none';
       if (varsBox) varsBox.innerHTML = '';
       return;
     }
 
-    const tpl = this.canonicalTemplates.find(t => String(t.id) === String(tplId));
+    const tpl = this.canonicalTemplates.find(t => String(t.id) === String(tplId) || String(t.slug) === String(tplId));
     if (!tpl) return;
 
     this.selectedCanonicalBody = tpl.body_text || tpl.content || tpl.body || '';
@@ -313,20 +667,57 @@ class UnifiedWAModal {
           </button>
         </div>
 
+        <!-- 1-Tap Digital Catalog Share -->
+        <div class="uwa-section-label">📖 Send Digital Catalog</div>
+        <div style="background:#f0fdf4; border:1.5px solid #86efac; border-radius:10px; padding:10px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; gap:6px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:160px;">
+              <i class="fas fa-book-open" style="color:#15803d; font-size:13px;"></i>
+              <select id="uwaDigitalCatSel" style="flex:1; font-size:11px; font-weight:700; color:#166534; background:#fff; border:1.5px solid #86efac; border-radius:6px; padding:4px 6px; cursor:pointer; outline:none;">
+                <option value="solar">☀️ Solar Rooftop &amp; EPC</option>
+                <option value="industrial_hub">🏢 MyntReal Hub (5-in-1 Franchise)</option>
+                <option value="customer_ev_pricing">⚡ Customer 2W EV Pricing &amp; Models</option>
+                <option value="hub_pricing">🏷️ Hub Commercials &amp; Pricing (24h)</option>
+                <option value="ev_b2b">🚚 Commercial EV Fleet &amp; Cargo (B2B)</option>
+                <option value="ev_b2c">⚡ Smart Electric 2-Wheelers (B2C)</option>
+                <option value="ev_spares">⚙️ EV Spares, Chargers &amp; Batteries</option>
+                <option value="etc_training">🎓 ETC EV Technician Certifications</option>
+                <option value="real_estate">🏡 Premium Real Estate &amp; Townships</option>
+                <option value="insurance">🛡️ Comprehensive Insurance Advisory</option>
+              </select>
+            </div>
+            <div style="display:flex; gap:3px;" id="uwaDigitalCatLangPills">
+              <button type="button" class="uwa-cat-lang-btn" data-lang="te" style="padding:2px 7px; border-radius:5px; border:1px solid #16a34a; background:#16a34a; color:#fff; font-size:10.5px; font-weight:700; cursor:pointer;">తెలుగు</button>
+              <button type="button" class="uwa-cat-lang-btn" data-lang="en" style="padding:2px 7px; border-radius:5px; border:1px solid #cbd5e1; background:#fff; color:#334155; font-size:10.5px; font-weight:600; cursor:pointer;">EN</button>
+              <button type="button" class="uwa-cat-lang-btn" data-lang="hi" style="padding:2px 7px; border-radius:5px; border:1px solid #cbd5e1; background:#fff; color:#334155; font-size:10.5px; font-weight:600; cursor:pointer;">हिन्दी</button>
+              <button type="button" class="uwa-cat-lang-btn" data-lang="ta" style="padding:2px 7px; border-radius:5px; border:1px solid #cbd5e1; background:#fff; color:#334155; font-size:10.5px; font-weight:600; cursor:pointer;">தமிழ்</button>
+            </div>
+          </div>
+          <div id="uwaDigitalCatDesc" style="font-size:10.5px; color:#15803d; line-height:1.4; margin-bottom:8px;">
+            Sends personalized Har Ghar Solar Digital Catalog link with 90% savings, ₹78,000 subsidy &amp; ₹1 scheme details.
+          </div>
+          <button type="button" id="uwaInsertDigitalCatBtn" style="width:100%; padding:6px 10px; background:#15803d; color:#fff; border:none; border-radius:7px; font-size:11.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <i class="fas fa-link"></i> <span id="uwaDigitalCatBtnLabel">Insert Personalized Solar Catalog Link</span>
+          </button>
+        </div>
+
         <!-- Official Meta / Database Templates -->
         <div class="uwa-section-label">📑 Select Official Template</div>
         <div style="display:flex; gap:6px; margin-bottom:8px;">
           <select id="uwaCanonicalSeg" style="flex:1; font-size:11.5px; padding:6px; border:1px solid #cbd5e1; border-radius:8px; background:#fff;">
-            <option value="">All Segments</option>
-            <option value="general">MNR General</option>
-            <option value="solar">Solar</option>
-            <option value="myntreal_real">Myntreal Real</option>
-            <option value="ev_b2c">EV B2C</option>
-            <option value="ev_b2b">EV B2B</option>
-            <option value="real_estate">Real Estate</option>
-            <option value="etc_training">ETC Training</option>
-            <option value="vgk">VGK Members</option>
-            <option value="system">System</option>
+            <option value="">🏢 All Segments</option>
+            <option value="solar">☀️ Solar</option>
+            <option value="general">💬 General</option>
+            <option value="myntreal_real">🏡 Real Estate</option>
+            <option value="ev_b2c">⚡ EV B2C</option>
+            <option value="ev_b2b">⚡ EV B2B</option>
+            <option value="EV_SPARES">🔧 EV Spares</option>
+            <option value="etc_training">🎓 ETC Training</option>
+            <option value="partner">🤝 Channel Partner</option>
+            <option value="leads">🎯 CRM Leads</option>
+            <option value="staff">👔 Internal Staff</option>
+            <option value="vgk">💼 VGK Executive</option>
+            <option value="system">⚙️ System</option>
           </select>
           <select id="uwaCanonicalCat" style="flex:1; font-size:11.5px; padding:6px; border:1px solid #cbd5e1; border-radius:8px; background:#fff;">
             <option value="">All Categories</option>
@@ -335,6 +726,49 @@ class UnifiedWAModal {
             <option value="AUTHENTICATION">Authentication</option>
           </select>
         </div>
+
+        <!-- Template Search and Add Row -->
+        <div style="display:flex; gap:6px; margin-bottom:8px;">
+          <div style="position:relative; flex:1;">
+            <input type="text" id="uwaCanonicalSearch" placeholder="🔍 Search template content or name..." style="width:100%; font-size:11.5px; border:1px solid #cbd5e1; border-radius:8px; padding:6px 10px; background:#fff; outline:none;" />
+          </div>
+          <button type="button" id="uwaToggleAddTplBtn" style="padding:5px 9px; font-size:11px; font-weight:700; background:#f0fdf4; color:#15803d; border:1px solid #86efac; border-radius:8px; cursor:pointer; white-space:nowrap;">
+            <i class="fas fa-plus"></i> Add
+          </button>
+        </div>
+
+        <!-- Inline Add New Template Card (collapsible) -->
+        <div id="uwaAddTplCard" style="display:none; background:#f8fafc; border:1.5px dashed #16a34a; border-radius:10px; padding:10px; margin-bottom:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong style="font-size:12px; color:#15803d;"><i class="fas fa-plus-circle me-1"></i>New Approved Template</strong>
+            <button type="button" id="uwaCancelAddTplBtn" style="background:none; border:none; color:#64748b; font-size:16px; cursor:pointer;">&times;</button>
+          </div>
+          <div style="display:flex; gap:6px; margin-bottom:6px;">
+            <input type="text" id="uwaNewTplName" placeholder="Template Name *" style="flex:2; font-size:11.5px; border:1px solid #cbd5e1; border-radius:6px; padding:5px 8px;" />
+            <select id="uwaNewTplSeg" style="flex:1; font-size:11px; border:1px solid #cbd5e1; border-radius:6px; padding:5px 6px; background:#fff;">
+              <option value="solar">☀️ Solar</option>
+              <option value="general">💬 General</option>
+              <option value="myntreal_real">🏡 Real Estate</option>
+              <option value="ev_b2c">⚡ EV B2C</option>
+              <option value="ev_b2b">⚡ EV B2B</option>
+              <option value="EV_SPARES">🔧 EV Spares</option>
+              <option value="etc_training">🎓 ETC Training</option>
+              <option value="partner">🤝 Partner</option>
+              <option value="leads">🎯 Leads</option>
+              <option value="staff">👔 Staff</option>
+              <option value="vgk">💼 VGK</option>
+              <option value="system">⚙️ System</option>
+            </select>
+          </div>
+          <textarea id="uwaNewTplBody" rows="3" placeholder="Template message content with {{1}} customer name, {{2}} details..." style="width:100%; font-size:11.5px; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; margin-bottom:6px;"></textarea>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <small style="font-size:10px; color:#15803d;"><i class="fas fa-check"></i> Auto-approved for API</small>
+            <button type="button" id="uwaSaveNewTplBtn" style="padding:4px 10px; font-size:11.5px; font-weight:700; background:#16a34a; color:#fff; border:none; border-radius:6px; cursor:pointer;">
+              Save &amp; Use
+            </button>
+          </div>
+        </div>
+
         <div style="margin-bottom:10px;">
           <select id="uwaCanonicalTpl" style="width:100%; font-size:12px; border:1px solid #cbd5e1; border-radius:8px; padding:7px 10px; background:#fff;">
             <option value="">— Loading templates… —</option>
@@ -384,6 +818,20 @@ class UnifiedWAModal {
     `;
 
     document.body.appendChild(this.modalEl);
+
+    const detected = this.detectSegment();
+    const segEl = document.getElementById('uwaCanonicalSeg') as HTMLSelectElement;
+    if (segEl && detected) {
+      segEl.value = detected;
+    }
+
+    const detectedCatKey = this.detectCatalogKey();
+    const catSel = document.getElementById('uwaDigitalCatSel') as HTMLSelectElement;
+    if (catSel && detectedCatKey) {
+      catSel.value = detectedCatKey;
+    }
+    this.onDigitalCatalogSelect(detectedCatKey);
+
     this.attachEvents();
     void this.loadCanonicalTemplates();
   }
@@ -398,10 +846,28 @@ class UnifiedWAModal {
     document.getElementById('uwaQuickThanksBtn')?.addEventListener('click', () => this.applyVerticalQuick('thanks_connecting'));
     document.getElementById('uwaQuickReachBtn')?.addEventListener('click', () => this.applyVerticalQuick('trying_to_reach'));
 
+    // Digital Catalog Events
+    document.getElementById('uwaDigitalCatSel')?.addEventListener('change', (e) => {
+      this.onDigitalCatalogSelect((e.target as HTMLSelectElement).value);
+    });
+    this.modalEl.querySelectorAll('.uwa-cat-lang-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const lang = (e.currentTarget as HTMLElement).getAttribute('data-lang') || 'te';
+        this.applyDigitalCatalog(lang);
+      });
+    });
+    document.getElementById('uwaInsertDigitalCatBtn')?.addEventListener('click', () => {
+      this.applyDigitalCatalog();
+    });
+
     // Canonical Template Engine Events
-    document.getElementById('uwaCanonicalSeg')?.addEventListener('change', () => this.loadCanonicalTemplates());
-    document.getElementById('uwaCanonicalCat')?.addEventListener('change', () => this.loadCanonicalTemplates());
+    document.getElementById('uwaCanonicalSeg')?.addEventListener('change', () => this.filterCanonicalTemplates());
+    document.getElementById('uwaCanonicalCat')?.addEventListener('change', () => this.filterCanonicalTemplates());
+    document.getElementById('uwaCanonicalSearch')?.addEventListener('input', () => this.filterCanonicalTemplates());
     document.getElementById('uwaCanonicalTpl')?.addEventListener('change', () => this.onCanonicalTplChange());
+    document.getElementById('uwaToggleAddTplBtn')?.addEventListener('click', () => this.toggleAddTemplateCard());
+    document.getElementById('uwaCancelAddTplBtn')?.addEventListener('click', () => this.toggleAddTemplateCard(false));
+    document.getElementById('uwaSaveNewTplBtn')?.addEventListener('click', () => this.saveNewTemplate());
 
     // Mode Toggle
     document.getElementById('uwaModeScannedBtn')?.addEventListener('click', () => {

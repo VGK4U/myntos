@@ -10,6 +10,7 @@
     <script src="/public/js/staff-fetch.js"></script>
     <script src="/public/js/nda-enforcement.js"></script>
     <script src="/public/js/plivo-softphone.js?v=20260906_fix"></script>
+    <script src="/public/js/wa-lead-modal.js?v=20260918"></script>
     <style>
         /* High Contrast Theme & Visibility Fixes */
         :root {
@@ -645,6 +646,106 @@
         .timeline-dot.missed { background: #ef4444; }
         .timeline-dot.outgoing { background: #3b82f6; }
         .timeline-dot.voicemail { background: #a855f7; }
+        .timeline-dot.whatsapp { background: #25d366; }
+
+        /* Customer Drawer 3-Tab Styles & WhatsApp Bubbles */
+        .drawer-nav-tabs {
+            display: flex;
+            gap: 6px;
+            background: #0b1329;
+            padding: 4px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 16px;
+        }
+        .drawer-nav-btn {
+            flex: 1;
+            padding: 7px 10px;
+            border: none;
+            border-radius: 7px;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .drawer-nav-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: #f8fafc;
+        }
+        .drawer-nav-btn.active {
+            background: #1e293b;
+            color: #38bdf8;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .drawer-nav-badge {
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #cbd5e1;
+        }
+        .drawer-nav-btn.active .drawer-nav-badge {
+            background: rgba(56, 189, 248, 0.2);
+            color: #38bdf8;
+        }
+
+        /* WhatsApp Timeline and Bubbles */
+        .wa-timeline-card {
+            background: #0f172a;
+            border-radius: 8px;
+            border: 1px solid rgba(37, 211, 102, 0.2);
+            padding: 10px 12px;
+            margin-top: 6px;
+        }
+        .wa-chat-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 6px 0;
+            max-height: 520px;
+            overflow-y: auto;
+        }
+        .wa-bubble {
+            max-width: 82%;
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            position: relative;
+        }
+        .wa-bubble-out {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #059669, #047857);
+            color: #ffffff;
+            border-bottom-right-radius: 2px;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+        }
+        .wa-bubble-in {
+            align-self: flex-start;
+            background: #1e293b;
+            color: #f1f5f9;
+            border-bottom-left-radius: 2px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+        }
+        .wa-bubble-meta {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 4px;
+            font-size: 10px;
+            opacity: 0.75;
+            margin-top: 4px;
+        }
     </style>
 </head>
 <body>
@@ -925,7 +1026,7 @@
                             <!-- Live Search Input for Last 20 Calls -->
                             <div class="input-group input-group-sm mb-3">
                                 <span class="input-group-text bg-dark text-muted border-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
-                                <input type="text" id="dialerContactSearch" class="form-control bg-dark text-white border-secondary" placeholder="Search customer name, masked number, or type..." oninput="filterRecentDialerCalls(this.value)">
+                                <input type="text" id="dialerContactSearch" class="form-control bg-dark text-white border-secondary" placeholder="Search customer, caller, lead, phone, ID..." oninput="filterRecentDialerCalls(this.value)">
                                 <button class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('dialerContactSearch').value=''; filterRecentDialerCalls('');" title="Clear Search">
                                     <i class="fa-solid fa-xmark"></i>
                                 </button>
@@ -1030,7 +1131,8 @@
                     <div class="col-md-3">
                         <div class="input-group input-group-sm">
                             <span class="input-group-text bg-dark text-muted border-secondary"><i class="fa-solid fa-magnifying-glass"></i></span>
-                            <input type="text" id="filter-search" class="form-control bg-dark text-light border-secondary" placeholder="Search phone, name, UUID..." onkeyup="if(event.key==='Enter') loadCalls(1)">
+                            <input type="text" id="filter-search" class="form-control bg-dark text-light border-secondary" placeholder="Search customer, caller, lead, phone, ID..." onkeyup="if(event.key==='Enter') loadCalls(1)" oninput="handleCallsSearchInput(this.value)">
+                            <button class="btn btn-outline-secondary btn-sm" type="button" onclick="clearCallsSearch()" title="Clear Search"><i class="fa-solid fa-xmark"></i></button>
                         </div>
                     </div>
                     <div class="col-md-2">
@@ -1211,7 +1313,16 @@
                 <h5 class="fw-bold mb-0 text-light" id="drawer-customer-name"><i class="fa-solid fa-user-clock text-info me-2"></i>Customer Timeline</h5>
                 <div class="small text-muted font-monospace" id="drawer-phone-masked">+91 ••••••••••</div>
             </div>
-            <button class="btn btn-sm btn-outline-secondary" onclick="closeDrawer()"><i class="fa-solid fa-xmark"></i></button>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm btn-success px-2.5 py-1 fw-bold text-white shadow-sm" 
+                        style="background: #25D366 !important; border-color: #22c55e !important;" 
+                        id="drawer-header-wa-btn" 
+                        onclick="openDrawerWhatsApp()" 
+                        title="Send WhatsApp / Digital Catalog to this contact">
+                    <i class="fab fa-whatsapp me-1"></i> WhatsApp
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="closeDrawer()" title="Close Drawer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
         </div>
         <div class="drawer-body" id="drawer-content">
             <div class="text-center py-5 text-muted">
@@ -2244,6 +2355,14 @@
                             </div>
                         </div>
                         <div class="d-flex align-items-center gap-2 ms-3 flex-shrink-0">
+                            ${(cleanPhone && cleanPhone.length >= 6) ? `
+                                <button class="btn btn-outline-success btn-sm px-2.5 py-1 fw-semibold d-flex align-items-center gap-1 shadow-sm" 
+                                        onclick="openLeadWAModal('${escapeHtml(c.effective_lead_id || c.crm_lead_id || '')}', '${cleanPhone}', '${name.replace(/'/g, "\\'")}', '${escapeHtml(c.company_id || '')}', null, 'softphone_hub')" 
+                                        title="Send WhatsApp / Digital Catalog to ${name}">
+                                    <i class="fab fa-whatsapp text-success fs-6"></i>
+                                    <span class="d-none d-sm-inline small">WA</span>
+                                </button>
+                            ` : ''}
                             <button class="btn btn-outline-info btn-sm rounded-circle p-2" onclick="openCustomerHistory('${cleanPhone}', '${name.replace(/'/g, "\\'")}')" title="View Customer History" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;">
                                 <i class="fa-solid fa-clock-rotate-left"></i>
                             </button>
@@ -2271,6 +2390,12 @@
             const filtered = cachedRecentDialerCalls.filter(c => 
                 (c.customer_name || '').toLowerCase().includes(q) ||
                 (c.customer_phone_masked || '').toLowerCase().includes(q) ||
+                (c.customer_phone || '').toLowerCase().includes(q) ||
+                (c.phone || '').toLowerCase().includes(q) ||
+                (c.raw_phone || '').toLowerCase().includes(q) ||
+                (c.caller_phone || '').toLowerCase().includes(q) ||
+                (String(c.lead_id || '')).toLowerCase().includes(q) ||
+                (String(c.crm_lead_id || '')).toLowerCase().includes(q) ||
                 (c.type_label || '').toLowerCase().includes(q) ||
                 (c.source || '').toLowerCase().includes(q) ||
                 (c.contact_source || '').toLowerCase().includes(q) ||
@@ -2461,6 +2586,24 @@
         }
 
         let currentLoadCallsSeq = 0;
+        let callsSearchDebounceTimer = null;
+
+        function handleCallsSearchInput(val) {
+            if (callsSearchDebounceTimer) {
+                clearTimeout(callsSearchDebounceTimer);
+            }
+            callsSearchDebounceTimer = setTimeout(() => {
+                loadCalls(1);
+            }, 300);
+        }
+
+        function clearCallsSearch() {
+            const input = document.getElementById('filter-search');
+            if (input) {
+                input.value = '';
+                loadCalls(1);
+            }
+        }
 
         async function loadCalls(page = 1) {
             const fetchSeq = ++currentLoadCallsSeq;
@@ -2754,6 +2897,15 @@
                                                 onclick="triggerDialFromBtn(this)">
                                             <i class="fa-solid fa-phone"></i> Dial
                                         </button>
+                                        <button class="btn btn-outline-success btn-sm btn-action-sm px-2 py-1" 
+                                                data-lead-id="${escapeHtml(safeLeadId)}"
+                                                data-phone="${escapeHtml(cleanPhoneNum)}" 
+                                                data-name="${escapeHtml(safeCustName)}" 
+                                                data-company-id="${escapeHtml(c.company_id || '')}"
+                                                onclick="openLeadWAModal(this.getAttribute('data-lead-id'), this.getAttribute('data-phone'), this.getAttribute('data-name'), this.getAttribute('data-company-id'))"
+                                                title="Send WhatsApp to ${escapeHtml(safeCustName)}">
+                                            <i class="fab fa-whatsapp"></i> WA
+                                        </button>
                                     ` : `
                                         <button class="btn btn-outline-secondary btn-sm btn-action-sm px-2 py-1 disabled" title="Customer number not provided" style="opacity:0.4;" disabled>
                                             <i class="fa-solid fa-phone-slash"></i> Dial
@@ -2943,25 +3095,110 @@
             dialNumber(clean, 'Quick Outbound');
         }
 
+        function isPlaceholderClientName(name) {
+            if (!name) return true;
+            const s = name.trim().toLowerCase();
+            return !s ||
+                s === 'unknown' ||
+                s === 'guest caller' ||
+                s === 'guest customer' ||
+                s === 'customer' ||
+                s === 'caller' ||
+                s === 'lead' ||
+                s.startsWith('missed call') ||
+                s.startsWith('incoming call') ||
+                s.startsWith('call from') ||
+                s.startsWith('call_');
+        }
+
+        function openDrawerWhatsApp() {
+            const phone = activeHistoryState.cleanPhone || '';
+            if (!phone) {
+                alert('No valid phone number found for this contact.');
+                return;
+            }
+            const leadId = activeHistoryState.leadId || '';
+            let name = activeHistoryState.customerName || '';
+            if (isPlaceholderClientName(name)) {
+                name = '';
+            }
+            const companyId = activeHistoryState.companyId || '';
+            if (typeof openLeadWAModal === 'function') {
+                openLeadWAModal(leadId, phone, name, companyId, null, 'softphone_history_drawer');
+            } else {
+                window.open(`https://wa.me/91${phone}`, '_blank');
+            }
+        }
+
+        let activeHistoryState = {
+            cleanPhone: '',
+            customerName: '',
+            leadId: '',
+            companyId: '',
+            callData: null,
+            waData: null,
+            activeTab: 'all' // 'all' | 'calls' | 'messages'
+        };
+
         async function openCustomerHistory(rawPhone, customerName = 'Guest Customer') {
             const clean = (rawPhone || '').replace(/\D/g, '').slice(-10);
             if (!clean) return;
 
+            const initialDisplay = !isPlaceholderClientName(customerName) ? customerName : 'Customer Timeline';
             const maskedPhone = maskPhoneNumber(clean);
             document.getElementById('drawer-phone-masked').innerText = maskedPhone;
-            document.getElementById('drawer-customer-name').innerHTML = `<i class="fa-solid fa-user-clock text-info me-2"></i>${escapeHtml(customerName || 'Customer Timeline')}`;
+            document.getElementById('drawer-customer-name').innerHTML = `<i class="fa-solid fa-user-clock text-info me-2"></i>${escapeHtml(initialDisplay)}`;
             document.getElementById('drawer-content').innerHTML = `
                 <div class="text-center py-5 text-muted">
                     <div class="spinner-border spinner-border-sm text-info mb-2"></div>
-                    <div>Fetching customer timeline...</div>
+                    <div>Fetching customer interaction history & messages...</div>
                 </div>
             `;
             document.getElementById('drawer-overlay').style.display = 'block';
             document.getElementById('call-drawer').classList.add('open');
 
+            activeHistoryState = {
+                cleanPhone: clean,
+                customerName: !isPlaceholderClientName(customerName) ? customerName : '',
+                leadId: '',
+                companyId: '',
+                callData: null,
+                waData: null,
+                activeTab: 'all'
+            };
+
             try {
-                const res = await staffFetch(`/api/v1/telephony/calls/${clean}/customer-history`);
-                renderCustomerHistory(res, customerName);
+                const [callRes, waRes] = await Promise.all([
+                    staffFetch(`/api/v1/telephony/calls/${clean}/customer-history`).catch(err => ({ error: err.message, history: [] })),
+                    staffFetch(`/api/v1/whatsapp/inbox/thread/${clean}`).catch(() => ({ data: [], total: 0 }))
+                ]);
+
+                activeHistoryState.callData = callRes || {};
+                activeHistoryState.waData = waRes || {};
+
+                // Pick the best non-placeholder name
+                const candidates = [
+                    callRes && callRes.lead && callRes.lead.name,
+                    callRes && callRes.customer_name,
+                    waRes && waRes.contact_info && waRes.contact_info.resolved_name,
+                    customerName
+                ];
+                let resolvedName = '';
+                for (const c of candidates) {
+                    if (c && !isPlaceholderClientName(c)) {
+                        resolvedName = c.trim();
+                        break;
+                    }
+                }
+                if (!resolvedName) {
+                    resolvedName = customerName && !isPlaceholderClientName(customerName) ? customerName.trim() : (candidates[0] || candidates[1] || 'Guest Customer');
+                }
+
+                activeHistoryState.customerName = resolvedName;
+                activeHistoryState.leadId = (callRes && callRes.lead && callRes.lead.id) || (waRes && waRes.crm_leads && waRes.crm_leads[0] && waRes.crm_leads[0].id) || '';
+                activeHistoryState.companyId = (callRes && callRes.lead && callRes.lead.company_id) || '';
+
+                renderCustomerHistoryDrawer();
             } catch (err) {
                 document.getElementById('drawer-content').innerHTML = `
                     <div class="alert alert-danger">${escapeHtml(err.message)}</div>
@@ -2970,147 +3207,366 @@
         }
 
         function renderCustomerHistory(data, defaultName = 'Guest Customer') {
+            activeHistoryState.callData = data;
+            const candidates = [
+                data.lead && data.lead.name,
+                data.customer_name,
+                defaultName
+            ];
+            let resolvedName = '';
+            for (const c of candidates) {
+                if (c && !isPlaceholderClientName(c)) {
+                    resolvedName = c.trim();
+                    break;
+                }
+            }
+            activeHistoryState.customerName = resolvedName || defaultName || 'Guest Customer';
+            activeHistoryState.cleanPhone = (data.phone || data.raw_phone || '').replace(/\D/g, '').slice(-10);
+            activeHistoryState.leadId = (data.lead && data.lead.id) || '';
+            activeHistoryState.companyId = (data.lead && data.lead.company_id) || '';
+            renderCustomerHistoryDrawer();
+        }
+
+        function switchDrawerTab(tab) {
+            activeHistoryState.activeTab = tab;
+            renderDrawerTabContent();
+        }
+
+        function renderCustomerHistoryDrawer() {
             const drawerBody = document.getElementById('drawer-content');
-            const custName = (data.lead && data.lead.name) || data.customer_name || defaultName || 'Guest Customer';
-            const cleanPhone = (data.raw_phone || '').replace(/\D/g, '').slice(-10);
+            const data = activeHistoryState.callData || {};
+            const waData = activeHistoryState.waData || {};
+            const custName = activeHistoryState.customerName || 'Guest Customer';
+            const cleanPhone = activeHistoryState.cleanPhone || '';
             const maskedPhone = data.phone_masked || maskPhoneNumber(cleanPhone);
+            const leadId = activeHistoryState.leadId || '';
+            const companyId = activeHistoryState.companyId || '';
 
             document.getElementById('drawer-phone-masked').innerText = maskedPhone;
             document.getElementById('drawer-customer-name').innerHTML = `<i class="fa-solid fa-user-clock text-info me-2"></i>${escapeHtml(custName)}`;
 
-            let leadCard = `
+            const historyList = data.history || [];
+            const waList = waData.data || [];
+            const totalCalls = historyList.length;
+            const totalMessages = waList.length;
+            const totalInteractions = totalCalls + totalMessages;
+
+            const leadCard = `
                 <div class="card bg-dark border-secondary p-3 mb-3 shadow-sm">
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
                         <h6 class="fw-bold text-light mb-0"><i class="fa-solid fa-user-tag text-info me-1"></i> ${escapeHtml(custName)}</h6>
                         <span class="badge bg-primary">${escapeHtml((data.lead && data.lead.status) || 'Customer')}</span>
                     </div>
-                    <div class="small text-muted mt-2 d-flex flex-column gap-1">
+                    <div class="small text-muted mb-3 d-flex flex-column gap-1">
                         <div><i class="fa-solid fa-phone text-muted me-1"></i><strong>Phone:</strong> <span class="phone-masked font-monospace text-light">${escapeHtml(maskedPhone)}</span></div>
                         ${data.lead && data.lead.email ? `<div><i class="fa-solid fa-envelope text-muted me-1"></i><strong>Email:</strong> ${escapeHtml(data.lead.email)}</div>` : ''}
                         ${data.lead && data.lead.city ? `<div><i class="fa-solid fa-location-dot text-muted me-1"></i><strong>City:</strong> ${escapeHtml(data.lead.city)}</div>` : ''}
                     </div>
+                    <div class="d-flex gap-2 pt-2 border-top border-secondary">
+                        <button class="btn btn-success btn-sm flex-fill fw-semibold py-1.5" 
+                                data-phone="${escapeHtml(cleanPhone)}" 
+                                data-name="${escapeHtml(custName)}" 
+                                data-lead-id="${escapeHtml(leadId)}" 
+                                onclick="triggerDialFromBtn(this)">
+                            <i class="fa-solid fa-phone me-1"></i> Call Now
+                        </button>
+                        <button class="btn btn-outline-success btn-sm flex-fill fw-semibold py-1.5" 
+                                onclick="openLeadWAModal('${escapeHtml(leadId)}', '${escapeHtml(cleanPhone)}', '${escapeHtml(custName)}', '${escapeHtml(companyId)}')">
+                            <i class="fab fa-whatsapp me-1"></i> Send WhatsApp
+                        </button>
+                    </div>
                 </div>
             `;
-
-            const historyList = data.history || [];
-            let timelineHtml = '';
-            if (historyList.length === 0) {
-                timelineHtml = `<div class="text-muted text-center py-4">No previous calls found.</div>`;
-            } else {
-                timelineHtml = historyList.map(h => {
-                    let dotClass = 'incoming';
-                    let badgeClass = 'bg-success text-white';
-                    const isIncoming = (h.direction === 'inbound') || (h.type && h.type.toLowerCase().includes('in')) || (h.type === 'Missed by Staff') || (h.type === 'Voicemail');
-                    const directionPill = isIncoming
-                        ? `<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-1.5 py-0.5 fw-bold font-monospace" style="font-size:10px;"><i class="fa-solid fa-arrow-down-left me-1"></i>IN</span>`
-                        : `<span class="badge bg-primary bg-opacity-25 text-info border border-primary border-opacity-50 px-1.5 py-0.5 fw-bold font-monospace" style="font-size:10px;"><i class="fa-solid fa-arrow-up-right me-1"></i>OUT</span>`;
-
-                    if (h.type === 'Missed by Staff') { dotClass = 'missed'; badgeClass = 'bg-danger text-white'; }
-                    else if (h.type === 'Outgoing') { dotClass = 'outgoing'; badgeClass = 'bg-primary text-white'; }
-                    else if (h.type === 'Voicemail') { dotClass = 'voicemail'; badgeClass = 'bg-purple text-white'; }
-                    else if (h.type === 'Unanswered') { dotClass = 'missed'; badgeClass = 'bg-secondary text-white'; }
-
-                    // Crisp Date & Time (IST) formatting
-                    let dateDisplay = '—';
-                    let timeDisplay = '';
-                    const rawDt = h.started_at || h.created_at;
-                    const dObj = parseISTDate(rawDt);
-                    if (dObj) {
-                        dateDisplay = dObj.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
-                        timeDisplay = dObj.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-                    }
-                    
-                    let recAudio = '';
-                    const isVm = h.computed_type === 'voicemail' || (h.status && h.status.toLowerCase().includes('voicemail'));
-                    const vmTitle = isVm ? "Play Voicemail Recording" : "Play Call Recording";
-                    const recDurLabel = h.recording_duration_formatted || (h.recording_duration ? (Math.floor(h.recording_duration/60).toString().padStart(2,'0') + 'm ' + (h.recording_duration%60).toString().padStart(2,'0') + 's') : h.duration_formatted);
-                    if (h.has_recording || h.recording_url) {
-                        const hId = 'dh_' + h.id;
-                        const audioSrc = h.recording_url || `/api/v1/telephony/calls/${h.call_session_id}/recording`;
-                        recAudio = `
-                            <div class="mt-2">
-                                <div class="audio-scrubber-player ${isVm ? 'border border-warning border-opacity-50' : ''}" id="player-row-${hId}">
-                                    <button class="play-btn" id="pbtn-${hId}" onclick="toggleAudio('${escapeHtml(audioSrc)}', '${hId}', '${escapeHtml(recDurLabel)}')" title="${vmTitle} (${escapeHtml(recDurLabel)})" style="${isVm ? 'background: linear-gradient(135deg, #a855f7, #7e22ce);' : ''}">
-                                        <i class="fa-solid fa-play"></i>
-                                    </button>
-                                    <div class="scrubber-track-wrapper">
-                                        <input type="range" class="audio-slider" id="slider-${hId}" min="0" max="100" value="0" 
-                                               oninput="seekAudio(this.value, '${hId}')" 
-                                               onchange="commitSeekAudio(this.value, '${hId}')" 
-                                               title="Drag cursor to seek">
-                                        <div class="audio-time-label" id="timer-${hId}">00:00 / ${escapeHtml(recDurLabel)}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    } else if (isVm) {
-                        recAudio = `<div class="mt-1"><span class="badge bg-secondary bg-opacity-25 text-muted px-2 py-1" style="font-size:10.5px;"><i class="fa-solid fa-voicemail me-1"></i>No Audio</span></div>`;
-                    } else {
-                        recAudio = `<div class="mt-1"><span class="badge bg-secondary bg-opacity-25 text-muted px-2 py-1" style="font-size:10.5px;"><i class="fa-solid fa-microphone-slash me-1"></i>No Recording</span></div>`;
-                    }
-
-                    let ivrSection = '';
-                    if (h.ivr_selections && h.ivr_selections.length > 0) {
-                        const selBadges = h.ivr_selections.map(s => `
-                            <span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50 me-1 mb-1 px-2 py-1" style="font-size:11px;">
-                                <i class="fa-solid fa-hand-pointer me-1"></i>${escapeHtml(s.label || s.digit)}
-                                ${s.time ? `<span class="text-white-50 ms-1" style="font-size:10px;">(${escapeHtml(s.time)})</span>` : ''}
-                            </span>
-                        `).join('');
-                        ivrSection = `
-                            <div class="mt-2 p-2 rounded bg-black bg-opacity-40 border border-secondary border-opacity-50">
-                                <div class="small fw-bold text-info mb-1" style="font-size:11.5px;"><i class="fa-solid fa-list-check me-1"></i>IVR Options Selected:</div>
-                                <div class="d-flex flex-wrap">${selBadges}</div>
-                            </div>
-                        `;
-                    } else if (h.latest_selection) {
-                        ivrSection = `
-                            <div class="mt-2 p-1 px-2 rounded bg-black bg-opacity-40 border border-secondary border-opacity-50 small text-warning" style="font-size:11.5px;">
-                                <i class="fa-solid fa-hand-pointer me-1"></i>Selected: <strong>${escapeHtml(h.latest_selection)}</strong>
-                            </div>
-                        `;
-                    }
-
-                    return `
-                        <div class="timeline-item">
-                            <div class="timeline-dot ${dotClass}"></div>
-                            <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
-                                <div class="d-flex align-items-center gap-1.5 flex-wrap">
-                                    ${directionPill}
-                                    <span class="badge ${badgeClass} px-2 py-1" style="font-size:11.5px;font-weight:700;">${escapeHtml(h.type)}</span>
-                                    <span class="badge bg-dark border border-secondary text-warning font-monospace px-2 py-1" style="font-size:11.5px;" title="Total Call Duration"><i class="fa-solid fa-stopwatch text-info me-1"></i>${escapeHtml(h.duration_formatted)}</span>
-                                    ${h.recording_duration ? `<span class="badge bg-dark border border-secondary text-info font-monospace px-2 py-1" style="font-size:11.5px;" title="Recording Audio Duration"><i class="fa-solid fa-microphone text-warning me-1"></i>${escapeHtml(recDurLabel)}</span>` : ''}
-                                </div>
-                                <div class="text-end">
-                                    <span class="badge bg-dark bg-opacity-75 text-light border border-secondary font-monospace px-2 py-1 shadow-sm" style="font-size:11px;letter-spacing:0.3px;">
-                                        <i class="fa-solid fa-calendar-days text-info me-1"></i>${dateDisplay}
-                                        ${timeDisplay ? `<span class="text-white-50 mx-1">·</span><i class="fa-solid fa-clock text-warning me-1"></i>${timeDisplay}` : ''}
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="small text-light text-opacity-75 mt-1" style="font-size:11.5px;">
-                                Handled By: <strong class="text-white">${escapeHtml(h.operator_name)}</strong> ${h.called_did ? `· DID: <span class="text-white-50">${escapeHtml(maskPhoneNumber(h.called_did))}</span>` : ''}
-                            </div>
-                            ${ivrSection}
-                            ${recAudio}
-                        </div>
-                    `;
-                }).join('');
-            }
 
             drawerBody.innerHTML = `
                 ${leadCard}
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="fw-bold text-light mb-0"><i class="fa-solid fa-timeline me-1"></i> Interaction History (${data.total_calls || historyList.length})</h6>
-                    <button class="btn btn-success btn-sm" 
-                            data-phone="${escapeHtml(cleanPhone)}" 
-                            data-name="${escapeHtml(custName)}" 
-                            onclick="triggerDialFromBtn(this)">
-                        <i class="fa-solid fa-phone me-1"></i> Call Now
+                <div class="drawer-nav-tabs">
+                    <button class="drawer-nav-btn ${activeHistoryState.activeTab === 'all' ? 'active' : ''}" onclick="switchDrawerTab('all')">
+                        <i class="fa-solid fa-layer-group"></i> All <span class="drawer-nav-badge">${totalInteractions}</span>
+                    </button>
+                    <button class="drawer-nav-btn ${activeHistoryState.activeTab === 'calls' ? 'active' : ''}" onclick="switchDrawerTab('calls')">
+                        <i class="fa-solid fa-phone"></i> Calls <span class="drawer-nav-badge">${totalCalls}</span>
+                    </button>
+                    <button class="drawer-nav-btn ${activeHistoryState.activeTab === 'messages' ? 'active' : ''}" onclick="switchDrawerTab('messages')">
+                        <i class="fab fa-whatsapp"></i> Messages <span class="drawer-nav-badge">${totalMessages}</span>
                     </button>
                 </div>
-                <div>${timelineHtml}</div>
+                <div id="drawer-tab-content"></div>
             `;
+
+            renderDrawerTabContent();
+        }
+
+        function renderDrawerTabContent() {
+            const container = document.getElementById('drawer-tab-content');
+            if (!container) return;
+
+            const tabButtons = document.querySelectorAll('.drawer-nav-btn');
+            tabButtons.forEach(btn => {
+                const btnText = btn.textContent.toLowerCase();
+                const isMatch = (activeHistoryState.activeTab === 'all' && btnText.includes('all')) ||
+                                (activeHistoryState.activeTab === 'calls' && btnText.includes('calls')) ||
+                                (activeHistoryState.activeTab === 'messages' && btnText.includes('messages'));
+                btn.className = `drawer-nav-btn ${isMatch ? 'active' : ''}`;
+            });
+
+            const data = activeHistoryState.callData || {};
+            const waData = activeHistoryState.waData || {};
+            const historyList = data.history || [];
+            const waList = waData.data || [];
+            const cleanPhone = activeHistoryState.cleanPhone || '';
+            const custName = activeHistoryState.customerName || 'Customer';
+            const leadId = activeHistoryState.leadId || '';
+            const companyId = activeHistoryState.companyId || '';
+
+            function buildCallTimelineItem(h) {
+                let dotClass = 'incoming';
+                let badgeClass = 'bg-success text-white';
+                const isIncoming = (h.direction === 'inbound') || (h.type && h.type.toLowerCase().includes('in')) || (h.type === 'Missed by Staff') || (h.type === 'Voicemail');
+                const directionPill = isIncoming
+                    ? `<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-1.5 py-0.5 fw-bold font-monospace" style="font-size:10px;"><i class="fa-solid fa-arrow-down-left me-1"></i>IN</span>`
+                    : `<span class="badge bg-primary bg-opacity-25 text-info border border-primary border-opacity-50 px-1.5 py-0.5 fw-bold font-monospace" style="font-size:10px;"><i class="fa-solid fa-arrow-up-right me-1"></i>OUT</span>`;
+
+                if (h.type === 'Missed by Staff' || h.type === 'Missed') { dotClass = 'missed'; badgeClass = 'bg-danger text-white'; }
+                else if (h.type === 'Outgoing') { dotClass = 'outgoing'; badgeClass = 'bg-primary text-white'; }
+                else if (h.type === 'Voicemail') { dotClass = 'voicemail'; badgeClass = 'bg-purple text-white'; }
+                else if (h.type === 'Unanswered') { dotClass = 'missed'; badgeClass = 'bg-secondary text-white'; }
+
+                let dateDisplay = '—';
+                let timeDisplay = '';
+                const rawDt = h.started_at || h.created_at;
+                const dObj = parseISTDate(rawDt);
+                if (dObj) {
+                    dateDisplay = dObj.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
+                    timeDisplay = dObj.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+                }
+
+                let recAudio = '';
+                const isVm = h.computed_type === 'voicemail' || (h.status && h.status.toLowerCase().includes('voicemail'));
+                const vmTitle = isVm ? "Play Voicemail Recording" : "Play Call Recording";
+                const recDurLabel = h.recording_duration_formatted || (h.recording_duration ? (Math.floor(h.recording_duration/60).toString().padStart(2,'0') + 'm ' + (h.recording_duration%60).toString().padStart(2,'0') + 's') : h.duration_formatted);
+                if (h.has_recording || h.recording_url) {
+                    const hId = 'dh_' + h.id;
+                    const audioSrc = h.recording_url || `/api/v1/telephony/calls/${h.call_session_id}/recording`;
+                    recAudio = `
+                        <div class="mt-2">
+                            <div class="audio-scrubber-player ${isVm ? 'border border-warning border-opacity-50' : ''}" id="player-row-${hId}">
+                                <button class="play-btn" id="pbtn-${hId}" onclick="toggleAudio('${escapeHtml(audioSrc)}', '${hId}', '${escapeHtml(recDurLabel)}')" title="${vmTitle} (${escapeHtml(recDurLabel)})" style="${isVm ? 'background: linear-gradient(135deg, #a855f7, #7e22ce);' : ''}">
+                                    <i class="fa-solid fa-play"></i>
+                                </button>
+                                <div class="scrubber-track-wrapper">
+                                    <input type="range" class="audio-slider" id="slider-${hId}" min="0" max="100" value="0" 
+                                           oninput="seekAudio(this.value, '${hId}')" 
+                                           onchange="commitSeekAudio(this.value, '${hId}')" 
+                                           title="Drag cursor to seek">
+                                    <div class="audio-time-label" id="timer-${hId}">00:00 / ${escapeHtml(recDurLabel)}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (isVm) {
+                    recAudio = `<div class="mt-1"><span class="badge bg-secondary bg-opacity-25 text-muted px-2 py-1" style="font-size:10.5px;"><i class="fa-solid fa-voicemail me-1"></i>No Audio</span></div>`;
+                } else {
+                    recAudio = `<div class="mt-1"><span class="badge bg-secondary bg-opacity-25 text-muted px-2 py-0.5" style="font-size:10px;"><i class="fa-solid fa-microphone-slash me-1"></i>No Recording</span></div>`;
+                }
+
+                let ivrSection = '';
+                if (h.ivr_selections && h.ivr_selections.length > 0) {
+                    const selBadges = h.ivr_selections.map(s => `
+                        <span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-50 me-1 mb-1 px-2 py-0.5" style="font-size:10.5px;">
+                            <i class="fa-solid fa-hand-pointer me-1"></i>${escapeHtml(s.label || s.digit)}
+                            ${s.time ? `<span class="text-white-50 ms-1" style="font-size:9.5px;">(${escapeHtml(s.time)})</span>` : ''}
+                        </span>
+                    `).join('');
+                    ivrSection = `
+                        <div class="mt-2 p-1.5 rounded bg-black bg-opacity-40 border border-secondary border-opacity-50">
+                            <div class="small fw-bold text-info mb-1" style="font-size:11px;"><i class="fa-solid fa-list-check me-1"></i>IVR Options Selected:</div>
+                            <div class="d-flex flex-wrap">${selBadges}</div>
+                        </div>
+                    `;
+                } else if (h.latest_selection) {
+                    ivrSection = `
+                        <div class="mt-1.5 p-1 px-2 rounded bg-black bg-opacity-40 border border-secondary border-opacity-50 small text-warning" style="font-size:11px;">
+                            <i class="fa-solid fa-hand-pointer me-1"></i>Selected: <strong>${escapeHtml(h.latest_selection)}</strong>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="timeline-item">
+                        <div class="timeline-dot ${dotClass}"></div>
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                ${directionPill}
+                                <span class="badge ${badgeClass} px-2 py-0.5" style="font-size:11px;font-weight:700;">${escapeHtml(h.type)}</span>
+                                <span class="badge bg-dark border border-secondary text-warning font-monospace px-1.5 py-0.5" style="font-size:11px;" title="Duration"><i class="fa-solid fa-stopwatch text-info me-1"></i>${escapeHtml(h.duration_formatted)}</span>
+                                ${h.recording_duration ? `<span class="badge bg-dark border border-secondary text-info font-monospace px-2 py-1" style="font-size:11px;" title="Recording Audio Duration"><i class="fa-solid fa-microphone text-warning me-1"></i>${escapeHtml(recDurLabel)}</span>` : ''}
+                                ${h.source ? `<span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-50 px-1.5 py-0.5" style="font-size:10px;">${escapeHtml(h.source)}</span>` : ''}
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-dark bg-opacity-75 text-light border border-secondary font-monospace px-2 py-0.5 shadow-sm" style="font-size:10.5px;">
+                                    <i class="fa-solid fa-calendar-days text-info me-1"></i>${dateDisplay}
+                                    ${timeDisplay ? `<span class="text-white-50 mx-1">·</span><i class="fa-solid fa-clock text-warning me-1"></i>${timeDisplay}` : ''}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="small text-light text-opacity-75 mt-1" style="font-size:11.5px;">
+                            Handled By: <strong class="text-white">${escapeHtml(h.operator_name || 'Staff Member')}</strong> ${h.called_did ? `· DID: <span class="text-white-50">${escapeHtml(maskPhoneNumber(h.called_did))}</span>` : ''}
+                        </div>
+                        ${ivrSection}
+                        ${recAudio}
+                        <div class="d-flex align-items-center justify-content-between mt-2 pt-1.5 border-top border-secondary border-opacity-25">
+                            <span class="text-muted small" style="font-size: 10.5px;"><i class="fa-solid fa-phone-volume text-info me-1"></i>Call #${escapeHtml(h.id || '')}</span>
+                            <button class="btn btn-outline-success btn-sm py-0.5 px-2 fw-semibold" 
+                                    style="font-size: 11px;"
+                                    onclick="openLeadWAModal('${escapeHtml(leadId)}', '${escapeHtml(cleanPhone)}', '${escapeHtml(isPlaceholderClientName(custName) ? '' : custName)}', '${escapeHtml(companyId)}', null, 'softphone_call_item')" 
+                                    title="Send WhatsApp or Catalog Template">
+                                <i class="fab fa-whatsapp me-1"></i> Send WA
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function buildWaTimelineItem(m) {
+                const isOutbound = m.message_type === 'outbound';
+                const timeStr = m.received_at_ist || m.received_at || '—';
+                const senderLabel = isOutbound ? (m.sent_by_name ? `Sent by ${m.sent_by_name}` : 'Outbound WhatsApp') : (m.from_name ? m.from_name : 'Inbound WhatsApp');
+                const ticks = isOutbound ? (m.status_ticks || '✓') : '';
+                const tickColor = m.status_color || '#6b7280';
+
+                return `
+                    <div class="timeline-item">
+                        <div class="timeline-dot whatsapp"></div>
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                            <div class="d-flex align-items-center gap-1.5 flex-wrap">
+                                <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-2 py-0.5 fw-bold" style="font-size:11px;">
+                                    <i class="fab fa-whatsapp me-1"></i>${isOutbound ? 'WA Sent' : 'WA Received'}
+                                </span>
+                                <span class="small text-muted" style="font-size:11px;">${escapeHtml(senderLabel)}</span>
+                            </div>
+                            <span class="badge bg-dark bg-opacity-75 text-light border border-secondary font-monospace px-2 py-0.5" style="font-size:10.5px;">
+                                <i class="fa-solid fa-clock text-warning me-1"></i>${escapeHtml(timeStr)}
+                            </span>
+                        </div>
+                        <div class="wa-timeline-card">
+                            <div class="text-white small" style="white-space: pre-wrap; word-break: break-word; font-size: 12.5px;">${escapeHtml(m.body_text || '')}</div>
+                            ${m.media_url ? `<div class="mt-1"><a href="${escapeHtml(m.media_url)}" target="_blank" class="badge bg-primary text-light"><i class="fa-solid fa-paperclip me-1"></i> View Attachment</a></div>` : ''}
+                            ${isOutbound ? `<div class="text-end mt-1 small" style="color:${tickColor};font-size:10px;">${ticks} ${escapeHtml(m.status_label || '')}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 1. CALLS TAB
+            if (activeHistoryState.activeTab === 'calls') {
+                if (historyList.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-5 text-muted">
+                            <i class="fa-solid fa-phone-slash fa-2x mb-2 opacity-50"></i>
+                            <div class="fw-bold text-light">No Call Records Found</div>
+                            <div class="small">No inbound or outbound calls logged for this number.</div>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `<div>${historyList.map(buildCallTimelineItem).join('')}</div>`;
+                }
+                return;
+            }
+
+            // 2. MESSAGES TAB (WhatsApp Chat Bubble Thread)
+            if (activeHistoryState.activeTab === 'messages') {
+                let bubblesHtml = '';
+                if (waList.length === 0) {
+                    bubblesHtml = `
+                        <div class="text-center py-5 text-muted">
+                            <i class="fab fa-whatsapp fa-2x mb-2 text-success opacity-50"></i>
+                            <div class="fw-bold text-light">No WhatsApp Messages Found</div>
+                            <div class="small mb-3">Start a conversation with this contact or send a digital catalog.</div>
+                            <button class="btn btn-outline-success btn-sm" onclick="openLeadWAModal('${escapeHtml(leadId)}', '${escapeHtml(cleanPhone)}', '${escapeHtml(custName)}', '${escapeHtml(companyId)}')">
+                                <i class="fab fa-whatsapp me-1"></i> Send First WhatsApp Message
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    bubblesHtml = `
+                        <div class="wa-chat-container">
+                            ${waList.map(m => {
+                                const isOut = m.message_type === 'outbound';
+                                const bubbleClass = isOut ? 'wa-bubble-out' : 'wa-bubble-in';
+                                const timeStr = m.received_at_ist || m.received_at || '';
+                                const ticks = isOut ? (m.status_ticks || '✓') : '';
+                                const tickColor = m.status_color || '#6b7280';
+                                const sender = isOut ? (m.sent_by_name || 'Staff') : (m.from_name || 'Customer');
+
+                                return `
+                                    <div class="wa-bubble ${bubbleClass}">
+                                        <div class="small fw-semibold mb-1 opacity-75" style="font-size:11px;">${escapeHtml(sender)}</div>
+                                        <div style="font-size:13px;line-height:1.4;">${escapeHtml(m.body_text || '')}</div>
+                                        ${m.media_url ? `<div class="mt-1.5"><a href="${escapeHtml(m.media_url)}" target="_blank" class="badge bg-dark border border-secondary text-light text-decoration-none"><i class="fa-solid fa-paperclip me-1"></i> Attachment</a></div>` : ''}
+                                        <div class="wa-bubble-meta">
+                                            <span>${escapeHtml(timeStr)}</span>
+                                            ${isOut ? `<span style="color:${tickColor};font-weight:bold;font-size:11px;">${ticks}</span>` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                        <div class="pt-3 mt-3 border-top border-secondary text-center">
+                            <button class="btn btn-success btn-sm w-100 py-2 fw-semibold" onclick="openLeadWAModal('${escapeHtml(leadId)}', '${escapeHtml(cleanPhone)}', '${escapeHtml(custName)}', '${escapeHtml(companyId)}')">
+                                <i class="fab fa-whatsapp me-1"></i> Send WhatsApp / Catalog Template
+                            </button>
+                        </div>
+                    `;
+                }
+                container.innerHTML = bubblesHtml;
+                return;
+            }
+
+            // 3. ALL TAB (Combined Chronological Timeline)
+            const combined = [];
+            historyList.forEach(c => {
+                combined.push({
+                    kind: 'call',
+                    dt: c.started_at || c.created_at || '',
+                    data: c
+                });
+            });
+            waList.forEach(m => {
+                combined.push({
+                    kind: 'whatsapp',
+                    dt: m.received_at || '',
+                    data: m
+                });
+            });
+
+            combined.sort((a, b) => {
+                const da = new Date(a.dt || 0).getTime();
+                const db = new Date(b.dt || 0).getTime();
+                return db - da;
+            });
+
+            if (combined.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-5 text-muted">
+                        <i class="fa-solid fa-inbox fa-2x mb-2 opacity-50"></i>
+                        <div class="fw-bold text-light">No Interactions Found</div>
+                        <div class="small">No calls or WhatsApp messages logged for this contact.</div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div>
+                        ${combined.map(item => {
+                            if (item.kind === 'call') {
+                                return buildCallTimelineItem(item.data);
+                            } else {
+                                return buildWaTimelineItem(item.data);
+                            }
+                        }).join('')}
+                    </div>
+                `;
+            }
         }
 
         function closeDrawer() {
@@ -3403,6 +3859,14 @@
                             </div>
                         </div>
                         <div class="d-flex align-items-center gap-2 ms-3 flex-shrink-0">
+                            ${cleanPhone ? `
+                                <button class="btn btn-outline-success btn-sm rounded-circle p-2" 
+                                        onclick="openLeadWAModal('${escapeHtml(leadId)}', '${cleanPhone}', '${name.replace(/'/g, "\\'")}', '${escapeHtml(c.company_id || '')}')" 
+                                        title="Send WhatsApp to ${name}" 
+                                        style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;">
+                                    <i class="fab fa-whatsapp"></i>
+                                </button>
+                            ` : ''}
                             <button class="btn btn-outline-info btn-sm rounded-circle p-2" onclick="openCustomerHistory('${cleanPhone}', '${name.replace(/'/g, "\\'")}')" title="View Customer History" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;">
                                 <i class="fa-solid fa-clock-rotate-left"></i>
                             </button>

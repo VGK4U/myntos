@@ -1111,9 +1111,11 @@ def _batch_resolve_contact_info(db: Session, phone_list: list) -> dict:
             SELECT DISTINCT ON (RIGHT(REGEXP_REPLACE(cl.phone, '[^0-9]', '', 'g'), 10))
                    RIGHT(REGEXP_REPLACE(cl.phone, '[^0-9]', '', 'g'), 10) AS l10,
                    cl.id, cl.name, cl.status, cl.handler_type, cl.handler_id,
-                   TRIM(COALESCE(se.first_name,'') || ' ' || COALESCE(se.last_name,'')) AS owner_name
+                   TRIM(COALESCE(se.first_name,'') || ' ' || COALESCE(se.last_name,'')) AS owner_name,
+                   sc.slug AS cat_slug, cl.company_id, cl.solar_value
             FROM crm_leads cl
             LEFT JOIN staff_employees se ON se.emp_code = cl.handler_id AND cl.handler_type = 'staff'
+            LEFT JOIN signup_categories sc ON sc.id = cl.category_id
             WHERE RIGHT(REGEXP_REPLACE(cl.phone, '[^0-9]', '', 'g'), 10) = ANY(:l10_list)
                OR RIGHT(REGEXP_REPLACE(cl.alternate_phone, '[^0-9]', '', 'g'), 10) = ANY(:l10_list)
             ORDER BY RIGHT(REGEXP_REPLACE(cl.phone, '[^0-9]', '', 'g'), 10), cl.id DESC
@@ -1129,10 +1131,9 @@ def _batch_resolve_contact_info(db: Session, phone_list: list) -> dict:
         wi_rows = db.execute(_t("""
             SELECT DISTINCT ON (RIGHT(REGEXP_REPLACE(customer_phone, '[^0-9]', '', 'g'), 10))
                    RIGHT(REGEXP_REPLACE(customer_phone, '[^0-9]', '', 'g'), 10) AS l10,
-                   id, customer_name, assigned_to, status
-            FROM partner_walkins
+                   id, customer_name, assigned_to_name, status
+            FROM walkin_registrations
             WHERE RIGHT(REGEXP_REPLACE(customer_phone, '[^0-9]', '', 'g'), 10) = ANY(:l10_list)
-               OR RIGHT(REGEXP_REPLACE(alternate_phone, '[^0-9]', '', 'g'), 10) = ANY(:l10_list)
             ORDER BY RIGHT(REGEXP_REPLACE(customer_phone, '[^0-9]', '', 'g'), 10), id DESC
         """), {"l10_list": l10_list}).fetchall()
         for r in wi_rows:
@@ -1144,14 +1145,12 @@ def _batch_resolve_contact_info(db: Session, phone_list: list) -> dict:
     st_map = {}
     try:
         st_rows = db.execute(_t("""
-            SELECT DISTINCT ON (RIGHT(REGEXP_REPLACE(st.customer_phone, '[^0-9]', '', 'g'), 10))
-                   RIGHT(REGEXP_REPLACE(st.customer_phone, '[^0-9]', '', 'g'), 10) AS l10,
-                   st.id, st.status, st.ticket_id,
-                   TRIM(COALESCE(se.first_name,'') || ' ' || COALESCE(se.last_name,'')) AS tech_name
-            FROM service_ticket st
-            LEFT JOIN staff_employees se ON se.id = st.service_technician_id
-            WHERE RIGHT(REGEXP_REPLACE(st.customer_phone, '[^0-9]', '', 'g'), 10) = ANY(:l10_list)
-            ORDER BY RIGHT(REGEXP_REPLACE(st.customer_phone, '[^0-9]', '', 'g'), 10), st.id DESC
+            SELECT DISTINCT ON (RIGHT(REGEXP_REPLACE(customer_phone, '[^0-9]', '', 'g'), 10))
+                   RIGHT(REGEXP_REPLACE(customer_phone, '[^0-9]', '', 'g'), 10) AS l10,
+                   id, status, ticket_reference, assigned_to_name
+            FROM service_tickets
+            WHERE RIGHT(REGEXP_REPLACE(customer_phone, '[^0-9]', '', 'g'), 10) = ANY(:l10_list)
+            ORDER BY RIGHT(REGEXP_REPLACE(customer_phone, '[^0-9]', '', 'g'), 10), id DESC
         """), {"l10_list": l10_list}).fetchall()
         for r in st_rows:
             st_map[r[0]] = r
@@ -1166,7 +1165,7 @@ def _batch_resolve_contact_info(db: Session, phone_list: list) -> dict:
                    RIGHT(REGEXP_REPLACE(scl.phone_number, '[^0-9]', '', 'g'), 10) AS l10,
                    scl.contact_name,
                    TRIM(COALESCE(se.first_name,'') || ' ' || COALESCE(se.last_name,'')) AS staff_name
-            FROM staff_call_logs scl
+            FROM staff_contact_lists scl
             LEFT JOIN staff_employees se ON se.id = scl.staff_id
             WHERE RIGHT(REGEXP_REPLACE(scl.phone_number, '[^0-9]', '', 'g'), 10) = ANY(:l10_list)
               AND scl.contact_name IS NOT NULL
@@ -1182,6 +1181,7 @@ def _batch_resolve_contact_info(db: Session, phone_list: list) -> dict:
         l10 = phone_last10_map.get(ph)
         existing_in = []
         resolved_name = None
+        seg = "general"
 
         if l10 and l10 in crm_map:
             crm = crm_map[l10]
@@ -1191,6 +1191,25 @@ def _batch_resolve_contact_info(db: Session, phone_list: list) -> dict:
                 "type": "crm", "label": "CRM",
                 "id": crm[1], "status": crm[3], "with_whom": with_whom,
             })
+            c_slug = str(crm[7] or '').lower() if len(crm) > 7 else ''
+            cid = crm[8] if len(crm) > 8 else None
+            sol_val = crm[9] if len(crm) > 9 else None
+            if "solar" in c_slug or (sol_val and sol_val > 0) or cid == 4:
+                seg = "solar"
+            elif "real" in c_slug or "dream" in c_slug:
+                seg = "real_estate"
+            elif "ev" in c_slug and "b2b" in c_slug:
+                seg = "ev_b2b"
+            elif "ev" in c_slug and "b2c" in c_slug:
+                seg = "ev_b2c"
+            elif "spare" in c_slug:
+                seg = "EV_SPARES"
+            elif "etc" in c_slug or "train" in c_slug:
+                seg = "etc_training"
+            elif "insur" in c_slug:
+                seg = "insurance"
+            elif cid == 2:
+                seg = "ev_b2c"
 
         if l10 and l10 in wi_map:
             wi = wi_map[l10]
@@ -1224,7 +1243,8 @@ def _batch_resolve_contact_info(db: Session, phone_list: list) -> dict:
 
         result[ph] = {
             "resolved_name": resolved_name,
-            "existing_in": existing_in
+            "existing_in": existing_in,
+            "segment": seg
         }
 
     return result
@@ -1295,6 +1315,7 @@ def get_inbox(
     phone: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    segment: Optional[str] = Query(None),
     dept_code: Optional[str] = Query(None),
     category_code: Optional[str] = Query(None),
     source: Optional[str] = Query(None),
@@ -1332,6 +1353,46 @@ def get_inbox(
     if to_date:
         base_conds.append("received_at <= :to_date")
         params["to_date"] = to_date.strip() + " 23:59:59"
+
+    # Segment filter support across CRM leads, staff, and users
+    if segment and str(segment).strip().lower() != 'all':
+        seg_val = str(segment).strip().lower().replace('-', '_')
+        try:
+            seg_query = """
+                SELECT DISTINCT cl.phone FROM crm_leads cl
+                LEFT JOIN signup_categories sc ON cl.category_id = sc.id
+                WHERE cl.phone IS NOT NULL AND (
+            """
+            if seg_val == 'solar':
+                seg_query += "sc.slug ILIKE '%solar%' OR cl.company_id = 4 OR COALESCE(cl.solar_value, 0) > 0"
+            elif seg_val in ('real_estate', 'myntreal_real'):
+                seg_query += "sc.slug ILIKE '%real%' OR sc.slug ILIKE '%estate%' OR sc.slug ILIKE '%dream%' OR cl.company_id = 4"
+            elif seg_val == 'ev_b2c':
+                seg_query += "sc.slug ILIKE '%ev%b2c%' OR cl.company_id = 2"
+            elif seg_val == 'ev_b2b':
+                seg_query += "sc.slug ILIKE '%ev%b2b%'"
+            elif seg_val in ('ev_spares', 'ev_spares'):
+                seg_query += "sc.slug ILIKE '%spare%'"
+            elif seg_val == 'etc_training':
+                seg_query += "sc.slug ILIKE '%etc%' OR sc.slug ILIKE '%train%'"
+            elif seg_val == 'staff':
+                seg_query = "SELECT DISTINCT phone FROM staff_employees WHERE phone IS NOT NULL AND (1=1"
+            elif seg_val == 'partner':
+                seg_query = "SELECT DISTINCT phone_number FROM users WHERE phone_number IS NOT NULL AND (role = 'partner' OR is_partner = true"
+            elif seg_val == 'vgk':
+                seg_query += "cl.is_vgk_program = true OR sc.slug ILIKE '%vgk%'"
+            else:
+                seg_query += f"sc.slug ILIKE '%{seg_val}%'"
+            seg_query += ")"
+            matching_seg_phones = [r[0] for r in db.execute(_t(seg_query)).fetchall() if r[0]]
+            seg_p10 = list(set(''.join(filter(str.isdigit, str(p)))[-10:] for p in matching_seg_phones if len(''.join(filter(str.isdigit, str(p)))) >= 10))
+            if seg_p10:
+                base_conds.append("RIGHT(REGEXP_REPLACE(from_phone, '[^0-9]', '', 'g'), 10) = ANY(:seg_p10)")
+                params["seg_p10"] = seg_p10
+            else:
+                base_conds.append("1=0")
+        except Exception as _seg_e:
+            print(f"[WA-INBOX] Segment filter error: {_seg_e}")
 
     if exclude_staff:
         try:
@@ -1635,6 +1696,7 @@ def get_inbox(
             "last_message":     lm.get("body"),
             "last_message_type": lm.get("type"),
             "existing_in":      contact_info["existing_in"],
+            "segment":          contact_info.get("segment") or "general",
             "last_sent_by":     sent_by_name,
             "last_sent_by_name": sent_by_name,
             "source_type":      source_type
@@ -2454,6 +2516,7 @@ def get_whatsapp_delivery_logs(
     search: Optional[str] = Query(None),
     days: Optional[int] = Query(3),
     trigger_type: Optional[str] = Query(None),
+    segment: Optional[str] = Query(None),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
@@ -2503,6 +2566,27 @@ def get_whatsapp_delivery_logs(
                 )
             elif t_low == 'otp':
                 query = query.filter(MessageLog.message_type.in_(['whatsapp_otp', 'otp']))
+
+        # Segment filter
+        seg_val = str(segment).strip().lower() if (segment and isinstance(segment, str) and not hasattr(segment, 'default')) else ''
+        if seg_val and seg_val != 'all':
+            s_clean = seg_val.replace('-', '_')
+            if s_clean == 'solar':
+                query = query.filter(or_(MessageLog.message_body.ilike('%solar%'), MessageLog.message_body.ilike('%rooftop%'), MessageLog.message_body.ilike('%subsidy%')))
+            elif s_clean in ('real_estate', 'myntreal_real'):
+                query = query.filter(or_(MessageLog.message_body.ilike('%real%'), MessageLog.message_body.ilike('%property%'), MessageLog.message_body.ilike('%plot%'), MessageLog.message_body.ilike('%villa%')))
+            elif s_clean in ('ev_b2c', 'ev_b2b', 'ev_spares'):
+                query = query.filter(or_(MessageLog.message_body.ilike('%ev%'), MessageLog.message_body.ilike('%zynova%'), MessageLog.message_body.ilike('%battery%'), MessageLog.message_body.ilike('%vehicle%')))
+            elif s_clean == 'etc_training':
+                query = query.filter(or_(MessageLog.message_body.ilike('%training%'), MessageLog.message_body.ilike('%etc%'), MessageLog.message_body.ilike('%skill%'), MessageLog.message_body.ilike('%course%')))
+            elif s_clean in ('otp', 'system'):
+                query = query.filter(or_(MessageLog.message_type.in_(['whatsapp_otp', 'otp']), MessageLog.message_body.ilike('%otp%'), MessageLog.message_body.ilike('%verification%')))
+            elif s_clean == 'staff':
+                query = query.filter(or_(MessageLog.message_type.ilike('%staff%'), MessageLog.sent_by_staff_id.isnot(None)))
+            elif s_clean == 'partner':
+                query = query.filter(or_(MessageLog.message_body.ilike('%partner%'), MessageLog.message_body.ilike('%commission%'), MessageLog.message_body.ilike('%payout%')))
+            else:
+                query = query.filter(MessageLog.message_body.ilike(f'%{s_clean}%'))
 
         status_val = str(status).strip() if (status and isinstance(status, str) and not hasattr(status, 'default')) else ''
         if status_val and status_val.lower() != 'none':
@@ -3050,10 +3134,91 @@ def _build_target_map(targets_dict: dict) -> dict:
     return target_map
 
 
+def _extract_matched_snippet(text: Optional[str], query: Optional[str]) -> Optional[str]:
+    """Extract snippet around matched keyword from message body."""
+    if not text or not query:
+        return None
+    q = query.strip().lower()
+    t = str(text).strip()
+    idx = t.lower().find(q)
+    if idx == -1:
+        return None
+    start = max(0, idx - 25)
+    end = min(len(t), idx + len(q) + 45)
+    snip = t[start:end].strip()
+    if start > 0:
+        snip = "..." + snip
+    if end < len(t):
+        snip = snip + "..."
+    return snip
+
+
+def _resolve_contact_segment(phone_or_group: str, name: Optional[str], msg_text: Optional[str], lead_info: Optional[dict]) -> str:
+    """Classify conversation into standardized segment for universal filtering."""
+    if lead_info:
+        cat_slug = str(lead_info.get("category_slug") or "").lower()
+        if "solar" in cat_slug or (lead_info.get("solar_value") or 0) > 0:
+            return "solar"
+        if "real" in cat_slug or "estate" in cat_slug or "dream" in cat_slug:
+            return "real_estate"
+        if "ev" in cat_slug and "b2b" in cat_slug:
+            return "ev_b2b"
+        if "ev" in cat_slug and "b2c" in cat_slug:
+            return "ev_b2c"
+        if "spare" in cat_slug:
+            return "EV_SPARES"
+        if "etc" in cat_slug or "train" in cat_slug:
+            return "etc_training"
+        if "insur" in cat_slug:
+            return "insurance"
+        cid = lead_info.get("company_id")
+        if cid == 4:
+            return "solar"
+        if cid == 2:
+            return "ev_b2c"
+
+    lower_name = str(name or '').lower()
+    lower_ident = str(phone_or_group or '').lower()
+    combined = lower_name + " " + lower_ident
+    if "solar" in combined:
+        return "solar"
+    if "real estate" in combined or "property" in combined or "myntreal" in combined:
+        return "real_estate"
+    if "ev b2b" in combined:
+        return "ev_b2b"
+    if "ev" in combined or "spares" in combined:
+        return "ev_b2c"
+    if "training" in combined or "etc" in combined:
+        return "etc_training"
+    if "vgk" in combined:
+        return "vgk"
+    if "staff" in combined:
+        return "staff"
+    if "lead" in combined:
+        return "leads"
+
+    lower_msg = str(msg_text or '').lower()
+    if "solar" in lower_msg or "rooftop" in lower_msg or "subsidy" in lower_msg or "kwh" in lower_msg:
+        return "solar"
+    if "property" in lower_msg or "plot" in lower_msg or "flat" in lower_msg or "villa" in lower_msg:
+        return "real_estate"
+    if "electric vehicle" in lower_msg or "ev bike" in lower_msg or "battery" in lower_msg:
+        return "ev_b2c"
+    if "skill training" in lower_msg or "course" in lower_msg or "certification" in lower_msg:
+        return "etc_training"
+    if "payout" in lower_msg or "commission" in lower_msg or "referral" in lower_msg:
+        return "partner"
+    if "otp" in lower_msg or "verification code" in lower_msg:
+        return "system"
+
+    return "general"
+
+
 @router.get("/conversations-hub")
 def get_whatsapp_conversations_hub(
     search: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
+    segment: Optional[str] = Query(None),
     scope: Optional[str] = Query('assigned_tagged'),
     source_filter: Optional[str] = Query('all'),
     db: Session = Depends(get_db),
@@ -3075,6 +3240,7 @@ def get_whatsapp_conversations_hub(
         # Safe parameter normalization
         search_val = str(search).strip() if (search is not None and isinstance(search, str) and not hasattr(search, 'default')) else None
         category_val = str(category).strip() if (category is not None and isinstance(category, str) and not hasattr(category, 'default')) else None
+        segment_val = str(segment).strip().lower() if (segment is not None and isinstance(segment, str) and not hasattr(segment, 'default')) else None
         scope_val = str(scope).strip().lower() if (scope is not None and isinstance(scope, str) and not hasattr(scope, 'default')) else 'assigned_tagged'
         source_filt_val = str(source_filter).strip().lower() if (source_filter is not None and isinstance(source_filter, str) and not hasattr(source_filter, 'default')) else 'all'
 
@@ -3553,11 +3719,13 @@ def get_whatsapp_conversations_hub(
                     if p in permitted_phones or info.get("recipient_type") in ("group", "channel") or info.get("contact_type") in ("GROUP", "CHANNEL")
                 }
 
-        # 3. Enhanced Identity Resolution: Query matching phone names
+        # 3. Enhanced Identity & Segment Resolution: Query matching phone names & categories
         from app.models.crm import CRMLead
         from app.models.user import User
+        from app.models.signup_category import SignupCategory
 
-        contact_phones_10 = [p for p in contact_map.keys() if len(p) == 10 and contact_map[p].get("contact_type") not in ("GROUP", "CHANNEL")][:25]
+        contact_phones_10 = [p for p in contact_map.keys() if len(p) == 10 and contact_map[p].get("contact_type") not in ("GROUP", "CHANNEL")]
+        lead_info_map = {}
         if contact_phones_10:
             phone_variants = set()
             for p in contact_phones_10:
@@ -3565,13 +3733,27 @@ def get_whatsapp_conversations_hub(
                 phone_variants.add(f"91{p}")
                 phone_variants.add(f"+91{p}")
 
-            leads = db.query(CRMLead.name, CRMLead.phone, CRMLead.alternate_phone).filter(
+            leads = db.query(
+                CRMLead.name, CRMLead.phone, CRMLead.alternate_phone,
+                CRMLead.category_id, CRMLead.company_id, CRMLead.solar_value,
+                SignupCategory.slug.label("category_slug")
+            ).outerjoin(SignupCategory, CRMLead.category_id == SignupCategory.id).filter(
                 or_(CRMLead.phone.in_(phone_variants), CRMLead.alternate_phone.in_(phone_variants))
             ).all()
-            for l_name, l_ph, l_alt in leads:
+            for l_row in leads:
+                l_name = l_row.name
+                l_ph = l_row.phone
+                l_alt = l_row.alternate_phone
                 for ph_val in (l_ph, l_alt):
                     if not ph_val: continue
                     cp = ''.join(filter(str.isdigit, str(ph_val)))[-10:]
+                    if cp:
+                        lead_info_map[cp] = {
+                            "name": l_name,
+                            "category_slug": l_row.category_slug,
+                            "company_id": l_row.company_id,
+                            "solar_value": l_row.solar_value
+                        }
                     if cp in contact_map and contact_map[cp]["contact_type"] not in ("GROUP", "CHANNEL"):
                         if l_name and str(l_name).strip() not in ("0", "None", "null") and not str(l_name).strip().isdigit():
                             contact_map[cp]["name"] = l_name
@@ -3618,10 +3800,22 @@ def get_whatsapp_conversations_hub(
             if "contact_type" not in info:
                 info["contact_type"] = "CONTACT"
 
+        # Resolve segment and content search snippets for all contacts
+        for p, info in contact_map.items():
+            if not info.get("segment"):
+                info["segment"] = _resolve_contact_segment(p, info.get("name"), info.get("last_message"), lead_info_map.get(p))
+            if search_val and not info.get("matched_snippet"):
+                snip = _extract_matched_snippet(info.get("last_message"), search_val)
+                if snip:
+                    info["matched_snippet"] = snip
+
         # If searching, supplement with matching CRM leads so staff can initiate conversations directly
         if search_val and len(contact_map) < 30:
             s_lead_term = f"%{search_val}%"
-            matching_leads = db.query(CRMLead).filter(
+            matching_leads = db.query(
+                CRMLead.name, CRMLead.phone, CRMLead.category_id, CRMLead.company_id, CRMLead.solar_value,
+                SignupCategory.slug.label("category_slug")
+            ).outerjoin(SignupCategory, CRMLead.category_id == SignupCategory.id).filter(
                 CRMLead.phone.isnot(None),
                 CRMLead.phone != '',
                 or_(CRMLead.name.ilike(s_lead_term), CRMLead.phone.ilike(s_lead_term))
@@ -3629,13 +3823,19 @@ def get_whatsapp_conversations_hub(
             for ml in matching_leads:
                 m_ph = ''.join(filter(str.isdigit, ml.phone or ''))[-10:]
                 if m_ph and len(m_ph) == 10 and m_ph not in contact_map:
+                    ml_lead_info = {
+                        "category_slug": ml.category_slug,
+                        "company_id": ml.company_id,
+                        "solar_value": ml.solar_value
+                    }
                     contact_map[m_ph] = {
                         "phone": m_ph,
                         "name": ml.name or f"Customer (+91 {m_ph})",
                         "recipient_type": "individual",
                         "contact_type": "CONTACT",
-                        "status": ml.status or "Active",
+                        "status": "Active",
                         "category": "Direct Messages",
+                        "segment": _resolve_contact_segment(m_ph, ml.name, None, ml_lead_info),
                         "last_message": "Click to start conversation",
                         "last_time": "—",
                         "last_timestamp": datetime.min,
@@ -3644,13 +3844,26 @@ def get_whatsapp_conversations_hub(
                         "unread_count": 0,
                         "channel": "META_API",
                         "badge": "CRM Lead",
-                        "is_unassigned": False
+                        "is_unassigned": False,
+                        "matched_snippet": _extract_matched_snippet(ml.name, search_val)
                     }
 
         sorted_contacts = sorted(contact_map.values(), key=lambda x: str(x["last_timestamp"]), reverse=True)
 
         if category_val and category_val != 'all':
-            sorted_contacts = [c for c in sorted_contacts if category_val.lower() in c["category"].lower()]
+            sorted_contacts = [c for c in sorted_contacts if category_val.lower() in c.get("category", "").lower()]
+
+        if segment_val and segment_val != 'all':
+            def _matches_segment(c_seg, filter_seg):
+                if not c_seg: return False
+                c_s = str(c_seg).lower().replace('-', '_')
+                f_s = str(filter_seg).lower().replace('-', '_')
+                if f_s == c_s: return True
+                if f_s in ('real_estate', 'myntreal_real', 'real_dreams') and c_s in ('real_estate', 'myntreal_real', 'real_dreams'): return True
+                if f_s in ('ev_b2c', 'ev_b2b', 'ev_spares') and f_s == c_s: return True
+                if f_s in ('etc_training', 'etc') and c_s in ('etc_training', 'etc'): return True
+                return f_s in c_s or c_s in f_s
+            sorted_contacts = [c for c in sorted_contacts if _matches_segment(c.get("segment", ""), segment_val)]
 
         return {"success": True, "total": len(sorted_contacts), "conversations": sorted_contacts}
     except HTTPException:
