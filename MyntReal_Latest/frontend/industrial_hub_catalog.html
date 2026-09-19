@@ -999,6 +999,171 @@
             border-radius: 6px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            z-index: 2;
+        }
+
+        /* ── EV 5-MODEL INTERACTIVE SHOWCASE ──────────────────────────────── */
+        .ev-models-showcase {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .ev-main-display {
+            position: relative;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 220px;
+        }
+
+        .ev-featured-img {
+            width: 100%;
+            max-height: 240px;
+            object-fit: contain;
+            transition: transform 0.3s ease, opacity 0.2s ease;
+        }
+
+        .ev-active-model-chip {
+            position: absolute;
+            bottom: 4px;
+            right: 8px;
+            background: rgba(11, 31, 51, 0.9);
+            backdrop-filter: blur(8px);
+            color: var(--hub-gold-accent);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(244, 185, 66, 0.35);
+        }
+
+        .ev-models-thumb-row {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            width: 100%;
+            flex-wrap: wrap;
+        }
+
+        .ev-model-thumb-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--radius-sm);
+            padding: 4px 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #CBD5E1;
+            font-size: 10px;
+            font-weight: 600;
+            min-width: 52px;
+        }
+
+        .ev-model-thumb-btn img {
+            width: 38px;
+            height: 26px;
+            object-fit: contain;
+        }
+
+        .ev-model-thumb-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: var(--hub-cyan-tech);
+        }
+
+        .ev-model-thumb-btn.active {
+            background: rgba(21, 94, 239, 0.35);
+            border-color: var(--hub-gold-accent);
+            color: #FFFFFF;
+            box-shadow: 0 0 10px rgba(244, 185, 66, 0.35);
+        }
+
+        .models-overview-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .model-pill {
+            background: var(--hub-canvas);
+            border: 1px solid var(--hub-border);
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--hub-text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .model-pill:hover {
+            border-color: var(--hub-blue-primary);
+            color: var(--hub-blue-primary);
+        }
+
+        .model-pill i {
+            color: var(--hub-blue-primary);
+            margin-right: 3px;
+        }
+
+        /* ── LOGO SHOWCASE CONTAINER (WHITE CONTRAST ENCLOSURE) ───────────── */
+        .vertical-logo-showcase {
+            background: #FFFFFF;
+            border-radius: var(--radius-lg);
+            padding: 24px 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            width: 100%;
+            max-width: 280px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .vertical-logo-showcase img {
+            max-height: 140px;
+            max-width: 200px;
+            object-fit: contain;
+        }
+
+        .vertical-logo-caption {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--hub-text-secondary);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border-top: 1px solid var(--hub-border);
+            padding-top: 8px;
+            width: 100%;
+        }
+
+        .vertical-media-caption {
+            position: absolute;
+            bottom: 12px;
+            left: 12px;
+            right: 12px;
+            background: rgba(11, 31, 51, 0.9);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #FFFFFF;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 5px 10px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            z-index: 2;
         }
 
         .vertical-info-side {
@@ -3078,9 +3243,36 @@
                 <!-- Vertical 1: Manthra EV -->
                 <div class="vertical-card" id="vertical-ev">
                     <div class="vertical-card-inner">
-                        <div class="vertical-media-side">
+                        <div class="vertical-media-side ev-media-side">
                             <span class="vertical-stream-tag"><i class="fas fa-motorcycle"></i> Stream 01</span>
-                            <img src="/public/hub/Assets/manthra-beast-real.webp" alt="Manthra EV Lineup" onerror="this.onerror=null; this.src='/public/hub/Assets/manthra-fleet-lineup.webp';">
+                            <div class="ev-models-showcase">
+                                <div class="ev-main-display">
+                                    <img id="evMainImg" src="/public/hub/Assets/manthra-beast-real.webp" alt="Manthra EV - Beast Pro" class="ev-featured-img">
+                                    <span class="ev-active-model-chip" id="evActiveModelChip">Beast Pro (₹94,499)</span>
+                                </div>
+                                <div class="ev-models-thumb-row">
+                                    <button type="button" class="ev-model-thumb-btn active" onclick="switchEvModel('beast', 'Beast Pro (₹94,499)', '/public/hub/Assets/manthra-beast-real.webp', this)" title="Beast Pro">
+                                        <img src="/public/hub/Assets/manthra-beast-real.webp" alt="Beast Pro">
+                                        <span>Beast Pro</span>
+                                    </button>
+                                    <button type="button" class="ev-model-thumb-btn" onclick="switchEvModel('royal', 'Royal (₹88,999)', '/public/hub/Assets/manthra-royal-real.webp', this)" title="Royal">
+                                        <img src="/public/hub/Assets/manthra-royal-real.webp" alt="Royal">
+                                        <span>Royal</span>
+                                    </button>
+                                    <button type="button" class="ev-model-thumb-btn" onclick="switchEvModel('power-plus', 'Power Plus (₹74,999)', '/public/hub/Assets/manthra-power-plus-real.webp', this)" title="Power Plus">
+                                        <img src="/public/hub/Assets/manthra-power-plus-real.webp" alt="Power Plus">
+                                        <span>Power Plus</span>
+                                    </button>
+                                    <button type="button" class="ev-model-thumb-btn" onclick="switchEvModel('pro-gt', 'Pro GT (₹69,999)', '/public/hub/Assets/manthra-pro-gt-real.webp', this)" title="Pro GT">
+                                        <img src="/public/hub/Assets/manthra-pro-gt-real.webp" alt="Pro GT">
+                                        <span>Pro GT</span>
+                                    </button>
+                                    <button type="button" class="ev-model-thumb-btn" onclick="switchEvModel('m99', 'M99 (₹31,499)', '/public/hub/Assets/manthra-m99-real.png', this)" title="M99">
+                                        <img src="/public/hub/Assets/manthra-m99-real.png" alt="M99">
+                                        <span>M99</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                         <div class="vertical-info-side">
                             <div class="vertical-info-top">
@@ -3090,6 +3282,14 @@
                                 </div>
                                 <p class="vertical-desc">High-demand electric mobility engineered specifically for Indian road conditions. Low-speed (&lt;25 km/h) category requiring <strong>no driving license, no RTO registration</strong>, and zero road tax.</p>
                                 
+                                <div class="models-overview-pills">
+                                    <span class="model-pill" onclick="switchEvModel('beast', 'Beast Pro (₹94,499)', '/public/hub/Assets/manthra-beast-real.webp', document.querySelectorAll('.ev-model-thumb-btn')[0])"><i class="fas fa-motorcycle"></i> Beast Pro • ₹94,499</span>
+                                    <span class="model-pill" onclick="switchEvModel('royal', 'Royal (₹88,999)', '/public/hub/Assets/manthra-royal-real.webp', document.querySelectorAll('.ev-model-thumb-btn')[1])"><i class="fas fa-motorcycle"></i> Royal • ₹88,999</span>
+                                    <span class="model-pill" onclick="switchEvModel('power-plus', 'Power Plus (₹74,999)', '/public/hub/Assets/manthra-power-plus-real.webp', document.querySelectorAll('.ev-model-thumb-btn')[2])"><i class="fas fa-motorcycle"></i> Power Plus • ₹74,999</span>
+                                    <span class="model-pill" onclick="switchEvModel('pro-gt', 'Pro GT (₹69,999)', '/public/hub/Assets/manthra-pro-gt-real.webp', document.querySelectorAll('.ev-model-thumb-btn')[3])"><i class="fas fa-motorcycle"></i> Pro GT • ₹69,999</span>
+                                    <span class="model-pill" onclick="switchEvModel('m99', 'M99 (₹31,499)', '/public/hub/Assets/manthra-m99-real.png', document.querySelectorAll('.ev-model-thumb-btn')[4])"><i class="fas fa-motorcycle"></i> M99 • ₹31,499</span>
+                                </div>
+
                                 <div class="vertical-key-specs">
                                     <div class="spec-item">
                                         <span class="spec-item-label">5 Verified Models</span>
@@ -3123,7 +3323,10 @@
                     <div class="vertical-card-inner">
                         <div class="vertical-media-side">
                             <span class="vertical-stream-tag"><i class="fas fa-solar-panel"></i> Stream 02</span>
-                            <img src="/public/hub/Assets/Solar-PM.webp" alt="Har Ghar Solar Rooftop EPC" onerror="this.onerror=null; this.src='/public/hub/Assets/Solar_D.webp';">
+                            <img src="/public/hub/Assets/har-ghar-solar-real-installation.jpg" alt="Actual MyntReal Har Ghar Solar Rooftop Installation" class="vertical-feature-img" style="object-fit: cover; border-radius: var(--radius-md); max-height: 310px; width: 100%;">
+                            <div class="vertical-media-caption">
+                                <i class="fas fa-certificate text-warning"></i> Authentic Rooftop Solar Installation (AP Customer Site)
+                            </div>
                         </div>
                         <div class="vertical-info-side">
                             <div class="vertical-info-top">
@@ -3166,7 +3369,10 @@
                     <div class="vertical-card-inner">
                         <div class="vertical-media-side">
                             <span class="vertical-stream-tag"><i class="fas fa-shield-alt"></i> Stream 03</span>
-                            <img src="/public/hub/Assets/Care.webp" alt="VGK Care Insurance" onerror="this.onerror=null; this.src='/public/hub/Assets/Insurance.png';">
+                            <div class="vertical-logo-showcase">
+                                <img src="/public/hub/Assets/Care.webp" alt="VGK Care Multi-Insurer Advisory" onerror="this.onerror=null; this.src='/public/hub/Assets/Insurance.png';">
+                                <div class="vertical-logo-caption">Associated with Bajaj Capital &amp; 40+ Insurers</div>
+                            </div>
                         </div>
                         <div class="vertical-info-side">
                             <div class="vertical-info-top">
@@ -3209,7 +3415,10 @@
                     <div class="vertical-card-inner">
                         <div class="vertical-media-side">
                             <span class="vertical-stream-tag"><i class="fas fa-city"></i> Stream 04</span>
-                            <img src="/public/hub/Assets/realdreams.webp" alt="VGK Real Dreams" onerror="this.onerror=null; this.src='/public/hub/Assets/Estate.png';">
+                            <div class="vertical-logo-showcase">
+                                <img src="/public/hub/Assets/realdreams.webp" alt="VGK Real Dreams Townships" onerror="this.onerror=null; this.src='/public/hub/Assets/Estate.png';">
+                                <div class="vertical-logo-caption">DTCP / VMRDA &amp; RERA Approved Projects</div>
+                            </div>
                         </div>
                         <div class="vertical-info-side">
                             <div class="vertical-info-top">
@@ -3252,7 +3461,10 @@
                     <div class="vertical-card-inner">
                         <div class="vertical-media-side">
                             <span class="vertical-stream-tag"><i class="fas fa-graduation-cap"></i> Stream 05</span>
-                            <img src="/public/hub/Assets/ETC1.webp" alt="EVolution Training Centre" onerror="this.onerror=null; this.src='/public/hub/Assets/ETC.webp';">
+                            <img src="/public/hub/Assets/etc-ev-practical-lab-real.jpg" alt="Actual EVolution Practical Scooter Lab" class="vertical-feature-img" style="object-fit: cover; border-radius: var(--radius-md); max-height: 310px; width: 100%;">
+                            <div class="vertical-media-caption">
+                                <i class="fas fa-tools text-warning"></i> Authentic Practical EV Lab (Govt. Polytechnic Collaboration)
+                            </div>
                         </div>
                         <div class="vertical-info-side">
                             <div class="vertical-info-top">
@@ -4375,6 +4587,20 @@
             document.getElementById('heroSubtitle').innerHTML = data.heroSubtitle;
             document.getElementById('ctaPrimary').innerHTML = data.ctaPrimary;
             document.getElementById('ctaSecondary').innerHTML = data.ctaSecondary;
+        }
+
+        /* ── EV 5-MODEL SWITCHER LOGIC ─────────────────────────────────────── */
+        function switchEvModel(id, name, src, btn) {
+            const img = document.getElementById('evMainImg');
+            const chip = document.getElementById('evActiveModelChip');
+            if (img && chip) {
+                img.style.opacity = '0.3';
+                img.src = src;
+                img.onload = () => { img.style.opacity = '1'; };
+                chip.innerText = name;
+                document.querySelectorAll('.ev-model-thumb-btn').forEach(b => b.classList.remove('active'));
+                if (btn) btn.classList.add('active');
+            }
         }
 
         /* ── INTERACTIVE ROI CALCULATOR LOGIC ──────────────────────────────── */
