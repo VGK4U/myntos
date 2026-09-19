@@ -2228,7 +2228,7 @@ SEED_CATALOGS_DATA = [
                     {"label": "Battery Options", "value": "Graphene 48V 32Ah (9M) / Smart LFP (3Y)"},
                     {"label": "License", "value": "Zero License Required"}
                 ],
-                "pricing": {"base_price": 49999, "max_price": 81999, "currency": "INR", "price_text": "₹49,999 – ₹81,999"},
+                "pricing": {"base_price": 49923, "max_price": 81788, "currency": "INR", "price_text": "₹49,923 – ₹81,788"},
                 "media_urls": ["/public/hub/Assets/manthra-pro-gt-real.webp"],
                 "badges": ["Sport Commuter", "Non-RTO", "Zero License"],
                 "sort_order": 0
@@ -2245,7 +2245,7 @@ SEED_CATALOGS_DATA = [
                     {"label": "Carrier", "value": "Heavy Steel Extended Rack"},
                     {"label": "License", "value": "Zero License Required"}
                 ],
-                "pricing": {"base_price": 51499, "max_price": 83499, "currency": "INR", "price_text": "₹51,499 – ₹83,499"},
+                "pricing": {"base_price": 51278, "max_price": 83143, "currency": "INR", "price_text": "₹51,278 – ₹83,143"},
                 "media_urls": ["/public/hub/Assets/manthra-power-plus-real.webp"],
                 "badges": ["200kg Payload", "Heavy Cargo", "Non-RTO"],
                 "sort_order": 1
@@ -2262,7 +2262,7 @@ SEED_CATALOGS_DATA = [
                     {"label": "Storage", "value": "26L Full Helmet Space"},
                     {"label": "License", "value": "Zero License Required"}
                 ],
-                "pricing": {"base_price": 80999, "max_price": 96999, "currency": "INR", "price_text": "₹80,999 – ₹96,999"},
+                "pricing": {"base_price": 80782, "max_price": 96925, "currency": "INR", "price_text": "₹80,782 – ₹96,925"},
                 "media_urls": ["/public/hub/Assets/manthra-m99-real.webp"],
                 "badges": ["Urban Flagship", "Reverse Assist", "Non-RTO"],
                 "sort_order": 2
@@ -2279,7 +2279,7 @@ SEED_CATALOGS_DATA = [
                     {"label": "Charging", "value": "Built-in Fast USB Port"},
                     {"label": "License", "value": "Zero License Required"}
                 ],
-                "pricing": {"base_price": 80999, "max_price": 96999, "currency": "INR", "price_text": "₹80,999 – ₹96,999"},
+                "pricing": {"base_price": 80782, "max_price": 96925, "currency": "INR", "price_text": "₹80,782 – ₹96,925"},
                 "media_urls": ["/public/hub/Assets/manthra-royal-real.webp"],
                 "badges": ["Vintage Luxury", "Retro Classic", "Non-RTO"],
                 "sort_order": 3
@@ -2296,7 +2296,7 @@ SEED_CATALOGS_DATA = [
                     {"label": "Headlamp", "value": "Quad Projector LED Beam"},
                     {"label": "License", "value": "Zero License Required"}
                 ],
-                "pricing": {"base_price": 82999, "max_price": 99499, "currency": "INR", "price_text": "₹82,999 – ₹99,499"},
+                "pricing": {"base_price": 82916, "max_price": 99058, "currency": "INR", "price_text": "₹82,916 – ₹99,058"},
                 "media_urls": ["/public/hub/Assets/manthra-beast-real.webp"],
                 "badges": ["Street Fighter", "Dual Disc CBS", "Non-RTO"],
                 "sort_order": 4
