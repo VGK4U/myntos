@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
-    <title>Manthra EV — Customer 2-Wheeler Electric Scooter Pricing & Specifications Catalog</title>
+    <title>Manthra EV — Customer 2-Wheeler Electric Scooter Showroom & Price Catalogue</title>
     <meta name="description" content="Official 2026 Customer Price List for Manthra EV 2-wheelers: Pro GT, Power Plus, M99 Flagship, Royal Sling, and Beast Pro. Non-RTO Low-Speed (<25 km/h), Graphene 48V 32Ah (9M warranty) & LFP (3Y warranty) battery options. Complete with Solar, Insurance & Spares customer benefits.">
     <meta name="keywords" content="Manthra EV, electric scooter customer price, EV 2 wheeler pricing, non-RTO electric scooter, low speed EV, graphene battery scooter 9 months warranty, LFP electric scooter India, MyntReal Hub, Har Ghar Solar, VGK Care Insurance">
     <meta name="robots" content="index, follow">
@@ -11,112 +11,172 @@
     <!-- Fonts & Icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&family=Noto+Sans+Tamil:wght@400;600;700&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <style>
         :root {
+            /* Distinct Manthra EV Automotive Visual Identity */
             --bg-page: #f8fafc;
             --bg-card: #ffffff;
             --bg-card-alt: #f1f5f9;
-            --text-heading: #0f172a;
-            --text-body: #334155;
-            --text-secondary: #64748b;
-            --brand-border: #e2e8f0;
-            --border-subtle: #f1f5f9;
-            --brand-primary: #059669;
-            --brand-primary-hover: #047857;
-            --brand-warning: #f59e0b;
-            --brand-danger: #ef4444;
-            --brand-info: #0284c7;
-            --brand-purple: #7c3aed;
-            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.07);
-            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
-        }
+            --bg-surface: #ffffff;
+            --bg-elevated: #ffffff;
 
-        [data-theme="dark"] {
-            --bg-page: #0b0f17;
-            --bg-card: #151d2c;
-            --bg-card-alt: #1c273b;
-            --text-heading: #f8fafc;
-            --text-body: #cbd5e1;
-            --text-secondary: #94a3b8;
-            --brand-border: #26334a;
-            --border-subtle: #1e293b;
-            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-            --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+            --text-heading: #111827;
+            --text-body: #1e293b;
+            --text-secondary: #475569;
+            --text-muted: #64748b;
+
+            --brand-border: #e2e8f0;
+            --brand-border-focus: #84cc16;
+            --border-subtle: #f1f5f9;
+
+            /* Electric Green / Lime Green */
+            --brand-lime: #84cc16;
+            --brand-lime-hover: #65a30d;
+            --brand-lime-dark: #3f6212;
+            --brand-lime-bg: #f7fee7;
+            --brand-lime-border: #bef264;
+
+            /* Deep Graphite */
+            --brand-graphite: #111827;
+            --brand-graphite-surface: #1f2937;
+            --brand-slate: #0f172a;
+
+            /* Electric Teal / Cyan */
+            --brand-teal: #06b6d4;
+            --brand-teal-hover: #0891b2;
+            --brand-teal-bg: #ecfeff;
+            --brand-teal-border: #a5f3fc;
+            --brand-teal-text: #0e7490;
+
+            /* Warm Amber Accent */
+            --brand-amber: #d97706;
+            --brand-amber-bg: #fef3c7;
+            --brand-amber-border: #fde68a;
+            --brand-amber-text: #92400e;
+
+            /* WhatsApp Green */
+            --whatsapp-green: #25d366;
+            --whatsapp-hover: #1ebd5a;
+
+            /* Automotive Shadows */
+            --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+            --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+            --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.06), 0 2px 6px rgba(15, 23, 42, 0.04);
+            --shadow-lg: 0 10px 25px rgba(15, 23, 42, 0.08), 0 4px 10px rgba(15, 23, 42, 0.04);
+            --shadow-hover: 0 16px 36px rgba(15, 23, 42, 0.12), 0 6px 14px rgba(15, 23, 42, 0.06);
+            --shadow-glow: 0 0 24px rgba(132, 204, 22, 0.25);
         }
 
         * { box-sizing: border-box; }
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
+            max-width: 100%;
+            scroll-behavior: smooth;
+        }
+
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: var(--bg-page);
             color: var(--text-body);
             line-height: 1.6;
             margin: 0;
-            padding-bottom: 80px;
-            transition: background-color 0.3s ease, color 0.3s ease;
+            padding-bottom: 76px;
+            -webkit-font-smoothing: antialiased;
         }
 
-        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+        .font-sans { font-family: 'Plus Jakarta Sans', sans-serif; }
 
-        /* ── CUSTOMER NOTICE TOP BAR ─────────────────────────────────────── */
-        .customer-top-bar {
-            background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+        /* ── 1. ANNOUNCEMENT & HOTLINE TOP BAR ────────────────────────────── */
+        .ev-announcement-bar {
+            background: #111827;
             color: #ffffff;
             padding: 8px 16px;
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: 600;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .badge-live-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #84cc16;
+            box-shadow: 0 0 8px #84cc16;
+            animation: pulse-dot 1.8s infinite;
+        }
+        @keyframes pulse-dot {
+            0% { transform: scale(0.9); opacity: 0.8; }
+            50% { transform: scale(1.3); opacity: 1; }
+            100% { transform: scale(0.9); opacity: 0.8; }
         }
 
-        /* ── STICKY HEADER & TABS ─────────────────────────────────────────── */
-        .catalog-sticky-header {
+        /* ── 2. STICKY AUTOMOTIVE NAVIGATION HEADER ───────────────────────── */
+        .ev-nav-header {
             position: sticky;
             top: 0;
             z-index: 1040;
-            background: var(--bg-card);
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             border-bottom: 1px solid var(--brand-border);
-            backdrop-filter: blur(12px);
             padding: 10px 0;
-            transition: all 0.3s;
+            box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+            transition: all 0.25s ease;
         }
 
         .catalog-header-tab {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 5px 12px;
+            padding: 6px 14px;
             font-size: 12px;
             font-weight: 700;
             border-radius: 999px;
             text-decoration: none;
             transition: all 0.2s ease;
             border: 1px solid var(--brand-border);
-            background: var(--bg-card-alt);
+            background: #ffffff;
             color: var(--text-secondary);
             white-space: nowrap;
         }
-        .catalog-header-tab.active {
-            background: rgba(5, 150, 105, 0.12);
-            border-color: rgba(5, 150, 105, 0.45);
-            color: #059669;
-            box-shadow: 0 0 0 1px rgba(5, 150, 105, 0.2);
-        }
         .catalog-header-tab:hover {
-            color: #059669;
-            border-color: #059669;
+            color: #111827;
+            border-color: #84cc16;
+            background: var(--brand-lime-bg);
         }
-        [data-theme="dark"] .catalog-header-tab.active {
-            background: rgba(16, 185, 129, 0.2);
-            color: #34d399;
+        .catalog-header-tab.active {
+            background: #111827;
+            border-color: #111827;
+            color: #84cc16;
+            box-shadow: 0 2px 8px rgba(17, 24, 39, 0.25);
+        }
+
+        .anchor-nav-link {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .anchor-nav-link:hover, .anchor-nav-link.active {
+            color: #111827;
+            background: var(--bg-card-alt);
         }
 
         .lang-pill-btn {
             border: 1px solid var(--brand-border);
-            background: var(--bg-card);
+            background: #ffffff;
             color: var(--text-secondary);
             font-size: 12px;
             font-weight: 700;
@@ -126,335 +186,783 @@
             transition: all 0.2s;
         }
         .lang-pill-btn.active, .lang-pill-btn:hover {
-            background: #059669;
-            color: #ffffff;
-            border-color: #059669;
+            background: #111827;
+            color: #84cc16;
+            border-color: #111827;
         }
 
-        .theme-toggle-btn {
-            background: var(--bg-card-alt);
-            border: 1px solid var(--brand-border);
-            color: var(--text-body);
-            border-radius: 8px;
-            padding: 6px 10px;
-            font-size: 13px;
-            cursor: pointer;
+        /* ── BUTTONS ──────────────────────────────────────────────────────── */
+        .btn-lime {
+            background: #84cc16;
+            color: #111827;
+            font-weight: 800;
+            border: 1px solid #84cc16;
+            padding: 10px 22px;
+            border-radius: 10px;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(132, 204, 22, 0.3);
+        }
+        .btn-lime:hover {
+            background: #65a30d;
+            border-color: #65a30d;
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(101, 163, 13, 0.35);
+        }
+
+        .btn-graphite {
+            background: #111827;
+            color: #ffffff;
+            font-weight: 700;
+            border: 1px solid #111827;
+            padding: 10px 22px;
+            border-radius: 10px;
+            transition: all 0.25s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-graphite:hover {
+            background: #1f2937;
+            color: #84cc16;
+            border-color: #1f2937;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline-dark-custom {
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #1e293b;
+            font-weight: 700;
+            padding: 9px 20px;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+            text-decoration: none;
             display: inline-flex;
             align-items: center;
             gap: 6px;
         }
-
-        /* ── HERO & SECTIONS ─────────────────────────────────────────────── */
-        .catalog-hero-block {
-            background: linear-gradient(180deg, var(--bg-card) 0%, var(--bg-page) 100%);
-            border-bottom: 1px solid var(--brand-border);
-            padding: 40px 0 32px;
+        .btn-outline-dark-custom:hover {
+            border-color: #84cc16;
+            color: #111827;
+            background: var(--brand-lime-bg);
         }
 
+        .btn-whatsapp-custom {
+            background: #25d366;
+            color: #ffffff;
+            font-weight: 800;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            text-decoration: none;
+            box-shadow: 0 2px 10px rgba(37, 211, 102, 0.28);
+            transition: all 0.2s ease;
+        }
+        .btn-whatsapp-custom:hover {
+            background: #1ebd5a;
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(37, 211, 102, 0.38);
+        }
+
+        /* ── BADGES & PILLS ───────────────────────────────────────────────── */
         .pill-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 4px 12px;
+            padding: 5px 14px;
             border-radius: 999px;
             font-size: 12px;
-            font-weight: 700;
-            letter-spacing: 0.2px;
+            font-weight: 800;
+            letter-spacing: 0.3px;
         }
-        .pill-emerald { background: rgba(5, 150, 105, 0.12); color: #059669; border: 1px solid rgba(5, 150, 105, 0.3); }
-        .pill-gold { background: rgba(245, 158, 11, 0.15); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.4); }
-        .pill-purple { background: rgba(124, 58, 237, 0.12); color: #7c3aed; border: 1px solid rgba(124, 58, 237, 0.3); }
-        .pill-cyan { background: rgba(2, 132, 199, 0.12); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.3); }
+        .pill-lime {
+            background: #f7fee7;
+            color: #3f6212;
+            border: 1px solid #bef264;
+        }
+        .pill-teal {
+            background: #ecfeff;
+            color: #0e7490;
+            border: 1px solid #a5f3fc;
+        }
+        .pill-graphite {
+            background: #111827;
+            color: #84cc16;
+            border: 1px solid #111827;
+        }
+        .pill-amber {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
 
-        .stat-card {
-            background: var(--bg-card);
+        /* ── HERO AUTOMOTIVE ──────────────────────────────────────────────── */
+        .ev-hero-wrapper {
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border-bottom: 1px solid var(--brand-border);
+            position: relative;
+            overflow: hidden;
+            padding: 48px 0 40px;
+        }
+        .ev-hero-glow {
+            position: absolute;
+            top: -120px;
+            right: 5%;
+            width: 460px;
+            height: 460px;
+            background: radial-gradient(circle, rgba(132, 204, 22, 0.14) 0%, rgba(6, 182, 212, 0.08) 50%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .hero-headline {
+            font-size: 38px;
+            font-weight: 900;
+            letter-spacing: -0.8px;
+            line-height: 1.18;
+            color: #111827;
+        }
+        .hero-subtitle {
+            font-size: 15.5px;
+            color: #475569;
+            line-height: 1.65;
+        }
+
+        .hero-hero-img-box {
+            position: relative;
+            background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
             border: 1px solid var(--brand-border);
-            border-radius: 14px;
-            padding: 16px;
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+        }
+        .hero-hero-img-box img {
+            max-height: 310px;
+            max-width: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 14px 20px rgba(15, 23, 42, 0.16));
+            transition: transform 0.4s ease;
+        }
+        .hero-hero-img-box:hover img {
+            transform: scale(1.02);
+        }
+
+        /* 4 Value Pillars */
+        .stat-card {
+            background: #ffffff;
+            border: 1px solid var(--brand-border);
+            border-radius: 16px;
+            padding: 18px;
             box-shadow: var(--shadow-sm);
             height: 100%;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.25s ease;
+            position: relative;
         }
         .stat-card:hover {
-            transform: translateY(-2px);
+            transform: translateY(-3px);
             box-shadow: var(--shadow-md);
+            border-color: #84cc16;
         }
-
-        /* ── MODEL CARDS ─────────────────────────────────────────────────── */
-        .vehicle-card {
-            background: var(--bg-card);
-            border: 1px solid var(--brand-border);
-            border-radius: 18px;
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
-            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-        .vehicle-card:hover {
-            transform: translateY(-6px);
-            box-shadow: var(--shadow-lg);
-            border-color: #059669;
-        }
-
-        .vehicle-img-wrap {
-            position: relative;
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            padding: 24px 20px;
-            text-align: center;
-            overflow: hidden;
-            height: 220px;
+        .stat-icon-wrap {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-        [data-theme="dark"] .vehicle-img-wrap {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        }
-        .vehicle-img-wrap img {
-            max-height: 175px;
-            max-width: 90%;
-            object-fit: contain;
-            filter: drop-shadow(0 12px 16px rgba(0,0,0,0.18));
-            transition: transform 0.4s ease;
-        }
-        .vehicle-card:hover .vehicle-img-wrap img {
-            transform: scale(1.06);
+            font-size: 17px;
+            margin-bottom: 12px;
         }
 
-        .vehicle-body {
+        /* ── "WHICH MODEL IS RIGHT FOR ME" DECISION CARDS ─────────────────── */
+        .decision-card {
+            background: #ffffff;
+            border: 1px solid var(--brand-border);
+            border-radius: 16px;
             padding: 20px;
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: all 0.25s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .decision-card:hover {
+            transform: translateY(-4px);
+            border-color: #84cc16;
+            box-shadow: var(--shadow-md);
+        }
+        .decision-card.active {
+            border-color: #111827;
+            box-shadow: 0 0 0 2px #84cc16, var(--shadow-md);
+            background: #fafaf9;
+        }
+
+        /* ── PRODUCT SHOWCASE (CENTERPIECE) ──────────────────────────────── */
+        .filter-chip-btn {
+            border: 1px solid var(--brand-border);
+            background: #ffffff;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 700;
+            padding: 8px 18px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .filter-chip-btn:hover {
+            border-color: #84cc16;
+            color: #111827;
+        }
+        .filter-chip-btn.active {
+            background: #111827;
+            color: #84cc16;
+            border-color: #111827;
+            box-shadow: 0 2px 8px rgba(17, 24, 39, 0.2);
+        }
+
+        .product-card {
+            background: #ffffff;
+            border: 1px solid var(--brand-border);
+            border-radius: 22px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .product-card:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-hover);
+            border-color: #cbd5e1;
+        }
+
+        .product-img-stage {
+            position: relative;
+            background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+            padding: 28px 24px 20px;
+            text-align: center;
+            overflow: hidden;
+            height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid var(--brand-border);
+        }
+        .product-img-stage img {
+            max-height: 200px;
+            max-width: 92%;
+            object-fit: contain;
+            filter: drop-shadow(0 12px 18px rgba(15, 23, 42, 0.15));
+            transition: transform 0.4s ease;
+        }
+        .product-card:hover .product-img-stage img {
+            transform: scale(1.03);
+        }
+
+        .product-badge-float {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            z-index: 2;
+        }
+
+        /* Thumbnails Switcher */
+        .product-thumb-row {
+            position: absolute;
+            bottom: 8px;
+            right: 12px;
+            display: flex;
+            gap: 6px;
+            z-index: 2;
+        }
+        .product-thumb-item {
+            width: 38px;
+            height: 32px;
+            border-radius: 6px;
+            border: 1px solid rgba(15, 23, 42, 0.2);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .product-thumb-item.active {
+            border-color: #84cc16;
+            box-shadow: 0 0 0 2px rgba(132, 204, 22, 0.4);
+        }
+        .product-thumb-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .product-card-body {
+            padding: 22px;
             flex: 1;
             display: flex;
             flex-direction: column;
         }
 
-        .battery-pill-selector {
+        /* Battery Options Chips */
+        .battery-chip-group {
             display: flex;
-            background: var(--bg-card-alt);
+            background: #f8fafc;
             border: 1px solid var(--brand-border);
-            border-radius: 10px;
-            padding: 3px;
-            margin: 12px 0;
+            border-radius: 12px;
+            padding: 4px;
+            margin: 14px 0 16px;
             gap: 4px;
         }
-        .battery-pill-option {
+        .battery-chip-btn {
             flex: 1;
             text-align: center;
-            padding: 6px 4px;
-            font-size: 11px;
-            font-weight: 700;
-            border-radius: 7px;
+            padding: 7px 6px;
+            font-size: 11.5px;
+            font-weight: 800;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
             border: none;
             background: transparent;
             color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            line-height: 1.25;
         }
-        .battery-pill-option.active {
-            background: #059669;
-            color: #ffffff;
-            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.35);
+        .battery-chip-btn .chip-sub {
+            font-size: 9.5px;
+            font-weight: 600;
+            opacity: 0.85;
+            margin-top: 2px;
+        }
+        .battery-chip-btn.active {
+            background: #111827;
+            color: #84cc16;
+            box-shadow: 0 2px 6px rgba(17, 24, 39, 0.25);
         }
 
-        .spec-item {
+        /* Price Tag Block */
+        .price-hero-box {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 1px solid var(--brand-border);
+            border-radius: 14px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+        }
+        .price-val {
+            font-size: 26px;
+            font-weight: 900;
+            color: #111827;
+            line-height: 1;
+        }
+
+        /* Specification Previews */
+        .spec-preview-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .spec-preview-cell {
+            background: #f8fafc;
+            border: 1px solid var(--brand-border);
+            border-radius: 10px;
+            padding: 8px 10px;
+        }
+        .spec-cell-label {
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            letter-spacing: 0.3px;
+            display: block;
+        }
+        .spec-cell-val {
+            font-size: 12.5px;
+            font-weight: 800;
+            color: #111827;
+        }
+
+        /* Progressive Disclosure Specs Accordion */
+        .accordion-specs {
+            margin-bottom: 16px;
+        }
+        .accordion-specs .accordion-button {
+            background: #ffffff;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--text-secondary);
+            padding: 8px 12px;
+            border-radius: 8px !important;
+            border: 1px dashed var(--brand-border);
+            box-shadow: none;
+        }
+        .accordion-specs .accordion-button:not(.collapsed) {
+            color: #111827;
+            background: var(--bg-card-alt);
+            border-color: #cbd5e1;
+        }
+        .accordion-specs .accordion-body {
+            padding: 12px 0 0;
+            font-size: 12px;
+        }
+
+        .spec-row-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 6px 0;
             border-bottom: 1px dashed var(--brand-border);
-            font-size: 12px;
         }
-        .spec-item:last-child { border-bottom: none; }
+        .spec-row-item:last-child {
+            border-bottom: none;
+        }
 
-        /* ── PRICING MATRIX TABLE ────────────────────────────────────────── */
-        .pricing-table-wrap {
-            background: var(--bg-card);
+        /* ── COMPARISON SECTION ──────────────────────────────────────────── */
+        .comparison-table-card {
+            background: #ffffff;
             border: 1px solid var(--brand-border);
-            border-radius: 16px;
+            border-radius: 20px;
             overflow: hidden;
             box-shadow: var(--shadow-sm);
         }
-        .table-pricing {
+        .table-compare {
             margin-bottom: 0;
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
         }
-        .table-pricing th {
-            background: var(--bg-card-alt);
-            color: var(--text-heading);
+        .table-compare th {
+            background: #111827;
+            color: #ffffff;
             font-size: 12px;
             font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
             padding: 14px 16px;
-            border-bottom: 2px solid var(--brand-border);
             vertical-align: middle;
+            border-bottom: 2px solid #84cc16;
         }
-        .table-pricing td {
+        .table-compare td {
             padding: 14px 16px;
             border-bottom: 1px solid var(--brand-border);
             vertical-align: middle;
             font-size: 13px;
-            color: var(--text-body);
         }
-        .table-pricing tr:hover td {
-            background: rgba(5, 150, 105, 0.03);
+        .table-compare tr:last-child td {
+            border-bottom: none;
         }
-        [data-theme="dark"] .table-pricing tr:hover td {
-            background: rgba(16, 185, 129, 0.05);
+        .table-compare tbody tr:hover td {
+            background: rgba(132, 204, 22, 0.04);
         }
 
-        /* ── OTHER SERVICES CARDS ─────────────────────────────────────────── */
-        .service-banner-card {
-            background: var(--bg-card);
+        /* ── VIDEO SHOWCASE ──────────────────────────────────────────────── */
+        .video-spotlight-card {
+            background: #ffffff;
+            border: 1px solid var(--brand-border);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+        }
+        .video-thumb-container {
+            position: relative;
+            background: #0f172a;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .video-thumb-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: 0.85;
+            transition: all 0.4s ease;
+        }
+        .video-thumb-container:hover img {
+            transform: scale(1.04);
+            opacity: 0.95;
+        }
+        .video-play-btn {
+            position: absolute;
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            background: #84cc16;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            padding-left: 4px;
+            box-shadow: 0 0 0 10px rgba(132, 204, 22, 0.3), 0 8px 24px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s ease;
+        }
+        .video-thumb-container:hover .video-play-btn {
+            transform: scale(1.1);
+            background: #ffffff;
+            color: #84cc16;
+            box-shadow: 0 0 0 14px rgba(255, 255, 255, 0.35), 0 12px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* ── SAVINGS CALCULATOR ──────────────────────────────────────────── */
+        .calc-wrapper-card {
+            background: #ffffff;
+            border: 1px solid var(--brand-border);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: var(--shadow-md);
+        }
+        .custom-range-slider {
+            accent-color: #84cc16;
+            height: 8px;
+            border-radius: 4px;
+        }
+
+        /* ── STANDALONE BATTERIES & ACCESSORIES ──────────────────────────── */
+        .accessory-card {
+            background: #ffffff;
+            border: 1px solid var(--brand-border);
+            border-radius: 18px;
+            padding: 22px;
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+            transition: all 0.25s ease;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .accessory-card:hover {
+            transform: translateY(-4px);
+            border-color: #84cc16;
+            box-shadow: var(--shadow-md);
+        }
+
+        /* ── SECONDARY ECOSYSTEM ─────────────────────────────────────────── */
+        .ecosystem-service-card {
+            background: #ffffff;
             border: 1px solid var(--brand-border);
             border-radius: 18px;
             overflow: hidden;
             box-shadow: var(--shadow-sm);
-            transition: all 0.3s ease;
+            transition: all 0.25s ease;
             height: 100%;
             display: flex;
             flex-direction: column;
         }
-        .service-banner-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
+        .ecosystem-service-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+            border-color: #cbd5e1;
         }
-        .service-banner-header {
+        .ecosystem-header {
             padding: 16px 20px;
+            border-bottom: 1px solid var(--brand-border);
             display: flex;
             align-items: center;
             gap: 12px;
-            border-bottom: 1px solid var(--brand-border);
         }
 
-        /* ── CALCULATOR ──────────────────────────────────────────────────── */
-        .calc-box {
-            background: var(--bg-card);
+        /* ── TRUST & DISCLAIMER ──────────────────────────────────────────── */
+        .trust-box {
+            background: #ffffff;
             border: 1px solid var(--brand-border);
             border-radius: 20px;
             padding: 28px;
-            box-shadow: var(--shadow-md);
+            box-shadow: var(--shadow-sm);
+        }
+        .plain-terms-text {
+            color: var(--text-muted);
+            font-size: 11.5px;
+            line-height: 1.6;
         }
 
-        /* ── MOBILE STICKY FOOTER ─────────────────────────────────────────── */
-        .sticky-customer-bar {
+        /* ── PERSISTENT MOBILE STICKY CTA ────────────────────────────────── */
+        .mobile-sticky-bottom-bar {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
             z-index: 1030;
-            background: var(--bg-card);
+            background: rgba(255, 255, 255, 0.98);
             border-top: 1px solid var(--brand-border);
             padding: 10px 16px;
-            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 -4px 18px rgba(15, 23, 42, 0.1);
             backdrop-filter: blur(10px);
         }
 
-        /* ── MODAL ───────────────────────────────────────────────────────── */
-        .booking-modal-content {
-            background: var(--bg-card);
-            border: 1px solid var(--brand-border);
+        /* ── FLOATING DESKTOP WHATSAPP ───────────────────────────────────── */
+        .desktop-floating-wa {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1025;
+            background: #25d366;
+            color: #ffffff;
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            text-decoration: none;
+            box-shadow: 0 4px 16px rgba(37, 211, 102, 0.4);
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .desktop-floating-wa:hover {
+            transform: scale(1.1);
+            color: #ffffff;
+            box-shadow: 0 6px 22px rgba(37, 211, 102, 0.55);
+        }
+
+        /* ── MODALS ──────────────────────────────────────────────────────── */
+        .modal-automotive-content {
             border-radius: 20px;
-            color: var(--text-body);
+            border: 1px solid var(--brand-border);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
         }
         .booking-input {
-            background: var(--bg-card-alt);
+            background: #f8fafc;
             border: 1px solid var(--brand-border);
-            color: var(--text-heading);
+            color: #111827;
             border-radius: 10px;
             padding: 10px 14px;
             font-size: 14px;
             width: 100%;
+            transition: all 0.2s;
         }
         .booking-input:focus {
             outline: none;
-            border-color: #059669;
-            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
+            border-color: #84cc16;
+            box-shadow: 0 0 0 3px rgba(132, 204, 22, 0.25);
+            background: #ffffff;
+        }
+
+        @media (max-width: 992px) {
+            .hero-headline { font-size: 30px; }
+            .hero-hero-img-box img { max-height: 240px; }
+            .product-img-stage { height: 210px; }
+            .product-img-stage img { max-height: 160px; }
         }
 
         @media (max-width: 768px) {
-            .catalog-hero-block { padding: 24px 0 20px; }
-            .table-pricing th, .table-pricing td { padding: 10px 12px; font-size: 11px; }
-            .vehicle-img-wrap { height: 180px; }
-            .vehicle-img-wrap img { max-height: 140px; }
+            .ev-hero-wrapper { padding: 30px 0 24px; }
+            .hero-headline { font-size: 26px; }
+            .hero-subtitle { font-size: 14px; }
+            .calc-wrapper-card { padding: 20px; }
+            .video-spotlight-card { border-radius: 18px; }
         }
     </style>
 </head>
 <body>
 
-    <!-- ── 1. TOP NOTICE & HOTLINE BAR ──────────────────────────────────── -->
-    <div class="customer-top-bar">
+    <!-- ── 1. ANNOUNCEMENT & HOTLINE TOP BAR ────────────────────────────── -->
+    <div class="ev-announcement-bar">
         <div class="container-fluid px-3 px-xl-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-warning text-dark fw-bold px-2 py-1">OFFICIAL CUSTOMER PRICING</span>
-                <span>✨ Certified Non-RTO Low-Speed Electric Scooters • Zero Driving License • Free Home Delivery in AP &amp; Telangana</span>
+                <span class="badge bg-white text-dark fw-bold px-2 py-1" style="font-size: 11px;">OFFICIAL CUSTOMER PRICING</span>
+                <span class="d-flex align-items-center gap-2 small">
+                    <span class="badge-live-dot"></span>
+                    <span>Certified Non-RTO Low-Speed Electric Scooters • Zero Driving License • Free Home Delivery in AP &amp; Telangana</span>
+                </span>
             </div>
-            <div class="d-flex align-items-center gap-3">
+            <div class="d-flex align-items-center gap-3 ms-auto">
                 <a href="tel:+918585852738" class="text-white text-decoration-none fw-bold small">
-                    <i class="fas fa-phone-volume me-1"></i> 8585852738
+                    <i class="fas fa-phone-volume text-success me-1"></i> 8585852738
                 </a>
                 <a href="https://wa.me/918585852738?text=Hello!%20I%20am%20interested%20in%20Manthra%20EV%20Electric%20Scooters.%20Please%20share%20the%20catalog%20and%20pricing." 
-                   target="_blank" class="text-white text-decoration-none fw-bold" style="background: rgba(255,255,255,0.22); padding: 3px 10px; border-radius: 6px;">
-                    <i class="fab fa-whatsapp me-1 text-light"></i> WhatsApp Us
+                   target="_blank" rel="noopener noreferrer" class="text-white text-decoration-none fw-bold" style="background: rgba(255,255,255,0.18); padding: 3px 10px; border-radius: 6px; font-size: 12px;">
+                    <i class="fab fa-whatsapp me-1 text-success"></i> WhatsApp Us
                 </a>
             </div>
         </div>
     </div>
 
-    <!-- ── 2. STICKY HEADER & UNIFIED TABS ──────────────────────────────── -->
-    <header class="catalog-sticky-header">
+    <!-- ── 2. STICKY AUTOMOTIVE NAVIGATION HEADER ───────────────────────── -->
+    <header class="ev-nav-header">
         <div class="container-fluid px-3 px-xl-4 d-flex justify-content-between align-items-center gap-2 flex-wrap">
-            <!-- Left: Logos & Tabs -->
+            <!-- Left: Brand Logo & Section Anchors -->
             <div class="d-flex align-items-center gap-3">
-                <a href="/catalog/ev-b2c-pricing" class="d-flex align-items-center gap-2 text-decoration-none">
+                <a href="/catalog/ev-b2c-pricing" class="d-flex align-items-center gap-2 text-decoration-none" title="Manthra EV Digital Showroom">
                     <img src="/public/hub/Assets/ManthraEV-logo.png" alt="Manthra EV" style="height: 38px; object-fit: contain;" onerror="this.src='/public/myntreal-logo.png'">
                 </a>
 
-                <!-- Cross-Vertical Navigation Tabs -->
-                <div class="d-flex align-items-center gap-2 overflow-x-auto pb-1" id="crossNavTabs" style="scrollbar-width: none;">
-                    <a href="/catalog/industrial-hub-franchise" class="catalog-header-tab" title="5-in-1 Franchise Overview">
-                        <i class="fas fa-building-columns text-warning"></i>
-                        <span>5-in-1 Franchise</span>
-                    </a>
-                    <a href="/catalog/ev-b2c-pricing" class="catalog-header-tab active" title="Customer 2W EV Pricing & Models">
-                        <i class="fas fa-motorcycle text-success"></i>
-                        <span>2W EV Pricing</span>
-                    </a>
-                    <a href="/catalog/hub-ev-pricing" class="catalog-header-tab" title="Hub Commercial Pricing (24h)">
-                        <i class="fas fa-tags text-warning"></i>
-                        <span>Hub Pricing (24h)</span>
-                    </a>
-                    <a href="/catalog/ev-b2b/ev-commercial-fleet" class="catalog-header-tab" title="EV B2B Fleets">
-                        <i class="fas fa-truck-moving text-info"></i>
-                        <span>EV B2B Fleets</span>
-                    </a>
-                    <a href="/catalog/solar/commercial-residential-solar" class="catalog-header-tab" title="Har Ghar Solar Rooftop">
-                        <i class="fas fa-solar-panel text-warning"></i>
-                        <span>Solar</span>
-                    </a>
-                    <a href="/catalog/ev-spares/ev-spares-and-chargers" class="catalog-header-tab" title="EV Spares, Chargers & Batteries">
-                        <i class="fas fa-cogs" style="color: #a855f7;"></i>
-                        <span>EV Spares</span>
-                    </a>
-                    <a href="/catalog/insurance/comprehensive-insurance-advisory" class="catalog-header-tab" title="VGK Care Insurance Advisory">
-                        <i class="fas fa-shield-alt text-primary"></i>
-                        <span>Insurance</span>
-                    </a>
-                    <a href="/catalog/real-dreams/real-dreams-premium-properties" class="catalog-header-tab" title="Real Dreams Premium Properties">
-                        <i class="fas fa-building text-danger"></i>
-                        <span>Real Dreams</span>
-                    </a>
-                </div>
+                <!-- Quick Showroom Section Jump Links (Desktop) -->
+                <nav class="d-none d-xl-flex align-items-center gap-1">
+                    <a href="#modelsLineup" class="anchor-nav-link"><i class="fas fa-motorcycle text-success"></i> Models</a>
+                    <a href="#whichModel" class="anchor-nav-link"><i class="fas fa-compass text-info"></i> Guide</a>
+                    <a href="#compareSection" class="anchor-nav-link"><i class="fas fa-table-list text-warning"></i> Comparison</a>
+                    <a href="#videoShowcase" class="anchor-nav-link"><i class="fab fa-youtube text-danger"></i> Video</a>
+                    <a href="#savingsCalculator" class="anchor-nav-link"><i class="fas fa-calculator text-success"></i> Calculator</a>
+                    <a href="#batteriesAccessories" class="anchor-nav-link"><i class="fas fa-car-battery" style="color:#7c3aed;"></i> Batteries</a>
+                    <a href="#otherServices" class="anchor-nav-link"><i class="fas fa-solar-panel text-warning"></i> Solar &amp; Ecosystem</a>
+                </nav>
             </div>
 
-            <!-- Right: Theme & Language Switchers -->
-            <div class="d-flex align-items-center gap-2">
-                <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
-                    <i class="fas fa-moon text-warning" id="themeToggleIcon"></i>
-                    <span class="d-none d-sm-inline" id="themeToggleText">Dark Mode</span>
+            <!-- Center/Right: Ecosystem Tabs Matching Earlier Stages -->
+            <div class="d-none d-lg-flex align-items-center gap-2 overflow-x-auto pb-1" id="crossNavTabs" style="scrollbar-width: none;">
+                <a href="/catalog/industrial-hub-franchise" class="catalog-header-tab" title="5-in-1 Franchise Overview">
+                    <i class="fas fa-building-columns text-warning"></i>
+                    <span>5-in-1 Franchise</span>
+                </a>
+                <a href="/catalog/ev-b2c-pricing" class="catalog-header-tab active" title="Customer 2W EV Pricing &amp; Models">
+                    <i class="fas fa-motorcycle text-success"></i>
+                    <span>2W EV Pricing</span>
+                </a>
+                <a href="/catalog/hub-ev-pricing" class="catalog-header-tab" title="Hub Commercial Pricing (24h)">
+                    <i class="fas fa-tags text-warning"></i>
+                    <span>Hub Pricing (24h)</span>
+                </a>
+                <a href="/catalog/ev-b2b/ev-commercial-fleet" class="catalog-header-tab" title="EV B2B Fleets">
+                    <i class="fas fa-truck-moving text-info"></i>
+                    <span>EV B2B Fleets</span>
+                </a>
+                <a href="/catalog/solar/commercial-residential-solar" class="catalog-header-tab" title="Har Ghar Solar Rooftop">
+                    <i class="fas fa-solar-panel text-warning"></i>
+                    <span>Solar</span>
+                </a>
+                <a href="/catalog/ev-spares/ev-spares-and-chargers" class="catalog-header-tab" title="EV Spares, Chargers &amp; Batteries">
+                    <i class="fas fa-cogs" style="color: #a855f7;"></i>
+                    <span>EV Spares</span>
+                </a>
+                <a href="/catalog/insurance/comprehensive-insurance-advisory" class="catalog-header-tab" title="VGK Care Insurance Advisory">
+                    <i class="fas fa-shield-alt text-primary"></i>
+                    <span>Insurance</span>
+                </a>
+                <a href="/catalog/real-dreams/real-dreams-premium-properties" class="catalog-header-tab" title="Real Dreams Premium Properties">
+                    <i class="fas fa-building text-danger"></i>
+                    <span>Real Dreams</span>
+                </a>
+            </div>
+
+            <!-- Right: Actions & Multilingual Switcher -->
+            <div class="d-flex align-items-center gap-2 ms-auto">
+                <button class="btn btn-sm btn-lime d-none d-sm-inline-flex" onclick="openBookingModal('General Test Ride', 'EV-MANTHRA')">
+                    <i class="fas fa-calendar-check"></i> Book Test Ride
                 </button>
 
                 <div class="d-flex gap-1 align-items-center">
@@ -467,187 +975,350 @@
         </div>
     </header>
 
-    <!-- ── 3. HERO BANNER ───────────────────────────────────────────────── -->
-    <section class="catalog-hero-block">
-        <div class="container-xl">
-            <div class="text-center max-w-3xl mx-auto">
-                <div class="mb-2">
-                    <span class="pill-badge pill-emerald">
-                        <i class="fas fa-id-card-clip"></i> <span id="heroBadge1">Non-RTO Low-Speed (<25 km/h) • Zero Driving License</span>
-                    </span>
-                    <span class="pill-badge pill-gold ms-1">
-                        <i class="fas fa-bolt"></i> <span id="heroBadge2">Official 2026 Customer Pricing</span>
-                    </span>
-                </div>
-                <h1 class="fw-black text-heading mb-2" style="font-size: 32px; letter-spacing: -0.5px;" id="heroTitle">
-                    Manthra EV — Smart Electric 2-Wheelers &amp; Customer Pricing
-                </h1>
-                <p class="text-secondary mb-4 small" style="max-width: 840px; margin: 0 auto; font-size: 14px;" id="heroSubtitle">
-                    Engineered for Indian roads with certified <strong>Low-Speed (<25 km/h) Non-RTO convenience</strong>. No driving license, no vehicle registration, and zero road tax required! Powered by ultra-economical <strong>Graphene 48V 32Ah</strong> (9-Month Battery &amp; Charger Warranty) and long-lasting <strong>Smart LFP</strong> (3-Year Replacement Warranty).
-                </p>
-
-                <!-- 4 Value Pillars -->
-                <div class="row g-3 text-start">
-                    <div class="col-lg-3 col-sm-6">
-                        <div class="stat-card">
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <i class="fas fa-id-card text-success fs-5"></i>
-                                <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;">Zero Bureaucracy</small>
-                            </div>
-                            <div class="fs-5 fw-black text-heading font-mono">No Driving License</div>
-                            <small class="text-secondary">Non-RTO &lt;25 km/h • Zero registration &amp; road tax</small>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-sm-6">
-                        <div class="stat-card">
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <i class="fas fa-gas-pump text-warning fs-5"></i>
-                                <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;">Daily Economy</small>
-                            </div>
-                            <div class="fs-5 fw-black text-heading font-mono">₹0.15 / Kilometer</div>
-                            <small class="text-secondary">Save ₹3,000+ monthly vs ₹2.50/km petrol expense</small>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-sm-6">
-                        <div class="stat-card">
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <i class="fas fa-shield-check text-primary fs-5"></i>
-                                <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;">Dual Warranties</small>
-                            </div>
-                            <div class="fs-5 fw-black text-heading font-mono">9 Mo / 3 Yrs Warranty</div>
-                            <small class="text-secondary">Graphene (9M Battery &amp; Charger) | Smart LFP (3Y)</small>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-sm-6">
-                        <div class="stat-card">
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <i class="fas fa-wrench text-danger fs-5"></i>
-                                <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;">Ecosystem Backing</small>
-                            </div>
-                            <div class="fs-5 fw-black text-heading font-mono">Authorised Hub Service</div>
-                            <small class="text-secondary">Doorstep service, 100% genuine OEM spares &amp; roadside support</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ── 4. OFFICIAL VIDEO SHOWCASE ────────────────────────────────────── -->
-    <section class="py-5" style="background: var(--bg-card); border-bottom: 1px solid var(--brand-border);">
-        <div class="container-xl">
-            <div class="row align-items-center g-4">
+    <!-- ── 3. AUTOMOTIVE SHOWROOM HERO ──────────────────────────────────── -->
+    <section class="ev-hero-wrapper">
+        <div class="ev-hero-glow"></div>
+        <div class="container-xl position-relative">
+            <div class="row align-items-center g-4 g-lg-5">
+                
+                <!-- Left Column: Positioning & CTAs -->
                 <div class="col-lg-6">
-                    <div class="ratio ratio-16x9 rounded-4 shadow-lg overflow-hidden border border-2" style="border-color: rgba(5, 150, 105, 0.3) !important;">
-                        <iframe src="https://www.youtube.com/embed/FzKh_AVXiRo?rel=0&modestbranding=1" 
-                                title="Manthra EV Ride Quality & Specifications Official Video" 
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                                allowfullscreen></iframe>
+                    <div class="mb-3 d-flex flex-wrap gap-2">
+                        <span class="pill-badge pill-lime">
+                            <i class="fas fa-id-card-clip"></i> <span id="heroBadge1">Non-RTO Low-Speed (<25 km/h) • Zero Driving License</span>
+                        </span>
+                        <span class="pill-badge pill-graphite">
+                            <i class="fas fa-bolt"></i> <span id="heroBadge2">Official 2026 Customer Pricing</span>
+                        </span>
                     </div>
-                </div>
-                <div class="col-lg-6">
-                    <span class="pill-badge pill-emerald mb-2">
-                        <i class="fab fa-youtube text-danger"></i> Official Video Walkthrough
-                    </span>
-                    <h2 class="fw-black text-heading mb-3" style="font-size: 26px;">
-                        See Manthra EV in Action on Indian Roads
-                    </h2>
-                    <p class="text-secondary mb-3">
-                        Experience the superior build quality, high-torque gradient climbing, waterproof BLDC motor performance, and comfort suspension designed specifically for Indian city and rural roads.
+
+                    <h1 class="hero-headline mb-3" id="heroTitle">
+                        Manthra EV — Smart Electric 2-Wheelers &amp; Customer Pricing
+                    </h1>
+
+                    <p class="hero-subtitle mb-4" id="heroSubtitle">
+                        Engineered for Indian roads with certified <strong>Low-Speed (<25 km/h) Non-RTO convenience</strong>. No driving license, no vehicle registration, and zero road tax required! Powered by ultra-economical <strong>Graphene 48V 32Ah</strong> (9-Month Battery &amp; Charger Warranty) and long-lasting <strong>Smart LFP</strong> (3-Year Replacement Warranty).
                     </p>
-                    <div class="row g-2 mb-4">
-                        <div class="col-6">
-                            <div class="p-2 rounded-3 bg-card-alt border" style="background: var(--bg-card-alt); border-color: var(--brand-border) !important;">
-                                <i class="fas fa-check-circle text-success me-1"></i> <strong class="small">Silent BLDC Motor</strong>
-                                <div class="text-secondary" style="font-size: 11px;">Zero noise, instant gradient torque</div>
-                            </div>
+
+                    <div class="d-flex flex-wrap gap-3 mb-4">
+                        <a href="#modelsLineup" class="btn-lime">
+                            <i class="fas fa-motorcycle"></i> Explore 5 Models
+                        </a>
+                        <button class="btn-graphite" onclick="openBookingModal('General Test Ride', 'EV-MANTHRA')">
+                            <i class="fas fa-calendar-check"></i> Book Free Test Ride
+                        </button>
+                        <a href="https://wa.me/918585852738?text=Hello!%20I%20am%20interested%20in%20Manthra%20EV%20Electric%20Scooters.%20Please%20share%20the%20catalog%20and%20pricing." 
+                           target="_blank" rel="noopener noreferrer" class="btn-outline-dark-custom">
+                            <i class="fab fa-whatsapp text-success fs-6"></i> Chat on WhatsApp
+                        </a>
+                    </div>
+
+                    <!-- Quick Highlight Chips -->
+                    <div class="d-flex flex-wrap align-items-center gap-3 pt-2 text-secondary small">
+                        <span><i class="fas fa-check-circle text-success me-1"></i> Certified Non-RTO</span>
+                        <span><i class="fas fa-check-circle text-success me-1"></i> Free Home Delivery (AP &amp; TS)</span>
+                        <span><i class="fas fa-check-circle text-success me-1"></i> 5% GST Included</span>
+                    </div>
+                </div>
+
+                <!-- Right Column: Hero Visual Asset Stage -->
+                <div class="col-lg-6">
+                    <div class="hero-hero-img-box">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="pill-badge pill-teal"><i class="fas fa-shield-halved"></i> 100% Genuine Manthra EV</span>
+                            <span class="badge bg-dark font-mono text-lime px-2 py-1" style="color:#84cc16;">SHOWROOM LINEUP</span>
                         </div>
-                        <div class="col-6">
-                            <div class="p-2 rounded-3 bg-card-alt border" style="background: var(--bg-card-alt); border-color: var(--brand-border) !important;">
-                                <i class="fas fa-check-circle text-success me-1"></i> <strong class="small">Waterproof Harness</strong>
-                                <div class="text-secondary" style="font-size: 11px;">IP67 motor &amp; controller protection</div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="p-2 rounded-3 bg-card-alt border" style="background: var(--bg-card-alt); border-color: var(--brand-border) !important;">
-                                <i class="fas fa-check-circle text-success me-1"></i> <strong class="small">Telescopic Shocks</strong>
-                                <div class="text-secondary" style="font-size: 11px;">Hydraulic comfort over potholes</div>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="p-2 rounded-3 bg-card-alt border" style="background: var(--bg-card-alt); border-color: var(--brand-border) !important;">
-                                <i class="fas fa-check-circle text-success me-1"></i> <strong class="small">Dual CBS Brakes</strong>
-                                <div class="text-secondary" style="font-size: 11px;">Combined braking system safety</div>
-                            </div>
+                        <img src="/public/hub/Assets/manthra-fleet-lineup.webp" 
+                             alt="Manthra EV Lineup" 
+                             id="heroMainAssetImg"
+                             loading="eager"
+                             onerror="this.src='/public/hub/Assets/Manthra_1.webp'">
+                        <div class="mt-3 pt-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 text-secondary small">
+                            <span><i class="fas fa-road me-1 text-primary"></i> 5 Certified Models On-Road</span>
+                            <span class="fw-bold font-mono text-dark">Starting ₹49,999/-</span>
                         </div>
                     </div>
-                    <button class="btn btn-success fw-bold px-4 py-2 rounded-pill shadow-sm" onclick="openBookingModal('General Test Ride', 'EV-MANTHRA')">
-                        <i class="fas fa-calendar-check me-2"></i> Book a Free Test Ride Now
-                    </button>
+                </div>
+
+            </div>
+
+            <!-- 4 Value Pillars -->
+            <div class="row g-3 mt-4 pt-2">
+                <div class="col-lg-3 col-sm-6">
+                    <div class="stat-card">
+                        <div class="stat-icon-wrap" style="background:#f7fee7; color:#65a30d;">
+                            <i class="fas fa-id-card"></i>
+                        </div>
+                        <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;">Zero Bureaucracy</small>
+                        <div class="fs-5 fw-black text-heading font-mono">No Driving License</div>
+                        <small class="text-secondary">Non-RTO &lt;25 km/h • Zero registration &amp; road tax</small>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-sm-6">
+                    <div class="stat-card">
+                        <div class="stat-icon-wrap" style="background:#fef3c7; color:#d97706;">
+                            <i class="fas fa-gas-pump"></i>
+                        </div>
+                        <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;">Daily Economy</small>
+                        <div class="fs-5 fw-black text-heading font-mono">₹0.15 / Kilometer</div>
+                        <small class="text-secondary">Save ₹3,000+ monthly vs ₹2.50/km petrol expense</small>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-sm-6">
+                    <div class="stat-card">
+                        <div class="stat-icon-wrap" style="background:#ecfeff; color:#0e7490;">
+                            <i class="fas fa-shield-check"></i>
+                        </div>
+                        <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;">Dual Warranties</small>
+                        <div class="fs-5 fw-black text-heading font-mono">9 Mo / 3 Yrs Warranty</div>
+                        <small class="text-secondary">Graphene (9M Battery &amp; Charger) | Smart LFP (3Y)</small>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-sm-6">
+                    <div class="stat-card">
+                        <div class="stat-icon-wrap" style="background:#fef2f2; color:#ef4444;">
+                            <i class="fas fa-wrench"></i>
+                        </div>
+                        <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;">Ecosystem Backing</small>
+                        <div class="fs-5 fw-black text-heading font-mono">Authorised Hub Service</div>
+                        <small class="text-secondary">Doorstep service, 100% genuine OEM spares &amp; roadside support</small>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- ── 4. "WHICH MODEL IS RIGHT FOR ME?" DECISION GUIDE ─────────────── -->
+    <section class="py-5" id="whichModel" style="background: #ffffff; border-bottom: 1px solid var(--brand-border);">
+        <div class="container-xl">
+            <div class="text-center mb-4">
+                <span class="pill-badge pill-teal mb-2"><i class="fas fa-compass"></i> Buyer Decision Guide</span>
+                <h2 class="fw-black text-heading" style="font-size: 28px;">Which Manthra EV Is Right For You?</h2>
+                <p class="text-secondary small" style="max-width: 680px; margin: 0 auto;">
+                    Match your daily commute, cargo needs, or styling preference with the right vehicle. Tap any profile to highlight the model below.
+                </p>
+            </div>
+
+            <div class="row g-3">
+                <!-- Profile 1: City Commuter -->
+                <div class="col-lg col-md-4 col-sm-6">
+                    <div class="decision-card" onclick="filterModelsByCategory('commuter', this)">
+                        <div>
+                            <span class="badge bg-success mb-2">City &amp; Office</span>
+                            <h4 class="fw-bold fs-6 mb-1 text-heading">Daily Commuter</h4>
+                            <p class="text-secondary small mb-2">Ideal for students, professionals &amp; local errands.</p>
+                        </div>
+                        <div class="pt-2 border-top">
+                            <strong class="text-dark d-block">Manthra Pro GT</strong>
+                            <small class="text-lime fw-bold font-mono" style="color:#65a30d;">From ₹49,999</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile 2: Heavy Delivery -->
+                <div class="col-lg col-md-4 col-sm-6">
+                    <div class="decision-card" onclick="filterModelsByCategory('cargo', this)">
+                        <div>
+                            <span class="badge bg-warning text-dark mb-2">Heavy Duty</span>
+                            <h4 class="fw-bold fs-6 mb-1 text-heading">Delivery &amp; Cargo</h4>
+                            <p class="text-secondary small mb-2">Commercial logistics, milk, farm &amp; 200kg heavy payload.</p>
+                        </div>
+                        <div class="pt-2 border-top">
+                            <strong class="text-dark d-block">Power Plus</strong>
+                            <small class="text-lime fw-bold font-mono" style="color:#65a30d;">From ₹51,499</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile 3: Tech Flagship -->
+                <div class="col-lg col-md-4 col-sm-6">
+                    <div class="decision-card" onclick="filterModelsByCategory('flagship', this)">
+                        <div>
+                            <span class="badge bg-primary mb-2">Smart Tech</span>
+                            <h4 class="fw-bold fs-6 mb-1 text-heading">Urban Flagship</h4>
+                            <p class="text-secondary small mb-2">1-Touch Reverse Assist, keyless smart remote &amp; digital dash.</p>
+                        </div>
+                        <div class="pt-2 border-top">
+                            <strong class="text-dark d-block">M99 Flagship</strong>
+                            <small class="text-lime fw-bold font-mono" style="color:#65a30d;">From ₹80,999</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile 4: Vintage Luxury -->
+                <div class="col-lg col-md-4 col-sm-6">
+                    <div class="decision-card" onclick="filterModelsByCategory('retro', this)">
+                        <div>
+                            <span class="badge bg-purple text-white mb-2" style="background:#7c3aed;">Retro Luxury</span>
+                            <h4 class="fw-bold fs-6 mb-1 text-heading">Vintage Elegance</h4>
+                            <p class="text-secondary small mb-2">Chrome styling, double-contour seat &amp; USB fast charging.</p>
+                        </div>
+                        <div class="pt-2 border-top">
+                            <strong class="text-dark d-block">Royal Sling</strong>
+                            <small class="text-lime fw-bold font-mono" style="color:#65a30d;">From ₹80,999</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile 5: Street Fighter -->
+                <div class="col-lg col-md-4 col-sm-6">
+                    <div class="decision-card" onclick="filterModelsByCategory('beast', this)">
+                        <div>
+                            <span class="badge bg-danger mb-2">Dual Disc CBS</span>
+                            <h4 class="fw-bold fs-6 mb-1 text-heading">Street Fighter</h4>
+                            <p class="text-secondary small mb-2">Dual hydraulic disc brakes, nitrogen gas shocks &amp; sport body.</p>
+                        </div>
+                        <div class="pt-2 border-top">
+                            <strong class="text-dark d-block">Beast Pro</strong>
+                            <small class="text-lime fw-bold font-mono" style="color:#65a30d;">From ₹82,999</small>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- ── 5. 5 CERTIFIED MANTHRA EV MODELS ──────────────────────────────── -->
-    <section class="py-5" id="modelsLineup">
+    <!-- ── 5. PRODUCT SHOWCASE — THE CENTERPIECE ────────────────────────── -->
+    <section class="py-5" id="modelsLineup" style="background: var(--bg-page);">
         <div class="container-xl">
-            <div class="text-center mb-5">
-                <span class="pill-badge pill-emerald mb-2"><i class="fas fa-motorcycle"></i> 5 Certified Models</span>
-                <h2 class="fw-black text-heading" style="font-size: 28px;">Select Your Perfect Electric Scooter</h2>
-                <p class="text-secondary small" style="max-width: 650px; margin: 0 auto;">
-                    Choose between ultra-economical Graphene 48V 32Ah (9-Month warranty on battery &amp; charger) or long-lasting Smart LFP (3-Year replacement warranty). All prices include 5% GST and turnkey on-road delivery!
-                </p>
+            
+            <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 mb-4">
+                <div>
+                    <span class="pill-badge pill-lime mb-2"><i class="fas fa-motorcycle"></i> Digital Showroom</span>
+                    <h2 class="fw-black text-heading mb-1" style="font-size: 30px;">Select Your Manthra EV</h2>
+                    <p class="text-secondary small mb-0">
+                        Choose between ultra-economical Graphene 48V 32Ah (9M Warranty on battery &amp; charger) or long-lasting Smart LFP (3Y Warranty). All prices include 5% GST and turnkey on-road delivery!
+                    </p>
+                </div>
+
+                <!-- Filter Chips -->
+                <div class="d-flex align-items-center gap-2 overflow-x-auto pb-1" id="filterChipsRow" style="scrollbar-width:none;">
+                    <button class="filter-chip-btn active" data-filter="all" onclick="applyModelFilter('all', this)">All Models (5)</button>
+                    <button class="filter-chip-btn" data-filter="commuter" onclick="applyModelFilter('commuter', this)">Sport Commuter</button>
+                    <button class="filter-chip-btn" data-filter="cargo" onclick="applyModelFilter('cargo', this)">Heavy Cargo</button>
+                    <button class="filter-chip-btn" data-filter="flagship" onclick="applyModelFilter('flagship', this)">Urban Flagship</button>
+                    <button class="filter-chip-btn" data-filter="retro" onclick="applyModelFilter('retro', this)">Retro Luxury</button>
+                    <button class="filter-chip-btn" data-filter="beast" onclick="applyModelFilter('beast', this)">Street Fighter</button>
+                </div>
             </div>
 
-            <div class="row g-4 justify-content-center">
+            <div class="row g-4 justify-content-center" id="productsCardGrid">
                 
                 <!-- MODEL 1: MANTHRA PRO GT -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="vehicle-card" id="card-EV-PRO-GT">
-                        <div class="vehicle-img-wrap">
-                            <span class="badge bg-success position-absolute top-0 start-0 m-3 px-2 py-1 small fw-bold">BEST COMMUTER</span>
-                            <img src="/public/hub/Assets/manthra-pro-gt-real.webp" alt="Manthra Pro GT" onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                <div class="col-lg-4 col-md-6 model-card-col" data-category="commuter">
+                    <div class="product-card" id="card-EV-PRO-GT">
+                        <div class="product-badge-float">
+                            <span class="pill-badge pill-lime"><i class="fas fa-award"></i> BEST COMMUTER</span>
                         </div>
-                        <div class="vehicle-body">
+                        <div class="product-img-stage">
+                            <img src="/public/hub/Assets/manthra-pro-gt-real.webp" 
+                                 id="img-EV-PRO-GT"
+                                 alt="Manthra Pro GT Electric Scooter" 
+                                 loading="lazy"
+                                 onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                            
+                            <!-- Thumbnail Gallery Switcher -->
+                            <div class="product-thumb-row">
+                                <button type="button" class="product-thumb-item active" 
+                                        onclick="switchCardImage('EV-PRO-GT', '/public/hub/Assets/manthra-pro-gt-real.webp', this)" title="Studio View">
+                                    <img src="/public/hub/Assets/manthra-pro-gt-real.webp" alt="Pro GT Studio" onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                                </button>
+                                <button type="button" class="product-thumb-item" 
+                                        onclick="switchCardImage('EV-PRO-GT', '/public/hub/Assets/manthra-fleet-lineup.webp', this)" title="Lineup View">
+                                    <img src="/public/hub/Assets/manthra-fleet-lineup.webp" alt="Lineup">
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="product-card-body">
                             <div class="d-flex justify-content-between align-items-start mb-1">
                                 <h3 class="fw-black text-heading fs-5 mb-0">Manthra Pro GT</h3>
-                                <span class="badge bg-secondary font-mono">Sport Commuter</span>
+                                <span class="badge bg-dark font-mono text-lime px-2 py-1" style="color:#84cc16;">Sport Commuter</span>
                             </div>
-                            <small class="text-secondary mb-2">Aerodynamic urban street commuter with matrix LED headlamp and digital LCD cluster.</small>
+                            <p class="text-secondary small mb-2">
+                                Aerodynamic urban street commuter with matrix LED headlamp and digital LCD cluster.
+                            </p>
 
-                            <!-- Battery Selector -->
-                            <div class="battery-pill-selector">
-                                <button class="battery-pill-option active" onclick="selectModelBattery('EV-PRO-GT', 'graphene', 49999, '65-75 km', '9 Mo Battery & Charger')">Graphene 48V (9M)</button>
-                                <button class="battery-pill-option" onclick="selectModelBattery('EV-PRO-GT', 'lfp48', 74999, '85-95 km', '3 Yrs Comprehensive')">Smart LFP 48V (3Y)</button>
-                                <button class="battery-pill-option" onclick="selectModelBattery('EV-PRO-GT', 'lfp60', 81999, '115-125 km', '3 Yrs Comprehensive')">LFP 60V (3Y)</button>
+                            <!-- Battery Variant Selector Chips -->
+                            <div class="battery-chip-group">
+                                <button type="button" class="battery-chip-btn active" 
+                                        onclick="selectModelBattery('EV-PRO-GT', 'graphene', 49999, '65-75 km', '9 Mo Battery & Charger')">
+                                    <span>Graphene 48V</span>
+                                    <span class="chip-sub text-success">9M Warranty</span>
+                                </button>
+                                <button type="button" class="battery-chip-btn" 
+                                        onclick="selectModelBattery('EV-PRO-GT', 'lfp48', 74999, '85-95 km', '3 Yrs Comprehensive')">
+                                    <span>Smart LFP 48V</span>
+                                    <span class="chip-sub text-primary">3Y Warranty</span>
+                                </button>
+                                <button type="button" class="battery-chip-btn" 
+                                        onclick="selectModelBattery('EV-PRO-GT', 'lfp60', 81999, '115-125 km', '3 Yrs Comprehensive')">
+                                    <span>Smart LFP 60V</span>
+                                    <span class="chip-sub text-info">3Y Warranty</span>
+                                </button>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-baseline mb-3">
+                            <!-- Price Tag Display -->
+                            <div class="price-hero-box d-flex justify-content-between align-items-center">
                                 <div>
-                                    <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;">Customer On-Road Price</small>
-                                    <div class="fs-4 fw-black text-success font-mono" id="price-EV-PRO-GT">₹49,999</div>
+                                    <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 10.5px;">Customer On-Road Price</small>
+                                    <div class="price-val font-mono" id="price-EV-PRO-GT">₹49,999</div>
                                     <small class="text-secondary" style="font-size: 10px;">Includes 5% GST &amp; turnkey fitment</small>
                                 </div>
                                 <div class="text-end">
-                                    <span class="badge bg-warning text-dark font-mono" id="range-EV-PRO-GT">65-75 km</span>
-                                    <div class="text-secondary" style="font-size: 11px;" id="warranty-EV-PRO-GT">9 Mo Warranty</div>
+                                    <span class="pill-badge pill-amber font-mono" id="range-EV-PRO-GT">65-75 km</span>
+                                    <div class="text-secondary small mt-1" id="warranty-EV-PRO-GT">9 Mo Battery &amp; Charger</div>
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <div class="spec-item"><span class="text-secondary">Top Speed</span><strong class="font-mono">&lt;25 km/h (Non-RTO)</strong></div>
-                                <div class="spec-item"><span class="text-secondary">Charging Time</span><strong class="font-mono">4 – 5 Hours</strong></div>
-                                <div class="spec-item"><span class="text-secondary">Driving License</span><strong class="text-success"><i class="fas fa-check-circle"></i> NOT Required</strong></div>
-                                <div class="spec-item"><span class="text-secondary">Braking Safety</span><strong class="font-mono">Front Disc + Rear Drum</strong></div>
+                            <!-- Specification Preview Grid -->
+                            <div class="spec-preview-grid">
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Top Speed</span>
+                                    <span class="spec-cell-val font-mono">&lt;25 km/h (Non-RTO)</span>
+                                </div>
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Driving License</span>
+                                    <span class="spec-cell-val text-success"><i class="fas fa-check-circle"></i> Zero License</span>
+                                </div>
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Charging Time</span>
+                                    <span class="spec-cell-val font-mono">4 – 5 Hours</span>
+                                </div>
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Braking Safety</span>
+                                    <span class="spec-cell-val font-mono">Front Disc + Rear Drum</span>
+                                </div>
                             </div>
 
+                            <!-- Progressive Disclosure Accordion for Full Specs -->
+                            <div class="accordion accordion-specs" id="acc-EV-PRO-GT">
+                                <div class="accordion-item border-0 bg-transparent">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#specDetails-EV-PRO-GT">
+                                            <i class="fas fa-sliders me-2 text-lime"></i> View Full Specifications
+                                        </button>
+                                    </h2>
+                                    <div id="specDetails-EV-PRO-GT" class="accordion-collapse collapse" data-bs-parent="#acc-EV-PRO-GT">
+                                        <div class="accordion-body">
+                                            <div class="spec-row-item"><span class="text-secondary">Vehicle Category</span><strong>Non-RTO Certified Low Speed</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Motor Type</span><strong>BLDC Hub Motor (Waterproof IP67)</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Suspension</span><strong>Front Telescopic, Rear Hydraulic Shocks</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Lighting</span><strong>Full Matrix LED with DRL</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Tyre Type</span><strong>Heavy-Duty Tubeless Tyres</strong></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CTAs -->
                             <div class="mt-auto d-grid gap-2">
-                                <button class="btn btn-success fw-bold py-2 rounded-3 shadow-sm" onclick="openBookingModal('Manthra Pro GT', 'EV-PRO-GT')">
-                                    <i class="fas fa-shopping-cart me-1"></i> Book Now / Test Ride
+                                <button class="btn-lime w-100" onclick="openBookingModal('Manthra Pro GT', 'EV-PRO-GT')">
+                                    <i class="fas fa-calendar-check"></i> Book Now / Free Test Ride
                                 </button>
                                 <a href="https://wa.me/918585852738?text=Hello!%20I%20am%20interested%20in%20Manthra%20Pro%20GT%20Electric%20Scooter.%20Please%20share%20details." 
-                                   target="_blank" class="btn btn-outline-secondary btn-sm fw-bold rounded-3">
+                                   target="_blank" rel="noopener noreferrer" class="btn-outline-dark-custom justify-content-center">
                                     <i class="fab fa-whatsapp text-success me-1"></i> WhatsApp Inquiry
                                 </a>
                             </div>
@@ -656,51 +1327,118 @@
                 </div>
 
                 <!-- MODEL 2: MANTHRA POWER PLUS CARGO -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="vehicle-card" id="card-EV-POWER-PLUS">
-                        <div class="vehicle-img-wrap">
-                            <span class="badge bg-warning text-dark position-absolute top-0 start-0 m-3 px-2 py-1 small fw-bold">200KG HEAVY PAYLOAD</span>
-                            <img src="/public/hub/Assets/manthra-power-plus-real.webp" alt="Manthra Power Plus" onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                <div class="col-lg-4 col-md-6 model-card-col" data-category="cargo">
+                    <div class="product-card" id="card-EV-POWER-PLUS">
+                        <div class="product-badge-float">
+                            <span class="pill-badge pill-amber"><i class="fas fa-truck-ramp-box"></i> 200KG HEAVY PAYLOAD</span>
                         </div>
-                        <div class="vehicle-body">
+                        <div class="product-img-stage">
+                            <img src="/public/hub/Assets/manthra-power-plus-real.webp" 
+                                 id="img-EV-POWER-PLUS"
+                                 alt="Manthra Power Plus Cargo Electric Scooter" 
+                                 loading="lazy"
+                                 onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                            
+                            <div class="product-thumb-row">
+                                <button type="button" class="product-thumb-item active" 
+                                        onclick="switchCardImage('EV-POWER-PLUS', '/public/hub/Assets/manthra-power-plus-real.webp', this)" title="Studio View">
+                                    <img src="/public/hub/Assets/manthra-power-plus-real.webp" alt="Power Plus" onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                                </button>
+                                <button type="button" class="product-thumb-item" 
+                                        onclick="switchCardImage('EV-POWER-PLUS', '/public/hub/Assets/manthra-fleet-lineup.webp', this)" title="Lineup View">
+                                    <img src="/public/hub/Assets/manthra-fleet-lineup.webp" alt="Lineup">
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="product-card-body">
                             <div class="d-flex justify-content-between align-items-start mb-1">
                                 <h3 class="fw-black text-heading fs-5 mb-0">Manthra Power Plus</h3>
-                                <span class="badge bg-secondary font-mono">Heavy Cargo</span>
+                                <span class="badge bg-warning text-dark font-mono px-2 py-1">Heavy Cargo</span>
                             </div>
-                            <small class="text-secondary mb-2">Engineered for last-mile commercial delivery, farm utility, groceries and heavy cargo loads.</small>
+                            <p class="text-secondary small mb-2">
+                                Engineered for last-mile commercial delivery, farm utility, groceries and heavy cargo loads.
+                            </p>
 
-                            <!-- Battery Selector -->
-                            <div class="battery-pill-selector">
-                                <button class="battery-pill-option active" onclick="selectModelBattery('EV-POWER-PLUS', 'graphene', 51499, '65-75 km', '9 Mo Battery & Charger')">Graphene 48V (9M)</button>
-                                <button class="battery-pill-option" onclick="selectModelBattery('EV-POWER-PLUS', 'lfp48', 76499, '85-95 km', '3 Yrs Comprehensive')">Smart LFP 48V (3Y)</button>
-                                <button class="battery-pill-option" onclick="selectModelBattery('EV-POWER-PLUS', 'lfp60', 83499, '115-125 km', '3 Yrs Comprehensive')">LFP 60V (3Y)</button>
+                            <!-- Battery Variant Selector Chips -->
+                            <div class="battery-chip-group">
+                                <button type="button" class="battery-chip-btn active" 
+                                        onclick="selectModelBattery('EV-POWER-PLUS', 'graphene', 51499, '65-75 km', '9 Mo Battery & Charger')">
+                                    <span>Graphene 48V</span>
+                                    <span class="chip-sub text-success">9M Warranty</span>
+                                </button>
+                                <button type="button" class="battery-chip-btn" 
+                                        onclick="selectModelBattery('EV-POWER-PLUS', 'lfp48', 76499, '85-95 km', '3 Yrs Comprehensive')">
+                                    <span>Smart LFP 48V</span>
+                                    <span class="chip-sub text-primary">3Y Warranty</span>
+                                </button>
+                                <button type="button" class="battery-chip-btn" 
+                                        onclick="selectModelBattery('EV-POWER-PLUS', 'lfp60', 83499, '115-125 km', '3 Yrs Comprehensive')">
+                                    <span>Smart LFP 60V</span>
+                                    <span class="chip-sub text-info">3Y Warranty</span>
+                                </button>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-baseline mb-3">
+                            <!-- Price Tag Display -->
+                            <div class="price-hero-box d-flex justify-content-between align-items-center">
                                 <div>
-                                    <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;">Customer On-Road Price</small>
-                                    <div class="fs-4 fw-black text-success font-mono" id="price-EV-POWER-PLUS">₹51,499</div>
+                                    <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 10.5px;">Customer On-Road Price</small>
+                                    <div class="price-val font-mono" id="price-EV-POWER-PLUS">₹51,499</div>
                                     <small class="text-secondary" style="font-size: 10px;">Includes 5% GST &amp; turnkey fitment</small>
                                 </div>
                                 <div class="text-end">
-                                    <span class="badge bg-warning text-dark font-mono" id="range-EV-POWER-PLUS">65-75 km</span>
-                                    <div class="text-secondary" style="font-size: 11px;" id="warranty-EV-POWER-PLUS">9 Mo Warranty</div>
+                                    <span class="pill-badge pill-amber font-mono" id="range-EV-POWER-PLUS">65-75 km</span>
+                                    <div class="text-secondary small mt-1" id="warranty-EV-POWER-PLUS">9 Mo Battery &amp; Charger</div>
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <div class="spec-item"><span class="text-secondary">Payload Capacity</span><strong class="font-mono text-warning">200 kg Certified</strong></div>
-                                <div class="spec-item"><span class="text-secondary">Rear Suspension</span><strong class="font-mono">Reinforced Dual Springs</strong></div>
-                                <div class="spec-item"><span class="text-secondary">Driving License</span><strong class="text-success"><i class="fas fa-check-circle"></i> NOT Required</strong></div>
-                                <div class="spec-item"><span class="text-secondary">Carrier Type</span><strong class="font-mono">Heavy Steel Extended Rack</strong></div>
+                            <!-- Specification Preview Grid -->
+                            <div class="spec-preview-grid">
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Payload Capacity</span>
+                                    <span class="spec-cell-val font-mono text-warning">200 kg Certified</span>
+                                </div>
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Driving License</span>
+                                    <span class="spec-cell-val text-success"><i class="fas fa-check-circle"></i> Zero License</span>
+                                </div>
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Rear Suspension</span>
+                                    <span class="spec-cell-val font-mono">Reinforced Dual Springs</span>
+                                </div>
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Carrier Type</span>
+                                    <span class="spec-cell-val font-mono">Heavy Steel Extended Rack</span>
+                                </div>
                             </div>
 
+                            <!-- Progressive Disclosure Accordion -->
+                            <div class="accordion accordion-specs" id="acc-EV-POWER-PLUS">
+                                <div class="accordion-item border-0 bg-transparent">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#specDetails-EV-POWER-PLUS">
+                                            <i class="fas fa-sliders me-2 text-lime"></i> View Full Specifications
+                                        </button>
+                                    </h2>
+                                    <div id="specDetails-EV-POWER-PLUS" class="accordion-collapse collapse" data-bs-parent="#acc-EV-POWER-PLUS">
+                                        <div class="accordion-body">
+                                            <div class="spec-row-item"><span class="text-secondary">Commercial Utility</span><strong>Last-Mile Delivery / Agriculture</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Frame Architecture</span><strong>Heavy-Duty Reinforced High-Tensile Steel</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Braking</span><strong>Front Disc + Heavy Drum Rear</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Tyre Width</span><strong>Extra-Wide All-Terrain Grip</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Gradient Climb</span><strong>Heavy Torque Hill Climbing Assist</strong></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CTAs -->
                             <div class="mt-auto d-grid gap-2">
-                                <button class="btn btn-success fw-bold py-2 rounded-3 shadow-sm" onclick="openBookingModal('Manthra Power Plus Cargo', 'EV-POWER-PLUS')">
-                                    <i class="fas fa-shopping-cart me-1"></i> Book Now / Test Ride
+                                <button class="btn-lime w-100" onclick="openBookingModal('Manthra Power Plus Cargo', 'EV-POWER-PLUS')">
+                                    <i class="fas fa-calendar-check"></i> Book Now / Free Test Ride
                                 </button>
                                 <a href="https://wa.me/918585852738?text=Hello!%20I%20am%20interested%20in%20Manthra%20Power%20Plus%20Cargo%20Scooter.%20Please%20share%20details." 
-                                   target="_blank" class="btn btn-outline-secondary btn-sm fw-bold rounded-3">
+                                   target="_blank" rel="noopener noreferrer" class="btn-outline-dark-custom justify-content-center">
                                     <i class="fab fa-whatsapp text-success me-1"></i> WhatsApp Inquiry
                                 </a>
                             </div>
@@ -709,50 +1447,113 @@
                 </div>
 
                 <!-- MODEL 3: MANTHRA M99 FLAGSHIP -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="vehicle-card" id="card-EV-M99">
-                        <div class="vehicle-img-wrap">
-                            <span class="badge bg-primary position-absolute top-0 start-0 m-3 px-2 py-1 small fw-bold">URBAN FLAGSHIP</span>
-                            <img src="/public/hub/Assets/manthra-m99-real.webp" alt="Manthra M99 Flagship" onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                <div class="col-lg-4 col-md-6 model-card-col" data-category="flagship">
+                    <div class="product-card" id="card-EV-M99">
+                        <div class="product-badge-float">
+                            <span class="pill-badge pill-teal"><i class="fas fa-star"></i> URBAN FLAGSHIP</span>
                         </div>
-                        <div class="vehicle-body">
+                        <div class="product-img-stage">
+                            <img src="/public/hub/Assets/manthra-m99-real.webp" 
+                                 id="img-EV-M99"
+                                 alt="Manthra M99 Flagship Electric Scooter" 
+                                 loading="lazy"
+                                 onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                            
+                            <div class="product-thumb-row">
+                                <button type="button" class="product-thumb-item active" 
+                                        onclick="switchCardImage('EV-M99', '/public/hub/Assets/manthra-m99-real.webp', this)" title="Studio View">
+                                    <img src="/public/hub/Assets/manthra-m99-real.webp" alt="M99" onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                                </button>
+                                <button type="button" class="product-thumb-item" 
+                                        onclick="switchCardImage('EV-M99', '/public/hub/Assets/manthra-fleet-lineup.webp', this)" title="Lineup View">
+                                    <img src="/public/hub/Assets/manthra-fleet-lineup.webp" alt="Lineup">
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="product-card-body">
                             <div class="d-flex justify-content-between align-items-start mb-1">
                                 <h3 class="fw-black text-heading fs-5 mb-0">Manthra M99 Flagship</h3>
-                                <span class="badge bg-secondary font-mono">Premium Tech</span>
+                                <span class="badge bg-info text-white font-mono px-2 py-1">Premium Tech</span>
                             </div>
-                            <small class="text-secondary mb-2">Next-gen urban flagship with Reverse Assist, full-color digital console, and keyless push start.</small>
+                            <p class="text-secondary small mb-2">
+                                Next-gen urban flagship with Reverse Assist, full-color digital console, and keyless push start.
+                            </p>
 
-                            <!-- Battery Selector -->
-                            <div class="battery-pill-selector">
-                                <button class="battery-pill-option active" onclick="selectModelBattery('EV-M99', 'graphene', 80999, '75-85 km', '9 Mo Battery & Charger')">Graphene 48V (9M)</button>
-                                <button class="battery-pill-option" onclick="selectModelBattery('EV-M99', 'lfp60', 96999, '120-130 km', '3 Yrs Comprehensive')">Smart LFP 60V (3Y)</button>
+                            <!-- Battery Variant Selector Chips -->
+                            <div class="battery-chip-group">
+                                <button type="button" class="battery-chip-btn active" 
+                                        onclick="selectModelBattery('EV-M99', 'graphene', 80999, '75-85 km', '9 Mo Battery & Charger')">
+                                    <span>Graphene 48V</span>
+                                    <span class="chip-sub text-success">9M Warranty</span>
+                                </button>
+                                <button type="button" class="battery-chip-btn" 
+                                        onclick="selectModelBattery('EV-M99', 'lfp60', 96999, '120-130 km', '3 Yrs Comprehensive')">
+                                    <span>Smart LFP 60V</span>
+                                    <span class="chip-sub text-info">3Y Warranty</span>
+                                </button>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-baseline mb-3">
+                            <!-- Price Tag Display -->
+                            <div class="price-hero-box d-flex justify-content-between align-items-center">
                                 <div>
-                                    <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;">Customer On-Road Price</small>
-                                    <div class="fs-4 fw-black text-success font-mono" id="price-EV-M99">₹80,999</div>
+                                    <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 10.5px;">Customer On-Road Price</small>
+                                    <div class="price-val font-mono" id="price-EV-M99">₹80,999</div>
                                     <small class="text-secondary" style="font-size: 10px;">Includes 5% GST &amp; turnkey fitment</small>
                                 </div>
                                 <div class="text-end">
-                                    <span class="badge bg-warning text-dark font-mono" id="range-EV-M99">75-85 km</span>
-                                    <div class="text-secondary" style="font-size: 11px;" id="warranty-EV-M99">9 Mo Warranty</div>
+                                    <span class="pill-badge pill-amber font-mono" id="range-EV-M99">75-85 km</span>
+                                    <div class="text-secondary small mt-1" id="warranty-EV-M99">9 Mo Battery &amp; Charger</div>
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <div class="spec-item"><span class="text-secondary">Reverse Assist</span><strong class="text-success"><i class="fas fa-check-circle"></i> Yes (1-Touch)</strong></div>
-                                <div class="spec-item"><span class="text-secondary">Keyless Operation</span><strong class="font-mono">Smart Remote Key Fob</strong></div>
-                                <div class="spec-item"><span class="text-secondary">Driving License</span><strong class="text-success"><i class="fas fa-check-circle"></i> NOT Required</strong></div>
-                                <div class="spec-item"><span class="text-secondary">Underseat Storage</span><strong class="font-mono">26L Full Helmet Space</strong></div>
+                            <!-- Specification Preview Grid -->
+                            <div class="spec-preview-grid">
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Reverse Assist</span>
+                                    <span class="spec-cell-val text-success"><i class="fas fa-check-circle"></i> Yes (1-Touch)</span>
+                                </div>
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Driving License</span>
+                                    <span class="spec-cell-val text-success"><i class="fas fa-check-circle"></i> Zero License</span>
+                                </div>
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Keyless Operation</span>
+                                    <span class="spec-cell-val font-mono">Smart Remote Fob</span>
+                                </div>
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Underseat Storage</span>
+                                    <span class="spec-cell-val font-mono">26L Helmet Space</span>
+                                </div>
                             </div>
 
+                            <!-- Progressive Disclosure Accordion -->
+                            <div class="accordion accordion-specs" id="acc-EV-M99">
+                                <div class="accordion-item border-0 bg-transparent">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#specDetails-EV-M99">
+                                            <i class="fas fa-sliders me-2 text-lime"></i> View Full Specifications
+                                        </button>
+                                    </h2>
+                                    <div id="specDetails-EV-M99" class="accordion-collapse collapse" data-bs-parent="#acc-EV-M99">
+                                        <div class="accordion-body">
+                                            <div class="spec-row-item"><span class="text-secondary">Instrument Console</span><strong>Full-Color High-Definition TFT Display</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Safety Alarm</span><strong>Anti-Theft Motion Sensor with Wheel Lock</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Reverse Feature</span><strong>Electric Geared Reverse Push-Assist</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Brakes</span><strong>Front Hydraulic Disc + Rear Drum CBS</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">USB Charger</span><strong>Quick Charge 3.0 Integrated Socket</strong></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CTAs -->
                             <div class="mt-auto d-grid gap-2">
-                                <button class="btn btn-success fw-bold py-2 rounded-3 shadow-sm" onclick="openBookingModal('Manthra M99 Flagship', 'EV-M99')">
-                                    <i class="fas fa-shopping-cart me-1"></i> Book Now / Test Ride
+                                <button class="btn-lime w-100" onclick="openBookingModal('Manthra M99 Flagship', 'EV-M99')">
+                                    <i class="fas fa-calendar-check"></i> Book Now / Free Test Ride
                                 </button>
                                 <a href="https://wa.me/918585852738?text=Hello!%20I%20am%20interested%20in%20Manthra%20M99%20Flagship%20Scooter.%20Please%20share%20details." 
-                                   target="_blank" class="btn btn-outline-secondary btn-sm fw-bold rounded-3">
+                                   target="_blank" rel="noopener noreferrer" class="btn-outline-dark-custom justify-content-center">
                                     <i class="fab fa-whatsapp text-success me-1"></i> WhatsApp Inquiry
                                 </a>
                             </div>
@@ -761,50 +1562,113 @@
                 </div>
 
                 <!-- MODEL 4: MANTHRA ROYAL SLING -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="vehicle-card" id="card-EV-ROYAL-SLING">
-                        <div class="vehicle-img-wrap">
-                            <span class="badge bg-purple text-white position-absolute top-0 start-0 m-3 px-2 py-1 small fw-bold" style="background:#7c3aed;">RETRO LUXURY</span>
-                            <img src="/public/hub/Assets/manthra-royal-real.webp" alt="Manthra Royal Sling" onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                <div class="col-lg-4 col-md-6 model-card-col" data-category="retro">
+                    <div class="product-card" id="card-EV-ROYAL-SLING">
+                        <div class="product-badge-float">
+                            <span class="pill-badge pill-graphite" style="color:#d8b4fe;"><i class="fas fa-crown"></i> RETRO LUXURY</span>
                         </div>
-                        <div class="vehicle-body">
+                        <div class="product-img-stage">
+                            <img src="/public/hub/Assets/manthra-royal-real.webp" 
+                                 id="img-EV-ROYAL-SLING"
+                                 alt="Manthra Royal Sling Electric Scooter" 
+                                 loading="lazy"
+                                 onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                            
+                            <div class="product-thumb-row">
+                                <button type="button" class="product-thumb-item active" 
+                                        onclick="switchCardImage('EV-ROYAL-SLING', '/public/hub/Assets/manthra-royal-real.webp', this)" title="Studio View">
+                                    <img src="/public/hub/Assets/manthra-royal-real.webp" alt="Royal Sling" onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                                </button>
+                                <button type="button" class="product-thumb-item" 
+                                        onclick="switchCardImage('EV-ROYAL-SLING', '/public/hub/Assets/manthra-fleet-lineup.webp', this)" title="Lineup View">
+                                    <img src="/public/hub/Assets/manthra-fleet-lineup.webp" alt="Lineup">
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="product-card-body">
                             <div class="d-flex justify-content-between align-items-start mb-1">
                                 <h3 class="fw-black text-heading fs-5 mb-0">Manthra Royal Sling</h3>
-                                <span class="badge bg-secondary font-mono">Vintage Classic</span>
+                                <span class="badge bg-purple text-white font-mono px-2 py-1" style="background:#7c3aed;">Vintage Classic</span>
                             </div>
-                            <small class="text-secondary mb-2">Timeless retro luxury styling with chrome mirrors, premium double-contour seat &amp; USB fast charging.</small>
+                            <p class="text-secondary small mb-2">
+                                Timeless retro luxury styling with chrome mirrors, premium double-contour seat &amp; USB fast charging.
+                            </p>
 
-                            <!-- Battery Selector -->
-                            <div class="battery-pill-selector">
-                                <button class="battery-pill-option active" onclick="selectModelBattery('EV-ROYAL-SLING', 'graphene', 80999, '75-85 km', '9 Mo Battery & Charger')">Graphene 48V (9M)</button>
-                                <button class="battery-pill-option" onclick="selectModelBattery('EV-ROYAL-SLING', 'lfp60', 96999, '120-130 km', '3 Yrs Comprehensive')">Smart LFP 60V (3Y)</button>
+                            <!-- Battery Variant Selector Chips -->
+                            <div class="battery-chip-group">
+                                <button type="button" class="battery-chip-btn active" 
+                                        onclick="selectModelBattery('EV-ROYAL-SLING', 'graphene', 80999, '75-85 km', '9 Mo Battery & Charger')">
+                                    <span>Graphene 48V</span>
+                                    <span class="chip-sub text-success">9M Warranty</span>
+                                </button>
+                                <button type="button" class="battery-chip-btn" 
+                                        onclick="selectModelBattery('EV-ROYAL-SLING', 'lfp60', 96999, '120-130 km', '3 Yrs Comprehensive')">
+                                    <span>Smart LFP 60V</span>
+                                    <span class="chip-sub text-info">3Y Warranty</span>
+                                </button>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-baseline mb-3">
+                            <!-- Price Tag Display -->
+                            <div class="price-hero-box d-flex justify-content-between align-items-center">
                                 <div>
-                                    <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;">Customer On-Road Price</small>
-                                    <div class="fs-4 fw-black text-success font-mono" id="price-EV-ROYAL-SLING">₹80,999</div>
+                                    <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 10.5px;">Customer On-Road Price</small>
+                                    <div class="price-val font-mono" id="price-EV-ROYAL-SLING">₹80,999</div>
                                     <small class="text-secondary" style="font-size: 10px;">Includes 5% GST &amp; turnkey fitment</small>
                                 </div>
                                 <div class="text-end">
-                                    <span class="badge bg-warning text-dark font-mono" id="range-EV-ROYAL-SLING">75-85 km</span>
-                                    <div class="text-secondary" style="font-size: 11px;" id="warranty-EV-ROYAL-SLING">9 Mo Warranty</div>
+                                    <span class="pill-badge pill-amber font-mono" id="range-EV-ROYAL-SLING">75-85 km</span>
+                                    <div class="text-secondary small mt-1" id="warranty-EV-ROYAL-SLING">9 Mo Battery &amp; Charger</div>
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <div class="spec-item"><span class="text-secondary">Comfort Seating</span><strong class="font-mono">Premium Double Contour Cushion</strong></div>
-                                <div class="spec-item"><span class="text-secondary">Mobile Charging</span><strong class="font-mono">Built-in Fast USB Port</strong></div>
-                                <div class="spec-item"><span class="text-secondary">Driving License</span><strong class="text-success"><i class="fas fa-check-circle"></i> NOT Required</strong></div>
-                                <div class="spec-item"><span class="text-secondary">Styling Accents</span><strong class="font-mono">Classic Chrome Mirrors &amp; Trim</strong></div>
+                            <!-- Specification Preview Grid -->
+                            <div class="spec-preview-grid">
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Comfort Seating</span>
+                                    <span class="spec-cell-val font-mono">Double Contour Cushion</span>
+                                </div>
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Driving License</span>
+                                    <span class="spec-cell-val text-success"><i class="fas fa-check-circle"></i> Zero License</span>
+                                </div>
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Mobile Charging</span>
+                                    <span class="spec-cell-val font-mono">Built-in Fast USB</span>
+                                </div>
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Styling Accents</span>
+                                    <span class="spec-cell-val font-mono">Chrome Mirrors &amp; Trim</span>
+                                </div>
                             </div>
 
+                            <!-- Progressive Disclosure Accordion -->
+                            <div class="accordion accordion-specs" id="acc-EV-ROYAL-SLING">
+                                <div class="accordion-item border-0 bg-transparent">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#specDetails-EV-ROYAL-SLING">
+                                            <i class="fas fa-sliders me-2 text-lime"></i> View Full Specifications
+                                        </button>
+                                    </h2>
+                                    <div id="specDetails-EV-ROYAL-SLING" class="accordion-collapse collapse" data-bs-parent="#acc-EV-ROYAL-SLING">
+                                        <div class="accordion-body">
+                                            <div class="spec-row-item"><span class="text-secondary">Vintage Trim</span><strong>Polished Chrome Mirrors, Handlebar &amp; Badging</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Seat Cushioning</span><strong>Premium High-Density Ergonomic Dual Cushion</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Suspension</span><strong>Smooth Hydraulic Ride Over Uneven Roads</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Footboard</span><strong>Spacious Flat Floorboard with Bag Hook</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Headlamp</span><strong>Vintage Circular Jewel LED Projector</strong></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CTAs -->
                             <div class="mt-auto d-grid gap-2">
-                                <button class="btn btn-success fw-bold py-2 rounded-3 shadow-sm" onclick="openBookingModal('Manthra Royal Sling', 'EV-ROYAL-SLING')">
-                                    <i class="fas fa-shopping-cart me-1"></i> Book Now / Test Ride
+                                <button class="btn-lime w-100" onclick="openBookingModal('Manthra Royal Sling', 'EV-ROYAL-SLING')">
+                                    <i class="fas fa-calendar-check"></i> Book Now / Free Test Ride
                                 </button>
                                 <a href="https://wa.me/918585852738?text=Hello!%20I%20am%20interested%20in%20Manthra%20Royal%20Sling%20Scooter.%20Please%20share%20details." 
-                                   target="_blank" class="btn btn-outline-secondary btn-sm fw-bold rounded-3">
+                                   target="_blank" rel="noopener noreferrer" class="btn-outline-dark-custom justify-content-center">
                                     <i class="fab fa-whatsapp text-success me-1"></i> WhatsApp Inquiry
                                 </a>
                             </div>
@@ -813,50 +1677,113 @@
                 </div>
 
                 <!-- MODEL 5: MANTHRA BEAST PRO -->
-                <div class="col-lg-4 col-md-6">
-                    <div class="vehicle-card" id="card-EV-BEAST-PRO">
-                        <div class="vehicle-img-wrap">
-                            <span class="badge bg-danger position-absolute top-0 start-0 m-3 px-2 py-1 small fw-bold">DUAL DISC CBS</span>
-                            <img src="/public/hub/Assets/manthra-beast-real.webp" alt="Manthra Beast Pro" onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                <div class="col-lg-4 col-md-6 model-card-col" data-category="beast">
+                    <div class="product-card" id="card-EV-BEAST-PRO">
+                        <div class="product-badge-float">
+                            <span class="pill-badge pill-graphite" style="color:#f87171;"><i class="fas fa-fire"></i> DUAL DISC CBS</span>
                         </div>
-                        <div class="vehicle-body">
+                        <div class="product-img-stage">
+                            <img src="/public/hub/Assets/manthra-beast-real.webp" 
+                                 id="img-EV-BEAST-PRO"
+                                 alt="Manthra Beast Pro Electric Scooter" 
+                                 loading="lazy"
+                                 onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                            
+                            <div class="product-thumb-row">
+                                <button type="button" class="product-thumb-item active" 
+                                        onclick="switchCardImage('EV-BEAST-PRO', '/public/hub/Assets/manthra-beast-real.webp', this)" title="Studio View">
+                                    <img src="/public/hub/Assets/manthra-beast-real.webp" alt="Beast Pro" onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                                </button>
+                                <button type="button" class="product-thumb-item" 
+                                        onclick="switchCardImage('EV-BEAST-PRO', '/public/hub/Assets/manthra-fleet-lineup.webp', this)" title="Lineup View">
+                                    <img src="/public/hub/Assets/manthra-fleet-lineup.webp" alt="Lineup">
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="product-card-body">
                             <div class="d-flex justify-content-between align-items-start mb-1">
                                 <h3 class="fw-black text-heading fs-5 mb-0">Manthra Beast Pro</h3>
-                                <span class="badge bg-secondary font-mono">Street Fighter</span>
+                                <span class="badge bg-danger font-mono px-2 py-1">Street Fighter</span>
                             </div>
-                            <small class="text-secondary mb-2">Aggressive muscular styling with front &amp; rear hydraulic disc brakes, nitrogen gas shocks &amp; CBS.</small>
+                            <p class="text-secondary small mb-2">
+                                Aggressive muscular styling with front &amp; rear hydraulic disc brakes, nitrogen gas shocks &amp; CBS.
+                            </p>
 
-                            <!-- Battery Selector -->
-                            <div class="battery-pill-selector">
-                                <button class="battery-pill-option active" onclick="selectModelBattery('EV-BEAST-PRO', 'graphene', 82999, '75-85 km', '9 Mo Battery & Charger')">Graphene 48V (9M)</button>
-                                <button class="battery-pill-option" onclick="selectModelBattery('EV-BEAST-PRO', 'lfp60', 99499, '120-130 km', '3 Yrs Comprehensive')">Smart LFP 60V (3Y)</button>
+                            <!-- Battery Variant Selector Chips -->
+                            <div class="battery-chip-group">
+                                <button type="button" class="battery-chip-btn active" 
+                                        onclick="selectModelBattery('EV-BEAST-PRO', 'graphene', 82999, '75-85 km', '9 Mo Battery & Charger')">
+                                    <span>Graphene 48V</span>
+                                    <span class="chip-sub text-success">9M Warranty</span>
+                                </button>
+                                <button type="button" class="battery-chip-btn" 
+                                        onclick="selectModelBattery('EV-BEAST-PRO', 'lfp60', 99499, '120-130 km', '3 Yrs Comprehensive')">
+                                    <span>Smart LFP 60V</span>
+                                    <span class="chip-sub text-info">3Y Warranty</span>
+                                </button>
                             </div>
 
-                            <div class="d-flex justify-content-between align-items-baseline mb-3">
+                            <!-- Price Tag Display -->
+                            <div class="price-hero-box d-flex justify-content-between align-items-center">
                                 <div>
-                                    <small class="text-secondary text-uppercase fw-bold" style="font-size: 11px;">Customer On-Road Price</small>
-                                    <div class="fs-4 fw-black text-success font-mono" id="price-EV-BEAST-PRO">₹82,999</div>
+                                    <small class="text-muted text-uppercase fw-bold d-block" style="font-size: 10.5px;">Customer On-Road Price</small>
+                                    <div class="price-val font-mono" id="price-EV-BEAST-PRO">₹82,999</div>
                                     <small class="text-secondary" style="font-size: 10px;">Includes 5% GST &amp; turnkey fitment</small>
                                 </div>
                                 <div class="text-end">
-                                    <span class="badge bg-warning text-dark font-mono" id="range-EV-BEAST-PRO">75-85 km</span>
-                                    <div class="text-secondary" style="font-size: 11px;" id="warranty-EV-BEAST-PRO">9 Mo Warranty</div>
+                                    <span class="pill-badge pill-amber font-mono" id="range-EV-BEAST-PRO">75-85 km</span>
+                                    <div class="text-secondary small mt-1" id="warranty-EV-BEAST-PRO">9 Mo Battery &amp; Charger</div>
                                 </div>
                             </div>
 
-                            <div class="mb-3">
-                                <div class="spec-item"><span class="text-secondary">Braking System</span><strong class="font-mono text-danger">Dual Front &amp; Rear Disc CBS</strong></div>
-                                <div class="spec-item"><span class="text-secondary">Suspension</span><strong class="font-mono">Nitrogen Gas Charged Dampers</strong></div>
-                                <div class="spec-item"><span class="text-secondary">Driving License</span><strong class="text-success"><i class="fas fa-check-circle"></i> NOT Required</strong></div>
-                                <div class="spec-item"><span class="text-secondary">Headlamp</span><strong class="font-mono">Quad Projector High-Beam LED</strong></div>
+                            <!-- Specification Preview Grid -->
+                            <div class="spec-preview-grid">
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Braking System</span>
+                                    <span class="spec-cell-val font-mono text-danger">Dual Front &amp; Rear Disc</span>
+                                </div>
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Driving License</span>
+                                    <span class="spec-cell-val text-success"><i class="fas fa-check-circle"></i> Zero License</span>
+                                </div>
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Rear Shock</span>
+                                    <span class="spec-cell-val font-mono">Nitrogen Gas Charged</span>
+                                </div>
+                                <div class="spec-preview-cell">
+                                    <span class="spec-cell-label">Headlamp</span>
+                                    <span class="spec-cell-val font-mono">Quad High-Beam Projector</span>
+                                </div>
                             </div>
 
+                            <!-- Progressive Disclosure Accordion -->
+                            <div class="accordion accordion-specs" id="acc-EV-BEAST-PRO">
+                                <div class="accordion-item border-0 bg-transparent">
+                                    <h2 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#specDetails-EV-BEAST-PRO">
+                                            <i class="fas fa-sliders me-2 text-lime"></i> View Full Specifications
+                                        </button>
+                                    </h2>
+                                    <div id="specDetails-EV-BEAST-PRO" class="accordion-collapse collapse" data-bs-parent="#acc-EV-BEAST-PRO">
+                                        <div class="accordion-body">
+                                            <div class="spec-row-item"><span class="text-secondary">Braking Tech</span><strong>Dual Hydraulic Calipers with Combined Braking (CBS)</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Dampers</span><strong>Nitrogen Canister Gas Shocks with Rebound Damping</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Aesthetics</span><strong>Street Fighter Aggressive Muscular Fairing</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Tyres</span><strong>High-Traction Racing Compound Tubeless</strong></div>
+                                            <div class="spec-row-item"><span class="text-secondary">Security</span><strong>Electronic Anti-Theft Lock with Audio Siren</strong></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CTAs -->
                             <div class="mt-auto d-grid gap-2">
-                                <button class="btn btn-success fw-bold py-2 rounded-3 shadow-sm" onclick="openBookingModal('Manthra Beast Pro', 'EV-BEAST-PRO')">
-                                    <i class="fas fa-shopping-cart me-1"></i> Book Now / Test Ride
+                                <button class="btn-lime w-100" onclick="openBookingModal('Manthra Beast Pro', 'EV-BEAST-PRO')">
+                                    <i class="fas fa-calendar-check"></i> Book Now / Free Test Ride
                                 </button>
                                 <a href="https://wa.me/918585852738?text=Hello!%20I%20am%20interested%20in%20Manthra%20Beast%20Pro%20Scooter.%20Please%20share%20details." 
-                                   target="_blank" class="btn btn-outline-secondary btn-sm fw-bold rounded-3">
+                                   target="_blank" rel="noopener noreferrer" class="btn-outline-dark-custom justify-content-center">
                                     <i class="fab fa-whatsapp text-success me-1"></i> WhatsApp Inquiry
                                 </a>
                             </div>
@@ -868,24 +1795,26 @@
         </div>
     </section>
 
-    <!-- ── 6. COMPLETE MODEL PRICING MATRIX TABLE ───────────────────────── -->
-    <section class="py-5" style="background: var(--bg-card); border-top: 1px solid var(--brand-border); border-bottom: 1px solid var(--brand-border);">
+    <!-- ── 6. COMPLETE MODEL PRICING & SPEC COMPARISON ──────────────────── -->
+    <section class="py-5" id="compareSection" style="background: #ffffff; border-top: 1px solid var(--brand-border); border-bottom: 1px solid var(--brand-border);">
         <div class="container-xl">
             <div class="text-center mb-4">
-                <span class="pill-badge pill-gold mb-2"><i class="fas fa-table-list"></i> Transparent Price Sheet</span>
-                <h2 class="fw-black text-heading" style="font-size: 26px;">Model &amp; Battery Variant Comparison</h2>
-                <p class="text-secondary small">Compare ex-showroom base and on-road package prices across battery chemistries.</p>
+                <span class="pill-badge pill-amber mb-2"><i class="fas fa-table-list"></i> Transparent Price Sheet</span>
+                <h2 class="fw-black text-heading" style="font-size: 28px;">Side-by-Side Model &amp; Battery Variant Comparison</h2>
+                <p class="text-secondary small" style="max-width: 650px; margin: 0 auto;">
+                    Compare certified customer on-road pricing across Graphene and Smart LFP battery chemistries.
+                </p>
             </div>
 
-            <div class="pricing-table-wrap table-responsive">
-                <table class="table table-pricing">
+            <div class="comparison-table-card table-responsive">
+                <table class="table table-compare">
                     <thead>
                         <tr>
                             <th>Model Name</th>
                             <th>Category</th>
-                            <th>Graphene 48V 32Ah<br><small class="text-success fw-bold">(9 Mo Battery &amp; Charger)</small></th>
-                            <th>Smart LFP 48V 30Ah<br><small class="text-primary fw-bold">(3 Yrs Warranty)</small></th>
-                            <th>Smart LFP 60V 32Ah<br><small class="text-purple fw-bold">(3 Yrs Warranty)</small></th>
+                            <th>Graphene 48V 32Ah<br><small class="text-lime fw-bold" style="color:#84cc16;">(9 Mo Battery &amp; Charger)</small></th>
+                            <th>Smart LFP 48V 30Ah<br><small class="text-info fw-bold">(3 Yrs Warranty)</small></th>
+                            <th>Smart LFP 60V 32Ah<br><small class="text-warning fw-bold">(3 Yrs Warranty)</small></th>
                             <th>License Needed?</th>
                             <th>Action</th>
                         </tr>
@@ -896,12 +1825,12 @@
                                 <strong>Manthra Pro GT</strong>
                                 <div class="text-secondary" style="font-size: 11px;">Sport Street Commuter</div>
                             </td>
-                            <td><span class="badge bg-secondary font-mono">Commuter</span></td>
-                            <td class="fw-bold text-success font-mono fs-6">₹49,999</td>
+                            <td><span class="badge bg-dark font-mono text-lime" style="color:#84cc16;">Commuter</span></td>
+                            <td class="fw-bold text-dark font-mono fs-6">₹49,999</td>
                             <td class="fw-bold font-mono">₹74,999</td>
                             <td class="fw-bold font-mono">₹81,999</td>
-                            <td><span class="badge bg-success"><i class="fas fa-times me-1"></i> Zero License</span></td>
-                            <td><button class="btn btn-sm btn-outline-success fw-bold" onclick="openBookingModal('Manthra Pro GT', 'EV-PRO-GT')">Book Ride</button></td>
+                            <td><span class="badge bg-success"><i class="fas fa-check me-1"></i> Zero License</span></td>
+                            <td><button class="btn btn-sm btn-lime" onclick="openBookingModal('Manthra Pro GT', 'EV-PRO-GT')">Book Ride</button></td>
                         </tr>
                         <tr>
                             <td>
@@ -909,23 +1838,23 @@
                                 <div class="text-secondary" style="font-size: 11px;">Heavy Cargo (200kg Load)</div>
                             </td>
                             <td><span class="badge bg-warning text-dark font-mono">Cargo Utility</span></td>
-                            <td class="fw-bold text-success font-mono fs-6">₹51,499</td>
+                            <td class="fw-bold text-dark font-mono fs-6">₹51,499</td>
                             <td class="fw-bold font-mono">₹76,499</td>
                             <td class="fw-bold font-mono">₹83,499</td>
-                            <td><span class="badge bg-success"><i class="fas fa-times me-1"></i> Zero License</span></td>
-                            <td><button class="btn btn-sm btn-outline-success fw-bold" onclick="openBookingModal('Manthra Power Plus Cargo', 'EV-POWER-PLUS')">Book Ride</button></td>
+                            <td><span class="badge bg-success"><i class="fas fa-check me-1"></i> Zero License</span></td>
+                            <td><button class="btn btn-sm btn-lime" onclick="openBookingModal('Manthra Power Plus Cargo', 'EV-POWER-PLUS')">Book Ride</button></td>
                         </tr>
                         <tr>
                             <td>
                                 <strong>Manthra M99 Flagship</strong>
                                 <div class="text-secondary" style="font-size: 11px;">Reverse Assist Urban Flagship</div>
                             </td>
-                            <td><span class="badge bg-primary font-mono">Flagship</span></td>
-                            <td class="fw-bold text-success font-mono fs-6">₹80,999</td>
+                            <td><span class="badge bg-info text-white font-mono">Flagship</span></td>
+                            <td class="fw-bold text-dark font-mono fs-6">₹80,999</td>
                             <td class="text-secondary">—</td>
                             <td class="fw-bold font-mono">₹96,999</td>
-                            <td><span class="badge bg-success"><i class="fas fa-times me-1"></i> Zero License</span></td>
-                            <td><button class="btn btn-sm btn-outline-success fw-bold" onclick="openBookingModal('Manthra M99 Flagship', 'EV-M99')">Book Ride</button></td>
+                            <td><span class="badge bg-success"><i class="fas fa-check me-1"></i> Zero License</span></td>
+                            <td><button class="btn btn-sm btn-lime" onclick="openBookingModal('Manthra M99 Flagship', 'EV-M99')">Book Ride</button></td>
                         </tr>
                         <tr>
                             <td>
@@ -933,11 +1862,11 @@
                                 <div class="text-secondary" style="font-size: 11px;">Vintage Classic Retro Luxury</div>
                             </td>
                             <td><span class="badge bg-purple text-white font-mono" style="background:#7c3aed;">Retro Luxury</span></td>
-                            <td class="fw-bold text-success font-mono fs-6">₹80,999</td>
+                            <td class="fw-bold text-dark font-mono fs-6">₹80,999</td>
                             <td class="text-secondary">—</td>
                             <td class="fw-bold font-mono">₹96,999</td>
-                            <td><span class="badge bg-success"><i class="fas fa-times me-1"></i> Zero License</span></td>
-                            <td><button class="btn btn-sm btn-outline-success fw-bold" onclick="openBookingModal('Manthra Royal Sling', 'EV-ROYAL-SLING')">Book Ride</button></td>
+                            <td><span class="badge bg-success"><i class="fas fa-check me-1"></i> Zero License</span></td>
+                            <td><button class="btn btn-sm btn-lime" onclick="openBookingModal('Manthra Royal Sling', 'EV-ROYAL-SLING')">Book Ride</button></td>
                         </tr>
                         <tr>
                             <td>
@@ -945,86 +1874,115 @@
                                 <div class="text-secondary" style="font-size: 11px;">Dual Disc CBS Street Fighter</div>
                             </td>
                             <td><span class="badge bg-danger font-mono">Street Fighter</span></td>
-                            <td class="fw-bold text-success font-mono fs-6">₹82,999</td>
+                            <td class="fw-bold text-dark font-mono fs-6">₹82,999</td>
                             <td class="text-secondary">—</td>
                             <td class="fw-bold font-mono">₹99,499</td>
-                            <td><span class="badge bg-success"><i class="fas fa-times me-1"></i> Zero License</span></td>
-                            <td><button class="btn btn-sm btn-outline-success fw-bold" onclick="openBookingModal('Manthra Beast Pro', 'EV-BEAST-PRO')">Book Ride</button></td>
+                            <td><span class="badge bg-success"><i class="fas fa-check me-1"></i> Zero License</span></td>
+                            <td><button class="btn btn-sm btn-lime" onclick="openBookingModal('Manthra Beast Pro', 'EV-BEAST-PRO')">Book Ride</button></td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-            <div class="mt-2 text-secondary text-center small">
+
+            <div class="mt-3 text-secondary text-center small">
                 * Note: All prices include 5% vehicle GST, charger, toolkit, mirrors, and delivery assistance. Graphene batteries carry 9 months warranty on both battery &amp; charger. Smart LFP batteries carry 3 years comprehensive replacement warranty.
             </div>
         </div>
     </section>
 
-    <!-- ── 7. STANDALONE OEM BATTERIES & SMART CHARGERS ────────────────── -->
-    <section class="py-5" style="background: var(--bg-page);">
+    <!-- ── 7. OFFICIAL VIDEO SHOWCASE (CLICK-TO-PLAY MODAL WITH ZERO LEAK) ─ -->
+    <section class="py-5" id="videoShowcase" style="background: var(--bg-page);">
         <div class="container-xl">
-            <div class="text-center mb-5">
-                <span class="pill-badge pill-purple mb-2"><i class="fas fa-car-battery"></i> Genuine Batteries &amp; Chargers</span>
-                <h2 class="fw-black text-heading" style="font-size: 26px;">Standalone Replacement Batteries &amp; Fast Chargers</h2>
-                <p class="text-secondary small">Need a spare battery or extra charger? Available individually with full manufacturer warranties.</p>
-            </div>
+            <div class="video-spotlight-card">
+                <div class="row g-0 align-items-center">
+                    
+                    <!-- Left: Poster Thumbnail Click-to-Play -->
+                    <div class="col-lg-6">
+                        <div class="video-thumb-container" onclick="openVideoPlayerModal('https://www.youtube.com/embed/FzKh_AVXiRo?autoplay=1&rel=0&modestbranding=1')">
+                            <img src="https://img.youtube.com/vi/FzKh_AVXiRo/hqdefault.jpg" 
+                                 alt="Manthra EV Road Test &amp; Specifications" 
+                                 loading="lazy"
+                                 onerror="this.src='/public/hub/Assets/manthra-fleet-lineup.webp'">
+                            <div class="video-play-btn" title="Click to Watch Official Video">
+                                <i class="fas fa-play"></i>
+                            </div>
+                            <span class="badge bg-dark position-absolute bottom-0 start-0 m-3 px-2 py-1 font-mono text-lime" style="color:#84cc16;">
+                                <i class="fab fa-youtube text-danger me-1"></i> 1080p HD Walkthrough
+                            </span>
+                        </div>
+                    </div>
 
-            <div class="row g-3 justify-content-center">
-                <div class="col-md-3 col-sm-6">
-                    <div class="stat-card text-center p-4">
-                        <i class="fas fa-battery-half text-success fs-1 mb-2"></i>
-                        <h4 class="fw-bold fs-6 mb-1">Graphene 48V 32Ah Pack</h4>
-                        <div class="fs-4 fw-black text-heading font-mono mb-2">₹17,499</div>
-                        <span class="badge bg-success mb-2">9 Months Warranty</span>
-                        <div class="text-secondary small">800+ life cycles • High surge tolerance • Fast recharge</div>
+                    <!-- Right: Automotive Engineering Highlights -->
+                    <div class="col-lg-6 p-4 p-xl-5">
+                        <span class="pill-badge pill-lime mb-2">
+                            <i class="fab fa-youtube text-danger"></i> Verified Video Walkthrough
+                        </span>
+                        <h2 class="fw-black text-heading mb-3" style="font-size: 26px;">
+                            See Manthra EV in Action on Indian Roads
+                        </h2>
+                        <p class="text-secondary mb-4 small">
+                            Experience the superior build quality, high-torque gradient climbing, waterproof BLDC motor performance, and comfort suspension designed specifically for Indian city and rural roads.
+                        </p>
+
+                        <div class="row g-2 mb-4">
+                            <div class="col-sm-6">
+                                <div class="p-2 rounded-3 bg-white border">
+                                    <i class="fas fa-check-circle text-success me-1"></i> <strong class="small">Silent BLDC Motor</strong>
+                                    <div class="text-secondary" style="font-size: 11px;">Zero noise, instant gradient torque</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-2 rounded-3 bg-white border">
+                                    <i class="fas fa-check-circle text-success me-1"></i> <strong class="small">Waterproof Harness</strong>
+                                    <div class="text-secondary" style="font-size: 11px;">IP67 motor &amp; controller protection</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-2 rounded-3 bg-white border">
+                                    <i class="fas fa-check-circle text-success me-1"></i> <strong class="small">Telescopic Shocks</strong>
+                                    <div class="text-secondary" style="font-size: 11px;">Hydraulic comfort over potholes</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-2 rounded-3 bg-white border">
+                                    <i class="fas fa-check-circle text-success me-1"></i> <strong class="small">Dual CBS Brakes</strong>
+                                    <div class="text-secondary" style="font-size: 11px;">Combined braking system safety</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2">
+                            <button class="btn-lime" onclick="openVideoPlayerModal('https://www.youtube.com/embed/FzKh_AVXiRo?autoplay=1&rel=0&modestbranding=1')">
+                                <i class="fas fa-play-circle"></i> Play Full Video
+                            </button>
+                            <button class="btn-outline-dark-custom" onclick="openBookingModal('General Test Ride', 'EV-MANTHRA')">
+                                <i class="fas fa-calendar-check"></i> Book Free Test Ride
+                            </button>
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="stat-card text-center p-4">
-                        <i class="fas fa-battery-full text-primary fs-1 mb-2"></i>
-                        <h4 class="fw-bold fs-6 mb-1">Smart LFP 48V 30Ah Pack</h4>
-                        <div class="fs-4 fw-black text-heading font-mono mb-2">₹38,999</div>
-                        <span class="badge bg-primary mb-2">3 Years Warranty</span>
-                        <div class="text-secondary small">2,000+ deep cycles • Smart BMS protection • Flame retardant</div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="stat-card text-center p-4">
-                        <i class="fas fa-battery-bolt text-warning fs-1 mb-2"></i>
-                        <h4 class="fw-bold fs-6 mb-1">Smart LFP 60V 32Ah Pack</h4>
-                        <div class="fs-4 fw-black text-heading font-mono mb-2">₹45,999</div>
-                        <span class="badge bg-warning text-dark mb-2">3 Years Warranty</span>
-                        <div class="text-secondary small">Long-range 120km pack • Waterproof casing • Quick 3.5h charge</div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-sm-6">
-                    <div class="stat-card text-center p-4">
-                        <i class="fas fa-charging-station text-danger fs-1 mb-2"></i>
-                        <h4 class="fw-bold fs-6 mb-1">Smart Fast Chargers (48V/60V)</h4>
-                        <div class="fs-4 fw-black text-heading font-mono mb-2">₹2,499</div>
-                        <span class="badge bg-secondary mb-2">9 Months Warranty</span>
-                        <div class="text-secondary small">Auto cut-off • Silent cooling fan • Short-circuit surge protection</div>
-                    </div>
+
                 </div>
             </div>
         </div>
     </section>
 
     <!-- ── 8. INTERACTIVE FUEL SAVINGS & EMI CALCULATOR ──────────────────── -->
-    <section class="py-5" style="background: var(--bg-card); border-top: 1px solid var(--brand-border); border-bottom: 1px solid var(--brand-border);">
+    <section class="py-5" id="savingsCalculator" style="background: #ffffff; border-top: 1px solid var(--brand-border); border-bottom: 1px solid var(--brand-border);">
         <div class="container-xl">
-            <div class="row align-items-center g-4">
+            <div class="row align-items-center g-4 g-lg-5">
+                
                 <div class="col-lg-5">
-                    <span class="pill-badge pill-emerald mb-2"><i class="fas fa-calculator"></i> Fuel Savings Calculator</span>
+                    <span class="pill-badge pill-lime mb-2"><i class="fas fa-calculator"></i> Fuel Savings Calculator</span>
                     <h2 class="fw-black text-heading mb-3" style="font-size: 28px;">
                         Calculate How Much You Save Every Month
                     </h2>
                     <p class="text-secondary mb-4">
                         Petrol 2-wheelers cost ₹2.50 to ₹3.00 per km to run. Manthra EV costs only <strong>₹0.15 per km</strong>! In just 2 years, your fuel savings completely pay for the scooter!
                     </p>
+
                     <div class="d-flex flex-column gap-3">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="rounded-circle p-2 bg-success text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            <div class="rounded-circle p-2 bg-success text-white d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 18px;">
                                 <i class="fas fa-coins"></i>
                             </div>
                             <div>
@@ -1032,8 +1990,9 @@
                                 <small class="text-secondary">Keep your hard-earned money instead of giving it to petrol pumps.</small>
                             </div>
                         </div>
+
                         <div class="d-flex align-items-center gap-3">
-                            <div class="rounded-circle p-2 bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                            <div class="rounded-circle p-2 bg-primary text-white d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; font-size: 18px;">
                                 <i class="fas fa-leaf"></i>
                             </div>
                             <div>
@@ -1045,24 +2004,27 @@
                 </div>
 
                 <div class="col-lg-7">
-                    <div class="calc-box">
-                        <h4 class="fw-black text-heading mb-4 fs-5">Interactive Savings Estimator</h4>
-                        
-                        <!-- Daily Distance Slider -->
+                    <div class="calc-wrapper-card">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h4 class="fw-black text-heading fs-5 mb-0">Interactive Commute Estimator</h4>
+                            <span class="badge bg-dark font-mono text-lime px-2 py-1" style="color:#84cc16;">LIVE CALCULATOR</span>
+                        </div>
+
+                        <!-- Distance Slider -->
                         <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
                                 <label class="fw-bold small text-secondary">Your Daily Commute Distance:</label>
-                                <span class="fs-5 fw-black text-success font-mono"><span id="sliderValDisplay">35</span> km/day</span>
+                                <span class="fs-4 fw-black text-dark font-mono"><span id="sliderValDisplay">35</span> km/day</span>
                             </div>
-                            <input type="range" class="form-range" id="commuteSlider" min="10" max="80" step="5" value="35" oninput="updateCalculator()">
-                            <div class="d-flex justify-content-between text-secondary" style="font-size: 11px;">
+                            <input type="range" class="form-range custom-range-slider" id="commuteSlider" min="10" max="80" step="5" value="35" oninput="updateCalculator()">
+                            <div class="d-flex justify-content-between text-secondary pt-1" style="font-size: 11px;">
                                 <span>10 km (Local errands)</span>
-                                <span>35 km (Standard commute)</span>
+                                <span class="fw-bold">35 km (Standard commute)</span>
                                 <span>80 km (Heavy delivery)</span>
                             </div>
                         </div>
 
-                        <!-- Results Grid -->
+                        <!-- Monthly Cost Comparisons -->
                         <div class="row g-3 text-center mb-4">
                             <div class="col-sm-6">
                                 <div class="p-3 rounded-3" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2);">
@@ -1072,26 +2034,103 @@
                                 </div>
                             </div>
                             <div class="col-sm-6">
-                                <div class="p-3 rounded-3" style="background: rgba(5, 150, 105, 0.08); border: 1px solid rgba(5, 150, 105, 0.25);">
-                                    <small class="text-success fw-bold text-uppercase" style="font-size: 11px;">Monthly Manthra EV Cost</small>
-                                    <div class="fs-4 fw-black text-success font-mono mt-1" id="monthlyEvCost">₹158</div>
+                                <div class="p-3 rounded-3" style="background: rgba(132, 204, 22, 0.12); border: 1px solid rgba(132, 204, 22, 0.35);">
+                                    <small class="text-dark fw-bold text-uppercase" style="font-size: 11px;">Monthly Manthra EV Cost</small>
+                                    <div class="fs-4 fw-black text-dark font-mono mt-1" id="monthlyEvCost">₹158</div>
                                     <small class="text-secondary" style="font-size: 10px;">@ ₹0.15 / km (Home power)</small>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="p-3 rounded-3 mb-3 text-center" style="background: linear-gradient(135deg, rgba(5,150,105,0.15) 0%, rgba(245,158,11,0.15) 100%); border: 1px solid rgba(5,150,105,0.3);">
+                        <!-- Total Net Savings Box -->
+                        <div class="p-3 rounded-3 mb-4 text-center" style="background: linear-gradient(135deg, rgba(132,204,22,0.18) 0%, rgba(6,182,212,0.15) 100%); border: 1px solid rgba(132,204,22,0.4);">
                             <div class="text-secondary text-uppercase fw-bold small" style="font-size: 11px;">Your Net Monthly Fuel Savings</div>
-                            <div class="fs-2 fw-black text-success font-mono my-1" id="monthlySavingsDisplay">₹2,467 / month</div>
-                            <div class="fw-bold text-heading" style="font-size: 13px;">
-                                3-Year Total Savings: <span class="text-success font-mono fw-black" id="threeYearSavingsDisplay">₹88,812</span> (Covers Scooter Cost!)
+                            <div class="fs-2 fw-black text-dark font-mono my-1" id="monthlySavingsDisplay">₹2,467 / month</div>
+                            <div class="fw-bold text-heading" style="font-size: 13.5px;">
+                                3-Year Total Savings: <span class="font-mono fw-black text-dark" id="threeYearSavingsDisplay">₹88,812</span> <span class="text-success">(Covers Scooter Cost!)</span>
                             </div>
                         </div>
 
                         <div class="text-center">
-                            <button class="btn btn-success fw-bold px-4 py-2 rounded-pill shadow-sm" onclick="openBookingModal('Manthra Pro GT (Savings Calculator)', 'EV-PRO-GT')">
+                            <button class="btn-lime w-100 py-3" onclick="openBookingModal('Manthra Pro GT (Savings Calculator)', 'EV-PRO-GT')">
                                 <i class="fas fa-bolt me-1"></i> Start Saving Today — Book Free Test Ride
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 9. STANDALONE OEM BATTERIES & SMART CHARGERS ────────────────── -->
+    <section class="py-5" id="batteriesAccessories" style="background: var(--bg-page);">
+        <div class="container-xl">
+            <div class="text-center mb-5">
+                <span class="pill-badge pill-graphite mb-2" style="color:#d8b4fe;"><i class="fas fa-car-battery"></i> Genuine Batteries &amp; Chargers</span>
+                <h2 class="fw-black text-heading" style="font-size: 28px;">Standalone Replacement Batteries &amp; Fast Chargers</h2>
+                <p class="text-secondary small" style="max-width: 650px; margin: 0 auto;">
+                    Need a spare battery or extra fast charger? Available individually with full official manufacturer warranties.
+                </p>
+            </div>
+
+            <div class="row g-3 justify-content-center">
+                <div class="col-lg-3 col-sm-6">
+                    <div class="accessory-card">
+                        <div>
+                            <div class="mb-3 text-success fs-1"><i class="fas fa-battery-half"></i></div>
+                            <h4 class="fw-bold fs-6 mb-1 text-heading">Graphene 48V 32Ah Pack</h4>
+                            <div class="fs-4 fw-black text-heading font-mono mb-2">₹17,499</div>
+                            <span class="badge bg-success mb-3">9 Months Warranty</span>
+                            <div class="text-secondary small">800+ life cycles • High surge tolerance • Fast recharge</div>
+                        </div>
+                        <div class="mt-3 pt-3 border-top">
+                            <button class="btn btn-sm btn-outline-dark-custom w-100" onclick="openBookingModal('Graphene 48V 32Ah Battery Pack', 'BAT-GRAPH-48')">Inquire Battery</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-sm-6">
+                    <div class="accessory-card">
+                        <div>
+                            <div class="mb-3 text-primary fs-1"><i class="fas fa-battery-full"></i></div>
+                            <h4 class="fw-bold fs-6 mb-1 text-heading">Smart LFP 48V 30Ah Pack</h4>
+                            <div class="fs-4 fw-black text-heading font-mono mb-2">₹38,999</div>
+                            <span class="badge bg-primary mb-3">3 Years Warranty</span>
+                            <div class="text-secondary small">2,000+ deep cycles • Smart BMS protection • Flame retardant</div>
+                        </div>
+                        <div class="mt-3 pt-3 border-top">
+                            <button class="btn btn-sm btn-outline-dark-custom w-100" onclick="openBookingModal('Smart LFP 48V 30Ah Battery Pack', 'BAT-LFP-48')">Inquire Battery</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-sm-6">
+                    <div class="accessory-card">
+                        <div>
+                            <div class="mb-3 text-warning fs-1"><i class="fas fa-battery-bolt"></i></div>
+                            <h4 class="fw-bold fs-6 mb-1 text-heading">Smart LFP 60V 32Ah Pack</h4>
+                            <div class="fs-4 fw-black text-heading font-mono mb-2">₹45,999</div>
+                            <span class="badge bg-warning text-dark mb-3">3 Years Warranty</span>
+                            <div class="text-secondary small">Long-range 120km pack • Waterproof casing • Quick 3.5h charge</div>
+                        </div>
+                        <div class="mt-3 pt-3 border-top">
+                            <button class="btn btn-sm btn-outline-dark-custom w-100" onclick="openBookingModal('Smart LFP 60V 32Ah Battery Pack', 'BAT-LFP-60')">Inquire Battery</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-sm-6">
+                    <div class="accessory-card">
+                        <div>
+                            <div class="mb-3 text-danger fs-1"><i class="fas fa-charging-station"></i></div>
+                            <h4 class="fw-bold fs-6 mb-1 text-heading">Smart Fast Chargers (48V/60V)</h4>
+                            <div class="fs-4 fw-black text-heading font-mono mb-2">₹2,499</div>
+                            <span class="badge bg-secondary mb-3">9 Months Warranty</span>
+                            <div class="text-secondary small">Auto cut-off • Silent cooling fan • Short-circuit surge protection</div>
+                        </div>
+                        <div class="mt-3 pt-3 border-top">
+                            <button class="btn btn-sm btn-outline-dark-custom w-100" onclick="openBookingModal('Smart Fast Charger (48V/60V)', 'ACC-CHARGER')">Inquire Charger</button>
                         </div>
                     </div>
                 </div>
@@ -1099,14 +2138,13 @@
         </div>
     </section>
 
-    <!-- ── 9. INTEGRATED ECOSYSTEM: OUR OTHER SERVICES & BENEFITS ────────── -->
-    <!-- (Explicitly requested by user: Solar, Insurance & Spares customer prices and benefits) -->
-    <section class="py-5" style="background: var(--bg-page);" id="otherServices">
+    <!-- ── 10. SECONDARY CLEAN-TECH ECOSYSTEM ───────────────────────────── -->
+    <section class="py-5" id="otherServices" style="background: #ffffff; border-top: 1px solid var(--brand-border); border-bottom: 1px solid var(--brand-border);">
         <div class="container-xl">
             <div class="text-center mb-5">
-                <span class="pill-badge pill-emerald mb-2"><i class="fas fa-layer-group"></i> Complete Green Ecosystem</span>
+                <span class="pill-badge pill-teal mb-2"><i class="fas fa-layer-group"></i> Integrated Ecosystem</span>
                 <h2 class="fw-black text-heading" style="font-size: 28px;">Our Integrated Customer Services &amp; Benefits</h2>
-                <p class="text-secondary small" style="max-width: 720px; margin: 0 auto;">
+                <p class="text-secondary small" style="max-width: 700px; margin: 0 auto;">
                     We don't just sell electric scooters — we power your entire green lifestyle with subsidized rooftop solar, specialized EV battery insurance, and lifetime OEM spare parts backing.
                 </p>
             </div>
@@ -1115,8 +2153,8 @@
                 
                 <!-- SERVICE 1: HAR GHAR SOLAR ROOFTOP -->
                 <div class="col-lg-4 col-md-6">
-                    <div class="service-banner-card">
-                        <div class="service-banner-header" style="background: rgba(245, 158, 11, 0.08);">
+                    <div class="ecosystem-service-card">
+                        <div class="ecosystem-header" style="background: rgba(245, 158, 11, 0.08);">
                             <div class="rounded-circle p-2 bg-warning text-dark d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
                                 <i class="fas fa-solar-panel fs-5"></i>
                             </div>
@@ -1131,25 +2169,25 @@
                             </p>
                             
                             <div class="mb-3">
-                                <div class="spec-item">
+                                <div class="spec-row-item">
                                     <span><strong>1 kW On-Grid System</strong></span>
                                     <span class="fw-bold font-mono text-success">₹25,000 <small class="text-secondary">(after ₹30k subsidy)</small></span>
                                 </div>
-                                <div class="spec-item">
+                                <div class="spec-row-item">
                                     <span><strong>2 kW Dual System</strong></span>
                                     <span class="fw-bold font-mono text-success">₹50,000 <small class="text-secondary">(after ₹60k subsidy)</small></span>
                                 </div>
-                                <div class="spec-item">
+                                <div class="spec-row-item">
                                     <span><strong>3 kW Zero-Bill System</strong></span>
                                     <span class="fw-bold font-mono text-success">₹87,000 <small class="text-secondary">(after ₹78k subsidy)</small></span>
                                 </div>
-                                <div class="spec-item">
+                                <div class="spec-row-item">
                                     <span><strong>5 kW + EV Home Hub</strong></span>
                                     <span class="fw-bold font-mono text-success">₹1,87,000 <small class="text-secondary">(full house + EV)</small></span>
                                 </div>
                             </div>
 
-                            <div class="p-2 rounded-3 mb-3 bg-card-alt border" style="font-size: 11px; background: var(--bg-card-alt); border-color: var(--brand-border) !important;">
+                            <div class="p-2 rounded-3 mb-3 bg-light border" style="font-size: 11px;">
                                 <i class="fas fa-sparkles text-warning me-1"></i> <strong>Customer Benefit:</strong> Save up to ₹3,500 every month on electricity bills and get 100% free charging for your EV!
                             </div>
 
@@ -1164,8 +2202,8 @@
 
                 <!-- SERVICE 2: VGK CARE INSURANCE ADVISORY -->
                 <div class="col-lg-4 col-md-6">
-                    <div class="service-banner-card">
-                        <div class="service-banner-header" style="background: rgba(2, 132, 199, 0.08);">
+                    <div class="ecosystem-service-card">
+                        <div class="ecosystem-header" style="background: rgba(6, 182, 212, 0.08);">
                             <div class="rounded-circle p-2 bg-info text-white d-flex align-items-center justify-content-center" style="width: 44px; height: 44px;">
                                 <i class="fas fa-shield-halved fs-5"></i>
                             </div>
@@ -1180,25 +2218,25 @@
                             </p>
 
                             <div class="mb-3">
-                                <div class="spec-item">
+                                <div class="spec-row-item">
                                     <span><strong>EV Zero-Depreciation Cover</strong></span>
                                     <span class="fw-bold font-mono text-primary">From ₹1,499 / yr</span>
                                 </div>
-                                <div class="spec-item">
+                                <div class="spec-row-item">
                                     <span><strong>Battery Water Damage Add-on</strong></span>
                                     <span class="fw-bold font-mono text-primary">From ₹499 / yr</span>
                                 </div>
-                                <div class="spec-item">
+                                <div class="spec-row-item">
                                     <span><strong>₹5 Lakh Family Health Cover</strong></span>
                                     <span class="fw-bold font-mono text-primary">From ₹3,200 / yr</span>
                                 </div>
-                                <div class="spec-item">
+                                <div class="spec-row-item">
                                     <span><strong>Solar All-Risk Asset Policy</strong></span>
                                     <span class="fw-bold font-mono text-primary">From ₹1,199 / yr</span>
                                 </div>
                             </div>
 
-                            <div class="p-2 rounded-3 mb-3 bg-card-alt border" style="font-size: 11px; background: var(--bg-card-alt); border-color: var(--brand-border) !important;">
+                            <div class="p-2 rounded-3 mb-3 bg-light border" style="font-size: 11px;">
                                 <i class="fas fa-shield-check text-info me-1"></i> <strong>Customer Benefit:</strong> Instant digital policy issuance, zero depreciation deduction, and dedicated claim assist desk.
                             </div>
 
@@ -1211,10 +2249,10 @@
                     </div>
                 </div>
 
-                <!-- SERVICE 3: EV SPARES, BATTERIES & DIAGNOSTIC DEPOT -->
+                <!-- SERVICE 3: EV SPARES & SERVICE DEPOT -->
                 <div class="col-lg-4 col-md-6">
-                    <div class="service-banner-card">
-                        <div class="service-banner-header" style="background: rgba(124, 58, 237, 0.08);">
+                    <div class="ecosystem-service-card">
+                        <div class="ecosystem-header" style="background: rgba(124, 58, 237, 0.08);">
                             <div class="rounded-circle p-2 bg-purple text-white d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; background: #7c3aed;">
                                 <i class="fas fa-cogs fs-5"></i>
                             </div>
@@ -1229,25 +2267,25 @@
                             </p>
 
                             <div class="mb-3">
-                                <div class="spec-item">
+                                <div class="spec-row-item">
                                     <span><strong>Smart Auto Cut-Off Fast Charger</strong></span>
-                                    <span class="fw-bold font-mono text-purple" style="color: #7c3aed;">₹2,499</span>
+                                    <span class="fw-bold font-mono" style="color: #7c3aed;">₹2,499</span>
                                 </div>
-                                <div class="spec-item">
+                                <div class="spec-row-item">
                                     <span><strong>Heavy-Duty Tubeless Tyres (Pair)</strong></span>
-                                    <span class="fw-bold font-mono text-purple" style="color: #7c3aed;">₹2,499</span>
+                                    <span class="fw-bold font-mono" style="color: #7c3aed;">₹2,499</span>
                                 </div>
-                                <div class="spec-item">
+                                <div class="spec-row-item">
                                     <span><strong>Replacement Graphene 48V 32Ah</strong></span>
-                                    <span class="fw-bold font-mono text-purple" style="color: #7c3aed;">₹17,499</span>
+                                    <span class="fw-bold font-mono" style="color: #7c3aed;">₹17,499</span>
                                 </div>
-                                <div class="spec-item">
+                                <div class="spec-row-item">
                                     <span><strong>Hub Routine Service Checkup</strong></span>
-                                    <span class="fw-bold font-mono text-purple" style="color: #7c3aed;">₹350 / session</span>
+                                    <span class="fw-bold font-mono" style="color: #7c3aed;">₹350 / session</span>
                                 </div>
                             </div>
 
-                            <div class="p-2 rounded-3 mb-3 bg-card-alt border" style="font-size: 11px; background: var(--bg-card-alt); border-color: var(--brand-border) !important;">
+                            <div class="p-2 rounded-3 mb-3 bg-light border" style="font-size: 11px;">
                                 <i class="fas fa-wrench text-purple me-1" style="color: #7c3aed;"></i> <strong>Customer Benefit:</strong> Direct marketplace ordering with doorstep delivery or walk-in service at your local MyntReal Hub.
                             </div>
 
@@ -1264,24 +2302,106 @@
         </div>
     </section>
 
-    <!-- ── 10. TEST RIDE & PURCHASE INQUIRY MODAL ───────────────────────── -->
+    <!-- ── 11. TRUST & COMPLIANCE LAYER (PLAIN-TEXT T&C ONLY) ───────────── -->
+    <section class="py-5" style="background: var(--bg-page);">
+        <div class="container-xl">
+            <div class="trust-box">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-8">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <span class="pill-badge pill-lime"><i class="fas fa-certificate"></i> Certified Indian Mobility</span>
+                            <span class="pill-badge pill-teal"><i class="fas fa-shield-check"></i> Manufacturer Backed</span>
+                        </div>
+                        <h3 class="fw-black text-heading fs-4 mb-2">
+                            Certified Non-RTO Compliance &amp; Official Warranties
+                        </h3>
+                        <p class="text-secondary small mb-3">
+                            All Manthra EV 2-wheelers are officially tested and certified under Central Motor Vehicle Rules (CMVR) for Low-Speed Electric Vehicles (<25 km/h with motor under 250W). No driving license, no RTO registration, and zero road tax are legally required anywhere across India. Graphene batteries carry 9 months warranty on both battery &amp; charger. Smart LFP batteries carry 3 years comprehensive replacement warranty.
+                        </p>
+                        
+                        <!-- Plain Text Terms & Conditions: ZERO HYPERLINKS -->
+                        <div class="plain-terms-text">
+                            * Terms &amp; Conditions Apply. All prices include 5% vehicle GST, charger, toolkit, mirrors, and delivery assistance. Non-RTO certification applies to speed limit under 25 km/h. Warranty terms subject to manufacturer guidelines.
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4 text-lg-end">
+                        <div class="d-grid gap-2">
+                            <button class="btn-lime w-100 py-3" onclick="openBookingModal('General Customer Inquiry', 'EV-MANTHRA')">
+                                <i class="fas fa-motorcycle me-1"></i> Book Your Free Test Ride Now
+                            </button>
+                            <a href="https://wa.me/918585852738?text=Hello!%20I%20am%20interested%20in%20Manthra%20EV%20Electric%20Scooters.%20Please%20share%20the%20catalog%20and%20pricing." 
+                               target="_blank" rel="noopener noreferrer" class="btn-whatsapp-custom w-100 py-3">
+                                <i class="fab fa-whatsapp fs-5"></i> Connect on WhatsApp
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 12. FLOATING DESKTOP WHATSAPP ─────────────────────────────────── -->
+    <a href="https://wa.me/918585852738?text=Hello!%20I%20am%20interested%20in%20Manthra%20EV%20Electric%20Scooters.%20Please%20share%20the%20catalog%20and%20pricing." 
+       target="_blank" 
+       rel="noopener noreferrer" 
+       class="desktop-floating-wa d-none d-md-flex" 
+       title="Chat with Manthra EV Advisor on WhatsApp">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
+    <!-- ── 13. PERSISTENT MOBILE BOTTOM STICKY BAR ──────────────────────── -->
+    <div class="mobile-sticky-bottom-bar d-md-none">
+        <div class="d-flex gap-2">
+            <button class="btn-lime flex-grow-1 py-2 fw-bold" onclick="openBookingModal('Mobile Test Ride', 'EV-MANTHRA')">
+                <i class="fas fa-motorcycle me-1"></i> Book Test Ride
+            </button>
+            <a href="https://wa.me/918585852738?text=Hello!%20I%20am%20interested%20in%20Manthra%20EV%20Electric%20Scooters.%20Please%20share%20the%20catalog." 
+               target="_blank" 
+               rel="noopener noreferrer" 
+               class="btn-whatsapp-custom px-3 py-2">
+                <i class="fab fa-whatsapp fs-5"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- ── 14. RESPONSIVE VIDEO LIGHTBOX MODAL (ZERO AUDIO LEAK) ────────── -->
+    <div class="modal fade" id="videoPlayerModal" tabindex="-1" aria-labelledby="videoPlayerModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content modal-automotive-content bg-dark border-0">
+                <div class="modal-header border-0 py-2 px-3 bg-black text-white">
+                    <h6 class="modal-title small fw-bold font-mono text-lime mb-0" id="videoPlayerModalLabel">
+                        <i class="fab fa-youtube text-danger me-2"></i> Manthra EV — Official Video Walkthrough
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" onclick="stopVideoPlayer()"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="ratio ratio-16x9" id="videoModalFrameContainer">
+                        <!-- Iframe injected on demand; destroyed immediately on close -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 15. TEST RIDE & INQUIRY MODAL ────────────────────────────────── -->
     <div class="modal fade" id="leadBookingModal" tabindex="-1" aria-labelledby="leadBookingModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content booking-modal-content">
-                <div class="modal-header border-0 pb-0">
+            <div class="modal-content modal-automotive-content bg-white">
+                <div class="modal-header border-bottom py-3 px-4">
                     <div>
                         <h5 class="modal-title fw-black text-heading" id="leadBookingModalLabel">Book a Free Test Ride</h5>
                         <small class="text-secondary" id="modalSubhead">Experience Manthra EV right at your doorstep</small>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body pt-3">
+                <div class="modal-body p-4">
                     <form id="leadBookingForm" onsubmit="submitLeadBooking(event)">
                         <input type="hidden" id="selectedModelCode" value="EV-PRO-GT">
                         
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-secondary">Selected Model</label>
-                            <input type="text" class="booking-input fw-bold text-success" id="modalModelDisplay" readonly value="Manthra Pro GT">
+                            <input type="text" class="booking-input fw-bold text-dark font-mono" id="modalModelDisplay" readonly value="Manthra Pro GT">
                         </div>
 
                         <div class="mb-3">
@@ -1292,7 +2412,7 @@
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-secondary">Mobile Number (WhatsApp) *</label>
                             <div class="input-group">
-                                <span class="input-group-text bg-card-alt border" style="background:var(--bg-card-alt); border-color:var(--brand-border);">+91</span>
+                                <span class="input-group-text bg-light border text-secondary font-mono">+91</span>
                                 <input type="tel" class="booking-input" id="leadCustPhone" required placeholder="10-digit mobile number" pattern="[6-9][0-9]{9}">
                             </div>
                         </div>
@@ -1304,7 +2424,7 @@
                             </div>
                             <div class="col-6">
                                 <label class="form-label small fw-bold text-secondary">PIN Code</label>
-                                <input type="text" class="booking-input" id="leadCustPin" placeholder="e.g. 520001" pattern="[0-9]{6}">
+                                <input type="text" class="booking-input font-mono" id="leadCustPin" placeholder="e.g. 520001" pattern="[0-9]{6}">
                             </div>
                         </div>
 
@@ -1319,7 +2439,7 @@
                         </div>
 
                         <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-success fw-bold py-2 rounded-3 shadow" id="btnSubmitLead">
+                            <button type="submit" class="btn-lime py-3 w-100" id="btnSubmitLead">
                                 <i class="fas fa-paper-plane me-1"></i> Confirm Booking &amp; Connect on WhatsApp
                             </button>
                             <small class="text-secondary text-center" style="font-size: 11px;">
@@ -1332,24 +2452,11 @@
         </div>
     </div>
 
-    <!-- ── 11. STICKY MOBILE ACTION BAR ─────────────────────────────────── -->
-    <div class="sticky-customer-bar d-md-none">
-        <div class="d-flex gap-2">
-            <button class="btn btn-success flex-grow-1 fw-bold rounded-pill" onclick="openBookingModal('General Test Ride', 'EV-PRO-GT')">
-                <i class="fas fa-motorcycle me-1"></i> Book Test Ride
-            </button>
-            <a href="https://wa.me/918585852738?text=Hello!%20I%20am%20interested%20in%20Manthra%20EV%20Electric%20Scooters.%20Please%20share%20the%20catalog." 
-               target="_blank" class="btn btn-outline-success fw-bold rounded-pill px-3">
-                <i class="fab fa-whatsapp"></i>
-            </a>
-        </div>
-    </div>
-
-    <!-- Bootstrap Bundle JS -->
+    <!-- Bootstrap 5 Bundle JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // Multi-lingual translations
+        // Multi-lingual translations (Source of Truth preserved)
         const I18N = {
             en: {
                 heroBadge1: "Non-RTO Low-Speed (<25 km/h) • Zero Driving License",
@@ -1391,30 +2498,30 @@
             document.getElementById('heroSubtitle').textContent = t.heroSubtitle;
         }
 
-        function toggleTheme() {
-            const html = document.documentElement;
-            const currentTheme = html.getAttribute('data-theme') || 'light';
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            html.setAttribute('data-theme', newTheme);
-            const icon = document.getElementById('themeToggleIcon');
-            const text = document.getElementById('themeToggleText');
-            if (newTheme === 'dark') {
-                icon.className = 'fas fa-sun text-warning';
-                text.textContent = 'Light Mode';
-            } else {
-                icon.className = 'fas fa-moon text-warning';
-                text.textContent = 'Dark Mode';
+        // Image Switcher for Model Cards (Thumbnails)
+        function switchCardImage(modelCode, imgSrc, btnEl) {
+            const imgEl = document.getElementById(`img-${modelCode}`);
+            if (imgEl) {
+                imgEl.src = imgSrc;
+            }
+            const card = document.getElementById(`card-${modelCode}`);
+            if (card) {
+                card.querySelectorAll('.product-thumb-item').forEach(b => b.classList.remove('active'));
+            }
+            if (btnEl) {
+                btnEl.classList.add('active');
             }
         }
 
-        // Model battery selection
+        // Model Battery Option Selection with live price & range update
         function selectModelBattery(modelCode, batType, price, range, warranty) {
             const card = document.getElementById(`card-${modelCode}`);
             if (!card) return;
-            const buttons = card.querySelectorAll('.battery-pill-option');
+            const buttons = card.querySelectorAll('.battery-chip-btn');
             buttons.forEach(b => b.classList.remove('active'));
             if (window.event && window.event.target) {
-                window.event.target.classList.add('active');
+                const targetBtn = window.event.target.closest('.battery-chip-btn');
+                if (targetBtn) targetBtn.classList.add('active');
             }
 
             document.getElementById(`price-${modelCode}`).textContent = '₹' + price.toLocaleString('en-IN');
@@ -1422,14 +2529,79 @@
             document.getElementById(`warranty-${modelCode}`).textContent = warranty;
         }
 
-        // Fuel savings calculator
+        // Model Category Filter Chips
+        function applyModelFilter(category, btnEl) {
+            document.querySelectorAll('.filter-chip-btn').forEach(b => b.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+
+            const cols = document.querySelectorAll('.model-card-col');
+            cols.forEach(col => {
+                if (category === 'all' || col.getAttribute('data-category') === category) {
+                    col.style.display = 'block';
+                } else {
+                    col.style.display = 'none';
+                }
+            });
+        }
+
+        // Decision Guide Card Filter Hook
+        function filterModelsByCategory(category, cardEl) {
+            document.querySelectorAll('.decision-card').forEach(c => c.classList.remove('active'));
+            if (cardEl) cardEl.classList.add('active');
+
+            // Set corresponding chip filter
+            const chipBtn = document.querySelector(`.filter-chip-btn[data-filter="${category}"]`);
+            if (chipBtn) {
+                applyModelFilter(category, chipBtn);
+            }
+
+            // Smooth scroll to showcase
+            const target = document.getElementById('modelsLineup');
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // Video Modal Handler (Guaranteed ZERO background audio leak)
+        let videoModalInstance = null;
+        function openVideoPlayerModal(videoEmbedUrl) {
+            const container = document.getElementById('videoModalFrameContainer');
+            container.innerHTML = `<iframe src="${videoEmbedUrl}" 
+                                           title="Manthra EV Video" 
+                                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                                           allowfullscreen 
+                                           style="width: 100%; height: 100%; border: 0;"></iframe>`;
+
+            const modalEl = document.getElementById('videoPlayerModal');
+            if (!videoModalInstance) {
+                videoModalInstance = new bootstrap.Modal(modalEl);
+            }
+            videoModalInstance.show();
+        }
+
+        function stopVideoPlayer() {
+            const container = document.getElementById('videoModalFrameContainer');
+            if (container) {
+                container.innerHTML = ''; // Detaches iframe and stops audio completely
+            }
+        }
+
+        // Ensure closing modal stops video unconditionally
+        document.addEventListener('DOMContentLoaded', () => {
+            const modalEl = document.getElementById('videoPlayerModal');
+            if (modalEl) {
+                modalEl.addEventListener('hidden.bs.modal', stopVideoPlayer);
+            }
+        });
+
+        // Fuel Savings Calculator
         function updateCalculator() {
             const dailyKm = parseInt(document.getElementById('commuteSlider').value, 10);
             document.getElementById('sliderValDisplay').textContent = dailyKm;
 
             const monthlyKm = dailyKm * 30;
             const petrolCostPerKm = 2.50; // ₹108/litre @ ~43 km/l
-            const evCostPerKm = 0.15; // 1.5 units per 100km @ ₹10/unit
+            const evCostPerKm = 0.15;     // 1.5 units per 100km @ ₹10/unit
 
             const petrolMonthly = Math.round(monthlyKm * petrolCostPerKm);
             const evMonthly = Math.round(monthlyKm * evCostPerKm);
@@ -1442,7 +2614,7 @@
             document.getElementById('threeYearSavingsDisplay').textContent = '₹' + threeYearSavings.toLocaleString('en-IN');
         }
 
-        // Lead booking modal handling
+        // Lead Booking Modal Handling
         let bookingModalInstance = null;
         function openBookingModal(modelName, modelCode) {
             document.getElementById('modalModelDisplay').value = modelName;
@@ -1496,11 +2668,11 @@
             }
             window.open(waUrl, '_blank');
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Confirm Booking & Connect on WhatsApp';
+            btn.innerHTML = '<i class="fas fa-paper-plane me-1"></i> Confirm Booking &amp; Connect on WhatsApp';
             alert(`Thank you, ${name}! Your test ride booking for ${model} has been recorded. Redirecting to WhatsApp to coordinate your ride.`);
         }
 
-        // Initialize calculator
+        // Initialize on DOMContentLoaded
         document.addEventListener('DOMContentLoaded', () => {
             updateCalculator();
         });
