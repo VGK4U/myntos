@@ -1856,9 +1856,9 @@
     ]
   },
   "2026-09-20": {
-    "timestamp_ist": "2026-09-20 11:30:00",
+    "timestamp_ist": "2026-09-20 15:30:00",
     "date_str": "20 September 2026",
-    "time_str": "11:30 AM",
+    "time_str": "03:30 PM",
     "total_calls": 3,
     "total_talk_seconds": 81,
     "total_talk_formatted": "00h 01m 21s",
