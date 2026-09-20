@@ -57,6 +57,12 @@ interface Lead {
   guru_name?: string | null;
   z_guru_id?: string | null;
   z_guru_name?: string | null;
+  team_senior_partner_id?: number | null;
+  team_senior_name?: string | null;
+  team_extended_partner_id?: number | null;
+  team_extended_name?: string | null;
+  team_core_partner_id?: number | null;
+  core_name?: string | null;
   support_staff_name?: string;
   technical_staff1_name?: string;
   technical_name?: string;
@@ -2131,16 +2137,22 @@ export class StaffLeadsPage {
             <span class="info-value">${lead.technical_name}</span>
           </div>
         ` : ''}
-        ${lead.guru_id ? `
+        ${(lead.team_senior_partner_id || lead.team_senior_name || lead.guru_id) ? `
           <div class="info-row">
             <span class="info-label">Senior</span>
-            <span class="info-value">${lead.guru_name || lead.guru_id} <span style="color:#6b7280;font-size:11px">(${lead.guru_id})</span></span>
+            <span class="info-value">${lead.team_senior_name || lead.guru_name || lead.guru_id} <span style="color:#6b7280;font-size:11px">(${lead.team_senior_partner_id ? `[PARTNER] ${lead.team_senior_partner_id}` : lead.guru_id})</span></span>
           </div>
         ` : ''}
-        ${lead.z_guru_id ? `
+        ${(lead.team_extended_partner_id || lead.team_extended_name || lead.z_guru_id) ? `
           <div class="info-row">
             <span class="info-label">Extended</span>
-            <span class="info-value">${lead.z_guru_name || lead.z_guru_id} <span style="color:#6b7280;font-size:11px">(${lead.z_guru_id})</span></span>
+            <span class="info-value">${lead.team_extended_name || lead.z_guru_name || lead.z_guru_id} <span style="color:#6b7280;font-size:11px">(${lead.team_extended_partner_id ? `[PARTNER] ${lead.team_extended_partner_id}` : lead.z_guru_id})</span></span>
+          </div>
+        ` : ''}
+        ${(lead.team_core_partner_id || lead.core_name) ? `
+          <div class="info-row">
+            <span class="info-label">Core</span>
+            <span class="info-value">${lead.core_name || lead.team_core_partner_id} <span style="color:#6b7280;font-size:11px">(${lead.team_core_partner_id ? `[PARTNER] ${lead.team_core_partner_id}` : ''})</span></span>
           </div>
         ` : ''}
       </div>
@@ -2661,14 +2673,16 @@ export class StaffLeadsPage {
     const nsSelectedText = document.getElementById('leadNetworkSelectedText') as HTMLElement;
     const nsGuruRow = document.getElementById('leadGuruRow') as HTMLElement;
     const nsGuruName = document.getElementById('leadGuruName') as HTMLElement;
+    const _hasSr = !!(lead.team_senior_partner_id || lead.guru_id);
+    const _srText = lead.team_senior_partner_id ? `[PARTNER] ${lead.team_senior_partner_id}${lead.team_senior_name ? ' — ' + lead.team_senior_name : ''}` : `${lead.guru_id || ''}${lead.guru_name ? ' — ' + lead.guru_name : ''}`;
     if (mnrInput) mnrInput.value = lead.mnr_handler_id || '';
-    if (guruInput) guruInput.value = lead.guru_id || '';
+    if (guruInput) guruInput.value = lead.team_senior_partner_id ? '' : (lead.guru_id || '');
     if (nsSearch) nsSearch.value = '';
-    if (nsSelected && lead.mnr_handler_id) {
-      nsSelectedText.textContent = `${lead.mnr_handler_id}${lead.mnr_handler_name ? ' — ' + lead.mnr_handler_name : ''}`;
-      nsSelected.style.display = 'block';
-      if (lead.guru_id && nsGuruRow) {
-        nsGuruName.textContent = `${lead.guru_id}${lead.guru_name ? ' — ' + lead.guru_name : ''}`;
+    if (nsSelected && (lead.mnr_handler_id || lead.team_senior_partner_id)) {
+      nsSelectedText.textContent = lead.mnr_handler_id ? `${lead.mnr_handler_id}${lead.mnr_handler_name ? ' — ' + lead.mnr_handler_name : ''}` : '';
+      nsSelected.style.display = lead.mnr_handler_id ? 'block' : 'none';
+      if (_hasSr && nsGuruRow) {
+        nsGuruName.textContent = _srText;
         nsGuruRow.style.display = 'block';
       } else if (nsGuruRow) {
         nsGuruRow.style.display = 'none';

@@ -71,6 +71,12 @@ interface Lead {
   mnr_handler_name?: string | null;
   guru_id?: string | null;
   guru_name?: string | null;
+  team_senior_partner_id?: number | null;
+  team_senior_name?: string | null;
+  team_extended_partner_id?: number | null;
+  team_extended_name?: string | null;
+  team_core_partner_id?: number | null;
+  core_name?: string | null;
   confirmed_final_value?: number | null;
 }
 
@@ -947,14 +953,16 @@ export class StaffTeamLeadsPage {
     const nsSelectedText = document.getElementById('leadNetworkSelectedText') as HTMLElement;
     const nsGuruRow = document.getElementById('leadGuruRow') as HTMLElement;
     const nsGuruName = document.getElementById('leadGuruName') as HTMLElement;
+    const _hasSr = !!(lead.team_senior_partner_id || lead.guru_id);
+    const _srText = lead.team_senior_partner_id ? `[PARTNER] ${lead.team_senior_partner_id}${lead.team_senior_name ? ' — ' + lead.team_senior_name : ''}` : `${lead.guru_id || ''}${lead.guru_name ? ' — ' + lead.guru_name : ''}`;
     if (mnrInput) mnrInput.value = lead.mnr_handler_id || '';
-    if (guruInput) guruInput.value = lead.guru_id || '';
+    if (guruInput) guruInput.value = lead.team_senior_partner_id ? '' : (lead.guru_id || '');
     if (nsSearch) nsSearch.value = '';
-    if (nsSelected && lead.mnr_handler_id) {
-      nsSelectedText.textContent = `${lead.mnr_handler_id}${lead.mnr_handler_name ? ' — ' + lead.mnr_handler_name : ''}`;
-      nsSelected.style.display = 'block';
-      if (lead.guru_id && nsGuruRow) {
-        nsGuruName.textContent = `${lead.guru_id}${lead.guru_name ? ' — ' + lead.guru_name : ''}`;
+    if (nsSelected && (lead.mnr_handler_id || lead.team_senior_partner_id)) {
+      nsSelectedText.textContent = lead.mnr_handler_id ? `${lead.mnr_handler_id}${lead.mnr_handler_name ? ' — ' + lead.mnr_handler_name : ''}` : '';
+      nsSelected.style.display = lead.mnr_handler_id ? 'block' : 'none';
+      if (_hasSr && nsGuruRow) {
+        nsGuruName.textContent = _srText;
         nsGuruRow.style.display = 'block';
       } else if (nsGuruRow) {
         nsGuruRow.style.display = 'none';

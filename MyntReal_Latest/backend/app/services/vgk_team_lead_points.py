@@ -198,6 +198,10 @@ def award_direct_team_lead_points(db: Session, lead_id: int) -> dict:
             'sponsor_balance_after': float(pts_entry.balance_after),
         }
     except Exception as exc:
+        try:
+            db.rollback()
+        except Exception:
+            pass
         logger.warning(f'[VGK-TEAM-LEAD-POINTS] Award failed for lead #{lead_id}: {exc}')
         return {'success': False, 'error': str(exc)}
 
@@ -259,40 +263,48 @@ def reverse_direct_team_lead_points(db: Session, lead_id: int, reason: str = 'Le
 
     from app.services.vgk_commission import add_vgk_points_entry
 
-    if points_to_debit > Decimal('0'):
-        rev = add_vgk_points_entry(
-            db=db,
-            partner_id=sponsor.id,
-            points_credit=Decimal('0'),
-            points_debit=points_to_debit,
-            reason_code='DIRECT_TEAM_LEAD_REVERSAL_V2',
-            reference_type='CRM_LEAD',
-            reference_id=lead.id,
-            notes=(
-                f'Reversal of direct team lead referral points — lead #{lead.id} ({reason})'
-            ),
+    try:
+        if points_to_debit > Decimal('0'):
+            rev = add_vgk_points_entry(
+                db=db,
+                partner_id=sponsor.id,
+                points_credit=Decimal('0'),
+                points_debit=points_to_debit,
+                reason_code='DIRECT_TEAM_LEAD_REVERSAL_V2',
+                reference_type='CRM_LEAD',
+                reference_id=lead.id,
+                notes=(
+                    f'Reversal of direct team lead referral points — lead #{lead.id} ({reason})'
+                ),
+            )
+            ledger_entry_id = rev.id
+
+        if unrecovered > Decimal('0'):
+            current_liability = Decimal(str(sponsor.points_recovery_liability or 0))
+            sponsor.points_recovery_liability = current_liability + unrecovered
+
+        lead.direct_team_lead_points_awarded = False
+        lead.direct_team_lead_points_awarded_at = None
+        db.flush()
+
+        logger.info(
+            f'[VGK-TEAM-LEAD-REVERSAL] Lead #{lead.id} reversed for sponsor #{sponsor.id}: '
+            f'debited={float(points_to_debit)}, unrecovered_liability={float(unrecovered)}'
         )
-        ledger_entry_id = rev.id
 
-    if unrecovered > Decimal('0'):
-        current_liability = Decimal(str(sponsor.points_recovery_liability or 0))
-        sponsor.points_recovery_liability = current_liability + unrecovered
-
-    lead.direct_team_lead_points_awarded = False
-    lead.direct_team_lead_points_awarded_at = None
-    db.flush()
-
-    logger.info(
-        f'[VGK-TEAM-LEAD-REVERSAL] Lead #{lead.id} reversed for sponsor #{sponsor.id}: '
-        f'debited={float(points_to_debit)}, unrecovered_liability={float(unrecovered)}'
-    )
-
-    return {
-        'success': True,
-        'reversed': True,
-        'points_debited': float(points_to_debit),
-        'unrecovered_liability': float(unrecovered),
-        'sponsor_id': sponsor.id,
-        'lead_id': lead.id,
-        'reversal_entry_id': ledger_entry_id,
-    }
+        return {
+            'success': True,
+            'reversed': True,
+            'points_debited': float(points_to_debit),
+            'unrecovered_liability': float(unrecovered),
+            'sponsor_id': sponsor.id,
+            'lead_id': lead.id,
+            'reversal_entry_id': ledger_entry_id,
+        }
+    except Exception as exc:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        logger.warning(f'[VGK-TEAM-LEAD-REVERSAL] Reversal failed for lead #{lead_id}: {exc}')
+        return {'success': False, 'error': str(exc)}

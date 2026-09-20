@@ -917,6 +917,35 @@ def run_migrations():
                 """))
                 logger.info("✅ mobile_device_sessions table ensured")
 
+                # 4.26 Direct team lead referral points schema & vgk_points_ledger constraint
+                conn.execute(text("ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded BOOLEAN NOT NULL DEFAULT FALSE;"))
+                conn.execute(text("ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded_at TIMESTAMP NULL;"))
+                conn.execute(text("ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS direct_team_lead_sponsor_id INTEGER REFERENCES official_partners(id) ON DELETE SET NULL;"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_crm_leads_dtl_points ON crm_leads(direct_team_lead_points_awarded);"))
+                conn.execute(text("ALTER TABLE vgk_points_ledger DROP CONSTRAINT IF EXISTS vgk_points_reason_check;"))
+                conn.execute(text("""
+                    ALTER TABLE vgk_points_ledger ADD CONSTRAINT vgk_points_reason_check CHECK (
+                        reason_code IN (
+                            'WELCOME_BONUS','ACTIVATION_BONUS','LOYAL_BONUS','BONANZA_REWARD',
+                            'PRODUCT_DISCOUNT','COMMISSION_ADJUSTMENT','MANUAL_ADJUSTMENT',
+                            'MIGRATION_BALANCE','CAMPAIGN_BONUS','AUTO_REFILL','COMPANY_ROYALTY',
+                            'INCOME_EARNED','BONANZA_CASH_CREDIT','REFERRAL_BONUS','SIGNUP_BONUS',
+                            'SOLAR_CIBIL_ADVANCE','ROYALTY_PAYOUT','REWARD_POINT_CONVERSION',
+                            'BUSINESS_BONUS','BUSINESS_REVERSAL',
+                            'ONBOARDING_V2','REGISTRATION_V2','REFERRAL_V2','ACTIVATION_V2',
+                            'ACTIVATION_SPONSOR_V2','BUSINESS_V2','PAYOUT_DEBIT_V2',
+                            'BUSINESS_REVERSAL_V2','LIABILITY_RECOVERY_V2','V2_ONBOARDING_GRANT',
+                            'DIRECT_TEAM_LEAD_V2','DIRECT_TEAM_LEAD_REVERSAL_V2'
+                        )
+                    );
+                """))
+                conn.execute(text("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS uq_vgk_pts_direct_team_lead_v2
+                    ON vgk_points_ledger (reference_id)
+                    WHERE reference_type = 'CRM_LEAD' AND reason_code = 'DIRECT_TEAM_LEAD_V2';
+                """))
+                logger.info("✅ Direct team lead points schema & vgk_points_ledger constraint ensured")
+
         logger.info("✅ Feature-specific schema migrations complete")
         
         # 4.20 Staff cash balance zero adjustments as of 16-Sep-2026

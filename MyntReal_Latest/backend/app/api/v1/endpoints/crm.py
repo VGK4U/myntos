@@ -11986,6 +11986,7 @@ def update_lead(
     # vendor_master, and staff_employee tables, NOT in user table. Guard only clears
     # source_ref_* when the source is a user-type (mnr/vgk) that no longer exists.
     from app.models.user import User as _MNRUser
+    from app.models.staff_accounts import OfficialPartner as _OfficialPartner
     _non_user_source_types = ('partner', 'vgk_partner', 'vendor', 'staff', 'external')
     for _fk_col, _clear_source in (
         ('mnr_handler_id', True),
@@ -11998,6 +11999,23 @@ def update_lead(
         if _fk_val:
             _fk_exists = db.query(_MNRUser.id).filter(_MNRUser.id == _fk_val).first()
             if not _fk_exists:
+                # DC-PARTNER-REATTRIB-001: If a partner ID was passed in a user.id slot, migrate it to team partner FK
+                if str(_fk_val).isdigit():
+                    try:
+                        _pid = int(_fk_val)
+                        _part_exists = db.query(_OfficialPartner.id).filter(_OfficialPartner.id == _pid).first()
+                        if _part_exists:
+                            if _fk_col == 'guru_id' and not getattr(lead, 'team_senior_partner_id', None):
+                                lead.team_senior_partner_id = _pid
+                                print(f"[DC-MNR-FK-GUARD] lead {lead_id}: guru_id={_fk_val} is OfficialPartner id — migrated to team_senior_partner_id", flush=True)
+                            elif _fk_col in ('z_guru_id', 'adi_guru_id') and not getattr(lead, 'team_extended_partner_id', None):
+                                lead.team_extended_partner_id = _pid
+                                print(f"[DC-MNR-FK-GUARD] lead {lead_id}: {_fk_col}={_fk_val} is OfficialPartner id — migrated to team_extended_partner_id", flush=True)
+                            elif _fk_col == 'core_id' and not getattr(lead, 'team_core_partner_id', None):
+                                lead.team_core_partner_id = _pid
+                                print(f"[DC-MNR-FK-GUARD] lead {lead_id}: core_id={_fk_val} is OfficialPartner id — migrated to team_core_partner_id", flush=True)
+                    except Exception as _re_e:
+                        print(f"[DC-MNR-FK-GUARD] partner check warning lead {lead_id}: {_re_e}", flush=True)
                 print(f"[DC-MNR-FK-GUARD] lead {lead_id}: {_fk_col}={_fk_val!r} not in user table — auto-nulling", flush=True)
                 setattr(lead, _fk_col, None)
                 if _clear_source:
@@ -12069,7 +12087,11 @@ def update_lead(
             award_res = award_direct_team_lead_points(db=db, lead_id=lead.id)
             if award_res.get('awarded'):
                 db.commit()
+            elif not award_res.get('success'):
+                db.rollback()
         except Exception as _pt_err:
+            try: db.rollback()
+            except Exception: pass
             logger.warning(f"[DC-VGK-TEAM-LEAD-POINTS] CRM update lead points error: {_pt_err}")
 
     # DC-TEAM-ASSIGN-001 (Jun 2026): Trigger VGK income drafts on completion.

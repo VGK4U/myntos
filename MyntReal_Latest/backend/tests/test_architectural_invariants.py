@@ -114,6 +114,7 @@ class TestArchitecturalInvariants(unittest.TestCase):
             "cumulative_self_business_dvr",
             "points_evaluated_dvr",
             "vgk_self_business_points_accrual_ledger",
+            "direct_team_lead_points_awarded",
         ]
 
         for item in required_tables_and_columns:

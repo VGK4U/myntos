@@ -3703,12 +3703,36 @@ function openEdit(leadId){
   sv('ef_src_search','');efRenderSelected('src',l.source_ref_type||(l.mnr_handler_id?'mnr':''),l.source_ref_id||l.mnr_handler_id||'',l.source_ref_name||l.mnr_handler_id||'');
   // DC Protocol Fix (Apr 2026): Show guru row for partner/vgk types too (VGK upline chain)
   document.getElementById('ef_guru_row').style.display=['mnr','vgk','partner','vgk_partner'].includes(l.source_ref_type||'mnr')?((l.source_ref_id||l.mnr_handler_id)?'block':'none'):'none';
-  sv('ef_guru_id',l.guru_id||'');sv('ef_guru_name',l.guru_name||'');sv('ef_guru_type',l.guru_id?((l.guru_id||'').startsWith('VGK')?'vgk':'mnr'):(l.guru_name?'partner':''));
+  const _hasSeniorPart = !!(l.team_senior_partner_id || (['partner','vgk_partner'].includes(l.source_ref_type||'') && (l.team_senior_name || l.guru_name)));
+  const _seniorType = _hasSeniorPart ? 'partner' : (l.guru_id ? ((l.guru_id||'').startsWith('VGK')?'vgk':'mnr') : (l.guru_name?'partner':''));
+  const _seniorId = _hasSeniorPart ? String(l.team_senior_partner_id||'') : (l.guru_id||'');
+  const _seniorName = _hasSeniorPart ? (l.team_senior_name || l.guru_name || '') : (l.guru_name||'');
+  sv('ef_guru_id', _hasSeniorPart ? '' : (l.guru_id||''));
+  sv('ef_team_senior_pid', _hasSeniorPart ? (_seniorId||'') : (l.team_senior_partner_id||''));
+  sv('ef_guru_name', _seniorName);
+  sv('ef_guru_type', _seniorType);
   document.getElementById('ef_guru_search').value='';
-  efRenderSelected('guru',l.guru_id?((l.guru_id||'').startsWith('VGK')?'vgk':'mnr'):(l.guru_name?'partner':''),l.guru_id||'',l.guru_name||'');
-  sv('ef_z_guru_id',l.z_guru_id||'');sv('ef_z_guru_name',l.z_guru_name||'');sv('ef_z_guru_type',l.z_guru_id?((l.z_guru_id||'').startsWith('VGK')?'vgk':'mnr'):(l.z_guru_name?'partner':''));
+  if (_seniorId || _seniorName) {
+    efRenderSelected('guru', _seniorType, _seniorId, _seniorName);
+  } else {
+    document.getElementById('ef_guru_selected').innerHTML='';
+  }
+
+  const _hasExtPart = !!(l.team_extended_partner_id || (['partner','vgk_partner'].includes(l.source_ref_type||'') && (l.team_extended_name || l.z_guru_name)));
+  const _extType = _hasExtPart ? 'partner' : (l.z_guru_id ? ((l.z_guru_id||'').startsWith('VGK')?'vgk':'mnr') : (l.z_guru_name?'partner':''));
+  const _extId = _hasExtPart ? String(l.team_extended_partner_id||'') : (l.z_guru_id||'');
+  const _extName = _hasExtPart ? (l.team_extended_name || l.z_guru_name || '') : (l.z_guru_name||'');
+  sv('ef_z_guru_id', _hasExtPart ? '' : (l.z_guru_id||''));
+  sv('ef_team_extended_pid', _hasExtPart ? (_extId||'') : (l.team_extended_partner_id||''));
+  sv('ef_z_guru_name', _extName);
+  sv('ef_z_guru_type', _extType);
   document.getElementById('ef_z_guru_search').value='';
-  efRenderSelected('z_guru',l.z_guru_id?((l.z_guru_id||'').startsWith('VGK')?'vgk':'mnr'):(l.z_guru_name?'partner':''),l.z_guru_id||'',l.z_guru_name||'');
+  if (_extId || _extName) {
+    efRenderSelected('z_guru', _extType, _extId, _extName);
+  } else {
+    document.getElementById('ef_z_guru_selected').innerHTML='';
+  }
+
   // DC-TEAM-ASSIGN-ALWAYS-001: Extended/Core visible whenever a network source is set —
   // same condition as Senior; rows show even when chain is < L3/L4 so user can manually assign.
   const _mnrVgkSrcId=l.source_ref_id||l.mnr_handler_id||'';
@@ -3716,15 +3740,20 @@ function openEdit(leadId){
   const _netSrcActive=['mnr','vgk','partner','vgk_partner'].includes(_mnrVgkSrcType)&&!!_mnrVgkSrcId;
   document.getElementById('ef_z_guru_row').style.display=_netSrcActive?'block':'none';
   // DC-TEAM-ASSIGN-001: Core row + team override FKs
-  sv('ef_core_partner_id',l.team_core_partner_id||'');sv('ef_core_name',l.team_core_name||'');sv('ef_core_type',l.team_core_partner_id?'partner':(l.team_core_name?'mnr':''));
-  sv('ef_team_senior_pid',l.team_senior_partner_id||'');sv('ef_team_extended_pid',l.team_extended_partner_id||'');
+  const _hasCorePart = !!(l.team_core_partner_id || l.team_core_name || (['partner','vgk_partner'].includes(l.source_ref_type||'') && (l.team_core_name || l.core_name)));
+  const _coreType = _hasCorePart ? 'partner' : (l.core_id ? 'mnr' : (l.core_name?'partner':''));
+  const _coreId = l.team_core_partner_id ? String(l.team_core_partner_id) : (l.core_id||'');
+  const _coreName = l.team_core_name || l.core_name || '';
+  sv('ef_core_partner_id', l.team_core_partner_id||'');
+  sv('ef_core_name', _coreName);
+  sv('ef_core_type', _coreType);
   document.getElementById('ef_core_search').value='';
-  if(l.team_core_name||l.team_core_partner_id){efRenderSelected('core',l.team_core_partner_id?'partner':'mnr',l.team_core_partner_id||'',l.team_core_name||'');}
+  if(_coreId || _coreName){efRenderSelected('core', _coreType, _coreId, _coreName);}
   else{document.getElementById('ef_core_selected').innerHTML='';}
   // DC-TEAM-ASSIGN-ALWAYS-001: Core visible whenever network source active — manual assign always possible
   document.getElementById('ef_core_row').style.display=_netSrcActive?'block':'none';
-  // DC-TEAM-ASSIGN-ALWAYS-001: Trigger upline fetch for vgk_partner/partner sources too — not just mnr/vgk
-  if(_netSrcActive){efFetchGuru(_mnrVgkSrcId,true);}
+  // DC-TEAM-ASSIGN-ALWAYS-001: Trigger upline fetch if senior is not yet set
+  if(_netSrcActive && !_seniorId && !_seniorName){efFetchGuru(_mnrVgkSrcId,true);}
   sv('ef_fs_type',l.field_support_ref_type||'');sv('ef_fs_id',l.field_support_ref_id||l.adi_guru_id||'');sv('ef_fs_name',l.field_support_ref_name||l.adi_guru_name||'');
   sv('ef_fs_search','');efRenderSelected('fs',l.field_support_ref_type||'',l.field_support_ref_id||l.adi_guru_id||'',l.field_support_ref_name||l.adi_guru_name||'');
   sv('ef_community_id', l.community_id||''); sv('ef_community_search', '');
@@ -4209,19 +4238,20 @@ async function saveLead(){
     technical_id:gv('ef_tech_id')?parseInt(gv('ef_tech_id')):null,
     // DC Protocol Fix (Apr 2026): Only send mnr_handler_id for user-type (mnr/vgk) sources
     mnr_handler_id:(['mnr','vgk'].includes(gv('ef_src_type')||''))?(gv('ef_src_id')||null):null,
-    guru_id:gv('ef_guru_id')||null,
-    z_guru_id:gv('ef_z_guru_id')||null,
-    guru_name:(()=>{const _t=gv('ef_guru_type')||'';return(['partner','vgk_partner'].includes(_t))?(gv('ef_guru_name')||null):null;})(),
-    z_guru_name:(()=>{const _t=gv('ef_z_guru_type')||'';return(['partner','vgk_partner'].includes(_t))?(gv('ef_z_guru_name')||null):null;})(),
+    guru_id: (['partner','vgk_partner'].includes(gv('ef_guru_type')||'') || gv('ef_team_senior_pid')) ? null : (gv('ef_guru_id')||null),
+    z_guru_id: (['partner','vgk_partner'].includes(gv('ef_z_guru_type')||'') || gv('ef_team_extended_pid')) ? null : (gv('ef_z_guru_id')||null),
+    guru_name: (['partner','vgk_partner'].includes(gv('ef_guru_type')||'')) ? (gv('ef_guru_name')||null) : (gv('ef_team_senior_pid') ? (gv('ef_guru_name')||null) : null),
+    z_guru_name: (['partner','vgk_partner'].includes(gv('ef_z_guru_type')||'')) ? (gv('ef_z_guru_name')||null) : (gv('ef_team_extended_pid') ? (gv('ef_z_guru_name')||null) : null),
     // DC-TEAM-ASSIGN-001 (Jun 2026): Team Assignment override FKs
     solar_brand_id: gv('ef_solar_brand_id')!=='' ? (parseInt(gv('ef_solar_brand_id'))||null) : null,
-    team_senior_partner_id:gv('ef_team_senior_pid')?parseInt(gv('ef_team_senior_pid'))||null:null,
-    team_extended_partner_id:gv('ef_team_extended_pid')?parseInt(gv('ef_team_extended_pid'))||null:null,
-    team_core_partner_id:gv('ef_core_partner_id')?parseInt(gv('ef_core_partner_id'))||null:null,
-    core_name:gv('ef_core_name')||null,
-    community_id:gv('ef_community_id')?parseInt(gv('ef_community_id')):null,
-    support_staff_id:gv('ef_support_staff_id')?parseInt(gv('ef_support_staff_id')):null,
-    technical_staff1_id:gv('ef_tech1_id')?parseInt(gv('ef_tech1_id')):null,
+    team_senior_partner_id: gv('ef_team_senior_pid') ? parseInt(gv('ef_team_senior_pid'))||null : null,
+    team_extended_partner_id: gv('ef_team_extended_pid') ? parseInt(gv('ef_team_extended_pid'))||null : null,
+    team_core_partner_id: gv('ef_core_partner_id') ? parseInt(gv('ef_core_partner_id'))||null : null,
+    core_id: (gv('ef_core_partner_id') || gv('ef_core_type') === 'partner') ? null : (gv('ef_core_id')||null),
+    core_name: gv('ef_core_name')||null,
+    community_id: gv('ef_community_id') ? parseInt(gv('ef_community_id'))||null : null,
+    support_staff_id: gv('ef_support_staff_id') ? parseInt(gv('ef_support_staff_id'))||null : null,
+    technical_staff1_id: gv('ef_tech1_id') ? parseInt(gv('ef_tech1_id'))||null : null,
     ...CRMHandlerConfirm.getValues(),
     ...CRMHandlerConfirm.getAssignment()
   };
@@ -4458,34 +4488,38 @@ async function efFetchGuru(mnrId,zAlreadySet){
     const d=await r.json();
     if(d.success&&d.data){
       if(d.data.guru){
-        document.getElementById('ef_guru_id').value=d.data.guru.id;
+        const _guruIsPartner=!!(d.data.guru.partner_id)||(d.source==='vgk');
+        document.getElementById('ef_guru_id').value=_guruIsPartner?'':d.data.guru.id;
+        document.getElementById('ef_team_senior_pid').value=_guruIsPartner?String(d.data.guru.partner_id||d.data.guru.id):'';
         document.getElementById('ef_guru_name').value=d.data.guru.name||'';
-        document.getElementById('ef_guru_type').value='mnr';
+        document.getElementById('ef_guru_type').value=_guruIsPartner?'partner':'mnr';
         document.getElementById('ef_guru_search').value='';
-        efRenderSelected('guru','mnr',String(d.data.guru.id),d.data.guru.name||'');
-        CRMHandlerConfirm.syncField('guru_id',d.data.guru.id,d.data.guru.name||'');
+        efRenderSelected('guru',_guruIsPartner?'partner':'mnr',String(_guruIsPartner?(d.data.guru.partner_id||d.data.guru.id):d.data.guru.id),d.data.guru.name||'');
+        CRMHandlerConfirm.syncField('guru_id',_guruIsPartner?null:d.data.guru.id,d.data.guru.name||'');
       }
       if(!zAlreadySet){
         if(d.data.adi_guru){
-          document.getElementById('ef_z_guru_id').value=d.data.adi_guru.id;
+          const _zIsPartner=!!(d.data.adi_guru.partner_id)||(d.source==='vgk');
+          document.getElementById('ef_z_guru_id').value=_zIsPartner?'':d.data.adi_guru.id;
+          document.getElementById('ef_team_extended_pid').value=_zIsPartner?String(d.data.adi_guru.partner_id||d.data.adi_guru.id):'';
           document.getElementById('ef_z_guru_name').value=d.data.adi_guru.name||'';
-          document.getElementById('ef_z_guru_type').value='mnr';
+          document.getElementById('ef_z_guru_type').value=_zIsPartner?'partner':'mnr';
           document.getElementById('ef_z_guru_search').value='';
-          efRenderSelected('z_guru','mnr',String(d.data.adi_guru.id),d.data.adi_guru.name||'');
+          efRenderSelected('z_guru',_zIsPartner?'partner':'mnr',String(_zIsPartner?(d.data.adi_guru.partner_id||d.data.adi_guru.id):d.data.adi_guru.id),d.data.adi_guru.name||'');
           document.getElementById('ef_z_guru_row').style.display='block';
-          CRMHandlerConfirm.syncField('z_guru_id',d.data.adi_guru.id,d.data.adi_guru.name||'');
+          CRMHandlerConfirm.syncField('z_guru_id',_zIsPartner?null:d.data.adi_guru.id,d.data.adi_guru.name||'');
         }else{efClearZGuru();document.getElementById('ef_z_guru_row').style.display='block';}
       }
       // DC-TEAM-ASSIGN-001: Populate Core (L4) from upline response
       if(d.data.core){
-        const _coreIsPartner=!!(d.data.core.partner_id);
-        document.getElementById('ef_core_partner_id').value=_coreIsPartner?String(d.data.core.partner_id||''):'';
+        const _coreIsPartner=!!(d.data.core.partner_id)||(d.source==='vgk');
+        document.getElementById('ef_core_partner_id').value=_coreIsPartner?String(d.data.core.partner_id||d.data.core.id||''):'';
         document.getElementById('ef_core_name').value=d.data.core.name||'';
         document.getElementById('ef_core_type').value=_coreIsPartner?'partner':'mnr';
         document.getElementById('ef_core_search').value='';
-        efRenderSelected('core',_coreIsPartner?'partner':'mnr',_coreIsPartner?String(d.data.core.partner_id):String(d.data.core.id),d.data.core.name||'');
+        efRenderSelected('core',_coreIsPartner?'partner':'mnr',String(_coreIsPartner?(d.data.core.partner_id||d.data.core.id):d.data.core.id),d.data.core.name||'');
         document.getElementById('ef_core_row').style.display='block';
-        CRMHandlerConfirm.syncField('core_id',_coreIsPartner?d.data.core.partner_id:d.data.core.id,d.data.core.name||'');
+        CRMHandlerConfirm.syncField('core_id',_coreIsPartner?null:d.data.core.id,d.data.core.name||'');
       }else{efClearCore();document.getElementById('ef_core_row').style.display='block';}
     }
   }catch(e){}

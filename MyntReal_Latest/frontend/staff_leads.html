@@ -3165,18 +3165,28 @@
                         document.getElementById('leadMnrHandlerSelected').innerHTML = '';
                     }
                     // DC-TEAM-ASSIGN-001: Senior/Extended/Core badge rendering on load
-                    const _guruType = lead.guru_id ? ((lead.guru_id||'').startsWith('VGK')?'vgk':'mnr') : (lead.guru_name?'partner':'');
-                    document.getElementById('leadGuruId').value = lead.guru_id || '';
+                    const _hasSrPart = !!(lead.team_senior_partner_id || (['partner','vgk_partner'].includes(lead.source_ref_type||'') && (lead.team_senior_name || lead.guru_name)));
+                    const _guruType = _hasSrPart ? 'partner' : (lead.guru_id ? ((lead.guru_id||'').startsWith('VGK')?'vgk':'mnr') : (lead.guru_name?'partner':''));
+                    const _guruId = _hasSrPart ? String(lead.team_senior_partner_id||'') : (lead.guru_id||'');
+                    const _guruName = _hasSrPart ? (lead.team_senior_name || lead.guru_name || '') : (lead.guru_name||'');
+                    document.getElementById('leadGuruId').value = _hasSrPart ? '' : (lead.guru_id || '');
+                    document.getElementById('leadTeamSeniorPid').value = _hasSrPart ? _guruId : (lead.team_senior_partner_id || '');
                     document.getElementById('leadGuruType').value = _guruType;
-                    document.getElementById('leadGuruName').value = lead.guru_name || '';
+                    document.getElementById('leadGuruName').value = _guruName;
                     document.getElementById('leadGuruSearch').value = '';
-                    renderLeadTeamBadge('guru', _guruType, lead.guru_id || '', lead.guru_name || '');
-                    const _zGuruType = lead.z_guru_id ? ((lead.z_guru_id||'').startsWith('VGK')?'vgk':'mnr') : (lead.z_guru_name?'partner':'');
-                    document.getElementById('leadZGuruId').value = lead.z_guru_id || '';
+                    renderLeadTeamBadge('guru', _guruType, _guruId, _guruName);
+
+                    const _hasExtPart = !!(lead.team_extended_partner_id || (['partner','vgk_partner'].includes(lead.source_ref_type||'') && (lead.team_extended_name || lead.z_guru_name)));
+                    const _zGuruType = _hasExtPart ? 'partner' : (lead.z_guru_id ? ((lead.z_guru_id||'').startsWith('VGK')?'vgk':'mnr') : (lead.z_guru_name?'partner':''));
+                    const _zGuruId = _hasExtPart ? String(lead.team_extended_partner_id||'') : (lead.z_guru_id||'');
+                    const _zGuruName = _hasExtPart ? (lead.team_extended_name || lead.z_guru_name || '') : (lead.z_guru_name||'');
+                    document.getElementById('leadZGuruId').value = _hasExtPart ? '' : (lead.z_guru_id || '');
+                    document.getElementById('leadTeamExtendedPid').value = _hasExtPart ? _zGuruId : (lead.team_extended_partner_id || '');
                     document.getElementById('leadZGuruType').value = _zGuruType;
-                    document.getElementById('leadZGuruName').value = lead.z_guru_name || '';
+                    document.getElementById('leadZGuruName').value = _zGuruName;
                     document.getElementById('leadZGuruSearch').value = '';
-                    renderLeadTeamBadge('z_guru', _zGuruType, lead.z_guru_id || '', lead.z_guru_name || '');
+                    renderLeadTeamBadge('z_guru', _zGuruType, _zGuruId, _zGuruName);
+
                     // DC-TEAM-ASSIGN-001: Core row load from existing lead
                     document.getElementById('leadCorePid').value = lead.team_core_partner_id || '';
                     document.getElementById('leadTeamSeniorPid').value = lead.team_senior_partner_id || '';
@@ -3956,16 +3966,15 @@
                 mnr_handler_id: (['mnr','vgk'].includes(document.getElementById('leadMnrHandlerType').value))
                     ? (document.getElementById('leadMnrHandlerId').value || null)
                     : null,
-                guru_id: document.getElementById('leadGuruId').value || null,
-                z_guru_id: document.getElementById('leadZGuruId').value || null,
-                // DC Protocol Fix (Apr 2026): For partner-chain uplines, extract name from display text
-                // (leadGuruId is empty for partner sources — upline stored as text in guru_name column)
-                guru_name: (() => { const _t = document.getElementById('leadGuruType').value || ''; return (['partner','vgk_partner'].includes(_t)) ? (document.getElementById('leadGuruName').value || null) : null; })(),
-                z_guru_name: (() => { const _t = document.getElementById('leadZGuruType').value || ''; return (['partner','vgk_partner'].includes(_t)) ? (document.getElementById('leadZGuruName').value || null) : null; })(),
+                guru_id: (['partner','vgk_partner'].includes(document.getElementById('leadGuruType').value||'') || document.getElementById('leadTeamSeniorPid').value) ? null : (document.getElementById('leadGuruId').value || null),
+                z_guru_id: (['partner','vgk_partner'].includes(document.getElementById('leadZGuruType').value||'') || document.getElementById('leadTeamExtendedPid').value) ? null : (document.getElementById('leadZGuruId').value || null),
+                guru_name: (() => { const _t = document.getElementById('leadGuruType').value || ''; return (['partner','vgk_partner'].includes(_t) || document.getElementById('leadTeamSeniorPid').value) ? (document.getElementById('leadGuruName').value || null) : null; })(),
+                z_guru_name: (() => { const _t = document.getElementById('leadZGuruType').value || ''; return (['partner','vgk_partner'].includes(_t) || document.getElementById('leadTeamExtendedPid').value) ? (document.getElementById('leadZGuruName').value || null) : null; })(),
                 // DC-TEAM-ASSIGN-001 (Jun 2026): Team Assignment override FKs
                 team_senior_partner_id: document.getElementById('leadTeamSeniorPid').value ? parseInt(document.getElementById('leadTeamSeniorPid').value) || null : null,
                 team_extended_partner_id: document.getElementById('leadTeamExtendedPid').value ? parseInt(document.getElementById('leadTeamExtendedPid').value) || null : null,
                 team_core_partner_id: document.getElementById('leadCorePid').value ? parseInt(document.getElementById('leadCorePid').value) || null : null,
+                core_id: (document.getElementById('leadCorePid').value || document.getElementById('leadCoreType').value === 'partner') ? null : (document.getElementById('leadCoreId') ? document.getElementById('leadCoreId').value || null : null),
                 core_name: document.getElementById('leadCoreName').value || null,
                 adi_guru_id: (['mnr','vgk'].includes(document.getElementById('leadAdiGuruType').value))
                     ? (document.getElementById('leadAdiGuruId').value || null)
