@@ -179,6 +179,7 @@ class ApiService {
     retryable: boolean = true,
     timeoutMs: number = 20000
   ): Promise<ApiResponse<T>> {
+    const isActuallyFormData = isFormData || (typeof FormData !== 'undefined' && body instanceof FormData);
     const executeRequest = async (): Promise<ApiResponse<T>> => {
       const headers: Record<string, string> = {};
       
@@ -206,7 +207,7 @@ class ApiService {
       headers['X-App-Version'] = APP_CONFIG.getFullVersion();
       headers['X-App-Platform'] = 'mobile';
       
-      if (!isFormData) {
+      if (!isActuallyFormData) {
         headers['Content-Type'] = 'application/json';
       }
 
@@ -224,7 +225,7 @@ class ApiService {
       };
 
       if (body) {
-        config.body = isFormData ? body : JSON.stringify(body);
+        config.body = isActuallyFormData ? body : JSON.stringify(body);
       }
 
       let normalizedEndpoint = endpoint;

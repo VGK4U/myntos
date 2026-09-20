@@ -893,7 +893,10 @@ def update_catalog(
     """
     Updates catalog master details, theme, and SEO settings.
     """
-    if not _is_catalog_author(current_user):
+    data = payload.dict(exclude_unset=True)
+    is_brochure_only = set(data.keys()).issubset({"pdf_brochure_url"})
+
+    if not _is_catalog_author(current_user) and not is_brochure_only:
         raise HTTPException(status_code=403, detail="Unauthorized: Leadership or Admin privileges required.")
 
     catalog = db.query(DigitalCatalog).filter(DigitalCatalog.id == catalog_id).first()
@@ -906,7 +909,6 @@ def update_catalog(
         "seo_keywords", "theme_config", "default_language", "active_languages",
         "pdf_brochure_url"
     ]
-    data = payload.dict(exclude_unset=True)
     for k in updatable:
         if k in data:
             setattr(catalog, k, data[k])

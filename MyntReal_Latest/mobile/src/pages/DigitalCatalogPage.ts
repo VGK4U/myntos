@@ -74,6 +74,7 @@ export class DigitalCatalogPage {
   private activeCatalog: Catalog | null = null;
   private activeTab: "packages" | "sections" | "media" | "overview" = "packages";
   private isLoading = true;
+  private isUploadingPdf = false;
 
   private readonly verticals = [
     { code: "SOLAR", label: "Solar", icon: "☀️" },
@@ -265,23 +266,18 @@ export class DigitalCatalogPage {
     }
 
     const cat = this.activeCatalog!;
-    let publicUrl = `/catalog/${cat.segment_code.toLowerCase().replace(/_/g, "-")}/${cat.slug}`;
-    if (cat.segment_code === "HUB_PRICING" || cat.slug === "hub-ev-pricing") {
-      publicUrl = "/catalog/hub-ev-pricing";
-    } else if (cat.segment_code === "EV_B2C" || cat.slug === "ev-b2c-pricing") {
-      publicUrl = "/catalog/ev-b2c-pricing";
-    }
+    const fullPublicUrl = this.getCanonicalPublicUrl(cat);
 
     // Extra route shortcuts
     let shortcutBtnHtml = "";
     if (cat.segment_code === "SOLAR") {
-      shortcutBtnHtml = `<a href="/hub/hgs" target="_blank" class="dc-btn-glass highlight-link"><i class="fas fa-sun text-warning"></i> /hub/hgs</a>`;
+      shortcutBtnHtml = `<button type="button" class="dc-btn-glass highlight-link dc-open-external-btn" data-url="${this.getCanonicalWebUrl("/hub/hgs")}"><i class="fas fa-sun text-warning"></i> /hub/hgs</button>`;
     } else if (cat.segment_code === "ETC_TRAINING") {
-      shortcutBtnHtml = `<a href="/hub/etc" target="_blank" class="dc-btn-glass highlight-link"><i class="fas fa-graduation-cap text-info"></i> /hub/etc</a>`;
+      shortcutBtnHtml = `<button type="button" class="dc-btn-glass highlight-link dc-open-external-btn" data-url="${this.getCanonicalWebUrl("/hub/etc")}"><i class="fas fa-graduation-cap text-info"></i> /hub/etc</button>`;
     } else if (cat.segment_code === "HUB_PRICING") {
-      shortcutBtnHtml = `<a href="/catalog/hub-ev-pricing" target="_blank" class="dc-btn-glass highlight-link"><i class="fas fa-tags text-warning"></i> 24h Commercials</a>`;
+      shortcutBtnHtml = `<button type="button" class="dc-btn-glass highlight-link dc-open-external-btn" data-url="${this.getCanonicalWebUrl("/catalog/hub-ev-pricing")}"><i class="fas fa-tags text-warning"></i> 24h Commercials</button>`;
     } else if (cat.segment_code === "EV_B2C") {
-      shortcutBtnHtml = `<a href="/catalog/ev-b2c-pricing" target="_blank" class="dc-btn-glass highlight-link"><i class="fas fa-motorcycle text-success"></i> Customer EV 2W</a>`;
+      shortcutBtnHtml = `<button type="button" class="dc-btn-glass highlight-link dc-open-external-btn" data-url="${this.getCanonicalWebUrl("/catalog/ev-b2c-pricing")}"><i class="fas fa-motorcycle text-success"></i> Customer EV 2W</button>`;
     }
 
     const sectionsCount = cat.sections_count || (cat.sections ? cat.sections.length : 0);
@@ -327,17 +323,27 @@ export class DigitalCatalogPage {
 
         <!-- Secondary Action Row -->
         <div class="dc-hero-actions-row">
-          <a href="${publicUrl}" target="_blank" class="dc-btn-glass" title="Open Public Web View">
-            <i class="fas fa-external-link-alt"></i>
+          <button type="button" class="dc-btn-glass dc-open-external-btn" data-url="${fullPublicUrl}" title="Open Public Web View">
+            <i class="fas fa-external-link-alt text-info"></i>
             <span>Open Web View</span>
-          </a>
+          </button>
           ${cat.pdf_brochure_url ? `
-            <a href="${cat.pdf_brochure_url}" target="_blank" class="dc-btn-glass" title="Download PDF Brochure">
+            <button type="button" class="dc-btn-glass dc-open-external-btn" data-url="${cat.pdf_brochure_url}" title="Download PDF Brochure">
               <i class="fas fa-file-pdf text-danger"></i>
               <span>PDF Brochure</span>
-            </a>
-          ` : ""}
+            </button>
+            <button type="button" class="dc-btn-glass text-warning" id="btnHeroUploadBrochure" title="Replace PDF Brochure">
+              <i class="fas fa-cloud-arrow-up text-warning"></i>
+              <span>Upload PDF</span>
+            </button>
+          ` : `
+            <button type="button" class="dc-btn-glass text-warning" id="btnHeroUploadBrochure" title="Upload Official PDF Brochure">
+              <i class="fas fa-cloud-arrow-up text-warning"></i>
+              <span>Upload PDF</span>
+            </button>
+          `}
           ${shortcutBtnHtml}
+          <input type="file" id="heroPdfFileInput" accept="application/pdf" style="display: none;">
         </div>
       </div>
 
@@ -371,6 +377,29 @@ export class DigitalCatalogPage {
       dispatchBtn.addEventListener("click", () => this.openMobileDispatchModal(cat));
     }
 
+    const heroUploadBtn = area.querySelector("#btnHeroUploadBrochure");
+    const heroFileInput = area.querySelector("#heroPdfFileInput") as HTMLInputElement;
+    if (heroUploadBtn && heroFileInput) {
+      heroUploadBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        heroFileInput.click();
+      });
+      heroFileInput.addEventListener("change", (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          this.handlePdfBrochureUpload(file, cat);
+        }
+      });
+    }
+
+    area.querySelectorAll(".dc-open-external-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const url = (btn as HTMLElement).dataset.url;
+        if (url) this.openExternalUrl(url);
+      });
+    });
+
     // Bind Sub-Tabs
     const subTabBtns = area.querySelectorAll("#dcSubTabsNav .dc-tab-btn");
     subTabBtns.forEach(btn => {
@@ -390,6 +419,115 @@ export class DigitalCatalogPage {
 
     // Fetch live telemetry for this specific catalog segment in background
     this.fetchSegmentTelemetry(cat.segment_code);
+  }
+
+  private getCanonicalWebUrl(path: string): string {
+    let origin = APP_CONFIG.BASE_SERVER_URL;
+    if (
+      typeof window !== "undefined" &&
+      window.location?.origin &&
+      !window.location.origin.includes("localhost") &&
+      !window.location.origin.includes("capacitor") &&
+      !window.location.origin.includes("app.myntreal.com")
+    ) {
+      origin = window.location.origin;
+    }
+    if (!origin || origin.includes("localhost") || origin.includes("app.myntreal.com")) {
+      origin = "https://www.myntreal.com";
+    }
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    return `${origin.replace(/\/+$/, "")}${cleanPath}`;
+  }
+
+  private getCanonicalPublicUrl(cat: Catalog): string {
+    let path = `/catalog/${cat.segment_code.toLowerCase().replace(/_/g, "-")}/${cat.slug}`;
+    if (cat.segment_code === "HUB_PRICING" || cat.slug === "hub-ev-pricing") {
+      path = "/catalog/hub-ev-pricing";
+    } else if (cat.segment_code === "EV_B2C" || cat.slug === "ev-b2c-pricing") {
+      path = "/catalog/ev-b2c-pricing";
+    }
+    return this.getCanonicalWebUrl(path);
+  }
+
+  private openExternalUrl(url: string): void {
+    if (!url) return;
+    if (typeof window !== "undefined") {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  }
+
+  private async handlePdfBrochureUpload(file: File, cat: Catalog): Promise<void> {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".pdf") && file.type !== "application/pdf") {
+      alert("Please select a valid PDF file (.pdf)");
+      return;
+    }
+    if (file.size > 25 * 1024 * 1024) {
+      alert("File size exceeds 25MB limit. Please choose a smaller PDF.");
+      return;
+    }
+
+    this.isUploadingPdf = true;
+    this.renderTabPane(cat);
+
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("folder", "catalogs/brochures");
+
+      const uploadRes = await apiService.uploadFile<any>("/api/v1/digital-catalogs/upload-media", fd);
+      if (!uploadRes.success || !uploadRes.data?.url) {
+        throw new Error(uploadRes.error || "Failed to upload PDF file to AWS S3");
+      }
+
+      const uploadedS3Url = uploadRes.data.url;
+
+      const updateRes = await apiService.put<any>(`/api/v1/digital-catalogs/${cat.id}`, {
+        pdf_brochure_url: uploadedS3Url
+      });
+
+      if (!updateRes.success) {
+        throw new Error(updateRes.error || "Failed to update catalog with brochure URL");
+      }
+
+      cat.pdf_brochure_url = uploadedS3Url;
+      if (this.activeCatalog && this.activeCatalog.id === cat.id) {
+        this.activeCatalog.pdf_brochure_url = uploadedS3Url;
+      }
+      alert("PDF Brochure uploaded to AWS S3 and attached to catalog successfully!");
+    } catch (err: any) {
+      alert(`Upload notice: ${err?.message || err || "Upload failed"}`);
+    } finally {
+      this.isUploadingPdf = false;
+      this.renderActiveCatalog();
+    }
+  }
+
+  private async handleDirectPdfUrlSave(url: string, cat: Catalog): Promise<void> {
+    const trimmed = (url || "").trim();
+    try {
+      const updateRes = await apiService.put<any>(`/api/v1/digital-catalogs/${cat.id}`, {
+        pdf_brochure_url: trimmed || null
+      });
+      if (!updateRes.success) {
+        throw new Error(updateRes.error || "Failed to update brochure URL");
+      }
+      cat.pdf_brochure_url = trimmed || undefined;
+      if (this.activeCatalog && this.activeCatalog.id === cat.id) {
+        this.activeCatalog.pdf_brochure_url = trimmed || undefined;
+      }
+      alert(trimmed ? "Brochure URL saved successfully!" : "Brochure URL removed.");
+      this.renderActiveCatalog();
+    } catch (err: any) {
+      alert(`Save notice: ${err?.message || err || "Failed to save URL"}`);
+    }
+  }
+
+  private async handleRemovePdfBrochure(cat: Catalog): Promise<void> {
+    if (!confirm("Are you sure you want to remove the attached PDF brochure from this catalog?")) {
+      return;
+    }
+    await this.handleDirectPdfUrlSave("", cat);
   }
 
   private async fetchSegmentTelemetry(segmentCode: string): Promise<void> {
@@ -514,8 +652,42 @@ export class DigitalCatalogPage {
             </div>
           `;
         }).join("")}
+
+        <!-- Quick Brochure Status & Upload Banner in Packages Tab -->
+        <div class="dc-quick-brochure-banner">
+          <div>
+            <div class="text-white fw-bold small"><i class="fas fa-file-pdf text-danger me-1"></i> Catalog PDF Brochure</div>
+            <div class="text-muted" style="font-size: 11px;">
+              ${cat.pdf_brochure_url ? "Brochure attached to catalog" : "No PDF attached yet"}
+            </div>
+          </div>
+          <div class="d-flex gap-2">
+            ${cat.pdf_brochure_url ? `
+              <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 dc-open-external-btn" data-url="${cat.pdf_brochure_url}" style="font-size: 11px;">
+                <i class="fas fa-eye me-1"></i> View
+              </button>
+            ` : ""}
+            <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 dc-quick-upload-trigger" style="font-size: 11px;">
+              <i class="fas fa-cloud-arrow-up me-1"></i> ${cat.pdf_brochure_url ? "Replace PDF" : "Upload PDF"}
+            </button>
+          </div>
+          <input type="file" id="quickBrochureFileInput" accept="application/pdf" style="display: none;">
+        </div>
       </div>
     `;
+
+    // Bind Quick Brochure Upload
+    const quickUploadBtn = pane.querySelector(".dc-quick-upload-trigger") as HTMLButtonElement;
+    const quickFileInput = pane.querySelector("#quickBrochureFileInput") as HTMLInputElement;
+    if (quickUploadBtn && quickFileInput) {
+      quickUploadBtn.addEventListener("click", () => quickFileInput.click());
+      quickFileInput.addEventListener("change", (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          this.handlePdfBrochureUpload(file, cat);
+        }
+      });
+    }
 
     // Bind Plan Send Buttons
     pane.querySelectorAll(".dc-btn-send-plan").forEach(btn => {
@@ -526,6 +698,14 @@ export class DigitalCatalogPage {
         const priceStr = pricing.net_cost ? `₹${Number(pricing.net_cost).toLocaleString("en-IN")}` : (pricing.price_text || "");
         const prefillNote = `Special Recommendation: ${item.title} (${priceStr}). Turnkey package with end-to-end execution.`;
         this.openMobileDispatchModal(cat, prefillNote);
+      });
+    });
+
+    pane.querySelectorAll(".dc-open-external-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const url = (btn as HTMLElement).dataset.url;
+        if (url) this.openExternalUrl(url);
       });
     });
   }
@@ -680,11 +860,7 @@ export class DigitalCatalogPage {
 
   // ── Tab 4: About, Specs & PDF Brochure ──────────────────────────────
   private renderOverviewTab(cat: Catalog, pane: HTMLElement): void {
-    let origin = APP_CONFIG.BASE_SERVER_URL;
-    if (typeof window !== "undefined" && window.location?.origin && !window.location.origin.includes("localhost") && !window.location.origin.includes("capacitor")) {
-      origin = window.location.origin;
-    }
-    const publicUrl = `${origin}/catalog/${cat.segment_code.toLowerCase().replace(/_/g, "-")}/${cat.slug}`;
+    const publicUrl = this.getCanonicalPublicUrl(cat);
 
     pane.innerHTML = `
       <!-- Overview Card -->
@@ -705,20 +881,61 @@ export class DigitalCatalogPage {
 
       <!-- PDF Brochure Card -->
       <div class="dc-info-card">
-        <h6 class="fw-bold text-white mb-1"><i class="fas fa-file-pdf text-danger me-2"></i>Official PDF Brochure Attachment</h6>
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <h6 class="fw-bold text-white mb-0"><i class="fas fa-file-pdf text-danger me-2"></i>Official PDF Brochure Attachment</h6>
+          ${cat.pdf_brochure_url
+            ? `<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-30 py-1 px-2"><i class="fas fa-check-circle me-1"></i>Attached</span>`
+            : `<span class="badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-30 py-1 px-2"><i class="fas fa-exclamation-triangle me-1"></i>No PDF Attached</span>`
+          }
+        </div>
         <p class="text-muted small mb-2">
-          High-resolution product specification brochure suitable for printing or sending alongside the interactive single-page link.
+          High-resolution product specification brochure suitable for customer presentation, WhatsApp dispatch, or printing.
         </p>
 
-        ${cat.pdf_brochure_url ? `
-          <a href="${cat.pdf_brochure_url}" target="_blank" class="dc-brochure-download-btn">
-            <i class="fas fa-download me-1"></i> Download Official PDF Brochure
-          </a>
+        ${this.isUploadingPdf ? `
+          <div class="dc-upload-progress">
+            <div class="spinner-border spinner-border-sm text-success" role="status"></div>
+            <span>Uploading PDF Brochure to AWS S3...</span>
+          </div>
+        ` : cat.pdf_brochure_url ? `
+          <div class="dc-pdf-attached-card">
+            <div class="dc-pdf-url-badge">
+              <i class="fas fa-file-pdf text-danger me-1"></i> ${cat.pdf_brochure_url}
+            </div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-sm btn-outline-info flex-fill dc-open-external-btn" data-url="${cat.pdf_brochure_url}">
+                <i class="fas fa-eye me-1"></i> View PDF
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-warning flex-fill" id="btnTabReplacePdf">
+                <i class="fas fa-cloud-arrow-up me-1"></i> Replace PDF
+              </button>
+              <button type="button" class="btn btn-sm btn-outline-danger" id="btnTabRemovePdf" title="Remove PDF Brochure">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </div>
+          </div>
         ` : `
-          <div class="alert alert-dark text-muted small p-2 mt-2 mb-0 border-secondary border-opacity-25 text-center">
-            Standard web catalog brochure is bundled directly inside the interactive proposal link.
+          <div class="dc-upload-zone" id="dcDropZonePdf">
+            <i class="fas fa-cloud-arrow-up dc-upload-zone-icon"></i>
+            <div class="fw-bold text-white mb-1">Tap to Upload Catalog PDF Brochure</div>
+            <div class="text-muted small mb-3">Choose a PDF file from device (Max 25MB). Uploads directly to AWS S3.</div>
+            <button type="button" class="dc-btn-wa" id="btnTabChoosePdf" style="max-width: 240px; margin: 0 auto;">
+              <i class="fas fa-file-arrow-up me-2"></i> Select PDF File
+            </button>
           </div>
         `}
+
+        <!-- Direct S3 URL Option -->
+        <div class="mt-3 pt-3 border-top border-secondary border-opacity-25">
+          <label class="form-label text-muted small fw-bold mb-1"><i class="fas fa-link text-info me-1"></i> Direct AWS S3 URL (Optional)</label>
+          <div class="input-group">
+            <input type="url" id="inputTabBrochureUrl" class="form-control form-control-sm bg-dark text-white border-secondary border-opacity-50" placeholder="https://myntreal-media-vault.s3.../brochure.pdf" value="${cat.pdf_brochure_url || ''}">
+            <button class="btn btn-sm btn-success px-3" type="button" id="btnTabSaveBrochureUrl">
+              <i class="fas fa-save me-1"></i> Save
+            </button>
+          </div>
+        </div>
+        <input type="file" id="tabBrochureFileInput" accept="application/pdf" style="display: none;">
       </div>
 
       <!-- Tracked Referral Link Card -->
@@ -730,11 +947,62 @@ export class DigitalCatalogPage {
           ${publicUrl}
         </div>
 
-        <button type="button" class="dc-copy-link-btn" id="btnCopyPublicCatalogLink" data-link="${publicUrl}">
-          <i class="fas fa-copy me-1"></i> Copy Web Catalog Link
-        </button>
+        <div class="d-flex gap-2">
+          <button type="button" class="dc-copy-link-btn flex-fill m-0 dc-open-external-btn" data-url="${publicUrl}">
+            <i class="fas fa-external-link-alt text-info me-1"></i> Open Web View
+          </button>
+          <button type="button" class="dc-copy-link-btn flex-fill m-0" id="btnCopyPublicCatalogLink" data-link="${publicUrl}">
+            <i class="fas fa-copy text-success me-1"></i> Copy Link
+          </button>
+        </div>
       </div>
     `;
+
+    // Bind PDF upload handlers
+    const tabFileInput = pane.querySelector("#tabBrochureFileInput") as HTMLInputElement;
+    const tabChooseBtn = pane.querySelector("#btnTabChoosePdf");
+    const dropZone = pane.querySelector("#dcDropZonePdf");
+    const tabReplaceBtn = pane.querySelector("#btnTabReplacePdf");
+    const tabRemoveBtn = pane.querySelector("#btnTabRemovePdf");
+    const tabSaveUrlBtn = pane.querySelector("#btnTabSaveBrochureUrl");
+    const tabUrlInput = pane.querySelector("#inputTabBrochureUrl") as HTMLInputElement;
+
+    if (tabFileInput) {
+      tabFileInput.addEventListener("change", (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (file) {
+          this.handlePdfBrochureUpload(file, cat);
+        }
+      });
+    }
+
+    if (tabChooseBtn && tabFileInput) {
+      tabChooseBtn.addEventListener("click", () => tabFileInput.click());
+    }
+    if (dropZone && tabFileInput) {
+      dropZone.addEventListener("click", (e) => {
+        if ((e.target as HTMLElement).closest("#btnTabChoosePdf")) return;
+        tabFileInput.click();
+      });
+    }
+    if (tabReplaceBtn && tabFileInput) {
+      tabReplaceBtn.addEventListener("click", () => tabFileInput.click());
+    }
+    if (tabRemoveBtn) {
+      tabRemoveBtn.addEventListener("click", () => this.handleRemovePdfBrochure(cat));
+    }
+    if (tabSaveUrlBtn && tabUrlInput) {
+      tabSaveUrlBtn.addEventListener("click", () => this.handleDirectPdfUrlSave(tabUrlInput.value, cat));
+    }
+
+    // Bind external link openers
+    pane.querySelectorAll(".dc-open-external-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const url = (btn as HTMLElement).dataset.url;
+        if (url) this.openExternalUrl(url);
+      });
+    });
 
     const copyBtn = pane.querySelector("#btnCopyPublicCatalogLink") as HTMLButtonElement;
     if (copyBtn) {

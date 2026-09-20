@@ -15457,6 +15457,90 @@ input:checked + .slider:before {
   border-radius: 10px;
   margin-top: 8px;
   cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dc-copy-link-btn:active {
+  transform: scale(0.98);
+}
+
+/* Upload Drop Zone & PDF Brochure Management */
+.dc-upload-zone {
+  border: 2px dashed rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.04);
+  border-radius: 14px;
+  padding: 22px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 10px;
+}
+
+.dc-upload-zone:hover,
+.dc-upload-zone:active {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.09);
+  transform: scale(0.99);
+}
+
+.dc-upload-zone-icon {
+  font-size: 36px;
+  color: #10b981;
+  margin-bottom: 10px;
+  display: inline-block;
+  animation: dcPulseIcon 2.5s infinite ease-in-out;
+}
+
+@keyframes dcPulseIcon {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.dc-pdf-attached-card {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 10px;
+}
+
+.dc-pdf-url-badge {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  color: #38bdf8;
+  word-break: break-all;
+  margin-bottom: 12px;
+}
+
+.dc-upload-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  border-radius: 12px;
+  padding: 14px;
+  color: #34d399;
+  font-weight: 600;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.dc-quick-brochure-banner {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 14px;
 }
 
 /* ==========================================================================
