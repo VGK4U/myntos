@@ -20,6 +20,8 @@ export interface WAModalOptions {
   context?: string;
   defaultMessage?: string;
   segment?: string;
+  catalogId?: number | string;
+  catalogKey?: string;
 }
 
 const QUICK_TEMPLATES: Record<string, { label: string; text: string }> = {
@@ -50,6 +52,7 @@ interface DigitalCatalogInfo {
   btnLabel: string;
   segmentSlug: string;
   catalogSlug: string;
+  brochureUrl?: string;
   desc: string;
   messages: {
     te: (cName: string, url: string) => string;
@@ -65,6 +68,7 @@ const DIGITAL_CATALOGS: Record<string, DigitalCatalogInfo> = {
     btnLabel: 'Solar',
     segmentSlug: 'solar',
     catalogSlug: 'commercial-residential-solar',
+    brochureUrl: '/catalog/mnr-catalog-web.pdf',
     desc: 'Sends personalized Har Ghar Solar Digital Catalog link with 90% savings, ₹78,000 subsidy & ₹1 scheme details.',
     messages: {
       te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nMyntReal Har Ghar Solar డిజిటల్ క్యాటలాగ్ & సబ్సిడీ కాలిక్యులేటర్ లింక్ ఇక్కడ చూడవచ్చు:\n👉 ${url}\n\n⚡ ముఖ్య వివరాలు:\n• కరెంట్ బిల్లు 90% వరకు ఆదా\n• ₹78,000 కేంద్ర ప్రభుత్వ సబ్సిడీ (PM Surya Ghar)\n• ₹1 కే సోలార్ & సులభ బ్యాంక్ లోన్ EMI ఆప్షన్స్\n• Tier-1 బ్రాండ్లు & 25 సంవత్సరాల వారంటీ\n\nపై లింక్ ఓపెన్ చేసి మీ ఇంటి కరెంట్ బిల్లుకు సరిపోయే ప్లాన్ మరియు సేవింగ్స్ కాలిక్యులేట్ చేసుకోగలరు.`,
@@ -78,6 +82,7 @@ const DIGITAL_CATALOGS: Record<string, DigitalCatalogInfo> = {
     btnLabel: 'Real Estate',
     segmentSlug: 'real-dreams',
     catalogSlug: 'real-dreams-premium-properties',
+    brochureUrl: '/public/hub/Assets/myntreal_real_dreams_brochure.pdf',
     desc: 'Sends Real Dreams catalog with RERA-approved luxury villas, gated open plots & prime commercial spaces.',
     messages: {
       te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\n🏡 *VGK Real Dreams — RERA & DTCP ఆమోదిత ప్రీమియం గేటెడ్ టౌన్‌షిప్స్*\n\nమీ కోసం అధికారిక రియల్ డ్రీమ్స్ డిజిటల్ క్యాటలాగ్ లింక్:\n👉 ${url}\n\n🌟 *ప్రాజెక్ట్ విశేషాలు & చట్టబద్ధత:*\n• 100% RERA & DTCP/VMRDA ఆమోదిత లేఅవుట్స్ & లగ్జరీ విల్లాస్\n• తక్షణ స్పాట్ రిజిస్ట్రేషన్ గ్యారెంటీ & 30 సం. క్లియర్ టైటిల్\n• SBI, HDFC, ICICI బ్యాంకుల ద్వారా 80% వరకు లోన్ సదుపాయం\n• 40+ ఆధునిక వసతులు: 40ft BT రోడ్లు, భూగర్భ విద్యుత్, సోలార్ లైట్లు, క్లబ్‌హౌస్\n• ప్లాట్ సైజులు: 167, 200, 267 & 500 చ.గ. (చ.గ. ₹18,500 నుండి)\n\n🛒 *రియల్ డ్రీమ్స్ ఈ-కామ్ మార్కెట్‌ప్లేస్‌లో ప్లాట్స్ చూడండి:*\n👉 https://www.myntreal.com/ecom?vertical=real-dreams\n\nఉచిత VIP సైట్ విజిట్ కోసం సంప్రదించండి.`,
@@ -91,11 +96,12 @@ const DIGITAL_CATALOGS: Record<string, DigitalCatalogInfo> = {
     btnLabel: 'EV 2W Pricing',
     segmentSlug: 'ev-b2c',
     catalogSlug: 'ev-b2c-pricing',
+    brochureUrl: '/public/hub/Assets/myntreal_manthra_ev_brochure.pdf',
     desc: 'Sends official Manthra EV Customer 2W Pricing with 5 models, Graphene (9M) & LFP (3Y) warranties, fuel savings calculator, Solar & Insurance benefits.',
     messages: {
       te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nమాంత్రా EV (Manthra EV) అధికారిక 2-వీలర్ ఎలక్ట్రిక్ స్కూటర్లు & కస్టమర్ ధరల పట్టిక:\n👉 ${url}\n\n⚡ ప్రధాన ప్రయోజనాలు & 5 సర్టిఫైడ్ మోడల్స్:\n• 5 మోడల్స్: Pro GT, Power Plus (200kg హెవీ కార్గో), M99 Flagship, Royal Sling, Beast Pro\n• నాన్-RTO లో-స్పీడ్ (<25 km/h) — డ్రైవింగ్ లైసెన్స్ & రిజిస్ట్రేషన్ అవసరం లేదు!\n• రన్నింగ్ ఖర్చు కేవలం ₹0.15/కి.మీ — నెలకు ₹3,000+ పెట్రోల్ ఆదా\n• గ్రాఫేన్ 48V 30Ah: 9 నెలల బ్యాటరీ & 9 నెలల ఛార్జర్ వారంటీ\n• స్మార్ట్ LFP బ్యాటరీలు: 3 సంవత్సరాల సమగ్ర రీప్లేస్‌మెంట్ వారంటీ\n• హర్ ఘర్ సోలార్ (PM సూర్య ఘర్ సబ్సిడీ), ఇన్సూరెన్స్ & జెన్యూన్ స్పేర్స్ సదుపాయం\n\nపై లింక్ క్లిక్ చేసి మోడల్-వైజ్ ధరలు, స్పెసిఫికేషన్లు & అధికారిక వీడియో చూడగలరు. ఉచిత టెస్ట్ డ్రైవ్ బుక్ చేసుకోండి!`,
       en: (cName, url) => `Namaskaram ${cName}! 🙏\n\nHere is your official Manthra EV 2-Wheeler Electric Scooters Customer Pricing & Specifications Catalog:\n👉 ${url}\n\n⚡ Customer Highlights & 5 Certified Models:\n• Models: Pro GT, Power Plus (200kg Cargo), M99 Flagship, Royal Sling & Beast Pro\n• Certified Non-RTO Low-Speed (<25 km/h) — Zero Driving License & Zero RTO Needed!\n• Ultra-low running cost of ₹0.15 / km — Save ₹3,000+ every month vs petrol\n• Graphene 48V 30Ah: 9 Months Battery Warranty & 9 Months Charger Warranty\n• Smart LFP: 3 Years Comprehensive Replacement Warranty & Fast Charge\n• Integrated Har Ghar Solar (PM Surya Ghar Subsidy), EV Insurance & Spares benefits\n\nClick the link above to explore model-wise prices, interactive savings calculator & official video showcase. Book your free test ride today!`,
-      hi: (cName, url) => `नमस्ते ${cName} जी! 🙏\n\nमंत्रा EV (Manthra EV) आधिकारिक 2-व्हीलर इलेक्ट्रिक स्कूटर्स एवं कस्टमर प्राइसिंग कैटलॉग लिंक यहाँ देखें:\n👉 ${url}\n\n⚡ मुख्य विशेषताएं एवं 5 मॉडल:\n• 5 मॉडल्स: Pro GT, Power Plus (200kg कार्गो), M99 Flagship, Royal Sling और Beast Pro\n• प्रमाणित नॉन-RTO (<25 km/h) — बिना ड्राइविंग लाइसेंस और बिना रजिस्ट्रेशन!\n• मात्र ₹0.15 प्रति किमी खर्च — हर महीने ₹3,000+ पेट्रोल की बचत\n• ग्रैफीन 48V 30Ah: 9 महीने की बैटरी एवं चार्जर वारंटी\n• स्मार्ट LFP: 3 साल की व्यापक रिप्लेसमेंट वारंटी\n• सोलर रूफटॉप सब्सिडी, जीरो-डेप इंश्योरेंस एवं स्पेयर पार्ट्स सपोर्ट\n\nकृपया ऊपर दिए गए लिंक पर क्लिक करके मॉडल-वाइज कीमतें और वीडियो देखें। आज ही फ्री टेस्ट ड्राइव बुक करें!`,
+      hi: (cName, url) => `नमस्ते ${cName} जी! 🙏\n\nमंत्रा EV (Manthra EV) आधिकारिक 2-व्हीलर इलेक्ट्रिक स्कूटर्स एवं कस्टमर प्राइसिंग कैटलॉग लिंक यहाँ देखें:\n👉 ${url}\n\n⚡ मुख्य विशेषताएं एवं 5 मॉडल:\n• 5 मॉडल्स: Pro GT, Power Plus (200kg कार्गो), M99 Flagship, Royal Sling और Beast Pro\n• प्रमाणित नॉन-RTO (<25 km/h) — बिना ड्राइविंग लाइसेंस और बिना रजिस्ट्रेशन!\n• मात्र ₹0.15 प्रति किमी खर्च — हर महीने ₹3,000+ पेट्रोल की बचत\n• ग्रैफीन 48V 30Ah: 9 महीने की बैटरी एवं चार्జర్ वारंटी\n• स्मार्ट LFP: 3 साल की व्यापक रिप्लेसमेंट वारंटी\n• सोलर रूफटॉप सब्सिडी, जीरो-डेप इंश्योरेंस एवं स्पेयर पार्ट्स सपोर्ट\n\nकृपया ऊपर दिए गए लिंक पर क्लिक करके मॉडल-वाइज कीमतें और वीडियो देखें। आज ही फ्री टेस्ट ड्राइव बुक करें!`,
       ta: (cName, url) => `வணக்கம் ${cName}! 🙏\n\nமாந்த்ரா EV (Manthra EV) அதிகாரப்பூர்வ இருசக்கர மின்சார வாகனங்கள் மற்றும் வாடிக்கையாளர் விலை பட்டியல்:\n👉 ${url}\n\n⚡ வாடிக்கையாளர் சிறப்பம்சங்கள்:\n• 5 சிறந்த மாடல்கள்: Pro GT, Power Plus, M99 Flagship, Royal Sling, Beast Pro\n• நான்-RTO குறைந்த வேகம் (<25 km/h) — ஓட்டுநர் உரிமம் அல்லது பதிவு தேவையில்லை!\n• கி.மீக்கு 15 பைசா மட்டுமே — மாதம் ₹3,000+ பெட்ரோல் செலவு மிச்சம்\n• கிராபீன் 48V 30Ah: 9 மாதங்கள் பேட்டரி மற்றும் சார்ஜர் உத்தரவாதம்\n• ஸ்மார்ட் LFP: 3 ஆண்டுகள் முழுமையான உத்தரவாதம்\n• சோலார் மானியம், இன்சூரன்ஸ் மற்றும் உதிரிபாகங்கள் ஆதரவு\n\nமேலே உள்ள இணைப்பைக் கிளிக் செய்து மாடல் விலைகளை அறிந்து இலவச டெஸ்ட் டிரைவ் முன்பதிவு செய்யுங்கள்!`
     }
   },
@@ -104,6 +110,7 @@ const DIGITAL_CATALOGS: Record<string, DigitalCatalogInfo> = {
     btnLabel: 'EV Commercial Fleet',
     segmentSlug: 'ev-b2b',
     catalogSlug: 'ev-commercial-fleet',
+    brochureUrl: '/public/hub/Assets/myntreal_manthra_ev_brochure.pdf',
     desc: 'Sends Commercial Fleet catalog with 75% logistics savings, reinforced chassis & 2-min battery swap.',
     messages: {
       te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nMyntReal Commercial EV Fleet & B2B Cargo డిజిటల్ క్యాటలాగ్ లింక్ ఇక్కడ చూడవచ్చు:\n👉 ${url}\n\n🚚 ముఖ్య ప్రయోజనాలు:\n• లాజిస్టిక్స్ రన్నింగ్ ఖర్చుల్లో 75% భారీ ఆదా\n• భారీ పేలోడ్ సామర్థ్యం కలిగిన హెవీ-డ్యూటీ చాసిస్\n• 2 నిమిషాల క్విక్ బ్యాటరీ స్వాప్పింగ్ & స్మార్ట్ టెలిమాటిక్స్ ఫ్లీట్ ట్రాకింగ్\n• డెలివరీ & బిజినెస్ ఫ్లీట్‌లకు ప్రత్యేక కార్పొరేట్ ఫైనాన్స్\n\nపై లింక్ క్లిక్ చేసి B2B ఫ్లీట్ మోడల్స్ మరియు ROI కాలిక్యులేటర్ చూడండి.`,
@@ -117,6 +124,7 @@ const DIGITAL_CATALOGS: Record<string, DigitalCatalogInfo> = {
     btnLabel: 'EV Spares',
     segmentSlug: 'ev-spares',
     catalogSlug: 'ev-spares-and-chargers',
+    brochureUrl: '/public/hub/Assets/myntreal_ev_spares_brochure.pdf',
     desc: 'Sends EV Spares catalog with OEM components, DC fast chargers, smart BMS & replacement lithium packs.',
     messages: {
       te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\n⚡ *MyntReal & VGK4U — జెన్యూయిన్ EV స్పేర్స్, ఛార్జర్లు & బ్యాటరీలు*\n\nమీ కోసం అఫీషియల్ డిజిటల్ క్యాటలాగ్ లింక్:\n👉 ${url}\n\n🏷️ *డైనమిక్ డిస్కౌంట్లు & ధరల విశ్లేషణ (హబ్ హోల్‌సేల్ vs కస్టమర్ రిటైల్):*\n• గ్రాఫీన్ బ్యాటరీ 48V 32Ah (9 నెలల వారంటీ):\n   - హబ్ హోల్‌సేల్: ₹12,000 (18% GST కలిపి)\n   - కస్టమర్ రిటైల్: ₹14,100 → *ఆదా: ₹2,100 (15% తగ్గింపు)*\n• LFP లిథియం బ్యాటరీ 48V 30Ah (2+1 సం. వారంటీ, AIS-156):\n   - హబ్ హోల్‌సేల్: ₹18,800 (18% GST కలిపి)\n   - కస్టమర్ రిటైల్: ₹22,100 → *ఆదా: ₹3,300 (15% తగ్గింపు)*\n• ఫాస్ట్ ఛార్జర్ 48V (9 నెలల వారంటీ): హబ్ ₹1,500 | రిటైల్ ₹1,575\n• కంట్రోలర్లు & BMS స్పేర్స్: 20% నుండి 29% వరకు డైనమిక్ మార్జిన్!\n\n🛒 *EV స్పేర్స్ ఈ-కామ్ మార్కెట్‌ప్లేస్‌లో ఆర్డర్ చేయండి:*\n👉 https://www.myntreal.com/ecom?vertical=ev&category=spares\n\n24 గంటల్లో దేశవ్యాప్త డెలివరీ & అధికారిక GST ఇన్వాయిసింగ్.`,
@@ -130,6 +138,7 @@ const DIGITAL_CATALOGS: Record<string, DigitalCatalogInfo> = {
     btnLabel: 'ETC Training',
     segmentSlug: 'etc',
     catalogSlug: 'etc-renewable-certifications',
+    brochureUrl: '/public/hub/Assets/myntreal_etc_training_brochure.pdf',
     desc: 'Sends ETC Training catalog: 1-week EV certification at Govt. Poly Pendurthi, ₹10,000 scholarship discount.',
     messages: {
       te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nEVolution Training Centre (ETC) ప్రొఫెషనల్ EV సర్టిఫికేషన్ డిజిటల్ క్యాటలాగ్ లింక్ ఇక్కడ చూడవచ్చు:\n👉 ${url}\n\n🎓 కోర్సు విశేషాలు:\n• 1-వారం ప్రాక్టికల్ EV టెక్నీషియన్ & ఎంటర్‌ప్రెన్యూర్‌షిప్ ప్రోగ్రామ్\n• Govt. Polytechnic College, Pendurthi లో ప్రత్యక్ష ప్రాక్టికల్ ల్యాబ్స్\n• BLDC మోటార్లు, బ్యాటరీ ప్యాక్ అసెంబ్లీ & BMS డయాగ్నోస్టిక్స్ లో శిక్షణ\n• ఫీజు ₹19,999 కి బదులుగా ₹10,000 స్కాలర్‌షిప్‌తో కేవలం ₹9,999 మాత్రమే!\n• 100% ప్లేస్‌మెంట్ అసిస్టెన్స్ & సర్వీస్ సెంటర్ బిజినెస్ గైడెన్స్\n\nపై లింక్ క్లిక్ చేసి సిలబస్ మరియు తదుపరి బ్యాచ్ వివరాలు చూడండి.`,
@@ -143,6 +152,7 @@ const DIGITAL_CATALOGS: Record<string, DigitalCatalogInfo> = {
     btnLabel: 'Insurance',
     segmentSlug: 'insurance',
     catalogSlug: 'comprehensive-insurance-advisory',
+    brochureUrl: '/public/hub/Assets/myntreal_insurance_guide.pdf',
     desc: 'Sends Insurance catalog with complete risk protection for EV fleets, solar rooftop plants, health & life.',
     messages: {
       te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\n🛡️ *VGK Care — 360° సమగ్ర బీమా & రిస్క్ ప్రొటెక్షన్*\n\nమీ కోసం అధికారిక ఇన్సూరెన్స్ అడ్వైజరీ డిజిటల్ క్యాటలాగ్ లింక్:\n👉 ${url}\n\n✨ *ముఖ్య బీమా రంగాలు & ప్రయోజనాలు:*\n• *ఈవీ మోటార్ & బ్యాటరీ రీప్లేస్‌మెంట్ కవర్:* లిథియం బ్యాటరీ డ్యామేజ్, వాటర్ ఇన్‌గ్రెస్ & జీరో-డిప్రిసియేషన్ ప్రొటెక్షన్\n• *సోలార్ రూఫ్‌టాప్ EPC ఆల్-రిస్క్ ఇన్సూరెన్స్:* తుఫాను, వర్షం, పిడుగుపాటు & జనరేషన్ లాస్ నష్టపరిహారం\n• *ఫ్యామిలీ క్యాష్‌లెస్‌ హెల్త్ ఇన్సూరెన్స్:* 4,500+ నెట్‌వర్క్ హాస్పిటల్స్ & నో రూమ్ రెంట్ క్యాపింగ్\n• *కమర్షియల్ & ఫ్యాక్టరీ లయబిలిటీ:* అగ్నిప్రమాదాలు, దొంగతనం & పబ్లిక్ లయబిలిటీ షీల్డ్\n• *98.6% క్లెయిమ్ సెటిల్‌మెంట్ రేషియో* & తక్షణ డిజిటల్ స్పాట్ ఇన్సూరెన్స్ జారీ\n\nపై లింక్ ద్వారా ప్రీమియం కాలిక్యులేట్ చేసుకోండి మరియు తక్షణ పాలసీ పొందండి.`,
@@ -156,6 +166,7 @@ const DIGITAL_CATALOGS: Record<string, DigitalCatalogInfo> = {
     btnLabel: 'MyntReal Hub',
     segmentSlug: 'industrial-hub',
     catalogSlug: 'industrial-hub-franchise',
+    brochureUrl: '/public/hub/Assets/myntreal_investor_franchise_brochure.pdf',
     desc: 'Sends MyntReal Hub catalog: 5-in-1 investor franchise (EV, Solar, Insurance, Real Estate & Training) with ₹12–15L investment & 140% ROI.',
     messages: {
       te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nMyntReal Hub (5-in-1 ఇన్వెస్టర్ ఫ్రాంచైజ్) అధికారిక డిజిటల్ క్యాటలాగ్ లింక్:\n👉 ${url}\n\n🏢 ఒకే హబ్ — 5 లాభదాయక వ్యాపార మార్గాలు:\n• మంత్ర ఈవీ షోరూమ్ & స్పేర్స్ డిపో (యూనిట్‌కు ₹7,000 మార్జిన్)\n• హర్ ఘర్ సోలార్ రూఫ్‌టాప్ EPC (₹78,000 సబ్సిడీ & ప్రాజెక్ట్‌కు ₹20,000 మార్జిన్)\n• VGK కేర్ ఇన్సూరెన్స్ అడ్వైజరీ (40+ ఇన్సూరర్లు, పాలసీకి ₹3,000 మార్జిన్)\n• VGK రియల్ డ్రీమ్స్ టౌన్‌షిప్స్ & విల్లాస్ బ్రోకరేజ్\n• EVolution ట్రైనింగ్ సెంటర్ (గవర్నమెంట్ పాలిటెక్నిక్ కాలేజ్ పార్టనర్)\n\n💼 పెట్టుబడి: ₹12–15 లక్షలు | బ్రేక్-ఈవెన్: 6-9 నెలలు | వార్షిక నికర ఆదాయం: ₹19.8 లక్షలు+\n🎁 ఫ్రాంచైజీతో పాటు కంప్యూటర్, 43" స్మార్ట్ టీవీ, కలర్ ప్రింటర్, షోరూమ్ బ్రాండింగ్ & 12 నెలల లీడ్ సపోర్ట్ ఉచితం!\n\nపై లింక్ క్లిక్ చేసి పూర్తి ప్రాస్పెక్టస్, ROI మోడల్ & వివరాలు చూడగలరు.`,
@@ -169,6 +180,7 @@ const DIGITAL_CATALOGS: Record<string, DigitalCatalogInfo> = {
     btnLabel: 'Hub Pricing (24h)',
     segmentSlug: 'hub-pricing',
     catalogSlug: 'hub-ev-pricing',
+    brochureUrl: '/public/hub/Assets/myntreal_investor_franchise_brochure.pdf',
     desc: 'Sends confidential MyntReal Hub EV & Solar Commercial Pricing catalog with wholesale costs, dealer margins & 24h auto-expiry security.',
     messages: {
       te: (cName, url) => `నమస్కారం ${cName} గారు! 🙏\n\nMyntReal Hub — గోప్యమైన EV & సోలార్ కమర్షియల్ ప్రైసింగ్ & డీలర్ మార్జిన్స్ క్యాటలాగ్ లింక్ (24 గంటలు మాత్రమే చెల్లుబాటు):\n👉 ${url}\n\n⚡ కమర్షియల్ ప్రైసింగ్ & మార్జిన్ వివరాలు:\n• 5 మోడల్స్ EV వాహనాల హోల్‌సేల్ ధరలు & 12% హబ్ మార్జిన్ (~₹7,200/వాహనం)\n• డైరెక్ట్ కస్టమర్ సేల్స్ పై +10.5% అదనపు VGK4U కమిషన్ (మొత్తం 22.5% మార్జిన్)\n• గ్రాఫేన్ & LFP బ్యాటరీలు మరియు ఫాస్ట్ ఛార్జర్ల విడి భాగాల ధరల పట్టిక\n• సోలార్ EPC 1kW–10kW మాతృక: ₹1,99,999 సిస్టమ్‌పై ₹7,000 షోరూమ్ + ₹13,000 డైరెక్ట్ మార్జిన్\n• 3-దశల యూనిట్ ఎకనామిక్స్ & లైవ్ డైరెక్ట్ సేల్స్ ROI సిమ్యులేటర్\n\n⚠️ గమనిక: ఈ లింక్ కేవలం 24 గంటలు మాత్రమే యాక్టివ్‌గా ఉంటుంది.\n\nపై లింక్ క్లిక్ చేసి పూర్తి హోల్‌సేల్ కాస్ట్ షీట్ & ROI వివరాలు వెంటనే చూడగలరు.`,
@@ -280,18 +292,47 @@ class UnifiedWAModal {
   private getDigitalCatalogMessage(catKey: string, lang: string): string {
     const cat = DIGITAL_CATALOGS[catKey] || DIGITAL_CATALOGS.solar;
     const cName = (this.currentOptions?.name || 'Customer').trim();
-    const origin = (typeof window !== 'undefined' && window.location && window.location.origin && !window.location.origin.includes('localhost') && !window.location.origin.includes('capacitor')) ? window.location.origin : 'https://www.myntreal.com';
+    let origin = 'https://www.myntreal.com';
+    if (typeof window !== 'undefined' && window.location && window.location.origin) {
+      const wOrigin = window.location.origin;
+      const isLocal = wOrigin.includes('localhost') || 
+                      wOrigin.includes('127.0.0.1') || 
+                      wOrigin.includes('0.0.0.0') || 
+                      wOrigin.includes('192.168.') || 
+                      wOrigin.includes('10.0.') || 
+                      wOrigin.includes(':8000') || 
+                      wOrigin.includes(':5000') || 
+                      wOrigin.includes(':5173') || 
+                      wOrigin.includes(':3000') ||
+                      wOrigin.includes('capacitor');
+      if (!isLocal) {
+        origin = wOrigin;
+      }
+    }
     let catalogUrl = `${origin}/catalog/${cat.segmentSlug}/${cat.catalogSlug}?lang=${encodeURIComponent(lang || 'te')}`;
     if (catKey === 'hub_pricing' && !catalogUrl.includes('exp=')) {
       catalogUrl += `&exp=${Math.floor(Date.now() / 1000) + 86400}`;
     }
 
     const l = (lang || 'te').toLowerCase() as 'te' | 'en' | 'hi' | 'ta';
-    const msgFn = cat.messages[l] || cat.messages.en;
+    const msgFn = (cat.messages && cat.messages[l]) ? cat.messages[l] : (cat.messages && cat.messages.en);
+    let msg = '';
     if (typeof msgFn === 'function') {
-      return msgFn(cName, catalogUrl);
+      msg = msgFn(cName, catalogUrl);
+    } else {
+      msg = `Namaskaram ${cName}! Here is your catalog link:\n👉 ${catalogUrl}`;
     }
-    return `Namaskaram ${cName}! Here is your catalog link:\n👉 ${catalogUrl}`;
+
+    if (cat.brochureUrl && !msg.includes('.pdf')) {
+      const brochureHref = cat.brochureUrl.startsWith('http') ? cat.brochureUrl : (origin + (cat.brochureUrl.startsWith('/') ? '' : '/') + cat.brochureUrl);
+      const bTitle = (l === 'te') ? '📄 *అధికారిక PDF బ్రోచర్ (డైరెక్ట్ డౌన్‌లోడ్):*' :
+                     (l === 'hi') ? '📄 *आधिकारिक पीडीएफ ब्रोशर (डाउनलोड लिंक):*' :
+                     (l === 'ta') ? '📄 *அதிகாரப்பூர்வ PDF ப்ரோஷர் (பதிவிறக்கம்):*' :
+                     '📄 *Official PDF Brochure (Direct Download):*';
+      msg += `\n\n${bTitle}\n👉 ${brochureHref}`;
+    }
+
+    return msg;
   }
 
   private applyDigitalCatalog(lang?: string): void {
@@ -322,6 +363,9 @@ class UnifiedWAModal {
   }
 
   private detectCatalogKey(): string {
+    if (this.currentOptions?.catalogKey && DIGITAL_CATALOGS[this.currentOptions.catalogKey]) {
+      return this.currentOptions.catalogKey;
+    }
     const ctx = (this.currentOptions?.context || '').toLowerCase();
     const seg = (this.currentOptions?.segment || '').toLowerCase();
     if (ctx.includes('solar') || seg === 'solar') return 'solar';
@@ -592,10 +636,10 @@ class UnifiedWAModal {
 
     if (!this.currentOptions) return;
 
-    const { phone, name, context, defaultMessage } = this.currentOptions;
+    const { phone, name, context, defaultMessage, catalogKey } = this.currentOptions;
     const cleanPhone = (phone || '').replace(/\D/g, '').slice(-10);
     const signature = this.getSenderSignature();
-    const initialText = (defaultMessage || this.getVerticalQuickMessage('thanks_connecting')) + signature;
+    const initialText = (defaultMessage || (catalogKey ? this.getDigitalCatalogMessage(catalogKey, this.selectedCatalogLang) : this.getVerticalQuickMessage('thanks_connecting'))) + signature;
 
     this.modalEl = document.createElement('div');
     this.modalEl.id = 'unifiedWAModal';
@@ -951,6 +995,16 @@ class UnifiedWAModal {
         });
 
         if (response.success) {
+          if (this.currentOptions.catalogId) {
+            void apiService.post(`/digital-catalogs/${this.currentOptions.catalogId}/log-dispatch`, {
+              lead_id: hasValidLeadId ? Number(leadId) : null,
+              phone: cleanPhone,
+              name: name || null,
+              channel: 'whatsapp',
+              mode: 'company',
+              send_status: 'sent'
+            }).catch(e => console.warn('[UnifiedWAModal] log-dispatch error:', e));
+          }
           if (sendBtnLabel) sendBtnLabel.innerHTML = '<i class="fas fa-check me-1"></i> Sent Successfully ✓';
           this.showFeedback('✅ Dispatched via WhatsApp Meta Cloud API (Official Business)', 'success');
           setTimeout(() => this.close(), 2500);
@@ -983,6 +1037,16 @@ class UnifiedWAModal {
       });
 
       if (response.success) {
+        if (this.currentOptions.catalogId) {
+          void apiService.post(`/digital-catalogs/${this.currentOptions.catalogId}/log-dispatch`, {
+            lead_id: hasValidLeadId ? Number(leadId) : null,
+            phone: cleanPhone,
+            name: name || null,
+            channel: 'whatsapp',
+            mode: 'scanned',
+            send_status: 'sent'
+          }).catch(e => console.warn('[UnifiedWAModal] log-dispatch error:', e));
+        }
         if (sendBtnLabel) sendBtnLabel.innerHTML = '<i class="fas fa-check me-1"></i> Sent Successfully ✓';
         this.showFeedback(`✅ Dispatched via Personal Scanned WhatsApp! Sender: ${this.escapeHtml(authService.getAuthState().user?.full_name || 'Staff')}`, 'success');
         setTimeout(() => this.close(), 2500);

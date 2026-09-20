@@ -15,6 +15,7 @@ import { authService } from '../services/auth.service';
 import { PageHeader } from '../components/PageHeader';
 import { callSyncService } from '../services/call-sync.service';
 import { APP_CONFIG } from '../config/app.config';
+import { recordingPlayerService } from '../services/recording-player.service';
 
 interface CallRecord {
   id: number;
@@ -1501,52 +1502,13 @@ export class StaffCallTrackingPage {
   private currentBlobUrl: string | null = null;
 
   private async playRecording(recordingId: number): Promise<void> {
-    const playerDiv = document.getElementById('ctAudioPlayer');
-    const audioEl  = document.getElementById('ctAudioElement') as HTMLAudioElement;
-    if (!playerDiv || !audioEl) return;
-
-    // Show loading on play button
-    const playBtn = document.querySelector(`[data-rec-id="${recordingId}"]`) as HTMLElement | null;
-    if (playBtn) playBtn.innerHTML = '<ion-icon name="hourglass" style="font-size:14px;"></ion-icon>';
-
-    // Revoke previous blob URL if any
-    if (this.currentBlobUrl) { URL.revokeObjectURL(this.currentBlobUrl); this.currentBlobUrl = null; }
-
-    try {
-      const token = await apiService.getToken();
-      const baseUrl = apiService.getBaseUrl();
-      const url = `${baseUrl}/call-tracking/recordings/${recordingId}/stream`;
-
-      const resp = await fetch(url, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-      });
-
-      if (!resp.ok) {
-        const msg = resp.status === 404 ? 'Recording file not found on server'
-                  : resp.status === 403 ? 'You do not have access to this recording'
-                  : `Could not load recording (${resp.status})`;
-        alert(msg);
-        if (playBtn) playBtn.innerHTML = '<ion-icon name="play" style="font-size:14px;"></ion-icon>';
-        return;
-      }
-
-      const blob = await resp.blob();
-      this.currentBlobUrl = URL.createObjectURL(blob);
-
-      audioEl.src = this.currentBlobUrl;
-      playerDiv.style.display = 'block';
-
-      audioEl.onended = () => {
-        if (this.currentBlobUrl) { URL.revokeObjectURL(this.currentBlobUrl); this.currentBlobUrl = null; }
-      };
-
-      audioEl.play().catch(() => {});
-      this.activeAudio = audioEl;
-    } catch (e: any) {
-      alert(`Playback error: ${e?.message || 'Unknown error'}`);
-    } finally {
-      if (playBtn) playBtn.innerHTML = '<ion-icon name="play" style="font-size:14px;"></ion-icon>';
-    }
+    const rawStreamUrl = `/api/v1/call-tracking/recordings/${recordingId}/stream`;
+    await recordingPlayerService.play({
+      key: `ct_rec_${recordingId}`,
+      rawUrl: rawStreamUrl,
+      title: `Call Recording #${recordingId}`,
+      subtitle: 'Call Tracking Audio'
+    });
   }
 
   private closeAudioPlayer(): void {

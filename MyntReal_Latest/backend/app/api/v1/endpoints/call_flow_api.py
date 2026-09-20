@@ -5,7 +5,7 @@ Simulator, and Plivo Inbound Webhook Execution.
 Created: Sep 2026
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, Body, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, Body, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_, or_, not_
 from typing import Optional, List, Dict, Any, Set
@@ -26,6 +26,7 @@ from app.api.v1.endpoints.staff_auth import get_current_staff_user
 from app.core.security import get_current_user_hybrid
 from app.models.staff import StaffEmployee, StaffDepartment
 from app.models.crm import CRMLead
+from app.models.signup_category import SignupCategory
 from app.models.telephony_call_flow import (
     TelephonyCallFlow, TelephonyCallFlowVersion, TelephonyRingGroup,
     TelephonyBusinessHours, TelephonyHoliday, TelephonyPlivoEndpoint,
@@ -446,11 +447,104 @@ def _get_public_base_url(request: Request) -> str:
     return f"{proto}://{host}".rstrip('/')
 
 
+def _dispatch_inbound_push_observer(
+    caller_phone: str,
+    called_did: str,
+    call_uuid: str,
+    session_id: Optional[str],
+    xml_str: str
+):
+    """
+    Non-blocking background observer for inbound Plivo calls.
+    Extracts dialed agents from generated XML and dispatches high-priority
+    VoIP push notifications to their mobile devices.
+    """
+    if not getattr(settings, "ENABLE_MOBILE_VOIP_PUSH", True):
+        return
+
+    try:
+        from app.core.database import SessionLocal
+        from app.services.telephony.mobile_push_service import MobileCallNotifier
+        from app.models.telephony_call_flow import TelephonyPlivoEndpoint
+        from app.models.crm import CRMLead
+
+        sip_usernames = re.findall(r'<User>sip:([^@]+)@phone\.plivo\.com</User>', xml_str)
+        if not sip_usernames:
+            return
+
+        with SessionLocal() as bg_db:
+            target_staff_ids = []
+            company_id = 1
+            lead_name = None
+            lead_id = None
+
+            for u in sip_usernames:
+                ep = bg_db.query(TelephonyPlivoEndpoint).filter(
+                    TelephonyPlivoEndpoint.plivo_username == u
+                ).first()
+                if ep:
+                    target_staff_ids.append(ep.staff_id)
+                    company_id = ep.company_id
+                else:
+                    m = re.match(r'agentc(\d+)s(\d+)', u)
+                    if m:
+                        company_id = int(m.group(1))
+                        target_staff_ids.append(int(m.group(2)))
+
+            # CRM Lead matching & category/segment resolution
+            lead_category = None
+            lead_type = None
+            lead_city = None
+            lead_status = None
+            deal_value = None
+
+            clean_phone = re.sub(r'\D', '', caller_phone or '')[-10:]
+            if clean_phone:
+                lead = bg_db.query(CRMLead).filter(
+                    CRMLead.phone.ilike(f"%{clean_phone}%")
+                ).order_by(CRMLead.id.desc()).first()
+                if lead:
+                    lead_id = lead.id
+                    lead_name = (lead.name or lead.full_name or "Lead").strip()
+                    if hasattr(lead, 'company_id') and lead.company_id:
+                        company_id = lead.company_id
+                    if getattr(lead, 'category_id', None):
+                        cat_obj = bg_db.query(SignupCategory).filter(SignupCategory.id == lead.category_id).first()
+                        if cat_obj and cat_obj.name:
+                            lead_category = cat_obj.name
+                    lead_type = lead.looking_for or lead.requirements or lead.source or ''
+                    lead_city = lead.city or ''
+                    lead_status = lead.status or ''
+                    if getattr(lead, 'deal_value_total', None):
+                        deal_value = f"₹{int(lead.deal_value_total):,}"
+
+            if target_staff_ids:
+                MobileCallNotifier.notify_inbound_call(
+                    caller_phone=caller_phone,
+                    called_did=called_did,
+                    provider_call_id=call_uuid,
+                    call_session_id=session_id or call_uuid,
+                    target_staff_ids=list(set(target_staff_ids)),
+                    company_id=company_id,
+                    lead_name=lead_name,
+                    lead_id=lead_id,
+                    category=lead_category,
+                    lead_type=lead_type,
+                    city=lead_city,
+                    lead_status=lead_status,
+                    deal_value=deal_value,
+                    db=bg_db
+                )
+    except Exception as e:
+        logger.error(f"[MOBILE-PUSH-OBSERVER-ERROR] Background dispatch error: {e}", exc_info=True)
+
+
 # ── 3. PLIVO INBOUND TELECOM WEBHOOKS ────────────────────────────────────────
 
 @router.post("/plivo/inbound")
 async def plivo_inbound_answer(
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     """
@@ -497,6 +591,21 @@ async def plivo_inbound_answer(
             headers=headers_dict,
             forwarded_from=forwarded_from
         )
+
+        # Non-blocking Mobile Push Dispatch for Screen-Off Incoming Calling
+        if getattr(settings, "ENABLE_MOBILE_VOIP_PUSH", True):
+            try:
+                background_tasks.add_task(
+                    _dispatch_inbound_push_observer,
+                    caller_phone=caller_phone,
+                    called_did=called_did,
+                    call_uuid=call_uuid,
+                    session_id=session_id_param,
+                    xml_str=xml_str
+                )
+            except Exception as notify_err:
+                logger.warning(f"[MOBILE-PUSH-DISPATCH-NOTICE] Failed to enqueue background push: {notify_err}")
+
         return Response(content=xml_str, media_type="application/xml")
     except Exception as e:
         logger.error(f"[PLIVO-INBOUND-EXCEPTION] Exception in plivo_inbound_answer: {e}")
@@ -1064,6 +1173,24 @@ async def plivo_application_hangup(
     session.metadata_json = json.dumps(meta)
 
     db.commit()
+
+    # Cancel ringing on any mobile devices if call ended
+    if getattr(settings, "ENABLE_MOBILE_VOIP_PUSH", True):
+        try:
+            from app.services.telephony.mobile_push_service import MobileCallNotifier
+            s_id = session.call_session_id if session else str(session_id_param or call_uuid)
+            op_id = session.operator_id if session else None
+            comp_id = session.company_id if session else 1
+            MobileCallNotifier.notify_call_cancelled(
+                call_session_id=s_id,
+                provider_call_id=str(call_uuid),
+                target_staff_ids=[op_id] if op_id else None,
+                company_id=comp_id,
+                reason=target_state,
+                db=db
+            )
+        except Exception as cancel_err:
+            logger.warning(f"[MOBILE-PUSH-CANCEL-NOTICE] Failed to notify call cancel: {cancel_err}")
 
     # If requested by internal JSON client / test suite without Plivo signature, return JSON
     if request.headers.get("accept") == "application/json" and not (sig_v3 or "plivo" in request.headers.get("user-agent", "").lower()):
@@ -3270,6 +3397,39 @@ def get_customer_call_history(
             if op_rec:
                 h_op_rec_map[op_id] = op_rec
 
+    # Pre-fetch StaffCallLog records for this phone number
+    scl_records = []
+    try:
+        from app.models.call_tracking import StaffCallLog
+        scl_q = db.query(StaffCallLog).filter(StaffCallLog.phone_number.ilike(f"%{clean_digits}%"))
+        if not is_supreme:
+            scl_q = scl_q.filter(StaffCallLog.company_id.in_(list(allowed_company_ids)))
+        scl_q = scl_q.filter(
+            or_(StaffCallLog.source.is_(None), StaffCallLog.source.notin_(["softphone", "webrtc"])),
+            or_(StaffCallLog.device_call_id.is_(None), ~StaffCallLog.device_call_id.like("vcs_%"))
+        ).order_by(StaffCallLog.call_datetime.desc()).limit(50)
+        scl_records = scl_q.all()
+    except Exception as scl_err:
+        logger.warning(f"[CUSTOMER-HISTORY] scl query error: {scl_err}")
+
+    # DC-PERF-BATCH: Batch pre-fetch all StaffEmployee objects in ONE single query to eliminate 100+ N+1 queries
+    needed_emp_ids = set()
+    for s in sessions:
+        if s.operator_id:
+            needed_emp_ids.add(s.operator_id)
+    for scl in scl_records:
+        if scl.staff_id:
+            needed_emp_ids.add(scl.staff_id)
+
+    emp_name_map = {}
+    if needed_emp_ids:
+        employees = db.query(StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.first_name, StaffEmployee.last_name, StaffEmployee.emp_code).filter(
+            StaffEmployee.id.in_(list(needed_emp_ids))
+        ).all()
+        for e in employees:
+            e_name = e.full_name or f"{e.first_name or ''} {e.last_name or ''}".strip() or e.emp_code
+            emp_name_map[e.id] = e_name
+
     history_items = []
     for s in sessions:
         dur = s.duration_seconds or 0
@@ -3282,11 +3442,9 @@ def get_customer_call_history(
         else:
             hist_type = 'Outgoing' if dur > 0 else 'Unanswered'
 
-        op_name = "IVR / Unassigned"
-        if s.operator_id:
-            emp = db.query(StaffEmployee).filter(StaffEmployee.id == s.operator_id).first()
-            if emp:
-                op_name = emp.full_name or f"{emp.first_name} {emp.last_name}".strip() or emp.emp_code
+        op_name = emp_name_map.get(s.operator_id) if s.operator_id else "IVR / Unassigned"
+        if not op_name:
+            op_name = "IVR / Unassigned"
 
         meta = {}
         if s.metadata_json:
@@ -3331,60 +3489,45 @@ def get_customer_call_history(
             "latest_selection": meta.get("latest_selection", "")
         })
 
-    # Also fetch StaffCallLog records for this phone number
-    try:
-        from app.models.call_tracking import StaffCallLog
-        scl_q = db.query(StaffCallLog).filter(StaffCallLog.phone_number.ilike(f"%{clean_digits}%"))
-        if not is_supreme:
-            scl_q = scl_q.filter(StaffCallLog.company_id.in_(list(allowed_company_ids)))
-        scl_q = scl_q.filter(
-            or_(StaffCallLog.source.is_(None), StaffCallLog.source.notin_(["softphone", "webrtc"])),
-            or_(StaffCallLog.device_call_id.is_(None), ~StaffCallLog.device_call_id.like("vcs_%"))
-        ).order_by(StaffCallLog.call_datetime.desc()).limit(50)
-        scl_records = scl_q.all()
-        for scl in scl_records:
-            dur = scl.duration_seconds or 0
-            s_type_upper = (scl.call_type or 'OUTGOING').upper()
-            dir_str = 'inbound' if s_type_upper == 'INCOMING' else 'outbound'
-            st = 'answered' if dur > 0 else ('missed' if s_type_upper == 'MISSED' else 'ended')
-            hist_type = 'Incoming' if dir_str == 'inbound' else 'Outgoing'
-            if dir_str == 'inbound' and dur == 0:
-                hist_type = 'Missed'
-            elif dir_str == 'outbound' and dur == 0:
-                hist_type = 'Unanswered'
-            
+    for scl in scl_records:
+        dur = scl.duration_seconds or 0
+        s_type_upper = (scl.call_type or 'OUTGOING').upper()
+        dir_str = 'inbound' if s_type_upper == 'INCOMING' else 'outbound'
+        st = 'answered' if dur > 0 else ('missed' if s_type_upper == 'MISSED' else 'ended')
+        hist_type = 'Incoming' if dir_str == 'inbound' else 'Outgoing'
+        if dir_str == 'inbound' and dur == 0:
+            hist_type = 'Missed'
+        elif dir_str == 'outbound' and dur == 0:
+            hist_type = 'Unanswered'
+        
+        scl_staff_name = emp_name_map.get(scl.staff_id) if scl.staff_id else "Staff Member"
+        if not scl_staff_name:
             scl_staff_name = "Staff Member"
-            if scl.staff_id:
-                emp = db.query(StaffEmployee).filter(StaffEmployee.id == scl.staff_id).first()
-                if emp:
-                    scl_staff_name = emp.full_name or f"{emp.first_name} {emp.last_name}".strip() or emp.emp_code
 
-            started_iso = scl.call_datetime.isoformat() if scl.call_datetime else (scl.created_at.isoformat() if scl.created_at else None)
-            rec_url = getattr(scl, 'recording_url', None)
-            history_items.append({
-                "id": 1000000 + scl.id,
-                "call_session_id": scl.device_call_id or f"scl_{scl.id}",
-                "direction": dir_str,
-                "type": hist_type,
-                "status": st,
-                "created_at": scl.created_at.isoformat() if scl.created_at else started_iso,
-                "started_at": started_iso,
-                "ended_at": None,
-                "duration_formatted": f"{dur // 60:02d}m {dur % 60:02d}s",
-                "duration_seconds": dur,
-                "recording_duration": dur if rec_url else 0,
-                "recording_duration_formatted": f"{dur // 60:02d}m {dur % 60:02d}s" if rec_url else None,
-                "operator_name": scl_staff_name,
-                "recording_url": rec_url,
-                "has_recording": bool(rec_url),
-                "called_did": None,
-                "source": "Mobile Call",
-                "ivr_selections": [],
-                "ivr_path": [],
-                "latest_selection": ""
-            })
-    except Exception as scl_err:
-        logger.warning(f"[CUSTOMER-HISTORY] scl query error: {scl_err}")
+        started_iso = scl.call_datetime.isoformat() if scl.call_datetime else (scl.created_at.isoformat() if scl.created_at else None)
+        rec_url = getattr(scl, 'recording_url', None)
+        history_items.append({
+            "id": 1000000 + scl.id,
+            "call_session_id": scl.device_call_id or f"scl_{scl.id}",
+            "direction": dir_str,
+            "type": hist_type,
+            "status": st,
+            "created_at": scl.created_at.isoformat() if scl.created_at else started_iso,
+            "started_at": started_iso,
+            "ended_at": None,
+            "duration_formatted": f"{dur // 60:02d}m {dur % 60:02d}s",
+            "duration_seconds": dur,
+            "recording_duration": dur if rec_url else 0,
+            "recording_duration_formatted": f"{dur // 60:02d}m {dur % 60:02d}s" if rec_url else None,
+            "operator_name": scl_staff_name,
+            "recording_url": rec_url,
+            "has_recording": bool(rec_url),
+            "called_did": None,
+            "source": "Mobile Call",
+            "ivr_selections": [],
+            "ivr_path": [],
+            "latest_selection": ""
+        })
 
     history_items.sort(key=lambda x: x.get("started_at") or x.get("created_at") or "", reverse=True)
 

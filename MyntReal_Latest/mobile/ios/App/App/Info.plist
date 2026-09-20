@@ -62,11 +62,23 @@
 		<string>location</string>
 		<string>remote-notification</string>
 		<string>audio</string>
+		<string>voip</string>
 	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.myntos.mobile</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>myntreal</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

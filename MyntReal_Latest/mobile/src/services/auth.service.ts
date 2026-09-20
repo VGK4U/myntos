@@ -89,8 +89,16 @@ class AuthService {
               console.log('[DC_AUTH] Persistent session refreshed successfully on startup');
               return;
             }
+            // If refreshMobileSession() already logged out due to 401/403 rejection, state is cleared
+            if (!this.authState.isLoggedIn) {
+              console.log('[DC_AUTH] Refresh token invalidated by server on cold start');
+              return;
+            }
+            // If failed due to offline/network issue, retain session in offline mode
+            console.log('[DC_AUTH] Network offline on startup; retaining session in offline mode');
+            return;
           }
-          console.log('[DC_AUTH] No valid persistent session or refresh failed, clearing state');
+          console.log('[DC_AUTH] No valid persistent session, clearing state');
           restored.isLoggedIn = false;
           restored.user = null;
           restored.tokenExpiresAt = 0;
@@ -417,8 +425,13 @@ class AuthService {
         window.dispatchEvent(new CustomEvent('auth-changed'));
         return true;
       } else {
-        console.warn('[DC_AUTH] Refresh token rejected or expired on server:', response.error);
-        await this.logout();
+        const status = response?.status;
+        if (status === 401 || status === 403) {
+          console.warn(`[DC_AUTH] Refresh token rejected or expired on server (HTTP ${status}):`, response?.error);
+          await this.logout();
+        } else {
+          console.warn(`[DC_AUTH] Mobile session refresh failed due to network/server condition (HTTP ${status || 0}). Session preserved for retry when online.`);
+        }
         return false;
       }
     } catch (e) {
@@ -434,8 +447,11 @@ class AuthService {
       if (refreshToken || deviceId) {
         await apiService.revokeMobileToken(refreshToken || undefined, deviceId, false);
       }
+      if (deviceId && Capacitor.isNativePlatform()) {
+        await apiService.post('/telephony/mobile/push-token/revoke', { device_id: deviceId });
+      }
     } catch (e) {
-      console.warn('[DC_AUTH] Revoke mobile token failed during logout:', e);
+      console.warn('[DC_AUTH] Revoke mobile/push token failed during logout:', e);
     }
 
     await apiService.clearToken();
@@ -641,7 +657,7 @@ class AuthService {
         if (needsRefresh) {
           console.log('[DC_AUTH] Access token needs refresh, attempting proactive refresh...');
           const reAuthed = await this.refreshMobileSession();
-          if (!reAuthed && this.isTokenExpired()) {
+          if (!reAuthed && this.isTokenExpired() && !this.authState.isLoggedIn) {
             console.log('[DC_AUTH] Mobile session refresh failed and access token is expired, emitting session-expired');
             window.dispatchEvent(new CustomEvent('session-expired'));
           }

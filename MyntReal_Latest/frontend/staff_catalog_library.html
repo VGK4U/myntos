@@ -10,6 +10,7 @@
     <script src="/public/js/staff-token-manager.js"></script>
     <script src="/public/js/staff-fetch.js"></script>
     <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/public/js/wa-lead-modal.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
     <style>
@@ -437,6 +438,9 @@
                     <p class="text-muted mb-0">Single-page responsive web catalogs, modular section builder, multilingual copy & WhatsApp dispatch.</p>
                 </div>
                 <div class="d-flex gap-2">
+                    <a href="/hub" class="btn btn-ghost-dark text-decoration-none" title="Go to Home Page">
+                        <i class="fas fa-home me-1 text-warning"></i> Home
+                    </a>
                     <button class="btn btn-ghost-dark" onclick="openDispatchHistoryModal()" title="View My Dispatches and Team Telemetry">
                         <i class="fas fa-history me-1 text-info"></i> Dispatch History & Telemetry
                     </button>
@@ -2054,6 +2058,42 @@
         }
 
         function openWhatsAppDispatchModal() {
+            if (window.openLeadWAModal && activeCatalog) {
+                // Map activeCatalog to the matching DIGITAL_CATALOGS key
+                let catKey = 'solar';
+                const seg = (activeCatalog.segment_code || '').toUpperCase();
+                const slug = (activeCatalog.slug || '').toLowerCase();
+                if (seg === 'SOLAR' || slug.includes('solar')) {
+                    catKey = 'solar';
+                } else if (seg === 'EV_SPARES' || slug.includes('spares')) {
+                    catKey = 'ev_spares';
+                } else if (seg === 'EV_B2C' || slug.includes('b2c')) {
+                    catKey = 'ev_b2c';
+                } else if (seg === 'EV_B2B' || slug.includes('b2b') || slug.includes('cargo')) {
+                    catKey = 'ev_b2b';
+                } else if (seg === 'HUB_PRICING' || slug.includes('pricing') || slug.includes('margin')) {
+                    catKey = 'hub_pricing';
+                } else if (seg === 'HUB' || slug.includes('hub') || slug.includes('franchise')) {
+                    catKey = 'industrial_hub';
+                } else if (seg === 'ETC' || slug.includes('etc') || slug.includes('train')) {
+                    catKey = 'etc_training';
+                } else if (seg === 'REAL_ESTATE' || slug.includes('real') || slug.includes('dream')) {
+                    catKey = 'real_estate';
+                } else if (seg === 'INSURANCE' || slug.includes('insur')) {
+                    catKey = 'insurance';
+                }
+                
+                const companyId = activeCatalog.company_id || 4;
+                window.openLeadWAModal(null, '', '', companyId, null, {
+                    catalogKey: catKey,
+                    catalogId: activeCatalog.id,
+                    catalogTitle: activeCatalog.title,
+                    segmentCode: seg
+                });
+                return;
+            }
+
+            // Fallback to local dispatch modal
             initRecipientSearch();
 
             document.getElementById('dispatchPhoneInput').value = '';

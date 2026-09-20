@@ -7,6 +7,7 @@
 import { apiService } from '../services/api.service';
 import { PageHeader } from '../components/PageHeader';
 import { routerService } from '../services/router.service';
+import { APP_CONFIG } from '../config/app.config';
 
 interface ServiceTicket {
   id: number;
@@ -893,7 +894,7 @@ export class ServiceQueuePage {
   private async _mobileSpareAccept(spareId: number, ticketId: number): Promise<void> {
     if (!confirm('Accept this spare request? Stock will be checked and ZYPO/ZYPR auto-created if needed.')) return;
     try {
-      const r = await fetch(`/api/v1/tickets/service/spares/${spareId}/accept`, {
+      const r = await fetch(`${APP_CONFIG.BASE_SERVER_URL}/api/v1/tickets/service/spares/${spareId}/accept`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: 'Accepted via mobile' })
@@ -912,7 +913,7 @@ export class ServiceQueuePage {
     const reason = prompt('Reason for cancellation:');
     if (!reason) return;
     try {
-      const r = await fetch(`/api/v1/tickets/service/spares/${spareId}/cancel`, {
+      const r = await fetch(`${APP_CONFIG.BASE_SERVER_URL}/api/v1/tickets/service/spares/${spareId}/cancel`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason })
@@ -929,51 +930,57 @@ export class ServiceQueuePage {
     if (!modalBody || !modalFooter) return;
     const today = new Date().toISOString().slice(0, 10);
     modalBody.innerHTML = `
-      <div class="form-section">
-        <h5>Record Spare Payment</h5>
-        <div class="form-group">
-          <label>Amount (₹) *</label>
-          <input type="number" id="mSpPmtAmt" class="form-input" min="0.01" step="0.01" placeholder="0.00">
+      <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:#1e293b;">Record Spare Payment</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#64748b;">Amount (₹) *</label>
+          <input type="number" id="mSpPmtAmount" placeholder="0.00" step="0.01" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;">
         </div>
-        <div class="form-group">
-          <label>Payment Mode *</label>
-          <div class="pmt-mode-group">
-            ${['CASH','UPI','NEFT','CARD','BANK','CHEQUE'].map(m =>
-              `<button type="button" class="pmt-mode-btn" data-mode="${m}" onclick="this.parentElement.querySelectorAll('.pmt-mode-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active');document.getElementById('mSpPmtMode').value='${m}'">${m}</button>`
-            ).join('')}
-          </div>
-          <input type="hidden" id="mSpPmtMode">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#64748b;">Payment Mode *</label>
+          <select id="mSpPmtMode" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;">
+            <option value="">-- Select Mode --</option>
+            <option value="UPI">UPI / GPay / PhonePe</option>
+            <option value="Cash">Cash</option>
+            <option value="Card">Credit / Debit Card</option>
+            <option value="Bank Transfer">Bank Transfer / NEFT</option>
+          </select>
         </div>
-        <div class="form-group">
-          <label>Transaction Reference / UTR</label>
-          <input type="text" id="mSpPmtRef" class="form-input" placeholder="UTR / Cheque no...">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#64748b;">Reference / Transaction ID</label>
+          <input type="text" id="mSpPmtRef" placeholder="e.g. UPI Ref / UTR" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;">
         </div>
-        <div class="form-group">
-          <label>Payment Date</label>
-          <input type="date" id="mSpPmtDate" class="form-input" value="${today}">
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#64748b;">Payment Date</label>
+          <input type="date" id="mSpPmtDate" value="${today}" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;">
         </div>
-        <div class="form-group">
-          <label>Notes</label>
-          <textarea id="mSpPmtNotes" class="form-textarea" rows="2" placeholder="Additional notes..."></textarea>
+        <div>
+          <label style="font-size:11px;font-weight:600;color:#64748b;">Notes</label>
+          <textarea id="mSpPmtNotes" rows="2" placeholder="Optional remarks" style="width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;box-sizing:border-box;"></textarea>
         </div>
-        <div class="info-note">Recording payment will create an Income Entry in Accounts automatically.</div>
       </div>
     `;
     modalFooter.innerHTML = `
-      <button class="btn btn-secondary" id="mSpPmtCancelBtn">Cancel</button>
-      <button class="btn btn-success" id="mSpPmtSubmitBtn">Confirm Payment</button>
+      <button class="btn btn-outline" id="mSpPmtClose" style="padding:6px 14px;font-size:12px;">Cancel</button>
+      <button class="btn btn-primary" id="mSpPmtSave" style="padding:6px 14px;font-size:12px;">Record Payment</button>
     `;
-    document.getElementById('mSpPmtCancelBtn')?.addEventListener('click', () => this.loadSpareRequests(ticketId));
-    document.getElementById('mSpPmtSubmitBtn')?.addEventListener('click', async () => {
-      const amount = parseFloat((document.getElementById('mSpPmtAmt') as HTMLInputElement)?.value || '0');
-      const mode = (document.getElementById('mSpPmtMode') as HTMLInputElement)?.value;
+    const modalEl = document.getElementById('ticketDetailModal');
+    if (modalEl) modalEl.style.display = 'block';
+
+    document.getElementById('mSpPmtClose')?.addEventListener('click', () => {
+      if (modalEl) modalEl.style.display = 'none';
+    });
+
+    document.getElementById('mSpPmtSave')?.addEventListener('click', async () => {
+      const amount = parseFloat((document.getElementById('mSpPmtAmount') as HTMLInputElement)?.value || '0');
+      const mode = (document.getElementById('mSpPmtMode') as HTMLSelectElement)?.value;
       const ref = (document.getElementById('mSpPmtRef') as HTMLInputElement)?.value?.trim() || null;
       const dateVal = (document.getElementById('mSpPmtDate') as HTMLInputElement)?.value || null;
       const notes = (document.getElementById('mSpPmtNotes') as HTMLTextAreaElement)?.value?.trim() || null;
       if (!amount || amount <= 0) { alert('Enter a valid amount'); return; }
       if (!mode) { alert('Select a payment mode'); return; }
       try {
-        const r = await fetch(`/api/v1/tickets/service/spares/${spareId}/payment`, {
+        const r = await fetch(`${APP_CONFIG.BASE_SERVER_URL}/api/v1/tickets/service/spares/${spareId}/payment`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ amount, payment_mode: mode, payment_reference: ref, payment_date: dateVal, payment_notes: notes })
@@ -982,6 +989,7 @@ export class ServiceQueuePage {
         if (!r.ok) throw new Error(d.detail || 'Payment failed');
         const ieMsg = d.income_entry_number ? `\nIncome Entry: ${d.income_entry_number}` : '';
         alert(`Payment of ₹${amount.toFixed(2)} via ${mode} recorded${ieMsg}`);
+        if (modalEl) modalEl.style.display = 'none';
         await this.loadSpareRequests(ticketId);
       } catch (e: any) { alert('Error: ' + e.message); }
     });
@@ -991,7 +999,7 @@ export class ServiceQueuePage {
     const notes = prompt('Dispatch notes (optional):', '') ?? null;
     if (notes === null) return;
     try {
-      const r = await fetch(`/api/v1/tickets/service/spares/${spareId}/dispatch`, {
+      const r = await fetch(`${APP_CONFIG.BASE_SERVER_URL}/api/v1/tickets/service/spares/${spareId}/dispatch`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token') || localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: notes || null })

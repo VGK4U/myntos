@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 48;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -15,6 +15,16 @@
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		A084ECDBA7D38E1E42DFC39D /* Pods_App.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */; };
+		F019C2022FED79650016851F /* VoIPCallManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F019C2012FED79650016851F /* VoIPCallManager.swift */; };
+		F019C2042FED79650016851F /* IncomingCallPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = F019C2032FED79650016851F /* IncomingCallPlugin.swift */; };
+		F019C2062FED79650016851F /* IncomingCallPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = F019C2052FED79650016851F /* IncomingCallPlugin.m */; };
+		F019C2082FED79650016851F /* AudioRoutingPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = F019C2072FED79650016851F /* AudioRoutingPlugin.swift */; };
+		F019C20A2FED79650016851F /* AudioRoutingPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = F019C2092FED79650016851F /* AudioRoutingPlugin.m */; };
+		F019C20C2FED79650016851F /* BackgroundLocationPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = F019C20B2FED79650016851F /* BackgroundLocationPlugin.swift */; };
+		F019C20E2FED79650016851F /* BackgroundLocationPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = F019C20D2FED79650016851F /* BackgroundLocationPlugin.m */; };
+		F019C2102FED79650016851F /* SecureStoragePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = F019C20F2FED79650016851F /* SecureStoragePlugin.swift */; };
+		F019C2122FED79650016851F /* SecureStoragePlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = F019C2112FED79650016851F /* SecureStoragePlugin.m */; };
+		F019C2982FED79650016851F /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F019C2972FED79650016851F /* ViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,6 +39,16 @@
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		AF277DCFFFF123FFC6DF26C7 /* Pods_App.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_App.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AF51FD2D460BCFE21FA515B2 /* Pods-App.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.release.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.release.xcconfig"; sourceTree = "<group>"; };
+		F019C2012FED79650016851F /* VoIPCallManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoIPCallManager.swift; sourceTree = "<group>"; };
+		F019C2032FED79650016851F /* IncomingCallPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomingCallPlugin.swift; sourceTree = "<group>"; };
+		F019C2052FED79650016851F /* IncomingCallPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = IncomingCallPlugin.m; sourceTree = "<group>"; };
+		F019C2072FED79650016851F /* AudioRoutingPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRoutingPlugin.swift; sourceTree = "<group>"; };
+		F019C2092FED79650016851F /* AudioRoutingPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AudioRoutingPlugin.m; sourceTree = "<group>"; };
+		F019C20B2FED79650016851F /* BackgroundLocationPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundLocationPlugin.swift; sourceTree = "<group>"; };
+		F019C20D2FED79650016851F /* BackgroundLocationPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = BackgroundLocationPlugin.m; sourceTree = "<group>"; };
+		F019C20F2FED79650016851F /* SecureStoragePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureStoragePlugin.swift; sourceTree = "<group>"; };
+		F019C2112FED79650016851F /* SecureStoragePlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SecureStoragePlugin.m; sourceTree = "<group>"; };
+		F019C2972FED79650016851F /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		FC68EB0AF532CFC21C3344DD /* Pods-App.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-App.debug.xcconfig"; path = "Pods/Target Support Files/Pods-App/Pods-App.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -75,6 +95,16 @@
 			children = (
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
+				F019C2012FED79650016851F /* VoIPCallManager.swift */,
+				F019C2032FED79650016851F /* IncomingCallPlugin.swift */,
+				F019C2052FED79650016851F /* IncomingCallPlugin.m */,
+				F019C2072FED79650016851F /* AudioRoutingPlugin.swift */,
+				F019C2092FED79650016851F /* AudioRoutingPlugin.m */,
+				F019C20B2FED79650016851F /* BackgroundLocationPlugin.swift */,
+				F019C20D2FED79650016851F /* BackgroundLocationPlugin.m */,
+				F019C20F2FED79650016851F /* SecureStoragePlugin.swift */,
+				F019C2112FED79650016851F /* SecureStoragePlugin.m */,
+				F019C2972FED79650016851F /* ViewController.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -122,8 +152,9 @@
 		504EC2FC1FED79650016851F /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				BuildIndependentTargetsInParallel = YES;
 				LastSwiftUpdateCheck = 0920;
-				LastUpgradeCheck = 0920;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					504EC3031FED79650016851F = {
 						CreatedOnToolsVersion = 9.2;
@@ -189,6 +220,7 @@
 		};
 		9592DBEFFC6D2A0C8D5DEB22 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
@@ -210,6 +242,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
+				F019C2022FED79650016851F /* VoIPCallManager.swift in Sources */,
+				F019C2042FED79650016851F /* IncomingCallPlugin.swift in Sources */,
+				F019C2062FED79650016851F /* IncomingCallPlugin.m in Sources */,
+				F019C2082FED79650016851F /* AudioRoutingPlugin.swift in Sources */,
+				F019C20A2FED79650016851F /* AudioRoutingPlugin.m in Sources */,
+				F019C20C2FED79650016851F /* BackgroundLocationPlugin.swift in Sources */,
+				F019C20E2FED79650016851F /* BackgroundLocationPlugin.m in Sources */,
+				F019C2102FED79650016851F /* SecureStoragePlugin.swift in Sources */,
+				F019C2122FED79650016851F /* SecureStoragePlugin.m in Sources */,
+				F019C2982FED79650016851F /* ViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -249,6 +291,7 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
@@ -256,8 +299,10 @@
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -267,8 +312,10 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 9UY5DTN5Z8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -287,6 +334,7 @@
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -306,6 +354,7 @@
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
@@ -313,8 +362,10 @@
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -324,8 +375,10 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 9UY5DTN5Z8;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -337,7 +390,9 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -351,7 +406,10 @@
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.myntos.mobile;
@@ -371,7 +429,10 @@
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.myntos.mobile;
 				PRODUCT_NAME = "$(TARGET_NAME)";

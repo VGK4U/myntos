@@ -11,6 +11,7 @@
 import { apiService } from '../services/api.service';
 import { PageHeader } from '../components/PageHeader';
 import { routerService } from '../services/router.service';
+import { APP_CONFIG } from '../config/app.config';
 
 interface CatalogItem {
   id: number;
@@ -852,7 +853,8 @@ export class DigitalCatalogPage {
           </div>
         ` : '';
 
-        const fullTracked = (window.location.origin || '') + (d.tracked_url || '');
+        const origin = (!window.location.origin || window.location.origin.includes('localhost') || window.location.origin.includes('capacitor')) ? APP_CONFIG.BASE_SERVER_URL : window.location.origin;
+        const fullTracked = origin + (d.tracked_url || '');
         const waUrl = `https://wa.me/91${d.recipient_phone}?text=${encodeURIComponent('Hello ' + (d.recipient_name || '') + ', here is the catalog proposal: ' + fullTracked)}`;
 
         const dateStr = d.sent_at ? new Date(d.sent_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'N/A';

@@ -2,6 +2,7 @@ import { apiService } from '../services/api.service';
 import { PageHeader } from '../components/PageHeader';
 import { routerService } from '../services/router.service';
 import { authService } from '../services/auth.service';
+import { APP_CONFIG } from '../config/app.config';
 
 interface Employee {
   id: number;
@@ -638,7 +639,7 @@ export class TaskCreatePage {
             try {
               const formData = new FormData();
               formData.append('file', file);
-              await fetch(`/api/v1/staff/tasks/${taskId}/attachments`, {
+              await fetch(`${APP_CONFIG.BASE_SERVER_URL}/api/v1/staff/tasks/${taskId}/attachments`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token')}` },
                 body: formData

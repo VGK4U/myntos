@@ -958,8 +958,53 @@ class SoftphoneModal {
     const box = this.modalEl?.querySelector('#spLeadContextBox') as HTMLElement;
     if (!box) return;
 
-    if (!entityId) {
-      box.style.display = 'none';
+    // Render immediate metadata if passed in options
+    if (this.currentOptions?.categoryName) {
+      const catBadge = this.modalEl?.querySelector('#spMobileCatBadge');
+      if (catBadge) catBadge.textContent = this.currentOptions.categoryName;
+      const headerCat = this.modalEl?.querySelector('#spHeaderCatBadge') as HTMLElement;
+      if (headerCat) {
+        headerCat.textContent = `🏷️ ${this.currentOptions.categoryName}`;
+        headerCat.style.display = 'inline-block';
+      }
+    }
+
+    if (this.currentOptions?.status) {
+      const statusEl = this.modalEl?.querySelector('#spMobileStatus') as HTMLElement;
+      if (statusEl) {
+        statusEl.textContent = this.currentOptions.status.toUpperCase();
+      }
+      const headerStatus = this.modalEl?.querySelector('#spHeaderStatusBadge') as HTMLElement;
+      if (headerStatus) {
+        headerStatus.textContent = `📌 ${this.currentOptions.status}`;
+        headerStatus.style.display = 'inline-block';
+      }
+    }
+
+    let resolvedId = entityId;
+
+    // Fallback: resolve lead ID by phone number if entityId was not directly supplied
+    if (!resolvedId && this.currentOptions?.phoneNumber) {
+      try {
+        const cleanDigits = this.currentOptions.phoneNumber.replace(/\D/g, '').slice(-10);
+        if (cleanDigits.length >= 10) {
+          const histResp = await apiService.get<any>(`/telephony/calls/${cleanDigits}/customer-history`);
+          const hData = histResp?.data ?? histResp;
+          if (hData?.lead?.id) {
+            resolvedId = hData.lead.id;
+          }
+        }
+      } catch (e) {
+        console.warn('[SoftphoneModal] Lead lookup by phone notice:', e);
+      }
+    }
+
+    if (!resolvedId) {
+      if (this.currentOptions?.categoryName || this.currentOptions?.status) {
+        box.style.display = 'block';
+      } else {
+        box.style.display = 'none';
+      }
       return;
     }
 
@@ -969,7 +1014,7 @@ class SoftphoneModal {
         lead?: any;
         attempts?: any[];
         notes?: any[];
-      }>(`/crm/dialer/lead/${entityId}/detail`);
+      }>(`/crm/dialer/lead/${resolvedId}/detail`);
 
       const data = resp.data ?? (resp as any);
       if (!data || !data.lead) return;

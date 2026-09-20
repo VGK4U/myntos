@@ -1,6 +1,7 @@
 import { apiService } from '../services/api.service';
 import { PageHeader } from '../components/PageHeader';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
+import { APP_CONFIG } from '../config/app.config';
 
 interface TimesheetEntry {
   id: number;
@@ -1249,7 +1250,7 @@ export class TimesheetPage {
         };
         const action = actionMap[newStatus];
         if (!action) return false;
-        const r = await fetch(`/api/v1/tickets/service/${itemId}/${action}`, {
+        const r = await fetch(`${APP_CONFIG.BASE_SERVER_URL}/api/v1/tickets/service/${itemId}/${action}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeader },
           body: JSON.stringify({})

@@ -8,14 +8,40 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Configure AVAudioSession for background audio and VoIP calling stability (defaulting to earpiece/receiver for conversational voice calls)
+        // Configure AVAudioSession for loud media playback & recording listening by default
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth, .allowBluetoothA2DP])
+            try session.setCategory(.playback, mode: .default, options: [])
+            try session.overrideOutputAudioPort(.speaker)
             try session.setActive(true)
         } catch {
             print("[AppDelegate] Notice initializing AVAudioSession: \(error)")
         }
+
+        // Initialize CallKit and PushKit for screen-off VoIP incoming call handling
+        VoIPCallManager.shared.start()
+
+        // Register Darwin notification observer to allow direct incoming call triggers from host/devicectl
+        let darwinCenter = CFNotificationCenterGetDarwinNotifyCenter()
+        CFNotificationCenterAddObserver(
+            darwinCenter,
+            nil,
+            { (_, _, _, _, _) in
+                NSLog("[AppDelegate] Darwin notification received: triggering test incoming call immediately")
+                VoIPCallManager.shared.triggerTestIncomingCall(
+                    callerPhone: "+919876543210",
+                    callerName: "Rajesh Sharma",
+                    delaySeconds: 0,
+                    category: "Solar",
+                    leadType: "5kW Residential Rooftop",
+                    city: "Hyderabad"
+                )
+            },
+            "com.myntos.trigger_test_call" as CFString,
+            nil,
+            .deliverImmediately
+        )
+
         return true
     }
 
@@ -42,8 +68,18 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        // Called when the app was launched with a url. Feel free to add additional processing here,
-        // but if you want the App API to support tracking app url opens, make sure to keep this call
+        if url.scheme == "myntreal" && (url.host == "test-call" || url.path.contains("test-call")) {
+            NSLog("[AppDelegate] URL scheme received: \(url.absoluteString)")
+            VoIPCallManager.shared.triggerTestIncomingCall(
+                callerPhone: "+919876543210",
+                callerName: "Rajesh Sharma",
+                delaySeconds: 0,
+                category: "Solar",
+                leadType: "5kW Residential Rooftop",
+                city: "Hyderabad"
+            )
+            return true
+        }
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
     }
 

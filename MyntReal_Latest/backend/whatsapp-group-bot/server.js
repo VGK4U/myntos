@@ -106,6 +106,7 @@ function stopWhatsAppSocket() {
 let lastConnectedTimestamp = 0;
 let lastMessageSentTimestamp = 0;
 const NEW_CONNECTION_COOLDOWN_MS = 25000; // 25s post-scan stabilization cooldown
+let consecutiveAuthFailures = 0;
 
 let isProcessingQueue = false;
 async function processOutboundQueue() {
@@ -538,7 +539,7 @@ async function startWhatsAppBot() {
         auth: state,
         logger: pino({ level: 'silent' }),
         printQRInTerminal: false,
-        browser: Browsers.macOS('Desktop'),
+        browser: Browsers.ubuntu('Chrome'),
         syncFullHistory: false,
         connectTimeoutMs: 60000,
         keepAliveIntervalMs: 30000,
@@ -596,6 +597,7 @@ async function processConnectionUpdate(thisGen, update) {
         lastConnectedTimestamp = Date.now();
         connectionStatus = 'connected';
         currentQr = null;
+        consecutiveAuthFailures = 0;
         console.log(`✅ [WA-LIFECYCLE] WHATSAPP CONNECTED (Gen ${thisGen})! Session is active and authoritative.`);
         await backupSessionToDatabase();
 
@@ -644,9 +646,20 @@ async function processConnectionUpdate(thisGen, update) {
         const isRestartRequired = statusCode === DisconnectReason.restartRequired || statusCode === 515;
         
         if (isLoggedOut) {
+            consecutiveAuthFailures++;
+            if (consecutiveAuthFailures < 2) {
+                console.warn(`⚠️ [WA-LIFECYCLE] Received 401 disconnect (auth failure attempt #${consecutiveAuthFailures}/2, Gen: ${thisGen}). Attempting safe socket reconnect before declaring terminal logout...`);
+                connectionStatus = 'reconnecting';
+                setTimeout(() => {
+                    if (thisGen === clientGen) startWhatsAppBot();
+                }, 3000);
+                syncClusterCoordinator();
+                return { dropped: false, status: connectionStatus };
+            }
+            consecutiveAuthFailures = 0;
             connectionStatus = 'qr_ready';
             currentQr = null;
-            console.log(`🧹 [WA-LIFECYCLE] Terminal logout confirmed (Status: ${statusCode}, Gen: ${thisGen}). Purging dead session and preparing fresh QR...`);
+            console.log(`🧹 [WA-LIFECYCLE] Terminal logout confirmed after consecutive 401s (Status: ${statusCode}, Gen: ${thisGen}). Purging dead session and preparing fresh QR...`);
             skipRestoreOnce = true;
             await purgeS3Session();
             try {
@@ -717,6 +730,7 @@ async function logoutBotSession() {
         }
         currentQr = null;
         targetJid = null;
+        consecutiveAuthFailures = 0;
 
         skipRestoreOnce = true;
         await purgeS3Session();

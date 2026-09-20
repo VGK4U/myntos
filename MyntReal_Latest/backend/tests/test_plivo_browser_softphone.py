@@ -261,7 +261,8 @@ class TestPlivoBrowserSoftphone(unittest.TestCase):
             current_user=self.staff_1,
             customer_phone="9876500001",
             lead_id=self.lead.id,
-            provider_name="plivo"
+            provider_name="plivo",
+            dispatch_provider_call=False
         )
         self.test_session_ids.append(session.call_session_id)
         self.assertIsNotNone(session)

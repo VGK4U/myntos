@@ -13,8 +13,12 @@ import sys
 import psycopg2
 from io import BytesIO
 import time
+import dotenv
+dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
+if not os.environ.get("PROD_DATABASE_URL"):
+    dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
-PROD_DB_URL = "postgresql://neondb_owner:npg_tnS3mrd1KFgk@ep-dry-lab-ad9prs0y.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require"
+PROD_DB_URL = os.environ.get("PROD_DATABASE_URL")
 DEV_DB_URL = os.environ.get("DATABASE_URL")
 
 SKIP_TABLES = ['alembic_version', 'apscheduler_jobs']

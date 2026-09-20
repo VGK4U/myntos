@@ -55,6 +55,7 @@ from app.api.v1.endpoints import (
     bank_contacts,
     crm_settings,
     digital_catalogs,
+    mobile_telephony_api,
 )
 
 # Scaffold routers are mounted in main.py at ROOT level to match Flask routing
@@ -245,6 +246,7 @@ api_router.include_router(voip_dialer.router, tags=["VoIP In-App PSTN Calling & 
 api_router.include_router(call_flow_api.router, prefix="/telephony", tags=["MyntOS Native Telephony & Call Flow Designer"])
 api_router.include_router(call_flow_api.router, prefix="/telephony/call-flow", tags=["MyntOS Native Telephony & Call Flow Designer"])
 api_router.include_router(plivo_softphone_api.router, prefix="/telephony/plivo", tags=["Plivo Browser Softphone & Token API"])
+api_router.include_router(mobile_telephony_api.router, prefix="/telephony", tags=["MyntOS Mobile Telephony & Push Signaling"])
 api_router.include_router(crm_lead_sync.router, prefix="/crm", tags=["CRM Google Sheets Lead Sync"])
 api_router.include_router(crm_commissions.router, tags=["CRM Commissions"])
 

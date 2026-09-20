@@ -23,6 +23,7 @@ from fastapi import (
     APIRouter, Depends, HTTPException, status, Query, Body, 
     UploadFile, File, Form, Request
 )
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import text, or_, and_, desc
@@ -366,6 +367,50 @@ def get_public_catalog_by_ref(
     }
     data["branding"] = _get_catalog_branding(catalog)
     return {"success": True, "catalog": data}
+
+
+@router.get("/c/{share_ref_code}")
+@router.get("/public/c/{share_ref_code}")
+def redirect_short_catalog_code(
+    share_ref_code: str,
+    lang: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Short link redirection for digital catalogs:
+    /c/{share_ref_code} -> /catalog/{segment_slug}/{catalog_slug}?ref={share_ref_code}&lang={lang}
+    Tracks hit/view count and returns 307 temporary redirect to the canonical catalog URL.
+    """
+    send_record = db.query(CatalogLeadSend).filter(CatalogLeadSend.share_ref_code == share_ref_code).first()
+    if not send_record:
+        return RedirectResponse(url="/catalog/solar/commercial-residential-solar", status_code=307)
+
+    catalog = db.query(DigitalCatalog).filter(DigitalCatalog.id == send_record.catalog_id).first()
+    if not catalog or not catalog.is_active:
+        return RedirectResponse(url="/catalog/solar/commercial-residential-solar", status_code=307)
+
+    # Record view telemetry
+    send_record.view_count = (send_record.view_count or 0) + 1
+    now_t = get_indian_time()
+    if not send_record.first_viewed_at:
+        send_record.first_viewed_at = now_t
+    send_record.last_viewed_at = now_t
+    db.commit()
+
+    selected_lang = lang or send_record.language_code or 'te'
+    cat_slug = catalog.slug
+    segment_slug = catalog.segment_code.lower().replace('_', '-')
+
+    if catalog.segment_code == "HUB_PRICING" or cat_slug == "hub-ev-pricing":
+        target_path = f"/catalog/hub-ev-pricing?ref={share_ref_code}&lang={selected_lang}"
+    elif catalog.segment_code == "EV_B2C" or cat_slug in ["ev-b2c-pricing", "customer-2w-ev-pricing"]:
+        target_path = f"/catalog/ev-b2c-pricing?ref={share_ref_code}&lang={selected_lang}"
+    elif catalog.segment_code == "EV_SPARES" or cat_slug in ["ev-spares", "ev_spares"]:
+        target_path = f"/catalog/ev-spares?ref={share_ref_code}&lang={selected_lang}"
+    else:
+        target_path = f"/catalog/{segment_slug}/{cat_slug}?ref={share_ref_code}&lang={selected_lang}"
+
+    return RedirectResponse(url=target_path, status_code=307)
 
 
 @router.post("/public/{catalog_id}/track-view")
@@ -1271,12 +1316,17 @@ def dispatch_catalog_whatsapp(
 
     recip_display = recip_name or "Valued Customer"
 
-    # Base web application domain
-    host = request.headers.get("host") or "myntos.vgk4u.com"
-    scheme = request.headers.get("x-forwarded-proto") or "https"
-    base_url = f"{scheme}://{host}"
-    if "localhost" in host:
-        base_url = "http://localhost:5000"
+    # Base web application domain (Rule 1: Never leak internal/local hosts to customers)
+    env_public_base = os.environ.get("PUBLIC_CATALOG_URL") or os.environ.get("BASE_URL")
+    if env_public_base and not any(dev in env_public_base for dev in ["localhost", "127.0.0.1", "0.0.0.0"]):
+        base_url = env_public_base.rstrip('/')
+    else:
+        req_host = request.headers.get("x-forwarded-host") or request.headers.get("host") or "www.myntreal.com"
+        if any(dev in req_host for dev in ["localhost", "127.0.0.1", "0.0.0.0", "192.168.", "10.0.", ":8000", ":5000", ":5173", ":3000"]):
+            base_url = "https://www.myntreal.com"
+        else:
+            req_scheme = request.headers.get("x-forwarded-proto") or "https"
+            base_url = f"{req_scheme}://{req_host}"
 
     staff_name = f"{current_user.first_name} {current_user.last_name or ''}".strip()
     staff_ext = None
@@ -1298,21 +1348,30 @@ def dispatch_catalog_whatsapp(
     else:
         web_catalog_url = f"{base_url}/catalog/{segment_slug}/{cat_slug}?ref={share_ref_code}&name={urllib.parse.quote(recip_display)}&staff={urllib.parse.quote(staff_name)}{ext_param}&lang={payload.language_code}"
 
-    # Build personalized WhatsApp message
+    # Clean short URL for WhatsApp sharing (1-tap clickable, recognized by WhatsApp URL detector)
+    short_catalog_url = f"{base_url}/c/{share_ref_code}"
+
+    # Build personalized WhatsApp message with clean hyperlinks
     message_lines = [
         f"Dear {recip_display}! 👋",
         "",
         f"Here is your personalized *{catalog.title}* proposal prepared by *{staff_name}*:",
         "",
-        f"📱 *Interactive Web Proposal & Calculator:*",
-        f"{web_catalog_url}"
+        f"📖 *{catalog.title} (Interactive Web Proposal & Calculator):*",
+        f"👉 {short_catalog_url}"
     ]
 
-    if payload.delivery_method in ("pdf_document", "both") and catalog.pdf_brochure_url:
+    # Resolve PDF brochure URL
+    pdf_candidate = catalog.pdf_brochure_url
+    if not pdf_candidate and catalog.segment_code == "SOLAR":
+        pdf_candidate = "/catalog/mnr-catalog-web.pdf"
+
+    if (payload.delivery_method in ("pdf_document", "both") or pdf_candidate) and pdf_candidate:
+        pdf_full_url = pdf_candidate if pdf_candidate.startswith("http") else f"{base_url}{pdf_candidate if pdf_candidate.startswith('/') else '/' + pdf_candidate}"
         message_lines.extend([
             "",
-            f"📄 *Download PDF Brochure:*",
-            f"{catalog.pdf_brochure_url}"
+            f"📄 *Official PDF Brochure (Direct Download):*",
+            f"👉 {pdf_full_url}"
         ])
 
     if payload.custom_note:
@@ -1413,10 +1472,96 @@ def dispatch_catalog_whatsapp(
         "success": True,
         "send_id": lead_send.id,
         "share_ref_code": share_ref_code,
+        "short_catalog_url": short_catalog_url,
         "web_catalog_url": web_catalog_url,
         "wa_me_url": wa_me_url,
         "delivery_status": lead_send.status,
         "whatsapp_api_result": wa_result
+    }
+
+
+class CatalogLogDispatchPayload(BaseModel):
+    recipient_phone: str
+    recipient_name: Optional[str] = None
+    language_code: Optional[str] = "te"
+    delivery_channel: Optional[str] = "whatsapp"
+    delivery_method: Optional[str] = "web_link"
+    lead_id: Optional[int] = None
+    partner_id: Optional[int] = None
+    share_ref_code: Optional[str] = None
+    status: Optional[str] = "sent"
+    whatsapp_message_id: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@router.post("/{catalog_id}/log-dispatch")
+def log_external_catalog_dispatch(
+    catalog_id: int,
+    payload: CatalogLogDispatchPayload,
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Logs an external catalog dispatch (e.g. from Universal WhatsApp Modal via Scanned Bot, Official API, or Direct WA)
+    into the immutable CatalogLeadSend ledger to keep telemetry, statistics, and dispatch history 100% accurate.
+    """
+    catalog = db.query(DigitalCatalog).filter(DigitalCatalog.id == catalog_id).first()
+    if not catalog:
+        raise HTTPException(status_code=404, detail="Catalog not found")
+
+    clean_digits = re.sub(r'\D', '', payload.recipient_phone)
+    if len(clean_digits) == 10:
+        full_phone = f"91{clean_digits}"
+    elif len(clean_digits) == 12 and clean_digits.startswith('91'):
+        full_phone = clean_digits
+    else:
+        full_phone = clean_digits
+
+    ref_code = payload.share_ref_code or uuid.uuid4().hex[:16]
+
+    lead_send = CatalogLeadSend(
+        catalog_id=catalog.id,
+        lead_id=payload.lead_id,
+        company_id=getattr(current_user, 'company_id', 4) or 4,
+        staff_id=current_user.id,
+        recipient_phone=full_phone,
+        recipient_name=payload.recipient_name or "Valued Customer",
+        language_code=payload.language_code or "te",
+        delivery_channel=payload.delivery_channel or "whatsapp",
+        delivery_method=payload.delivery_method or "web_link",
+        share_ref_code=ref_code,
+        whatsapp_message_id=payload.whatsapp_message_id,
+        status=payload.status or "sent",
+        view_count=0,
+        sent_at=get_indian_time()
+    )
+    db.add(lead_send)
+    db.commit()
+    db.refresh(lead_send)
+
+    if payload.lead_id:
+        try:
+            crm_note = CRMLeadNote(
+                lead_id=payload.lead_id,
+                note=(
+                    f"📱 Digital Catalog Dispatched [{catalog.title}]\n"
+                    f"Channel: {payload.delivery_channel} | Language: {payload.language_code}\n"
+                    f"Status: {lead_send.status}"
+                ),
+                created_by_id=current_user.emp_code if hasattr(current_user, 'emp_code') else str(current_user.id),
+                created_by_type="staff",
+                created_at=get_indian_time()
+            )
+            db.add(crm_note)
+            db.commit()
+        except Exception:
+            pass
+
+    return {
+        "success": True,
+        "send_id": lead_send.id,
+        "share_ref_code": ref_code,
+        "status": lead_send.status
     }
 
 

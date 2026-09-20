@@ -115,6 +115,20 @@ class Settings(BaseSettings):
     PLIVO_APP_ID: Optional[str] = os.getenv("PLIVO_APP_ID", "10583407997011554")
     PLIVO_DEFAULT_CALLER_ID: str = os.getenv("PLIVO_DEFAULT_CALLER_ID", "+918031728899")
 
+    # ── Mobile VoIP Push Signaling (Screen-Off Calling Phase 2) ──
+    ENABLE_MOBILE_VOIP_PUSH: bool = os.getenv("ENABLE_MOBILE_VOIP_PUSH", "true").lower() == "true"
+    FCM_PROJECT_ID: Optional[str] = os.getenv("FCM_PROJECT_ID", "myntrealosg")
+    FCM_SERVICE_ACCOUNT_JSON: Optional[str] = os.getenv(
+        "FCM_SERVICE_ACCOUNT_JSON",
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "firebase-service-account.json"))
+        if os.path.exists(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "firebase-service-account.json")))
+        else None
+    )
+    APNS_KEY_ID: Optional[str] = os.getenv("APNS_KEY_ID")
+    APNS_TEAM_ID: Optional[str] = os.getenv("APNS_TEAM_ID")
+    APNS_AUTH_KEY_PATH: Optional[str] = os.getenv("APNS_AUTH_KEY_PATH")
+    APNS_USE_SANDBOX: bool = os.getenv("APNS_USE_SANDBOX", "true").lower() == "true"
+
     # ── WhatsApp API Centralized Business Contact Numbers & Signature Settings ──
     WHATSAPP_PRIMARY_BUSINESS_NUMBER: str = os.getenv("WHATSAPP_PRIMARY_BUSINESS_NUMBER", "+91 85858 52738")
     WHATSAPP_SECONDARY_BUSINESS_NUMBER: str = os.getenv("WHATSAPP_SECONDARY_BUSINESS_NUMBER", "+91 8897797667")

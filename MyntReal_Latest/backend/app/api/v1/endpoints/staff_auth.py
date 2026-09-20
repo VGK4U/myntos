@@ -22,6 +22,7 @@ from app.models.staff import (
 )
 from app.models.staff_accounts import AssociatedCompany
 from app.models.mobile_device_session import MobileDeviceSession
+from app.models.mobile_device_push_token import MobileDevicePushToken
 from app.core.timezone import get_indian_time
 
 router = APIRouter(prefix="/staff", tags=["Staff Auth"])
@@ -1220,6 +1221,22 @@ async def refresh_staff_mobile_session(
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
 
+    employee_data = employee.to_dict()
+    try:
+        from app.services.auth_context_service import resolve_staff_memberships
+        acc_cids, prim_cid = resolve_staff_memberships(db, employee.id, getattr(employee, "tenant_id", 1) or 1)
+        employee_data["accessible_company_ids"] = acc_cids
+        employee_data["primary_company_id"] = prim_cid
+    except Exception:
+        pass
+    try:
+        from app.services.telephony.flow_interpreter import CallFlowInterpreter
+        employee_data["extension"] = CallFlowInterpreter.get_staff_configured_extension(
+            db, employee.base_company_id or 1, employee.id
+        )
+    except Exception:
+        employee_data["extension"] = None
+
     db.commit()
 
     return {
@@ -1228,7 +1245,7 @@ async def refresh_staff_mobile_session(
         "refresh_token": new_refresh_token,
         "token_type": "bearer",
         "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        "employee": employee.to_dict()
+        "employee": employee_data
     }
 
 
@@ -1264,11 +1281,20 @@ async def revoke_staff_mobile_session(
             db.query(MobileDeviceSession).filter_by(
                 staff_id=staff_id_to_revoke
             ).update({"is_revoked": True})
+            db.query(MobileDevicePushToken).filter_by(
+                staff_id=staff_id_to_revoke
+            ).update({"is_active": False})
     elif clean_token:
         h = hashlib.sha256(clean_token.encode()).hexdigest()
+        sess = db.query(MobileDeviceSession).filter_by(refresh_token_hash=h).first()
+        if sess:
+            db.query(MobileDevicePushToken).filter_by(
+                staff_id=sess.staff_id, device_id=sess.device_id
+            ).update({"is_active": False})
         db.query(MobileDeviceSession).filter_by(refresh_token_hash=h).update({"is_revoked": True})
     elif clean_device:
         db.query(MobileDeviceSession).filter_by(device_id=clean_device).update({"is_revoked": True})
+        db.query(MobileDevicePushToken).filter_by(device_id=clean_device).update({"is_active": False})
 
     db.commit()
     return {"success": True, "message": "Mobile session revoked successfully."}

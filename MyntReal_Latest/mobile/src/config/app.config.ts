@@ -113,10 +113,10 @@ function getWsBaseUrl(): string {
 }
 
 export const APP_CONFIG = {
-  VERSION: '1.0.1',
-  BUILD_NUMBER: 1,
-  BUILD_DATE: '2026-08-30',
-  MIN_SUPPORTED_VERSION: '1.0.0',
+  VERSION: '2.4.17',
+  BUILD_NUMBER: 17,
+  BUILD_DATE: '2026-09-20',
+  MIN_SUPPORTED_VERSION: '2.4.0',
   
   get DOMAIN() { return getCurrentDomain(); },
   get BASE_SERVER_URL() { return getBaseServerUrl(); },

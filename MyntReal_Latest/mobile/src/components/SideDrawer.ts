@@ -53,16 +53,16 @@ const ROUTE_PATH_MAP: Record<string, string> = {
   '/staff/lead-sources': 'staff-lead-sources',
   '/staff/bank-wise-leads': 'staff-bank-wise-leads',
   '/staff/crm/bank-wise-leads': 'staff-bank-wise-leads',
-  '/staff/solar-leads': 'staff-leads',
-  '/staff/real-dreams-leads': 'zynova-real-estate',
-  '/staff/insurance-leads': 'zynova-insurance',
-  '/staff/ev-b2b-leads': 'staff-leads',
-  '/staff/ev-b2c-leads': 'staff-leads',
-  '/staff/ev-spares-leads': 'staff-leads',
-  '/staff/etc-leads': 'staff-training-videos',
-  '/staff/mnr-leads': 'staff-leads',
-  '/staff/mnr-leads-master': 'staff-leads',
-  '/staff/executive-dashboard': 'dashboard',
+  '/staff/solar-leads': 'category-leads-master',
+  '/staff/real-dreams-leads': 'category-leads-master',
+  '/staff/insurance-leads': 'category-leads-master',
+  '/staff/ev-b2b-leads': 'category-leads-master',
+  '/staff/ev-b2c-leads': 'category-leads-master',
+  '/staff/ev-spares-leads': 'category-leads-master',
+  '/staff/etc-leads': 'category-leads-master',
+  '/staff/mnr-leads': 'category-leads-master',
+  '/staff/mnr-leads-master': 'category-leads-master',
+  '/staff/executive-dashboard': 'executive-dashboard',
   '/staff/crm/whatsapp-inbox': 'staff-whatsapp',
   '/staff/crm/wa-inbox': 'staff-whatsapp',
   '/staff/whatsapp': 'staff-whatsapp',
@@ -73,6 +73,12 @@ const ROUTE_PATH_MAP: Record<string, string> = {
   '/staff/configuration/catalog': 'digital-catalog',
   '/staff/catalog-library': 'digital-catalog',
   '/staff/catalog': 'digital-catalog',
+  '/catalog-library': 'digital-catalog',
+  'catalog-library': 'digital-catalog',
+  '/staff/catalog-library.html': 'digital-catalog',
+  '/catalog-library.html': 'digital-catalog',
+  '/catalog': 'digital-catalog',
+  'catalog': 'digital-catalog',
   
   '/staff/call-tracking': 'staff-call-tracking',
   '/staff/vendors': 'staff-vendors',
@@ -258,17 +264,17 @@ const MENU_MASTER: MenuSection[] = [
     section_label: "WORK FLOWS",
     order: 10,
     items: [
+      { menu_code: "EXECUTIVE_DASHBOARD", label: "Executive Dashboard", route: "executive-dashboard" },
       { menu_code: "MNR_BANK_WISE_LEADS", label: "Field Sales", route: "staff-bank-wise-leads" },
-      { menu_code: "SOLAR_LEADS", label: "Solar Leads", route: "staff-leads" },
-      { menu_code: "ZYN_REAL_ESTATE", label: "Real Dreams Leads", route: "zynova-real-estate" },
-      { menu_code: "EV_B2B_LEADS", label: "EV B2B Leads", route: "staff-leads" },
-      { menu_code: "EV_B2C_LEADS", label: "EV B2C Leads", route: "staff-leads" },
-      { menu_code: "EV_SPARES_LEADS", label: "EV Spares Leads", route: "staff-leads" },
-      { menu_code: "ZYN_INSURANCE", label: "Insurance Leads", route: "zynova-insurance" },
-      { menu_code: "ETC_LEADS", label: "ETC Leads", route: "staff-training-videos" },
-      { menu_code: "MNR_LEADS", label: "MNR Leads", route: "staff-leads" },
-      { menu_code: "EXECUTIVE_DASHBOARD", label: "Executive Dashboard", route: "dashboard" },
-      { menu_code: "CATEGORY_LEADS_MASTER", label: "Category Leads Master", route: "staff-leads" }
+      { menu_code: "CATEGORY_LEADS_MASTER", label: "Category Leads Master", route: "category-leads-master" },
+      { menu_code: "SOLAR_LEADS", label: "Solar Leads", route: "category-leads-master", tab: "solar" },
+      { menu_code: "EV_B2B_LEADS", label: "EV B2B Leads", route: "category-leads-master", tab: "ev-b2b" },
+      { menu_code: "EV_B2C_LEADS", label: "EV B2C Leads", route: "category-leads-master", tab: "ev-b2c" },
+      { menu_code: "EV_SPARES_LEADS", label: "EV Spares Leads", route: "category-leads-master", tab: "ev-spares" },
+      { menu_code: "ZYN_REAL_ESTATE", label: "Real Dreams Leads", route: "category-leads-master", tab: "real-dreams" },
+      { menu_code: "ZYN_INSURANCE", label: "Insurance Leads", route: "category-leads-master", tab: "insurance" },
+      { menu_code: "ETC_LEADS", label: "ETC Leads", route: "category-leads-master", tab: "etc" },
+      { menu_code: "MNR_LEADS", label: "MNR Leads", route: "category-leads-master", tab: "mnr" }
     ]
   },
   {
@@ -498,7 +504,7 @@ export class SideDrawer {
 
   private renderMenuItem(item: MenuItem): string {
     return `
-      <a class="drawer-menu-item" data-route="${item.route}">
+      <a class="drawer-menu-item" data-route="${item.route}"${item.tab ? ` data-tab="${item.tab}"` : ''}>
         <span class="menu-label">${item.label}</span>
       </a>
     `;
@@ -689,6 +695,7 @@ export class SideDrawer {
 
     const WORKFLOWS_ORDER: Record<string, number> = {
       'EXECUTIVE_DASHBOARD': 1,
+      'MNR_EXECUTIVE_DASHBOARD': 1,
       'staff_executive_dashboard': 1,
       'mnr_executive_dashboard': 1,
 
@@ -697,34 +704,42 @@ export class SideDrawer {
       'staff_bank_wise_leads': 2,
 
       'CATEGORY_LEADS_MASTER': 3,
+      'MNR_LEADS_MASTER': 3,
       'mnr_leads_master': 3,
       'staff_mnr_leads_master': 3,
 
       'SOLAR_LEADS': 4,
+      'MNR_SOLAR_LEADS': 4,
       'staff_solar_leads': 4,
       'mnr_solar_leads': 4,
 
       'EV_B2B_LEADS': 5,
+      'MNR_EV_B2B_LEADS': 5,
       'staff_ev_b2b_leads': 5,
       'mnr_ev_b2b_leads': 5,
 
       'EV_B2C_LEADS': 6,
+      'MNR_EV_B2C_LEADS': 6,
       'staff_ev_b2c_leads': 6,
       'mnr_ev_b2c_leads': 6,
 
       'EV_SPARES_LEADS': 7,
+      'MNR_EV_SPARES_LEADS': 7,
       'staff_ev_spares_leads': 7,
       'mnr_ev_spares_leads': 7,
 
       'ZYN_REAL_ESTATE': 8,
+      'MNR_REAL_DREAMS_LEADS': 8,
       'staff_real_dreams_leads': 8,
       'mnr_real_dreams_leads': 8,
 
       'ZYN_INSURANCE': 9,
+      'MNR_INSURANCE_LEADS': 9,
       'staff_insurance_leads': 9,
       'mnr_insurance_leads': 9,
 
       'ETC_LEADS': 10,
+      'MNR_ETC_LEADS': 10,
       'staff_etc_leads': 10,
       'mnr_etc_leads': 10,
 
@@ -792,7 +807,14 @@ export class SideDrawer {
     const sectionOrderList: string[] = [];
 
     const formatMenuItem = (rawCode: string, rawName: string, rawRoutePath: string, rawIcon?: string): MenuItem | null => {
-      const route = ROUTE_PATH_MAP[rawRoutePath] || ROUTE_PATH_MAP[rawRoutePath?.replace(/\/$/, '')] || (rawRoutePath ? rawRoutePath.replace(/^\/staff\//, '').replace(/\//g, '-') : null);
+      let route = ROUTE_PATH_MAP[rawRoutePath] || ROUTE_PATH_MAP[rawRoutePath?.replace(/\/$/, '')] || (rawRoutePath ? rawRoutePath.replace(/^\/staff\//, '').replace(/\//g, '-') : null);
+      const codeUpper = (rawCode || '').toUpperCase();
+      const routeLower = (rawRoutePath || '').toLowerCase();
+
+      if (codeUpper.includes('CATALOG') || routeLower.includes('catalog')) {
+        route = 'digital-catalog';
+      }
+
       if (!route) return null;
 
       // DC Protocol: Remove access to Staff Leads page (/staff/leads) for Anusha, Anushka, Hema, Nandana, Poojitha
@@ -809,35 +831,57 @@ export class SideDrawer {
       if (!label || label === 'None' || label.trim() === '') {
         label = (rawCode || '').replace(/^staff_|^_staff_|^mnr_/i, '').replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
       }
-      const codeUpper = (rawCode || '').toUpperCase();
-      const routeLower = (rawRoutePath || '').toLowerCase();
 
       if (codeUpper.includes('AUTO_DIALER') || routeLower.includes('auto-dialer') || routeLower === '/staff/dialer' || codeUpper === 'STAFF_AUTO_DIALER' || codeUpper === 'AUTO_DIALER' || codeUpper === 'STAFF_DIALER' || codeUpper === 'DIALER') {
         label = 'Auto Dialer';
       } else if (codeUpper.includes('BANK_WISE_LEADS') || routeLower.includes('bank-wise-leads')) {
-        label = 'Field staff leads';
+        label = 'Field Sales';
       } else if (codeUpper.includes('REAL_DREAMS') || routeLower.includes('real-dreams-leads')) {
         label = 'Real Dreams Leads';
       } else if (codeUpper.includes('ETC_LEADS') || routeLower.includes('etc-leads')) {
         label = 'ETC Training Students';
       } else if (codeUpper.includes('CATEGORY_LEADS_MASTER') || codeUpper.includes('MNR_LEADS_MASTER') || routeLower.includes('mnr-leads-master')) {
         label = 'Category Lead Master';
+      } else if (codeUpper.includes('EXECUTIVE_DASHBOARD') || routeLower.includes('executive-dashboard')) {
+        label = 'Executive Dashboard';
       } else if (codeUpper.includes('WHATSAPP') || routeLower.includes('whatsapp')) {
         label = 'WhatsApp Center';
       } else if (codeUpper.includes('SOFTPHONE') || codeUpper === 'PHONE_DIALPAD' || codeUpper === 'CALLING_PAGE' || routeLower.includes('softphone') || routeLower.includes('calling') || routeLower.includes('phone-dialpad')) {
         label = 'Calling & Softphone';
       } else if (codeUpper.includes('VGK_TEAM_MEMBERS') || codeUpper === 'STAFF_VGK_MEMBERS' || routeLower.includes('vgk/members')) {
         label = 'VGK Channel Partners';
+      } else if (codeUpper.includes('CATALOG') || routeLower.includes('catalog')) {
+        label = 'Digital Catalog';
       }
 
-      const iconClass = rawIcon || (label.includes('WhatsApp') ? 'fab fa-whatsapp' : label.includes('Auto Dialer') ? 'fas fa-phone-volume' : label.includes('Softphone') || label.includes('Calling') ? 'fas fa-headset' : label.includes('VGK') || label.includes('Channel') ? 'fas fa-users' : label.includes('Field') ? 'fas fa-users-gear' : 'fas fa-file-alt');
-      const iconColor = label.includes('WhatsApp') ? 'color: #25d366;' : (label.includes('Auto Dialer') || label.includes('Softphone') || label.includes('Calling')) ? 'color: #38bdf8;' : (label.includes('VGK') || label.includes('Channel')) ? 'color: #7c3aed;' : '';
+      let tab: string | undefined = undefined;
+      if (codeUpper.includes('SOLAR_LEADS') || routeLower.includes('solar-leads')) {
+        tab = 'solar';
+      } else if (codeUpper.includes('EV_B2B') || routeLower.includes('ev-b2b')) {
+        tab = 'ev-b2b';
+      } else if (codeUpper.includes('EV_B2C') || routeLower.includes('ev-b2c')) {
+        tab = 'ev-b2c';
+      } else if (codeUpper.includes('EV_SPARES') || routeLower.includes('ev-spares')) {
+        tab = 'ev-spares';
+      } else if (codeUpper.includes('REAL_DREAMS') || codeUpper.includes('ZYN_REAL_ESTATE') || routeLower.includes('real-dreams-leads')) {
+        tab = 'real-dreams';
+      } else if (codeUpper.includes('INSURANCE') || codeUpper.includes('ZYN_INSURANCE') || routeLower.includes('insurance-leads')) {
+        tab = 'insurance';
+      } else if (codeUpper.includes('ETC_LEADS') || routeLower.includes('etc-leads')) {
+        tab = 'etc';
+      } else if (codeUpper.includes('MNR_LEADS') || routeLower.includes('mnr-leads')) {
+        tab = 'mnr';
+      }
+
+      const iconClass = rawIcon || (label.includes('WhatsApp') ? 'fab fa-whatsapp' : label.includes('Auto Dialer') ? 'fas fa-phone-volume' : label.includes('Softphone') || label.includes('Calling') ? 'fas fa-headset' : label.includes('VGK') || label.includes('Channel') ? 'fas fa-users' : (label.includes('Field') || label.includes('Sales')) ? 'fas fa-users-gear' : (label.includes('Catalog') ? 'fas fa-book-open' : 'fas fa-file-alt'));
+      const iconColor = label.includes('WhatsApp') ? 'color: #25d366;' : (label.includes('Auto Dialer') || label.includes('Softphone') || label.includes('Calling')) ? 'color: #38bdf8;' : (label.includes('VGK') || label.includes('Channel')) ? 'color: #7c3aed;' : (label.includes('Catalog') ? 'color: #10b981;' : '');
       const iconHtml = `<i class="${iconClass}" style="margin-right: 8px; width: 18px; text-align: center; ${iconColor}"></i>`;
 
       return {
         menu_code: rawCode,
         label: `${iconHtml}${label}`,
-        route: route
+        route: route,
+        tab: tab
       };
     };
 

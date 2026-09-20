@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "529282095458",
+    "project_id": "myntrealosg",
+    "storage_bucket": "myntrealosg.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:529282095458:android:07a1b154a8e656ba4a343b",
+        "android_client_info": {
+          "package_name": "com.myntos.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD-Mjn-REaqxkGdNtJPJyIAkJ28rlYUofc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -7,6 +7,7 @@
 import { apiService } from '../services/api.service';
 import { PageHeader } from '../components/PageHeader';
 import { routerService } from '../services/router.service';
+import { APP_CONFIG } from '../config/app.config';
 
 interface BillingRecord {
   id: number;
@@ -547,7 +548,7 @@ export class ServiceRevenuePage {
     if (!this.selectedBilling) return;
 
     try {
-      window.open(`/api/v1/tickets/service/billing/${this.selectedBilling.id}/pdf`, '_blank');
+      window.open(`${APP_CONFIG.BASE_SERVER_URL}/api/v1/tickets/service/billing/${this.selectedBilling.id}/pdf`, '_blank');
       this.showToast('Opening PDF...');
     } catch (error: any) {
       this.showToast(error.message || 'Failed to download PDF', 'error');

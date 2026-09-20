@@ -1292,7 +1292,8 @@ export class LoginPage {
     modal.className = 'share-modal';
     modal.id = 'shareModal';
 
-    const shareUrl = `${window.location.origin}/announcements/${announcement.id}`;
+    const origin = (!window.location.origin || window.location.origin.includes('localhost') || window.location.origin.includes('capacitor')) ? APP_CONFIG.BASE_SERVER_URL : window.location.origin;
+    const shareUrl = `${origin}/announcements/${announcement.id}`;
     const shareText = `Check out: ${announcement.title}`;
 
     modal.innerHTML = `

@@ -5,6 +5,7 @@
 
 import { apiService } from '../services/api.service';
 import { portalService } from '../services/portal.service';
+import { APP_CONFIG } from '../config/app.config';
 
 interface VGKMessage {
   role: 'user' | 'assistant';
@@ -28,10 +29,8 @@ export class VGKMobileAssistant {
   }
 
   private getEndpoint(): string {
-    const portal = portalService.getPortal();
-    if (portal === 'partner') return '/api/v1/ai/command/process';
-    if (portal === 'staff') return '/api/v1/ai/command/process';
-    return '/api/v1/ai/command/process';
+    const base = APP_CONFIG.BASE_SERVER_URL;
+    return `${base}/api/v1/ai/command/process`;
   }
 
   private render() {

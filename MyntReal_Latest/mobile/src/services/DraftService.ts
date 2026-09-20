@@ -1,3 +1,5 @@
+import { APP_CONFIG } from '../config/app.config';
+
 // DC Draft Manager — Mobile (DC-DRAFT-001)
 // Mirrors web draft-manager: localStorage + backend sync every 30s + beforeunload.
 
@@ -5,7 +7,7 @@ const STORAGE_PREFIX = 'dc_draft_v1_';
 const SYNC_INTERVAL_MS = 30000;
 const DEBOUNCE_MS = 1500;
 const TTL_DAYS = 7;
-const API_BASE = '/api/v1/drafts';
+const getApiBase = () => `${APP_CONFIG.BASE_SERVER_URL}/api/v1/drafts`;
 
 interface DraftEntry {
   data: Record<string, unknown>;
@@ -60,7 +62,7 @@ class DraftServiceClass {
     try {
       const data = this._getDataFn();
       if (!data || Object.keys(data).length === 0) return;
-      await fetch(`${API_BASE}/${encodeURIComponent(this._key)}`, {
+      await fetch(`${getApiBase()}/${encodeURIComponent(this._key)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ draft_data: JSON.stringify(data), page_url: window.location.pathname }),
@@ -73,7 +75,7 @@ class DraftServiceClass {
     const token = this._getToken();
     if (!token || !this._key) return null;
     try {
-      const r = await fetch(`${API_BASE}/${encodeURIComponent(this._key)}`, {
+      const r = await fetch(`${getApiBase()}/${encodeURIComponent(this._key)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!r.ok) return null;
@@ -87,7 +89,7 @@ class DraftServiceClass {
     try { localStorage.removeItem(STORAGE_PREFIX + this._key); } catch (_) {}
     const token = this._getToken();
     if (token) {
-      fetch(`${API_BASE}/${encodeURIComponent(this._key)}`, {
+      fetch(`${getApiBase()}/${encodeURIComponent(this._key)}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
         keepalive: true,

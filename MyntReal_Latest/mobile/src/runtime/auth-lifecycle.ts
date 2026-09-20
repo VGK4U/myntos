@@ -8,6 +8,7 @@
 
 import { App, AppState } from '@capacitor/app';
 import { Preferences } from '@capacitor/preferences';
+import { APP_CONFIG } from '../config/app.config';
 
 interface AuthToken {
   token: string;
@@ -162,7 +163,12 @@ class AuthLifecycle {
       const { value: token } = await Preferences.get({ key: this.options.tokenKey });
       if (!token) return false;
 
-      const response = await fetch(this.options.refreshEndpoint, {
+      let endpoint = this.options.refreshEndpoint;
+      if (!endpoint.startsWith('http://') && !endpoint.startsWith('https://')) {
+        endpoint = endpoint.startsWith('/') ? `${APP_CONFIG.BASE_SERVER_URL}${endpoint}` : `${APP_CONFIG.BASE_SERVER_URL}/${endpoint}`;
+      }
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

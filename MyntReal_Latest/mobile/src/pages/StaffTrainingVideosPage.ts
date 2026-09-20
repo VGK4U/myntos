@@ -7,6 +7,7 @@
 
 import { apiService } from '../services/api.service';
 import { PageHeader } from '../components/PageHeader';
+import { APP_CONFIG } from '../config/app.config';
 
 interface TrainingVideo {
   id: number;
@@ -194,7 +195,8 @@ export class StaffTrainingVideosPage {
     const ratio = v.is_short ? 'portrait' : 'landscape';
 
     // enablejsapi=1 enables postMessage events for completion detection
-    const embedSrc = `https://www.youtube.com/embed/${v.youtube_video_id}?rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`;
+    const safeOrigin = APP_CONFIG.isNativeApp() ? APP_CONFIG.BASE_SERVER_URL : (window.location.origin || APP_CONFIG.BASE_SERVER_URL);
+    const embedSrc = `https://www.youtube.com/embed/${v.youtube_video_id}?rel=0&modestbranding=1&enablejsapi=1&origin=${encodeURIComponent(safeOrigin)}`;
 
     const footer = done
       ? `<span class="tv-done-label">✅ Completed</span><span></span>`

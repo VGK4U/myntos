@@ -3,7 +3,18 @@ import AVFoundation
 import Capacitor
 
 @objc(AudioRoutingPlugin)
-public class AudioRoutingPlugin: CAPPlugin {
+public class AudioRoutingPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "AudioRoutingPlugin"
+    public let jsName = "AudioRouting"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "setSpeakerphoneOn", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "isSpeakerphoneOn", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "resetAudioMode", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setMediaPlaybackMode", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "startInCallService", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stopInCallService", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getAudioDiagnostics", returnType: CAPPluginReturnPromise)
+    ]
 
     @objc func setSpeakerphoneOn(_ call: CAPPluginCall) {
         let enabled = call.getBool("enabled") ?? false
@@ -49,12 +60,34 @@ public class AudioRoutingPlugin: CAPPlugin {
     @objc func resetAudioMode(_ call: CAPPluginCall) {
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.overrideOutputAudioPort(.none)
+            try session.setCategory(.playback, mode: .default, options: [])
+            try? session.overrideOutputAudioPort(.speaker)
+            try session.setActive(true)
+            NSLog("[AudioRoutingPlugin] iOS resetAudioMode: routed to loud speaker")
             call.resolve([
-                "success": true
+                "success": true,
+                "deviceRoute": "BUILTIN_SPEAKER"
             ])
         } catch {
+            NSLog("[AudioRoutingPlugin] Failed to reset audio mode: \(error.localizedDescription)")
             call.reject("Failed to reset audio mode: \(error.localizedDescription)")
+        }
+    }
+
+    @objc func setMediaPlaybackMode(_ call: CAPPluginCall) {
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default, options: [])
+            try? session.overrideOutputAudioPort(.speaker)
+            try session.setActive(true)
+            NSLog("[AudioRoutingPlugin] iOS setMediaPlaybackMode: routed to loud speaker")
+            call.resolve([
+                "success": true,
+                "deviceRoute": "BUILTIN_SPEAKER"
+            ])
+        } catch {
+            NSLog("[AudioRoutingPlugin] Failed to set media playback mode: \(error.localizedDescription)")
+            call.reject("Failed to set media playback mode: \(error.localizedDescription)")
         }
     }
 

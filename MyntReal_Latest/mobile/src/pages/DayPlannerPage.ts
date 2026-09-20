@@ -1,6 +1,7 @@
 import { apiService } from '../services/api.service';
 import { PageHeader } from '../components/PageHeader';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
+import { APP_CONFIG } from '../config/app.config';
 
 interface PlanItem {
   id: number;
@@ -1359,7 +1360,7 @@ export class DayPlannerPage {
               try {
                 const formData = new FormData();
                 formData.append('file', file);
-                await fetch(`/api/v1/staff/tasks/${newTaskId}/attachments`, {
+                await fetch(`${APP_CONFIG.BASE_SERVER_URL}/api/v1/staff/tasks/${newTaskId}/attachments`, {
                   method: 'POST',
                   headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token')}` },
                   body: formData

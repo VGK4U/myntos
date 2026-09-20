@@ -16602,11 +16602,11 @@ def seed_bank_wise_leads_menu():
                     display_order, audience_scope, source, source_file, is_default_visible, is_default_accessible,
                     is_active, sidebar_section, sidebar_section_title, sidebar_section_order, menu_type
                 ) VALUES (
-                    'MNR_BANK_WISE_LEADS', 'Field staff leads', '/staff/bank-wise-leads', 'MYNT_REAL',
+                    'MNR_BANK_WISE_LEADS', 'Field Sales', '/staff/bank-wise-leads', 'MYNT_REAL',
                     'fas fa-users-gear', 2, 'staff', 'system', 'menu-master.js', true, true,
-                    true, 'MYNT_REAL', 'MYNTREAL', 20, 'STAFF'
+                    true, 'MYNT_REAL', 'WORKFLOWS', 20, 'STAFF'
                 ) ON CONFLICT (menu_code) DO UPDATE SET
-                    menu_name = 'Field staff leads',
+                    menu_name = 'Field Sales',
                     menu_icon = 'fas fa-users-gear',
                     is_default_visible = true,
                     is_default_accessible = true,
@@ -16617,7 +16617,7 @@ def seed_bank_wise_leads_menu():
             if menu_id:
                 already_seeded = conn.execute(text("SELECT 1 FROM staff_employee_menu_settings WHERE menu_id = :mid LIMIT 1"), {"mid": menu_id}).scalar()
                 if not already_seeded:
-                    conn.execute(text("UPDATE staff_menu_master SET menu_name = 'Field staff leads', is_active = true, is_default_visible = true, is_default_accessible = true WHERE menu_code = 'MNR_BANK_WISE_LEADS'"))
+                    conn.execute(text("UPDATE staff_menu_master SET menu_name = 'Field Sales', is_active = true, is_default_visible = true, is_default_accessible = true WHERE menu_code = 'MNR_BANK_WISE_LEADS'"))
                     for cid in (1, 2, 3, 4, 5):
                         conn.execute(text("""
                             INSERT INTO staff_employee_menu_settings (company_id, employee_id, menu_id, can_view, can_edit, is_overridden)

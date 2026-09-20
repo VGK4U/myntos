@@ -11,6 +11,7 @@
     <script src="/public/js/nda-enforcement.js"></script>
     <script src="/public/js/plivo-softphone.js?v=20260906_fix"></script>
     <script src="/public/js/wa-lead-modal.js?v=20260918"></script>
+    <script src="/public/js/softphone-crm-lead-modal.js?v=20260919"></script>
     <style>
         /* High Contrast Theme & Visibility Fixes */
         :root {
@@ -2363,6 +2364,14 @@
                                     <span class="d-none d-sm-inline small">WA</span>
                                 </button>
                             ` : ''}
+                            ${(c.effective_lead_id || c.crm_lead_id) ? `
+                                <button class="btn btn-outline-warning btn-sm px-2.5 py-1 fw-semibold d-flex align-items-center gap-1 shadow-sm" 
+                                        onclick="openSoftphoneCRMLeadModal('${escapeHtml(c.effective_lead_id || c.crm_lead_id)}', '${cleanPhone}', '${name.replace(/'/g, "\\'")}', '${escapeHtml(c.company_id || '')}')" 
+                                        title="Open CRM Lead details & updates for ${name}">
+                                    <i class="fa-solid fa-address-card text-warning fs-6"></i>
+                                    <span class="d-none d-sm-inline small">CRM</span>
+                                </button>
+                            ` : ''}
                             <button class="btn btn-outline-info btn-sm rounded-circle p-2" onclick="openCustomerHistory('${cleanPhone}', '${name.replace(/'/g, "\\'")}')" title="View Customer History" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;">
                                 <i class="fa-solid fa-clock-rotate-left"></i>
                             </button>
@@ -2911,6 +2920,17 @@
                                             <i class="fa-solid fa-phone-slash"></i> Dial
                                         </button>
                                     `}
+                                    ${safeLeadId ? `
+                                        <button class="btn btn-outline-warning btn-sm btn-action-sm px-2 py-1" 
+                                                data-lead-id="${escapeHtml(safeLeadId)}"
+                                                data-phone="${escapeHtml(cleanPhoneNum)}" 
+                                                data-name="${escapeHtml(safeCustName)}" 
+                                                data-company-id="${escapeHtml(c.company_id || '')}"
+                                                onclick="openSoftphoneCRMLeadModal(this.getAttribute('data-lead-id'), this.getAttribute('data-phone'), this.getAttribute('data-name'), this.getAttribute('data-company-id'))"
+                                                title="Open CRM Lead details & update status/comments for ${escapeHtml(safeCustName)}">
+                                            <i class="fa-solid fa-address-card"></i> CRM
+                                        </button>
+                                    ` : ''}
                                     <button class="btn btn-outline-info btn-sm btn-action-sm px-2 py-1" 
                                             data-phone="${escapeHtml(cleanPhoneNum)}" 
                                             data-name="${escapeHtml(safeCustName)}" 
@@ -3274,6 +3294,12 @@
                                 onclick="openLeadWAModal('${escapeHtml(leadId)}', '${escapeHtml(cleanPhone)}', '${escapeHtml(custName)}', '${escapeHtml(companyId)}')">
                             <i class="fab fa-whatsapp me-1"></i> Send WhatsApp
                         </button>
+                        ${leadId ? `
+                            <button class="btn btn-outline-warning btn-sm flex-fill fw-semibold py-1.5" 
+                                    onclick="openSoftphoneCRMLeadModal('${escapeHtml(leadId)}', '${escapeHtml(cleanPhone)}', '${escapeHtml(custName)}', '${escapeHtml(companyId)}')">
+                                <i class="fa-solid fa-address-card me-1"></i> CRM Lead
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             `;
@@ -3865,6 +3891,14 @@
                                         title="Send WhatsApp to ${name}" 
                                         style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;">
                                     <i class="fab fa-whatsapp"></i>
+                                </button>
+                            ` : ''}
+                            ${leadId ? `
+                                <button class="btn btn-outline-warning btn-sm rounded-circle p-2" 
+                                        onclick="openSoftphoneCRMLeadModal('${escapeHtml(leadId)}', '${cleanPhone}', '${name.replace(/'/g, "\\'")}', '${escapeHtml(c.company_id || '')}')" 
+                                        title="Open CRM Lead details for ${name}" 
+                                        style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;">
+                                    <i class="fa-solid fa-address-card"></i>
                                 </button>
                             ` : ''}
                             <button class="btn btn-outline-info btn-sm rounded-circle p-2" onclick="openCustomerHistory('${cleanPhone}', '${name.replace(/'/g, "\\'")}')" title="View Customer History" style="width:34px;height:34px;display:flex;align-items:center;justify-content:center;">

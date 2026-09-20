@@ -30709,6 +30709,19 @@ async function processAction(id, action){
       res.end(data);
     });
 
+  } else if (url.startsWith('/c/') || url === '/c') {
+    // Short catalog link redirect: /c/{share_ref_code}
+    const cleanRef = url.split('?')[0].replace(/^\/c\/?/, '').trim();
+    if (!cleanRef) {
+      res.writeHead(302, { 'Location': '/catalog/solar/commercial-residential-solar' });
+      res.end();
+      return;
+    }
+    const qs = url.includes('?') ? url.substring(url.indexOf('?')) : '';
+    res.writeHead(307, { 'Location': `/api/v1/digital-catalogs/c/${encodeURIComponent(cleanRef)}${qs}` });
+    res.end();
+    return;
+
   } else if (url.startsWith('/catalog/') || url.toLowerCase() === '/catalog' || url.toLowerCase().startsWith('/catalog?') || url.toLowerCase() === '/mnrcatalog' || url.toLowerCase().startsWith('/mnrcatalog?')) {
     // Single-Page Digital Catalog Platform (Public Interactive Web Catalog — no auth required)
     const isLegacy = url.toLowerCase().startsWith('/mnrcatalog');

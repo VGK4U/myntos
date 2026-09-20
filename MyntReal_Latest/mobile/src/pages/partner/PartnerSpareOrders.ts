@@ -4,6 +4,7 @@
  * Mirrors partner_spare_orders.html functionality.
  */
 import { apiService } from '../../services/api.service';
+import { APP_CONFIG } from '../../config/app.config';
 
 interface SpareItem {
   item_id: number;
@@ -187,7 +188,7 @@ export class PartnerSpareOrders {
   private async loadCompanies(): Promise<void> {
     try {
       const token  = localStorage.getItem('partner_token') || '';
-      const base   = apiService.getBaseUrl();
+      const base = APP_CONFIG.BASE_SERVER_URL;
       const r = await fetch(`${base}/api/v1/staff/accounts/companies`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -199,7 +200,7 @@ export class PartnerSpareOrders {
 
   private async loadCatalog(): Promise<void> {
     const token  = localStorage.getItem('partner_token') || '';
-    const base   = apiService.getBaseUrl();
+    const base = APP_CONFIG.BASE_SERVER_URL;
     const search = (document.getElementById('spSearch') as HTMLInputElement)?.value?.trim() || '';
     const loadEl = document.getElementById('spCatalogLoading');
     const listEl = document.getElementById('spCatalogList');
@@ -312,7 +313,7 @@ export class PartnerSpareOrders {
 
   private async doSubmit(): Promise<void> {
     const token  = localStorage.getItem('partner_token') || '';
-    const base   = apiService.getBaseUrl();
+    const base = APP_CONFIG.BASE_SERVER_URL;
     const coSel  = (document.getElementById('spSubmitCompany') as HTMLSelectElement)?.value;
     const notes  = (document.getElementById('spSubmitNotes') as HTMLTextAreaElement)?.value?.trim() || '';
     if (!coSel) { alert('Please select a company'); return; }
@@ -344,7 +345,7 @@ export class PartnerSpareOrders {
 
   private async loadRequests(): Promise<void> {
     const token = localStorage.getItem('partner_token') || '';
-    const base  = apiService.getBaseUrl();
+    const base = APP_CONFIG.BASE_SERVER_URL;
     const loadEl = document.getElementById('spReqLoading');
     const listEl = document.getElementById('spReqList');
     const emptyEl = document.getElementById('spReqEmpty');
@@ -398,7 +399,7 @@ export class PartnerSpareOrders {
   private async cancelRequest(reqId: number): Promise<void> {
     if (!confirm('Cancel this spare parts request?')) return;
     const token = localStorage.getItem('partner_token') || '';
-    const base  = apiService.getBaseUrl();
+    const base = APP_CONFIG.BASE_SERVER_URL;
     try {
       const r = await fetch(`${base}/api/v1/partner/auth/spare-requests/${reqId}/cancel`, {
         method: 'PUT',

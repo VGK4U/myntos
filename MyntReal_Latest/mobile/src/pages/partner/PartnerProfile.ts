@@ -1,4 +1,5 @@
 import { apiService } from '../../services/api.service';
+import { APP_CONFIG } from '../../config/app.config';
 
 export class PartnerProfile {
   private container: HTMLElement;
@@ -12,7 +13,7 @@ export class PartnerProfile {
     try {
       const token = localStorage.getItem('partner_token');
       const companyId = localStorage.getItem('partner_company_id') || '';
-      const base = apiService.getBaseUrl();
+      const base = APP_CONFIG.BASE_SERVER_URL;
       const r = await fetch(`${base}/api/v1/partner/auth/me?company_id=${companyId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });

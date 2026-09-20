@@ -13,6 +13,8 @@ import { unifiedWAModal } from '../components/UnifiedWAModal';
 import { unifiedShareLeadModal } from '../components/UnifiedShareLeadModal';
 import { callController } from '../services/call-controller';
 import { dialerService } from '../services/dialer.service';
+import { APP_CONFIG } from '../config/app.config';
+import { recordingPlayerService } from '../services/recording-player.service';
 
 interface Lead {
   id: number;
@@ -2422,31 +2424,14 @@ export class StaffLeadsPage {
     return icons[type] || '📋';
   }
 
-  private playCallRecording(recordingId: number, btnEl: HTMLElement): void {
-    // Ensure in-communication mode is reset to media loudspeaker (Issue #5)
-    try {
-      const cap = (window as any).Capacitor;
-      if (cap?.Plugins?.AudioRouting?.resetAudioMode) {
-        cap.Plugins.AudioRouting.resetAudioMode().catch(() => {});
-      }
-    } catch (_) {}
-
-    const existingPlayer = document.getElementById('mobileAudioPlayer');
-    if (existingPlayer) existingPlayer.remove();
-
-    const container = btnEl.closest('.call-record-item');
-    if (!container) return;
-
-    const playerDiv = document.createElement('div');
-    playerDiv.id = 'mobileAudioPlayer';
-    playerDiv.className = 'audio-player-inline';
-    playerDiv.innerHTML = `
-      <audio controls autoplay style="width:100%;height:36px;" src="/api/v1/call-tracking/recordings/${recordingId}/stream">
-        Your browser does not support audio playback.
-      </audio>
-      <button class="btn btn-xs btn-outline close-player-btn" onclick="document.getElementById('mobileAudioPlayer')?.remove()">✕</button>
-    `;
-    container.after(playerDiv);
+  private async playCallRecording(recordingId: number, btnEl: HTMLElement): Promise<void> {
+    const rawStreamUrl = `/api/v1/call-tracking/recordings/${recordingId}/stream`;
+    await recordingPlayerService.play({
+      key: `lead_rec_${recordingId}`,
+      rawUrl: rawStreamUrl,
+      title: `Call Recording #${recordingId}`,
+      subtitle: 'Lead Activity Audio'
+    });
   }
 
   private getSortIcon(column: string): string {

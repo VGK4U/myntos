@@ -11,4 +11,6 @@ export { callSyncService } from './call-sync.service';
 export { telephonyService } from './telephony.service';
 export { platformAudioAdapter } from './platform-audio.adapter';
 export { callController } from './call-controller';
+export { incomingCallAdapter } from './incoming-call.adapter';
+export { recordingPlayerService } from './recording-player.service';
 

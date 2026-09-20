@@ -67,6 +67,9 @@ dependencies {
     // Background Location Service dependencies
     implementation 'com.google.android.gms:play-services-location:21.0.1'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
+    // Firebase Cloud Messaging for Screen-Off Incoming Calls
+    implementation 'com.google.firebase:firebase-messaging:24.1.0'
 }
 
 apply from: 'capacitor.build.gradle'

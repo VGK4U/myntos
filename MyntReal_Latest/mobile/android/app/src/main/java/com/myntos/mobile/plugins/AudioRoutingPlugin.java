@@ -234,6 +234,28 @@ public class AudioRoutingPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void setMediaPlaybackMode(PluginCall call) {
+        try {
+            AudioManager am = getAudioManager();
+            if (am != null) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    am.clearCommunicationDevice();
+                }
+                am.setSpeakerphoneOn(false);
+                am.setMicrophoneMute(false);
+                am.setMode(AudioManager.MODE_NORMAL);
+                abandonVoiceAudioFocus(am);
+                currentDeviceRoute = "MODE_NORMAL";
+                Log.d(TAG, "[AudioRouting] Media playback mode set: MODE_NORMAL for loud audio");
+            }
+            call.resolve(new JSObject().put("success", true).put("mode", "MODE_NORMAL"));
+        } catch (Exception e) {
+            Log.e(TAG, "[AudioRouting] Failed to set media playback mode: " + e.getMessage(), e);
+            call.reject("Failed to set media playback mode: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
     public void startInCallService(PluginCall call) {
         try {
             Context context = getContext();

@@ -158,6 +158,18 @@
     '<div id="_lwaVarBox"></div>',
     '</div>',
 
+    /* smart recipient search */
+    '<div id="_lwaSearchBox" style="margin-bottom:12px;position:relative">',
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">',
+    '<label style="font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin:0"><i class="fas fa-search text-success me-1"></i> Search Recipient (Name or 3+ Digits)</label>',
+    '<span style="font-size:10px;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;padding:1px 6px;border-radius:4px;font-weight:600">Leads · Calls · Partners</span>',
+    '</div>',
+    '<div style="position:relative">',
+    '<input type="text" id="_lwaSearchInp" placeholder="Search contact by name or digits (or type 10-digit number below)..." onfocus="if(!this.value) window._lwaSearchRecipients(\'\')" oninput="window._lwaSearchRecipients(this.value)" autocomplete="off" style="width:100%;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;padding:7px 10px;box-sizing:border-box">',
+    '<div id="_lwaSearchResults" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #10b981;border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,0.18);max-height:220px;overflow-y:auto;z-index:1000"></div>',
+    '</div>',
+    '</div>',
+
     /* recipient phone */
     '<div style="margin-bottom:12px">',
     '<label style="font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Recipient Mobile Number</label>',
@@ -217,6 +229,113 @@
     el.style.color      = ok === true ? '#065f46' : ok === false ? '#991b1b' : '#0369a1';
     el.style.border     = '1px solid ' + (ok === true ? '#a7f3d0' : ok === false ? '#fecaca' : '#bae6fd');
     el.innerHTML        = msg;
+  }
+
+  /* ── Recipient Directory Search & Autocomplete ───────────────────────────── */
+  var _recipientSearchTimeout = null;
+  function _searchRecipients(query) {
+    if (_recipientSearchTimeout) clearTimeout(_recipientSearchTimeout);
+    var resultsEl = document.getElementById('_lwaSearchResults');
+    if (!resultsEl) return;
+
+    var q = (query || '').trim();
+    _recipientSearchTimeout = setTimeout(function() {
+      resultsEl.style.display = 'block';
+      resultsEl.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:#6b7280"><i class="fas fa-spinner fa-spin me-1 text-emerald-600"></i> Searching CRM leads, call logs &amp; partners...</div>';
+
+      function _getAuthToken() {
+        try {
+          return localStorage.getItem('token') || localStorage.getItem('staff_token') || '';
+        } catch(e) { return ''; }
+      }
+      var token = _getAuthToken();
+      var headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+
+      fetch('/api/v1/digital-catalogs/recipients/search?q=' + encodeURIComponent(q), {
+        credentials: 'include',
+        headers: headers
+      })
+      .then(function(res) {
+        if (!res.ok) throw new Error('Search failed: ' + res.status);
+        return res.json();
+      })
+      .then(function(data) {
+        var items = (data && data.results) ? data.results : [];
+        if (!items.length) {
+          resultsEl.innerHTML = '<div style="padding:12px;text-align:center;font-size:12px;color:#9ca3af"><i class="fas fa-user-slash me-1"></i> No matching contacts found. You can type the 10-digit number directly below.</div>';
+          return;
+        }
+
+        var html = '<div style="background:#f8fafc;padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:10.5px;font-weight:700;color:#64748b;display:flex;justify-content:space-between;align-items:center">' +
+          '<span>' + (data.is_recent ? '⚡ RECENT ACTIVE CONTACTS' : '🔍 SEARCH RESULTS (' + items.length + ')') + '</span>' +
+          '<button type="button" onclick="document.getElementById(\'_lwaSearchResults\').style.display=\'none\'" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:13px;line-height:1">×</button>' +
+          '</div>';
+
+        items.forEach(function(item) {
+          var safeName = _esc(item.name || 'Valued Contact');
+          var safePhone = _esc(item.phone || '');
+          var safeFormatted = _esc(item.formatted_phone || safePhone);
+          var safeSource = _esc(item.source || 'Contact');
+          var safeSubtitle = _esc(item.subtitle || '');
+          var badgeColor = item.badge_color || '#10b981';
+          var itemJson = encodeURIComponent(JSON.stringify(item));
+
+          html += '<div onclick="window._lwaSelectRecipient(\'' + itemJson + '\')" style="padding:8px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px" onmouseover="this.style.background=\'#f0fdf4\'" onmouseout="this.style.background=\'#fff\'">' +
+            '<div style="flex:1;min-width:0">' +
+              '<div style="font-size:12px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + safeName + '</div>' +
+              '<div style="font-size:11px;color:#64748b;margin-top:1px">' +
+                '<span style="font-family:monospace;font-weight:600;color:#059669">' + safeFormatted + '</span>' +
+                (safeSubtitle ? (' · <span>' + safeSubtitle + '</span>') : '') +
+              '</div>' +
+            '</div>' +
+            '<span style="font-size:10px;padding:2px 6px;border-radius:4px;font-weight:700;background:' + badgeColor + '18;color:' + badgeColor + ';border:1px solid ' + badgeColor + '40;white-space:nowrap">' + safeSource + '</span>' +
+          '</div>';
+        });
+
+        resultsEl.innerHTML = html;
+      })
+      .catch(function(err) {
+        resultsEl.innerHTML = '<div style="padding:10px;text-align:center;font-size:12px;color:#dc2626"><i class="fas fa-exclamation-triangle me-1"></i> Search error: ' + _esc(err.message) + '</div>';
+      });
+    }, 250);
+  }
+
+  function _selectRecipient(encodedItem) {
+    try {
+      var item = JSON.parse(decodeURIComponent(encodedItem));
+      var resultsEl = document.getElementById('_lwaSearchResults');
+      if (resultsEl) resultsEl.style.display = 'none';
+
+      var searchInp = document.getElementById('_lwaSearchInp');
+      if (searchInp) searchInp.value = item.name + ' (' + item.phone + ')';
+
+      var phoneInp = document.getElementById('_lwaPhoneInp');
+      if (phoneInp) {
+        phoneInp.value = item.phone;
+        phoneInp.dataset.rawPhone = item.phone;
+        phoneInp.readOnly = true;
+      }
+      var editBtn = document.getElementById('_lwaPhoneEditBtn');
+      if (editBtn) editBtn.style.display = 'inline-block';
+
+      _s.phone = item.phone;
+      _s.name = item.name;
+      _s.leadId = item.lead_id || null;
+      _s.partnerId = item.partner_id || null;
+
+      var sub = document.getElementById('_lwaSub');
+      if (sub) {
+        sub.textContent = item.name + ' · ' + _maskPhone(item.phone) + (item.source ? (' [' + item.source + ']') : '');
+      }
+
+      // Re-apply catalog message with personalized customer name if active
+      if (document.getElementById('_lwaCatSel') && _selectedCatalogKey) {
+        _applyCatalog(_selectedCatalogLang);
+      }
+    } catch(e) {
+      console.error('[lwa] _selectRecipient error', e);
+    }
   }
 
   function _applyModeStyle() {
@@ -554,6 +673,21 @@
               body: JSON.stringify({ phone: targetNum, message_preview: msg.slice(0, 200), message_body: msg, template_id: tplId ? parseInt(tplId, 10) : null })
             }).catch(function(e) { console.warn('[lwa] log-scanned non-fatal', e); });
           }
+          if (_s.catalogId) {
+            fetch('/api/v1/digital-catalogs/' + _s.catalogId + '/log-dispatch', {
+              method: 'POST', credentials: 'include',
+              headers: authHeaders,
+              body: JSON.stringify({
+                recipient_phone: targetNum,
+                recipient_name: _s.name || 'Valued Customer',
+                lead_id: (_s.leadId && !isNaN(parseInt(_s.leadId, 10))) ? parseInt(_s.leadId, 10) : null,
+                delivery_channel: 'scanned_bot',
+                delivery_method: 'both',
+                language_code: _selectedCatalogLang || 'te',
+                status: 'sent'
+              })
+            }).catch(function(e) { console.warn('[lwa] log-catalog-dispatch non-fatal', e); });
+          }
           setTimeout(function() { document.getElementById('_lwaModal').style.display = 'none'; }, 2500);
         } else {
           var errDetail = d.detail || d.message || d.error || d.reason || 'Gateway dispatch failed';
@@ -599,6 +733,22 @@
       if (d.success) {
         btn.innerHTML = '<i class="fas fa-check"></i> Sent ✓';
         _showRes('✅ Sent via 🏢 Official WhatsApp! WAMID: ' + (d.wamid || 'N/A') + ' (Dispatched & Tracked)', true);
+        if (_s.catalogId) {
+          fetch('/api/v1/digital-catalogs/' + _s.catalogId + '/log-dispatch', {
+            method: 'POST', credentials: 'include',
+            headers: authHeaders,
+            body: JSON.stringify({
+              recipient_phone: targetNum,
+              recipient_name: _s.name || 'Valued Customer',
+              lead_id: (_s.leadId && !isNaN(parseInt(_s.leadId, 10))) ? parseInt(_s.leadId, 10) : null,
+              delivery_channel: 'official_meta_api',
+              delivery_method: 'both',
+              language_code: _selectedCatalogLang || 'te',
+              whatsapp_message_id: d.wamid || null,
+              status: 'sent'
+            })
+          }).catch(function(e) { console.warn('[lwa] log-catalog-dispatch non-fatal', e); });
+        }
         setTimeout(function() { document.getElementById('_lwaModal').style.display = 'none'; }, 3000);
       } else {
         var reason = d.reason || d.detail || d.error || 'Meta dispatch failed';
@@ -698,6 +848,29 @@
     var cleanP = targetPhone.replace(/\D/g, '').slice(-10);
     var msg = document.getElementById('_lwaMsg') ? document.getElementById('_lwaMsg').value : '';
     var url = cleanP ? ('https://wa.me/91' + cleanP + '?text=' + encodeURIComponent(msg)) : ('https://wa.me/?text=' + encodeURIComponent(msg));
+    if (_s.catalogId && cleanP) {
+      function _getAuthToken() {
+        try {
+          return localStorage.getItem('token') || localStorage.getItem('staff_token') || '';
+        } catch(e) { return ''; }
+      }
+      var token = _getAuthToken();
+      var authHeaders = { 'Content-Type': 'application/json' };
+      if (token) authHeaders['Authorization'] = 'Bearer ' + token;
+      fetch('/api/v1/digital-catalogs/' + _s.catalogId + '/log-dispatch', {
+        method: 'POST', credentials: 'include',
+        headers: authHeaders,
+        body: JSON.stringify({
+          recipient_phone: cleanP,
+          recipient_name: _s.name || 'Valued Customer',
+          lead_id: (_s.leadId && !isNaN(parseInt(_s.leadId, 10))) ? parseInt(_s.leadId, 10) : null,
+          delivery_channel: 'direct_web_wa',
+          delivery_method: 'both',
+          language_code: _selectedCatalogLang || 'te',
+          status: 'sent'
+        })
+      }).catch(function(e) { console.warn('[lwa] log-catalog-dispatch non-fatal', e); });
+    }
     window.open(url, '_blank');
   }
 
@@ -731,6 +904,7 @@
       btnLabel: 'Solar',
       segmentSlug: 'solar',
       catalogSlug: 'commercial-residential-solar',
+      brochureUrl: '/catalog/mnr-catalog-web.pdf',
       desc: 'Sends personalized Har Ghar Solar Digital Catalog link with 90% savings, ₹78,000 subsidy & ₹1 scheme details.',
       messages: {
         te: function(cName, url) {
@@ -784,6 +958,7 @@
       btnLabel: 'Real Estate',
       segmentSlug: 'real-dreams',
       catalogSlug: 'real-dreams-premium-properties',
+      brochureUrl: '/public/hub/Assets/myntreal_real_dreams_brochure.pdf',
       desc: 'Sends Real Dreams catalog with RERA-approved luxury villas, gated open plots & prime commercial spaces.',
       messages: {
         te: function(cName, url) {
@@ -839,6 +1014,7 @@
       btnLabel: 'EV 2W Pricing',
       segmentSlug: 'ev-b2c',
       catalogSlug: 'ev-b2c-pricing',
+      brochureUrl: '/public/hub/Assets/myntreal_manthra_ev_brochure.pdf',
       desc: 'Sends official Manthra EV Customer 2W Pricing with 5 models, Graphene (9M) & LFP (3Y) warranties, fuel savings calculator, Solar & Insurance benefits.',
       messages: {
         te: function(cName, url) {
@@ -900,6 +1076,7 @@
       btnLabel: 'EV Commercial Fleet',
       segmentSlug: 'ev-b2b',
       catalogSlug: 'ev-commercial-fleet',
+      brochureUrl: '/public/hub/Assets/myntreal_manthra_ev_brochure.pdf',
       desc: 'Sends Commercial Fleet catalog with 75% logistics savings, reinforced chassis & 2-min battery swap.',
       messages: {
         te: function(cName, url) {
@@ -952,6 +1129,7 @@
       btnLabel: 'EV Spares',
       segmentSlug: 'ev-spares',
       catalogSlug: 'ev-spares-and-chargers',
+      brochureUrl: '/public/hub/Assets/myntreal_ev_spares_brochure.pdf',
       desc: 'Sends EV Spares catalog with OEM components, DC fast chargers, smart BMS & replacement lithium packs.',
       messages: {
         te: function(cName, url) {
@@ -1014,6 +1192,7 @@
       btnLabel: 'ETC Training',
       segmentSlug: 'etc',
       catalogSlug: 'etc-renewable-certifications',
+      brochureUrl: '/public/hub/Assets/myntreal_etc_training_brochure.pdf',
       desc: 'Sends ETC Training catalog: 1-week EV certification at Govt. Poly Pendurthi, ₹10,000 scholarship discount.',
       messages: {
         te: function(cName, url) {
@@ -1071,6 +1250,7 @@
       btnLabel: 'Insurance',
       segmentSlug: 'insurance',
       catalogSlug: 'comprehensive-insurance-advisory',
+      brochureUrl: '/public/hub/Assets/myntreal_insurance_guide.pdf',
       desc: 'Sends Insurance catalog with complete risk protection for EV fleets, solar rooftop plants, health & life.',
       messages: {
         te: function(cName, url) {
@@ -1129,6 +1309,7 @@
       btnLabel: 'MyntReal Hub',
       segmentSlug: 'industrial-hub',
       catalogSlug: 'industrial-hub-franchise',
+      brochureUrl: '/public/hub/Assets/myntreal_investor_franchise_brochure.pdf',
       desc: 'Sends MyntReal Hub catalog: 5-in-1 investor franchise (EV, Solar, Insurance, Real Estate & Training) with ₹12–15L investment & 140% ROI.',
       messages: {
         te: function(cName, url) {
@@ -1194,6 +1375,7 @@
       btnLabel: 'Hub Pricing (24h)',
       segmentSlug: 'hub-pricing',
       catalogSlug: 'hub-ev-pricing',
+      brochureUrl: '/public/hub/Assets/myntreal_investor_franchise_brochure.pdf',
       desc: 'Sends confidential MyntReal Hub EV & Solar Commercial Pricing catalog with wholesale costs, dealer margins & 24h auto-expiry security.',
       messages: {
         te: function(cName, url) {
@@ -1269,7 +1451,23 @@
   function _getCatalogMessage(catKey, lang, customerName) {
     var cat = DIGITAL_CATALOGS[catKey] || DIGITAL_CATALOGS.solar;
     var cName = (customerName || 'Customer').trim();
-    var origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : 'https://www.myntreal.com';
+    var origin = 'https://www.myntreal.com';
+    if (typeof window !== 'undefined' && window.location && window.location.origin) {
+      var wOrigin = window.location.origin;
+      var isLocal = wOrigin.includes('localhost') || 
+                    wOrigin.includes('127.0.0.1') || 
+                    wOrigin.includes('0.0.0.0') || 
+                    wOrigin.includes('192.168.') || 
+                    wOrigin.includes('10.0.') || 
+                    wOrigin.includes(':8000') || 
+                    wOrigin.includes(':5000') || 
+                    wOrigin.includes(':5173') || 
+                    wOrigin.includes(':3000') ||
+                    wOrigin.includes('capacitor');
+      if (!isLocal) {
+        origin = wOrigin;
+      }
+    }
     var catalogUrl = origin + '/catalog/' + cat.segmentSlug + '/' + cat.catalogSlug + '?lang=' + encodeURIComponent(lang || 'te');
     if (catKey === 'hub_pricing' && !catalogUrl.includes('exp=')) {
       catalogUrl += '&exp=' + (Math.floor(Date.now() / 1000) + 86400);
@@ -1277,10 +1475,23 @@
 
     var l = (lang || 'te').toLowerCase();
     var msgFn = (cat.messages && cat.messages[l]) ? cat.messages[l] : (cat.messages && cat.messages.en);
+    var msg = '';
     if (typeof msgFn === 'function') {
-      return msgFn(cName, catalogUrl);
+      msg = msgFn(cName, catalogUrl);
+    } else {
+      msg = 'Namaskaram ' + cName + '! Here is your catalog link:\n👉 ' + catalogUrl;
     }
-    return 'Namaskaram ' + cName + '! Here is your catalog link:\n👉 ' + catalogUrl;
+
+    if (cat.brochureUrl && !msg.includes('.pdf')) {
+      var brochureHref = cat.brochureUrl.startsWith('http') ? cat.brochureUrl : (origin + (cat.brochureUrl.startsWith('/') ? '' : '/') + cat.brochureUrl);
+      var bTitle = (l === 'te') ? '📄 *అధికారిక PDF బ్రోచర్ (డైరెక్ట్ డౌన్‌లోడ్):*' :
+                   (l === 'hi') ? '📄 *आधिकारिक पीडीएफ ब्रोशर (डाउनलोड लिंक):*' :
+                   (l === 'ta') ? '📄 *அதிகாரப்பூர்வ PDF ப்ரோஷர் (பதிவிறக்கம்):*' :
+                   '📄 *Official PDF Brochure (Direct Download):*';
+      msg += '\n\n' + bTitle + '\n👉 ' + brochureHref;
+    }
+
+    return msg;
   }
 
   function _applyCatalog(lang) {
@@ -1324,6 +1535,8 @@
     window._lwaToggleAddTpl    = function(s) { _toggleAddTpl(s); };
     window._lwaSaveNewTpl      = function() { _saveNewTpl(); };
     window._lwaFilterTpls      = function() { _filterTpls(); };
+    window._lwaSearchRecipients= function(q) { _searchRecipients(q); };
+    window._lwaSelectRecipient = function(i) { _selectRecipient(i); };
     window._lwaUnlockPhone = function() {
       var _inp = document.getElementById('_lwaPhoneInp');
       if (_inp) {
@@ -1342,7 +1555,13 @@
     _ensure();
     _bindGlobals();
     var cleanP = phone ? String(phone).replace(/\D/g, '').slice(-10) : '';
-    _s = { leadId: leadId, phone: cleanP, name: name, companyId: companyId, mode: 'company', tpls: [], bodyTpl: '', context: context || '' };
+
+    var ctxObj = (typeof context === 'object' && context !== null) ? context : {};
+    var ctxStr = (typeof context === 'string') ? context : (ctxObj.catalogKey || ctxObj.segmentCode || '');
+    var catalogId = ctxObj.catalogId || null;
+    var forcedCatKey = ctxObj.catalogKey || null;
+
+    _s = { leadId: leadId, phone: cleanP, name: name, companyId: companyId, mode: 'company', tpls: [], bodyTpl: '', context: ctxStr, catalogId: catalogId };
 
     /* reset UI */
     document.getElementById('_lwaSub').textContent     = (name || 'Contact') + (cleanP ? (' · ' + _maskPhone(cleanP)) : '');
@@ -1357,34 +1576,51 @@
       _ebtn.style.display = cleanP ? 'inline-block' : 'none';
     }
 
+    var searchBox = document.getElementById('_lwaSearchInp');
+    if (searchBox) searchBox.value = '';
+    var searchRes = document.getElementById('_lwaSearchResults');
+    if (searchRes) { searchRes.innerHTML = ''; searchRes.style.display = 'none'; }
+
     /* Contextual catalog & segment auto-selection (always editable by user) */
     var initialSeg = '';
-    var initialCatKey = 'solar';
-    var ctxLower = (context || '').toLowerCase();
-    if (ctxLower.indexOf('solar') !== -1 || companyId === 4 || companyId === '4') {
-      initialSeg = 'solar';
-      initialCatKey = 'solar';
-    } else if (ctxLower.indexOf('real') !== -1 || ctxLower.indexOf('property') !== -1) {
-      initialSeg = 'real_estate';
-      initialCatKey = 'real_estate';
-    } else if (ctxLower.indexOf('spare') !== -1) {
-      initialSeg = 'EV_SPARES';
-      initialCatKey = 'ev_spares';
-    } else if (ctxLower.indexOf('cargo') !== -1 || ctxLower.indexOf('fleet') !== -1 || ctxLower.indexOf('b2b') !== -1) {
-      initialSeg = 'ev_b2b';
-      initialCatKey = 'ev_b2b';
-    } else if (ctxLower.indexOf('ev') !== -1 || companyId === 2 || companyId === '2') {
-      initialSeg = 'ev_b2c';
-      initialCatKey = 'ev_b2c';
-    } else if (ctxLower.indexOf('etc') !== -1 || ctxLower.indexOf('train') !== -1) {
-      initialSeg = 'etc_training';
-      initialCatKey = 'etc_training';
-    } else if (ctxLower.indexOf('insur') !== -1) {
-      initialCatKey = 'insurance';
-    } else if (ctxLower.indexOf('pricing') !== -1 || ctxLower.indexOf('margin') !== -1 || ctxLower.indexOf('commercial') !== -1) {
-      initialCatKey = 'hub_pricing';
-    } else if (ctxLower.indexOf('hub') !== -1 || ctxLower.indexOf('franchise') !== -1) {
-      initialCatKey = 'industrial_hub';
+    var initialCatKey = forcedCatKey || 'solar';
+    var ctxLower = (ctxStr || '').toLowerCase();
+    if (!forcedCatKey) {
+      if (ctxLower.indexOf('solar') !== -1 || companyId === 4 || companyId === '4') {
+        initialSeg = 'solar';
+        initialCatKey = 'solar';
+      } else if (ctxLower.indexOf('real') !== -1 || ctxLower.indexOf('property') !== -1) {
+        initialSeg = 'real_estate';
+        initialCatKey = 'real_estate';
+      } else if (ctxLower.indexOf('spare') !== -1) {
+        initialSeg = 'EV_SPARES';
+        initialCatKey = 'ev_spares';
+      } else if (ctxLower.indexOf('cargo') !== -1 || ctxLower.indexOf('fleet') !== -1 || ctxLower.indexOf('b2b') !== -1) {
+        initialSeg = 'ev_b2b';
+        initialCatKey = 'ev_b2b';
+      } else if (ctxLower.indexOf('ev') !== -1 || companyId === 2 || companyId === '2') {
+        initialSeg = 'ev_b2c';
+        initialCatKey = 'ev_b2c';
+      } else if (ctxLower.indexOf('etc') !== -1 || ctxLower.indexOf('train') !== -1) {
+        initialSeg = 'etc_training';
+        initialCatKey = 'etc_training';
+      } else if (ctxLower.indexOf('insur') !== -1) {
+        initialCatKey = 'insurance';
+      } else if (ctxLower.indexOf('pricing') !== -1 || ctxLower.indexOf('margin') !== -1 || ctxLower.indexOf('commercial') !== -1) {
+        initialCatKey = 'hub_pricing';
+      } else if (ctxLower.indexOf('hub') !== -1 || ctxLower.indexOf('franchise') !== -1) {
+        initialCatKey = 'industrial_hub';
+      }
+    } else {
+      if (forcedCatKey === 'solar') initialSeg = 'solar';
+      else if (forcedCatKey === 'ev_spares') initialSeg = 'EV_SPARES';
+      else if (forcedCatKey === 'ev_b2c') initialSeg = 'EV_B2C';
+      else if (forcedCatKey === 'ev_b2b') initialSeg = 'EV_B2B';
+      else if (forcedCatKey === 'etc_training') initialSeg = 'ETC';
+      else if (forcedCatKey === 'real_estate') initialSeg = 'REAL_ESTATE';
+      else if (forcedCatKey === 'insurance') initialSeg = 'INSURANCE';
+      else if (forcedCatKey === 'industrial_hub') initialSeg = 'HUB';
+      else if (forcedCatKey === 'hub_pricing') initialSeg = 'HUB_PRICING';
     }
 
     var segEl = document.getElementById('_lwaSeg');
@@ -1401,6 +1637,8 @@
     
     if (initialMessage) {
       document.getElementById('_lwaMsg').value = initialMessage;
+    } else if (forcedCatKey || catalogId) {
+      _applyCatalog(_selectedCatalogLang || 'te');
     } else {
       document.getElementById('_lwaMsg').value = 'Namaskaram ' + (name || 'Customer') + '! ' + _getStaffSignature();
     }

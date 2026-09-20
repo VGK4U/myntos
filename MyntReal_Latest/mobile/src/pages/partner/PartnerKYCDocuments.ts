@@ -1,4 +1,5 @@
 import { apiService } from '../../services/api.service';
+import { APP_CONFIG } from '../../config/app.config';
 
 const DOC_CONFIG: Record<string, { label: string; icon: string; color: string; bg: string }> = {
   aadhar_front:   { label: 'Aadhaar — Front',  icon: '🪪', color: '#3b82f6', bg: 'rgba(59,130,246,.12)' },
@@ -26,7 +27,7 @@ export class PartnerKYCDocuments {
     try {
       const token = localStorage.getItem('partner_token') || '';
       const companyId = localStorage.getItem('partner_company_id') || '';
-      const base = apiService.getBaseUrl();
+      const base = APP_CONFIG.BASE_SERVER_URL;
       const headers = { Authorization: `Bearer ${token}` };
 
       const [pRes, psRes, kycRes] = await Promise.all([
@@ -163,7 +164,7 @@ export class PartnerKYCDocuments {
       fd.append('file', file);
       fd.append('document_type', type);
       try {
-        const base = apiService.getBaseUrl();
+        const base = APP_CONFIG.BASE_SERVER_URL;
         const res = await fetch(`${base}/api/v1/partner/kyc/upload`, {
           method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd
         });

@@ -17,6 +17,8 @@ import { authService } from '../services/auth.service';
 import { routerService } from '../services/router.service';
 import { PageHeader } from '../components/PageHeader';
 import { unifiedWAModal } from '../components/UnifiedWAModal';
+import { APP_CONFIG } from '../config/app.config';
+import { recordingPlayerService } from '../services/recording-player.service';
 
 export type SoftphoneScope = 'dialer' | 'my' | 'new_calls' | 'team' | 'contacts' | 'overall';
 export type ContactSourceType = 'all' | 'leads' | 'vgk' | 'mnr' | 'synced_contacts';
@@ -66,6 +68,7 @@ interface CallItem {
   crm_lead_id?: string | number;
   effective_lead_id?: string | number;
   lead_id?: string | number;
+  company_id?: string | number;
   called_did?: string;
   customer_phone_display?: string;
   raw_provider_from?: string;
@@ -90,6 +93,7 @@ interface CustomerContact {
   badge?: string;
   subtitle?: string;
   lead_id?: string | number;
+  company_id?: string | number;
 }
 
 interface TeamMember {
@@ -112,6 +116,7 @@ interface CustomerTimelineData {
     email?: string;
     city?: string;
     phone?: string;
+    company_id?: number | string;
   };
   history?: Array<{
     id: string | number;
@@ -223,14 +228,16 @@ export class SoftphonePage {
 
   // Audio Player State
   private currentAudio: HTMLAudioElement | null = null;
+  private currentAudioBlobUrl: string | null = null;
   private playingAudioKey: string | null = null;
+  private recordingPlayerUnsub: (() => void) | null = null;
 
   // Return route (for automatic return to CRM page after call)
   private returnUrl: string | null = null;
   private telephonyUnsub: (() => void) | null = null;
 
   // Bottom Sheet Drawer State
-  private activeBottomSheet: 'customer_history' | 'action_taken' | 'quick_staff_verify' | null = null;
+  private activeBottomSheet: 'customer_history' | 'action_taken' | 'quick_staff_verify' | 'crm_lead' | null = null;
   private customerDrawerActiveTab: 'all' | 'calls' | 'messages' = 'all';
   private customerHistoryData: CustomerTimelineData | null = null;
   private customerHistoryLoading: boolean = false;
@@ -239,6 +246,20 @@ export class SoftphonePage {
   private actionModalPhone: string = '';
   private actionModalNotes: string = '';
   private isSubmittingAction: boolean = false;
+
+  // CRM Lead Bottom Sheet State
+  private crmLeadId: string | number | null = null;
+  private crmLeadPhone: string = '';
+  private crmLeadName: string = '';
+  private crmLeadCompanyId: string | number | null = null;
+  private crmLeadData: any = null;
+  private crmLeadLoading: boolean = false;
+  private crmLeadSubmitting: boolean = false;
+  private crmLeadNotes: any[] = [];
+  private crmLeadCategories: any[] = [];
+  private crmLeadNewNote: string = '';
+  private crmLeadTab: 'details' | 'notes' | 'audit' = 'details';
+  private crmLeadAuditChanges: any[] = [];
 
   // Quick Staff Verification State (Option A: Direct WhatsApp Call Link)
   private quickStaffLeadPreview: any = null;
@@ -347,6 +368,14 @@ export class SoftphonePage {
       });
     }
 
+    // Subscribe to recording player service
+    if (!this.recordingPlayerUnsub) {
+      this.recordingPlayerUnsub = recordingPlayerService.subscribe((state) => {
+        this.playingAudioKey = state.isPlaying ? state.key : null;
+        this.updateAudioIcons();
+      });
+    }
+
     if (shouldAutoStart && autoDialNum && isAuth) {
       setTimeout(() => {
         this.startCall(autoDialNum, autoDialName);
@@ -357,6 +386,9 @@ export class SoftphonePage {
   private handleTelephonyStateChange(session: any): void {
     const wasInCall = this.isInCall;
     this.isInCall = session.state !== 'idle' && session.state !== 'ended' && session.state !== 'failed';
+    if (this.isInCall) {
+      recordingPlayerService.stop();
+    }
     this.isCallConnected = session.state === 'connected';
     this.callDuration = session.durationSeconds;
     this.isMuted = session.isMuted;
@@ -415,9 +447,18 @@ export class SoftphonePage {
       this.telephonyUnsub();
       this.telephonyUnsub = null;
     }
+    if (this.recordingPlayerUnsub) {
+      this.recordingPlayerUnsub();
+      this.recordingPlayerUnsub = null;
+    }
+    recordingPlayerService.stop();
     if (this.currentAudio) {
       this.currentAudio.pause();
       this.currentAudio = null;
+    }
+    if (this.currentAudioBlobUrl) {
+      URL.revokeObjectURL(this.currentAudioBlobUrl);
+      this.currentAudioBlobUrl = null;
     }
     if (this.contactsDebounceTimer) {
       clearTimeout(this.contactsDebounceTimer);
@@ -847,55 +888,12 @@ export class SoftphonePage {
 
   // ──────────────────────────── AUDIO PLAYER ────────────────────────────
 
-  private toggleAudioPlayback(key: string, rawUrl: string): void {
-    if (this.playingAudioKey === key && this.currentAudio) {
-      if (!this.currentAudio.paused) {
-        this.currentAudio.pause();
-        this.playingAudioKey = null;
-        this.updateAudioIcons();
-        return;
-      }
-    }
-
-    if (this.currentAudio) {
-      this.currentAudio.pause();
-      this.currentAudio = null;
-    }
-
-    // Ensure in-communication mode is reset to media loudspeaker (Issue #5)
-    try {
-      const cap = (window as any).Capacitor;
-      if (cap?.Plugins?.AudioRouting?.resetAudioMode) {
-        cap.Plugins.AudioRouting.resetAudioMode().catch(() => {});
-      }
-    } catch (_) {}
-
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('staff_token') || localStorage.getItem('token') || '';
-    const fullUrl = rawUrl.startsWith('http') ? rawUrl : `${window.location.origin}${rawUrl}`;
-    const audioUrl = fullUrl.includes('?') ? `${fullUrl}&token=${token}` : `${fullUrl}?token=${token}`;
-
-    this.currentAudio = new Audio(audioUrl);
-    this.playingAudioKey = key;
-    this.updateAudioIcons();
-
-    this.currentAudio.play().then(() => {
-      this.updateAudioIcons();
-    }).catch(err => {
-      console.warn('[SoftphonePage] Audio playback error:', err);
-      alert('Unable to play recording. Stream unavailable or expired.');
-      this.playingAudioKey = null;
-      this.updateAudioIcons();
+  private async toggleAudioPlayback(key: string, rawUrl: string, title?: string): Promise<void> {
+    await recordingPlayerService.play({
+      key,
+      rawUrl,
+      title: title || 'Call Recording'
     });
-
-    this.currentAudio.onended = () => {
-      this.playingAudioKey = null;
-      this.updateAudioIcons();
-    };
-
-    this.currentAudio.onerror = () => {
-      this.playingAudioKey = null;
-      this.updateAudioIcons();
-    };
   }
 
   private updateAudioIcons(): void {
@@ -938,66 +936,67 @@ export class SoftphonePage {
     const clean = (rawPhone || '').replace(/\D/g, '').slice(-10);
     if (!clean) return;
 
+    const initialName = (!this.isPlaceholderName(customerName) ? customerName : '').trim() || 'Customer Lead';
     this.customerHistoryLoading = true;
-    this.customerHistoryData = null;
+    this.customerHistoryData = {
+      customer_name: initialName,
+      raw_phone: clean,
+      phone_masked: this.maskPhone(clean),
+      total_calls: 0,
+      history: [],
+      whatsapp_thread: []
+    };
     this.customerDrawerActiveTab = 'all';
     this.activeBottomSheet = 'customer_history';
     this.renderBottomSheet();
 
-    try {
-      const [historyRes, waRes] = await Promise.allSettled([
-        apiService.get<any>(`/telephony/calls/${clean}/customer-history`),
-        apiService.get<any>(`/whatsapp/inbox/thread/${clean}`)
-      ]);
-
-      let historyData: any = null;
-      if (historyRes.status === 'fulfilled') {
-        const hVal = historyRes.value;
-        historyData = (hVal && hVal.data) ? hVal.data : hVal;
-      }
-
+    // Stream WhatsApp thread in background without blocking call history
+    apiService.get<any>(`/whatsapp/inbox/thread/${clean}`).then((waRes: any) => {
       let waList: any[] = [];
-      if (waRes.status === 'fulfilled') {
-        const wVal = waRes.value;
-        const wData = (wVal && wVal.data) ? wVal.data : wVal;
-        if (Array.isArray(wData)) {
-          waList = wData;
-        } else if (wData && Array.isArray(wData.data)) {
-          waList = wData.data;
-        }
+      const wVal = waRes?.data || waRes;
+      if (Array.isArray(wVal)) {
+        waList = wVal;
+      } else if (wVal && Array.isArray(wVal.data)) {
+        waList = wVal.data;
       }
-
-      let bestName = customerName;
-      const candidates = [
-        historyData?.lead?.name,
-        historyData?.customer_name,
-        historyData?.name,
-        customerName
-      ];
-      for (const c of candidates) {
-        if (c && !this.isPlaceholderName(c)) {
-          bestName = c.trim();
-          break;
-        }
+      if (this.activeBottomSheet === 'customer_history' && this.customerHistoryData?.raw_phone === clean) {
+        this.customerHistoryData.whatsapp_thread = waList;
+        this.renderBottomSheet();
       }
+    }).catch(e => {
+      console.warn('[SoftphonePage] Non-critical WhatsApp thread load error:', e);
+    });
 
-      if (historyData) {
+    try {
+      const historyRes = await apiService.get<any>(`/telephony/calls/${clean}/customer-history`);
+      const hVal = (historyRes && historyRes.data) ? historyRes.data : historyRes;
+
+      if (hVal) {
+        let bestName = initialName;
+        const candidates = [
+          hVal?.lead?.name,
+          hVal?.customer_name,
+          hVal?.name,
+          initialName
+        ];
+        for (const c of candidates) {
+          if (c && !this.isPlaceholderName(c)) {
+            bestName = c.trim();
+            break;
+          }
+        }
+
         this.customerHistoryData = {
-          ...historyData,
+          ...this.customerHistoryData,
+          ...hVal,
           customer_name: bestName,
-          whatsapp_thread: waList
-        };
-      } else {
-        this.customerHistoryData = {
           raw_phone: clean,
-          customer_name: bestName,
-          total_calls: 0,
-          history: [],
-          whatsapp_thread: waList
+          phone_masked: hVal.phone_masked || this.maskPhone(clean),
+          whatsapp_thread: this.customerHistoryData?.whatsapp_thread || []
         };
       }
     } catch (err: any) {
-      console.warn('[SoftphonePage] Error fetching customer timeline:', err);
+      console.warn('[SoftphonePage] Error fetching customer call history:', err);
     } finally {
       this.customerHistoryLoading = false;
       this.renderBottomSheet();
@@ -1049,11 +1048,136 @@ export class SoftphonePage {
     }
   }
 
+  private async openCRMLeadModal(leadId: string | number, phone: string = '', name: string = '', companyId?: string | number | null): Promise<void> {
+    this.crmLeadId = leadId;
+    this.crmLeadPhone = phone;
+    this.crmLeadName = name;
+    this.crmLeadCompanyId = companyId || null;
+    this.crmLeadData = null;
+    this.crmLeadLoading = true;
+    this.crmLeadSubmitting = false;
+    this.crmLeadNotes = [];
+    this.crmLeadAuditChanges = [];
+    this.crmLeadNewNote = '';
+    this.crmLeadTab = 'details';
+    this.activeBottomSheet = 'crm_lead';
+    this.renderBottomSheet();
+
+    try {
+      const coQuery = companyId ? `?company_id=${companyId}` : '';
+      const res = await apiService.get<any>(`/crm/leads/${leadId}${coQuery}`);
+      if (res && res.data) {
+        this.crmLeadData = res.data;
+        this.crmLeadCompanyId = res.data.company_id || companyId;
+        this.crmLeadNotes = res.data.notes || [];
+        this.crmLeadAuditChanges = res.data.field_audit_changes || [];
+
+        if (!this.crmLeadAuditChanges.length) {
+          try {
+            const auditRes = await apiService.get<any>(`/crm/leads/${leadId}/field-audit-history${coQuery}`);
+            if (auditRes && Array.isArray(auditRes.changes)) {
+              this.crmLeadAuditChanges = auditRes.changes;
+            }
+          } catch (e) {}
+        }
+
+        if (!this.crmLeadCategories.length) {
+          try {
+            const catRes = await apiService.get<any>(`/signup-categories/list?company_id=${this.crmLeadCompanyId || 4}`);
+            if (catRes && catRes.categories) {
+              this.crmLeadCategories = catRes.categories;
+            }
+          } catch (e) {}
+        }
+      }
+    } catch (err: any) {
+      alert(`Failed to load lead details: ${err?.message || err}`);
+    } finally {
+      this.crmLeadLoading = false;
+      this.renderBottomSheet();
+    }
+  }
+
+  private async submitCRMLeadUpdates(): Promise<void> {
+    if (!this.crmLeadId || !this.crmLeadData) return;
+    this.crmLeadSubmitting = true;
+    this.renderBottomSheet();
+    const effectiveCompanyId = this.crmLeadCompanyId || this.crmLeadData.company_id || 4;
+
+    try {
+      const getEl = <T extends HTMLElement>(id: string) => (this.container.querySelector('#' + id) || document.getElementById(id)) as T;
+      const statusEl = getEl<HTMLSelectElement>('mobileCrmStatus');
+      const priorityEl = getEl<HTMLSelectElement>('mobileCrmPriority');
+      const categoryEl = getEl<HTMLSelectElement>('mobileCrmCategory');
+      const nameEl = getEl<HTMLInputElement>('mobileCrmName');
+      const cityEl = getEl<HTMLInputElement>('mobileCrmCity');
+      const areaEl = getEl<HTMLInputElement>('mobileCrmArea');
+      const budgetMaxEl = getEl<HTMLInputElement>('mobileCrmBudgetMax');
+      const descEl = getEl<HTMLTextAreaElement>('mobileCrmDesc');
+      const reqEl = getEl<HTMLTextAreaElement>('mobileCrmReq');
+      const noteInput = getEl<HTMLTextAreaElement>('mobileCrmNewNote');
+
+      const payload: any = {
+        name: nameEl?.value?.trim() || this.crmLeadData.name,
+        status: statusEl?.value || this.crmLeadData.status,
+        priority: priorityEl?.value || this.crmLeadData.priority,
+        city: cityEl?.value?.trim() || null,
+        area: areaEl?.value?.trim() || null,
+        description: descEl?.value?.trim() || null,
+        requirements: reqEl?.value?.trim() || null
+      };
+      if (categoryEl && categoryEl.value) {
+        payload.category_id = parseInt(categoryEl.value, 10);
+      }
+      if (budgetMaxEl && budgetMaxEl.value !== '') {
+        payload.budget_max = parseFloat(budgetMaxEl.value);
+      }
+
+      await apiService.put<any>(`/crm/leads/${this.crmLeadId}?company_id=${effectiveCompanyId}`, payload);
+
+      const noteText = noteInput?.value?.trim() || this.crmLeadNewNote?.trim() || '';
+      if (noteText) {
+        await apiService.post<any>(`/crm/leads/${this.crmLeadId}/notes?company_id=${effectiveCompanyId}`, {
+          note: noteText,
+          is_private: false
+        });
+        this.crmLeadNewNote = '';
+      }
+
+      alert(`Lead #${this.crmLeadId} updated successfully!`);
+
+      // Update calls list item state locally
+      const foundScopeCall = this.scopeCalls.find(c => String(c.crm_lead_id || c.lead_id || '') === String(this.crmLeadId));
+      if (foundScopeCall) {
+        foundScopeCall.status = payload.status;
+      }
+      const foundRecent = this.recent20Calls.find(c => String(c.crm_lead_id || c.lead_id || '') === String(this.crmLeadId));
+      if (foundRecent) {
+        foundRecent.status = payload.status;
+      }
+
+      this.closeBottomSheet();
+      if (this.activeScope === 'dialer') {
+        this.renderRecent20List();
+      } else {
+        this.renderScopeCallsList();
+      }
+    } catch (err: any) {
+      alert(`Failed to save lead: ${err?.message || err}`);
+    } finally {
+      this.crmLeadSubmitting = false;
+      this.renderBottomSheet();
+    }
+  }
+
   private closeBottomSheet(): void {
     const wasQuickStaff = this.activeBottomSheet === 'quick_staff_verify';
     this.activeBottomSheet = null;
     this.customerHistoryData = null;
     this.quickStaffLeadPreview = null;
+    this.crmLeadData = null;
+    this.crmLeadId = null;
+    this.crmLeadAuditChanges = [];
     this.renderBottomSheet();
 
     if (wasQuickStaff && !authService.getAuthState().isLoggedIn) {
@@ -1089,6 +1213,9 @@ export class SoftphonePage {
                 <i class="fas fa-diagram-project"></i> Studio
               </a>
             ` : ''}
+            <button id="softphoneTestCallBtn" title="Test Screen-Off Call" style="padding: 5px 9px; border-radius: 10px; background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.3); color: #22c55e; font-size: 11px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+              <i class="fas fa-phone-arrow-down-left"></i> Test Ring
+            </button>
             <button id="softphoneRefreshBtn" title="Refresh" style="width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #94a3b8; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
               <i class="fas fa-rotate"></i>
             </button>
@@ -1669,6 +1796,11 @@ export class SoftphonePage {
                 <button class="wa-action-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(c.name)}" data-lead-id="${this.escapeAttr(String(c.lead_id || ''))}" title="Send WhatsApp" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.3); color: #25d366; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                   <i class="fab fa-whatsapp fa-xs"></i>
                 </button>
+                ${c.lead_id ? `
+                  <button class="crm-lead-trigger-btn" data-lead-id="${this.escapeAttr(String(c.lead_id))}" data-phone="${cleanPhone}" data-name="${this.escapeAttr(c.name)}" data-company-id="${this.escapeAttr(String(c.company_id || ''))}" title="CRM Lead Details" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-address-card fa-xs"></i>
+                  </button>
+                ` : ''}
                 <button class="customer-history-trigger-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(c.name)}" title="Customer Timeline" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                   <i class="fas fa-clock-rotate-left fa-xs"></i>
                 </button>
@@ -1851,6 +1983,12 @@ export class SoftphonePage {
               </button>
             ` : ''}
 
+            ${(c.crm_lead_id || c.effective_lead_id || c.lead_id) ? `
+              <button class="crm-lead-trigger-btn" data-lead-id="${this.escapeAttr(String(c.crm_lead_id || c.effective_lead_id || c.lead_id))}" data-phone="${cleanPhone}" data-name="${this.escapeAttr(name)}" data-company-id="${this.escapeAttr(String(c.company_id || ''))}" title="CRM Lead Details" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-address-card fa-xs"></i>
+              </button>
+            ` : ''}
+
             <button class="customer-history-trigger-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(name)}" title="Customer Timeline" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; cursor: pointer; display: flex; align-items: center; justify-content: center;">
               <i class="fas fa-clock-rotate-left fa-xs"></i>
             </button>
@@ -1991,9 +2129,350 @@ export class SoftphonePage {
       container.innerHTML = this.renderActionTakenSheetHtml();
     } else if (this.activeBottomSheet === 'quick_staff_verify') {
       container.innerHTML = this.renderQuickStaffVerifySheetHtml();
+    } else if (this.activeBottomSheet === 'crm_lead') {
+      container.innerHTML = this.renderCRMLeadSheetHtml();
     }
 
     this.attachBottomSheetListeners();
+  }
+
+  private renderCRMLeadSheetHtml(): string {
+    const lead = this.crmLeadData;
+    const name = this.escapeHtml(lead?.name || this.crmLeadName || 'Customer Lead');
+    const rawPhone = lead?.phone || this.crmLeadPhone || '';
+    const cleanPhone = (rawPhone || '').replace(/\D/g, '').slice(-10);
+    const maskedPhone = this.escapeHtml(this.maskPhone(cleanPhone));
+    const leadIdStr = this.escapeAttr(String(this.crmLeadId || ''));
+    const status = lead?.status || 'new';
+    const priority = lead?.priority || 'normal';
+    const notes = this.crmLeadNotes || [];
+
+    if (this.crmLeadLoading) {
+      return `
+        <div id="bottomSheetBackdrop" style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 999; backdrop-filter: blur(4px);"></div>
+        <div style="position: fixed; bottom: 0; left: 0; right: 0; max-height: 85vh; background: #0f172a; border-top-left-radius: 24px; border-top-right-radius: 24px; z-index: 1000; padding: 40px 20px; text-align: center; color: #94a3b8;">
+          <div class="spinner-border text-warning mb-3" role="status" style="width: 2rem; height: 2rem;"></div>
+          <div style="font-weight: 600; font-size: 14px;">Loading Lead #${leadIdStr}…</div>
+        </div>
+      `;
+    }
+
+    // Build timeline items
+    const timelineItems: Array<{ type: string; color: string; author: string; time: string; content: string }> = [];
+    if (lead?.looking_for && String(lead.looking_for).trim()) {
+      timelineItems.push({
+        type: 'Looking For',
+        color: '#a855f7',
+        author: 'Lead Requirement',
+        time: lead.created_at,
+        content: String(lead.looking_for).trim()
+      });
+    }
+    if (lead?.recent_comments && String(lead.recent_comments).trim()) {
+      timelineItems.push({
+        type: 'Recent Comment',
+        color: '#38bdf8',
+        author: 'Staff Update',
+        time: lead.updated_at || lead.created_at,
+        content: String(lead.recent_comments).trim()
+      });
+    }
+    if (Array.isArray(notes)) {
+      notes.forEach((n: any) => {
+        const txt = n.note || n.content || '';
+        if (!txt.trim()) return;
+        timelineItems.push({
+          type: n.note_type || 'Note',
+          color: '#22c55e',
+          author: n.created_by_name || n.created_by_id || n.created_by_type || 'Staff',
+          time: n.created_at,
+          content: txt
+        });
+      });
+    }
+
+    // Group audit changes into sessions
+    const auditSessions: Array<{ key: string; author: string; emp_code: string; time_iso: string; items: any[] }> = [];
+    (this.crmLeadAuditChanges || []).forEach((c: any) => {
+      const dtStr = c.changed_at ? String(c.changed_at).slice(0, 16) : 'unknown';
+      const authorStr = c.changed_by_name || 'Staff';
+      const key = `${dtStr}_${authorStr}`;
+      let group = auditSessions.find(s => s.key === key);
+      if (!group) {
+        group = {
+          key,
+          author: authorStr,
+          emp_code: c.changed_by_id || '',
+          time_iso: c.changed_at,
+          items: []
+        };
+        auditSessions.push(group);
+      }
+      group.items.push(c);
+    });
+
+    return `
+      <!-- Backdrop Overlay -->
+      <div id="bottomSheetBackdrop" style="position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 999; backdrop-filter: blur(4px);"></div>
+
+      <!-- Slide-Up Drawer -->
+      <div style="position: fixed; bottom: 0; left: 0; right: 0; max-height: 90vh; overflow-y: auto; background: #0f172a; border-top-left-radius: 24px; border-top-right-radius: 24px; z-index: 1000; box-shadow: 0 -10px 40px rgba(0,0,0,0.8); border-top: 1px solid rgba(255,255,255,0.15); padding: 18px 16px 28px;">
+        
+        <!-- Header -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+            <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); display: flex; align-items: center; justify-content: center; color: #f59e0b; font-size: 17px; flex-shrink: 0;">
+              <i class="fas fa-address-card"></i>
+            </div>
+            <div style="min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span style="font-size: 15px; font-weight: 700; color: #f8fafc;">${name}</span>
+                <span style="font-size: 10px; font-weight: 700; color: #fbbf24; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; padding: 1px 5px; font-family: monospace;">#${leadIdStr}</span>
+                <span style="font-size: 10px; font-weight: 700; color: #38bdf8; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 6px; padding: 1px 5px;">${this.escapeHtml(status)}</span>
+              </div>
+              <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">
+                <span style="font-family: monospace; color: #60a5fa;">${maskedPhone}</span>
+                ${lead?.category_name ? ` · <span>${this.escapeHtml(lead.category_name)}</span>` : ''}
+                ${lead?.city ? ` · <span>📍 ${this.escapeHtml(lead.city)}</span>` : ''}
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+            ${cleanPhone ? `
+              <button class="wa-action-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(name)}" data-lead-id="${leadIdStr}" title="Send WhatsApp" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(37, 211, 102, 0.15); border: 1px solid rgba(37, 211, 102, 0.3); color: #25d366; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <i class="fab fa-whatsapp fa-xs"></i>
+              </button>
+              <button class="call-action-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(name)}" title="Call Now" style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); border: none; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-phone fa-xs"></i>
+              </button>
+            ` : ''}
+            <button id="closeBottomSheetBtn" style="width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,0.1); border: none; color: #94a3b8; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+          </div>
+        </div>
+
+        <!-- Tab Toggle -->
+        <div style="display: flex; gap: 6px; margin-bottom: 14px; background: rgba(30, 41, 59, 0.7); border: 1px solid #334155; border-radius: 10px; padding: 4px;">
+          <button id="mobileCrmTabDetailsBtn" type="button" style="flex: 1; padding: 6px 4px; border: none; border-radius: 7px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.15s; background: ${this.crmLeadTab === 'details' ? 'rgba(245, 158, 11, 0.2)' : 'transparent'}; color: ${this.crmLeadTab === 'details' ? '#fbbf24' : '#94a3b8'};">
+            📋 Details
+          </button>
+          <button id="mobileCrmTabNotesBtn" type="button" style="flex: 1; padding: 6px 4px; border: none; border-radius: 7px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.15s; background: ${this.crmLeadTab === 'notes' ? 'rgba(245, 158, 11, 0.2)' : 'transparent'}; color: ${this.crmLeadTab === 'notes' ? '#fbbf24' : '#94a3b8'};">
+            💬 Notes (${timelineItems.length})
+          </button>
+          <button id="mobileCrmTabAuditBtn" type="button" style="flex: 1; padding: 6px 4px; border: none; border-radius: 7px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.15s; background: ${this.crmLeadTab === 'audit' ? 'rgba(245, 158, 11, 0.2)' : 'transparent'}; color: ${this.crmLeadTab === 'audit' ? '#fbbf24' : '#94a3b8'};">
+            🕒 Changes (${this.crmLeadAuditChanges.length})
+          </button>
+        </div>
+
+        <!-- DETAILS FORM (Auto Dialer Model) -->
+        <div id="mobileCrmTabDetailsContent" style="display: ${this.crmLeadTab === 'details' ? 'flex' : 'none'}; flex-direction: column; gap: 12px;">
+          <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+              <label style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 4px; display: block;">Status *</label>
+              <select id="mobileCrmStatus" style="width: 100%; background: #1e293b; border: 1px solid #3b82f6; border-radius: 8px; color: #ffffff; padding: 8px 10px; font-size: 12.5px; font-weight: 700; outline: none;">
+                <optgroup label="Pipeline Stages">
+                  <option value="new" ${status === 'new' ? 'selected' : ''}>New</option>
+                  <option value="tried to contact" ${status === 'tried to contact' ? 'selected' : ''}>Tried to Contact</option>
+                  <option value="contacted" ${status === 'contacted' ? 'selected' : ''}>Contacted</option>
+                  <option value="interested" ${status === 'interested' ? 'selected' : ''}>Interested</option>
+                  <option value="qualified" ${status === 'qualified' ? 'selected' : ''}>Qualified</option>
+                  <option value="proposal" ${status === 'proposal' ? 'selected' : ''}>Proposal Sent</option>
+                  <option value="on_hold" ${status === 'on_hold' ? 'selected' : ''}>On Hold</option>
+                </optgroup>
+                <optgroup label="Bank Loan">
+                  <option value="waiting_for_bank_loan" ${status === 'waiting_for_bank_loan' ? 'selected' : ''}>Waiting for Bank Loan</option>
+                  <option value="bank_loan_rejected" ${status === 'bank_loan_rejected' ? 'selected' : ''}>Bank Loan Rejected</option>
+                  <option value="loan_process" ${status === 'loan_process' ? 'selected' : ''}>Loan Process</option>
+                </optgroup>
+                <optgroup label="Won & Implementation">
+                  <option value="won" ${status === 'won' ? 'selected' : ''}>Won</option>
+                  <option value="order_placed" ${status === 'order_placed' ? 'selected' : ''}>Order Placed</option>
+                  <option value="dispatched" ${status === 'dispatched' ? 'selected' : ''}>Dispatched</option>
+                  <option value="delivered" ${status === 'delivered' ? 'selected' : ''}>Delivered</option>
+                  <option value="installed" ${status === 'installed' ? 'selected' : ''}>Installed</option>
+                  <option value="completed" ${status === 'completed' ? 'selected' : ''}>Completed</option>
+                </optgroup>
+                <optgroup label="Closed">
+                  <option value="lost" ${status === 'lost' ? 'selected' : ''}>Lost</option>
+                  <option value="do_not_call" ${status === 'do_not_call' ? 'selected' : ''}>Do Not Call (DNC)</option>
+                </optgroup>
+              </select>
+            </div>
+
+            <div style="width: 110px;">
+              <label style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 4px; display: block;">Priority</label>
+              <select id="mobileCrmPriority" style="width: 100%; background: #1e293b; border: 1px solid #475569; border-radius: 8px; color: #ffffff; padding: 8px 10px; font-size: 12.5px; outline: none;">
+                <option value="normal" ${priority === 'normal' ? 'selected' : ''}>Normal</option>
+                <option value="medium" ${priority === 'medium' ? 'selected' : ''}>Medium</option>
+                <option value="high" ${priority === 'high' ? 'selected' : ''}>High</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 4px; display: block;">Category</label>
+            <select id="mobileCrmCategory" style="width: 100%; background: #1e293b; border: 1px solid #475569; border-radius: 8px; color: #ffffff; padding: 8px 10px; font-size: 12.5px; outline: none;">
+              <option value="">Select Category…</option>
+              ${this.crmLeadCategories.map((cat: any) => `
+                <option value="${cat.id}" ${lead?.category_id === cat.id ? 'selected' : ''}>${this.escapeHtml(cat.name)}</option>
+              `).join('')}
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+              <label style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 4px; display: block;">Name</label>
+              <input id="mobileCrmName" type="text" value="${this.escapeAttr(lead?.name || '')}" style="width: 100%; background: #1e293b; border: 1px solid #475569; border-radius: 8px; color: #ffffff; padding: 8px 10px; font-size: 12.5px; outline: none;">
+            </div>
+            <div style="flex: 1;">
+              <label style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 4px; display: block;">City</label>
+              <input id="mobileCrmCity" type="text" value="${this.escapeAttr(lead?.city || '')}" style="width: 100%; background: #1e293b; border: 1px solid #475569; border-radius: 8px; color: #ffffff; padding: 8px 10px; font-size: 12.5px; outline: none;">
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px;">
+            <div style="flex: 1;">
+              <label style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 4px; display: block;">Area / Locality</label>
+              <input id="mobileCrmArea" type="text" value="${this.escapeAttr(lead?.area || '')}" style="width: 100%; background: #1e293b; border: 1px solid #475569; border-radius: 8px; color: #ffffff; padding: 8px 10px; font-size: 12.5px; outline: none;">
+            </div>
+            <div style="flex: 1;">
+              <label style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 4px; display: block;">Budget Max (₹)</label>
+              <input id="mobileCrmBudgetMax" type="number" value="${lead?.budget_max != null ? lead.budget_max : ''}" style="width: 100%; background: #1e293b; border: 1px solid #475569; border-radius: 8px; color: #ffffff; padding: 8px 10px; font-size: 12.5px; outline: none;">
+            </div>
+          </div>
+
+          <div>
+            <label style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 4px; display: block;">Description</label>
+            <textarea id="mobileCrmDesc" rows="2" style="width: 100%; background: #1e293b; border: 1px solid #475569; border-radius: 8px; color: #ffffff; padding: 8px 10px; font-size: 12.5px; outline: none;" placeholder="Project context...">${this.escapeHtml(lead?.description || '')}</textarea>
+          </div>
+
+          <div>
+            <label style="font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 4px; display: block;">Requirements</label>
+            <textarea id="mobileCrmReq" rows="2" style="width: 100%; background: #1e293b; border: 1px solid #475569; border-radius: 8px; color: #ffffff; padding: 8px 10px; font-size: 12.5px; outline: none;" placeholder="Customer needs...">${this.escapeHtml(lead?.requirements || '')}</textarea>
+          </div>
+        </div>
+
+        <!-- COMMENTS & NOTES TAB -->
+        <div id="mobileCrmTabNotesContent" style="display: ${this.crmLeadTab === 'notes' ? 'flex' : 'none'}; flex-direction: column; gap: 12px;">
+          <!-- Add New Comment Box -->
+          <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 12px; padding: 12px;">
+            <div style="font-size: 12px; font-weight: 800; color: #fbbf24; margin-bottom: 8px;">
+              <i class="fas fa-pen-to-square me-1"></i> Add New Comment / Call Outcome
+            </div>
+
+            <!-- Quick outcome chips -->
+            <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;">
+              <button type="button" class="mobile-outcome-chip" data-note="Answered - Interested" data-status="interested" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; font-size: 11px; font-weight: 700; border-radius: 16px; padding: 3px 8px; cursor: pointer;">
+                ✅ Interested
+              </button>
+              <button type="button" class="mobile-outcome-chip" data-note="Follow-up Required" data-status="contacted" style="background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa; font-size: 11px; font-weight: 700; border-radius: 16px; padding: 3px 8px; cursor: pointer;">
+                📞 Follow-up
+              </button>
+              <button type="button" class="mobile-outcome-chip" data-note="Busy / No Answer" data-status="tried to contact" style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24; font-size: 11px; font-weight: 700; border-radius: 16px; padding: 3px 8px; cursor: pointer;">
+                📳 Busy / No Ans
+              </button>
+              <button type="button" class="mobile-outcome-chip" data-note="Callback Requested" data-status="contacted" style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: #c084fc; font-size: 11px; font-weight: 700; border-radius: 16px; padding: 3px 8px; cursor: pointer;">
+                🔁 Callback
+              </button>
+              <button type="button" class="mobile-outcome-chip" data-note="Not Interested" data-status="lost" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; font-size: 11px; font-weight: 700; border-radius: 16px; padding: 3px 8px; cursor: pointer;">
+                ❌ Not Interested
+              </button>
+            </div>
+
+            <textarea id="mobileCrmNewNote" rows="2" style="width: 100%; background: #0f172a; border: 1px solid #475569; border-radius: 8px; color: #ffffff; padding: 8px 10px; font-size: 12px; outline: none;" placeholder="Type comments or updates on this lead...">${this.escapeHtml(this.crmLeadNewNote)}</textarea>
+          </div>
+
+          <!-- Notes List -->
+          <div style="font-size: 12px; font-weight: 700; color: #94a3b8; margin-top: 4px;">Timeline (${timelineItems.length} entries)</div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            ${!timelineItems.length ? `
+              <div style="text-align: center; color: #64748b; font-size: 12px; padding: 20px;">No comments or updates yet.</div>
+            ` : timelineItems.map(item => `
+              <div style="background: rgba(30, 41, 59, 0.6); border-left: 3px solid ${item.color}; border-radius: 8px; padding: 8px 12px;">
+                <div style="display: flex; justify-content: space-between; font-size: 10.5px; color: #94a3b8; margin-bottom: 2px;">
+                  <span style="font-weight: 700; color: ${item.color};">${this.escapeHtml(item.type)} · ${this.escapeHtml(item.author)}</span>
+                  <span>${this.formatRelativeTime(item.time)}</span>
+                </div>
+                <div style="font-size: 12px; color: #f1f5f9; white-space: pre-wrap;">${this.escapeHtml(item.content)}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- FIELD AUDIT CHANGES TAB -->
+        <div id="mobileCrmTabAuditContent" style="display: ${this.crmLeadTab === 'audit' ? 'flex' : 'none'}; flex-direction: column; gap: 12px;">
+          ${!this.crmLeadAuditChanges.length ? `
+            <div style="text-align: center; padding: 36px 16px; background: rgba(15, 23, 42, 0.6); border: 1px dashed #334155; border-radius: 12px;">
+              <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(100, 116, 139, 0.15); display: inline-flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 18px; margin-bottom: 10px;">
+                <i class="fas fa-file-circle-check"></i>
+              </div>
+              <div style="font-size: 13.5px; font-weight: 700; color: #e2e8f0; margin-bottom: 4px;">No Details Updated</div>
+              <div style="font-size: 11.5px; color: #64748b;">No field changes or comments were updated for this lead yet.</div>
+            </div>
+          ` : auditSessions.map(session => `
+            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 12px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);">
+              <!-- Session Header: Attendant + Time -->
+              <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <div style="width: 24px; height: 24px; border-radius: 50%; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); display: flex; align-items: center; justify-content: center; color: #38bdf8; font-size: 11px;">
+                    <i class="fas fa-user-check"></i>
+                  </div>
+                  <div>
+                    <span style="font-size: 12px; font-weight: 700; color: #f8fafc;">${this.escapeHtml(session.author)}</span>
+                    ${session.emp_code && !session.author.includes(session.emp_code) ? `<span style="font-size: 10.5px; color: #94a3b8; margin-left: 4px; font-family: monospace;">(${this.escapeHtml(session.emp_code)})</span>` : ''}
+                  </div>
+                </div>
+                <div style="font-size: 10.5px; color: #fbbf24; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 10px; padding: 2px 8px;">
+                  <i class="far fa-clock"></i> ${this.escapeHtml(this.formatRelativeTime(session.time_iso))}
+                </div>
+              </div>
+
+              <!-- Changes Items (Only changed fields) -->
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                ${session.items.map(item => {
+                  const isComment = item.change_category === 'comments' || (item.field_name && item.field_name.includes('comment'));
+                  const beforeDisp = item.before_display || '—';
+                  const presentDisp = item.present_display || '—';
+                  return `
+                    <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 8px 10px;">
+                      <div style="display: flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">
+                        <i class="${isComment ? 'fas fa-comment-dots text-info' : 'fas fa-pen-to-square text-warning'}" style="font-size: 10px;"></i>
+                        <span>${this.escapeHtml(item.field_label || item.field_name)}</span>
+                      </div>
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div>
+                          <div style="font-size: 9.5px; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin-bottom: 3px;">Before</div>
+                          <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 6px; padding: 4px 6px; font-size: 11px; color: #f87171; word-break: break-word; white-space: pre-wrap; font-family: ${isComment ? 'inherit' : 'monospace'};">
+                            ${this.escapeHtml(beforeDisp)}
+                          </div>
+                        </div>
+                        <div>
+                          <div style="font-size: 9.5px; font-weight: 700; text-transform: uppercase; color: #94a3b8; margin-bottom: 3px;">Present</div>
+                          <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 4px 6px; font-size: 11px; color: #34d399; font-weight: 600; word-break: break-word; white-space: pre-wrap; font-family: ${isComment ? 'inherit' : 'monospace'};">
+                            ${this.escapeHtml(presentDisp)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Footer Action -->
+        <div style="display: flex; gap: 10px; margin-top: 20px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.1);">
+          <button type="button" onclick="window.location.hash = '#/leads?lead_id=${leadIdStr}'" style="background: transparent; border: 1px solid #475569; color: #94a3b8; border-radius: 10px; padding: 10px 14px; font-size: 12px; font-weight: 600; cursor: pointer;">
+            Full CRM →
+          </button>
+          <button id="mobileCrmSubmitBtn" type="button" style="flex: 1; background: #f59e0b; border: none; border-radius: 10px; color: #0f172a; font-weight: 800; padding: 12px 16px; font-size: 13px; cursor: pointer; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); display: flex; align-items: center; justify-content: center; gap: 8px;">
+            ${this.crmLeadSubmitting ? '<i class="fas fa-spinner fa-spin"></i> Saving…' : '<i class="fas fa-check"></i> Save Lead Updates'}
+          </button>
+        </div>
+
+      </div>
+    `;
   }
 
   private renderCustomerHistorySheetHtml(): string {
@@ -2240,6 +2719,11 @@ export class SoftphonePage {
             </div>
           </div>
           <div style="display: flex; align-items: center; gap: 8px;">
+            ${leadIdStr ? `
+              <button class="crm-lead-trigger-btn" data-lead-id="${leadIdStr}" data-phone="${cleanPhone}" data-name="${this.escapeAttr(this.isPlaceholderName(custName) ? '' : custName)}" data-company-id="${this.escapeAttr(String(data?.lead?.company_id || ''))}" title="CRM Lead Details" style="padding: 6px 12px; border-radius: 16px; background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24; font-size: 11.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                <i class="fas fa-address-card"></i> CRM
+              </button>
+            ` : ''}
             <button class="wa-action-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(this.isPlaceholderName(custName) ? '' : custName)}" data-lead-id="${leadIdStr}" title="Send WhatsApp / Digital Catalog" style="padding: 6px 12px; border-radius: 16px; background: #25d366; border: none; color: #fff; font-size: 11.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);">
               <i class="fab fa-whatsapp"></i> WhatsApp
             </button>
@@ -2416,6 +2900,22 @@ export class SoftphonePage {
       if (this.activeScope === 'dialer') this.loadRecent20Calls();
       else if (this.activeScope === 'contacts') this.loadContacts(this.contactsPage);
       else this.loadScopeCalls(this.scopeCurrentPage);
+    });
+
+    // 3b. Test Screen-Off Incoming Call
+    document.getElementById('softphoneTestCallBtn')?.addEventListener('click', async () => {
+      try {
+        const { incomingCallAdapter } = await import('../services/incoming-call.adapter');
+        await incomingCallAdapter.triggerTestCall('+919876543210', 'Rajesh Sharma', 3.0, 'Solar', '5kW Residential Rooftop', 'Hyderabad');
+
+        const toast = document.createElement('div');
+        toast.style.cssText = 'position: fixed; top: 65px; left: 50%; transform: translateX(-50%); background: #16a34a; color: #fff; padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 13px; z-index: 99999; box-shadow: 0 4px 15px rgba(0,0,0,0.4); text-align: center; pointer-events: none;';
+        toast.innerHTML = '<i class="fas fa-phone-volume"></i> Incoming Call ringing in 3s — Lock screen now!';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
+      } catch (e) {
+        console.warn('[SoftphonePage] Test call trigger error:', e);
+      }
     });
 
     // 4. Keypad Buttons
@@ -2609,8 +3109,9 @@ export class SoftphonePage {
         const target = btn as HTMLElement;
         const key = target.dataset.audioKey || '';
         const streamUrl = target.dataset.streamUrl || '';
+        const title = target.getAttribute('title') || 'Call Recording';
         if (key && streamUrl) {
-          this.toggleAudioPlayback(key, streamUrl);
+          this.toggleAudioPlayback(key, streamUrl, title);
         }
       });
     });
@@ -2625,6 +3126,21 @@ export class SoftphonePage {
         const name = target.dataset.name || 'Customer';
         if (sessionId) {
           this.openActionTakenModal(sessionId, phone, name);
+        }
+      });
+    });
+
+    // CRM Lead details modal trigger
+    this.container.querySelectorAll('.crm-lead-trigger-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = btn as HTMLElement;
+        const leadId = target.dataset.leadId || '';
+        const phone = target.dataset.phone || '';
+        const name = target.dataset.name || 'Customer';
+        const companyId = target.dataset.companyId || '';
+        if (leadId) {
+          this.openCRMLeadModal(leadId, phone, name, companyId);
         }
       });
     });
@@ -2886,6 +3402,104 @@ export class SoftphonePage {
       return;
     }
 
+    if (this.activeBottomSheet === 'crm_lead') {
+      const detailsBtn = document.getElementById('mobileCrmTabDetailsBtn');
+      const notesBtn = document.getElementById('mobileCrmTabNotesBtn');
+      const auditBtn = document.getElementById('mobileCrmTabAuditBtn');
+      const detailsContent = document.getElementById('mobileCrmTabDetailsContent');
+      const notesContent = document.getElementById('mobileCrmTabNotesContent');
+      const auditContent = document.getElementById('mobileCrmTabAuditContent');
+
+      const setTabActive = (activeTab: 'details' | 'notes' | 'audit') => {
+        this.crmLeadTab = activeTab;
+        if (detailsContent) detailsContent.style.display = activeTab === 'details' ? 'flex' : 'none';
+        if (notesContent) notesContent.style.display = activeTab === 'notes' ? 'flex' : 'none';
+        if (auditContent) auditContent.style.display = activeTab === 'audit' ? 'flex' : 'none';
+
+        if (detailsBtn) {
+          detailsBtn.style.background = activeTab === 'details' ? 'rgba(245, 158, 11, 0.2)' : 'transparent';
+          detailsBtn.style.color = activeTab === 'details' ? '#fbbf24' : '#94a3b8';
+        }
+        if (notesBtn) {
+          notesBtn.style.background = activeTab === 'notes' ? 'rgba(245, 158, 11, 0.2)' : 'transparent';
+          notesBtn.style.color = activeTab === 'notes' ? '#fbbf24' : '#94a3b8';
+        }
+        if (auditBtn) {
+          auditBtn.style.background = activeTab === 'audit' ? 'rgba(245, 158, 11, 0.2)' : 'transparent';
+          auditBtn.style.color = activeTab === 'audit' ? '#fbbf24' : '#94a3b8';
+        }
+      };
+
+      detailsBtn?.addEventListener('click', () => setTabActive('details'));
+      notesBtn?.addEventListener('click', () => setTabActive('notes'));
+      auditBtn?.addEventListener('click', () => setTabActive('audit'));
+
+      // Quick outcome chips
+      document.querySelectorAll<HTMLElement>('.mobile-outcome-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const noteText = chip.dataset.note || '';
+          const targetStatus = chip.dataset.status || '';
+          const noteTextarea = document.getElementById('mobileCrmNewNote') as HTMLTextAreaElement;
+          if (noteTextarea) {
+            const current = noteTextarea.value.trim();
+            noteTextarea.value = current ? `${current}\n${noteText}` : noteText;
+            this.crmLeadNewNote = noteTextarea.value;
+          } else {
+            this.crmLeadNewNote = noteText;
+          }
+          const statusSelect = document.getElementById('mobileCrmStatus') as HTMLSelectElement;
+          if (statusSelect && targetStatus) {
+            statusSelect.value = targetStatus;
+          }
+        });
+      });
+
+      // Note input tracking
+      const newNoteEl = document.getElementById('mobileCrmNewNote') as HTMLTextAreaElement;
+      newNoteEl?.addEventListener('input', () => {
+        this.crmLeadNewNote = newNoteEl.value;
+      });
+
+      // Submit button
+      document.getElementById('mobileCrmSubmitBtn')?.addEventListener('click', () => {
+        this.submitCRMLeadUpdates();
+      });
+
+      // WhatsApp & Call actions inside CRM lead sheet
+      const container = document.getElementById('softphoneBottomSheetContainer');
+      if (container) {
+        container.querySelectorAll('.wa-action-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const target = btn as HTMLElement;
+            const phone = target.dataset.phone || '';
+            const name = target.dataset.name || '';
+            const leadId = target.dataset.leadId || '';
+            if (phone) {
+              unifiedWAModal.open({
+                phone,
+                name,
+                leadId: leadId ? Number(leadId) : undefined,
+                context: 'softphone'
+              });
+            }
+          });
+        });
+
+        container.querySelectorAll('.call-action-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const phone = (btn as HTMLElement).dataset.phone;
+            const name = (btn as HTMLElement).dataset.name;
+            if (phone) {
+              this.closeBottomSheet();
+              this.startCall(phone, name);
+            }
+          });
+        });
+      }
+      return;
+    }
+
     const noteInput = document.getElementById('actionTakenNoteInput') as HTMLTextAreaElement;
     noteInput?.addEventListener('input', () => {
       this.actionModalNotes = noteInput.value;
@@ -2896,14 +3510,29 @@ export class SoftphonePage {
     // Inside bottom sheet customer timeline: Audio play triggers & Call button
     const container = document.getElementById('softphoneBottomSheetContainer');
     if (container) {
+      container.querySelectorAll('.crm-lead-trigger-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const target = btn as HTMLElement;
+          const leadId = target.dataset.leadId || '';
+          const phone = target.dataset.phone || '';
+          const name = target.dataset.name || 'Customer';
+          const companyId = target.dataset.companyId || '';
+          if (leadId) {
+            this.openCRMLeadModal(leadId, phone, name, companyId);
+          }
+        });
+      });
+
       container.querySelectorAll('.audio-play-trigger-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           const target = btn as HTMLElement;
           const key = target.dataset.audioKey || '';
           const streamUrl = target.dataset.streamUrl || '';
+          const title = target.getAttribute('title') || 'Call Recording';
           if (key && streamUrl) {
-            this.toggleAudioPlayback(key, streamUrl);
+            this.toggleAudioPlayback(key, streamUrl, title);
           }
         });
       });

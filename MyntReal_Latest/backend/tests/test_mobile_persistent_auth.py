@@ -317,3 +317,22 @@ def test_expired_session_rejected(test_staff, db):
     assert res.status_code == 401
     assert "expired" in res.json()["detail"].lower()
 
+
+def test_missing_or_malformed_refresh_payload():
+    # Empty payload
+    r1 = client.post("/api/v1/staff/auth/mobile/refresh", json={})
+    assert r1.status_code in (400, 422)
+
+    # Missing device_id
+    r2 = client.post("/api/v1/staff/auth/mobile/refresh", json={"refresh_token": "some_tok"})
+    assert r2.status_code in (400, 422)
+
+    # Missing refresh_token
+    r3 = client.post("/api/v1/staff/auth/mobile/refresh", json={"device_id": "dev_123"})
+    assert r3.status_code in (400, 422)
+
+    # Whitespace only
+    r4 = client.post("/api/v1/staff/auth/mobile/refresh", json={"refresh_token": "   ", "device_id": "   "})
+    assert r4.status_code in (400, 422)
+
+

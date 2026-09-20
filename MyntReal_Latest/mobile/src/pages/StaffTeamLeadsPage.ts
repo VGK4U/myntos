@@ -13,6 +13,8 @@ import { unifiedWAModal } from '../components/UnifiedWAModal';
 import { callController } from '../services/call-controller';
 import { dialerService } from '../services/dialer.service';
 import { unifiedShareLeadModal } from '../components/UnifiedShareLeadModal';
+import { APP_CONFIG } from '../config/app.config';
+import { recordingPlayerService } from '../services/recording-player.service';
 
 interface Company {
   id: number;
@@ -1962,21 +1964,14 @@ export class StaffTeamLeadsPage {
     }
   }
 
-  private playCallRecording(recordingId: number, btnEl: HTMLElement): void {
-    const existingPlayer = document.getElementById('mobileAudioPlayer');
-    if (existingPlayer) existingPlayer.remove();
-    const container = btnEl.closest('.call-record-item');
-    if (!container) return;
-    const playerDiv = document.createElement('div');
-    playerDiv.id = 'mobileAudioPlayer';
-    playerDiv.className = 'audio-player-inline';
-    playerDiv.innerHTML = `
-      <audio controls autoplay style="width:100%;height:36px;" src="/api/v1/call-tracking/recordings/${recordingId}/stream">
-        Your browser does not support audio playback.
-      </audio>
-      <button class="btn btn-xs btn-outline close-player-btn" onclick="document.getElementById('mobileAudioPlayer')?.remove()">✕</button>
-    `;
-    container.after(playerDiv);
+  private async playCallRecording(recordingId: number, btnEl: HTMLElement): Promise<void> {
+    const rawStreamUrl = `/api/v1/call-tracking/recordings/${recordingId}/stream`;
+    await recordingPlayerService.play({
+      key: `team_rec_${recordingId}`,
+      rawUrl: rawStreamUrl,
+      title: `Team Call Recording #${recordingId}`,
+      subtitle: 'Team Lead Activity Audio'
+    });
   }
 
   private handleBulkAction(action: string): void {

@@ -3,7 +3,16 @@ import Capacitor
 import Security
 
 @objc(SecureStoragePlugin)
-public class SecureStoragePlugin: CAPPlugin {
+public class SecureStoragePlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "SecureStoragePlugin"
+    public let jsName = "SecureStorage"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "setKey", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getKey", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "removeKey", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "clear", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getDeviceId", returnType: CAPPluginReturnPromise)
+    ]
     private let serviceName = "com.myntos.mobile.keychain"
 
     @objc func setKey(_ call: CAPPluginCall) {

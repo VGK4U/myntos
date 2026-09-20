@@ -8,6 +8,7 @@ import { apiService } from '../../services/api.service';
 import { authService } from '../../services/auth.service';
 import { PageHeader } from '../../components/PageHeader';
 import { routerService } from '../../services/router.service';
+import { APP_CONFIG } from '../../config/app.config';
 
 interface Package {
   id: number;
@@ -713,7 +714,7 @@ export class MNRAddMember {
       document.getElementById('mnrMobileOtpPendingBadge')!.style.display = 'none';
       document.getElementById('mnrMobilePhoneToken' as any)!.setAttribute('value', '');
       try {
-        const r = await fetch('/api/v1/users/send-otp', {
+        const r = await fetch(`${APP_CONFIG.BASE_SERVER_URL}/api/v1/users/send-otp`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: mobile })
@@ -754,7 +755,7 @@ export class MNRAddMember {
       const btn = document.getElementById('mnrMobileVerifyBtn') as HTMLButtonElement;
       if (btn) { btn.disabled = true; btn.textContent = 'Verifying…'; }
       try {
-        const r = await fetch('/api/v1/users/verify-otp', {
+        const r = await fetch(`${APP_CONFIG.BASE_SERVER_URL}/api/v1/users/verify-otp`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone: mobile, otp_code: otpCode })

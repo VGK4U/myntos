@@ -3365,6 +3365,12 @@
 
             <!-- Right Controls: Theme Switcher + Languages + Platform Mark -->
             <div class="d-flex align-items-center gap-2 order-2 ms-auto">
+                <!-- Home Link -->
+                <a href="/hub" class="theme-toggle-btn text-decoration-none" title="Go to Home Page">
+                    <i class="fas fa-home text-warning"></i>
+                    <span class="d-none d-sm-inline ms-1">Home</span>
+                </a>
+
                 <!-- 1-Tap Light/Dark Theme Switcher -->
                 <button type="button" class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleCatalogTheme()" title="Toggle Light / Dark Mode">
                     <i class="fas fa-sun text-warning" id="themeToggleIcon"></i>
@@ -3388,6 +3394,7 @@
 
     <!-- ── 2. STICKY IN-PAGE JUMP NAVIGATION ───────────────────────────── -->
     <nav class="sticky-jump-nav" id="jumpNavBar">
+        <a href="/hub" class="jump-link text-warning fw-bold"><i class="fas fa-home me-1"></i>Home</a>
         <a href="#hero" class="jump-link active">Overview</a>
         <a href="#highlights" class="jump-link">Key Benefits</a>
         <a href="#packages" class="jump-link">Packages &amp; Pricing</a>

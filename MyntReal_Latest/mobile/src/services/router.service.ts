@@ -46,6 +46,8 @@ export type PageRoute =
   | 'staff-whatsapp'
   | 'staff-whatsapp-inbox'
   | 'staff-bank-wise-leads'
+  | 'executive-dashboard'
+  | 'category-leads-master'
   // Day Planner Section
   | 'day-planner'
   // Tasks Section - New
@@ -201,6 +203,9 @@ export type PageRoute =
   // Custom Web Views
   | 'staff-expense-entries'
   | 'digital-catalog'
+  | 'catalog-library'
+  | 'staff-catalog-library'
+  | 'catalog'
   | 'staff-my-earnings';
 
 interface RouteConfig {
@@ -248,6 +253,9 @@ class RouterService {
     'staff-crm': { id: 'staff-crm', title: 'CRM Dashboard', icon: 'pie-chart', showInTabs: false, portal: 'staff' },
     'staff-team-leads': { id: 'staff-team-leads', title: 'Team Leads', icon: 'users', showInTabs: false, portal: 'staff' },
     'digital-catalog': { id: 'digital-catalog', title: 'Digital Catalog', icon: 'book-open', showInTabs: false, portal: 'staff' },
+    'catalog-library': { id: 'catalog-library', title: 'Catalog Library', icon: 'book-open', showInTabs: false, portal: 'staff' },
+    'staff-catalog-library': { id: 'staff-catalog-library', title: 'Catalog Library', icon: 'book-open', showInTabs: false, portal: 'staff' },
+    'catalog': { id: 'catalog', title: 'Digital Catalog', icon: 'book-open', showInTabs: false, portal: 'staff' },
     'change-password': { id: 'change-password', title: 'Change Password', icon: 'lock', showInTabs: false, portal: 'staff' },
     // Staff Dashboard Section - New Routes
     'staff-employees': { id: 'staff-employees', title: 'Employees', icon: 'users', showInTabs: false, portal: 'staff' },
@@ -265,7 +273,9 @@ class RouterService {
     'staff-lead-sources': { id: 'staff-lead-sources', title: 'Lead Sources', icon: 'list', showInTabs: false, portal: 'staff' },
     'staff-whatsapp': { id: 'staff-whatsapp', title: 'WhatsApp Inbox', icon: 'message-circle', showInTabs: false, portal: 'staff' },
     'staff-whatsapp-inbox': { id: 'staff-whatsapp-inbox', title: 'WhatsApp Inbox', icon: 'message-circle', showInTabs: false, portal: 'staff' },
-    'staff-bank-wise-leads': { id: 'staff-bank-wise-leads', title: 'Field staff leads', icon: 'users', showInTabs: false, portal: 'staff' },
+    'staff-bank-wise-leads': { id: 'staff-bank-wise-leads', title: 'Field Sales', icon: 'users', showInTabs: false, portal: 'staff' },
+    'executive-dashboard': { id: 'executive-dashboard', title: 'Executive Dashboard', icon: 'pie-chart', showInTabs: false, portal: 'staff' },
+    'category-leads-master': { id: 'category-leads-master', title: 'Category Lead Master', icon: 'grid', showInTabs: false, portal: 'staff' },
     'staff-call-tracking': { id: 'staff-call-tracking', title: 'Call Tracking', icon: 'call', showInTabs: false, portal: 'staff' },
     'auto-dialer': { id: 'auto-dialer', title: 'Auto Dialer', icon: 'phone-call', showInTabs: false, portal: 'staff' },
     'softphone': { id: 'softphone', title: 'Softphone', icon: 'phone', showInTabs: false, portal: 'staff' },
@@ -429,10 +439,14 @@ class RouterService {
       addToHistory = params;
       params = undefined;
     }
-    if (addToHistory && this.currentRoute !== route) {
+    let targetRoute: PageRoute = route;
+    if (route === 'catalog-library' || route === 'staff-catalog-library' || (route as string) === 'catalog') {
+      targetRoute = 'digital-catalog';
+    }
+    if (addToHistory && this.currentRoute !== targetRoute) {
       this.history.push(this.currentRoute);
     }
-    this.currentRoute = route;
+    this.currentRoute = targetRoute;
     this.routeParams = params || {};
     this.notifyListeners();
   }

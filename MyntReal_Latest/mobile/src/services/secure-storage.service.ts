@@ -87,26 +87,34 @@ class SecureStorageService {
   }
 
   async setRefreshToken(token: string): Promise<void> {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await NativeSecureStorage.setKey({ key: REFRESH_TOKEN_KEY, value: token });
+        return;
+      } catch (e) {
+        console.warn('[SecureStorage] Native storage write failed, falling back to local:', e);
+      }
+    }
+    // Web development & native safety fallback
     try {
-      await NativeSecureStorage.setKey({ key: REFRESH_TOKEN_KEY, value: token });
+      localStorage.setItem(`mynt_sec_${REFRESH_TOKEN_KEY}`, token);
     } catch (e) {
-      console.error('[SecureStorage] Failed to store refresh token in secure storage:', e);
-      // Fail-safe memory/storage backup if native keystore fails
-      try { localStorage.setItem(`mynt_sec_${REFRESH_TOKEN_KEY}`, token); } catch {}
+      console.warn('[SecureStorage] Storage fallback write error:', e);
     }
   }
 
   async getRefreshToken(): Promise<string | null> {
-    try {
-      const res = await NativeSecureStorage.getKey({ key: REFRESH_TOKEN_KEY });
-      if (res && res.value) {
-        return res.value;
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const res = await NativeSecureStorage.getKey({ key: REFRESH_TOKEN_KEY });
+        if (res?.value) return res.value;
+      } catch (e) {
+        console.warn('[SecureStorage] Failed to read refresh token from native storage:', e);
       }
-    } catch (e) {
-      console.warn('[SecureStorage] Failed to read refresh token from native storage:', e);
     }
+    // Web development & native safety fallback
     try {
-      return localStorage.getItem(`mynt_sec_${REFRESH_TOKEN_KEY}`);
+      return localStorage.getItem(`mynt_sec_${REFRESH_TOKEN_KEY}`) || null;
     } catch {
       return null;
     }
@@ -129,10 +137,12 @@ class SecureStorageService {
     } catch (e) {
       console.warn('[SecureStorage] Error clearing native secure storage:', e);
     }
-    try {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith('mynt_sec_'));
-      keys.forEach(k => localStorage.removeItem(k));
-    } catch {}
+    if (!Capacitor.isNativePlatform()) {
+      try {
+        const keys = Object.keys(localStorage).filter(k => k.startsWith('mynt_sec_'));
+        keys.forEach(k => localStorage.removeItem(k));
+      } catch {}
+    }
     this.cachedDeviceId = null;
   }
 }

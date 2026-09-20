@@ -1,6 +1,7 @@
 import { apiService } from '../services/api.service';
 import { PageHeader } from '../components/PageHeader';
 import { routerService } from '../services/router.service';
+import { APP_CONFIG } from '../config/app.config';
 
 interface Task {
   id: number;
@@ -628,7 +629,7 @@ export class TasksAssignedPage {
           <div class="attachment-icon"><i class="fas fa-file"></i></div>
           <span class="attachment-name">${att.filename || att.file_name || 'File'}</span>
         </div>
-        <button class="attachment-btn" onclick="window.open('/api/v1/staff/tasks/attachments/${att.id}/download', '_blank')"><i class="fas fa-download"></i></button>
+        <button class="attachment-btn" onclick="window.open('${APP_CONFIG.BASE_SERVER_URL}/api/v1/staff/tasks/attachments/${att.id}/download', '_blank')"><i class="fas fa-download"></i></button>
       </div>
     `).join('');
   }
@@ -681,7 +682,7 @@ export class TasksAssignedPage {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      const response = await fetch(`/api/v1/staff/tasks/${taskId}/attachments`, {
+      const response = await fetch(`${APP_CONFIG.BASE_SERVER_URL}/api/v1/staff/tasks/${taskId}/attachments`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('staff_token')}` },
         body: formData

@@ -2211,6 +2211,7 @@
 
                 <!-- Desktop Section Navigation Links -->
                 <ul class="catalog-nav-links">
+                    <li class="catalog-nav-item"><a href="/hub" class="nav-link-home text-decoration-none" title="Go to Home Page"><i class="fas fa-home me-1 text-warning"></i>Home</a></li>
                     <li class="catalog-nav-item"><a href="#hero" class="active" id="navLinkOverview">Overview</a></li>
                     <li class="catalog-nav-item"><a href="#explore_solutions" id="navLinkExplore">Explore</a></li>
                     <li class="catalog-nav-item"><a href="#packages" id="navLinkPackages">Packages</a></li>
@@ -2224,6 +2225,10 @@
 
                 <!-- Language Switcher & Actions -->
                 <div class="d-flex align-items-center gap-2">
+                    <a href="/hub" class="btn-header-home d-none d-sm-inline-flex align-items-center gap-1 text-decoration-none" title="Go to Home Page" style="background: rgba(15,23,42,0.06); color: #0f172a; font-size: 13px; font-weight: 700; padding: 7px 13px; border-radius: 999px; border: 1px solid rgba(15,23,42,0.12);">
+                        <i class="fas fa-home text-warning"></i> <span>Home</span>
+                    </a>
+
                     <div class="lang-switch-group" id="langSwitchGroup" role="group" aria-label="Language selector">
                         <button type="button" class="lang-pill-btn active" data-lang="en" onclick="switchLanguage('en')"><span class="lang-full">EN</span><span class="lang-short">EN</span></button>
                         <button type="button" class="lang-pill-btn" data-lang="te" onclick="switchLanguage('te')"><span class="lang-full">తెలుగు</span><span class="lang-short">TEL</span></button>
@@ -2245,6 +2250,7 @@
         <!-- Mobile Drawer Navigation -->
         <div class="mobile-nav-drawer" id="mobileNavDrawer">
             <ul>
+                <li><a href="/hub"><i class="fas fa-home me-2 text-warning"></i> Hub Home</a></li>
                 <li><a href="#hero" onclick="toggleMobileMenu()"><i class="fas fa-home me-2 text-warning"></i> Overview</a></li>
                 <li><a href="#explore_solutions" onclick="toggleMobileMenu()"><i class="fas fa-compass me-2 text-warning"></i> Explore Solutions</a></li>
                 <li><a href="#highlights" onclick="toggleMobileMenu()"><i class="fas fa-star me-2 text-warning"></i> Key Benefits</a></li>

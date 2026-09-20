@@ -368,7 +368,7 @@ class DialerService {
         // Check call logs for the dialed number appearing after dial time
         const { value: token } = await (await import('@capacitor/preferences')).Preferences.get({ key: 'auth_token' });
         if (!token) return;
-        const res = await fetch(`/api/v1/call-tracking/my-stats?range=today`, {
+        const res = await fetch(`${APP_CONFIG.BASE_SERVER_URL}/api/v1/call-tracking/my-stats?range=today`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         // DC_401_POLL_STOP: On auth failure, stop poll immediately and fire popup

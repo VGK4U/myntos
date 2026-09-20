@@ -11171,6 +11171,15 @@ def get_lead(
         lead_dict['can_click_to_call'] = auth_decision['can_click_to_call']
         lead_dict['contact_relationship'] = auth_decision['relationship']
 
+        # Field-wise audit changes history (Before vs Present)
+        try:
+            lead_dict['field_audit_changes'] = _build_lead_field_audit_changes(db, lead_id)
+            lead_dict['field_audit_total'] = len(lead_dict['field_audit_changes'])
+        except Exception as _fae:
+            print(f"[CRM-WARNING] Error fetching field_audit_changes for lead {lead.id}: {_fae}")
+            lead_dict['field_audit_changes'] = []
+            lead_dict['field_audit_total'] = 0
+
         return {
             'success': True,
             'data': lead_dict
@@ -11181,6 +11190,155 @@ def get_lead(
         error_detail = f"get_lead error for lead_id={lead_id}, company_id={company_id}: {str(e)}\n{traceback.format_exc()}"
         print(f"[CRM-ERROR] {error_detail}")
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
+
+
+def _build_lead_field_audit_changes(db: Session, lead_id: int) -> list:
+    """Build complete field-wise change history showing Before vs Present values and attendant timestamps."""
+    from app.models.crm import CRMLeadAuditLog, CRMLeadNote
+    from app.models.signup_category import SignupCategory
+    from app.models.staff import StaffEmployee
+
+    LABEL_MAP = {
+        'status': 'Lead Status',
+        'solar_pipeline_status': 'Solar Pipeline Status',
+        'priority': 'Priority',
+        'category_id': 'Category / Vertical',
+        'name': 'Customer Name',
+        'email': 'Email Address',
+        'phone': 'Primary Phone',
+        'alternate_phone': 'Alternate Phone',
+        'city': 'City',
+        'area': 'Area / Locality',
+        'source': 'Lead Source',
+        'budget_min': 'Budget Min',
+        'budget_max': 'Budget Max',
+        'next_followup_date': 'Next Follow-up',
+        'requirements': 'Requirements',
+        'description': 'Description',
+        'telecaller_id': 'Assigned Telecaller',
+        'field_staff_id': 'Assigned Field Staff',
+        'primary_owner_id': 'Primary Owner',
+        'associated_partner_id': 'Associated Partner',
+        'comment_added': 'Call Outcome / Comment Added',
+        'comment_updated': 'Comment Updated',
+        'recent_comments': 'Recent Comment',
+        'looking_for': 'Looking For',
+    }
+
+    staff_rows = db.query(StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.emp_code).all()
+    staff_map = {}
+    for s in staff_rows:
+        display_label = f"{s.full_name or s.emp_code} ({s.emp_code})" if s.emp_code else (s.full_name or f"Staff #{s.id}")
+        staff_map[str(s.id)] = display_label
+        staff_map[s.id] = display_label
+        if s.emp_code:
+            staff_map[s.emp_code] = display_label
+
+    cat_rows = db.query(SignupCategory.id, SignupCategory.name).all()
+    cat_map = {c.id: c.name for c in cat_rows}
+    cat_map_str = {str(c.id): c.name for c in cat_rows}
+
+    def format_val(field: str, val) -> str:
+        if val is None or str(val).strip() in ('', 'None', 'null'):
+            return '—'
+        val_str = str(val).strip()
+        if field == 'category_id':
+            return cat_map.get(val, cat_map_str.get(val_str, val_str))
+        if field in ('telecaller_id', 'field_staff_id', 'primary_owner_id'):
+            return staff_map.get(val, staff_map.get(val_str, f"Staff #{val_str}"))
+        if field in ('budget_min', 'budget_max'):
+            try:
+                num = float(val_str)
+                return f"₹{int(num):,}" if num.is_integer() else f"₹{num:,.2f}"
+            except Exception:
+                return f"₹{val_str}"
+        if field == 'status':
+            return val_str.replace('_', ' ').title()
+        if field == 'priority':
+            return val_str.capitalize()
+        return val_str
+
+    audit_rows = db.query(CRMLeadAuditLog).filter(
+        CRMLeadAuditLog.lead_id == lead_id
+    ).order_by(CRMLeadAuditLog.changed_at.desc()).limit(200).all()
+
+    note_rows = db.query(CRMLeadNote).filter(
+        CRMLeadNote.lead_id == lead_id
+    ).order_by(CRMLeadNote.created_at.desc()).limit(100).all()
+
+    seen_note_texts = set()
+    changes = []
+
+    for a in audit_rows:
+        if a.field_name in ('comment_added', 'comment_updated') and a.new_value:
+            seen_note_texts.add(a.new_value.strip())
+        changer = a.changed_by_name
+        if not changer or changer in ('staff', 'user', 'system'):
+            changer = staff_map.get(a.changed_by_id, a.changed_by_id or 'Staff')
+
+        dt_iso = a.changed_at.isoformat() if hasattr(a.changed_at, 'isoformat') else str(a.changed_at)
+        changes.append({
+            'id': a.id,
+            'source': 'audit_log',
+            'field_name': a.field_name,
+            'field_label': LABEL_MAP.get(a.field_name, a.field_name.replace('_', ' ').title()),
+            'before_value': a.old_value,
+            'before_display': format_val(a.field_name, a.old_value),
+            'present_value': a.new_value,
+            'present_display': format_val(a.field_name, a.new_value),
+            'changed_by_name': changer,
+            'changed_by_id': a.changed_by_id,
+            'changed_by_type': a.changed_by_type,
+            'change_category': a.change_category or 'field',
+            'changed_at': dt_iso
+        })
+
+    for n in note_rows:
+        ntxt = (n.note or '').strip()
+        if not ntxt or ntxt in seen_note_texts:
+            continue
+        seen_note_texts.add(ntxt)
+        n_author = staff_map.get(n.created_by_id, n.created_by_id or 'Staff')
+        dt_iso = n.created_at.isoformat() if hasattr(n.created_at, 'isoformat') else str(n.created_at)
+        changes.append({
+            'id': f"note_{n.id}",
+            'source': 'crm_lead_notes',
+            'field_name': 'comment_added',
+            'field_label': 'Call Outcome / Comment Added',
+            'before_value': None,
+            'before_display': '—',
+            'present_value': ntxt,
+            'present_display': ntxt,
+            'changed_by_name': n_author,
+            'changed_by_id': n.created_by_id,
+            'changed_by_type': n.created_by_type or 'staff',
+            'change_category': 'comments',
+            'changed_at': dt_iso
+        })
+
+    changes.sort(key=lambda x: str(x['changed_at']), reverse=True)
+    return changes
+
+
+@router.get("/leads/{lead_id}/field-audit-history")
+def get_lead_field_audit_history(
+    lead_id: int,
+    company_id: Optional[int] = Query(None, description="Company ID for DC Protocol"),
+    db: Session = Depends(get_db),
+    current_employee: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    Field-Wise Changes Audit History for Lead Modal.
+    Shows only modified fields with before and present values, attendant/staff name, and updated timestamps.
+    """
+    lead = get_authorized_lead(db, lead_id, current_employee)
+    changes = _build_lead_field_audit_changes(db, lead.id)
+    return {
+        'success': True,
+        'lead_id': lead.id,
+        'total_changes': len(changes),
+        'changes': changes
+    }
 
 
 @router.post("/leads/{lead_id}/click-to-call")
@@ -11638,6 +11796,22 @@ def update_lead(
     _AUDIT_FIELD_MAP = {
         'status':                'status',
         'solar_pipeline_status': 'status',
+        'priority':              'classification',
+        'category_id':           'classification',
+        'name':                  'customer',
+        'email':                 'customer',
+        'phone':                 'customer',
+        'alternate_phone':       'customer',
+        'city':                  'location',
+        'area':                  'location',
+        'source':                'source',
+        'budget_min':            'budget',
+        'budget_max':            'budget',
+        'next_followup_date':    'followup',
+        'description':           'requirements',
+        'requirements':          'requirements',
+        'recent_comments':       'comments',
+        'looking_for':           'requirements',
         'guru_id':               'handler',
         'z_guru_id':             'handler',
         'adi_guru_id':           'handler',
@@ -12937,6 +13111,31 @@ async def add_note(
     db.add(note)
     lead.last_contact_date = get_indian_time()
     lead.recent_comments = note_data.note  # DC-CMN-SYNC-001: keep recent_comments in sync with latest note
+
+    # [DC-AUDIT] Log comment added into crm_lead_audit_log
+    try:
+        from app.models.crm import CRMLeadAuditLog as _AuditLog
+        _c_name = (
+            getattr(current_user, 'full_name', None) or
+            getattr(current_user, 'name', None) or
+            getattr(current_user, 'partner_name', None) or
+            getattr(current_user, 'emp_code', None) or
+            str(current_user.id)
+        )
+        db.add(_AuditLog(
+            lead_id=lead.id,
+            changed_by_type=note_author_type,
+            changed_by_id=note_author_id,
+            changed_by_name=_c_name,
+            field_name='comment_added',
+            old_value=None,
+            new_value=note_data.note,
+            change_category='comments',
+            changed_at=get_indian_time()
+        ))
+    except Exception as _ne:
+        print(f"[DC-AUDIT] Note audit log write failed: {_ne}", flush=True)
+
     db.commit()
     db.refresh(note)
 
@@ -12964,8 +13163,28 @@ def update_lead_note(
     ).first()
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
+    _old_note_text = note.note
     note.note = note_data.note
     note.is_private = note_data.is_private
+
+    # [DC-AUDIT] Log comment updated into crm_lead_audit_log
+    try:
+        from app.models.crm import CRMLeadAuditLog as _AuditLog
+        _c_name = getattr(current_employee, 'full_name', None) or getattr(current_employee, 'emp_code', None) or str(current_employee.id)
+        db.add(_AuditLog(
+            lead_id=lead.id,
+            changed_by_type='staff',
+            changed_by_id=current_employee.emp_code or str(current_employee.id),
+            changed_by_name=_c_name,
+            field_name='comment_updated',
+            old_value=_old_note_text,
+            new_value=note_data.note,
+            change_category='comments',
+            changed_at=get_indian_time()
+        ))
+    except Exception as _nue:
+        print(f"[DC-AUDIT] Note update audit write failed: {_nue}", flush=True)
+
     db.commit()
     db.refresh(note)
     return {'success': True, 'message': 'Note updated', 'data': note.to_dict()}

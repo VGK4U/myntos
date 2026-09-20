@@ -14,6 +14,7 @@ import { apiService } from './services/api.service';
 import { portalService } from './services/portal.service';
 import { routerService, PageRoute } from './services/router.service';
 import { callController } from './services/call-controller';
+import { APP_CONFIG } from './config/app.config';
 import { LoginPage } from './pages/Login';
 import { PageHeader } from './components/PageHeader';
 // Staff Portal Pages
@@ -49,8 +50,11 @@ import { OperatorCallsPage } from './pages/OperatorCallsPage';
 import { StaffExpenseEntriesPage } from './pages/StaffExpenseEntriesPage';
 import { StaffMyEarningsPage } from './pages/StaffMyEarningsPage';
 import { StaffVGKMembersPage } from './pages/StaffVGKMembersPage';
+import { ExecutiveDashboardPage } from './pages/ExecutiveDashboardPage';
+import { CategoryLeadsMasterPage } from './pages/CategoryLeadsMasterPage';
 import { callSyncService } from './services/call-sync.service';
 import { gpsService } from './services/gps.service';
+import { incomingCallAdapter } from './services/incoming-call.adapter';
 // New Staff Dashboard Section Pages
 import { StaffEmployeesPage } from './pages/StaffEmployeesPage';
 import { StaffDirectoryPage } from './pages/StaffDirectoryPage';
@@ -384,6 +388,10 @@ class MNRApp {
 
       this.requestStartupPermissions().catch(e =>
         console.warn('[DC_APP] Background permission request error:', e)
+      );
+
+      incomingCallAdapter.init().catch(e =>
+        console.warn('[DC_APP] IncomingCallAdapter init error:', e)
       );
 
       if (this.isLoggedIn) {
@@ -940,11 +948,20 @@ class MNRApp {
       case 'staff-bank-wise-leads':
         page = new StaffBankWiseLeadsPage(this.pageContainer);
         break;
+      case 'executive-dashboard':
+        page = new ExecutiveDashboardPage(this.pageContainer);
+        break;
+      case 'category-leads-master':
+        page = new CategoryLeadsMasterPage(this.pageContainer);
+        break;
       case 'staff-whatsapp':
       case 'staff-whatsapp-inbox':
         page = new StaffWhatsAppInboxPage(this.pageContainer);
         break;
       case 'digital-catalog':
+      case 'catalog-library':
+      case 'staff-catalog-library':
+      case 'catalog':
         page = new DigitalCatalogPage(this.pageContainer);
         break;
       
@@ -1528,7 +1545,7 @@ class MNRApp {
     try {
       const token = await apiService.getToken();
       const res = await fetch(
-        `/api/v1/staff/nda/current?document_type=${encodeURIComponent(agreementType)}`,
+        `${APP_CONFIG.BASE_SERVER_URL}/api/v1/staff/nda/current?document_type=${encodeURIComponent(agreementType)}`,
         { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } }
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -1562,7 +1579,7 @@ class MNRApp {
       acceptBtn.textContent = '⏳ Processing…';
       try {
         const token = await apiService.getToken();
-        const res = await fetch('/api/v1/staff/nda/accept', {
+        const res = await fetch(`${APP_CONFIG.BASE_SERVER_URL}/api/v1/staff/nda/accept`, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ nda_version_id: versionId }),

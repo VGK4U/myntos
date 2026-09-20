@@ -4,7 +4,19 @@ import UIKit
 import Capacitor
 
 @objc(BackgroundLocationPlugin)
-public class BackgroundLocationPlugin: CAPPlugin, CLLocationManagerDelegate {
+public class BackgroundLocationPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDelegate {
+    public let identifier = "BackgroundLocationPlugin"
+    public let jsName = "BackgroundLocation"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "checkPermissions", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "requestPermissions", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "startTracking", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "stopTracking", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "isTracking", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getCurrentLocation", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "flushQueue", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "getDiagnostics", returnType: CAPPluginReturnPromise)
+    ]
     private var locationManager: CLLocationManager?
     private var isTrackingLocation = false
     private var authToken: String?
@@ -125,7 +137,7 @@ public class BackgroundLocationPlugin: CAPPlugin, CLLocationManagerDelegate {
         ])
     }
 
-    @objc func checkPermissions(_ call: CAPPluginCall) {
+    @objc public override func checkPermissions(_ call: CAPPluginCall) {
         let status = currentAuthorizationStatus()
         let fine = status == .authorizedAlways || status == .authorizedWhenInUse
         let bg = status == .authorizedAlways
@@ -138,7 +150,7 @@ public class BackgroundLocationPlugin: CAPPlugin, CLLocationManagerDelegate {
         ])
     }
 
-    @objc func requestPermissions(_ call: CAPPluginCall) {
+    @objc public override func requestPermissions(_ call: CAPPluginCall) {
         let currentStatus = currentAuthorizationStatus()
         if currentStatus != .notDetermined {
             // Already determined, resolve truthfully with current status

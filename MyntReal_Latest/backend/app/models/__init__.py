@@ -40,6 +40,7 @@ from app.models.expense_category import ExpenseMainCategory, ExpenseSubCategory
 # Staff System Models (DC Protocol Compliant)
 from app.models.staff import StaffRole, StaffDepartment, StaffEmployee, StaffSetting, StaffAuditLog, log_staff_audit
 from app.models.mobile_device_session import MobileDeviceSession
+from app.models.mobile_device_push_token import MobileDevicePushToken
 
 # Staff Task Management Models (DC Protocol Compliant)
 from app.models.staff_tasks import (
@@ -290,6 +291,7 @@ __all__ = [
     "StaffDepartment",
     "StaffEmployee",
     "MobileDeviceSession",
+    "MobileDevicePushToken",
     "StaffSetting",
     "StaffAuditLog",
     "log_staff_audit",
