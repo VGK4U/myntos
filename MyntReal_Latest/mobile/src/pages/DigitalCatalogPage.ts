@@ -766,92 +766,86 @@ export class DigitalCatalogPage {
 
     modalEl = document.createElement("div");
     modalEl.id = "mobileCatalogDispatchModal";
-    modalEl.style.cssText = `
-      position: fixed; inset: 0; z-index: 10050;
-      background: rgba(0, 0, 0, 0.78); backdrop-filter: blur(4px);
-      display: flex; align-items: flex-end; justify-content: center;
-      padding: 0; animation: fadeIn 0.15s ease-out;
-    `;
+    modalEl.className = "dc-modal-overlay";
 
     modalEl.innerHTML = `
-      <div class="dispatch-sheet" style="
-        background: #0f172a; width: 100%; max-width: 540px;
-        max-height: 90vh; overflow-y: auto;
-        border-top-left-radius: 24px; border-top-right-radius: 24px;
-        border: 1px solid rgba(16, 185, 129, 0.3); border-bottom: none;
-        box-shadow: 0 -12px 30px rgba(0,0,0,0.6);
-        color: #f8fafc; padding: 20px 16px 28px 16px;
-      ">
-        <!-- Drag Handle Indicator -->
-        <div style="width: 44px; height: 4px; background: rgba(255,255,255,0.25); border-radius: 2px; margin: 0 auto 14px auto;"></div>
+      <div class="dc-modal-sheet">
+        <!-- Drag Handle -->
+        <div class="dc-drag-handle"></div>
 
         <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary border-opacity-25">
-          <div class="d-flex align-items-center gap-2">
-            <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #25d366, #128c7e); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; box-shadow: 0 2px 8px rgba(37,211,102,0.4);">
+        <div class="dc-modal-header">
+          <div class="dc-modal-header-left">
+            <div class="dc-modal-icon-badge wa">
               <i class="fab fa-whatsapp"></i>
             </div>
-            <div>
-              <h6 class="fw-bold mb-0 text-white" style="font-size: 15px;">Send via WhatsApp</h6>
-              <div class="text-muted" style="font-size: 11px;">${cat.title}</div>
+            <div class="dc-modal-title-wrap">
+              <h3 class="dc-modal-title">Send via WhatsApp</h3>
+              <div class="dc-modal-subtitle">${cat.title}</div>
             </div>
           </div>
-          <button id="closeDispatchModalBtn" class="btn btn-sm btn-dark text-muted rounded-circle" style="width: 32px; height: 32px; padding: 0; font-size: 18px;">
-            &times;
+          <button type="button" id="closeDispatchModalBtn" class="dc-modal-close-btn" title="Close">
+            <i class="fas fa-times"></i>
           </button>
         </div>
 
         <!-- Recipient Autocomplete Search -->
-        <div class="mb-3">
-          <label class="form-label fw-bold small text-light mb-1" style="font-size: 12px;">
-            <i class="fas fa-search me-1 text-info"></i> Search Contact, Lead or Partner:
+        <div class="dc-form-field">
+          <label class="dc-form-label">
+            <i class="fas fa-search" style="color: #38bdf8;"></i> Search Contact, Lead or Partner
           </label>
-          <div class="input-group input-group-sm">
-            <input type="text" id="modalRecipientSearchInput" class="form-control" 
-                   placeholder="Type name or phone number..."
-                   style="background: #1e293b; color: #fff; border-color: #334155; font-size: 13px; padding: 8px 12px;" />
-            <button class="btn btn-outline-secondary" type="button" id="modalClearSearchBtn">Clear</button>
+          <div class="dc-search-wrap">
+            <i class="fas fa-search dc-search-icon"></i>
+            <input type="text" id="modalRecipientSearchInput" class="dc-search-input" 
+                   placeholder="Type name or phone number..." autocomplete="off" />
+            <button type="button" id="modalClearSearchBtn" class="dc-search-clear-btn" title="Clear search">
+              <i class="fas fa-times"></i>
+            </button>
           </div>
-          <div id="modalSearchDropdown" style="display: none; background: #1e293b; border: 1px solid #334155; border-radius: 10px; max-height: 180px; overflow-y: auto; margin-top: 4px; box-shadow: 0 4px 14px rgba(0,0,0,0.5);">
+          <div id="modalSearchDropdown" class="dc-search-dropdown" style="display: none;">
             <!-- Dynamic search results -->
           </div>
         </div>
 
         <!-- Active Selected Recipient Pill -->
-        <div id="modalSelectedCard" style="display: none; background: #13243d; border: 1px solid #0284c7; border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <div class="fw-bold text-white small" id="modalSelectedName">Name</div>
-              <div class="text-info small" id="modalSelectedPhone" style="font-size: 11px;">+91 ...</div>
-            </div>
-            <button type="button" id="modalRemoveSelectedBtn" class="btn btn-sm btn-link text-danger p-0" style="font-size: 12px; text-decoration: none;">
-              <i class="fas fa-times me-1"></i>Clear
-            </button>
+        <div id="modalSelectedCard" class="dc-selected-card" style="display: none;">
+          <div>
+            <div style="font-weight: 700; color: #ffffff; font-size: 13px;" id="modalSelectedName">Name</div>
+            <div style="color: #38bdf8; font-size: 11px; margin-top: 2px;" id="modalSelectedPhone">+91 ...</div>
           </div>
+          <button type="button" id="modalRemoveSelectedBtn" class="dc-selected-remove-btn">
+            <i class="fas fa-times"></i> Clear
+          </button>
         </div>
 
         <!-- Phone & Name Inputs -->
-        <div class="row g-2 mb-3">
-          <div class="col-7">
-            <label class="form-label fw-bold text-light mb-1" style="font-size: 12px;">Mobile Number *</label>
-            <input type="tel" id="modalRecipientPhone" class="form-control form-control-sm" 
-                   placeholder="10-digit number"
-                   style="background: #1e293b; color: #fff; border-color: #334155; padding: 8px 12px;" />
+        <div class="dc-form-row">
+          <div class="dc-form-field" style="margin-bottom: 0;">
+            <label class="dc-form-label">
+              <span>Mobile Number</span>
+              <span class="dc-required-star">*</span>
+            </label>
+            <div class="dc-input-affix">
+              <span class="dc-prefix">+91</span>
+              <input type="tel" id="modalRecipientPhone" class="dc-form-input with-prefix" 
+                     placeholder="10-digit number" maxlength="10" />
+            </div>
           </div>
-          <div class="col-5">
-            <label class="form-label fw-bold text-light mb-1" style="font-size: 12px;">Name (optional)</label>
-            <input type="text" id="modalRecipientName" class="form-control form-control-sm" 
-                   placeholder="Recipient name"
-                   style="background: #1e293b; color: #fff; border-color: #334155; padding: 8px 12px;" />
+          <div class="dc-form-field" style="margin-bottom: 0;">
+            <label class="dc-form-label">
+              <span>Name (optional)</span>
+            </label>
+            <input type="text" id="modalRecipientName" class="dc-form-input" 
+                   placeholder="Recipient name" />
           </div>
         </div>
 
         <!-- Language Selector -->
-        <div class="mb-3">
-          <label class="form-label fw-bold text-light mb-1" style="font-size: 12px;">
-            <i class="fas fa-language me-1 text-warning"></i> Catalog Language
+        <div class="dc-form-field">
+          <label class="dc-form-label">
+            <i class="fas fa-language" style="color: #f59e0b;"></i> Catalog Language
           </label>
-          <select id="modalCatalogLang" class="form-select form-select-sm" style="background: #1e293b; color: #fff; border-color: #334155; padding: 8px 12px;">
+          <select id="modalCatalogLang" class="dc-form-select">
             <option value="en" selected>English</option>
             <option value="te">తెలుగు (Telugu)</option>
             <option value="hi">हिन्दी (Hindi)</option>
@@ -860,36 +854,39 @@ export class DigitalCatalogPage {
         </div>
 
         <!-- Delivery Method -->
-        <div class="mb-3">
-          <label class="form-label fw-bold text-light mb-1" style="font-size: 12px;">Delivery Method</label>
-          <div class="d-flex gap-3 p-2 rounded bg-dark border border-secondary border-opacity-25">
-            <div class="form-check form-check-inline m-0">
-              <input class="form-check-input" type="radio" name="modalDeliveryMethod" id="methodLink" value="web_link" checked>
-              <label class="form-check-label text-light small" for="methodLink">Interactive Web Link</label>
-            </div>
-            <div class="form-check form-check-inline m-0">
-              <input class="form-check-input" type="radio" name="modalDeliveryMethod" id="methodPdf" value="pdf_document">
-              <label class="form-check-label text-light small" for="methodPdf">PDF Brochure</label>
-            </div>
-            <div class="form-check form-check-inline m-0">
-              <input class="form-check-input" type="radio" name="modalDeliveryMethod" id="methodBoth" value="both">
-              <label class="form-check-label text-light small" for="methodBoth">Both</label>
-            </div>
+        <div class="dc-form-field">
+          <label class="dc-form-label">
+            <i class="fas fa-paper-plane" style="color: #10b981;"></i> Delivery Format
+          </label>
+          <div class="dc-delivery-segmented">
+            <label class="dc-segment-option" for="methodLink">
+              <input type="radio" name="modalDeliveryMethod" id="methodLink" value="web_link" checked>
+              <span class="dc-segment-content"><i class="fas fa-globe"></i> Web Link</span>
+            </label>
+            <label class="dc-segment-option" for="methodPdf">
+              <input type="radio" name="modalDeliveryMethod" id="methodPdf" value="pdf_document">
+              <span class="dc-segment-content"><i class="fas fa-file-pdf"></i> PDF</span>
+            </label>
+            <label class="dc-segment-option" for="methodBoth">
+              <input type="radio" name="modalDeliveryMethod" id="methodBoth" value="both">
+              <span class="dc-segment-content"><i class="fas fa-layer-group"></i> Both</span>
+            </label>
           </div>
         </div>
 
         <!-- Custom Note -->
-        <div class="mb-3">
-          <label class="form-label fw-bold text-light mb-1" style="font-size: 12px;">Specialist Note / Custom Message</label>
-          <textarea id="modalCustomNote" class="form-control form-control-sm" rows="2" 
-                    placeholder="E.g., Based on our site visit discussion today..."
-                    style="background: #1e293b; color: #fff; border-color: #334155; font-size: 12px;">${prefillNote || ""}</textarea>
+        <div class="dc-form-field">
+          <label class="dc-form-label">
+            <i class="fas fa-comment-dots" style="color: #a855f7;"></i> Specialist Note / Custom Message
+          </label>
+          <textarea id="modalCustomNote" class="dc-form-textarea" rows="2" 
+                    placeholder="E.g., Based on our site visit discussion today...">${prefillNote || ""}</textarea>
         </div>
 
         <!-- Action Button -->
-        <div class="d-grid gap-2 pt-2">
-          <button id="modalSubmitDispatchBtn" class="dc-btn-wa">
-            <i class="fab fa-whatsapp"></i>
+        <div style="padding-top: 6px;">
+          <button id="modalSubmitDispatchBtn" type="button" class="dc-submit-btn">
+            <i class="fab fa-whatsapp" style="font-size: 17px;"></i>
             <span>Send Catalog Now</span>
           </button>
         </div>
@@ -914,6 +911,7 @@ export class DigitalCatalogPage {
       clearSearchBtn.addEventListener("click", () => {
         searchInput.value = "";
         if (dropdown) dropdown.style.display = "none";
+        searchInput.focus();
       });
     }
 
@@ -958,7 +956,7 @@ export class DigitalCatalogPage {
         }
 
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Preparing dispatch...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Preparing dispatch...';
 
         try {
           const res = await apiService.post<any>(`/api/v1/digital-catalogs/${cat.id}/dispatch-whatsapp`, {
@@ -1061,7 +1059,7 @@ export class DigitalCatalogPage {
     if (card && cardName && cardPhone) {
       cardName.textContent = `${item.name} (${item.source})`;
       cardPhone.textContent = `${item.formatted_phone || item.phone} ${item.subtitle ? "• " + item.subtitle : ""}`;
-      card.style.display = "block";
+      card.style.display = "flex";
     }
   }
 
@@ -1077,92 +1075,73 @@ export class DigitalCatalogPage {
 
     modalEl = document.createElement("div");
     modalEl.id = "mobileCatalogHistoryModal";
-    modalEl.style.cssText = `
-      position: fixed; inset: 0; z-index: 10050;
-      background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px);
-      display: flex; align-items: flex-end; justify-content: center;
-      padding: 0; animation: fadeIn 0.15s ease-out;
-    `;
+    modalEl.className = "dc-modal-overlay";
 
     modalEl.innerHTML = `
-      <div class="history-sheet" style="
-        background: #0f172a; width: 100%; max-width: 560px;
-        height: 92vh; display: flex; flex-direction: column;
-        border-top-left-radius: 24px; border-top-right-radius: 24px;
-        border: 1px solid rgba(56, 189, 248, 0.3); border-bottom: none;
-        box-shadow: 0 -12px 30px rgba(0,0,0,0.6);
-        color: #f8fafc; padding: 18px 16px 16px 16px;
-      ">
+      <div class="dc-history-sheet">
         <!-- Drag Handle -->
-        <div style="width: 44px; height: 4px; background: rgba(255,255,255,0.25); border-radius: 2px; margin: 0 auto 12px auto;"></div>
+        <div class="dc-drag-handle"></div>
 
         <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom border-secondary border-opacity-25">
-          <div class="d-flex align-items-center gap-2">
-            <div style="width: 36px; height: 36px; border-radius: 50%; background: #0284c7; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px;">
+        <div class="dc-modal-header">
+          <div class="dc-modal-header-left">
+            <div class="dc-modal-icon-badge telemetry">
               <i class="fas fa-chart-line"></i>
             </div>
-            <div>
-              <h6 class="fw-bold mb-0 text-white" style="font-size: 15px;">Dispatch History & Telemetry</h6>
-              <div class="text-muted" style="font-size: 11px;">Real-time link views & engagement tracking</div>
+            <div class="dc-modal-title-wrap">
+              <h3 class="dc-modal-title">Dispatch History & Telemetry</h3>
+              <div class="dc-modal-subtitle">Real-time link views & engagement tracking</div>
             </div>
           </div>
-          <button id="closeMobileHistModalBtn" class="btn btn-sm btn-dark text-muted rounded-circle" style="width: 32px; height: 32px; padding: 0; font-size: 18px;">
-            &times;
+          <button type="button" id="closeMobileHistModalBtn" class="dc-modal-close-btn" title="Close">
+            <i class="fas fa-times"></i>
           </button>
         </div>
 
         <!-- Scope Pills (My Dispatches vs Team Dispatches) -->
-        <div class="d-flex gap-2 mb-2 p-1 bg-dark rounded-pill border border-secondary border-opacity-25">
-          <button type="button" class="btn btn-sm btn-success rounded-pill flex-fill fw-bold py-1" id="btnMobileScopeMy" style="font-size: 12px;">
+        <div class="dc-scope-toggle-bar">
+          <button type="button" class="dc-scope-btn active" id="btnMobileScopeMy">
             <i class="fas fa-user me-1"></i> My Dispatches (<span id="mobileBadgeMy">0</span>)
           </button>
-          <button type="button" class="btn btn-sm btn-outline-secondary text-light rounded-pill flex-fill fw-bold py-1" id="btnMobileScopeTeam" style="font-size: 12px;">
+          <button type="button" class="dc-scope-btn" id="btnMobileScopeTeam">
             <i class="fas fa-users me-1"></i> Team Dispatches (<span id="mobileBadgeTeam">0</span>)
           </button>
         </div>
 
         <!-- 4 KPI Summary Cards Grid -->
-        <div class="row g-2 mb-2">
-          <div class="col-6">
-            <div class="p-2 rounded-3 text-center" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.08);">
-              <small class="text-muted d-block" style="font-size: 10px; font-weight: 700;">TOTAL DISPATCHES</small>
-              <div class="fs-5 fw-bold text-white" id="mobileHistKpiDispatches">0</div>
-            </div>
+        <div class="dc-hist-kpi-grid">
+          <div class="dc-hist-kpi-card">
+            <div class="dc-hist-kpi-label">TOTAL DISPATCHES</div>
+            <div class="dc-hist-kpi-value text-white" id="mobileHistKpiDispatches">0</div>
           </div>
-          <div class="col-6">
-            <div class="p-2 rounded-3 text-center" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.08);">
-              <small class="text-muted d-block" style="font-size: 10px; font-weight: 700;">TOTAL LINK CLICKS</small>
-              <div class="fs-5 fw-bold text-success" id="mobileHistKpiClicks">0</div>
-            </div>
+          <div class="dc-hist-kpi-card">
+            <div class="dc-hist-kpi-label">TOTAL LINK CLICKS</div>
+            <div class="dc-hist-kpi-value text-success" id="mobileHistKpiClicks">0</div>
           </div>
-          <div class="col-6">
-            <div class="p-2 rounded-3 text-center" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.08);">
-              <small class="text-muted d-block" style="font-size: 10px; font-weight: 700;">CLICK-THROUGH RATE</small>
-              <div class="fs-5 fw-bold text-warning" id="mobileHistKpiRate">0%</div>
-            </div>
+          <div class="dc-hist-kpi-card">
+            <div class="dc-hist-kpi-label">CLICK-THROUGH RATE</div>
+            <div class="dc-hist-kpi-value text-warning" id="mobileHistKpiRate">0%</div>
           </div>
-          <div class="col-6">
-            <div class="p-2 rounded-3 text-center" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.08);">
-              <small class="text-muted d-block" style="font-size: 10px; font-weight: 700;">TOP MODEL</small>
-              <div class="fs-5 fw-bold text-info text-truncate" id="mobileHistKpiModel">SOLAR</div>
-            </div>
+          <div class="dc-hist-kpi-card">
+            <div class="dc-hist-kpi-label">TOP MODEL</div>
+            <div class="dc-hist-kpi-value text-info text-truncate" id="mobileHistKpiModel">SOLAR</div>
           </div>
         </div>
 
         <!-- Quick Filters Toolbar -->
-        <div class="mb-2">
-          <div class="d-flex align-items-center gap-2 mb-2">
-            <div style="position: relative; flex: 1;">
-              <input type="text" id="mobileHistSearchInput" placeholder="Search recipient, phone, staff..." style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #334155; border-radius: 8px; font-size: 12px; padding: 7px 10px 7px 30px; outline: none;">
-              <i class="fas fa-search text-muted" style="position: absolute; left: 10px; top: 9px; font-size: 11px;"></i>
+        <div>
+          <div class="dc-hist-filter-row">
+            <div class="dc-search-wrap" style="flex: 1;">
+              <i class="fas fa-search dc-search-icon"></i>
+              <input type="text" id="mobileHistSearchInput" class="dc-search-input compact" 
+                     placeholder="Search recipient, phone, staff..." />
             </div>
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="btnMobileHistReset" style="font-size: 11px; padding: 6px 10px; border-radius: 8px; color: #94a3b8; border-color: #334155;">
+            <button type="button" class="dc-reset-btn" id="btnMobileHistReset" title="Reset Filters">
               <i class="fas fa-undo"></i>
             </button>
           </div>
-          <div class="d-flex gap-1 overflow-auto no-scrollbar pb-1">
-            <select id="mobileHistModelFilter" style="background: #1e293b; color: #fff; border: 1px solid #334155; border-radius: 8px; font-size: 11px; padding: 5px 8px; outline: none;">
+          <div class="dc-hist-dropdowns-row no-scrollbar">
+            <select id="mobileHistModelFilter" class="dc-hist-select">
               <option value="ALL">All Models</option>
               <option value="SOLAR">Solar</option>
               <option value="INDUSTRIAL_HUB">Hub 5-in-1</option>
@@ -1174,13 +1153,13 @@ export class DigitalCatalogPage {
               <option value="REAL_DREAMS">Real Dreams</option>
               <option value="INSURANCE">Insurance</option>
             </select>
-            <select id="mobileHistEngagementFilter" style="background: #1e293b; color: #fff; border: 1px solid #334155; border-radius: 8px; font-size: 11px; padding: 5px 8px; outline: none;">
+            <select id="mobileHistEngagementFilter" class="dc-hist-select">
               <option value="all">All Activity</option>
               <option value="viewed">✓ Viewed (&gt;0 clicks)</option>
               <option value="high">🔥 High (2+ clicks)</option>
               <option value="unviewed">⚪ Unopened (0 clicks)</option>
             </select>
-            <select id="mobileHistTimeframeFilter" style="background: #1e293b; color: #fff; border: 1px solid #334155; border-radius: 8px; font-size: 11px; padding: 5px 8px; outline: none;">
+            <select id="mobileHistTimeframeFilter" class="dc-hist-select">
               <option value="all">All Time</option>
               <option value="today">Today</option>
               <option value="yesterday">Yesterday</option>
@@ -1192,9 +1171,9 @@ export class DigitalCatalogPage {
 
         <!-- Scrollable List of Dispatches -->
         <div id="mobileHistListContainer" style="flex: 1; overflow-y: auto; padding-right: 2px;">
-          <div class="text-center py-4">
-            <div class="spinner-border spinner-border-sm text-info" role="status"></div>
-            <p class="text-muted small mt-2">Loading dispatch telemetry...</p>
+          <div class="text-center py-4 text-muted">
+            <i class="fas fa-spinner fa-spin fa-2x text-info mb-2"></i>
+            <p class="small mt-1">Loading dispatch telemetry...</p>
           </div>
         </div>
       </div>
@@ -1215,15 +1194,15 @@ export class DigitalCatalogPage {
     if (btnScopeMy && btnScopeTeam) {
       btnScopeMy.addEventListener("click", () => {
         this.currentMobileHistoryScope = "my";
-        btnScopeMy.className = "btn btn-sm btn-success rounded-pill flex-fill fw-bold py-1";
-        btnScopeTeam.className = "btn btn-sm btn-outline-secondary text-light rounded-pill flex-fill fw-bold py-1";
+        btnScopeMy.className = "dc-scope-btn active";
+        btnScopeTeam.className = "dc-scope-btn";
         this.fetchAndRenderMobileHistory();
       });
 
       btnScopeTeam.addEventListener("click", () => {
         this.currentMobileHistoryScope = "team";
-        btnScopeTeam.className = "btn btn-sm btn-success rounded-pill flex-fill fw-bold py-1";
-        btnScopeMy.className = "btn btn-sm btn-outline-secondary text-light rounded-pill flex-fill fw-bold py-1";
+        btnScopeTeam.className = "dc-scope-btn active";
+        btnScopeMy.className = "dc-scope-btn";
         this.fetchAndRenderMobileHistory();
       });
     }
@@ -1278,9 +1257,9 @@ export class DigitalCatalogPage {
     const listContainer = modalEl.querySelector("#mobileHistListContainer");
     if (listContainer) {
       listContainer.innerHTML = `
-        <div class="text-center py-4">
-          <div class="spinner-border spinner-border-sm text-info" role="status"></div>
-          <p class="text-muted small mt-2">Loading dispatch telemetry...</p>
+        <div class="text-center py-4 text-muted">
+          <i class="fas fa-spinner fa-spin fa-2x text-info mb-2"></i>
+          <p class="small mt-1">Loading dispatch telemetry...</p>
         </div>
       `;
     }
@@ -1339,20 +1318,20 @@ export class DigitalCatalogPage {
 
       listContainer.innerHTML = dispatches.map((d: any) => {
         const clicks = d.view_count || 0;
-        let clickBadge = `<span class="badge bg-secondary bg-opacity-25 text-muted border border-secondary border-opacity-25 px-2 py-1" style="font-size: 11px;">0 clicks</span>`;
+        let clickBadge = `<span style="font-size: 11px; padding: 3px 8px; border-radius: 6px; background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.25);">0 clicks</span>`;
         if (clicks >= 2) {
-          clickBadge = `<span class="badge bg-danger bg-opacity-25 text-danger border border-danger border-opacity-50 px-2 py-1" style="font-size: 11px;"><i class="fas fa-fire me-1"></i>${clicks} clicks</span>`;
+          clickBadge = `<span style="font-size: 11px; padding: 3px 8px; border-radius: 6px; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); font-weight: 700;"><i class="fas fa-fire me-1"></i>${clicks} clicks</span>`;
         } else if (clicks === 1) {
-          clickBadge = `<span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-50 px-2 py-1" style="font-size: 11px;"><i class="fas fa-check me-1"></i>1 click</span>`;
+          clickBadge = `<span style="font-size: 11px; padding: 3px 8px; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); font-weight: 700;"><i class="fas fa-check me-1"></i>1 click</span>`;
         }
 
         const staffHeader = isTeam ? `
-          <div class="d-flex align-items-center gap-2 mb-2 pb-1 border-bottom border-secondary border-opacity-25">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
             <div style="width: 22px; height: 22px; border-radius: 50%; background: #1e293b; border: 1px solid #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: #60a5fa;">
               ${(d.staff_name || "U").charAt(0)}
             </div>
-            <div class="small text-muted" style="font-size: 11px;">
-              Dispatched by <strong class="text-white">${d.staff_name || "Staff"}</strong> (${d.staff_code || ""})
+            <div style="font-size: 11px; color: #94a3b8;">
+              Dispatched by <strong style="color: #fff;">${d.staff_name || "Staff"}</strong> (${d.staff_code || ""})
             </div>
           </div>
         ` : "";
@@ -1364,38 +1343,36 @@ export class DigitalCatalogPage {
         const dateStr = d.sent_at ? new Date(d.sent_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "N/A";
 
         return `
-          <div class="card bg-dark border-secondary border-opacity-25 rounded-3 p-3 mb-2 shadow-sm">
+          <div class="dc-hist-card">
             ${staffHeader}
-            <div class="d-flex justify-content-between align-items-start mb-1">
+            <div class="dc-hist-card-header">
               <div>
-                <div class="fw-bold text-white small">${d.recipient_name || "Customer"}</div>
-                <div class="text-muted" style="font-size: 11px;"><i class="fas fa-phone-alt me-1 text-secondary"></i>+91 ${d.recipient_phone}</div>
+                <div class="dc-hist-card-customer">${d.recipient_name || "Customer"}</div>
+                <div class="dc-hist-card-phone"><i class="fas fa-phone-alt me-1 text-info"></i>+91 ${d.recipient_phone}</div>
               </div>
-              <span class="badge bg-dark text-info border border-info border-opacity-25 font-monospace" style="font-size: 10px;">
-                #${d.share_ref_code || ""}
-              </span>
+              <span class="dc-hist-ref-code">#${d.share_ref_code || ""}</span>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center my-2">
-              <div>
-                <span class="badge bg-success bg-opacity-25 text-success rounded-pill px-2 py-0" style="font-size: 10px;">
+            <div class="dc-hist-catalog-row">
+              <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+                <span class="dc-badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700;">
                   ${d.segment_code}
                 </span>
-                <span class="text-light small ms-1">${d.catalog_title}</span>
+                <span style="font-size: 12px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${d.catalog_title}</span>
               </div>
               <div>${clickBadge}</div>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center text-muted small mt-1 pt-2 border-top border-secondary border-opacity-25" style="font-size: 11px;">
-              <span><i class="far fa-clock me-1 text-secondary"></i>${dateStr}</span>
-              <div class="d-flex gap-2">
-                <a href="${d.tracked_url}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 11px;" title="Open Link">
+            <div class="dc-hist-footer">
+              <span><i class="far fa-clock me-1 text-muted"></i>${dateStr}</span>
+              <div class="dc-hist-actions">
+                <a href="${d.tracked_url}" target="_blank" class="dc-hist-action-btn" title="Open Link">
                   <i class="fas fa-external-link-alt"></i>
                 </a>
-                <a href="${waUrl}" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2" style="font-size: 11px;" title="WhatsApp">
+                <a href="${waUrl}" target="_blank" class="dc-hist-action-btn wa" title="WhatsApp">
                   <i class="fab fa-whatsapp"></i>
                 </a>
-                <button type="button" class="btn btn-sm btn-outline-warning py-0 px-2 mobile-copy-btn" data-url="${fullTracked}" style="font-size: 11px;" title="Copy Link">
+                <button type="button" class="dc-hist-action-btn copy mobile-copy-btn" data-url="${fullTracked}" title="Copy Link">
                   <i class="fas fa-copy"></i>
                 </button>
               </div>
