@@ -9,6 +9,7 @@
 import { PageHeader } from '../../components/PageHeader';
 import { routerService } from '../../services/router.service';
 import { authService } from '../../services/auth.service';
+import { getStoredToken } from '../../utils/token';
 import { APP_CONFIG } from '../../config/app.config';
 
 const NATIVE_ROUTES: Record<string, string> = {
@@ -150,7 +151,7 @@ export class VGKMemberHubPage {
       <div style="background:#f6f9fc;min-height:calc(100vh - 64px)">
         <iframe
           id="vgk4u-dashboard-frame"
-          src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/dashboard?embed=true&tab=${activeTab}&token=${encodeURIComponent(localStorage.getItem("auth_token") || "")}"
+          src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/dashboard?embed=true&tab=${activeTab}&token=${encodeURIComponent(getStoredToken())}"
           style="width:100%;height:calc(100vh - 64px);border:0;background:#f6f9fc;"
           loading="lazy"
           title="VGK4U Dashboard"

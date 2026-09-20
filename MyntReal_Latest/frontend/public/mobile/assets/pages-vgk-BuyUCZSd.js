@@ -1,4 +1,4 @@
-import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}from"./components-D8-DH5cB.js";class U{container;users=[];loading=!0;mode="today";constructor(e){this.container=e}async init(){this.render(),await this.loadBirthdays()}async loadBirthdays(){this.loading=!0,this.updateContent();try{const e=await m.get(`/banners/admin/birthdays/${this.mode}?audience=vgk4u`);e.success&&e.data?this.users=e.data.users||[]:this.users=[]}catch(e){console.error("[VGKBirthdays] Failed to load:",e),this.users=[]}this.loading=!1,this.updateContent()}render(){this.container.innerHTML=`
+import{b as m,t as E,d as L,a as g}from"./services-DPKayw1u.js";import{P as p}from"./components-BlVIz9RY.js";import{az as u}from"./pages-staff-CDwAej2N.js";class K{container;users=[];loading=!0;mode="today";constructor(e){this.container=e}async init(){this.render(),await this.loadBirthdays()}async loadBirthdays(){this.loading=!0,this.updateContent();try{const e=await m.get(`/banners/admin/birthdays/${this.mode}?audience=vgk4u`);e.success&&e.data?this.users=e.data.users||[]:this.users=[]}catch(e){console.error("[VGKBirthdays] Failed to load:",e),this.users=[]}this.loading=!1,this.updateContent()}render(){this.container.innerHTML=`
       <div class="page-container">
         ${p.render({title:"🎂 VGK4U Birthdays",showBack:!0})}
         <div id="pageContent">
@@ -38,18 +38,18 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           <div style="font-size:11px;color:#888;margin-top:2px;">VGK4U · ${this.escape(e.user_id)}</div>
         </div>
       </div>
-    `}modeLabel(){return this.mode==="today"?"today":this.mode==="tomorrow"?"tomorrow":"the next 7 days"}escape(e){return String(e??"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t])}}class N{container;constructor(e){this.container=e}async init(){const t=S.getRouteParams().tab||"earnings",a={earnings:"VGK4U Member Hub",profile:"Profile",mycard:"My Card & Progress",addmember:"Add Channel Partner",coupons:"Coupons",network:"Team",points:"Points Balance",ledger:"My Earnings",leads:"My Leads",tickets:"Service Tickets",bonanza:"Bonanza Rewards",vendors:"Vendor Shops",media:"Media Hub",orders:"Orders",career:"Career & Milestones"}[t]||"VGK4U Member Hub",r=E.getAuthState().user||{},s=r.name||r.partner_name||"Member",o=r.partner_code||"",l=o?`${s} (${o})`:s,c=document.getElementById("vgk4u-dashboard-frame");if(c&&c.contentWindow){c.contentWindow.postMessage({type:"vgk_switch_tab",tab:t},"*");const f=document.querySelector(".header-title");f&&(f.textContent=a);const u=document.querySelector(".header-subtitle");u&&(u.textContent=l),localStorage.setItem("vgk_active_tab",t)}else this.container.innerHTML=await this.render(),await this.afterRender()}async render(){const t=E.getAuthState().user||{},i=t.name||t.partner_name||"Member",a=t.partner_code||"",n=a?`${i} (${a})`:i,s=S.getRouteParams().tab||"earnings",l={earnings:"VGK4U Member Hub",profile:"Profile",mycard:"My Card & Progress",addmember:"Add Channel Partner",coupons:"Coupons",network:"Team",points:"Points Balance",ledger:"My Earnings",leads:"My Leads",tickets:"Service Tickets",bonanza:"Bonanza Rewards",vendors:"Vendor Shops",media:"Media Hub",orders:"Orders",career:"Career & Milestones"}[s]||"VGK4U Member Hub";return`
+    `}modeLabel(){return this.mode==="today"?"today":this.mode==="tomorrow"?"tomorrow":"the next 7 days"}escape(e){return String(e??"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t])}}class G{container;constructor(e){this.container=e}async init(){const t=E.getRouteParams().tab||"earnings",a={earnings:"VGK4U Member Hub",profile:"Profile",mycard:"My Card & Progress",addmember:"Add Channel Partner",coupons:"Coupons",network:"Team",points:"Points Balance",ledger:"My Earnings",leads:"My Leads",tickets:"Service Tickets",bonanza:"Bonanza Rewards",vendors:"Vendor Shops",media:"Media Hub",orders:"Orders",career:"Career & Milestones"}[t]||"VGK4U Member Hub",r=L.getAuthState().user||{},s=r.name||r.partner_name||"Member",o=r.partner_code||"",l=o?`${s} (${o})`:s,c=document.getElementById("vgk4u-dashboard-frame");if(c&&c.contentWindow){c.contentWindow.postMessage({type:"vgk_switch_tab",tab:t},"*");const f=document.querySelector(".header-title");f&&(f.textContent=a);const b=document.querySelector(".header-subtitle");b&&(b.textContent=l),localStorage.setItem("vgk_active_tab",t)}else this.container.innerHTML=await this.render(),await this.afterRender()}async render(){const t=L.getAuthState().user||{},i=t.name||t.partner_name||"Member",a=t.partner_code||"",n=a?`${i} (${a})`:i,s=E.getRouteParams().tab||"earnings",l={earnings:"VGK4U Member Hub",profile:"Profile",mycard:"My Card & Progress",addmember:"Add Channel Partner",coupons:"Coupons",network:"Team",points:"Points Balance",ledger:"My Earnings",leads:"My Leads",tickets:"Service Tickets",bonanza:"Bonanza Rewards",vendors:"Vendor Shops",media:"Media Hub",orders:"Orders",career:"Career & Milestones"}[s]||"VGK4U Member Hub";return`
       ${p.render({title:l,showBack:!1,showLogout:!0,subtitle:n,showMenu:!0})}
       <div style="background:#f6f9fc;min-height:calc(100vh - 64px)">
         <iframe
           id="vgk4u-dashboard-frame"
-          src="${g.MEDIA_BASE_URL}/vgk/dashboard?embed=true&tab=${s}&token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+          src="${g.MEDIA_BASE_URL}/vgk/dashboard?embed=true&tab=${s}&token=${encodeURIComponent(u())}"
           style="width:100%;height:calc(100vh - 64px);border:0;background:#f6f9fc;"
           loading="lazy"
           title="VGK4U Dashboard"
         ></iframe>
       </div>
-    `}async afterRender(){const t=E.getAuthState().user||{},i=t.name||t.partner_name||"Member",a=t.partner_code||"",n=a?`${i} (${a})`:i,s=S.getRouteParams().tab||"earnings",l={earnings:"VGK4U Member Hub",profile:"Profile",mycard:"My Card & Progress",addmember:"Add Channel Partner",coupons:"Coupons",network:"Team",points:"Points Balance",ledger:"My Earnings",leads:"My Leads",tickets:"Service Tickets",bonanza:"Bonanza Rewards",vendors:"Vendor Shops",media:"Media Hub",orders:"Orders",career:"Career & Milestones"}[s]||"VGK4U Member Hub";p.attachListeners({title:l,showBack:!1,showLogout:!0,subtitle:n,showMenu:!0})}}class K{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="coupon-benefits";static label="Coupon Benefits";static icon="🎟️";static color="#e11d48";static endpoint="/api/v1/admin/coupon-benefits?audience=vgk4u";async render(){return`
+    `}async afterRender(){const t=L.getAuthState().user||{},i=t.name||t.partner_name||"Member",a=t.partner_code||"",n=a?`${i} (${a})`:i,s=E.getRouteParams().tab||"earnings",l={earnings:"VGK4U Member Hub",profile:"Profile",mycard:"My Card & Progress",addmember:"Add Channel Partner",coupons:"Coupons",network:"Team",points:"Points Balance",ledger:"My Earnings",leads:"My Leads",tickets:"Service Tickets",bonanza:"Bonanza Rewards",vendors:"Vendor Shops",media:"Media Hub",orders:"Orders",career:"Career & Milestones"}[s]||"VGK4U Member Hub";p.attachListeners({title:l,showBack:!1,showLogout:!0,subtitle:n,showMenu:!0})}}class O{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="coupon-benefits";static label="Coupon Benefits";static icon="🎟️";static color="#e11d48";static endpoint="/api/v1/admin/coupon-benefits?audience=vgk4u";async render(){return`
         ${p.render({title:"Coupon Benefits",showBack:!0})}
         <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
           <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #e11d48;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -60,13 +60,13 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           </div>
           <iframe
             id="vgk4u-coupon-benefits-frame"
-            src="${g.MEDIA_BASE_URL}/vgk/coupon-benefits?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+            src="${g.MEDIA_BASE_URL}/vgk/coupon-benefits?token=${encodeURIComponent(u())}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="Coupon Benefits (VGK4U)"
           ></iframe>
         </div>
-      `}async afterRender(){}}class G{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="daywise-income";static label="Daywise Income";static icon="📅";static color="#059669";static endpoint="/api/v1/admin/daywise-income?audience=vgk4u";async render(){return`
+      `}async afterRender(){}}class F{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="daywise-income";static label="Daywise Income";static icon="📅";static color="#059669";static endpoint="/api/v1/admin/daywise-income?audience=vgk4u";async render(){return`
         ${p.render({title:"Daywise Income",showBack:!0})}
         <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
           <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #059669;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -77,13 +77,13 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           </div>
           <iframe
             id="vgk4u-daywise-income-frame"
-            src="${g.MEDIA_BASE_URL}/vgk/daywise-income?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+            src="${g.MEDIA_BASE_URL}/vgk/daywise-income?token=${encodeURIComponent(u())}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="Daywise Income (VGK4U)"
           ></iframe>
         </div>
-      `}async afterRender(){}}class O{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="direct-summary";static label="Direct (L1)";static icon="①";static color="#475569";static endpoint="/api/v1/admin/direct-summary?audience=vgk4u";async render(){return`
+      `}async afterRender(){}}class q{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="direct-summary";static label="Direct (L1)";static icon="①";static color="#475569";static endpoint="/api/v1/admin/direct-summary?audience=vgk4u";async render(){return`
         ${p.render({title:"Direct (L1)",showBack:!0})}
         <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
           <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #475569;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -94,13 +94,13 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           </div>
           <iframe
             id="vgk4u-direct-summary-frame"
-            src="${g.MEDIA_BASE_URL}/vgk/direct-summary?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+            src="${g.MEDIA_BASE_URL}/vgk/direct-summary?token=${encodeURIComponent(u())}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="Direct (L1) (VGK4U)"
           ></iframe>
         </div>
-      `}async afterRender(){}}class F{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="ev-benefits";static label="EV Benefits";static icon="⚡";static color="#16a34a";static endpoint="/api/v1/ev-discount/admin/ev-discount-stats?audience=vgk4u";async render(){return`
+      `}async afterRender(){}}class H{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="ev-benefits";static label="EV Benefits";static icon="⚡";static color="#16a34a";static endpoint="/api/v1/ev-discount/admin/ev-discount-stats?audience=vgk4u";async render(){return`
         ${p.render({title:"EV Benefits",showBack:!0})}
         <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
           <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #16a34a;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -111,13 +111,13 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           </div>
           <iframe
             id="vgk4u-ev-benefits-frame"
-            src="${g.MEDIA_BASE_URL}/vgk/ev-benefits?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+            src="${g.MEDIA_BASE_URL}/vgk/ev-benefits?token=${encodeURIComponent(u())}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="EV Benefits (VGK4U)"
           ></iframe>
         </div>
-      `}async afterRender(){}}class q{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="ev-discount";static label="EV Discount";static icon="🏷️";static color="#16a34a";static endpoint="/api/v1/ev-discount/admin/ev-discount-stats?audience=vgk4u";async render(){return`
+      `}async afterRender(){}}class j{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="ev-discount";static label="EV Discount";static icon="🏷️";static color="#16a34a";static endpoint="/api/v1/ev-discount/admin/ev-discount-stats?audience=vgk4u";async render(){return`
         ${p.render({title:"EV Discount",showBack:!0})}
         <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
           <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #16a34a;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -128,13 +128,13 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           </div>
           <iframe
             id="vgk4u-ev-discount-frame"
-            src="${g.MEDIA_BASE_URL}/vgk/ev-discount?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+            src="${g.MEDIA_BASE_URL}/vgk/ev-discount?token=${encodeURIComponent(u())}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="EV Discount (VGK4U)"
           ></iframe>
         </div>
-      `}async afterRender(){}}class H{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="franchise-earnings";static label="Franchise";static icon="🏪";static color="#ea580c";static endpoint="/api/v1/ev-discount/admin/franchise-purchases?audience=vgk4u";async render(){return`
+      `}async afterRender(){}}class W{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="franchise-earnings";static label="Franchise";static icon="🏪";static color="#ea580c";static endpoint="/api/v1/ev-discount/admin/franchise-purchases?audience=vgk4u";async render(){return`
         ${p.render({title:"Franchise",showBack:!0})}
         <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
           <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #ea580c;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -145,13 +145,13 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           </div>
           <iframe
             id="vgk4u-franchise-earnings-frame"
-            src="${g.MEDIA_BASE_URL}/vgk/franchise-earnings?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+            src="${g.MEDIA_BASE_URL}/vgk/franchise-earnings?token=${encodeURIComponent(u())}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="Franchise (VGK4U)"
           ></iframe>
         </div>
-      `}async afterRender(){}}class j{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="guru-summary";static label="Senior (L3)";static icon="③";static color="#475569";static endpoint="/api/v1/admin/guru-summary?audience=vgk4u";async render(){return`
+      `}async afterRender(){}}class Y{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="guru-summary";static label="Senior (L3)";static icon="③";static color="#475569";static endpoint="/api/v1/admin/guru-summary?audience=vgk4u";async render(){return`
         ${p.render({title:"Senior (L3)",showBack:!0})}
         <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
           <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #475569;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -162,13 +162,13 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           </div>
           <iframe
             id="vgk4u-guru-summary-frame"
-            src="${g.MEDIA_BASE_URL}/vgk/guru-summary?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+            src="${g.MEDIA_BASE_URL}/vgk/guru-summary?token=${encodeURIComponent(u())}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="Senior (L3) (VGK4U)"
           ></iframe>
         </div>
-      `}async afterRender(){}}class W{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="income-types";static label="Income Types";static icon="📊";static color="#2563eb";static endpoint="/api/v1/admin/income-types?audience=vgk4u";async render(){return`
+      `}async afterRender(){}}class Z{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="income-types";static label="Income Types";static icon="📊";static color="#2563eb";static endpoint="/api/v1/admin/income-types?audience=vgk4u";async render(){return`
         ${p.render({title:"Income Types",showBack:!0})}
         <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
           <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #2563eb;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -179,13 +179,13 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           </div>
           <iframe
             id="vgk4u-income-types-frame"
-            src="${g.MEDIA_BASE_URL}/vgk/income-types?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+            src="${g.MEDIA_BASE_URL}/vgk/income-types?token=${encodeURIComponent(u())}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="Income Types (VGK4U)"
           ></iframe>
         </div>
-      `}async afterRender(){}}class Y{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="insurance";static label="Insurance";static icon="🛡️";static color="#4f46e5";static endpoint="/api/v1/admin/insurance?audience=vgk4u";async render(){return`
+      `}async afterRender(){}}class J{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="insurance";static label="Insurance";static icon="🛡️";static color="#4f46e5";static endpoint="/api/v1/admin/insurance?audience=vgk4u";async render(){return`
         ${p.render({title:"Insurance",showBack:!0})}
         <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
           <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #4f46e5;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -196,13 +196,13 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           </div>
           <iframe
             id="vgk4u-insurance-frame"
-            src="${g.MEDIA_BASE_URL}/vgk/insurance?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+            src="${g.MEDIA_BASE_URL}/vgk/insurance?token=${encodeURIComponent(u())}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="Insurance (VGK4U)"
           ></iframe>
         </div>
-      `}async afterRender(){}}class Z{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="matching-summary";static label="Matching (L2)";static icon="②";static color="#475569";static endpoint="/api/v1/admin/matching-summary?audience=vgk4u";async render(){return`
+      `}async afterRender(){}}class Q{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="matching-summary";static label="Matching (L2)";static icon="②";static color="#475569";static endpoint="/api/v1/admin/matching-summary?audience=vgk4u";async render(){return`
         ${p.render({title:"Matching (L2)",showBack:!0})}
         <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
           <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #475569;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -213,13 +213,13 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           </div>
           <iframe
             id="vgk4u-matching-summary-frame"
-            src="${g.MEDIA_BASE_URL}/vgk/matching-summary?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+            src="${g.MEDIA_BASE_URL}/vgk/matching-summary?token=${encodeURIComponent(u())}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="Matching (L2) (VGK4U)"
           ></iframe>
         </div>
-      `}async afterRender(){}}class J{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="my-submissions";static label="My Submissions";static icon="📄";static color="#7c3aed";static endpoint="/api/v1/admin/my-submissions?audience=vgk4u";async render(){return`
+      `}async afterRender(){}}class X{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="my-submissions";static label="My Submissions";static icon="📄";static color="#7c3aed";static endpoint="/api/v1/admin/my-submissions?audience=vgk4u";async render(){return`
         ${p.render({title:"My Submissions",showBack:!0})}
         <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
           <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #7c3aed;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -230,13 +230,13 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           </div>
           <iframe
             id="vgk4u-my-submissions-frame"
-            src="${g.MEDIA_BASE_URL}/vgk/my-submissions?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+            src="${g.MEDIA_BASE_URL}/vgk/my-submissions?token=${encodeURIComponent(u())}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="My Submissions (VGK4U)"
           ></iframe>
         </div>
-      `}async afterRender(){}}class Q{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="training";static label="Training";static icon="🎓";static color="#db2777";static endpoint="/api/v1/admin/training?audience=vgk4u";async render(){return`
+      `}async afterRender(){}}class ee{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="training";static label="Training";static icon="🎓";static color="#db2777";static endpoint="/api/v1/admin/training?audience=vgk4u";async render(){return`
         ${p.render({title:"Training",showBack:!0})}
         <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
           <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #db2777;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -247,13 +247,13 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           </div>
           <iframe
             id="vgk4u-training-frame"
-            src="${g.MEDIA_BASE_URL}/vgk/training?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+            src="${g.MEDIA_BASE_URL}/vgk/training?token=${encodeURIComponent(u())}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="Training (VGK4U)"
           ></iframe>
         </div>
-      `}async afterRender(){}}class X{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="ved-summary";static label="VED (L5)";static icon="⑤";static color="#475569";static endpoint="/api/v1/admin/ved-summary?audience=vgk4u";async render(){return`
+      `}async afterRender(){}}class te{container;constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}static slug="ved-summary";static label="VED (L5)";static icon="⑤";static color="#475569";static endpoint="/api/v1/admin/ved-summary?audience=vgk4u";async render(){return`
         ${p.render({title:"VED (L5)",showBack:!0})}
         <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
           <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #475569;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -264,13 +264,13 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           </div>
           <iframe
             id="vgk4u-ved-summary-frame"
-            src="${g.MEDIA_BASE_URL}/vgk/ved-summary?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+            src="${g.MEDIA_BASE_URL}/vgk/ved-summary?token=${encodeURIComponent(u())}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="VED (L5) (VGK4U)"
           ></iframe>
         </div>
-      `}async afterRender(){}}class ee{container;earners=[];latestDate=null;loading=!0;constructor(e){this.container=e}async init(){this.render(),await this.loadEarners()}async loadEarners(){this.loading=!0,this.updateContent();try{const e=await m.get("/banners/top-performers?limit=10&audience=vgk4u");e.success&&e.data?(this.earners=e.data.top_performers||[],this.latestDate=e.data.latest_earning_date||null):this.earners=[]}catch(e){console.error("[VGKTopEarners] Failed to load:",e),this.earners=[]}this.loading=!1,this.updateContent()}render(){this.container.innerHTML=`
+      `}async afterRender(){}}class ie{container;earners=[];latestDate=null;loading=!0;constructor(e){this.container=e}async init(){this.render(),await this.loadEarners()}async loadEarners(){this.loading=!0,this.updateContent();try{const e=await m.get("/banners/top-performers?limit=10&audience=vgk4u");e.success&&e.data?(this.earners=e.data.top_performers||[],this.latestDate=e.data.latest_earning_date||null):this.earners=[]}catch(e){console.error("[VGKTopEarners] Failed to load:",e),this.earners=[]}this.loading=!1,this.updateContent()}render(){this.container.innerHTML=`
       <div class="page-container">
         ${p.render({title:"🏆 VGK4U Top Earners",showBack:!0})}
         <div id="pageContent">
@@ -305,7 +305,7 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           ₹${(e.total_earnings||0).toLocaleString("en-IN")}
         </div>
       </div>
-    `}escape(e){return String(e??"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t])}}class te{container;awards=[];loading=!0;vgk4uEnabled=!0;note="";audienceLabel="VGK4U Members";constructor(e){this.container=e}async init(){this.render(),await this.loadAwards()}async loadAwards(){this.loading=!0,this.updateContent();try{const e=await m.get("/unified-awards/list?audience=vgk4u");e.success&&e.data?(this.awards=e.data.awards||[],this.vgk4uEnabled=e.data.vgk4u_enabled!==!1,this.note=e.data.note||"",this.audienceLabel=e.data.audience_label||"VGK4U Members"):this.awards=[]}catch(e){console.error("[VGKAwards] Failed to load:",e),this.awards=[]}this.loading=!1,this.updateContent()}render(){this.container.innerHTML=`
+    `}escape(e){return String(e??"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t])}}class ae{container;awards=[];loading=!0;vgk4uEnabled=!0;note="";audienceLabel="VGK4U Members";constructor(e){this.container=e}async init(){this.render(),await this.loadAwards()}async loadAwards(){this.loading=!0,this.updateContent();try{const e=await m.get("/unified-awards/list?audience=vgk4u");e.success&&e.data?(this.awards=e.data.awards||[],this.vgk4uEnabled=e.data.vgk4u_enabled!==!1,this.note=e.data.note||"",this.audienceLabel=e.data.audience_label||"VGK4U Members"):this.awards=[]}catch(e){console.error("[VGKAwards] Failed to load:",e),this.awards=[]}this.loading=!1,this.updateContent()}render(){this.container.innerHTML=`
       <div class="page-container">
         ${p.render({title:"🏆 VGK4U Awards",showBack:!0})}
         <div id="pageContent">
@@ -344,7 +344,7 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
           ${this.escape(i)}${a?` · ${this.escape(a)}`:""}
         </div>
       </div>
-    `}escape(e){return String(e??"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t])}}class ie{container;members=[];total=0;thisMonth=0;loading=!0;page=1;pageSize=25;regOtpSent=!1;regPhoneVerifiedToken="";lastRegData=null;refLookupTimer=null;constructor(e){this.container=e}async init(){this.render(),this.attachEvents(),await this.loadData()}async loadData(){this.loading=!0,this.updateList();try{const e=`/vgk/my-registrations?page=${this.page}&page_size=${this.pageSize}`,t=await m.get(e);t.success?(this.members=t.data||[],this.total=t.total||0,this.thisMonth=t.this_month||0):this.members=[]}catch(e){console.error("[VGKMyRegistrations] load error:",e),this.members=[]}finally{this.loading=!1,this.updateList(),this.updateStats()}}fmtDate(e){return e?new Date(e).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit"}):"—"}render(){const t=JSON.parse(localStorage.getItem("vgk_partner")||"{}").partner_code||"";this.container.innerHTML=`
+    `}escape(e){return String(e??"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t])}}class ne{container;members=[];total=0;thisMonth=0;loading=!0;page=1;pageSize=25;regOtpSent=!1;regPhoneVerifiedToken="";lastRegData=null;refLookupTimer=null;constructor(e){this.container=e}async init(){this.render(),this.attachEvents(),await this.loadData()}async loadData(){this.loading=!0,this.updateList();try{const e=`/vgk/my-registrations?page=${this.page}&page_size=${this.pageSize}`,t=await m.get(e);t.success?(this.members=t.data||[],this.total=t.total||0,this.thisMonth=t.this_month||0):this.members=[]}catch(e){console.error("[VGKMyRegistrations] load error:",e),this.members=[]}finally{this.loading=!1,this.updateList(),this.updateStats()}}fmtDate(e){return e?new Date(e).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit"}):"—"}render(){const t=JSON.parse(localStorage.getItem("vgk_partner")||"{}").partner_code||"";this.container.innerHTML=`
       <div style="background:#f8f5ff;min-height:100vh;padding-bottom:80px">
         ${p.render({title:"My VGK Registrations",showBack:!0})}
 
@@ -493,7 +493,7 @@ import{b as m,t as S,d as E,a as g}from"./services-BTy1czHo.js";import{P as p}fr
             <i class="fas fa-spinner fa-spin" style="font-size:22px"></i>
           </div>
         </div>
-      </div>`,p.attachListeners({title:"My VGK Registrations",showBack:!0})}attachEvents(){this.container.querySelector("#regOpenBtn")?.addEventListener("click",()=>{const e=this.container.querySelector("#regFormCard");e&&(e.style.display="block",e.scrollIntoView({behavior:"smooth",block:"start"}))}),this.container.querySelector("#regCloseBtn")?.addEventListener("click",()=>{this.closeRegForm()}),this.container.querySelector("#regAnotherBtn")?.addEventListener("click",()=>{this.resetRegForm()}),this.container.querySelector("#regShareBtn")?.addEventListener("click",()=>{this.lastRegData&&this.showShareOverlay(this.lastRegData)}),this.container.querySelector("#regReferrer")?.addEventListener("input",()=>this.lookupReferrer()),this.container.querySelector("#regReferrer")?.value&&this.lookupReferrer(),this.container.querySelector("#regPhone")?.addEventListener("input",()=>this.resetOtpState()),this.container.querySelector("#regSendOtpBtn")?.addEventListener("click",()=>this.sendOTP()),this.container.querySelector("#regVerifyBtn")?.addEventListener("click",()=>this.verifyOTP()),this.container.querySelector("#regResendLink")?.addEventListener("click",()=>this.sendOTP()),this.container.querySelector("#regSkipOtpLink")?.addEventListener("click",()=>this.skipOTP()),this.container.querySelector("#regForm")?.addEventListener("submit",e=>{e.preventDefault(),this.submitRegistration()})}skipOTP(){const e=i=>this.container.querySelector(`#${i}`),t=this.container.querySelector("#regError");t&&(t.style.display="none"),e("regOtpBlock")&&(e("regOtpBlock").style.display="none"),e("regOtpVerifiedBadge")&&(e("regOtpVerifiedBadge").style.display="none"),e("regOtpPendingBadge")&&(e("regOtpPendingBadge").style.display="block")}lookupReferrer(){const e=this.container.querySelector("#regReferrer"),t=this.container.querySelector("#regReferrerName");if(!t)return;const i=(e?.value||"").trim().toUpperCase();if(this.refLookupTimer&&clearTimeout(this.refLookupTimer),i.length<3){t.innerHTML="";return}t.innerHTML='<span style="color:#9ca3af"><i class="fas fa-spinner fa-spin" style="margin-right:4px"></i>Looking up…</span>',this.refLookupTimer=setTimeout(async()=>{try{const a=await m.get(`/vgk/public/member-lookup?q=${encodeURIComponent(i)}`);if(a.results&&a.results.length>0){const n=a.results.find(r=>r.partner_code.toUpperCase()===i)||a.results[0];t.innerHTML=`<span style="color:#16a34a;font-weight:700"><i class="fas fa-check-circle" style="margin-right:4px"></i>${n.partner_name} <span style="color:#9ca3af;font-weight:400">(${n.partner_code})</span></span>`}else t.innerHTML='<span style="color:#dc2626"><i class="fas fa-times-circle" style="margin-right:4px"></i>VGK ID not found</span>'}catch{t.innerHTML='<span style="color:#dc2626"><i class="fas fa-times-circle" style="margin-right:4px"></i>VGK ID not found</span>'}},500)}resetOtpState(){this.regOtpSent=!1,this.regPhoneVerifiedToken="";const e=a=>this.container.querySelector(`#${a}`),t=this.container.querySelector("#regOtpInput"),i=this.container.querySelector("#regSendOtpBtn");e("regOtpBlock")&&(e("regOtpBlock").style.display="none"),e("regOtpVerifiedBadge")&&(e("regOtpVerifiedBadge").style.display="none"),e("regOtpPendingBadge")&&(e("regOtpPendingBadge").style.display="none"),t&&(t.value=""),i&&(i.textContent="Send OTP")}async sendOTP(){const e=this.container.querySelector("#regPhone"),t=this.container.querySelector("#regError"),i=(e?.value||"").trim();if(!i||!/^\d{10}$/.test(i)){t.textContent="Please enter a valid 10-digit phone number before sending OTP.",t.style.display="block";return}t.style.display="none";const a=this.container.querySelector("#regSendOtpBtn");a.disabled=!0,a.textContent="Sending…";try{const n=await m.post("/vgk/auth/signup/send-otp",{phone:i});if(n.success)if(n.otp_sent===!1)t.textContent=n.message||"WhatsApp OTP could not be sent right now. You can proceed with registration and verify later.",t.style.display="block",t.style.background="#fffbeb",t.style.borderColor="#fde68a",t.style.color="#92400e",this.skipOTP();else{this.regOtpSent=!0;const r=this.container.querySelector("#regOtpBlock"),s=this.container.querySelector("#regOtpVerifiedBadge"),o=this.container.querySelector("#regOtpPendingBadge"),l=this.container.querySelector("#regOtpInput");r&&(r.style.display="block"),s&&(s.style.display="none"),o&&(o.style.display="none"),l&&(l.value="",l.focus()),this.regPhoneVerifiedToken="",a.textContent="Resend OTP"}else t.textContent=n.message||"Failed to send OTP. You can still register and verify later.",t.style.display="block",a.textContent="Send OTP",this.skipOTP()}catch(n){t.textContent=n?.detail||n?.message||"Failed to send OTP. You can still register and verify later.",t.style.display="block",a.textContent="Send OTP",this.skipOTP()}finally{a.disabled=!1}}async verifyOTP(){const e=this.container.querySelector("#regPhone"),t=this.container.querySelector("#regOtpInput"),i=this.container.querySelector("#regError"),a=(e?.value||"").trim(),n=(t?.value||"").trim();if(!n||n.length!==6){i.textContent="Please enter the 6-digit OTP from WhatsApp.",i.style.display="block";return}i.style.display="none";const r=this.container.querySelector("#regVerifyBtn");r.disabled=!0,r.textContent="Verifying…";try{const s=await m.post("/vgk/auth/signup/verify-otp",{phone:a,otp_code:n});if(s.success&&s.phone_verified_token){this.regPhoneVerifiedToken=s.phone_verified_token;const o=this.container.querySelector("#regOtpBlock"),l=this.container.querySelector("#regOtpVerifiedBadge"),c=this.container.querySelector("#regOtpPendingBadge");o&&(o.style.display="none"),l&&(l.style.display="block"),c&&(c.style.display="none")}else i.textContent=s.message||"Invalid OTP. Please try again.",i.style.display="block"}catch(s){i.textContent=s?.detail||s?.message||"Invalid OTP. Please try again.",i.style.display="block"}finally{r.disabled=!1,r.textContent="Verify"}}async submitRegistration(){const e=v=>this.container.querySelector(`#${v}`)?.value?.trim()||"",t=this.container.querySelector("#regError");t.style.display="none";const i=e("regFirstName"),a=e("regLastName"),n=e("regPhone"),r=e("regPassword"),s=e("regTitle"),o=e("regGender"),l=e("regEmail"),c=e("regReferrer"),f=[s,i,a].filter(Boolean).join(" ");if(!i||!a){t.textContent="Please enter both first name and last name.",t.style.display="block";return}const u=(n||"").replace(/\D/g,"").slice(-10);if(!u||u.length!==10){t.textContent="Please enter a valid 10-digit mobile number.",t.style.display="block";return}if(!r||r.length<6){t.textContent="Password must be at least 6 characters.",t.style.display="block";return}const x=this.container.querySelector("#regSubmitBtn"),w=this.container.querySelector("#regSubmitText"),_=this.container.querySelector("#regSubmitSpinner");x.disabled=!0,w.style.display="none",_.style.display="";try{const v={partner_name:f,phone:u,password:r,name_title:s||null,first_name:i||null,last_name:a||null,gender:o||null,phone_verified_token:this.regPhoneVerifiedToken||null};l&&(v.email=l),c&&(v.referrer_code=c);const $=await m.post("/vgk/auth/signup",v);if($.success){const A=this.container.querySelector("#regForm"),P=this.container.querySelector("#regSuccess"),R=this.container.querySelector("#regNewId");A&&(A.style.display="none"),R&&(R.textContent=$.partner_code||""),P&&(P.style.display="block"),this.lastRegData={partner_code:$.partner_code||"",partner_name:f,phone:n,password:r},this.showShareOverlay(this.lastRegData),await this.loadData()}else t.textContent=$.message||"Registration failed. Please try again.",t.style.display="block"}catch(v){t.textContent=v?.detail||v?.message||"Registration failed. Please try again.",t.style.display="block"}finally{x.disabled=!1,w.style.display="",_.style.display="none"}}buildShareMsg(e,t){const i=t.partner_code,a=t.partner_name,n=t.password,r=`https://vgk4u.com/vgk/login?tab=signup&ref=${encodeURIComponent(i)}`,s="https://www.youtube.com/@VGK4YOU";return e==="hindi"?`🎉 बधाई हो ${a} जी! 🎉
+      </div>`,p.attachListeners({title:"My VGK Registrations",showBack:!0})}attachEvents(){this.container.querySelector("#regOpenBtn")?.addEventListener("click",()=>{const e=this.container.querySelector("#regFormCard");e&&(e.style.display="block",e.scrollIntoView({behavior:"smooth",block:"start"}))}),this.container.querySelector("#regCloseBtn")?.addEventListener("click",()=>{this.closeRegForm()}),this.container.querySelector("#regAnotherBtn")?.addEventListener("click",()=>{this.resetRegForm()}),this.container.querySelector("#regShareBtn")?.addEventListener("click",()=>{this.lastRegData&&this.showShareOverlay(this.lastRegData)}),this.container.querySelector("#regReferrer")?.addEventListener("input",()=>this.lookupReferrer()),this.container.querySelector("#regReferrer")?.value&&this.lookupReferrer(),this.container.querySelector("#regPhone")?.addEventListener("input",()=>this.resetOtpState()),this.container.querySelector("#regSendOtpBtn")?.addEventListener("click",()=>this.sendOTP()),this.container.querySelector("#regVerifyBtn")?.addEventListener("click",()=>this.verifyOTP()),this.container.querySelector("#regResendLink")?.addEventListener("click",()=>this.sendOTP()),this.container.querySelector("#regSkipOtpLink")?.addEventListener("click",()=>this.skipOTP()),this.container.querySelector("#regForm")?.addEventListener("submit",e=>{e.preventDefault(),this.submitRegistration()})}skipOTP(){const e=i=>this.container.querySelector(`#${i}`),t=this.container.querySelector("#regError");t&&(t.style.display="none"),e("regOtpBlock")&&(e("regOtpBlock").style.display="none"),e("regOtpVerifiedBadge")&&(e("regOtpVerifiedBadge").style.display="none"),e("regOtpPendingBadge")&&(e("regOtpPendingBadge").style.display="block")}lookupReferrer(){const e=this.container.querySelector("#regReferrer"),t=this.container.querySelector("#regReferrerName");if(!t)return;const i=(e?.value||"").trim().toUpperCase();if(this.refLookupTimer&&clearTimeout(this.refLookupTimer),i.length<3){t.innerHTML="";return}t.innerHTML='<span style="color:#9ca3af"><i class="fas fa-spinner fa-spin" style="margin-right:4px"></i>Looking up…</span>',this.refLookupTimer=setTimeout(async()=>{try{const a=await m.get(`/vgk/public/member-lookup?q=${encodeURIComponent(i)}`);if(a.results&&a.results.length>0){const n=a.results.find(r=>r.partner_code.toUpperCase()===i)||a.results[0];t.innerHTML=`<span style="color:#16a34a;font-weight:700"><i class="fas fa-check-circle" style="margin-right:4px"></i>${n.partner_name} <span style="color:#9ca3af;font-weight:400">(${n.partner_code})</span></span>`}else t.innerHTML='<span style="color:#dc2626"><i class="fas fa-times-circle" style="margin-right:4px"></i>VGK ID not found</span>'}catch{t.innerHTML='<span style="color:#dc2626"><i class="fas fa-times-circle" style="margin-right:4px"></i>VGK ID not found</span>'}},500)}resetOtpState(){this.regOtpSent=!1,this.regPhoneVerifiedToken="";const e=a=>this.container.querySelector(`#${a}`),t=this.container.querySelector("#regOtpInput"),i=this.container.querySelector("#regSendOtpBtn");e("regOtpBlock")&&(e("regOtpBlock").style.display="none"),e("regOtpVerifiedBadge")&&(e("regOtpVerifiedBadge").style.display="none"),e("regOtpPendingBadge")&&(e("regOtpPendingBadge").style.display="none"),t&&(t.value=""),i&&(i.textContent="Send OTP")}async sendOTP(){const e=this.container.querySelector("#regPhone"),t=this.container.querySelector("#regError"),i=(e?.value||"").trim();if(!i||!/^\d{10}$/.test(i)){t.textContent="Please enter a valid 10-digit phone number before sending OTP.",t.style.display="block";return}t.style.display="none";const a=this.container.querySelector("#regSendOtpBtn");a.disabled=!0,a.textContent="Sending…";try{const n=await m.post("/vgk/auth/signup/send-otp",{phone:i});if(n.success)if(n.otp_sent===!1)t.textContent=n.message||"WhatsApp OTP could not be sent right now. You can proceed with registration and verify later.",t.style.display="block",t.style.background="#fffbeb",t.style.borderColor="#fde68a",t.style.color="#92400e",this.skipOTP();else{this.regOtpSent=!0;const r=this.container.querySelector("#regOtpBlock"),s=this.container.querySelector("#regOtpVerifiedBadge"),o=this.container.querySelector("#regOtpPendingBadge"),l=this.container.querySelector("#regOtpInput");r&&(r.style.display="block"),s&&(s.style.display="none"),o&&(o.style.display="none"),l&&(l.value="",l.focus()),this.regPhoneVerifiedToken="",a.textContent="Resend OTP"}else t.textContent=n.message||"Failed to send OTP. You can still register and verify later.",t.style.display="block",a.textContent="Send OTP",this.skipOTP()}catch(n){t.textContent=n?.detail||n?.message||"Failed to send OTP. You can still register and verify later.",t.style.display="block",a.textContent="Send OTP",this.skipOTP()}finally{a.disabled=!1}}async verifyOTP(){const e=this.container.querySelector("#regPhone"),t=this.container.querySelector("#regOtpInput"),i=this.container.querySelector("#regError"),a=(e?.value||"").trim(),n=(t?.value||"").trim();if(!n||n.length!==6){i.textContent="Please enter the 6-digit OTP from WhatsApp.",i.style.display="block";return}i.style.display="none";const r=this.container.querySelector("#regVerifyBtn");r.disabled=!0,r.textContent="Verifying…";try{const s=await m.post("/vgk/auth/signup/verify-otp",{phone:a,otp_code:n});if(s.success&&s.phone_verified_token){this.regPhoneVerifiedToken=s.phone_verified_token;const o=this.container.querySelector("#regOtpBlock"),l=this.container.querySelector("#regOtpVerifiedBadge"),c=this.container.querySelector("#regOtpPendingBadge");o&&(o.style.display="none"),l&&(l.style.display="block"),c&&(c.style.display="none")}else i.textContent=s.message||"Invalid OTP. Please try again.",i.style.display="block"}catch(s){i.textContent=s?.detail||s?.message||"Invalid OTP. Please try again.",i.style.display="block"}finally{r.disabled=!1,r.textContent="Verify"}}async submitRegistration(){const e=k=>this.container.querySelector(`#${k}`)?.value?.trim()||"",t=this.container.querySelector("#regError");t.style.display="none";const i=e("regFirstName"),a=e("regLastName"),n=e("regPhone"),r=e("regPassword"),s=e("regTitle"),o=e("regGender"),l=e("regEmail"),c=e("regReferrer"),f=[s,i,a].filter(Boolean).join(" ");if(!i||!a){t.textContent="Please enter both first name and last name.",t.style.display="block";return}const b=(n||"").replace(/\D/g,"").slice(-10);if(!b||b.length!==10){t.textContent="Please enter a valid 10-digit mobile number.",t.style.display="block";return}if(!r||r.length<6){t.textContent="Password must be at least 6 characters.",t.style.display="block";return}const h=this.container.querySelector("#regSubmitBtn"),z=this.container.querySelector("#regSubmitText"),_=this.container.querySelector("#regSubmitSpinner");h.disabled=!0,z.style.display="none",_.style.display="";try{const k={partner_name:f,phone:b,password:r,name_title:s||null,first_name:i||null,last_name:a||null,gender:o||null,phone_verified_token:this.regPhoneVerifiedToken||null};l&&(k.email=l),c&&(k.referrer_code=c);const S=await m.post("/vgk/auth/signup",k);if(S.success){const P=this.container.querySelector("#regForm"),R=this.container.querySelector("#regSuccess"),M=this.container.querySelector("#regNewId");P&&(P.style.display="none"),M&&(M.textContent=S.partner_code||""),R&&(R.style.display="block"),this.lastRegData={partner_code:S.partner_code||"",partner_name:f,phone:n,password:r},this.showShareOverlay(this.lastRegData),await this.loadData()}else t.textContent=S.message||"Registration failed. Please try again.",t.style.display="block"}catch(k){t.textContent=k?.detail||k?.message||"Registration failed. Please try again.",t.style.display="block"}finally{h.disabled=!1,z.style.display="",_.style.display="none"}}buildShareMsg(e,t){const i=t.partner_code,a=t.partner_name,n=t.password,r=`https://vgk4u.com/vgk/login?tab=signup&ref=${encodeURIComponent(i)}`,s="https://www.youtube.com/@VGK4YOU";return e==="hindi"?`🎉 बधाई हो ${a} जी! 🎉
 
 VGK4U में आपका स्वागत है! आपके खाते में कुल 15,000 रिवॉर्ड पॉइंट्स जमा हो गए हैं:
 🎁 10,000 पॉइंट्स — वेलकम बोनस
@@ -685,7 +685,7 @@ Start exploring your dashboard and make the most out of your rewards and opportu
           <span><i class="fas fa-phone" style="margin-right:4px;color:#9ca3af"></i>${t.phone||"—"}</span>
           <span><i class="fas fa-calendar-alt" style="margin-right:4px;color:#9ca3af"></i>Reg: ${this.fmtDate(t.created_at)}</span>
         </div>
-      </div>`).join("")}}}const C=[{key:"all",label:"All",icon:"fas fa-th-large"},{key:"active",label:"Active",icon:"fas fa-fire"},{key:"claim",label:"Claim Now",icon:"fas fa-gift"},{key:"won",label:"Won",icon:"fas fa-trophy"},{key:"claimed_proc",label:"Claimed",icon:"fas fa-check-circle"},{key:"upcoming",label:"Upcoming",icon:"fas fa-calendar-alt"},{key:"missed",label:"Missed",icon:"fas fa-times-circle"},{key:"inactive",label:"Inactive",icon:"fas fa-pause-circle"}],M=["Claimed","Achieved - Claimed","Processing","Staff Verified","Procurement In Progress","Dispatched","Delivered","Completed","Payment Released","Paid"],I={completed_deals:"linear-gradient(135deg,#4c1d95,#7c3aed)",solar:"linear-gradient(135deg,#92400e,#d97706)",direct_referral:"linear-gradient(135deg,#1e3a5f,#2563eb)",matching_points:"linear-gradient(135deg,#065f46,#059669)",team_size:"linear-gradient(135deg,#7c2d12,#ea580c)"},B={completed_deals:"fas fa-handshake",solar:"fas fa-solar-panel",direct_referral:"fas fa-user-plus",matching_points:"fas fa-sync",team_size:"fas fa-users"};function b(d){return String(d??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function k(d){if(!d)return"—";const e=d.endsWith("Z")||d.includes("+")?d:d+"+05:30";return new Date(e).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit",timeZone:"Asia/Kolkata"})}function D(d,e){return e?"linear-gradient(135deg,#374151,#6b7280)":I[d??""]??"linear-gradient(135deg,#312e81,#6d28d9)"}class ae{container;all=[];rewardFiles=[];filter="active";loading=!0;error="";constructor(e){this.container=e}async init(){this.render(),await this.load()}async load(e=!1){this.loading=!0,this.error="",this.refreshContent();try{const[t,i]=await Promise.all([m.get("/bonanza/my-bonanzas"),m.get("/bonanza/my-reward-files")]);t.success&&t.data?this.all=t.data.bonanzas||[]:this.all=[],this.rewardFiles=i.data?.files||[]}catch{this.error="Could not load bonanza rewards. Please try again.",this.all=[],this.rewardFiles=[]}this.loading=!1,this.refreshContent()}render(){this.container.innerHTML=`
+      </div>`).join("")}}}const B=[{key:"all",label:"All",icon:"fas fa-th-large"},{key:"active",label:"Active",icon:"fas fa-fire"},{key:"claim",label:"Claim Now",icon:"fas fa-gift"},{key:"won",label:"Won",icon:"fas fa-trophy"},{key:"claimed_proc",label:"Claimed",icon:"fas fa-check-circle"},{key:"upcoming",label:"Upcoming",icon:"fas fa-calendar-alt"},{key:"missed",label:"Missed",icon:"fas fa-times-circle"},{key:"inactive",label:"Inactive",icon:"fas fa-pause-circle"}],C=["Claimed","Achieved - Claimed","Processing","Staff Verified","Procurement In Progress","Dispatched","Delivered","Completed","Payment Released","Paid"],D={completed_deals:"linear-gradient(135deg,#4c1d95,#7c3aed)",solar:"linear-gradient(135deg,#92400e,#d97706)",direct_referral:"linear-gradient(135deg,#1e3a5f,#2563eb)",matching_points:"linear-gradient(135deg,#065f46,#059669)",team_size:"linear-gradient(135deg,#7c2d12,#ea580c)"},T={completed_deals:"fas fa-handshake",solar:"fas fa-solar-panel",direct_referral:"fas fa-user-plus",matching_points:"fas fa-sync",team_size:"fas fa-users"};function x(d){return String(d??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function w(d){if(!d)return"—";const e=d.endsWith("Z")||d.includes("+")?d:d+"+05:30";return new Date(e).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit",timeZone:"Asia/Kolkata"})}function I(d,e){return e?"linear-gradient(135deg,#374151,#6b7280)":D[d??""]??"linear-gradient(135deg,#312e81,#6d28d9)"}class re{container;all=[];rewardFiles=[];filter="active";loading=!0;error="";constructor(e){this.container=e}async init(){this.render(),await this.load()}async load(e=!1){this.loading=!0,this.error="",this.refreshContent();try{const[t,i]=await Promise.all([m.get("/bonanza/my-bonanzas"),m.get("/bonanza/my-reward-files")]);t.success&&t.data?this.all=t.data.bonanzas||[]:this.all=[],this.rewardFiles=i.data?.files||[]}catch{this.error="Could not load bonanza rewards. Please try again.",this.all=[],this.rewardFiles=[]}this.loading=!1,this.refreshContent()}render(){this.container.innerHTML=`
       <style>
         .bnz-filter-bar{display:flex;gap:8px;flex-wrap:nowrap;overflow-x:auto;padding:0 12px 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
         .bnz-filter-bar::-webkit-scrollbar{display:none}
@@ -735,7 +735,7 @@ Start exploring your dashboard and make the most out of your rewards and opportu
         ${p.render({title:"Bonanza Rewards",showBack:!0})}
         <div style="margin-bottom:12px">
           <div class="bnz-filter-bar" id="bnzFilterBar">
-            ${C.map(e=>`<button class="bnz-fc${e.key==="all"?" active":""}" data-filter="${e.key}"><i class="${e.icon} me-1"></i>${e.label}</button>`).join("")}
+            ${B.map(e=>`<button class="bnz-fc${e.key==="all"?" active":""}" data-filter="${e.key}"><i class="${e.icon} me-1"></i>${e.label}</button>`).join("")}
           </div>
         </div>
         <div id="bnzContent">
@@ -743,19 +743,19 @@ Start exploring your dashboard and make the most out of your rewards and opportu
         </div>
         <div style="height:24px"></div>
       </div>
-    `,p.attachListeners({title:"Bonanza Rewards",showBack:!0}),document.getElementById("bnzFilterBar")?.addEventListener("click",e=>{const t=e.target.closest("[data-filter]");t&&(document.querySelectorAll(".bnz-fc").forEach(i=>i.classList.remove("active")),t.classList.add("active"),t.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"}),this.filter=t.dataset.filter||"all",this.refreshContent())})}statusChip(e){const t=(e.status||"").toLowerCase(),i=(e.processed_status||"").toLowerCase();return i==="delivered"?'<span class="bnz-chip bnz-chip-dlv"><i class="fas fa-check-circle me-1"></i>Delivered</span>':i==="dispatched"?'<span class="bnz-chip bnz-chip-dlv"><i class="fas fa-truck me-1"></i>Dispatched</span>':i&&i!=="pending"&&!t.includes("progress")&&!t.includes("claim")&&!t.includes("upcoming")&&!t.includes("missed")?`<span class="bnz-chip bnz-chip-clmd"><i class="fas fa-hourglass-half me-1"></i>${b(e.processed_status)}</span>`:t.includes("claim now")?'<span class="bnz-chip bnz-chip-claim"><i class="fas fa-gift me-1"></i>Claim Now!</span>':t.includes("achieved")?'<span class="bnz-chip bnz-chip-ach"><i class="fas fa-trophy me-1"></i>Achieved</span>':t.includes("progress")?'<span class="bnz-chip bnz-chip-prog"><i class="fas fa-spinner fa-spin me-1"></i>In Progress</span>':t.includes("upcoming")?'<span class="bnz-chip bnz-chip-up"><i class="fas fa-calendar me-1"></i>Upcoming</span>':t.includes("missed")?'<span class="bnz-chip bnz-chip-miss"><i class="fas fa-times-circle me-1"></i>Missed</span>':`<span class="bnz-chip bnz-chip-prog">${b(e.status)}</span>`}rewardBadge(e){if(e.reward_type==="slab_wise"&&e.slab_extra_amount){const a=e.current_progress||1,n=Number(e.slab_extra_amount)*a,r=Number(e.slab_extra_amount).toLocaleString("en-IN"),s=a>1?`${a} files × ₹${r}`:"per deal";return`<div class="bnz-rbadge bnz-rbadge-cash"><div class="bnz-rb-amt">+₹${n.toLocaleString("en-IN")}</div><div class="bnz-rb-lbl">${s}</div></div>`}if(e.is_monetary&&e.reward_amount)return`<div class="bnz-rbadge bnz-rbadge-cash"><div class="bnz-rb-amt">₹${Number(e.reward_amount).toLocaleString("en-IN")}</div><div class="bnz-rb-lbl">Cash Prize</div></div>`;const t=e.award_name||e.reward_text||"Free Award",i=t.length>16?t.substring(0,14)+"…":t;return`<div class="bnz-rbadge bnz-rbadge-free"><div class="bnz-rb-lbl" style="font-size:11px;font-weight:900">FREE</div><div class="bnz-rb-amt" style="font-size:13px">${b(i)}</div></div>`}filtered(){return this.filter==="all"?this.all:this.all.filter(e=>{const t=e.status||"";return this.filter==="active"?t==="In Progress":this.filter==="claim"?t==="Achieved - Claim Now":this.filter==="won"?t==="Achieved - Claim Now"||M.some(i=>t.includes(i)):this.filter==="claimed_proc"?M.some(i=>t.includes(i)):this.filter==="upcoming"?t==="Upcoming":this.filter==="missed"?t==="Missed Opportunity":this.filter==="inactive"?t==="Upcoming"||t==="Missed Opportunity":!1})}cardHtml(e){const t=e.achievement_percentage||0,i=t>=100?"#22c55e":t>=60?"#f59e0b":"#7c3aed",a=B[e.criteria_type??""]??"fas fa-trophy",n=(e.status||"").includes("Missed"),r=D(e.criteria_type,n);e.status==="Achieved - Claim Now"&&e.slots_full;const s=e.image_url?`<img src="${b(e.image_url)}" alt="${b(e.name)}" onerror="this.outerHTML='<div class=\\'bnz-img-ph\\' style=\\'${r.replace(/'/g,"\\'")}\\'>'+
-         '<i class=\\'${a}\\'></i><span>${b(e.name)}</span></div>'">`:`<div class="bnz-img-ph" style="${r}"><i class="${a}"></i><span>${b(e.name)}</span></div>`,o=e.registered_target_bonus&&e.registered_target&&e.activated_target;let l="";if(o){const f=!!e.partner_is_activated,u=f?Math.min(100,Math.round((e.current_progress??0)/e.registered_target*100)):t,x=f?t:0;l=`
+    `,p.attachListeners({title:"Bonanza Rewards",showBack:!0}),document.getElementById("bnzFilterBar")?.addEventListener("click",e=>{const t=e.target.closest("[data-filter]");t&&(document.querySelectorAll(".bnz-fc").forEach(i=>i.classList.remove("active")),t.classList.add("active"),t.scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"}),this.filter=t.dataset.filter||"all",this.refreshContent())})}statusChip(e){const t=(e.status||"").toLowerCase(),i=(e.processed_status||"").toLowerCase();return i==="delivered"?'<span class="bnz-chip bnz-chip-dlv"><i class="fas fa-check-circle me-1"></i>Delivered</span>':i==="dispatched"?'<span class="bnz-chip bnz-chip-dlv"><i class="fas fa-truck me-1"></i>Dispatched</span>':i&&i!=="pending"&&!t.includes("progress")&&!t.includes("claim")&&!t.includes("upcoming")&&!t.includes("missed")?`<span class="bnz-chip bnz-chip-clmd"><i class="fas fa-hourglass-half me-1"></i>${x(e.processed_status)}</span>`:t.includes("claim now")?'<span class="bnz-chip bnz-chip-claim"><i class="fas fa-gift me-1"></i>Claim Now!</span>':t.includes("achieved")?'<span class="bnz-chip bnz-chip-ach"><i class="fas fa-trophy me-1"></i>Achieved</span>':t.includes("progress")?'<span class="bnz-chip bnz-chip-prog"><i class="fas fa-spinner fa-spin me-1"></i>In Progress</span>':t.includes("upcoming")?'<span class="bnz-chip bnz-chip-up"><i class="fas fa-calendar me-1"></i>Upcoming</span>':t.includes("missed")?'<span class="bnz-chip bnz-chip-miss"><i class="fas fa-times-circle me-1"></i>Missed</span>':`<span class="bnz-chip bnz-chip-prog">${x(e.status)}</span>`}rewardBadge(e){if(e.reward_type==="slab_wise"&&e.slab_extra_amount){const a=e.current_progress||1,n=Number(e.slab_extra_amount)*a,r=Number(e.slab_extra_amount).toLocaleString("en-IN"),s=a>1?`${a} files × ₹${r}`:"per deal";return`<div class="bnz-rbadge bnz-rbadge-cash"><div class="bnz-rb-amt">+₹${n.toLocaleString("en-IN")}</div><div class="bnz-rb-lbl">${s}</div></div>`}if(e.is_monetary&&e.reward_amount)return`<div class="bnz-rbadge bnz-rbadge-cash"><div class="bnz-rb-amt">₹${Number(e.reward_amount).toLocaleString("en-IN")}</div><div class="bnz-rb-lbl">Cash Prize</div></div>`;const t=e.award_name||e.reward_text||"Free Award",i=t.length>16?t.substring(0,14)+"…":t;return`<div class="bnz-rbadge bnz-rbadge-free"><div class="bnz-rb-lbl" style="font-size:11px;font-weight:900">FREE</div><div class="bnz-rb-amt" style="font-size:13px">${x(i)}</div></div>`}filtered(){return this.filter==="all"?this.all:this.all.filter(e=>{const t=e.status||"";return this.filter==="active"?t==="In Progress":this.filter==="claim"?t==="Achieved - Claim Now":this.filter==="won"?t==="Achieved - Claim Now"||C.some(i=>t.includes(i)):this.filter==="claimed_proc"?C.some(i=>t.includes(i)):this.filter==="upcoming"?t==="Upcoming":this.filter==="missed"?t==="Missed Opportunity":this.filter==="inactive"?t==="Upcoming"||t==="Missed Opportunity":!1})}cardHtml(e){const t=e.achievement_percentage||0,i=t>=100?"#22c55e":t>=60?"#f59e0b":"#7c3aed",a=T[e.criteria_type??""]??"fas fa-trophy",n=(e.status||"").includes("Missed"),r=I(e.criteria_type,n);e.status==="Achieved - Claim Now"&&e.slots_full;const s=e.image_url?`<img src="${x(e.image_url)}" alt="${x(e.name)}" onerror="this.outerHTML='<div class=\\'bnz-img-ph\\' style=\\'${r.replace(/'/g,"\\'")}\\'>'+
+         '<i class=\\'${a}\\'></i><span>${x(e.name)}</span></div>'">`:`<div class="bnz-img-ph" style="${r}"><i class="${a}"></i><span>${x(e.name)}</span></div>`,o=e.registered_target_bonus&&e.registered_target&&e.activated_target;let l="";if(o){const f=!!e.partner_is_activated,b=f?Math.min(100,Math.round((e.current_progress??0)/e.registered_target*100)):t,h=f?t:0;l=`
         <div class="bnz-tier-row${f?"":" active"}">
           <div class="bnz-tier-h">
             <span style="font-size:10px;font-weight:700;color:${f?"#6b7280":"#c4b5fd"}"><i class="fas fa-id-card me-1"></i>Registered${f?"":' <span style="background:#7c3aed;color:#fff;border-radius:7px;padding:1px 5px;font-size:8px">CURRENT</span>'}</span>
-            <span style="font-size:11px;font-weight:800;color:${f?"#6b7280":i}">${e.current_progress??0}/${e.registered_target} (${u}%)</span>
+            <span style="font-size:11px;font-weight:800;color:${f?"#6b7280":i}">${e.current_progress??0}/${e.registered_target} (${b}%)</span>
           </div>
-          <div class="bnz-tier-bar"><div style="height:100%;width:${f?u:t}%;background:${i};transition:width .4s"></div></div>
+          <div class="bnz-tier-bar"><div style="height:100%;width:${f?b:t}%;background:${i};transition:width .4s"></div></div>
         </div>
         <div class="bnz-tier-row${f?" active":""}">
           <div class="bnz-tier-h">
             <span style="font-size:10px;font-weight:700;color:${f?"#c4b5fd":"#6b7280"}"><i class="fas fa-bolt me-1"></i>Activated${f?' <span style="background:#7c3aed;color:#fff;border-radius:7px;padding:1px 5px;font-size:8px">CURRENT</span>':'<span style="font-size:8px;color:#6b7280"> (activate to unlock)</span>'}</span>
-            <span style="font-size:11px;font-weight:800;color:${f?i:"#6b7280"}">${f?(e.current_progress??0)+"/"+e.activated_target+" ("+x+"%)":e.activated_target+" deals"}</span>
+            <span style="font-size:11px;font-weight:800;color:${f?i:"#6b7280"}">${f?(e.current_progress??0)+"/"+e.activated_target+" ("+h+"%)":e.activated_target+" deals"}</span>
           </div>
           ${f?`<div class="bnz-tier-bar"><div style="height:100%;width:${t}%;background:${i};transition:width .4s"></div></div>`:""}
         </div>
@@ -765,24 +765,24 @@ Start exploring your dashboard and make the most out of your rewards and opportu
           <span style="color:${i};font-size:14px;font-weight:900">${t}%</span>
         </div>
         <div class="bnz-pb-bg"><div class="bnz-pb-fill" style="width:${t}%;background:${i}"></div></div>`;const c=e.slots_full&&e.status==="Achieved - Claim Now"?'<div style="text-align:center;background:rgba(220,38,38,.2);border:1px solid rgba(220,38,38,.35);border-radius:9px;padding:10px;font-size:12px;color:#fca5a5;margin-top:10px;font-weight:700"><i class="fas fa-times-circle me-1"></i>All slots filled — contact support</div>':"";return`
-      <div class="bnz-card${n?" bnz-missed":""}" data-status="${b(e.status)}">
+      <div class="bnz-card${n?" bnz-missed":""}" data-status="${x(e.status)}">
         <div class="bnz-img">
           ${s}
           <div class="bnz-sov">${this.statusChip(e)}</div>
           <div class="bnz-rov">${this.rewardBadge(e)}</div>
         </div>
         <div class="bnz-body">
-          <div class="bnz-name">${b(e.name)}</div>
+          <div class="bnz-name">${x(e.name)}</div>
           <div class="bnz-meta">
-            ${e.segment_name?`<span class="bnz-seg"><i class="fas fa-tag me-1"></i>${b(e.segment_name)}</span>`:""}
-            <span><i class="fas fa-calendar me-1"></i>${k(e.start_date)} → ${k(e.end_date)}</span>
+            ${e.segment_name?`<span class="bnz-seg"><i class="fas fa-tag me-1"></i>${x(e.segment_name)}</span>`:""}
+            <span><i class="fas fa-calendar me-1"></i>${w(e.start_date)} → ${w(e.end_date)}</span>
             ${e.grace_days?`<span><i class="fas fa-clock me-1"></i>${e.grace_days}d grace</span>`:""}
           </div>
           <div style="margin-bottom:8px">${l}</div>
           <div class="bnz-footer">
             <span><i class="fas fa-users me-1"></i>${e.current_winners??0}/${e.max_winners??"—"} winners</span>
             <span><i class="fas fa-ticket-alt me-1"></i>${e.slots_remaining??0} slots left</span>
-            ${e.claimed_date?`<span style="color:#34d399"><i class="fas fa-check me-1"></i>Claimed ${k(e.claimed_date)}</span>`:""}
+            ${e.claimed_date?`<span style="color:#34d399"><i class="fas fa-check me-1"></i>Claimed ${w(e.claimed_date)}</span>`:""}
           </div>
           ${c}
         </div>
@@ -807,27 +807,27 @@ Start exploring your dashboard and make the most out of your rewards and opportu
             <div style="font-size:13px;font-weight:800;color:#5b21b6"><i class="fas fa-solar-panel" style="margin-right:6px"></i>Solar File Breakdown</div>
             <div style="font-size:11px;color:#7c3aed;margin-top:2px">Each file that qualified for your bonanza reward</div>
           </div>
-          ${this.rewardFiles.map((o,l)=>{const c=r[o.advance_status]??"color:#374151;background:#f3f4f6",f=o.processed_status==="Paid"?'<span style="background:#d1fae5;color:#065f46;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700"><i class="fas fa-check-circle" style="margin-right:3px"></i>&#x20B9; Paid</span>':o.processed_status==="Payment Released"?'<span style="background:#dbeafe;color:#1d4ed8;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700"><i class="fas fa-clock" style="margin-right:3px"></i>Payment Approved</span>':o.processed_status==="Pending"||!o.processed_status?'<span style="background:#ede9fe;color:#5b21b6;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">Pending Approval</span>':`<span style="background:#f3f4f6;color:#374151;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">${b(o.processed_status)}</span>`,u=o.slab_extra_amount?`<strong style="color:#7c3aed">+&#x20B9;${Number(o.slab_extra_amount).toLocaleString("en-IN")}</strong>`:"—";return`<div style="background:${l%2===0?"#fff":"#fafaf9"};border-bottom:1px solid #f0f0f0;padding:12px 14px">
+          ${this.rewardFiles.map((o,l)=>{const c=r[o.advance_status]??"color:#374151;background:#f3f4f6",f=o.processed_status==="Paid"?'<span style="background:#d1fae5;color:#065f46;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700"><i class="fas fa-check-circle" style="margin-right:3px"></i>&#x20B9; Paid</span>':o.processed_status==="Payment Released"?'<span style="background:#dbeafe;color:#1d4ed8;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700"><i class="fas fa-clock" style="margin-right:3px"></i>Payment Approved</span>':o.processed_status==="Pending"||!o.processed_status?'<span style="background:#ede9fe;color:#5b21b6;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">Pending Approval</span>':`<span style="background:#f3f4f6;color:#374151;border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">${x(o.processed_status)}</span>`,b=o.slab_extra_amount?`<strong style="color:#7c3aed">+&#x20B9;${Number(o.slab_extra_amount).toLocaleString("en-IN")}</strong>`:"—";return`<div style="background:${l%2===0?"#fff":"#fafaf9"};border-bottom:1px solid #f0f0f0;padding:12px 14px">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
             <div style="flex:1;min-width:0">
-              <div style="font-size:11px;font-weight:800;color:#4c1d95;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${b(o.bonanza_name)}</div>
-              <div style="font-size:10px;color:#6b7280">${k(o.bonanza_start)} – ${k(o.bonanza_end)}</div>
+              <div style="font-size:11px;font-weight:800;color:#4c1d95;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x(o.bonanza_name)}</div>
+              <div style="font-size:10px;color:#6b7280">${w(o.bonanza_start)} – ${w(o.bonanza_end)}</div>
             </div>
-            <div style="text-align:right;flex-shrink:0;margin-left:10px">${u}</div>
+            <div style="text-align:right;flex-shrink:0;margin-left:10px">${b}</div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
             <div>
-              <div style="font-size:13px;font-weight:600;color:#111">${b(o.lead_name)}</div>
-              <div style="font-size:10px;font-family:monospace;color:#6b7280">${b(o.entry_number)} &nbsp;·&nbsp; ${k(o.file_date)}</div>
+              <div style="font-size:13px;font-weight:600;color:#111">${x(o.lead_name)}</div>
+              <div style="font-size:10px;font-family:monospace;color:#6b7280">${x(o.entry_number)} &nbsp;·&nbsp; ${w(o.file_date)}</div>
             </div>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
-              <span style="${c};border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">${b(o.advance_status)}</span>
+              <span style="${c};border-radius:20px;padding:2px 8px;font-size:10px;font-weight:700">${x(o.advance_status)}</span>
               ${f}
             </div>
           </div>
-          ${o.achieved_date?`<div style="font-size:10px;color:#16a34a;margin-top:6px"><i class="fas fa-check-circle" style="margin-right:3px"></i>Achieved: ${k(o.achieved_date)}</div>`:""}
+          ${o.achieved_date?`<div style="font-size:10px;color:#16a34a;margin-top:6px"><i class="fas fa-check-circle" style="margin-right:3px"></i>Achieved: ${w(o.achieved_date)}</div>`:""}
         </div>`}).join("")}
-        </div>`}e.innerHTML=a+t.map(r=>this.cardHtml(r)).join("")+n,document.getElementById("bnzRefresh")?.addEventListener("click",()=>this.load(!0))}reload(){this.load(!0)}}function h(d){return String(d??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function L(d){if(!d)return"—";try{return new Date(d).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"})}catch{return d}}function y(d){return d.toLocaleString("en-IN")}function z(d){return d.toLocaleString("en-IN",{minimumFractionDigits:2})}class ne{container;rows=[];summary={total_credits:0,total_debits:0,income_debits:0,available_balance:0};page=1;pageSize=30;totalEntries=0;loading=!1;currentFilter="all";constructor(e){this.container=e}async render(){return`
+        </div>`}e.innerHTML=a+t.map(r=>this.cardHtml(r)).join("")+n,document.getElementById("bnzRefresh")?.addEventListener("click",()=>this.load(!0))}reload(){this.load(!0)}}function y(d){return String(d??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}function A(d){if(!d)return"—";try{return new Date(d).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"})}catch{return d}}function v(d){return d.toLocaleString("en-IN")}function $(d){return d.toLocaleString("en-IN",{minimumFractionDigits:2})}class se{container;rows=[];summary={total_credits:0,total_debits:0,income_debits:0,available_balance:0};page=1;pageSize=30;totalEntries=0;loading=!1;currentFilter="all";constructor(e){this.container=e}async render(){return`
       ${p.render({title:"Points Balance",showBack:!0})}
       <div id="vgk-pts-root" style="padding:12px;background:#f6f9fc;min-height:100vh">
         <div id="vgk-pts-summary" style="margin-bottom:14px">
@@ -866,23 +866,23 @@ Start exploring your dashboard and make the most out of your rewards and opportu
           Failed to load points history. Please try again.
         </div>`}finally{this.loading=!1}}}async _loadMore(){this.page++,await this._load(!1)}_renderSummary(){const e=this.summary,t=e.pending_points||0,i=t>0?`<div style="background:#fff;border:1.5px solid #fde68a;border-radius:12px;padding:12px 10px;text-align:center">
           <div style="font-size:9px;color:#92400e;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Pending Points</div>
-          <div style="font-size:15px;font-weight:800;color:#d97706">${y(t)}</div>
+          <div style="font-size:15px;font-weight:800;color:#d97706">${v(t)}</div>
           <div style="font-size:9px;color:#6b7280">pts · awaiting payment</div>
         </div>`:"";document.getElementById("vgk-pts-summary").innerHTML=`
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
         <div style="background:#fff;border:1.5px solid #d1fae5;border-radius:12px;padding:12px 10px;text-align:center">
           <div style="font-size:9px;color:#4c1d95;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Points In Total</div>
-          <div style="font-size:15px;font-weight:800;color:#7c3aed">${y(e.total_credits)}</div>
+          <div style="font-size:15px;font-weight:800;color:#7c3aed">${v(e.total_credits)}</div>
           <div style="font-size:9px;color:#7c3aed;opacity:.8">pts</div>
         </div>
         <div style="background:#fff;border:1.5px solid #fee2e2;border-radius:12px;padding:12px 10px;text-align:center">
           <div style="font-size:9px;color:#991b1b;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Points Used Total</div>
-          <div style="font-size:15px;font-weight:800;color:#dc2626">${y(e.income_debits||0)}</div>
+          <div style="font-size:15px;font-weight:800;color:#dc2626">${v(e.income_debits||0)}</div>
           <div style="font-size:9px;color:#dc2626;opacity:.8">pts</div>
         </div>
         <div style="background:linear-gradient(135deg,#5b21b6,#7c3aed);border-radius:12px;padding:12px 10px;text-align:center;box-shadow:0 2px 8px rgba(124,58,237,.25);grid-column:1/-1">
           <div style="font-size:9px;color:#e9d5ff;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Points Final Balance</div>
-          <div style="font-size:22px;font-weight:900;color:#fff">${y(e.available_balance)}</div>
+          <div style="font-size:22px;font-weight:900;color:#fff">${v(e.available_balance)}</div>
           <div style="font-size:9px;color:#c4b5fd">pts &nbsp;(1 pt = ₹1 discount)</div>
         </div>
         ${i}
@@ -907,19 +907,19 @@ Start exploring your dashboard and make the most out of your rewards and opportu
           </div>
           <div style="flex:1;min-width:0">
             <div style="font-size:12px;font-weight:700;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-              ${h(i.description||"—")}
+              ${y(i.description||"—")}
             </div>
             <div style="font-size:10px;color:#6b7280;margin-top:1px">
-              ${L(i.date)}
-              ${i.used_at?`· <span style="color:#7c3aed">${h(i.used_at)}</span>`:""}
+              ${A(i.date)}
+              ${i.used_at?`· <span style="color:#7c3aed">${y(i.used_at)}</span>`:""}
             </div>
           </div>
           <div style="text-align:right;flex-shrink:0">
             <div style="font-size:14px;font-weight:900;color:${n?"#dc2626":"#059669"}">
-              ${n?"−":"+"}${y(r)}
+              ${n?"−":"+"}${v(r)}
             </div>
             <div style="font-size:10px;color:#7c3aed;font-weight:700">
-              Bal: ${y(i.running_balance)}
+              Bal: ${v(i.running_balance)}
             </div>
           </div>
           <button data-row="${a}"
@@ -929,52 +929,52 @@ Start exploring your dashboard and make the most out of your rewards and opportu
             <i class="fas fa-eye"></i> View
           </button>
         </div>
-      `}).join(""),e.querySelectorAll("button[data-row]").forEach(i=>{i.addEventListener("click",()=>{const a=parseInt(i.dataset.row??"0",10);this._openSheet(t[a])})})}_toggleLoadMore(){const e=document.getElementById("vgk-pts-loadmore");if(!e)return;const t=this.page*this.pageSize;e.style.display=t<this.totalEntries?"block":"none"}_openSheet(e){const t=e.points_debit>0,i=t?e.points_debit:e.points_credit,a=e.income_entry,n=t&&a?(()=>{const r=Number(a.commission_amount??0),s=Number(a.admin_charges??0),o=Number(a.tds_amount??0),l=Number(a.net_payout??0),c=a.paid_at?L(a.paid_at):"—",f=a.payment_mode==="BANK"?"🏦 Bank Transfer":a.payment_mode==="CASH"?"💵 Cash":a.payment_mode??"—";return`
+      `}).join(""),e.querySelectorAll("button[data-row]").forEach(i=>{i.addEventListener("click",()=>{const a=parseInt(i.dataset.row??"0",10);this._openSheet(t[a])})})}_toggleLoadMore(){const e=document.getElementById("vgk-pts-loadmore");if(!e)return;const t=this.page*this.pageSize;e.style.display=t<this.totalEntries?"block":"none"}_openSheet(e){const t=e.points_debit>0,i=t?e.points_debit:e.points_credit,a=e.income_entry,n=t&&a?(()=>{const r=Number(a.commission_amount??0),s=Number(a.admin_charges??0),o=Number(a.tds_amount??0),l=Number(a.net_payout??0),c=a.paid_at?A(a.paid_at):"—",f=a.payment_mode==="BANK"?"🏦 Bank Transfer":a.payment_mode==="CASH"?"💵 Cash":a.payment_mode??"—";return`
         <div style="background:#faf5ff;border:1.5px solid #e9d5ff;border-radius:10px;padding:14px;margin-bottom:12px">
           <div style="font-size:10px;font-weight:800;color:#5b21b6;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">
             <i class="fas fa-solar-panel me-1"></i>Solar Advance Income Breakdown
           </div>
           <div style="font-size:10px;color:#6b7280;font-weight:600;margin-bottom:2px">Entry No.</div>
-          <div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:10px;font-family:monospace">${h(a.entry_number??"—")}</div>
+          <div style="font-size:12px;font-weight:700;color:#111827;margin-bottom:10px;font-family:monospace">${y(a.entry_number??"—")}</div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
             <div style="background:#fff;border-radius:8px;padding:8px;border:1px solid #e9d5ff">
               <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:2px">Gross Income</div>
-              <div style="font-size:14px;font-weight:900;color:#111827">₹${z(r)}</div>
+              <div style="font-size:14px;font-weight:900;color:#111827">₹${$(r)}</div>
             </div>
             <div style="background:#fff;border-radius:8px;padding:8px;border:1px solid #e9d5ff">
               <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:2px">Pts Debited</div>
-              <div style="font-size:14px;font-weight:900;color:#dc2626">−${y(i)}</div>
+              <div style="font-size:14px;font-weight:900;color:#dc2626">−${v(i)}</div>
             </div>
           </div>
 
           <div style="background:#fff;border-radius:8px;padding:10px;border:1px solid #e9d5ff;margin-bottom:8px">
             <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:6px">Deduction Breakup</div>
-            ${[["Gross Income",`₹${z(r)}`,"#111827"],["Admin Charges (8%)",`−₹${z(s)}`,"#dc2626"],["TDS (2%)",`−₹${z(o)}`,"#dc2626"]].map(([u,x,w],_)=>`
+            ${[["Gross Income",`₹${$(r)}`,"#111827"],["Admin Charges (8%)",`−₹${$(s)}`,"#dc2626"],["TDS (2%)",`−₹${$(o)}`,"#dc2626"]].map(([b,h,z],_)=>`
               <div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0;${_<2?"border-bottom:1px dashed #e9d5ff":""}">
-                <span style="color:#374151">${u}</span>
-                <span style="font-weight:700;color:${w}">${x}</span>
+                <span style="color:#374151">${b}</span>
+                <span style="font-weight:700;color:${z}">${h}</span>
               </div>
             `).join("")}
             <div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0 0;font-weight:900">
               <span style="color:#059669">Net Paid Out</span>
-              <span style="color:#059669">₹${z(l)}</span>
+              <span style="color:#059669">₹${$(l)}</span>
             </div>
           </div>
 
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
             <div style="background:#fff;border-radius:8px;padding:8px;border:1px solid #e9d5ff">
               <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:2px">Payment Mode</div>
-              <div style="font-size:11px;font-weight:700;color:#1f2937">${h(f)}</div>
+              <div style="font-size:11px;font-weight:700;color:#1f2937">${y(f)}</div>
             </div>
             <div style="background:#fff;border-radius:8px;padding:8px;border:1px solid #e9d5ff">
               <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:2px">Paid Date</div>
-              <div style="font-size:11px;font-weight:700;color:#1f2937">${h(c)}</div>
+              <div style="font-size:11px;font-weight:700;color:#1f2937">${y(c)}</div>
             </div>
             ${a.payment_utr?`
             <div style="background:#fff;border-radius:8px;padding:8px;border:1px solid #e9d5ff;grid-column:1/-1">
               <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:2px">UTR / Reference</div>
-              <div style="font-size:11px;font-weight:700;color:#1f2937;font-family:monospace;word-break:break-all">${h(a.payment_utr)}</div>
+              <div style="font-size:11px;font-weight:700;color:#1f2937;font-family:monospace;word-break:break-all">${y(a.payment_utr)}</div>
             </div>`:""}
           </div>
         </div>`})():"";document.getElementById("vgk-pts-sheet-body").innerHTML=`
@@ -982,7 +982,7 @@ Start exploring your dashboard and make the most out of your rewards and opportu
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
         <div style="background:#f9fafb;border-radius:8px;padding:10px">
           <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:3px">Date</div>
-          <div style="font-size:13px;font-weight:700;color:#111827">${L(e.date)}</div>
+          <div style="font-size:13px;font-weight:700;color:#111827">${A(e.date)}</div>
         </div>
         <div style="background:#f9fafb;border-radius:8px;padding:10px">
           <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:3px">Type</div>
@@ -990,25 +990,25 @@ Start exploring your dashboard and make the most out of your rewards and opportu
         </div>
         <div style="background:#f9fafb;border-radius:8px;padding:10px">
           <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:3px">Amount</div>
-          <div style="font-size:18px;font-weight:900;color:${t?"#dc2626":"#059669"}">${t?"−":"+"}${y(i)} pts</div>
+          <div style="font-size:18px;font-weight:900;color:${t?"#dc2626":"#059669"}">${t?"−":"+"}${v(i)} pts</div>
         </div>
         <div style="background:#f9fafb;border-radius:8px;padding:10px">
           <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:3px">Balance After</div>
-          <div style="font-size:18px;font-weight:900;color:#7c3aed">${y(e.running_balance)} pts</div>
+          <div style="font-size:18px;font-weight:900;color:#7c3aed">${v(e.running_balance)} pts</div>
         </div>
       </div>
       <div style="margin-bottom:8px">
         <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:3px">Description</div>
-        <div style="font-size:13px;color:#1f2937;font-weight:500">${h(e.description??"—")}</div>
+        <div style="font-size:13px;color:#1f2937;font-weight:500">${y(e.description??"—")}</div>
       </div>
       ${e.used_at?`<div style="margin-bottom:8px">
         <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:3px">Used At</div>
-        <div style="font-size:13px;color:#5b21b6;font-weight:600">${h(e.used_at)}</div>
+        <div style="font-size:13px;color:#5b21b6;font-weight:600">${y(e.used_at)}</div>
       </div>`:""}
       ${e.notes?`<div style="background:#f5f3ff;border-radius:8px;padding:10px;font-size:11px;color:#374151;line-height:1.6">
-        <i class="fas fa-sticky-note me-1" style="color:#7c3aed"></i>${h(e.notes)}
+        <i class="fas fa-sticky-note me-1" style="color:#7c3aed"></i>${y(e.notes)}
       </div>`:""}
-    `,document.getElementById("vgk-pts-sheet").style.display="block",document.body.style.overflow="hidden"}_closeSheet(){document.getElementById("vgk-pts-sheet").style.display="none",document.body.style.overflow=""}}class re{container;static slug="feedback";static label="Submit Feedback";static icon="fas fa-comment-dots";static color="#7c3aed";static endpoint="/vgk/feedback";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
+    `,document.getElementById("vgk-pts-sheet").style.display="block",document.body.style.overflow="hidden"}_closeSheet(){document.getElementById("vgk-pts-sheet").style.display="none",document.body.style.overflow=""}}class oe{container;static slug="feedback";static label="Submit Feedback";static icon="fas fa-comment-dots";static color="#7c3aed";static endpoint="/vgk/feedback";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
       ${p.render({title:"Submit Feedback",showBack:!0})}
       <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
         <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #7c3aed;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -1019,13 +1019,13 @@ Start exploring your dashboard and make the most out of your rewards and opportu
         </div>
         <iframe
           id="vgk4u-feedback-frame"
-          src="${g.MEDIA_BASE_URL}/vgk/feedback?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+          src="${g.MEDIA_BASE_URL}/vgk/feedback?token=${encodeURIComponent(u())}"
           style="width:100%;height:calc(100vh - 200px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
           loading="lazy"
           title="Submit Feedback (VGK4U)"
         ></iframe>
       </div>
-    `}async afterRender(){}}class se{container;static slug="announcements";static label="Create Announcement";static icon="fas fa-bullhorn";static color="#0d9488";static endpoint="/vgk/announcements";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
+    `}async afterRender(){}}class de{container;static slug="announcements";static label="Create Announcement";static icon="fas fa-bullhorn";static color="#0d9488";static endpoint="/vgk/announcements";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
       ${p.render({title:"Create Announcement",showBack:!0})}
       <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
         <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #0d9488;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -1036,13 +1036,13 @@ Start exploring your dashboard and make the most out of your rewards and opportu
         </div>
         <iframe
           id="vgk4u-announcements-frame"
-          src="${g.MEDIA_BASE_URL}/vgk/announcements?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+          src="${g.MEDIA_BASE_URL}/vgk/announcements?token=${encodeURIComponent(u())}"
           style="width:100%;height:calc(100vh - 200px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
           loading="lazy"
           title="Create Announcement (VGK4U)"
         ></iframe>
       </div>
-    `}async afterRender(){}}class oe{container;static slug="my-announcements";static label="My Announcements";static icon="fas fa-list";static color="#0d9488";static endpoint="/vgk/my-announcements";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
+    `}async afterRender(){}}class le{container;static slug="my-announcements";static label="My Announcements";static icon="fas fa-list";static color="#0d9488";static endpoint="/vgk/my-announcements";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
       ${p.render({title:"My Announcements",showBack:!0})}
       <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
         <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #0d9488;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -1053,13 +1053,13 @@ Start exploring your dashboard and make the most out of your rewards and opportu
         </div>
         <iframe
           id="vgk4u-my-announcements-frame"
-          src="${g.MEDIA_BASE_URL}/vgk/my-announcements?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+          src="${g.MEDIA_BASE_URL}/vgk/my-announcements?token=${encodeURIComponent(u())}"
           style="width:100%;height:calc(100vh - 200px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
           loading="lazy"
           title="My Announcements (VGK4U)"
         ></iframe>
       </div>
-    `}async afterRender(){}}class de{container;static slug="kyc";static label="KYC Documents";static icon="fas fa-id-card";static color="#dc2626";static endpoint="/vgk/kyc";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
+    `}async afterRender(){}}class ce{container;static slug="kyc";static label="KYC Documents";static icon="fas fa-id-card";static color="#dc2626";static endpoint="/vgk/kyc";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
       ${p.render({title:"KYC Documents",showBack:!0})}
       <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
         <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #dc2626;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -1070,13 +1070,13 @@ Start exploring your dashboard and make the most out of your rewards and opportu
         </div>
         <iframe
           id="vgk4u-kyc-frame"
-          src="${g.MEDIA_BASE_URL}/vgk/kyc?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+          src="${g.MEDIA_BASE_URL}/vgk/kyc?token=${encodeURIComponent(u())}"
           style="width:100%;height:calc(100vh - 200px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
           loading="lazy"
           title="KYC Documents (VGK4U)"
         ></iframe>
       </div>
-    `}async afterRender(){}}class le{container;static slug="bank-details";static label="Bank Details";static icon="fas fa-university";static color="#2563eb";static endpoint="/vgk/bank-details";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
+    `}async afterRender(){}}class pe{container;static slug="bank-details";static label="Bank Details";static icon="fas fa-university";static color="#2563eb";static endpoint="/vgk/bank-details";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
       ${p.render({title:"Bank Details",showBack:!0})}
       <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
         <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #2563eb;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -1087,13 +1087,13 @@ Start exploring your dashboard and make the most out of your rewards and opportu
         </div>
         <iframe
           id="vgk4u-bank-details-frame"
-          src="${g.MEDIA_BASE_URL}/vgk/bank-details?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+          src="${g.MEDIA_BASE_URL}/vgk/bank-details?token=${encodeURIComponent(u())}"
           style="width:100%;height:calc(100vh - 200px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
           loading="lazy"
           title="Bank Details (VGK4U)"
         ></iframe>
       </div>
-    `}async afterRender(){}}class ce{container;static slug="profile-edit";static label="Edit Profile";static icon="fas fa-user-edit";static color="#7c3aed";static endpoint="/vgk/profile-edit";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
+    `}async afterRender(){}}class fe{container;static slug="profile-edit";static label="Edit Profile";static icon="fas fa-user-edit";static color="#7c3aed";static endpoint="/vgk/profile-edit";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
       ${p.render({title:"Edit Profile",showBack:!0})}
       <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
         <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #7c3aed;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -1104,13 +1104,13 @@ Start exploring your dashboard and make the most out of your rewards and opportu
         </div>
         <iframe
           id="vgk4u-profile-edit-frame"
-          src="${g.MEDIA_BASE_URL}/vgk/profile-edit?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+          src="${g.MEDIA_BASE_URL}/vgk/profile-edit?token=${encodeURIComponent(u())}"
           style="width:100%;height:calc(100vh - 200px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
           loading="lazy"
           title="Edit Profile (VGK4U)"
         ></iframe>
       </div>
-    `}async afterRender(){}}class pe{container;static slug="settings";static label="Notification Settings";static icon="fas fa-cog";static color="#6b7280";static endpoint="/vgk/settings";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
+    `}async afterRender(){}}class ge{container;static slug="settings";static label="Notification Settings";static icon="fas fa-cog";static color="#6b7280";static endpoint="/vgk/settings";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
       ${p.render({title:"Notification Settings",showBack:!0})}
       <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
         <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #6b7280;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -1121,13 +1121,13 @@ Start exploring your dashboard and make the most out of your rewards and opportu
         </div>
         <iframe
           id="vgk4u-settings-frame"
-          src="${g.MEDIA_BASE_URL}/vgk/settings?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+          src="${g.MEDIA_BASE_URL}/vgk/settings?token=${encodeURIComponent(u())}"
           style="width:100%;height:calc(100vh - 200px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
           loading="lazy"
           title="Notification Settings (VGK4U)"
         ></iframe>
       </div>
-    `}async afterRender(){}}class fe{container;static slug="coupon-activate";static label="Activate Coupon";static icon="fas fa-ticket-alt";static color="#d97706";static endpoint="/vgk/coupon-activate";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
+    `}async afterRender(){}}class ue{container;static slug="coupon-activate";static label="Activate Coupon";static icon="fas fa-ticket-alt";static color="#d97706";static endpoint="/vgk/coupon-activate";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
       ${p.render({title:"Activate Coupon",showBack:!0})}
       <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
         <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #d97706;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -1138,13 +1138,13 @@ Start exploring your dashboard and make the most out of your rewards and opportu
         </div>
         <iframe
           id="vgk4u-coupon-activate-frame"
-          src="${g.MEDIA_BASE_URL}/vgk/coupon-activate?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+          src="${g.MEDIA_BASE_URL}/vgk/coupon-activate?token=${encodeURIComponent(u())}"
           style="width:100%;height:calc(100vh - 200px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
           loading="lazy"
           title="Activate Coupon (VGK4U)"
         ></iframe>
       </div>
-    `}async afterRender(){}}class ge{container;static slug="coupon-progress";static label="Coupon Progress";static icon="fas fa-chart-line";static color="#10b981";static endpoint="/vgk/coupon-progress";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
+    `}async afterRender(){}}class be{container;static slug="coupon-progress";static label="Coupon Progress";static icon="fas fa-chart-line";static color="#10b981";static endpoint="/vgk/coupon-progress";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
       ${p.render({title:"Coupon Progress",showBack:!0})}
       <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
         <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #10b981;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -1155,13 +1155,13 @@ Start exploring your dashboard and make the most out of your rewards and opportu
         </div>
         <iframe
           id="vgk4u-coupon-progress-frame"
-          src="${g.MEDIA_BASE_URL}/vgk/coupon-progress?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+          src="${g.MEDIA_BASE_URL}/vgk/coupon-progress?token=${encodeURIComponent(u())}"
           style="width:100%;height:calc(100vh - 200px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
           loading="lazy"
           title="Coupon Progress (VGK4U)"
         ></iframe>
       </div>
-    `}async afterRender(){}}class ue{container;static slug="coupon-transfer";static label="Transfer Coupons";static icon="fas fa-exchange-alt";static color="#8b5cf6";static endpoint="/vgk/coupon-transfer";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
+    `}async afterRender(){}}class me{container;static slug="coupon-transfer";static label="Transfer Coupons";static icon="fas fa-exchange-alt";static color="#8b5cf6";static endpoint="/vgk/coupon-transfer";constructor(e){this.container=e}async init(){this.container.innerHTML=await this.render(),await this.afterRender()}async render(){return`
       ${p.render({title:"Transfer Coupons",showBack:!0})}
       <div style="padding:14px 12px;background:#f6f9fc;min-height:100vh">
         <div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid #8b5cf6;border-radius:12px;padding:14px 16px;margin-bottom:12px">
@@ -1172,13 +1172,13 @@ Start exploring your dashboard and make the most out of your rewards and opportu
         </div>
         <iframe
           id="vgk4u-coupon-transfer-frame"
-          src="${g.MEDIA_BASE_URL}/vgk/coupon-transfer?token=${encodeURIComponent(localStorage.getItem("auth_token")||"")}"
+          src="${g.MEDIA_BASE_URL}/vgk/coupon-transfer?token=${encodeURIComponent(u())}"
           style="width:100%;height:calc(100vh - 200px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
           loading="lazy"
           title="Transfer Coupons (VGK4U)"
         ></iframe>
       </div>
-    `}async afterRender(){}}class me{static slug="vgk-income-unified";static label="VGK Income — Unified";static icon="💹";container;rows=[];fullRows=[];loading=!0;filterStatus="";filterKind="";filterMonth="";filterDateFrom="";filterDateTo="";filterSearch="";filterPoints="";expandedDates=new Set;expandedPartners=new Set;activeModalRow=null;activeModalAction="";paymentMode="BANK";constructor(e){this.container=e}async init(){this.renderContainer(),await this.loadData()}renderContainer(){this.container.innerHTML=`
+    `}async afterRender(){}}class xe{static slug="vgk-income-unified";static label="VGK Income — Unified";static icon="💹";container;rows=[];fullRows=[];loading=!0;filterStatus="";filterKind="";filterMonth="";filterDateFrom="";filterDateTo="";filterSearch="";filterPoints="";expandedDates=new Set;expandedPartners=new Set;activeModalRow=null;activeModalAction="";paymentMode="BANK";constructor(e){this.container=e}async init(){this.renderContainer(),await this.loadData()}renderContainer(){this.container.innerHTML=`
       <div class="page-container" style="background:#f0fdf4;min-height:100vh;padding-bottom:30px">
         ${p.render({title:"VGK Income — Unified",showBack:!0})}
         <div id="pageContent" style="padding:12px">
@@ -1189,7 +1189,7 @@ Start exploring your dashboard and make the most out of your rewards and opportu
         </div>
       </div>
       <div id="actModalOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;padding:16px"></div>
-    `,p.attachListeners({title:"VGK Income — Unified",showBack:!0})}async loadData(){this.loading=!0;try{const e=new URLSearchParams({vgk_mode:"true",per_page:"200"});this.filterStatus&&!["Stage1Approved","Payout Completed"].includes(this.filterStatus)&&e.set("status",this.filterStatus),this.filterKind&&!["BONANZA","FIELD_ALLOWANCE"].includes(this.filterKind)&&e.set("kind",this.filterKind),this.filterPoints&&e.set("points_filter",this.filterPoints);const t=!this.filterKind||!["BONANZA","FIELD_ALLOWANCE"].includes(this.filterKind),i=!this.filterStatus||["RELEASED","PAID","PENDING"].includes(this.filterStatus),a=(!this.filterKind||this.filterKind==="BONANZA")&&i,n=!this.filterKind||this.filterKind==="FIELD_ALLOWANCE",r=new URLSearchParams({per_page:"200"});this.filterStatus&&["Pending","Stage1Approved","Payout Completed"].includes(this.filterStatus)&&r.set("status",this.filterStatus),this.filterMonth&&r.set("month_year",this.filterMonth.replace("-","").substring(2)),this.filterSearch&&r.set("search",this.filterSearch);const[s,o,l]=await Promise.all([t?m.get(`/vgk/staff/vgk/cash-income/unified-list?${e.toString()}`):Promise.resolve(null),a?m.get("/bonanza/vgk/pending-payments?stage=all"):Promise.resolve(null),n?m.get(`/vgk/staff/vgk/field-allowances?${r.toString()}`):Promise.resolve(null)]);let c=[];if(s&&s.success&&(c=[...Array.isArray(s.data)?s.data:s.data?.data||[]]),o&&o.success){const u=(o.data?.claims||o.claims||[]).map(x=>this.normalizeBonanzaRow(x));c=[...c,...u]}if(l&&l.success){const u=(Array.isArray(l.data)?l.data:l.data?.data||[]).map(x=>this.normalizeFaRow(x));c=[...c,...u]}this.fullRows=[...c],this.applyFilters()}catch(e){console.error("[VGKIncomeUnified] Error loading data:",e);const t=document.getElementById("pageContent");t&&(t.innerHTML=`
+    `,p.attachListeners({title:"VGK Income — Unified",showBack:!0})}async loadData(){this.loading=!0;try{const e=new URLSearchParams({vgk_mode:"true",per_page:"200"});this.filterStatus&&!["Stage1Approved","Payout Completed"].includes(this.filterStatus)&&e.set("status",this.filterStatus),this.filterKind&&!["BONANZA","FIELD_ALLOWANCE"].includes(this.filterKind)&&e.set("kind",this.filterKind),this.filterPoints&&e.set("points_filter",this.filterPoints);const t=!this.filterKind||!["BONANZA","FIELD_ALLOWANCE"].includes(this.filterKind),i=!this.filterStatus||["RELEASED","PAID","PENDING"].includes(this.filterStatus),a=(!this.filterKind||this.filterKind==="BONANZA")&&i,n=!this.filterKind||this.filterKind==="FIELD_ALLOWANCE",r=new URLSearchParams({per_page:"200"});this.filterStatus&&["Pending","Stage1Approved","Payout Completed"].includes(this.filterStatus)&&r.set("status",this.filterStatus),this.filterMonth&&r.set("month_year",this.filterMonth.replace("-","").substring(2)),this.filterSearch&&r.set("search",this.filterSearch);const[s,o,l]=await Promise.all([t?m.get(`/vgk/staff/vgk/cash-income/unified-list?${e.toString()}`):Promise.resolve(null),a?m.get("/bonanza/vgk/pending-payments?stage=all"):Promise.resolve(null),n?m.get(`/vgk/staff/vgk/field-allowances?${r.toString()}`):Promise.resolve(null)]);let c=[];if(s&&s.success&&(c=[...Array.isArray(s.data)?s.data:s.data?.data||[]]),o&&o.success){const b=(o.data?.claims||o.claims||[]).map(h=>this.normalizeBonanzaRow(h));c=[...c,...b]}if(l&&l.success){const b=(Array.isArray(l.data)?l.data:l.data?.data||[]).map(h=>this.normalizeFaRow(h));c=[...c,...b]}this.fullRows=[...c],this.applyFilters()}catch(e){console.error("[VGKIncomeUnified] Error loading data:",e);const t=document.getElementById("pageContent");t&&(t.innerHTML=`
           <div style="background:#fee2e2;color:#991b1b;padding:16px;border-radius:12px;text-align:center">
             <i class="fas fa-exclamation-triangle fa-2x"></i>
             <div style="font-weight:700;margin-top:8px">Failed to load VGK Income records</div>
@@ -1205,10 +1205,10 @@ Start exploring your dashboard and make the most out of your rewards and opportu
 
       <!-- 3-Level Accordion List -->
       ${this.render3LevelList()}
-    `,this.attachEventListeners())}renderSummaryCards(){const e=["DRAFT","PENDING","RELEASED","STAGE1_APPROVED","PAID","CANCELLED"],t={};let i=0,a=0;for(const s of this.rows){const o=s.status==="Payout Completed"?"PAID":s.status==="Stage1Approved"?"STAGE1_APPROVED":s.status||"DRAFT";t[o]||(t[o]={count:0,gross:0,net:0}),t[o].count++,t[o].gross+=Number(s.commission_amount||0),t[o].net+=Number(s.net_payout||0),o!=="CANCELLED"&&(i+=Number(s.commission_amount||0),a+=Number(s.net_payout||0))}const n=e.map(s=>{const o=t[s]||{count:0,gross:0},l=this.filterStatus===s,c={DRAFT:"#92400e",PENDING:"#1e40af",RELEASED:"#0d9488",STAGE1_APPROVED:"#5b21b6",PAID:"#15803d",CANCELLED:"#991b1b"},f=l?c[s]:"#d1fae5",u=l?c[s]:"#ffffff",x=l?"#ffffff":"#374151",w=l?"#ffffff":c[s];return`
-        <div class="sum-card-mb" data-status="${s}" style="flex:0 0 110px;background:${u};border:1.5px solid ${f};border-radius:10px;padding:8px 10px;cursor:pointer;scroll-snap-align:start">
-          <div style="font-size:10px;font-weight:700;color:${x};text-transform:uppercase;letter-spacing:.05em">${s.replace("_"," ")}</div>
-          <div style="font-size:18px;font-weight:800;color:${w};margin-top:2px">${o.count}</div>
+    `,this.attachEventListeners())}renderSummaryCards(){const e=["DRAFT","PENDING","RELEASED","STAGE1_APPROVED","PAID","CANCELLED"],t={};let i=0,a=0;for(const s of this.rows){const o=s.status==="Payout Completed"?"PAID":s.status==="Stage1Approved"?"STAGE1_APPROVED":s.status||"DRAFT";t[o]||(t[o]={count:0,gross:0,net:0}),t[o].count++,t[o].gross+=Number(s.commission_amount||0),t[o].net+=Number(s.net_payout||0),o!=="CANCELLED"&&(i+=Number(s.commission_amount||0),a+=Number(s.net_payout||0))}const n=e.map(s=>{const o=t[s]||{count:0,gross:0},l=this.filterStatus===s,c={DRAFT:"#92400e",PENDING:"#1e40af",RELEASED:"#0d9488",STAGE1_APPROVED:"#5b21b6",PAID:"#15803d",CANCELLED:"#991b1b"},f=l?c[s]:"#d1fae5",b=l?c[s]:"#ffffff",h=l?"#ffffff":"#374151",z=l?"#ffffff":c[s];return`
+        <div class="sum-card-mb" data-status="${s}" style="flex:0 0 110px;background:${b};border:1.5px solid ${f};border-radius:10px;padding:8px 10px;cursor:pointer;scroll-snap-align:start">
+          <div style="font-size:10px;font-weight:700;color:${h};text-transform:uppercase;letter-spacing:.05em">${s.replace("_"," ")}</div>
+          <div style="font-size:18px;font-weight:800;color:${z};margin-top:2px">${o.count}</div>
           <div style="font-size:10.5px;font-weight:600;color:${l?"#e2e8f0":"#6b7280"};margin-top:2px">${this.fmt(o.gross)}</div>
         </div>
       `}).join(""),r=`
@@ -1408,4 +1408,4 @@ Start exploring your dashboard and make the most out of your rewards and opportu
           <button id="modalSubmitBtn" style="background:${t==="reject"?"#dc2626":"#059669"};color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700">Submit</button>
         </div>
       </div>
-    `,i.style.display="flex",document.getElementById("modalCancelBtn")?.addEventListener("click",()=>{i.style.display="none"}),document.getElementById("modalSubmitBtn")?.addEventListener("click",()=>{this.submitModalAction()})}async submitModalAction(){if(!this.activeModalRow)return;const e=this.activeModalRow,t=this.activeModalAction,i=document.getElementById("modalNotesInp")?.value.trim(),a={entry_id:e.id,action:t};if(i&&(a.notes=i),t==="reject"){const n=document.getElementById("modalRejReason")?.value.trim();if(!n){alert("Rejection reason is required");return}a.rejection_reason=n}else if(t==="mark_paid"&&(a.payment_mode=this.paymentMode,this.paymentMode==="BANK")){const n=document.getElementById("modalUtrInp")?.value.trim();if(!n){alert("UTR reference number is required");return}a.payment_utr=n,a.bank_ledger_id=1}try{const n=await m.post(`/vgk/staff/vgk/cash-income/unified-action?company_id=${e.company_id||2}`,a);n.success?(document.getElementById("actModalOverlay").style.display="none",this.loadData()):alert("Action failed: "+(n.error||"Unknown error"))}catch(n){alert("Action error: "+n?.message)}}async approveBonanza(e){if(confirm("Release this bonanza payment? Wallet will be credited."))try{const t=await m.post(`/bonanza/vgk/claims/${e}/status`,{status:"Payment Released"});t.success?this.loadData():alert("Release failed: "+(t.error||"Error"))}catch(t){alert("Release error: "+t?.message)}}async faStage1(e){if(confirm("Approve this field allowance (Stage 1)?"))try{const t=await m.post(`/vgk/staff/vgk/field-allowances/${e}/stage1-approve`,{});t.success?this.loadData():alert("Approval failed: "+(t.error||"Error"))}catch(t){alert("Approval error: "+t?.message)}}async faStage2(e){if(confirm("Mark this field allowance as Paid (Stage 2)?"))try{const t=await m.post(`/vgk/staff/vgk/field-allowances/${e}/stage2-mark-paid`,{});t.success?this.loadData():alert("Mark paid failed: "+(t.error||"Error"))}catch(t){alert("Mark paid error: "+t?.message)}}parseIsoDate(e){if(!e||e==="null"||e==="undefined")return null;const t=String(e).trim();if(!t)return null;if(/^\d{4}-\d{2}-\d{2}$/.test(t))return new Date(t+"T00:00:00+05:30");const i=t.endsWith("Z")||t.includes("+")?t:t+"+05:30",a=new Date(i);if(!isNaN(a.getTime()))return a;const n=new Date(t);return isNaN(n.getTime())?null:n}fmtDate(e){const t=this.parseIsoDate(e);return t?t.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}):"—"}getDateKey(e){const t=this.parseIsoDate(e);return t?t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0"):"NO_DATE"}fmt(e){return"₹"+Number(e||0).toLocaleString("en-IN",{minimumFractionDigits:0,maximumFractionDigits:2})}escape(e){return String(e??"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t]||t)}}export{pe as A,ee as B,Q as C,X as D,se as V,te as a,le as b,U as c,ae as d,fe as e,K as f,ge as g,ue as h,G as i,O as j,F as k,q as l,re as m,H as n,j as o,W as p,me as q,Y as r,de as s,Z as t,N as u,oe as v,ie as w,J as x,ne as y,ce as z};
+    `,i.style.display="flex",document.getElementById("modalCancelBtn")?.addEventListener("click",()=>{i.style.display="none"}),document.getElementById("modalSubmitBtn")?.addEventListener("click",()=>{this.submitModalAction()})}async submitModalAction(){if(!this.activeModalRow)return;const e=this.activeModalRow,t=this.activeModalAction,i=document.getElementById("modalNotesInp")?.value.trim(),a={entry_id:e.id,action:t};if(i&&(a.notes=i),t==="reject"){const n=document.getElementById("modalRejReason")?.value.trim();if(!n){alert("Rejection reason is required");return}a.rejection_reason=n}else if(t==="mark_paid"&&(a.payment_mode=this.paymentMode,this.paymentMode==="BANK")){const n=document.getElementById("modalUtrInp")?.value.trim();if(!n){alert("UTR reference number is required");return}a.payment_utr=n,a.bank_ledger_id=1}try{const n=await m.post(`/vgk/staff/vgk/cash-income/unified-action?company_id=${e.company_id||2}`,a);n.success?(document.getElementById("actModalOverlay").style.display="none",this.loadData()):alert("Action failed: "+(n.error||"Unknown error"))}catch(n){alert("Action error: "+n?.message)}}async approveBonanza(e){if(confirm("Release this bonanza payment? Wallet will be credited."))try{const t=await m.post(`/bonanza/vgk/claims/${e}/status`,{status:"Payment Released"});t.success?this.loadData():alert("Release failed: "+(t.error||"Error"))}catch(t){alert("Release error: "+t?.message)}}async faStage1(e){if(confirm("Approve this field allowance (Stage 1)?"))try{const t=await m.post(`/vgk/staff/vgk/field-allowances/${e}/stage1-approve`,{});t.success?this.loadData():alert("Approval failed: "+(t.error||"Error"))}catch(t){alert("Approval error: "+t?.message)}}async faStage2(e){if(confirm("Mark this field allowance as Paid (Stage 2)?"))try{const t=await m.post(`/vgk/staff/vgk/field-allowances/${e}/stage2-mark-paid`,{});t.success?this.loadData():alert("Mark paid failed: "+(t.error||"Error"))}catch(t){alert("Mark paid error: "+t?.message)}}parseIsoDate(e){if(!e||e==="null"||e==="undefined")return null;const t=String(e).trim();if(!t)return null;if(/^\d{4}-\d{2}-\d{2}$/.test(t))return new Date(t+"T00:00:00+05:30");const i=t.endsWith("Z")||t.includes("+")?t:t+"+05:30",a=new Date(i);if(!isNaN(a.getTime()))return a;const n=new Date(t);return isNaN(n.getTime())?null:n}fmtDate(e){const t=this.parseIsoDate(e);return t?t.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}):"—"}getDateKey(e){const t=this.parseIsoDate(e);return t?t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0"):"NO_DATE"}fmt(e){return"₹"+Number(e||0).toLocaleString("en-IN",{minimumFractionDigits:0,maximumFractionDigits:2})}escape(e){return String(e??"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t]||t)}}export{ge as A,ie as B,ee as C,te as D,de as V,ae as a,pe as b,K as c,re as d,ue as e,O as f,be as g,me as h,F as i,q as j,H as k,j as l,oe as m,W as n,Y as o,Z as p,xe as q,J as r,ce as s,Q as t,G as u,le as v,ne as w,X as x,se as y,fe as z};

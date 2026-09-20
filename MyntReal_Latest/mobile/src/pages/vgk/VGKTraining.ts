@@ -9,7 +9,8 @@
    */
 
   import { PageHeader } from '../../components/PageHeader';
-  import { APP_CONFIG } from '../../config/app.config';
+  import { getStoredToken } from '../../utils/token';
+import { APP_CONFIG } from '../../config/app.config';
 
   export class VGKTrainingPage {
   private container: HTMLElement;
@@ -42,7 +43,7 @@
           </div>
           <iframe
             id="vgk4u-training-frame"
-            src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/training?token=${encodeURIComponent(localStorage.getItem("auth_token") || "")}"
+            src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/training?token=${encodeURIComponent(getStoredToken())}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="Training (VGK4U)"

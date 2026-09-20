@@ -50,6 +50,16 @@ import { OperatorCallsPage } from './pages/OperatorCallsPage';
 import { StaffExpenseEntriesPage } from './pages/StaffExpenseEntriesPage';
 import { StaffMyEarningsPage } from './pages/StaffMyEarningsPage';
 import { StaffVGKMembersPage } from './pages/StaffVGKMembersPage';
+import { StaffIncentivesVGK4UPage } from './pages/StaffIncentivesVGK4UPage';
+import { StaffVGK4URealEstatePage } from './pages/StaffVGK4URealEstatePage';
+import { StaffVGK4UInsurancePage } from './pages/StaffVGK4UInsurancePage';
+import { StaffIncentivesApprovalsPage } from './pages/StaffIncentivesApprovalsPage';
+import { StaffIncentivesPointsPage } from './pages/StaffIncentivesPointsPage';
+import { StaffVGKIncomePage } from './pages/StaffVGKIncomePage';
+import { StaffVGKCouponsPage } from './pages/StaffVGKCouponsPage';
+import { StaffVGKPromoCodesPage } from './pages/StaffVGKPromoCodesPage';
+import { StaffVGKVendorsManagementPage } from './pages/StaffVGKVendorsManagementPage';
+import { StaffRealDreamsMarketplacePage } from './pages/StaffRealDreamsMarketplacePage';
 import { ExecutiveDashboardPage } from './pages/ExecutiveDashboardPage';
 import { CategoryLeadsMasterPage } from './pages/CategoryLeadsMasterPage';
 import { callSyncService } from './services/call-sync.service';
@@ -631,6 +641,18 @@ class MNRApp {
       '/staff/whatsapp-center': 'staff-whatsapp',
       '/staff/whatsapp-inbox': 'staff-whatsapp-inbox',
       '/staff/vgk/members': 'staff-vgk-members',
+      '/staff/incentives/vgk4u': 'staff-incentives-vgk4u',
+      '/staff/vgk4u/real-estate': 'staff-vgk4u-real-estate',
+      '/staff/vgk4u/insurance': 'staff-vgk4u-insurance',
+      '/staff/incentives/points': 'staff-incentives-points',
+      '/staff/incentives/approvals': 'staff-incentives-approvals',
+      '/staff/vgk/income': 'staff-vgk-income',
+      '/staff/vgk/coupons/available': 'staff-vgk-coupons',
+      '/staff/vgk/promo-codes': 'staff-vgk-promo-codes',
+      '/staff/vgk/vendors': 'staff-vgk-vendors',
+      '/staff/mnr/real-dreams/marketplace': 'real-dreams-marketplace',
+      '/rvz/real-dreams/marketplace': 'real-dreams-marketplace',
+      '/real-dreams/marketplace': 'real-dreams-marketplace',
       '/staff/dashboard': 'dashboard',
       '/staff/progress': 'progress'
     };
@@ -1075,6 +1097,36 @@ class MNRApp {
         break;
       case 'staff-vgk-members':
         page = new StaffVGKMembersPage(this.pageContainer);
+        break;
+      case 'staff-incentives-vgk4u':
+        page = new StaffIncentivesVGK4UPage(this.pageContainer);
+        break;
+      case 'staff-vgk4u-real-estate':
+        page = new StaffVGK4URealEstatePage(this.pageContainer);
+        break;
+      case 'staff-vgk4u-insurance':
+        page = new StaffVGK4UInsurancePage(this.pageContainer);
+        break;
+      case 'staff-incentives-points':
+        page = new StaffIncentivesPointsPage(this.pageContainer);
+        break;
+      case 'staff-incentives-approvals':
+        page = new StaffIncentivesApprovalsPage(this.pageContainer);
+        break;
+      case 'staff-vgk-income':
+        page = new StaffVGKIncomePage(this.pageContainer);
+        break;
+      case 'staff-vgk-coupons':
+        page = new StaffVGKCouponsPage(this.pageContainer);
+        break;
+      case 'staff-vgk-promo-codes':
+        page = new StaffVGKPromoCodesPage(this.pageContainer);
+        break;
+      case 'staff-vgk-vendors':
+        page = new StaffVGKVendorsManagementPage(this.pageContainer);
+        break;
+      case 'real-dreams-marketplace':
+        page = new StaffRealDreamsMarketplacePage(this.pageContainer);
         break;
       
       // New Location Tracking Section Pages

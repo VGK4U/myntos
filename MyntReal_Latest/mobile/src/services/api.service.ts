@@ -41,7 +41,10 @@ class ApiService {
     // Capacitor Preferences bridge may not be ready at startup on some Android devices.
     // All writes go to BOTH localStorage and Preferences (dual-write pattern).
     // Background sync from Preferences handles fresh installs / cleared browser storage.
-    this.token = localStorage.getItem('auth_token');
+    this.token = localStorage.getItem('auth_token') ||
+                 localStorage.getItem('staff_token') ||
+                 localStorage.getItem('token') ||
+                 localStorage.getItem('access_token');
     this.companyId = localStorage.getItem(STORAGE_KEY_COMPANY_ID);
 
     // Background sync: pull from Preferences once bridge is ready
@@ -63,18 +66,25 @@ class ApiService {
   async setToken(token: string): Promise<void> {
     this.token = token;
     localStorage.setItem('auth_token', token);
+    localStorage.setItem('token', token);
     Preferences.set({ key: 'auth_token', value: token }).catch(() => {});
   }
 
   async clearToken(): Promise<void> {
     this.token = null;
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('staff_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
     Preferences.remove({ key: 'auth_token' }).catch(() => {});
   }
 
   async getToken(): Promise<string | null> {
     if (!this.token) {
-      this.token = localStorage.getItem('auth_token');
+      this.token = localStorage.getItem('auth_token') ||
+                   localStorage.getItem('staff_token') ||
+                   localStorage.getItem('token') ||
+                   localStorage.getItem('access_token');
     }
     return this.token;
   }
@@ -185,7 +195,10 @@ class ApiService {
       
       if (!this.token) {
         try {
-          this.token = localStorage.getItem('auth_token');
+          this.token = localStorage.getItem('auth_token') ||
+                       localStorage.getItem('staff_token') ||
+                       localStorage.getItem('token') ||
+                       localStorage.getItem('access_token');
         } catch (_) {}
       }
       

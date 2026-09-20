@@ -208,7 +208,18 @@ export type PageRoute =
   | 'catalog-library'
   | 'staff-catalog-library'
   | 'catalog'
-  | 'staff-my-earnings';
+  | 'staff-my-earnings'
+  // Staff VGK & Incentives Routes
+  | 'staff-incentives-vgk4u'
+  | 'staff-vgk4u-real-estate'
+  | 'staff-vgk4u-insurance'
+  | 'staff-incentives-points'
+  | 'staff-incentives-approvals'
+  | 'staff-vgk-income'
+  | 'staff-vgk-coupons'
+  | 'staff-vgk-promo-codes'
+  | 'staff-vgk-vendors'
+  | 'real-dreams-marketplace';
 
 interface RouteConfig {
   id: PageRoute;
@@ -308,6 +319,16 @@ class RouterService {
     'staff-all-journeys': { id: 'staff-all-journeys', title: 'All Journeys', icon: 'map', showInTabs: false, portal: 'staff' },
     'staff-vgk4u-journeys': { id: 'staff-vgk4u-journeys', title: 'VGK4U Journeys', icon: 'truck', showInTabs: false, portal: 'staff' },
     'staff-vgk-members': { id: 'staff-vgk-members', title: 'VGK Channel Partners', icon: 'users', showInTabs: false, portal: 'staff' },
+    'staff-incentives-vgk4u': { id: 'staff-incentives-vgk4u', title: 'All VGK4U Members', icon: 'users', showInTabs: false, portal: 'staff' },
+    'staff-vgk4u-real-estate': { id: 'staff-vgk4u-real-estate', title: 'VGK Real Dreams (ZR)', icon: 'home', showInTabs: false, portal: 'staff' },
+    'staff-vgk4u-insurance': { id: 'staff-vgk4u-insurance', title: 'VGK Care (ZC)', icon: 'shield', showInTabs: false, portal: 'staff' },
+    'staff-incentives-points': { id: 'staff-incentives-points', title: 'MNR Points', icon: 'award', showInTabs: false, portal: 'staff' },
+    'staff-incentives-approvals': { id: 'staff-incentives-approvals', title: 'Incentive Approvals', icon: 'check-square', showInTabs: false, portal: 'staff' },
+    'staff-vgk-income': { id: 'staff-vgk-income', title: 'VGK Income Management', icon: 'dollar-sign', showInTabs: false, portal: 'staff' },
+    'staff-vgk-coupons': { id: 'staff-vgk-coupons', title: 'VGK PIN Activation', icon: 'tag', showInTabs: false, portal: 'staff' },
+    'staff-vgk-promo-codes': { id: 'staff-vgk-promo-codes', title: 'VGK Promo Codes', icon: 'percent', showInTabs: false, portal: 'staff' },
+    'staff-vgk-vendors': { id: 'staff-vgk-vendors', title: 'Vendor Management', icon: 'briefcase', showInTabs: false, portal: 'staff' },
+    'real-dreams-marketplace': { id: 'real-dreams-marketplace', title: 'Property Marketplace', icon: 'grid', showInTabs: false, portal: 'staff' },
     // Location Tracking Section - New Routes
     'staff-all-location-tracker': { id: 'staff-all-location-tracker', title: 'All Location Tracker', icon: 'map-pin', showInTabs: false, portal: 'staff' },
     'staff-team-live-tracker': { id: 'staff-team-live-tracker', title: 'Team Live Tracker', icon: 'navigation', showInTabs: false, portal: 'staff' },

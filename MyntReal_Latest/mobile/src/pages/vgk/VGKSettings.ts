@@ -8,7 +8,8 @@
  * and WVV verification logic without duplicating UI.
  */
 import { PageHeader } from '../../components/PageHeader';
-  import { APP_CONFIG } from '../../config/app.config';
+  import { getStoredToken } from '../../utils/token';
+import { APP_CONFIG } from '../../config/app.config';
 
 export class VGKSettingsPage {
   private container: HTMLElement;
@@ -39,7 +40,7 @@ export class VGKSettingsPage {
         </div>
         <iframe
           id="vgk4u-settings-frame"
-          src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/settings?token=${encodeURIComponent(localStorage.getItem("auth_token") || "")}"
+          src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/settings?token=${encodeURIComponent(getStoredToken())}"
           style="width:100%;height:calc(100vh - 200px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
           loading="lazy"
           title="Notification Settings (VGK4U)"

@@ -9,7 +9,8 @@
    */
 
   import { PageHeader } from '../../components/PageHeader';
-  import { APP_CONFIG } from '../../config/app.config';
+  import { getStoredToken } from '../../utils/token';
+import { APP_CONFIG } from '../../config/app.config';
 
   export class VGKEvDiscountPage {
   private container: HTMLElement;
@@ -42,7 +43,7 @@
           </div>
           <iframe
             id="vgk4u-ev-discount-frame"
-            src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/ev-discount?token=${encodeURIComponent(localStorage.getItem("auth_token") || "")}"
+            src="${APP_CONFIG.MEDIA_BASE_URL}/vgk/ev-discount?token=${encodeURIComponent(getStoredToken())}"
             style="width:100%;height:calc(100vh - 180px);border:0;background:#fff;border-radius:12px;border:1px solid #e2e8f0"
             loading="lazy"
             title="EV Discount (VGK4U)"

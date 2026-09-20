@@ -36,6 +36,70 @@ const ROUTE_PATH_MAP: Record<string, string> = {
   '/staff/vgk4u-journeys': 'staff-vgk4u-journeys',
   '/staff/vgk/members': 'staff-vgk-members',
   '/staff_vgk_members.html': 'staff-vgk-members',
+  '/staff/incentives/vgk4u': 'staff-incentives-vgk4u',
+  '/staff/vgk4u/real-estate': 'staff-vgk4u-real-estate',
+  '/staff/vgk4u/insurance': 'staff-vgk4u-insurance',
+  '/staff/vgk4u/etc-students': 'staff-vgk4u-real-estate',
+  '/staff/incentives/points': 'staff-incentives-points',
+  '/staff/incentives/approvals': 'staff-incentives-approvals',
+  '/staff/vgk/income': 'staff-vgk-income',
+  '/staff/vgk/income-unified': 'vgk-income-unified',
+  '/staff/vgk/coupons/available': 'staff-vgk-coupons',
+  '/staff/vgk/promo-codes': 'staff-vgk-promo-codes',
+  '/staff/vgk/bonanza-management': 'vgk-bonanza-rewards',
+  '/staff/vgk/bonanza-claims': 'vgk-bonanza-rewards',
+  '/staff/vgk/vendors': 'staff-vgk-vendors',
+  '/staff/vgk/vendor-categories': 'staff-vgk-vendors',
+  '/staff/vgk/vendor-products': 'staff-vgk-vendors',
+  '/staff/vgk/vendor-transactions': 'staff-vgk-vendors',
+  '/staff/vgk/cash-income/sales': 'staff-vgk-income',
+  '/staff/vgk/cash-income/accounts': 'staff-vgk-income',
+  '/staff/vgk/wallet': 'vgk-points-balance',
+  '/staff/vgk/config': 'staff-vgk-members',
+  '/rvz/real-dreams/marketplace': 'real-dreams-marketplace',
+  '/rvz/real-dreams': 'real-dreams-marketplace',
+  '/rvz/real-dreams/partners': 'real-dreams-marketplace',
+  '/rvz/real-dreams-partners': 'real-dreams-marketplace',
+  '/rvz/real-dreams/properties': 'real-dreams-marketplace',
+  '/rvz/real-dreams-properties': 'real-dreams-marketplace',
+  '/rvz/real-dreams-dashboard': 'real-dreams-marketplace',
+  '/staff/mnr/real-dreams/marketplace': 'real-dreams-marketplace',
+  '/real-dreams/marketplace': 'real-dreams-marketplace',
+  '/real-dreams/compare': 'real-dreams-marketplace',
+  '/real-dreams/property': 'real-dreams-marketplace',
+
+  // VGK Member module routes
+  '/vgk/birthdays': 'vgk-birthdays',
+  '/vgk/top-earners': 'vgk-top-earners',
+  '/vgk/awards': 'vgk-awards',
+  '/vgk/my-registrations': 'vgk-my-registrations',
+  '/vgk/bonanza-rewards': 'vgk-bonanza-rewards',
+  '/vgk/points-balance': 'vgk-points-balance',
+  '/vgk/member-hub': 'vgk-member-hub',
+  '/vgk/settings': 'vgk-settings',
+  '/vgk/bank-details': 'vgk-bank-details',
+  '/vgk/profile-edit': 'vgk-profile-edit',
+  '/vgk/kyc': 'vgk-kyc',
+  '/vgk/feedback': 'vgk-feedback',
+  '/vgk/announcements': 'vgk-announcements',
+  '/vgk/my-announcements': 'vgk-my-announcements',
+  '/vgk/coupon-activate': 'vgk-coupon-activate',
+  '/vgk/coupon-progress': 'vgk-coupon-progress',
+  '/vgk/coupon-transfer': 'vgk-coupon-transfer',
+  '/vgk/income-unified': 'vgk-income-unified',
+  '/vgk/daywise-income': 'vgk-daywise-income',
+  '/vgk/income-types': 'vgk-income-types',
+  '/vgk/direct-summary': 'vgk-direct-summary',
+  '/vgk/matching-summary': 'vgk-matching-summary',
+  '/vgk/guru-summary': 'vgk-guru-summary',
+  '/vgk/ved-summary': 'vgk-ved-summary',
+  '/vgk/ev-benefits': 'vgk-ev-benefits',
+  '/vgk/ev-discount': 'vgk-ev-discount',
+  '/vgk/franchise-earnings': 'vgk-franchise-earnings',
+  '/vgk/insurance': 'vgk-insurance',
+  '/vgk/training': 'vgk-training',
+  '/vgk/coupon-benefits': 'vgk-coupon-benefits',
+  '/vgk/my-submissions': 'vgk-my-submissions',
   
   '/staff/my-reimbursement-claims': 'reimbursements',
   '/staff/reimbursement-approvals': 'staff-reimbursement-approvals',
@@ -292,10 +356,131 @@ const MENU_MASTER: MenuSection[] = [
       { menu_code: "ZYNOVA", label: "VGK4U", route: "staff-zynova" },
       { menu_code: "ZYN_INSURANCE", label: "Zynova Insurance", route: "zynova-insurance" }
     ]
+  },
+  {
+    section_code: "VGK4U",
+    section_label: "VGK4U",
+    order: 16,
+    subSections: [
+      {
+        sub_section_code: "real-dreams",
+        sub_section_label: "VGK4U Property",
+        items: [
+          { menu_code: "REAL_DREAMS_MARKETPLACE", label: `<i class="fas fa-building" style="margin-right: 8px; width: 18px; text-align: center; color: #2563eb;"></i>Property Marketplace`, route: "real-dreams-marketplace" },
+          { menu_code: "VGK4U_REAL_ESTATE", label: `<i class="fas fa-home" style="margin-right: 8px; width: 18px; text-align: center; color: #2563eb;"></i>VGK Real Dreams (ZR)`, route: "staff-vgk4u-real-estate" },
+          { menu_code: "VGK4U_INSURANCE", label: `<i class="fas fa-shield-alt" style="margin-right: 8px; width: 18px; text-align: center; color: #059669;"></i>VGK Care (ZC)`, route: "staff-vgk4u-insurance" }
+        ]
+      },
+      {
+        sub_section_code: "zy-member-earnings",
+        sub_section_label: "VGK4U Earnings",
+        items: [
+          { menu_code: "INCENTIVES_VGK4U", label: `<i class="fas fa-users" style="margin-right: 8px; width: 18px; text-align: center; color: #7c3aed;"></i>All VGK4U Members`, route: "staff-incentives-vgk4u" },
+          { menu_code: "INCENTIVES_POINTS", label: `<i class="fas fa-coins" style="margin-right: 8px; width: 18px; text-align: center; color: #f59e0b;"></i>MNR Points`, route: "staff-incentives-points" },
+          { menu_code: "INCENTIVES_APPROVALS", label: `<i class="fas fa-clipboard-check" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>Incentive Approvals`, route: "staff-incentives-approvals" }
+        ]
+      }
+    ]
+  },
+  {
+    section_code: "VGK_TEAM",
+    section_label: "VGK TEAM",
+    order: 21,
+    subSections: [
+      {
+        sub_section_code: "vgk_team_management",
+        sub_section_label: "VGK Team Management",
+        items: [
+          { menu_code: "VGK_TEAM_MEMBERS", label: `<i class="fas fa-users" style="margin-right: 8px; width: 18px; text-align: center; color: #7c3aed;"></i>VGK Channel Partners`, route: "staff-vgk-members" },
+          { menu_code: "VGK_INCOME", label: `<i class="fas fa-hand-holding-usd" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>VGK Income Management`, route: "staff-vgk-income" },
+          { menu_code: "VGK_COUPONS", label: `<i class="fas fa-ticket-alt" style="margin-right: 8px; width: 18px; text-align: center; color: #6366f1;"></i>VGK PIN Activation`, route: "staff-vgk-coupons" },
+          { menu_code: "VGK_PROMO_CODES", label: `<i class="fas fa-tags" style="margin-right: 8px; width: 18px; text-align: center; color: #ec4899;"></i>VGK Promo Codes`, route: "staff-vgk-promo-codes" }
+        ]
+      },
+      {
+        sub_section_code: "vgk_bonanza",
+        sub_section_label: "VGK Bonanza",
+        items: [
+          { menu_code: "VGK_BONANZA_MGMT", label: `<i class="fas fa-trophy" style="margin-right: 8px; width: 18px; text-align: center; color: #f59e0b;"></i>Bonanza Management`, route: "vgk-bonanza-rewards" }
+        ]
+      }
+    ]
+  },
+  {
+    section_code: "VENDOR_MANAGEMENT",
+    section_label: "VENDOR MANAGEMENT",
+    order: 22,
+    items: [
+      { menu_code: "VM_VENDORS", label: `<i class="fas fa-store" style="margin-right: 8px; width: 18px; text-align: center; color: #0284c7;"></i>Vendor Master`, route: "staff-vgk-vendors" }
+    ]
   }
 ];
 
-const VGK_MENU_MASTER: MenuSection[] = [];
+const VGK_MENU_MASTER: MenuSection[] = [
+  {
+    section_code: "EARNINGS",
+    section_label: "EARNINGS & INCOME",
+    order: 1,
+    items: [
+      { menu_code: "VGK_INCOME_UNIFIED", label: `<i class="fas fa-chart-line" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>Income Dashboard`, route: "vgk-income-unified" },
+      { menu_code: "VGK_DAYWISE_INCOME", label: `<i class="fas fa-calendar-day" style="margin-right: 8px; width: 18px; text-align: center; color: #3b82f6;"></i>Daywise Income`, route: "vgk-daywise-income" },
+      { menu_code: "VGK_DIRECT_SUMMARY", label: `<i class="fas fa-users" style="margin-right: 8px; width: 18px; text-align: center; color: #6366f1;"></i>Direct (L1)`, route: "vgk-direct-summary" },
+      { menu_code: "VGK_MATCHING_SUMMARY", label: `<i class="fas fa-sitemap" style="margin-right: 8px; width: 18px; text-align: center; color: #8b5cf6;"></i>Matching (L2)`, route: "vgk-matching-summary" },
+      { menu_code: "VGK_GURU_SUMMARY", label: `<i class="fas fa-graduation-cap" style="margin-right: 8px; width: 18px; text-align: center; color: #ec4899;"></i>Guru Summary`, route: "vgk-guru-summary" },
+      { menu_code: "VGK_VED_SUMMARY", label: `<i class="fas fa-brain" style="margin-right: 8px; width: 18px; text-align: center; color: #f59e0b;"></i>Ved Summary`, route: "vgk-ved-summary" },
+      { menu_code: "VGK_FRANCHISE_EARNINGS", label: `<i class="fas fa-store" style="margin-right: 8px; width: 18px; text-align: center; color: #14b8a6;"></i>Franchise Earnings`, route: "vgk-franchise-earnings" }
+    ]
+  },
+  {
+    section_code: "PROGRAMS",
+    section_label: "PROGRAMS & BENEFITS",
+    order: 2,
+    items: [
+      { menu_code: "VGK_EV_BENEFITS", label: `<i class="fas fa-charging-station" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>EV Benefits`, route: "vgk-ev-benefits" },
+      { menu_code: "VGK_EV_DISCOUNT", label: `<i class="fas fa-percent" style="margin-right: 8px; width: 18px; text-align: center; color: #06b6d4;"></i>EV Discount`, route: "vgk-ev-discount" },
+      { menu_code: "VGK_INSURANCE", label: `<i class="fas fa-shield-alt" style="margin-right: 8px; width: 18px; text-align: center; color: #3b82f6;"></i>Insurance Policy`, route: "vgk-insurance" },
+      { menu_code: "VGK_TRAINING", label: `<i class="fas fa-chalkboard-teacher" style="margin-right: 8px; width: 18px; text-align: center; color: #8b5cf6;"></i>Training Program`, route: "vgk-training" },
+      { menu_code: "VGK_BONANZA_REWARDS", label: `<i class="fas fa-trophy" style="margin-right: 8px; width: 18px; text-align: center; color: #f59e0b;"></i>Bonanza Rewards`, route: "vgk-bonanza-rewards" },
+      { menu_code: "VGK_AWARDS", label: `<i class="fas fa-award" style="margin-right: 8px; width: 18px; text-align: center; color: #eab308;"></i>Awards & Milestones`, route: "vgk-awards" }
+    ]
+  },
+  {
+    section_code: "COUPONS_PINS",
+    section_label: "COUPONS & PINS",
+    order: 3,
+    items: [
+      { menu_code: "VGK_COUPON_ACTIVATE", label: `<i class="fas fa-key" style="margin-right: 8px; width: 18px; text-align: center; color: #6366f1;"></i>PIN Activation`, route: "vgk-coupon-activate" },
+      { menu_code: "VGK_COUPON_PROGRESS", label: `<i class="fas fa-tasks" style="margin-right: 8px; width: 18px; text-align: center; color: #3b82f6;"></i>Coupon Progress`, route: "vgk-coupon-progress" },
+      { menu_code: "VGK_COUPON_TRANSFER", label: `<i class="fas fa-exchange-alt" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>Coupon Transfer`, route: "vgk-coupon-transfer" },
+      { menu_code: "VGK_COUPON_BENEFITS", label: `<i class="fas fa-gift" style="margin-right: 8px; width: 18px; text-align: center; color: #ec4899;"></i>Coupon Benefits`, route: "vgk-coupon-benefits" }
+    ]
+  },
+  {
+    section_code: "PROFILE_SECURITY",
+    section_label: "MY ACCOUNT",
+    order: 4,
+    items: [
+      { menu_code: "VGK_PROFILE_EDIT", label: `<i class="fas fa-user-edit" style="margin-right: 8px; width: 18px; text-align: center; color: #3b82f6;"></i>Edit Profile`, route: "vgk-profile-edit" },
+      { menu_code: "VGK_KYC", label: `<i class="fas fa-id-card" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>KYC Verification`, route: "vgk-kyc" },
+      { menu_code: "VGK_BANK_DETAILS", label: `<i class="fas fa-university" style="margin-right: 8px; width: 18px; text-align: center; color: #f59e0b;"></i>Bank Details`, route: "vgk-bank-details" },
+      { menu_code: "VGK_POINTS_BALANCE", label: `<i class="fas fa-coins" style="margin-right: 8px; width: 18px; text-align: center; color: #eab308;"></i>Points Balance`, route: "vgk-points-balance" },
+      { menu_code: "VGK_FEEDBACK", label: `<i class="fas fa-comment-dots" style="margin-right: 8px; width: 18px; text-align: center; color: #06b6d4;"></i>Feedback`, route: "vgk-feedback" },
+      { menu_code: "VGK_SETTINGS", label: `<i class="fas fa-cog" style="margin-right: 8px; width: 18px; text-align: center; color: #64748b;"></i>Settings`, route: "vgk-settings" }
+    ]
+  },
+  {
+    section_code: "COMMUNITY",
+    section_label: "COMMUNITY & TEAM",
+    order: 5,
+    items: [
+      { menu_code: "VGK_TOP_EARNERS", label: `<i class="fas fa-medal" style="margin-right: 8px; width: 18px; text-align: center; color: #f59e0b;"></i>Top Earners`, route: "vgk-top-earners" },
+      { menu_code: "VGK_BIRTHDAYS", label: `<i class="fas fa-birthday-cake" style="margin-right: 8px; width: 18px; text-align: center; color: #ec4899;"></i>Birthdays`, route: "vgk-birthdays" },
+      { menu_code: "VGK_ANNOUNCEMENTS", label: `<i class="fas fa-bullhorn" style="margin-right: 8px; width: 18px; text-align: center; color: #3b82f6;"></i>Announcements`, route: "vgk-announcements" },
+      { menu_code: "VGK_MY_REGISTRATIONS", label: `<i class="fas fa-user-plus" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>My Registrations`, route: "vgk-my-registrations" },
+      { menu_code: "VGK_MY_SUBMISSIONS", label: `<i class="fas fa-file-invoice" style="margin-right: 8px; width: 18px; text-align: center; color: #8b5cf6;"></i>My Submissions`, route: "vgk-my-submissions" }
+    ]
+  }
+];
 
 export class SideDrawer {
   private container: HTMLElement | null = null;
@@ -862,6 +1047,26 @@ export class SideDrawer {
         label = 'VGK Channel Partners';
       } else if (codeUpper.includes('CATALOG') || routeLower.includes('catalog')) {
         label = 'Digital Catalog';
+      } else if (codeUpper.includes('INCENTIVES_VGK4U') || routeLower.includes('incentives/vgk4u')) {
+        label = 'All VGK4U Members';
+      } else if (codeUpper.includes('VGK4U_REAL_ESTATE') || routeLower.includes('vgk4u/real-estate')) {
+        label = 'VGK Real Dreams (ZR)';
+      } else if (codeUpper.includes('VGK4U_INSURANCE') || routeLower.includes('vgk4u/insurance')) {
+        label = 'VGK Care (ZC)';
+      } else if (codeUpper.includes('INCENTIVES_POINTS') || routeLower.includes('incentives/points')) {
+        label = 'MNR Points';
+      } else if (codeUpper.includes('INCENTIVES_APPROVALS') || routeLower.includes('incentives/approvals')) {
+        label = 'Incentive Approvals';
+      } else if (codeUpper.includes('VGK_INCOME') || routeLower.includes('vgk/income')) {
+        label = 'VGK Income Management';
+      } else if (codeUpper.includes('VGK_COUPONS') || routeLower.includes('vgk/coupons')) {
+        label = 'VGK PIN Activation';
+      } else if (codeUpper.includes('VGK_PROMO_CODES') || routeLower.includes('vgk/promo-codes')) {
+        label = 'VGK Promo Codes';
+      } else if (codeUpper.includes('VGK_VENDORS') || routeLower.includes('vgk/vendors')) {
+        label = 'Vendor Management';
+      } else if (codeUpper.includes('REAL_DREAMS_MARKETPLACE') || routeLower.includes('real-dreams/marketplace') || routeLower.includes('real-dreams-marketplace')) {
+        label = 'Property Marketplace';
       }
 
       let tab: string | undefined = undefined;
@@ -883,8 +1088,32 @@ export class SideDrawer {
         tab = 'mnr';
       }
 
-      const iconClass = rawIcon || (label.includes('WhatsApp') ? 'fab fa-whatsapp' : label.includes('Auto Dialer') ? 'fas fa-phone-volume' : label.includes('Softphone') || label.includes('Calling') ? 'fas fa-headset' : label.includes('VGK') || label.includes('Channel') ? 'fas fa-users' : (label.includes('Field') || label.includes('Sales')) ? 'fas fa-users-gear' : (label.includes('Catalog') ? 'fas fa-book-open' : 'fas fa-file-alt'));
-      const iconColor = label.includes('WhatsApp') ? 'color: #25d366;' : (label.includes('Auto Dialer') || label.includes('Softphone') || label.includes('Calling')) ? 'color: #38bdf8;' : (label.includes('VGK') || label.includes('Channel')) ? 'color: #7c3aed;' : (label.includes('Catalog') ? 'color: #10b981;' : '');
+      const iconClass = rawIcon || (
+        label.includes('WhatsApp') ? 'fab fa-whatsapp' :
+        label.includes('Auto Dialer') ? 'fas fa-phone-volume' :
+        label.includes('Softphone') || label.includes('Calling') ? 'fas fa-headset' :
+        label.includes('Real Dreams') || label.includes('Property') ? 'fas fa-building' :
+        label.includes('Insurance') || label.includes('Care') ? 'fas fa-shield-alt' :
+        label.includes('Points') ? 'fas fa-coins' :
+        label.includes('Approvals') ? 'fas fa-clipboard-check' :
+        label.includes('PIN') || label.includes('Coupon') ? 'fas fa-ticket-alt' :
+        label.includes('Promo') ? 'fas fa-tags' :
+        label.includes('Vendor') ? 'fas fa-store' :
+        label.includes('Income') ? 'fas fa-hand-holding-usd' :
+        label.includes('VGK') || label.includes('Channel') ? 'fas fa-users' :
+        (label.includes('Field') || label.includes('Sales')) ? 'fas fa-users-gear' :
+        (label.includes('Catalog') ? 'fas fa-book-open' : 'fas fa-file-alt')
+      );
+      const iconColor = 
+        label.includes('WhatsApp') ? 'color: #25d366;' :
+        (label.includes('Auto Dialer') || label.includes('Softphone') || label.includes('Calling')) ? 'color: #38bdf8;' :
+        (label.includes('Real Dreams') || label.includes('Property')) ? 'color: #2563eb;' :
+        (label.includes('Insurance') || label.includes('Care')) ? 'color: #059669;' :
+        label.includes('Points') ? 'color: #f59e0b;' :
+        label.includes('PIN') || label.includes('Coupon') ? 'color: #6366f1;' :
+        label.includes('Promo') ? 'color: #ec4899;' :
+        (label.includes('VGK') || label.includes('Channel')) ? 'color: #7c3aed;' :
+        (label.includes('Catalog') ? 'color: #10b981;' : '');
       const iconHtml = `<i class="${iconClass}" style="margin-right: 8px; width: 18px; text-align: center; ${iconColor}"></i>`;
 
       return {
