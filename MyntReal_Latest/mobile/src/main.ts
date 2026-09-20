@@ -622,6 +622,8 @@ class MNRApp {
       '/staff/my-leads': 'staff-leads',
       '/staff/team-leads': 'staff-team-leads',
       '/staff/bank-wise-leads': 'staff-bank-wise-leads',
+      '/staff/field-sales': 'staff-bank-wise-leads',
+      '/field-sales': 'staff-bank-wise-leads',
       '/staff/call-tracking': 'staff-call-tracking',
       '/staff/call-history': 'call-history',
       '/staff/operator-calls': 'operator-calls',
@@ -946,6 +948,8 @@ class MNRApp {
         page = new StaffTeamLeadsPage(this.pageContainer);
         break;
       case 'staff-bank-wise-leads':
+      case 'field-sales':
+      case 'staff-field-sales':
         page = new StaffBankWiseLeadsPage(this.pageContainer);
         break;
       case 'executive-dashboard':

@@ -3417,6 +3417,215 @@ def get_whatsapp_conversations_hub(
                             "is_unassigned": False
                         }
 
+        # ── Scope 5: GROUPS TAB (Tab: "Groups") ──────────────────────────────
+        elif scope_val in ('groups', 'group'):
+            s_filt = source_filt_val
+            group_catalog = {}  # canonical_key -> { "name": ..., "ident": ..., "variants": set(...), "channel": ... }
+
+            def _normalize_group_key(raw_id: str) -> str:
+                clean_id = (raw_id or "").strip()
+                digits = ''.join(filter(str.isdigit, clean_id))
+                if digits.startswith("120363"):
+                    return f"{digits}@g.us"
+                return clean_id
+
+            # 1. Query live participating groups from WhatsApp Bot Gateway (http://localhost:5002/api/groups)
+            if s_filt in ('all', 'scanned', 'groups'):
+                try:
+                    bot_resp = requests.get("http://localhost:5002/api/groups", timeout=1.5)
+                    if bot_resp.status_code == 200:
+                        bot_data = bot_resp.json()
+                        for bg in bot_data.get("groups", []):
+                            bg_id = (bg.get("id") or "").strip()
+                            bg_subject = (bg.get("subject") or "WhatsApp Group").strip()
+                            if bg_id:
+                                ck = _normalize_group_key(bg_id)
+                                bg_digits = ''.join(filter(str.isdigit, bg_id))
+                                vset = {bg_id, ck}
+                                if bg_digits:
+                                    vset.add(bg_digits)
+                                group_catalog[ck] = {
+                                    "name": bg_subject,
+                                    "ident": ck,
+                                    "variants": vset,
+                                    "channel": "SCANNED"
+                                }
+                except Exception:
+                    pass
+
+            # 2. Add configured target groups from Database / wa_job_targets.json
+            for j_id, g_list in targets_dict.items():
+                for g in (g_list or []):
+                    g_type = (g.get("type") or "").lower()
+                    ident = (g.get("identifier") or "").strip()
+                    g_name = (g.get("name") or "").strip()
+                    if not ident or ident == "Direct Customer Mobile":
+                        continue
+                    if g_type not in ('group', 'channel') and not ident.endswith('@g.us') and not ident.startswith('120363') and 'chat.whatsapp.com' not in ident:
+                        continue
+
+                    ck = _normalize_group_key(ident)
+                    ident_digits = ''.join(filter(str.isdigit, ident))
+                    vset = {ident, ck}
+                    if ident_digits:
+                        vset.add(ident_digits)
+                        vset.add(f"{ident_digits}@g.us")
+                    if ident.endswith("@g.us"):
+                        vset.add(ident[:-5])
+
+                    if ck not in group_catalog:
+                        group_catalog[ck] = {
+                            "name": g_name or "WhatsApp Group",
+                            "ident": ck,
+                            "variants": vset,
+                            "channel": "SCANNED"
+                        }
+                    else:
+                        group_catalog[ck]["variants"].update(vset)
+                        if g_name and (group_catalog[ck]["name"] == "WhatsApp Group" or not group_catalog[ck]["name"]):
+                            group_catalog[ck]["name"] = g_name
+
+            # 3. Add distinct groups recorded in WAInbox & MessageLog
+            db_group_rows = db.query(WAInbox.from_phone, WAInbox.from_name).filter(
+                or_(
+                    WAInbox.from_phone.like('%@g.us'),
+                    WAInbox.from_phone.like('120363%'),
+                    WAInbox.message_type == 'group'
+                )
+            ).distinct().all()
+            for p_val, n_val in db_group_rows:
+                if not p_val:
+                    continue
+                ck = _normalize_group_key(p_val)
+                p_digits = ''.join(filter(str.isdigit, p_val))
+                vset = {p_val, ck}
+                if p_digits:
+                    vset.add(p_digits)
+                    vset.add(f"{p_digits}@g.us")
+                if ck not in group_catalog:
+                    group_catalog[ck] = {
+                        "name": n_val or "WhatsApp Group",
+                        "ident": ck,
+                        "variants": vset,
+                        "channel": "SCANNED"
+                    }
+                else:
+                    group_catalog[ck]["variants"].update(vset)
+                    if n_val and (group_catalog[ck]["name"] == "WhatsApp Group" or not group_catalog[ck]["name"]):
+                        group_catalog[ck]["name"] = n_val
+
+            ml_group_rows = db.query(MessageLog.mobile_number, MessageLog.user_name).filter(
+                or_(
+                    MessageLog.mobile_number.like('%@g.us'),
+                    MessageLog.mobile_number.like('120363%'),
+                    MessageLog.message_type == 'group'
+                )
+            ).distinct().all()
+            for p_val, n_val in ml_group_rows:
+                if not p_val:
+                    continue
+                ck = _normalize_group_key(p_val)
+                p_digits = ''.join(filter(str.isdigit, p_val))
+                vset = {p_val, ck}
+                if p_digits:
+                    vset.add(p_digits)
+                    vset.add(f"{p_digits}@g.us")
+                if ck not in group_catalog:
+                    group_catalog[ck] = {
+                        "name": n_val or "WhatsApp Group",
+                        "ident": ck,
+                        "variants": vset,
+                        "channel": "SCANNED"
+                    }
+                else:
+                    group_catalog[ck]["variants"].update(vset)
+                    if n_val and (group_catalog[ck]["name"] == "WhatsApp Group" or not group_catalog[ck]["name"]):
+                        group_catalog[ck]["name"] = n_val
+
+            # 4. Fetch latest message sent/received for each group and populate contact_map
+            for gid, gmeta in group_catalog.items():
+                g_name = gmeta["name"]
+                g_vars = list(gmeta["variants"])
+                g_chan = gmeta.get("channel", "SCANNED")
+
+                last_m = db.query(WAInbox).filter(
+                    or_(
+                        WAInbox.from_phone.in_(g_vars),
+                        WAInbox.from_name.ilike(f"%{g_name}%")
+                    )
+                ).order_by(desc(WAInbox.received_at)).first()
+
+                last_ml = db.query(MessageLog).filter(
+                    or_(
+                        MessageLog.mobile_number.in_(g_vars),
+                        MessageLog.user_name.ilike(f"%{g_name}%")
+                    )
+                ).order_by(desc(MessageLog.sent_at)).first()
+
+                last_body = "Click to open group chat"
+                last_dt = None
+                last_status = "active"
+
+                if last_m and last_ml:
+                    if (last_ml.sent_at or datetime.min) >= (last_m.received_at or datetime.min):
+                        last_body = last_ml.message_body or "Group message sent"
+                        last_dt = last_ml.sent_at
+                        last_status = last_ml.current_status or "sent"
+                        prov_str = (last_ml.provider or "").upper()
+                        w_sid = str(last_ml.message_sid or "")
+                        if "META" in prov_str or w_sid.startswith("wamid."):
+                            g_chan = "META_API"
+                    else:
+                        last_body = last_m.body_text or "Group message received"
+                        last_dt = last_m.received_at
+                        last_status = last_m.status or "delivered"
+                        if str(last_m.wamid or '').startswith('wamid.'):
+                            g_chan = "META_API"
+                elif last_ml:
+                    last_body = last_ml.message_body or "Group message sent"
+                    last_dt = last_ml.sent_at
+                    last_status = last_ml.current_status or "sent"
+                    prov_str = (last_ml.provider or "").upper()
+                    w_sid = str(last_ml.message_sid or "")
+                    if "META" in prov_str or w_sid.startswith("wamid."):
+                        g_chan = "META_API"
+                elif last_m:
+                    last_body = last_m.body_text or "Group message received"
+                    last_dt = last_m.received_at
+                    last_status = last_m.status or "delivered"
+                    if str(last_m.wamid or '').startswith('wamid.'):
+                        g_chan = "META_API"
+
+                if s_filt == 'scanned' and g_chan != 'SCANNED':
+                    continue
+                if s_filt == 'api' and g_chan != 'META_API':
+                    continue
+
+                if search_val:
+                    s_lower = search_val.lower()
+                    if not (s_lower in g_name.lower() or s_lower in gid.lower() or s_lower in last_body.lower()):
+                        continue
+
+                contact_map[gid] = {
+                    "phone": gid,
+                    "name": g_name,
+                    "recipient_type": "group",
+                    "contact_type": "GROUP",
+                    "status": last_status,
+                    "category": "WhatsApp Group",
+                    "last_message": last_body,
+                    "last_time": last_dt.strftime('%d %b, %I:%M %p') if last_dt else '—',
+                    "last_timestamp": last_dt or datetime.min,
+                    "message_type": "group",
+                    "delivery_status": last_status,
+                    "unread_count": 0,
+                    "channel": g_chan,
+                    "broadcast_type": "group",
+                    "badge": "Group",
+                    "is_unassigned": False,
+                    "segment": "general"
+                }
+
         # ── Scope 3: NEW / UNREPLIED INBOUND MESSAGES (Tab 3: "3. New Messages") ────────────
         elif scope_val in ('company', 'company_unassigned', 'new_messages', 'new'):
             inbox_q = db.query(WAInbox).filter(

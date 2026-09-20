@@ -160,19 +160,41 @@ export class DigitalCatalogPage {
     try {
       this.isLoading = true;
       const res = await apiService.get<any>('/api/v1/digital-catalogs/library');
-      if (res && res.catalogs) {
-        this.catalogs = res.catalogs;
+      const data = res?.data || res || {};
+      const catalogs = data.catalogs || res?.catalogs || (Array.isArray(data) ? data : []);
+      if (catalogs && catalogs.length > 0) {
+        this.catalogs = catalogs;
         this.renderActiveCatalog();
+      } else {
+        const area = this.container.querySelector('#catalogContentArea');
+        if (area) {
+          area.innerHTML = `
+            <div class="alert alert-dark text-center py-4 rounded-4 border-secondary border-opacity-25">
+              <i class="fas fa-book-open text-muted mb-2" style="font-size: 28px;"></i>
+              <p class="mb-2 text-white fw-bold">No catalogs found</p>
+              <button class="btn btn-sm btn-outline-success rounded-pill px-3" id="btnRetryCatalogs">
+                <i class="fas fa-sync-alt me-1"></i> Retry
+              </button>
+            </div>
+          `;
+          area.querySelector('#btnRetryCatalogs')?.addEventListener('click', () => this.loadCatalogs());
+        }
       }
     } catch (err) {
       console.error('Mobile catalog load error:', err);
       const area = this.container.querySelector('#catalogContentArea');
       if (area) {
         area.innerHTML = `
-          <div class="alert alert-dark text-center">
-            <p class="mb-0 text-muted">Unable to load catalog. Please check connection.</p>
+          <div class="alert alert-dark text-center py-4 rounded-4 border-secondary border-opacity-25">
+            <i class="fas fa-exclamation-circle text-danger mb-2" style="font-size: 28px;"></i>
+            <p class="mb-2 text-white fw-bold">Unable to load catalog</p>
+            <p class="text-muted small mb-3">Please check your connection and try again.</p>
+            <button class="btn btn-sm btn-outline-success rounded-pill px-3" id="btnRetryCatalogs">
+              <i class="fas fa-sync-alt me-1"></i> Retry
+            </button>
           </div>
         `;
+        area.querySelector('#btnRetryCatalogs')?.addEventListener('click', () => this.loadCatalogs());
       }
     } finally {
       this.isLoading = false;
@@ -192,7 +214,8 @@ export class DigitalCatalogPage {
     // Fetch full details
     try {
       const fullRes = await apiService.get<any>(`/api/v1/digital-catalogs/${catSummary.id}`);
-      this.activeCatalog = fullRes.catalog || catSummary;
+      const fullData = fullRes?.data || fullRes || {};
+      this.activeCatalog = fullData.catalog || (fullRes as any)?.catalog || catSummary;
     } catch {
       this.activeCatalog = catSummary;
     }
@@ -499,7 +522,8 @@ export class DigitalCatalogPage {
     try {
       const q = encodeURIComponent(query);
       const res = await apiService.get<any>(`/api/v1/digital-catalogs/recipients/search?q=${q}&limit=12`);
-      const results = res?.results || [];
+      const data = res?.data || res || {};
+      const results = data.results || res?.results || [];
 
       if (results.length === 0) {
         dropdown.innerHTML = '<div class="p-2 text-muted small text-center">No matching contacts found</div>';

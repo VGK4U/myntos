@@ -18,7 +18,7 @@ import { APP_CONFIG } from '../config/app.config';
 
 export class StaffWhatsAppInboxPage {
   private container: HTMLElement;
-  private activeTab: 'messenger' | 'team' | 'company' | 'all' | 'broadcasts' | 'inbox' | 'templates' | 'automations' | 'audit' = 'messenger';
+  private activeTab: 'messenger' | 'team' | 'company' | 'all' | 'groups' | 'broadcasts' | 'inbox' | 'templates' | 'automations' | 'audit' = 'messenger';
 
   // ── Gateway & QR State ─────────────────────────────────────────────────────
   private gatewayConnected: boolean = true;
@@ -44,7 +44,7 @@ export class StaffWhatsAppInboxPage {
   private activeChatPhone: string | null = null;
   private activeChatName: string = '';
   private activeScope: string = 'assigned_tagged';
-  private chatOriginTab: 'messenger' | 'team' | 'company' | 'all' | 'broadcasts' | 'inbox' = 'messenger';
+  private chatOriginTab: 'messenger' | 'team' | 'company' | 'all' | 'groups' | 'broadcasts' | 'inbox' = 'messenger';
   private fMsgSearch: string = '';
   private chatHistory: any[] = [];
   private chatLoading: boolean = false;
@@ -187,6 +187,9 @@ export class StaffWhatsAppInboxPage {
       await this.loadMessenger();
     } else if (this.activeTab === 'all') {
       this.activeScope = 'all';
+      await this.loadMessenger();
+    } else if (this.activeTab === 'groups') {
+      this.activeScope = 'groups';
       await this.loadMessenger();
     } else if (this.activeTab === 'broadcasts') {
       this.activeScope = 'broadcasts';
@@ -342,30 +345,33 @@ export class StaffWhatsAppInboxPage {
               <i class="fas fa-globe"></i> 4. All Messages
             </button>
           ` : ''}
+          <button class="wa-nav-tab ${this.activeTab === 'groups' ? 'active' : ''}" data-tab="groups" style="${this.getTabBtnStyle(this.activeTab === 'groups')}">
+            <i class="fas fa-users-rectangle"></i> Groups
+          </button>
           <button class="wa-nav-tab ${this.activeTab === 'broadcasts' ? 'active' : ''}" data-tab="broadcasts" style="${this.getTabBtnStyle(this.activeTab === 'broadcasts')}">
-            <i class="fas fa-bullhorn"></i> 5. Broadcasts & Dispatches
+            <i class="fas fa-bullhorn"></i> Broadcasts &amp; Dispatches
           </button>
           ${isKeyLeadership ? `
             <button class="wa-nav-tab ${this.activeTab === 'inbox' ? 'active' : ''}" data-tab="inbox" style="${this.getTabBtnStyle(this.activeTab === 'inbox')}">
-              <i class="fas fa-robot"></i> 6. WhatsApp API Bot
+              <i class="fas fa-robot"></i> WhatsApp API Bot
               ${this.inboxStats.unread > 0 ? `<span style="background:#ef4444;color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px;">${this.inboxStats.unread}</span>` : ''}
             </button>
           ` : ''}
           ${isAdmin ? `
             <button class="wa-nav-tab ${this.activeTab === 'templates' ? 'active' : ''}" data-tab="templates" style="${this.getTabBtnStyle(this.activeTab === 'templates')}">
-              <i class="fas fa-file-alt"></i> 7. Templates
+              <i class="fas fa-file-alt"></i> Templates
             </button>
             <button class="wa-nav-tab ${this.activeTab === 'automations' ? 'active' : ''}" data-tab="automations" style="${this.getTabBtnStyle(this.activeTab === 'automations')}">
-              <i class="fas fa-cogs"></i> 8. Automations
+              <i class="fas fa-cogs"></i> Automations
             </button>
             <button class="wa-nav-tab ${this.activeTab === 'audit' ? 'active' : ''}" data-tab="audit" style="${this.getTabBtnStyle(this.activeTab === 'audit')}">
-              <i class="fas fa-shield-alt"></i> 9. Audit Log
+              <i class="fas fa-shield-alt"></i> Audit Log
             </button>
           ` : ''}
         </div>
 
         <!-- Tab Content Panes -->
-        ${(this.activeTab === 'messenger' || this.activeTab === 'team' || this.activeTab === 'company' || this.activeTab === 'all' || this.activeTab === 'broadcasts') ? this.renderMessengerTab() : ''}
+        ${(this.activeTab === 'messenger' || this.activeTab === 'team' || this.activeTab === 'company' || this.activeTab === 'all' || this.activeTab === 'groups' || this.activeTab === 'broadcasts') ? this.renderMessengerTab() : ''}
         ${this.activeTab === 'inbox' ? this.renderInboxTab() : ''}
         ${this.activeTab === 'templates' && isAdmin ? this.renderTemplatesTab() : ''}
         ${this.activeTab === 'automations' && isAdmin ? this.renderAutomationsTab() : ''}
@@ -402,6 +408,7 @@ export class StaffWhatsAppInboxPage {
     const isTeam = this.activeTab === 'team';
     const isCompany = this.activeTab === 'company';
     const isAll = this.activeTab === 'all';
+    const isGroups = this.activeTab === 'groups';
     const isBroadcasts = this.activeTab === 'broadcasts';
 
     let headerIcon = 'fas fa-comments';
@@ -428,6 +435,12 @@ export class StaffWhatsAppInboxPage {
       searchPlaceholder = 'Search all messages / phone / contact / body...';
       emptyTitle = 'No messages found in organization archive.';
       emptySubtitle = 'All organization outbound dispatches and conversations appear here.';
+    } else if (isGroups) {
+      headerIcon = 'fas fa-users-rectangle';
+      headerTitle = 'WhatsApp Groups (Scanned & API)';
+      searchPlaceholder = 'Search groups / JID / message...';
+      emptyTitle = 'No participating WhatsApp groups found.';
+      emptySubtitle = 'Groups where your scanned number or API number is added will appear here.';
     } else if (isBroadcasts) {
       headerIcon = 'fas fa-bullhorn';
       headerTitle = 'Broadcasts & Dispatches';
@@ -1247,10 +1260,10 @@ export class StaffWhatsAppInboxPage {
     }
   }
 
-  private async loadChat(phone: string, name: string, originTab?: 'messenger' | 'team' | 'company' | 'all' | 'broadcasts' | 'inbox'): Promise<void> {
+  private async loadChat(phone: string, name: string, originTab?: 'messenger' | 'team' | 'company' | 'all' | 'groups' | 'broadcasts' | 'inbox'): Promise<void> {
     if (originTab) {
       this.chatOriginTab = originTab;
-    } else if (['team', 'inbox', 'messenger', 'company', 'all', 'broadcasts'].includes(this.activeTab)) {
+    } else if (['team', 'inbox', 'messenger', 'company', 'all', 'groups', 'broadcasts'].includes(this.activeTab)) {
       this.chatOriginTab = this.activeTab as any;
     }
 

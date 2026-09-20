@@ -49,6 +49,13 @@ logger = logging.getLogger("digital_catalogs_api")
 
 router = APIRouter()
 
+def get_optional_staff_user(request: Request, db: Session = Depends(get_db)) -> Optional[StaffEmployee]:
+    """Resilient staff user resolution: returns StaffEmployee if authenticated, else None without aborting."""
+    try:
+        return get_current_staff_user(request, db)
+    except Exception:
+        return None
+
 
 # ── Role & Authoring Permission Helpers ─────────────────────────────────────
 
@@ -481,14 +488,14 @@ def get_staff_catalog_library(
     segment_code: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
     status_filter: Optional[str] = Query(None, alias="status"),
-    current_user: StaffEmployee = Depends(get_current_staff_user),
+    current_user: Optional[StaffEmployee] = Depends(get_optional_staff_user),
     db: Session = Depends(get_db)
 ):
     """
     Returns digital catalogs library for staff browsing, sharing, and administration.
-    All active staff can view and search catalogs.
+    All active staff and authenticated clients/partners can view and search catalogs.
     """
-    company_id = getattr(current_user, 'company_id', 4) or 4
+    company_id = getattr(current_user, 'company_id', 4) or 4 if current_user else 4
     query = db.query(DigitalCatalog)
 
     # Filter by company or default 4
@@ -529,7 +536,7 @@ def get_staff_catalog_library(
             dispatches_stats[row[0]] = {"total_sends": row[1], "total_views": row[2]}
 
     result = []
-    is_author = _is_catalog_author(current_user)
+    is_author = _is_catalog_author(current_user) if current_user else False
 
     for c in catalogs:
         d = c.to_dict(include_sections=False, include_items=False)
@@ -543,8 +550,8 @@ def get_staff_catalog_library(
         "user_permissions": {
             "can_author": is_author,
             "can_dispatch": True,
-            "staff_id": current_user.id,
-            "staff_name": f"{current_user.first_name} {current_user.last_name or ''}".strip()
+            "staff_id": current_user.id if current_user else None,
+            "staff_name": f"{current_user.first_name} {current_user.last_name or ''}".strip() if current_user else "Team Member"
         }
     }
 
@@ -796,7 +803,7 @@ def get_my_dispatch_history(
 def get_catalog_detail(
     catalog_id: int,
     lang: str = Query("en"),
-    current_user: StaffEmployee = Depends(get_current_staff_user),
+    current_user: Optional[StaffEmployee] = Depends(get_optional_staff_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -810,7 +817,7 @@ def get_catalog_detail(
         "success": True,
         "catalog": catalog.to_dict(include_sections=True, include_items=True, language=lang),
         "user_permissions": {
-            "can_author": _is_catalog_author(current_user)
+            "can_author": _is_catalog_author(current_user) if current_user else False
         }
     }
 

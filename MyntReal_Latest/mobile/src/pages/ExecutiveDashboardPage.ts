@@ -55,9 +55,11 @@ interface HandlerItem {
 export class ExecutiveDashboardPage {
   private container: HTMLElement;
   private loading: boolean = true;
-  private activePreset: 'today' | 'this_week' | 'this_month' | 'overall' = 'overall';
+  private activePreset: 'today' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'this_fy' | 'overall' = 'overall';
   private fromDate: string = '';
   private toDate: string = '';
+  private selectedSegment: string = '';
+  private handlerSearch: string = '';
   private summary: AnalyticsSummary = {};
   private byCategory: BreakdownItem[] = [];
   private byStatus: BreakdownItem[] = [];
@@ -94,7 +96,7 @@ export class ExecutiveDashboardPage {
     return `${y}-${m}-${dd}`;
   }
 
-  private setPreset(preset: 'today' | 'this_week' | 'this_month' | 'overall'): void {
+  private setPreset(preset: 'today' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'this_fy' | 'overall'): void {
     this.activePreset = preset;
     const today = new Date();
     const todayStr = this.fmtDateISO(today);
@@ -112,9 +114,28 @@ export class ExecutiveDashboardPage {
       mon.setDate(diffToMon);
       this.fromDate = this.fmtDateISO(mon);
       this.toDate = todayStr;
+    } else if (preset === 'last_week') {
+      const day = today.getDay();
+      const diffToLastMon = today.getDate() - day + (day === 0 ? -6 : 1) - 7;
+      const lastMon = new Date(today);
+      lastMon.setDate(diffToLastMon);
+      const lastSun = new Date(lastMon);
+      lastSun.setDate(lastMon.getDate() + 6);
+      this.fromDate = this.fmtDateISO(lastMon);
+      this.toDate = this.fmtDateISO(lastSun);
     } else if (preset === 'this_month') {
       const s = new Date(today.getFullYear(), today.getMonth(), 1);
       this.fromDate = this.fmtDateISO(s);
+      this.toDate = todayStr;
+    } else if (preset === 'last_month') {
+      const s = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const e = new Date(today.getFullYear(), today.getMonth(), 0);
+      this.fromDate = this.fmtDateISO(s);
+      this.toDate = this.fmtDateISO(e);
+    } else if (preset === 'this_fy') {
+      const curYear = today.getFullYear();
+      const fyStartYear = today.getMonth() >= 3 ? curYear : curYear - 1;
+      this.fromDate = `${fyStartYear}-04-01`;
       this.toDate = todayStr;
     }
     this.loadData();
@@ -128,6 +149,7 @@ export class ExecutiveDashboardPage {
       const p = new URLSearchParams();
       if (this.fromDate) p.set('created_from', this.fromDate);
       if (this.toDate) p.set('created_to', this.toDate);
+      if (this.selectedSegment) p.set('category', this.selectedSegment);
 
       const resp = await apiService.get<any>(`/crm/lead-analytics?${p.toString()}`);
       if (resp && (resp.success !== false)) {
@@ -151,6 +173,8 @@ export class ExecutiveDashboardPage {
     const won = this.summary.won_leads || 0;
     const inProg = this.summary.in_progress_leads || 0;
     const lost = this.summary.lost_leads || 0;
+    const pendingBal = this.summary.total_pending || 0;
+    const collected = this.summary.total_collected || 0;
     const winRate = total > 0 ? ((won / total) * 100).toFixed(1) : '0';
 
     this.container.innerHTML = `
@@ -163,22 +187,45 @@ export class ExecutiveDashboardPage {
         })}
 
         <div style="padding:14px;">
-          <!-- Quick Presets -->
-          <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; margin-bottom:12px; -webkit-overflow-scrolling:touch;">
+          <!-- Quick Timeframe Presets (Complete parity with Web) -->
+          <div style="display:flex; gap:6px; overflow-x:auto; padding-bottom:6px; margin-bottom:12px; -webkit-overflow-scrolling:touch;">
+            <button class="preset-btn ${this.activePreset === 'overall' ? 'active' : ''}" data-preset="overall" style="${this.getPresetStyle(this.activePreset === 'overall')}">Overall (All)</button>
             <button class="preset-btn ${this.activePreset === 'today' ? 'active' : ''}" data-preset="today" style="${this.getPresetStyle(this.activePreset === 'today')}">Today</button>
             <button class="preset-btn ${this.activePreset === 'this_week' ? 'active' : ''}" data-preset="this_week" style="${this.getPresetStyle(this.activePreset === 'this_week')}">This Week</button>
+            <button class="preset-btn ${this.activePreset === 'last_week' ? 'active' : ''}" data-preset="last_week" style="${this.getPresetStyle(this.activePreset === 'last_week')}">Last Week</button>
             <button class="preset-btn ${this.activePreset === 'this_month' ? 'active' : ''}" data-preset="this_month" style="${this.getPresetStyle(this.activePreset === 'this_month')}">This Month</button>
-            <button class="preset-btn ${this.activePreset === 'overall' ? 'active' : ''}" data-preset="overall" style="${this.getPresetStyle(this.activePreset === 'overall')}">Overall (All)</button>
+            <button class="preset-btn ${this.activePreset === 'last_month' ? 'active' : ''}" data-preset="last_month" style="${this.getPresetStyle(this.activePreset === 'last_month')}">Last Month</button>
+            <button class="preset-btn ${this.activePreset === 'this_fy' ? 'active' : ''}" data-preset="this_fy" style="${this.getPresetStyle(this.activePreset === 'this_fy')}">This FY</button>
           </div>
 
-          <!-- Date Range Custom Filter Collapsible -->
-          <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:10px 12px; margin-bottom:14px;">
+          <!-- Date Range & Segment Custom Filter Collapsible -->
+          <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:12px; margin-bottom:14px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Custom Date Range</span>
-              <button id="execRefreshBtn" style="background:transparent; border:none; color:#38bdf8; font-size:12px; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:4px;">
-                <i class="fas fa-sync-alt ${this.loading ? 'fa-spin' : ''}"></i> Refresh
-              </button>
+              <span style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">Custom Filter &amp; Range</span>
+              <div style="display:flex; gap:8px;">
+                <button id="execResetBtn" style="background:transparent; border:none; color:#94a3b8; font-size:12px; cursor:pointer; font-weight:600;">
+                  Reset
+                </button>
+                <button id="execRefreshBtn" style="background:transparent; border:none; color:#38bdf8; font-size:12px; cursor:pointer; font-weight:600; display:flex; align-items:center; gap:4px;">
+                  <i class="fas fa-sync-alt ${this.loading ? 'fa-spin' : ''}"></i> Refresh
+                </button>
+              </div>
             </div>
+
+            <!-- Segment Selector -->
+            <div style="margin-bottom:8px;">
+              <select id="execCategoryFilter" style="width:100%; background:#0f172a; border:1px solid #334155; color:#f1f5f9; border-radius:6px; padding:6px 8px; font-size:12px;">
+                <option value="" ${this.selectedSegment === '' ? 'selected' : ''}>All Segments / Verticals</option>
+                <option value="Solar" ${this.selectedSegment === 'Solar' ? 'selected' : ''}>☀️ Solar</option>
+                <option value="EV B2B" ${this.selectedSegment === 'EV B2B' ? 'selected' : ''}>⚡ EV B2B (Fleet/Franchise)</option>
+                <option value="EV B2C" ${this.selectedSegment === 'EV B2C' ? 'selected' : ''}>🛵 EV B2C (2-Wheelers)</option>
+                <option value="EV Spares" ${this.selectedSegment === 'EV Spares' ? 'selected' : ''}>🔧 EV Spares &amp; Batteries</option>
+                <option value="Real Dreams" ${this.selectedSegment === 'Real Dreams' ? 'selected' : ''}>🏡 Real Dreams (Plots/Villas)</option>
+                <option value="Insurance" ${this.selectedSegment === 'Insurance' ? 'selected' : ''}>🛡️ Insurance</option>
+                <option value="ETC Training" ${this.selectedSegment === 'ETC Training' ? 'selected' : ''}>🎓 ETC Training</option>
+              </select>
+            </div>
+
             <div style="display:flex; gap:8px; align-items:center;">
               <div style="flex:1;">
                 <input type="date" id="execFromDate" value="${this.fromDate}" style="width:100%; background:#0f172a; border:1px solid #334155; color:#f1f5f9; border-radius:6px; padding:6px 8px; font-size:12px;">
@@ -200,7 +247,7 @@ export class ExecutiveDashboardPage {
             </div>
           ` : `
             <!-- Top KPI Cards Grid -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
               <!-- Total Leads -->
               <div style="background:linear-gradient(135deg, #1e293b, #111827); border:1px solid #334155; border-radius:12px; padding:12px 14px;">
                 <div style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Total Leads</div>
@@ -230,25 +277,29 @@ export class ExecutiveDashboardPage {
               </div>
             </div>
 
-            <!-- In Progress / Lost / Collections Row -->
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:14px;">
-              <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:10px; text-align:center;">
-                <div style="font-size:10px; color:#fbbf24; font-weight:700; text-transform:uppercase;">In Progress</div>
-                <div style="font-size:16px; font-weight:800; color:#fef08a; margin-top:2px;">${this.fmtNum(inProg)}</div>
+            <!-- In Progress / Lost / Collections / Pending Row (Parity with Web) -->
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; margin-bottom:14px;">
+              <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:8px; text-align:center;">
+                <div style="font-size:9px; color:#fbbf24; font-weight:700; text-transform:uppercase;">In Progress</div>
+                <div style="font-size:15px; font-weight:800; color:#fef08a; margin-top:2px;">${this.fmtNum(inProg)}</div>
               </div>
-              <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:10px; text-align:center;">
-                <div style="font-size:10px; color:#f87171; font-weight:700; text-transform:uppercase;">Lost</div>
-                <div style="font-size:16px; font-weight:800; color:#fca5a5; margin-top:2px;">${this.fmtNum(lost)}</div>
+              <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:8px; text-align:center;">
+                <div style="font-size:9px; color:#f87171; font-weight:700; text-transform:uppercase;">Lost</div>
+                <div style="font-size:15px; font-weight:800; color:#fca5a5; margin-top:2px;">${this.fmtNum(lost)}</div>
               </div>
-              <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:10px; text-align:center;">
-                <div style="font-size:10px; color:#38bdf8; font-weight:700; text-transform:uppercase;">Collected</div>
-                <div style="font-size:14px; font-weight:800; color:#7dd3fc; margin-top:2px;">${this.fmtVal(this.summary.total_collected)}</div>
+              <div style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:8px; text-align:center;">
+                <div style="font-size:9px; color:#38bdf8; font-weight:700; text-transform:uppercase;">Collected</div>
+                <div style="font-size:13px; font-weight:800; color:#7dd3fc; margin-top:2px;">${this.fmtVal(collected)}</div>
+              </div>
+              <div style="background:#1e293b; border:1px solid #b91c1c; border-radius:10px; padding:8px; text-align:center;">
+                <div style="font-size:9px; color:#f87171; font-weight:700; text-transform:uppercase;">Pending ₹</div>
+                <div style="font-size:13px; font-weight:800; color:#fca5a5; margin-top:2px;">${this.fmtVal(pendingBal)}</div>
               </div>
             </div>
 
             <!-- Segment Navigation Tabs -->
             <div style="display:flex; background:#0f172a; border:1px solid #334155; border-radius:10px; padding:3px; margin-bottom:14px;">
-              <button class="nav-tab-btn ${this.activeTab === 'overview' ? 'active' : ''}" data-tab="overview" style="${this.getNavTabStyle(this.activeTab === 'overview')}">Overview & Stages</button>
+              <button class="nav-tab-btn ${this.activeTab === 'overview' ? 'active' : ''}" data-tab="overview" style="${this.getNavTabStyle(this.activeTab === 'overview')}">Overview &amp; Stages</button>
               <button class="nav-tab-btn ${this.activeTab === 'categories' ? 'active' : ''}" data-tab="categories" style="${this.getNavTabStyle(this.activeTab === 'categories')}">Verticals</button>
               <button class="nav-tab-btn ${this.activeTab === 'handlers' ? 'active' : ''}" data-tab="handlers" style="${this.getNavTabStyle(this.activeTab === 'handlers')}">Handlers</button>
             </div>
@@ -290,7 +341,7 @@ export class ExecutiveDashboardPage {
       <!-- Status Pipeline Breakdown -->
       <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:14px; margin-bottom:14px;">
         <div style="font-size:13px; font-weight:700; color:#ffffff; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
-          <i class="fas fa-filter" style="color:#38bdf8;"></i> Stage & Pipeline Breakdown
+          <i class="fas fa-filter" style="color:#38bdf8;"></i> Stage &amp; Pipeline Breakdown
         </div>
         ${this.byStatus.length === 0 ? `
           <div style="text-align:center; color:#64748b; padding:16px; font-size:12px;">No status data available</div>
@@ -313,10 +364,35 @@ export class ExecutiveDashboardPage {
         }).join('')}
       </div>
 
+      <!-- Lead Source Breakdown (Parity with Web staff_executive_dashboard.html) -->
+      ${this.bySource.length > 0 ? `
+        <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:14px; margin-bottom:14px;">
+          <div style="font-size:13px; font-weight:700; color:#ffffff; margin-bottom:12px; display:flex; align-items:center; gap:6px;">
+            <i class="fas fa-share-alt" style="color:#a855f7;"></i> Lead Source Breakdown
+          </div>
+          ${this.bySource.slice(0, 10).map(src => {
+            const count = src.count || src.total || 0;
+            const pct = total > 0 ? ((count / total) * 100).toFixed(1) : '0';
+            const name = (src.source || src.name || 'Other').toUpperCase();
+            return `
+              <div style="margin-bottom:8px;">
+                <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:3px;">
+                  <span style="font-weight:600; color:#cbd5e1;">${name}</span>
+                  <span style="font-weight:700; color:#94a3b8;">${this.fmtNum(count)} (${pct}%)</span>
+                </div>
+                <div style="background:#0f172a; border-radius:3px; height:5px; overflow:hidden;">
+                  <div style="width:${pct}%; background:#a855f7; height:100%; border-radius:3px;"></div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      ` : ''}
+
       <!-- Quick Shortcuts to Workflows -->
       <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:14px; margin-bottom:14px;">
         <div style="font-size:13px; font-weight:700; color:#ffffff; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
-          <i class="fas fa-bolt" style="color:#f59e0b;"></i> Workflows & Category Masters
+          <i class="fas fa-bolt" style="color:#f59e0b;"></i> Workflows &amp; Category Masters
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
           <button class="workflow-nav-card" data-route="staff-bank-wise-leads" style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px; text-align:left; color:#f1f5f9; cursor:pointer;">
@@ -329,11 +405,11 @@ export class ExecutiveDashboardPage {
           </button>
           <button class="workflow-nav-card" data-route="category-leads-master" data-tab="ev-b2b" style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px; text-align:left; color:#f1f5f9; cursor:pointer;">
             <div style="font-size:11px; font-weight:700; color:#3b82f6;"><i class="fas fa-truck"></i> EV B2B Leads</div>
-            <div style="font-size:10px; color:#64748b; margin-top:2px;">Franchise & Dealerships</div>
+            <div style="font-size:10px; color:#64748b; margin-top:2px;">Franchise &amp; Dealerships</div>
           </button>
           <button class="workflow-nav-card" data-route="category-leads-master" data-tab="real-dreams" style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:10px; text-align:left; color:#f1f5f9; cursor:pointer;">
             <div style="font-size:11px; font-weight:700; color:#ef4444;"><i class="fas fa-home"></i> Real Dreams</div>
-            <div style="font-size:10px; color:#64748b; margin-top:2px;">Plots & Real Estate</div>
+            <div style="font-size:10px; color:#64748b; margin-top:2px;">Plots &amp; Real Estate</div>
           </button>
         </div>
       </div>
@@ -348,35 +424,25 @@ export class ExecutiveDashboardPage {
             No category distribution found for this period.
           </div>
         ` : this.byCategory.map(cat => {
-          const name = cat.category || cat.name || 'Unassigned';
-          const count = cat.count || cat.total || 0;
+          const name = cat.category || cat.name || 'General';
+          const cnt = cat.count || cat.total || 0;
           const won = cat.won || 0;
           const val = cat.deal_value || cat.won_deal_value || 0;
-          const pct = total > 0 ? ((count / total) * 100).toFixed(1) : '0';
-          const tabKey = name.toLowerCase().replace(/\s+/g, '-');
+          const pct = total > 0 ? ((cnt / total) * 100).toFixed(1) : '0';
 
           return `
-            <div class="cat-card" data-cat="${tabKey}" style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:14px; cursor:pointer; transition:transform 0.15s ease;">
+            <div class="cat-card" data-cat="${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}" style="background:#1e293b; border:1px solid #334155; border-radius:10px; padding:12px 14px; cursor:pointer;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <div style="font-weight:700; font-size:14px; color:#ffffff; display:flex; align-items:center; gap:8px;">
-                  <span style="width:8px; height:8px; border-radius:50%; background:#38bdf8;"></span>
-                  ${name}
-                </div>
-                <span style="font-size:11px; color:#38bdf8; font-weight:600; display:flex; align-items:center; gap:4px;">
-                  View Master <i class="fas fa-chevron-right" style="font-size:9px;"></i>
-                </span>
+                <div style="font-size:13px; font-weight:700; color:#ffffff;">${name}</div>
+                <div style="font-size:11px; font-weight:600; color:#38bdf8;">${this.fmtNum(cnt)} leads (${pct}%)</div>
               </div>
 
-              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; background:#0f172a; border-radius:8px; padding:8px 10px; margin-bottom:8px;">
-                <div>
-                  <div style="font-size:9px; color:#64748b; text-transform:uppercase;">Leads</div>
-                  <div style="font-size:14px; font-weight:700; color:#f1f5f9;">${this.fmtNum(count)}</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                <div style="background:#0f172a; border-radius:6px; padding:6px 10px;">
+                  <div style="font-size:9px; color:#64748b; text-transform:uppercase;">Won Deals</div>
+                  <div style="font-size:13px; font-weight:700; color:#34d399;">${this.fmtNum(won)}</div>
                 </div>
-                <div>
-                  <div style="font-size:9px; color:#64748b; text-transform:uppercase;">Won</div>
-                  <div style="font-size:14px; font-weight:700; color:#34d399;">${this.fmtNum(won)}</div>
-                </div>
-                <div>
+                <div style="background:#0f172a; border-radius:6px; padding:6px 10px;">
                   <div style="font-size:9px; color:#64748b; text-transform:uppercase;">Deal Value</div>
                   <div style="font-size:13px; font-weight:700; color:#818cf8;">${this.fmtVal(val)}</div>
                 </div>
@@ -393,18 +459,31 @@ export class ExecutiveDashboardPage {
   }
 
   private renderHandlersTab(): string {
+    const q = (this.handlerSearch || '').toLowerCase().trim();
+    const filteredHandlers = this.handlers.filter(h => {
+      if (!q) return true;
+      const n = (h.name || '').toLowerCase();
+      const c = (h.emp_code || '').toLowerCase();
+      return n.includes(q) || c.includes(q);
+    });
+
     return `
       <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:14px;">
-        <div style="font-size:13px; font-weight:700; color:#ffffff; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-          <span><i class="fas fa-trophy" style="color:#fbbf24;"></i> Handler Performance</span>
-          <span style="font-size:11px; color:#94a3b8; font-weight:400;">${this.handlers.length} Handlers</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span style="font-size:13px; font-weight:700; color:#ffffff;"><i class="fas fa-trophy" style="color:#fbbf24;"></i> Handler Performance</span>
+          <span style="font-size:11px; color:#94a3b8; font-weight:400;">${filteredHandlers.length} Handlers</span>
         </div>
 
-        ${this.handlers.length === 0 ? `
-          <div style="text-align:center; color:#64748b; padding:24px; font-size:12px;">No handler analytics for selected range</div>
+        <!-- Handler Search Input -->
+        <div style="margin-bottom:12px;">
+          <input type="text" id="execHandlerSearchInput" placeholder="Search handler name or code..." value="${this.handlerSearch}" style="width:100%; background:#0f172a; border:1px solid #334155; color:#f1f5f9; border-radius:6px; padding:7px 10px; font-size:12px; outline:none;">
+        </div>
+
+        ${filteredHandlers.length === 0 ? `
+          <div style="text-align:center; color:#64748b; padding:24px; font-size:12px;">No handler analytics matching filter</div>
         ` : `
           <div style="display:flex; flex-direction:column; gap:8px;">
-            ${this.handlers.slice(0, 30).map((h, i) => {
+            ${filteredHandlers.slice(0, 50).map((h, i) => {
               const name = h.name || 'Staff Member';
               const code = h.emp_code ? `(${h.emp_code})` : '';
               const tot = h.total || 0;
@@ -445,6 +524,15 @@ export class ExecutiveDashboardPage {
       });
     });
 
+    // Segment dropdown
+    const catEl = document.getElementById('execCategoryFilter') as HTMLSelectElement;
+    if (catEl) {
+      catEl.addEventListener('change', () => {
+        this.selectedSegment = catEl.value;
+        this.loadData();
+      });
+    }
+
     // Custom date apply
     document.getElementById('execApplyDateBtn')?.addEventListener('click', () => {
       const fromEl = document.getElementById('execFromDate') as HTMLInputElement;
@@ -454,10 +542,36 @@ export class ExecutiveDashboardPage {
       this.loadData();
     });
 
+    // Reset button
+    document.getElementById('execResetBtn')?.addEventListener('click', () => {
+      this.fromDate = '';
+      this.toDate = '';
+      this.selectedSegment = '';
+      this.activePreset = 'overall';
+      this.loadData();
+    });
+
     // Refresh button
     document.getElementById('execRefreshBtn')?.addEventListener('click', () => {
       this.loadData();
     });
+
+    // Handler search input
+    const hSearchEl = document.getElementById('execHandlerSearchInput') as HTMLInputElement;
+    if (hSearchEl) {
+      hSearchEl.addEventListener('input', () => {
+        this.handlerSearch = hSearchEl.value;
+        const pane = this.container.querySelector('.executive-dashboard-container');
+        if (pane && this.activeTab === 'handlers') {
+          this.render();
+          const newSearch = document.getElementById('execHandlerSearchInput') as HTMLInputElement;
+          if (newSearch) {
+            newSearch.focus();
+            newSearch.selectionStart = newSearch.selectionEnd = newSearch.value.length;
+          }
+        }
+      });
+    }
 
     // Nav tabs
     this.container.querySelectorAll('.nav-tab-btn').forEach(btn => {

@@ -292,12 +292,13 @@
         <button class="wa-tab-btn" id="btn-tab-team" onclick="switchCenterTab('team')"><i class="fas fa-users"></i> 2. Team Messages</button>
         <button class="wa-tab-btn" id="btn-tab-company" onclick="switchCenterTab('company')"><i class="fas fa-envelope-open-text"></i> 3. New Messages <span class="badge-num" id="tb-company-num" style="display:none;background:#ef4444">0</span></button>
         <button class="wa-tab-btn" id="btn-tab-all" onclick="switchCenterTab('all')" style="display:none"><i class="fas fa-globe"></i> 4. All Messages</button>
-        <button class="wa-tab-btn" id="btn-tab-broadcasts" onclick="switchCenterTab('broadcasts')"><i class="fas fa-bullhorn"></i> 5. Broadcasts &amp; Dispatches</button>
-        <button class="wa-tab-btn admin-only-tab" id="btn-tab-inbox" onclick="switchCenterTab('inbox')"><i class="fas fa-robot"></i> 6. WhatsApp API Bot <span class="badge-num" id="tb-inbox-num">0</span></button>
-        <button class="wa-tab-btn admin-only-tab" id="btn-tab-templates" onclick="switchCenterTab('templates')"><i class="fas fa-file-alt"></i> 7. Templates</button>
-        <button class="wa-tab-btn admin-only-tab" id="btn-tab-automations" onclick="switchCenterTab('automations')"><i class="fas fa-cogs"></i> 8. Automations</button>
-        <button class="wa-tab-btn admin-only-tab" id="btn-tab-audit" onclick="switchCenterTab('audit')"><i class="fas fa-shield-alt"></i> 9. Audit Log</button>
-        <a href="/staff/whatsapp-config#tab-credentials" class="wa-tab-btn admin-only-tab" style="text-decoration:none;color:#475569"><i class="fas fa-key"></i> 10. API Config &amp; PIN</a>
+        <button class="wa-tab-btn" id="btn-tab-groups" onclick="switchCenterTab('groups')"><i class="fas fa-users-rectangle"></i> Groups</button>
+        <button class="wa-tab-btn" id="btn-tab-broadcasts" onclick="switchCenterTab('broadcasts')"><i class="fas fa-bullhorn"></i> Broadcasts &amp; Dispatches</button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-inbox" onclick="switchCenterTab('inbox')"><i class="fas fa-robot"></i> WhatsApp API Bot <span class="badge-num" id="tb-inbox-num">0</span></button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-templates" onclick="switchCenterTab('templates')"><i class="fas fa-file-alt"></i> Templates</button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-automations" onclick="switchCenterTab('automations')"><i class="fas fa-cogs"></i> Automations</button>
+        <button class="wa-tab-btn admin-only-tab" id="btn-tab-audit" onclick="switchCenterTab('audit')"><i class="fas fa-shield-alt"></i> Audit Log</button>
+        <a href="/staff/whatsapp-config#tab-credentials" class="wa-tab-btn admin-only-tab" style="text-decoration:none;color:#475569"><i class="fas fa-key"></i> API Config &amp; PIN</a>
       </div>
 
       <!-- ═══ TAB 1: CRM INBOX ═════════════════════════════════════════════════ -->
@@ -1166,6 +1167,12 @@ function switchCenterTab(tabName) {
     document.getElementById('pane-messenger')?.classList.add('active');
     activeScope = 'all';
     loadMessengerHub();
+  } else if (tabName === 'groups') {
+    if (compFilterBar) compFilterBar.style.display = 'none';
+    if (bcFilterBar) bcFilterBar.style.display = 'none';
+    document.getElementById('pane-messenger')?.classList.add('active');
+    activeScope = 'groups';
+    loadMessengerHub();
   } else if (tabName === 'broadcasts') {
     if (compFilterBar) compFilterBar.style.display = 'none';
     if (bcFilterBar) bcFilterBar.style.display = 'flex';
@@ -1797,6 +1804,8 @@ function renderConversationsList(convs) {
       emptyMsg = 'No broadcast dispatches found for this filter.';
     } else if (activeScope === 'all') {
       emptyMsg = 'No organization conversations found.';
+    } else if (activeScope === 'groups') {
+      emptyMsg = 'No participating WhatsApp groups found.';
     }
     document.getElementById('convList').innerHTML = `<div style="padding:30px 20px;text-align:center;color:#9ca3af"><i class="fas fa-inbox fa-2x" style="margin-bottom:8px;opacity:.5"></i><br>${emptyMsg}</div>`;
     return;
@@ -1928,7 +1937,7 @@ function onMsgSearchInput(val) {
 
 function onGlobalSearchInput(val) {
   const s = (val || '').trim();
-  if (['messenger', 'team', 'company', 'all', 'broadcasts'].includes(activeCenterTab)) {
+  if (['messenger', 'team', 'company', 'all', 'broadcasts', 'groups'].includes(activeCenterTab)) {
     const msgInput = document.getElementById('msgSearchInput');
     if (msgInput) msgInput.value = s;
     onMsgSearchInput(s);
@@ -3699,7 +3708,7 @@ async function refreshWhatsAppCenter(btn) {
       loadMessengerHub()
     ];
     if (typeof loadInbox === 'function') tasks.push(loadInbox(1));
-    if (activeCenterTab === 'messenger' && activeChatPhone) {
+    if (['messenger', 'team', 'company', 'all', 'broadcasts', 'groups'].includes(activeCenterTab) && activeChatPhone) {
       tasks.push(loadChatHistory(activeChatPhone, activeChatType));
     }
     await Promise.allSettled(tasks);
@@ -3976,7 +3985,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Background 5-second polling for real-time refresh
   pollTimer = setInterval(() => {
     if (activeCenterTab === 'inbox') loadInbox(1);
-    else if (activeCenterTab === 'messenger' && activeChatPhone) loadChatHistory(activeChatPhone, activeChatType);
+    else if (['messenger', 'team', 'company', 'all', 'broadcasts', 'groups'].includes(activeCenterTab) && activeChatPhone) loadChatHistory(activeChatPhone, activeChatType);
     checkGatewayConnectionStatus();
   }, 5000);
 });

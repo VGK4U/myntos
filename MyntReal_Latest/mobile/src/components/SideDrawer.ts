@@ -53,6 +53,10 @@ const ROUTE_PATH_MAP: Record<string, string> = {
   '/staff/lead-sources': 'staff-lead-sources',
   '/staff/bank-wise-leads': 'staff-bank-wise-leads',
   '/staff/crm/bank-wise-leads': 'staff-bank-wise-leads',
+  '/staff/field-sales': 'staff-bank-wise-leads',
+  '/field-sales': 'staff-bank-wise-leads',
+  'field-sales': 'staff-bank-wise-leads',
+  'bank-wise-leads': 'staff-bank-wise-leads',
   '/staff/solar-leads': 'category-leads-master',
   '/staff/real-dreams-leads': 'category-leads-master',
   '/staff/insurance-leads': 'category-leads-master',
@@ -702,6 +706,11 @@ export class SideDrawer {
       'MNR_BANK_WISE_LEADS': 2,
       'BANK_WISE_LEADS': 2,
       'staff_bank_wise_leads': 2,
+      'staff-bank-wise-leads': 2,
+      'FIELD_SALES': 2,
+      'MNR_FIELD_SALES': 2,
+      'staff_field_sales': 2,
+      'field-sales': 2,
 
       'CATEGORY_LEADS_MASTER': 3,
       'MNR_LEADS_MASTER': 3,
@@ -834,8 +843,9 @@ export class SideDrawer {
 
       if (codeUpper.includes('AUTO_DIALER') || routeLower.includes('auto-dialer') || routeLower === '/staff/dialer' || codeUpper === 'STAFF_AUTO_DIALER' || codeUpper === 'AUTO_DIALER' || codeUpper === 'STAFF_DIALER' || codeUpper === 'DIALER') {
         label = 'Auto Dialer';
-      } else if (codeUpper.includes('BANK_WISE_LEADS') || routeLower.includes('bank-wise-leads')) {
+      } else if (codeUpper.includes('BANK_WISE_LEADS') || routeLower.includes('bank-wise-leads') || routeLower.includes('field-sales') || codeUpper.includes('FIELD_SALES')) {
         label = 'Field Sales';
+        route = 'staff-bank-wise-leads';
       } else if (codeUpper.includes('REAL_DREAMS') || routeLower.includes('real-dreams-leads')) {
         label = 'Real Dreams Leads';
       } else if (codeUpper.includes('ETC_LEADS') || routeLower.includes('etc-leads')) {
@@ -1023,6 +1033,44 @@ export class SideDrawer {
           label: `<i class="fas fa-book-open" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>Digital Catalog`,
           route: "digital-catalog"
         });
+      }
+    }
+
+    // Ensure Field Sales is guaranteed in WORKFLOWS section directly under Executive Dashboard
+    let workflowsSec = sectionMap.get('WORKFLOWS');
+    if (!workflowsSec) {
+      workflowsSec = {
+        section_code: 'WORKFLOWS',
+        section_label: 'WORK FLOWS',
+        order: 10,
+        items: []
+      };
+      sectionMap.set('WORKFLOWS', workflowsSec);
+      sectionOrderList.push('WORKFLOWS');
+    }
+
+    if (workflowsSec) {
+      workflowsSec.items = workflowsSec.items || [];
+      const hasFieldSales = workflowsSec.items.some(i => 
+        i.route === 'staff-bank-wise-leads' || 
+        (i.menu_code && (
+          i.menu_code.toUpperCase().includes('BANK_WISE_LEADS') || 
+          i.menu_code.toUpperCase().includes('FIELD_SALES')
+        ))
+      );
+      if (!hasFieldSales) {
+        workflowsSec.items.push({
+          menu_code: "MNR_BANK_WISE_LEADS",
+          label: `<i class="fas fa-users-gear" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Field Sales`,
+          route: "staff-bank-wise-leads"
+        });
+      } else {
+        // Enforce proper label and icon for Field Sales
+        for (const item of workflowsSec.items) {
+          if (item.route === 'staff-bank-wise-leads' || (item.menu_code && (item.menu_code.toUpperCase().includes('BANK_WISE_LEADS') || item.menu_code.toUpperCase().includes('FIELD_SALES')))) {
+            item.label = `<i class="fas fa-users-gear" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Field Sales`;
+          }
+        }
       }
     }
 

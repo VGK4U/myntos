@@ -46,6 +46,8 @@ export type PageRoute =
   | 'staff-whatsapp'
   | 'staff-whatsapp-inbox'
   | 'staff-bank-wise-leads'
+  | 'field-sales'
+  | 'staff-field-sales'
   | 'executive-dashboard'
   | 'category-leads-master'
   // Day Planner Section
@@ -274,6 +276,8 @@ class RouterService {
     'staff-whatsapp': { id: 'staff-whatsapp', title: 'WhatsApp Inbox', icon: 'message-circle', showInTabs: false, portal: 'staff' },
     'staff-whatsapp-inbox': { id: 'staff-whatsapp-inbox', title: 'WhatsApp Inbox', icon: 'message-circle', showInTabs: false, portal: 'staff' },
     'staff-bank-wise-leads': { id: 'staff-bank-wise-leads', title: 'Field Sales', icon: 'users', showInTabs: false, portal: 'staff' },
+    'field-sales': { id: 'field-sales', title: 'Field Sales', icon: 'users', showInTabs: false, portal: 'staff' },
+    'staff-field-sales': { id: 'staff-field-sales', title: 'Field Sales', icon: 'users', showInTabs: false, portal: 'staff' },
     'executive-dashboard': { id: 'executive-dashboard', title: 'Executive Dashboard', icon: 'pie-chart', showInTabs: false, portal: 'staff' },
     'category-leads-master': { id: 'category-leads-master', title: 'Category Lead Master', icon: 'grid', showInTabs: false, portal: 'staff' },
     'staff-call-tracking': { id: 'staff-call-tracking', title: 'Call Tracking', icon: 'call', showInTabs: false, portal: 'staff' },

@@ -318,6 +318,26 @@ class TestWhatsAppCanonicalLifecycle(unittest.TestCase):
         self.db.refresh(log_entry)
         self.assertEqual(log_entry.current_status, "delivered")
 
+    # 9. Test Conversations Hub 'groups' scope
+    def test_09_conversations_hub_groups_scope(self):
+        from app.models.staff import StaffEmployee
+        from app.api.v1.endpoints.whatsapp import get_whatsapp_conversations_hub
+
+        staff = self.db.query(StaffEmployee).first()
+        if not staff:
+            self.skipTest("No staff available in dev database")
+
+        res = get_whatsapp_conversations_hub(scope="groups", db=self.db, current_user=staff)
+        self.assertTrue(res.get("success"))
+        self.assertIn("conversations", res)
+        self.assertIsInstance(res["conversations"], list)
+        self.assertGreater(len(res["conversations"]), 0)
+        for c in res["conversations"]:
+            self.assertEqual(c.get("recipient_type"), "group")
+            self.assertEqual(c.get("contact_type"), "GROUP")
+            self.assertIsNotNone(c.get("name"))
+            self.assertIsNotNone(c.get("phone"))
+
 
 if __name__ == "__main__":
     unittest.main()
