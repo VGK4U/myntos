@@ -1,5 +1,25 @@
 [
   {
+    "id": "log_af6b736d",
+    "job_id": "wa_daily_morning_wish",
+    "job_name": "WhatsApp 8 AM Morning Wish Dispatch",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Sep 2026, 10:02:33 AM IST",
+    "iso_timestamp": "2026-09-21T10:02:33.336445",
+    "target_summary": "Configured Targets",
+    "targets": [],
+    "sent_count": 2831,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "total_eligible": 3529,
+      "sent_count": 2831,
+      "skipped_count": 698
+    }
+  },
+  {
     "id": "log_19678175",
     "job_id": "missed_call_ack",
     "job_name": "Instant Missed Call Auto-ACK",
@@ -16227,48 +16247,6 @@
           }
         ],
         "message_id": "3EB0102BBA278AEEB69D50"
-      }
-    }
-  },
-  {
-    "id": "log_24b60b50",
-    "job_id": "wa_bihourly_sales_perf_report",
-    "job_name": "Sales Team 2-Hour Report & Leaderboard",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "31 Aug 2026, 09:30:04 AM IST",
-    "iso_timestamp": "2026-08-31T09:30:04.393861",
-    "target_summary": "Mynt Sales New",
-    "targets": [
-      {
-        "id": "t1",
-        "type": "group",
-        "name": "Mynt Sales New",
-        "identifier": "120363410784518818@g.us"
-      }
-    ],
-    "sent_count": 1,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "success": true,
-      "data": {
-        "success": true,
-        "sent_count": 1,
-        "failed_count": 0,
-        "results": [
-          {
-            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
-            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
-            "target_type": "group",
-            "resolved_jid": "120363410784518818@g.us",
-            "message_id": "3EB0968D443579950DF79B",
-            "success": true,
-            "fallback_used": false
-          }
-        ],
-        "message_id": "3EB0968D443579950DF79B"
       }
     }
   }
