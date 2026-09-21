@@ -2,6 +2,7 @@ import { routerService, PageRoute } from '../services/router.service';
 import { portalService } from '../services/portal.service';
 import { authService } from '../services/auth.service';
 import { apiService } from '../services/api.service';
+import { MENU_MASTER as CANONICAL_MENU_MASTER, SidebarSection, SidebarSubSection, SidebarItem } from '../constants/menu-master';
 
 const ROUTE_PATH_MAP: Record<string, string> = {
   '/staff/dashboard': 'dashboard',
@@ -68,9 +69,23 @@ const ROUTE_PATH_MAP: Record<string, string> = {
   '/rvz/real-dreams-properties': 'real-dreams-marketplace',
   '/rvz/real-dreams-dashboard': 'real-dreams-marketplace',
   '/staff/mnr/real-dreams/marketplace': 'real-dreams-marketplace',
+  '/staff/mnr/real-dreams': 'real-dreams-marketplace',
+  '/staff/mnr/real-dreams/partners': 'real-dreams-marketplace',
+  '/staff/mnr/real-dreams/properties': 'real-dreams-marketplace',
+  '/staff/mnr/real-dreams-dashboard': 'real-dreams-marketplace',
   '/real-dreams/marketplace': 'real-dreams-marketplace',
   '/real-dreams/compare': 'real-dreams-marketplace',
   '/real-dreams/property': 'real-dreams-marketplace',
+  '/staff/zynova/direct': 'vgk-direct-summary',
+  '/staff/zynova/matching': 'vgk-matching-summary',
+  '/staff/zynova/guru': 'vgk-guru-summary',
+  '/staff/zynova/ved': 'vgk-ved-summary',
+  '/staff/zynova/wallet': 'vgk-points-balance',
+  '/staff/zynova/withdrawals': 'vgk-points-balance',
+  '/staff/zynova/points': 'vgk-points-balance',
+  '/staff/kra-status': 'kras',
+  '/staff/timesheet': 'timesheet',
+  '/staff/progress': 'progress',
 
   // VGK Member module routes
   '/vgk/birthdays': 'vgk-birthdays',
@@ -192,6 +207,17 @@ const ROUTE_PATH_MAP: Record<string, string> = {
   '/staff/service-center-revenue': 'staff-service-revenue',
 };
 
+const TAB_MAP: Record<string, string> = {
+  '/staff/solar-leads': 'solar',
+  '/staff/ev-b2b-leads': 'ev-b2b',
+  '/staff/ev-b2c-leads': 'ev-b2c',
+  '/staff/ev-spares-leads': 'ev-spares',
+  '/staff/real-dreams-leads': 'real-dreams',
+  '/staff/insurance-leads': 'insurance',
+  '/staff/etc-leads': 'etc',
+  '/staff/mnr-leads': 'mnr',
+};
+
 interface MenuItem {
   menu_code: string;
   label: string;
@@ -235,189 +261,6 @@ const VGK_TOP_MENU_ITEMS: MenuItem[] = [
   { menu_code: "VGK_VENDORS", label: `<i class="fas fa-store" style="margin-right: 8px; width: 18px; text-align: center;"></i> Vendor Shops`, route: "vgk-member-hub", tab: "vendors" },
   { menu_code: "VGK_MEDIA", label: `<i class="fas fa-photo-video" style="margin-right: 8px; width: 18px; text-align: center;"></i> Media Hub`, route: "vgk-member-hub", tab: "media" },
   { menu_code: "VGK_ORDERS", label: `<i class="fas fa-box" style="margin-right: 8px; width: 18px; text-align: center;"></i> Orders`, route: "vgk-member-hub", tab: "orders" }
-];
-
-const MENU_MASTER: MenuSection[] = [
-  {
-    section_code: "ATTENDANCE",
-    section_label: "ATTENDANCE",
-    order: 1,
-    items: [
-      { menu_code: "IN_OUT_TIME", label: "In/Out Time", route: "attendance" },
-      { menu_code: "MY_LEAVES", label: "My Leaves", route: "leaves" },
-      { menu_code: "LEAVE_APPROVALS", label: "Leave Approvals", route: "staff-leave-approvals" },
-      { menu_code: "IN_OUT_RECORDS_ADMIN", label: "In/Out Records - Admin", route: "team-attendance" },
-      { menu_code: "ATTENDANCE_RECORDS", label: "Attendance Records", route: "staff-attendance-sheet" },
-      { menu_code: "ATTENDANCE_DASHBOARD", label: "Attendance Dashboard", route: "staff-attendance-reports" },
-      { menu_code: "EXCEPTION_APPROVALS", label: "Exception Approvals", route: "staff-attendance-exceptions" },
-      { menu_code: "ATTENDANCE_COMPUTATION", label: "Attendance Computation", route: "staff-attendance-computation" }
-    ]
-  },
-  {
-    section_code: "TASK_MANAGEMENT",
-    section_label: "TASK MANAGEMENT",
-    order: 3,
-    items: [
-      { menu_code: "ASSIGNED_BY_ME", label: "Assigned By Me", route: "tasks-assigned" },
-      { menu_code: "ASSIGNED_TO_ME", label: "Assigned To Me", route: "tasks-received" },
-      { menu_code: "TEAM_ACTIVITIES", label: "Team Activities", route: "staff-team-activities" },
-      { menu_code: "TASK_TRACKER", label: "Task Dashboard", route: "staff-task-tracker" },
-      { menu_code: "TASK_REVIEWS", label: "Task Reviews", route: "staff-task-reviews" }
-    ]
-  },
-  {
-    section_code: "KRA_MANAGEMENT",
-    section_label: "KRA MANAGEMENT",
-    order: 4,
-    items: [
-      { menu_code: "MY_KRAS", label: "My KRAs", route: "kras" },
-      { menu_code: "KRA_TEMPLATES", label: "KRA Templates", route: "staff-kra-templates" },
-      { menu_code: "KRA_TRACKING_SHEET", label: "KRA Tracking Sheet", route: "staff-kra-tracking" },
-      { menu_code: "KRA_REVIEW", label: "KRA Review", route: "staff-kra-review" }
-    ]
-  },
-  {
-    section_code: "TIMESHEET",
-    section_label: "TIMESHEET",
-    order: 5,
-    items: [
-      { menu_code: "MY_TIMESHEET", label: "My Timesheet", route: "timesheet" },
-      { menu_code: "TIMESHEET_APPROVAL", label: "Timesheet Approval", route: "staff-timesheet-approval" }
-    ]
-  },
-  {
-    section_code: "JOURNEY_TRACKING",
-    section_label: "JOURNEY TRACKING",
-    order: 6,
-    items: [
-      { menu_code: "MY_JOURNEYS", label: "My Journeys", route: "journeys" },
-      { menu_code: "TEAM_JOURNEYS", label: "Team Journeys", route: "team-journeys" },
-      { menu_code: "ALL_JOURNEYS", label: "All Journeys", route: "staff-all-journeys" },
-      { menu_code: "VGK4U_JOURNEYS", label: "VGK4U Journeys", route: "staff-vgk4u-journeys" }
-    ]
-  },
-  {
-    section_code: "REIMBURSEMENT",
-    section_label: "REIMBURSEMENT",
-    order: 7,
-    items: [
-      { menu_code: "MY_REIMBURSEMENT_CLAIMS", label: "My Reimbursement Claims", route: "reimbursements" },
-      { menu_code: "REIMBURSEMENT_APPROVALS", label: "Reimbursement Approvals", route: "staff-reimbursement-approvals" }
-    ]
-  },
-  {
-    section_code: "ACCOUNTS_EARNINGS",
-    section_label: "FINANCE & EARNINGS",
-    order: 8,
-    items: [
-      { menu_code: "MY_EARNINGS", label: "My Earnings", route: "staff-my-incentives" },
-      { menu_code: "PAYROLL_PROFILE", label: "Payroll Profile", route: "staff-payroll-profile" },
-      { menu_code: "SALARY_SLIPS", label: "Salary Slips", route: "staff-salary-slips" }
-    ]
-  },
-  {
-    section_code: "CRM_MODULE",
-    section_label: "CRM & LEADS",
-    order: 4,
-    items: [
-      { menu_code: "MY_CRM_DASHBOARD", label: "CRM Dashboard", route: "staff-crm" },
-      { menu_code: "MY_LEADS", label: "My Leads", route: "staff-my-leads" },
-      { menu_code: "DIGITAL_CATALOG", label: "Digital Catalog", route: "digital-catalog" },
-      { menu_code: "AUTO_DIALER", label: "Auto Dialer", route: "auto-dialer" },
-      { menu_code: "SOFTPHONE", label: "Calling & Softphone", route: "softphone" },
-      { menu_code: "BANK_WISE_LEADS", label: "Field staff leads", route: "staff-bank-wise-leads" },
-      { menu_code: "TEAM_LEADS", label: "Team Leads", route: "staff-team-leads" },
-      { menu_code: "LEADS_MASTER", label: "Staff Leads", route: "staff-leads" },
-      { menu_code: "VGK_TEAM_MEMBERS", label: "VGK Channel Partners", route: "staff-vgk-members" }
-    ]
-  },
-  {
-    section_code: "WORKFLOWS",
-    section_label: "WORK FLOWS",
-    order: 10,
-    items: [
-      { menu_code: "EXECUTIVE_DASHBOARD", label: "Executive Dashboard", route: "executive-dashboard" },
-      { menu_code: "MNR_BANK_WISE_LEADS", label: "Field Sales", route: "staff-bank-wise-leads" },
-      { menu_code: "CATEGORY_LEADS_MASTER", label: "Category Leads Master", route: "category-leads-master" },
-      { menu_code: "SOLAR_LEADS", label: "Solar Leads", route: "category-leads-master", tab: "solar" },
-      { menu_code: "EV_B2B_LEADS", label: "EV B2B Leads", route: "category-leads-master", tab: "ev-b2b" },
-      { menu_code: "EV_B2C_LEADS", label: "EV B2C Leads", route: "category-leads-master", tab: "ev-b2c" },
-      { menu_code: "EV_SPARES_LEADS", label: "EV Spares Leads", route: "category-leads-master", tab: "ev-spares" },
-      { menu_code: "ZYN_REAL_ESTATE", label: "Real Dreams Leads", route: "category-leads-master", tab: "real-dreams" },
-      { menu_code: "ZYN_INSURANCE", label: "Insurance Leads", route: "category-leads-master", tab: "insurance" },
-      { menu_code: "ETC_LEADS", label: "ETC Leads", route: "category-leads-master", tab: "etc" },
-      { menu_code: "MNR_LEADS", label: "MNR Leads", route: "category-leads-master", tab: "mnr" }
-    ]
-  },
-  {
-    section_code: "OPERATIONS",
-    section_label: "OPERATIONS",
-    order: 11,
-    items: [
-      { menu_code: "CALL_TRACKING", label: "Call Tracking", route: "staff-call-tracking" },
-      { menu_code: "VENDORS", label: "Vendors", route: "staff-vendors" },
-      { menu_code: "ZYN", label: "Zynova Real Estate", route: "zynova-real-estate" },
-      { menu_code: "ZYNOVA", label: "VGK4U", route: "staff-zynova" },
-      { menu_code: "ZYN_INSURANCE", label: "Zynova Insurance", route: "zynova-insurance" }
-    ]
-  },
-  {
-    section_code: "VGK4U",
-    section_label: "VGK4U",
-    order: 16,
-    subSections: [
-      {
-        sub_section_code: "real-dreams",
-        sub_section_label: "VGK4U Property",
-        items: [
-          { menu_code: "REAL_DREAMS_MARKETPLACE", label: `<i class="fas fa-building" style="margin-right: 8px; width: 18px; text-align: center; color: #2563eb;"></i>Property Marketplace`, route: "real-dreams-marketplace" },
-          { menu_code: "VGK4U_REAL_ESTATE", label: `<i class="fas fa-home" style="margin-right: 8px; width: 18px; text-align: center; color: #2563eb;"></i>VGK Real Dreams (ZR)`, route: "staff-vgk4u-real-estate" },
-          { menu_code: "VGK4U_INSURANCE", label: `<i class="fas fa-shield-alt" style="margin-right: 8px; width: 18px; text-align: center; color: #059669;"></i>VGK Care (ZC)`, route: "staff-vgk4u-insurance" }
-        ]
-      },
-      {
-        sub_section_code: "zy-member-earnings",
-        sub_section_label: "VGK4U Earnings",
-        items: [
-          { menu_code: "INCENTIVES_VGK4U", label: `<i class="fas fa-users" style="margin-right: 8px; width: 18px; text-align: center; color: #7c3aed;"></i>All VGK4U Members`, route: "staff-incentives-vgk4u" },
-          { menu_code: "INCENTIVES_POINTS", label: `<i class="fas fa-coins" style="margin-right: 8px; width: 18px; text-align: center; color: #f59e0b;"></i>MNR Points`, route: "staff-incentives-points" },
-          { menu_code: "INCENTIVES_APPROVALS", label: `<i class="fas fa-clipboard-check" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>Incentive Approvals`, route: "staff-incentives-approvals" }
-        ]
-      }
-    ]
-  },
-  {
-    section_code: "VGK_TEAM",
-    section_label: "VGK TEAM",
-    order: 21,
-    subSections: [
-      {
-        sub_section_code: "vgk_team_management",
-        sub_section_label: "VGK Team Management",
-        items: [
-          { menu_code: "VGK_TEAM_MEMBERS", label: `<i class="fas fa-users" style="margin-right: 8px; width: 18px; text-align: center; color: #7c3aed;"></i>VGK Channel Partners`, route: "staff-vgk-members" },
-          { menu_code: "VGK_INCOME", label: `<i class="fas fa-hand-holding-usd" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>VGK Income Management`, route: "staff-vgk-income" },
-          { menu_code: "VGK_COUPONS", label: `<i class="fas fa-ticket-alt" style="margin-right: 8px; width: 18px; text-align: center; color: #6366f1;"></i>VGK PIN Activation`, route: "staff-vgk-coupons" },
-          { menu_code: "VGK_PROMO_CODES", label: `<i class="fas fa-tags" style="margin-right: 8px; width: 18px; text-align: center; color: #ec4899;"></i>VGK Promo Codes`, route: "staff-vgk-promo-codes" }
-        ]
-      },
-      {
-        sub_section_code: "vgk_bonanza",
-        sub_section_label: "VGK Bonanza",
-        items: [
-          { menu_code: "VGK_BONANZA_MGMT", label: `<i class="fas fa-trophy" style="margin-right: 8px; width: 18px; text-align: center; color: #f59e0b;"></i>Bonanza Management`, route: "vgk-bonanza-rewards" }
-        ]
-      }
-    ]
-  },
-  {
-    section_code: "VENDOR_MANAGEMENT",
-    section_label: "VENDOR MANAGEMENT",
-    order: 22,
-    items: [
-      { menu_code: "VM_VENDORS", label: `<i class="fas fa-store" style="margin-right: 8px; width: 18px; text-align: center; color: #0284c7;"></i>Vendor Master`, route: "staff-vgk-vendors" }
-    ]
-  }
 ];
 
 const VGK_MENU_MASTER: MenuSection[] = [
@@ -491,15 +334,26 @@ export class SideDrawer {
   private overlay: HTMLElement | null = null;
   private isOpen = false;
   private expandedSections: Set<string> = new Set();
-  private staffMenuTree: any[] | null = null;
+  private allowedPaths: Set<string> | '*' = '*';
+  private isSupremeStaff: boolean = false;
   private isStaffMenuLoaded = false;
 
   constructor() {
     try {
-      const cached = localStorage.getItem('mnr_staff_menu_tree_cache');
-      if (cached) {
-        this.staffMenuTree = JSON.parse(cached);
+      const cachedSupreme = localStorage.getItem('mnr_staff_is_supreme_cache');
+      if (cachedSupreme === 'true') {
+        this.isSupremeStaff = true;
+        this.allowedPaths = '*';
         this.isStaffMenuLoaded = true;
+      } else {
+        const cachedPaths = localStorage.getItem('mnr_staff_allowed_paths_cache');
+        if (cachedPaths) {
+          const parsed = JSON.parse(cachedPaths);
+          if (Array.isArray(parsed)) {
+            this.allowedPaths = new Set(parsed);
+            this.isStaffMenuLoaded = true;
+          }
+        }
       }
     } catch (e) {}
 
@@ -507,9 +361,14 @@ export class SideDrawer {
     this.loadStaffMenus();
     
     window.addEventListener('logout', () => {
-      this.staffMenuTree = null;
+      this.allowedPaths = '*';
+      this.isSupremeStaff = false;
       this.isStaffMenuLoaded = false;
-      try { localStorage.removeItem('mnr_staff_menu_tree_cache'); } catch (e) {}
+      try {
+        localStorage.removeItem('mnr_staff_allowed_paths_cache');
+        localStorage.removeItem('mnr_staff_is_supreme_cache');
+        localStorage.removeItem('mnr_staff_menu_tree_cache');
+      } catch (e) {}
       this.updateUI();
     });
 
@@ -618,8 +477,7 @@ export class SideDrawer {
 
     const isAllowedAccounts = isManagerOrEa || isAccountsStaff;
 
-    const rawMenuMaster = isVgk ? VGK_MENU_MASTER : (portal === 'staff' ? this.getStaffMenuMaster() : MENU_MASTER);
-    const menuMaster = portal === 'staff' ? this.filterMenusForRole(rawMenuMaster, isManagerOrEa, isAllowedAccounts) : rawMenuMaster;
+    const menuMaster = isVgk ? VGK_MENU_MASTER : this.getStaffMenuMaster();
 
     return `
       <div class="drawer-header">
@@ -718,13 +576,22 @@ export class SideDrawer {
 
     this.container.querySelectorAll('[data-route]').forEach(el => {
       el.addEventListener('click', () => {
-        const route = (el as HTMLElement).dataset.route!;
+        const rawRoute = (el as HTMLElement).dataset.route!;
         const tab = (el as HTMLElement).dataset.tab;
         
+        let targetRoute = ROUTE_PATH_MAP[rawRoute] || ROUTE_PATH_MAP[rawRoute.replace(/\/$/, '')];
+        if (!targetRoute) {
+          if (rawRoute.startsWith('/staff/')) {
+            targetRoute = rawRoute.replace('/staff/', '').replace(/\//g, '-');
+          } else {
+            targetRoute = rawRoute;
+          }
+        }
+
         if (tab) {
-          routerService.navigate(route as PageRoute, { tab });
+          routerService.navigate(targetRoute as PageRoute, { tab });
         } else {
-          routerService.navigate(route as PageRoute);
+          routerService.navigate(targetRoute as PageRoute);
         }
         this.close();
       });
@@ -754,573 +621,463 @@ export class SideDrawer {
   }
 
   private async loadStaffMenus(): Promise<void> {
+    const authState = authService.getAuthState();
+    const user = (authState.user || {}) as any;
+    const staffType = (user.staff_type || '').toString().toUpperCase().trim();
+    const empCode = (user.emp_code || user.employee_code || '').toString().toUpperCase().trim();
+    const roleCode = (user.role_code || user.role?.role_code || user.user_type || '').toString().toLowerCase().trim();
+    const roleName = (user.role_name || user.role?.role_name || '').toString().toUpperCase().trim();
+
+    const supremeVariants = [
+      "VGK4U_SUPREME", "RVZ_SUPREME", "VGK4U", "VGK4U SUPREME", "VGK4U_EA", 
+      "KEY_LEADERSHIP", "KEY LEADERSHIP", "EA", "EXECUTIVE ADMIN", "MANAGER", 
+      "DIRECTOR", "SUPER_ADMIN", "ADMIN"
+    ];
+    
+    if (
+      supremeVariants.includes(staffType) ||
+      ['MR10018', 'MR10001', 'MR10016', 'MR10025'].includes(empCode) ||
+      ['key_leadership', 'vgk4u', 'ea', 'vgk4u_supreme', 'executive_admin', 'manager', 'director', 'admin', 'super_admin'].includes(roleCode) ||
+      supremeVariants.includes(roleName) ||
+      Boolean(user.is_manager || user.is_admin || user.is_super_admin)
+    ) {
+      this.isSupremeStaff = true;
+      this.allowedPaths = '*';
+      this.isStaffMenuLoaded = true;
+      try {
+        localStorage.setItem('mnr_staff_is_supreme_cache', 'true');
+      } catch (e) {}
+      this.updateUI();
+      return;
+    }
+
     try {
       const response = await apiService.get<any>('/staff/menu-settings/my-menus?unified=true');
-      if (response.success && response.data && response.data.sidebar_tree) {
-        this.staffMenuTree = response.data.sidebar_tree;
+      if (response.success && response.data) {
+        const menus: any[] = response.data.menus || [];
+        const paths = new Set<string>(menus.map(m => m.route_path).filter(p => Boolean(p)));
+        // Default permitted system/communication routes
+        paths.add('/staff/whatsapp-center');
+        paths.add('/staff/crm/whatsapp-inbox');
+        paths.add('/staff/crm/whatsapp-bot');
+        paths.add('/staff/softphone-center');
+        paths.add('/staff/softphone-hub');
+        paths.add('/staff/softphone');
+        paths.add('/staff/dialer');
+        paths.add('/staff/auto-dialer');
+        paths.add('/staff/my-leads');
+        paths.add('/staff/configuration/catalog');
+        paths.add('/staff/catalog-library');
+        paths.add('/staff/catalog');
+
+        this.allowedPaths = paths;
+        this.isSupremeStaff = false;
         this.isStaffMenuLoaded = true;
         try {
-          localStorage.setItem('mnr_staff_menu_tree_cache', JSON.stringify(this.staffMenuTree));
+          localStorage.setItem('mnr_staff_is_supreme_cache', 'false');
+          localStorage.setItem('mnr_staff_allowed_paths_cache', JSON.stringify(Array.from(paths)));
         } catch (e) {}
         this.updateUI();
       }
     } catch (e) {
       console.error('Failed to load dynamic staff menus:', e);
+      this.allowedPaths = '*';
+      this.updateUI();
     }
   }
 
-  private filterMenusForRole(sections: MenuSection[], isManagerOrEa: boolean, isAllowedAccounts: boolean = false): MenuSection[] {
-    const authState = authService.getAuthState();
-    const user = (authState.user || {}) as any;
-    const empCode = (user.emp_code || user.employee_code || '').toString().toUpperCase().trim();
-    const isRestrictedSales = ['MN10009', 'MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'].includes(empCode);
+  private getItemIcon(code: string, label: string): string {
+    const c = (code || '').toUpperCase();
+    const l = (label || '').toLowerCase();
 
-    if (isManagerOrEa && !isRestrictedSales) {
-      return sections; // Managers & EAs see ALL management, system, and accounts menus
-    }
+    if (c.includes('WHATSAPP') || l.includes('whatsapp')) return 'fab fa-whatsapp';
+    if (c.includes('AUTO_DIALER') || l.includes('auto dialer')) return 'fas fa-phone-volume';
+    if (c.includes('SOFTPHONE') || l.includes('calling') || l.includes('softphone')) return 'fas fa-headset';
+    if (c.includes('CATALOG') || l.includes('catalog')) return 'fas fa-book-open';
+    if (c.includes('FIELD_SALES') || l.includes('field sales') || c.includes('BANK_WISE_LEADS')) return 'fas fa-users-gear';
+    if (c.includes('SOLAR') || l.includes('solar')) return 'fas fa-solar-panel';
+    if (c.includes('EV_') || l.includes('ev ')) return 'fas fa-car';
+    if (c.includes('INSURANCE') || l.includes('care') || l.includes('insurance')) return 'fas fa-shield-alt';
+    if (c.includes('REAL_DREAMS') || c.includes('REAL_ESTATE') || l.includes('real dreams') || l.includes('real estate') || l.includes('property')) return 'fas fa-building';
+    if (c.includes('ETC') || l.includes('training') || l.includes('student')) return 'fas fa-graduation-cap';
+    if (c.includes('BONANZA') || l.includes('bonanza')) return 'fas fa-trophy';
+    if (c.includes('COUPON') || c.includes('PIN') || l.includes('coupon') || l.includes('pin')) return 'fas fa-ticket-alt';
+    if (c.includes('PROMO') || l.includes('promo')) return 'fas fa-tags';
+    if (c.includes('VENDOR') || l.includes('vendor')) return 'fas fa-store';
+    if (c.includes('WALLET') || l.includes('wallet')) return 'fas fa-wallet';
+    if (c.includes('INCOME') || l.includes('earnings') || l.includes('income')) return 'fas fa-hand-holding-usd';
+    if (c.includes('POINTS') || l.includes('points')) return 'fas fa-coins';
+    if (c.includes('APPROVAL') || l.includes('approval')) return 'fas fa-clipboard-check';
+    if (c.includes('KYC') || l.includes('kyc')) return 'fas fa-id-card';
+    if (c.includes('TRANSACTION') || l.includes('transaction')) return 'fas fa-receipt';
+    if (c.includes('MEMBER') || c.includes('TEAM') || l.includes('member') || l.includes('team')) return 'fas fa-users';
+    if (c.includes('ATTENDANCE') || l.includes('attendance')) return 'fas fa-clock';
+    if (c.includes('LEAVE') || l.includes('leave')) return 'fas fa-calendar-times';
+    if (c.includes('TASK') || l.includes('task')) return 'fas fa-tasks';
+    if (c.includes('KRA') || l.includes('kra')) return 'fas fa-chart-line';
+    if (c.includes('JOURNEY') || l.includes('journey')) return 'fas fa-route';
+    if (c.includes('TICKET') || l.includes('ticket') || l.includes('service')) return 'fas fa-tools';
+    return 'fas fa-circle';
+  }
 
-    // Management/System-only sections to hide from regular non-manager staff
-    // Note: VGK4U and VGK Team are available to ALL staff members per user requirement.
-    const RESTRICTED_SECTIONS = new Set([
-      'SAAS',
-      'SAAS_MANAGEMENT',
-      'SAAS CONFIGURATION',
-      'CONFIGURATION',
-      'SYSTEM_CONFIGURATION',
-      'SYSTEM CONFIG',
-      'META_ADS',
-      'META ADS',
-      'VENDOR_MANAGEMENT',
-      'VENDOR MANAGEMENT',
-      'VENDORS',
-      'HR',
-      'HR_MANAGEMENT',
-      'ZYNOVA',
-      'ZYNOVA_REAL_ESTATE',
-      'MNR',
-      'MNR_USER_SIDEBAR',
-      'MNR USER SIDEBAR',
-      'MNR_USER',
-      'MNR USER'
-    ]);
+  private getItemIconColor(code: string, label: string): string {
+    const c = (code || '').toUpperCase();
+    const l = (label || '').toLowerCase();
 
-    // Restrict Accounts & Finance section if user is NOT in Accounts Department and NOT Manager/EA
-    if (!isAllowedAccounts) {
-      RESTRICTED_SECTIONS.add('ACCOUNTS');
-      RESTRICTED_SECTIONS.add('ACCOUNTS_EARNINGS');
-      RESTRICTED_SECTIONS.add('ACCOUNTS & EARNINGS');
-      RESTRICTED_SECTIONS.add('FINANCE');
-      RESTRICTED_SECTIONS.add('FINANCE & EARNINGS');
-      RESTRICTED_SECTIONS.add('FINANCE_EARNINGS');
-      RESTRICTED_SECTIONS.add('ACCOUNTS_MANAGEMENT');
-    }
-
-    // Admin/Management-only items to hide from regular staff
-    const RESTRICTED_ITEM_CODES = new Set([
-      'EXECUTIVE_DASHBOARD',
-      'CATEGORY_LEADS_MASTER',
-      'SAAS_CONFIG',
-      'SYSTEM_CONFIG'
-    ]);
-
-    // DC Protocol: Remove access to Staff Leads page for Anusha, Anushka, Hema, Nandana, Poojitha & regular sales staff
-    if (!isManagerOrEa || isRestrictedSales) {
-      RESTRICTED_ITEM_CODES.add('LEADS_MASTER');
-      RESTRICTED_ITEM_CODES.add('STAFF_LEADS');
-      RESTRICTED_ITEM_CODES.add('staff_leads');
-    }
-
-    if (!isAllowedAccounts) {
-      RESTRICTED_ITEM_CODES.add('PAYROLL_PROFILE');
-      RESTRICTED_ITEM_CODES.add('SALARY_SLIPS');
-      RESTRICTED_ITEM_CODES.add('EXPENSE_ENTRIES');
-    }
-
-    const filtered: MenuSection[] = [];
-
-    for (const section of sections) {
-      const codeUpper = (section.section_code || '').toUpperCase().trim();
-      const labelUpper = (section.section_label || '').toUpperCase().trim();
-
-      // Skip restricted management sections for non-manager regular staff
-      if (RESTRICTED_SECTIONS.has(codeUpper) || RESTRICTED_SECTIONS.has(labelUpper)) {
-        continue;
-      }
-
-      let items = section.items;
-      if (items && items.length > 0) {
-        items = items.filter(item => {
-          const itemCode = (item.menu_code || '').toUpperCase().trim();
-          return !RESTRICTED_ITEM_CODES.has(itemCode);
-        });
-      }
-
-      let subSections = section.subSections;
-      if (subSections && subSections.length > 0) {
-        subSections = subSections.map(sub => ({
-          ...sub,
-          items: sub.items.filter(item => {
-            const itemCode = (item.menu_code || '').toUpperCase().trim();
-            return !RESTRICTED_ITEM_CODES.has(itemCode);
-          })
-        })).filter(sub => sub.items.length > 0);
-      }
-
-      const hasItems = items && items.length > 0;
-      const hasSubSections = subSections && subSections.length > 0;
-
-      if (hasItems || hasSubSections) {
-        filtered.push({
-          ...section,
-          items: hasItems ? items : undefined,
-          subSections: hasSubSections ? subSections : undefined
-        });
-      }
-    }
-
-    return filtered;
+    if (c.includes('WHATSAPP') || l.includes('whatsapp')) return 'color: #25d366;';
+    if (c.includes('AUTO_DIALER') || l.includes('auto dialer') || c.includes('SOFTPHONE') || l.includes('softphone')) return 'color: #38bdf8;';
+    if (c.includes('CATALOG') || l.includes('catalog')) return 'color: #10b981;';
+    if (c.includes('FIELD_SALES') || l.includes('field sales') || c.includes('BANK_WISE_LEADS')) return 'color: #38bdf8;';
+    if (c.includes('SOLAR') || l.includes('solar')) return 'color: #f59e0b;';
+    if (c.includes('EV_') || l.includes('ev ')) return 'color: #10b981;';
+    if (c.includes('INSURANCE') || l.includes('care') || l.includes('insurance')) return 'color: #059669;';
+    if (c.includes('REAL_DREAMS') || c.includes('REAL_ESTATE') || l.includes('real dreams') || l.includes('property')) return 'color: #2563eb;';
+    if (c.includes('ETC') || l.includes('training')) return 'color: #8b5cf6;';
+    if (c.includes('BONANZA') || l.includes('bonanza')) return 'color: #f59e0b;';
+    if (c.includes('COUPON') || c.includes('PIN') || l.includes('coupon') || l.includes('pin')) return 'color: #6366f1;';
+    if (c.includes('PROMO') || l.includes('promo')) return 'color: #ec4899;';
+    if (c.includes('VENDOR') || l.includes('vendor')) return 'color: #0284c7;';
+    if (c.includes('WALLET') || l.includes('wallet')) return 'color: #10b981;';
+    if (c.includes('INCOME') || l.includes('earnings') || l.includes('income')) return 'color: #10b981;';
+    if (c.includes('POINTS') || l.includes('points')) return 'color: #f59e0b;';
+    if (c.includes('APPROVAL') || l.includes('approval')) return 'color: #10b981;';
+    if (c.includes('KYC') || l.includes('kyc')) return 'color: #3b82f6;';
+    if (c.includes('TRANSACTION') || l.includes('transaction')) return 'color: #0284c7;';
+    if (c.includes('MEMBER') || c.includes('TEAM') || l.includes('member') || l.includes('team')) return 'color: #7c3aed;';
+    return '';
   }
 
   private getStaffMenuMaster(): MenuSection[] {
-    if (!this.staffMenuTree) {
-      return MENU_MASTER;
-    }
+    const authState = authService.getAuthState();
+    const user = (authState.user || {}) as any;
+    const empCode = (user.emp_code || user.employee_code || '').toString().toUpperCase().trim();
+    const roleCode = (user.role_code || user.role?.role_code || user.user_type || '').toString().toLowerCase().trim();
+    const roleName = (user.role_name || user.role?.role_name || '').toString().toUpperCase().trim();
+    const staffType = (user.staff_type || '').toString().toUpperCase().trim();
 
-    const WORKFLOWS_ORDER: Record<string, number> = {
-      'EXECUTIVE_DASHBOARD': 1,
-      'MNR_EXECUTIVE_DASHBOARD': 1,
-      'staff_executive_dashboard': 1,
-      'mnr_executive_dashboard': 1,
+    const supremeVariants = [
+      "VGK4U_SUPREME", "RVZ_SUPREME", "VGK4U", "VGK4U SUPREME", "VGK4U_EA", 
+      "KEY_LEADERSHIP", "KEY LEADERSHIP", "EA", "EXECUTIVE ADMIN", "MANAGER", 
+      "DIRECTOR", "SUPER_ADMIN", "ADMIN"
+    ];
+    const isSaaSAdmin = ['MR10018', 'MR10001', 'MR10025', 'MR10016'].includes(empCode) || 
+                        ['SAAS_SEGMENT_ADMIN', 'SUPER_ADMIN', 'VGK4U_SUPREME'].includes(staffType) ||
+                        ['super_admin', 'saas_segment_admin', 'tenant_admin', 'key_leadership', 'vgk4u'].includes(roleCode);
+    const isSupreme = this.isSupremeStaff || 
+                      supremeVariants.includes(staffType) ||
+                      ['MR10018', 'MR10001', 'MR10016', 'MR10025'].includes(empCode) ||
+                      ['key_leadership', 'vgk4u', 'ea', 'vgk4u_supreme'].includes(roleCode) ||
+                      Boolean(user.is_manager || user.is_admin || user.is_super_admin);
 
-      'MNR_BANK_WISE_LEADS': 2,
-      'BANK_WISE_LEADS': 2,
-      'staff_bank_wise_leads': 2,
-      'staff-bank-wise-leads': 2,
-      'FIELD_SALES': 2,
-      'MNR_FIELD_SALES': 2,
-      'staff_field_sales': 2,
-      'field-sales': 2,
+    const isAccountsStaff = (
+      ['account', 'accounts', 'finance', 'payroll', 'billing', 'bookkeeper', 'auditor'].some(r => roleCode.includes(r)) ||
+      ['ACCOUNT', 'ACCOUNTS', 'FINANCE', 'PAYROLL', 'BILLING', 'BOOKKEEPER', 'AUDITOR'].some(r => roleName.includes(r)) ||
+      ['ACCOUNT', 'ACCOUNTS', 'FINANCE', 'PAYROLL', 'BILLING', 'BOOKKEEPER', 'AUDITOR'].some(r => staffType.includes(r)) ||
+      ['ACCOUNT', 'ACCOUNTS', 'FINANCE', 'PAYROLL'].some(r => (user.department || user.department_name || '').toString().toUpperCase().includes(r))
+    );
+    const isAllowedAccounts = isSupreme || isAccountsStaff;
+    const isRestrictedSales = ['MN10009', 'MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'].includes(empCode);
 
-      'CATEGORY_LEADS_MASTER': 3,
-      'MNR_LEADS_MASTER': 3,
-      'mnr_leads_master': 3,
-      'staff_mnr_leads_master': 3,
-
-      'SOLAR_LEADS': 4,
-      'MNR_SOLAR_LEADS': 4,
-      'staff_solar_leads': 4,
-      'mnr_solar_leads': 4,
-
-      'EV_B2B_LEADS': 5,
-      'MNR_EV_B2B_LEADS': 5,
-      'staff_ev_b2b_leads': 5,
-      'mnr_ev_b2b_leads': 5,
-
-      'EV_B2C_LEADS': 6,
-      'MNR_EV_B2C_LEADS': 6,
-      'staff_ev_b2c_leads': 6,
-      'mnr_ev_b2c_leads': 6,
-
-      'EV_SPARES_LEADS': 7,
-      'MNR_EV_SPARES_LEADS': 7,
-      'staff_ev_spares_leads': 7,
-      'mnr_ev_spares_leads': 7,
-
-      'ZYN_REAL_ESTATE': 8,
-      'MNR_REAL_DREAMS_LEADS': 8,
-      'staff_real_dreams_leads': 8,
-      'mnr_real_dreams_leads': 8,
-
-      'ZYN_INSURANCE': 9,
-      'MNR_INSURANCE_LEADS': 9,
-      'staff_insurance_leads': 9,
-      'mnr_insurance_leads': 9,
-
-      'ETC_LEADS': 10,
-      'MNR_ETC_LEADS': 10,
-      'staff_etc_leads': 10,
-      'mnr_etc_leads': 10,
-
-      'MNR_LEADS': 11,
-      'staff_mnr_leads': 11,
-      'mnr_category_leads': 11,
-
-      'AUTO_DIALER': 12,
-      'staff_auto_dialer': 12,
-      'auto-dialer': 12
-    };
-
-    const CRM_ORDER: Record<string, number> = {
-      'MY_CRM_DASHBOARD': 1,
-      'staff_crm_dashboard': 1,
-      'staff-crm': 1,
-
-      'MY_LEADS': 2,
-      'staff_my_leads': 2,
-      'staff-my-leads': 2,
-
-      'AUTO_DIALER': 3,
-      'staff_auto_dialer': 3,
-      'staff_dialer': 3,
-      'auto-dialer': 3,
-
-      'SOFTPHONE': 4,
-      'staff_softphone': 4,
-      'softphone': 4,
-      'CALLING_PAGE': 4,
-      'calling': 4,
-      'phone-dialpad': 4,
-
-      'BANK_WISE_LEADS': 5,
-      'staff_bank_wise_leads': 5,
-      'staff-bank-wise-leads': 5,
-
-      'TEAM_LEADS': 6,
-      'staff_team_leads': 6,
-      'staff-team-leads': 6,
-
-      'WHATSAPP_CENTER': 7,
-      'staff_crm_whatsapp_inbox': 7,
-      'staff-whatsapp': 7,
-
-      'CALL_TRACKING': 8,
-      'call_tracking_dashboard': 8,
-      'staff-call-tracking': 8,
-
-      'OPERATOR_CALLS': 9,
-      'staff_operator_calls': 9,
-      'operator-calls': 9,
-
-      'VGK_TEAM_MEMBERS': 10,
-      'staff_vgk_members': 10,
-      'staff-vgk-members': 10,
-
-      'STAFF_LEADS': 11,
-      'staff_leads': 11,
-      'LEADS_MASTER': 11,
-      'leads_master': 11
-    };
-
-    const sectionMap = new Map<string, MenuSection>();
-    const sectionOrderList: string[] = [];
-
-    const formatMenuItem = (rawCode: string, rawName: string, rawRoutePath: string, rawIcon?: string): MenuItem | null => {
-      let route = ROUTE_PATH_MAP[rawRoutePath] || ROUTE_PATH_MAP[rawRoutePath?.replace(/\/$/, '')] || (rawRoutePath ? rawRoutePath.replace(/^\/staff\//, '').replace(/\//g, '-') : null);
-      const codeUpper = (rawCode || '').toUpperCase();
-      const routeLower = (rawRoutePath || '').toLowerCase();
-
-      if (codeUpper.includes('CATALOG') || routeLower.includes('catalog')) {
-        route = 'digital-catalog';
-      }
-
-      if (!route) return null;
-
-      // DC Protocol: Remove access to Staff Leads page (/staff/leads) for Anusha, Anushka, Hema, Nandana, Poojitha
-      const authState = authService.getAuthState();
-      const user = (authState.user || {}) as any;
-      const empCode = (user.emp_code || user.employee_code || '').toString().toUpperCase().trim();
-      if (['MN10009', 'MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'].includes(empCode)) {
-        if (route === 'staff-leads' || (rawRoutePath && rawRoutePath.toLowerCase() === '/staff/leads') || (rawCode && ['staff_leads', 'STAFF_LEADS', 'LEADS_MASTER', 'staff_leads_master'].includes(rawCode))) {
+    const formatItem = (item: SidebarItem): MenuItem | null => {
+      // Permission check (skip if not supreme and path not allowed)
+      if (!isSupreme && this.allowedPaths !== '*') {
+        const cleanPath = item.route.replace(/\/$/, '');
+        const isAlwaysAllowed = [
+          '/staff/dialer', '/staff/auto-dialer', '/staff/softphone', '/staff/whatsapp-center',
+          '/staff/configuration/catalog', '/staff/catalog-library', '/staff/catalog',
+          '/staff/bank-wise-leads', '/staff/field-sales', '/staff/my-leads'
+        ].includes(item.route) || item.route.startsWith('/staff/vgk/');
+        
+        if (!isAlwaysAllowed && !this.allowedPaths.has(item.route) && !this.allowedPaths.has(cleanPath)) {
           return null;
         }
       }
 
-      let label = rawName;
-      if (!label || label === 'None' || label.trim() === '') {
-        label = (rawCode || '').replace(/^staff_|^_staff_|^mnr_/i, '').replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
+      // Sales restriction
+      if (isRestrictedSales && (item.route === '/staff/leads' || item.menu_code === 'STAFF_LEADS' || item.menu_code === 'LEADS_MASTER')) {
+        return null;
       }
 
-      if (codeUpper.includes('AUTO_DIALER') || routeLower.includes('auto-dialer') || routeLower === '/staff/dialer' || codeUpper === 'STAFF_AUTO_DIALER' || codeUpper === 'AUTO_DIALER' || codeUpper === 'STAFF_DIALER' || codeUpper === 'DIALER') {
-        label = 'Auto Dialer';
-      } else if (codeUpper.includes('BANK_WISE_LEADS') || routeLower.includes('bank-wise-leads') || routeLower.includes('field-sales') || codeUpper.includes('FIELD_SALES')) {
-        label = 'Field Sales';
-        route = 'staff-bank-wise-leads';
-      } else if (codeUpper.includes('REAL_DREAMS') || routeLower.includes('real-dreams-leads')) {
-        label = 'Real Dreams Leads';
-      } else if (codeUpper.includes('ETC_LEADS') || routeLower.includes('etc-leads')) {
-        label = 'ETC Training Students';
-      } else if (codeUpper.includes('CATEGORY_LEADS_MASTER') || codeUpper.includes('MNR_LEADS_MASTER') || routeLower.includes('mnr-leads-master')) {
-        label = 'Category Lead Master';
-      } else if (codeUpper.includes('EXECUTIVE_DASHBOARD') || routeLower.includes('executive-dashboard')) {
-        label = 'Executive Dashboard';
-      } else if (codeUpper.includes('WHATSAPP') || routeLower.includes('whatsapp')) {
-        label = 'WhatsApp Center';
-      } else if (codeUpper.includes('SOFTPHONE') || codeUpper === 'PHONE_DIALPAD' || codeUpper === 'CALLING_PAGE' || routeLower.includes('softphone') || routeLower.includes('calling') || routeLower.includes('phone-dialpad')) {
-        label = 'Calling & Softphone';
-      } else if (codeUpper.includes('VGK_TEAM_MEMBERS') || codeUpper === 'STAFF_VGK_MEMBERS' || routeLower.includes('vgk/members')) {
-        label = 'VGK Channel Partners';
-      } else if (codeUpper.includes('CATALOG') || routeLower.includes('catalog')) {
-        label = 'Digital Catalog';
-      } else if (codeUpper.includes('INCENTIVES_VGK4U') || routeLower.includes('incentives/vgk4u')) {
-        label = 'All VGK4U Members';
-      } else if (codeUpper.includes('VGK4U_REAL_ESTATE') || routeLower.includes('vgk4u/real-estate')) {
-        label = 'VGK Real Dreams (ZR)';
-      } else if (codeUpper.includes('VGK4U_INSURANCE') || routeLower.includes('vgk4u/insurance')) {
-        label = 'VGK Care (ZC)';
-      } else if (codeUpper.includes('INCENTIVES_POINTS') || routeLower.includes('incentives/points')) {
-        label = 'MNR Points';
-      } else if (codeUpper.includes('INCENTIVES_APPROVALS') || routeLower.includes('incentives/approvals')) {
-        label = 'Incentive Approvals';
-      } else if (codeUpper.includes('VGK_INCOME') || routeLower.includes('vgk/income')) {
-        label = 'VGK Income Management';
-      } else if (codeUpper.includes('VGK_COUPONS') || routeLower.includes('vgk/coupons')) {
-        label = 'VGK PIN Activation';
-      } else if (codeUpper.includes('VGK_PROMO_CODES') || routeLower.includes('vgk/promo-codes')) {
-        label = 'VGK Promo Codes';
-      } else if (codeUpper.includes('VGK_VENDORS') || routeLower.includes('vgk/vendors')) {
-        label = 'Vendor Management';
-      } else if (codeUpper.includes('REAL_DREAMS_MARKETPLACE') || routeLower.includes('real-dreams/marketplace') || routeLower.includes('real-dreams-marketplace')) {
-        label = 'Property Marketplace';
+      let route = ROUTE_PATH_MAP[item.route] || ROUTE_PATH_MAP[item.route.replace(/\/$/, '')];
+      if (!route) {
+        if (item.route.startsWith('/staff/')) {
+          route = item.route.replace('/staff/', '').replace(/\//g, '-');
+        } else {
+          route = item.route;
+        }
       }
 
-      let tab: string | undefined = undefined;
-      if (codeUpper.includes('SOLAR_LEADS') || routeLower.includes('solar-leads')) {
-        tab = 'solar';
-      } else if (codeUpper.includes('EV_B2B') || routeLower.includes('ev-b2b')) {
-        tab = 'ev-b2b';
-      } else if (codeUpper.includes('EV_B2C') || routeLower.includes('ev-b2c')) {
-        tab = 'ev-b2c';
-      } else if (codeUpper.includes('EV_SPARES') || routeLower.includes('ev-spares')) {
-        tab = 'ev-spares';
-      } else if (codeUpper.includes('REAL_DREAMS') || codeUpper.includes('ZYN_REAL_ESTATE') || routeLower.includes('real-dreams-leads')) {
-        tab = 'real-dreams';
-      } else if (codeUpper.includes('INSURANCE') || codeUpper.includes('ZYN_INSURANCE') || routeLower.includes('insurance-leads')) {
-        tab = 'insurance';
-      } else if (codeUpper.includes('ETC_LEADS') || routeLower.includes('etc-leads')) {
-        tab = 'etc';
-      } else if (codeUpper.includes('MNR_LEADS') || routeLower.includes('mnr-leads')) {
-        tab = 'mnr';
+      let label = item.label;
+      let tab: string | undefined = TAB_MAP[item.route];
+      if (!tab) {
+        const cUpper = (item.menu_code || '').toUpperCase();
+        if (cUpper.includes('SOLAR_LEADS')) tab = 'solar';
+        else if (cUpper.includes('EV_B2B')) tab = 'ev-b2b';
+        else if (cUpper.includes('EV_B2C')) tab = 'ev-b2c';
+        else if (cUpper.includes('EV_SPARES')) tab = 'ev-spares';
+        else if (cUpper.includes('REAL_DREAMS') || cUpper.includes('ZYN_REAL_ESTATE')) tab = 'real-dreams';
+        else if (cUpper.includes('INSURANCE') || cUpper.includes('ZYN_INSURANCE')) tab = 'insurance';
+        else if (cUpper.includes('ETC_LEADS')) tab = 'etc';
+        else if (cUpper.includes('MNR_LEADS')) tab = 'mnr';
       }
 
-      const iconClass = rawIcon || (
-        label.includes('WhatsApp') ? 'fab fa-whatsapp' :
-        label.includes('Auto Dialer') ? 'fas fa-phone-volume' :
-        label.includes('Softphone') || label.includes('Calling') ? 'fas fa-headset' :
-        label.includes('Real Dreams') || label.includes('Property') ? 'fas fa-building' :
-        label.includes('Insurance') || label.includes('Care') ? 'fas fa-shield-alt' :
-        label.includes('Points') ? 'fas fa-coins' :
-        label.includes('Approvals') ? 'fas fa-clipboard-check' :
-        label.includes('PIN') || label.includes('Coupon') ? 'fas fa-ticket-alt' :
-        label.includes('Promo') ? 'fas fa-tags' :
-        label.includes('Vendor') ? 'fas fa-store' :
-        label.includes('Income') ? 'fas fa-hand-holding-usd' :
-        label.includes('VGK') || label.includes('Channel') ? 'fas fa-users' :
-        (label.includes('Field') || label.includes('Sales')) ? 'fas fa-users-gear' :
-        (label.includes('Catalog') ? 'fas fa-book-open' : 'fas fa-file-alt')
-      );
-      const iconColor = 
-        label.includes('WhatsApp') ? 'color: #25d366;' :
-        (label.includes('Auto Dialer') || label.includes('Softphone') || label.includes('Calling')) ? 'color: #38bdf8;' :
-        (label.includes('Real Dreams') || label.includes('Property')) ? 'color: #2563eb;' :
-        (label.includes('Insurance') || label.includes('Care')) ? 'color: #059669;' :
-        label.includes('Points') ? 'color: #f59e0b;' :
-        label.includes('PIN') || label.includes('Coupon') ? 'color: #6366f1;' :
-        label.includes('Promo') ? 'color: #ec4899;' :
-        (label.includes('VGK') || label.includes('Channel')) ? 'color: #7c3aed;' :
-        (label.includes('Catalog') ? 'color: #10b981;' : '');
-      const iconHtml = `<i class="${iconClass}" style="margin-right: 8px; width: 18px; text-align: center; ${iconColor}"></i>`;
+      let iconHtml = '';
+      if (!label.startsWith('<i class=')) {
+        const iconClass = item.icon || this.getItemIcon(item.menu_code, label);
+        const iconColor = this.getItemIconColor(item.menu_code, label);
+        iconHtml = `<i class="${iconClass}" style="margin-right: 8px; width: 18px; text-align: center; ${iconColor}"></i>`;
+      }
 
       return {
-        menu_code: rawCode,
+        menu_code: item.menu_code,
         label: `${iconHtml}${label}`,
         route: route,
         tab: tab
       };
     };
 
-    for (const sec of this.staffMenuTree) {
-      if (sec.id === 'progress' || sec.section_id === 'progress' || (sec.title || '').toUpperCase() === 'PROGRESS') {
-        continue;
-      }
-      const items: MenuItem[] = [];
-      const subSections: SubSection[] = [];
+    const sections: MenuSection[] = [];
 
-      // Add items from direct section.items
-      if (sec.items) {
-        for (const item of sec.items) {
-          const menuItem = formatMenuItem(item.menu_code, item.menu_name || item.label || item.name || item.title, item.route_path, item.menu_icon);
-          if (menuItem) items.push(menuItem);
-        }
-      }
+    // Helper to find canonical section by code
+    const getCanonicalSec = (code: string) => CANONICAL_MENU_MASTER.find(s => s.section_code === code);
 
-      // Add subSections
-      if (sec.subSections) {
-        for (const sub of sec.subSections) {
-          const subItems: MenuItem[] = [];
-          if (sub.items) {
-            for (const item of sub.items) {
-              const menuItem = formatMenuItem(item.menu_code, item.menu_name || item.label || item.name || item.title, item.route_path, item.menu_icon);
-              if (menuItem) subItems.push(menuItem);
-            }
-          }
-          let subTitle = sub.title || sub.name || sub.id || 'Subsection';
-          if (subTitle === 'None' || !subTitle) {
-            subTitle = (sub.id || '').replace(/^staff_|^vm_/i, '').replace(/_/g, ' ').replace(/\b\w/g, (p: string) => p.toUpperCase());
-          }
-          if (subItems.length > 0) {
-            subSections.push({
-              sub_section_code: sub.id || sub.section_id || 'sub',
-              sub_section_label: subTitle,
-              items: subItems
+    // 1. HR
+    const hrCanonical = getCanonicalSec('HR');
+    if (hrCanonical) {
+      const hrSubSections: SubSection[] = [];
+      if (hrCanonical.subSections) {
+        for (const sub of hrCanonical.subSections) {
+          const items = sub.items.map(formatItem).filter((i): i is MenuItem => i !== null);
+          if (items.length > 0) {
+            hrSubSections.push({
+              sub_section_code: sub.sub_section_code,
+              sub_section_label: sub.sub_section_label,
+              items: items
             });
           }
         }
       }
+      if (hrSubSections.length > 0) {
+        sections.push({
+          section_code: 'HR',
+          section_label: 'HR',
+          order: 2,
+          subSections: hrSubSections
+        });
+      }
+    }
 
-      if (items.length > 0 || subSections.length > 0) {
-        let secCode = (sec.id || sec.section_id || 'other').toString().trim();
-        let secTitle = (sec.title || sec.name || 'Other').toString().trim();
-        if (secTitle === 'None' || !secTitle) {
-          secTitle = secCode.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+    // 2. CRM & LEADS
+    const crmCanonical = getCanonicalSec('CRM_LEADS');
+    const crmItems: MenuItem[] = [];
+    if (crmCanonical && crmCanonical.items) {
+      for (const item of crmCanonical.items) {
+        const formatted = formatItem(item);
+        if (formatted) crmItems.push(formatted);
+      }
+    }
+    // Guarantee Calling & Softphone, Auto Dialer, Digital Catalog in CRM
+    if (!crmItems.some(i => i.route === 'auto-dialer')) {
+      crmItems.push({
+        menu_code: 'AUTO_DIALER',
+        label: `<i class="fas fa-phone-volume" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Auto Dialer`,
+        route: 'auto-dialer'
+      });
+    }
+    if (!crmItems.some(i => i.route === 'softphone')) {
+      crmItems.push({
+        menu_code: 'SOFTPHONE',
+        label: `<i class="fas fa-headset" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Calling & Softphone`,
+        route: 'softphone'
+      });
+    }
+    if (!crmItems.some(i => i.route === 'digital-catalog')) {
+      crmItems.push({
+        menu_code: 'DIGITAL_CATALOG',
+        label: `<i class="fas fa-book-open" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>Digital Catalog`,
+        route: 'digital-catalog'
+      });
+    }
+    if (crmItems.length > 0) {
+      sections.push({
+        section_code: 'CRM_MODULE',
+        section_label: 'CRM & LEADS',
+        order: 4,
+        items: crmItems
+      });
+    }
+
+    // 3. TASK MANAGEMENT
+    const taskCanonical = getCanonicalSec('TASK_MANAGEMENT');
+    if (taskCanonical && taskCanonical.items) {
+      const items = taskCanonical.items.map(formatItem).filter((i): i is MenuItem => i !== null);
+      if (items.length > 0) {
+        sections.push({
+          section_code: 'TASK_MANAGEMENT',
+          section_label: 'TASK MANAGEMENT',
+          order: 5,
+          items: items
+        });
+      }
+    }
+
+    // 4. KRA MANAGEMENT
+    const kraCanonical = getCanonicalSec('KRA_MANAGEMENT');
+    if (kraCanonical && kraCanonical.items) {
+      const items = kraCanonical.items.map(formatItem).filter((i): i is MenuItem => i !== null);
+      if (items.length > 0) {
+        sections.push({
+          section_code: 'KRA_MANAGEMENT',
+          section_label: 'KRA MANAGEMENT',
+          order: 6,
+          items: items
+        });
+      }
+    }
+
+    // 5. JOURNEY TRACKING
+    const journeyCanonical = getCanonicalSec('FIELD_LOCATION_TRACKING');
+    if (journeyCanonical && journeyCanonical.items) {
+      const items = journeyCanonical.items.map(formatItem).filter((i): i is MenuItem => i !== null);
+      if (items.length > 0) {
+        sections.push({
+          section_code: 'JOURNEY_TRACKING',
+          section_label: 'JOURNEY TRACKING',
+          order: 7,
+          items: items
+        });
+      }
+    }
+
+    // 6. REIMBURSEMENT
+    const reimbursementItems: MenuItem[] = [
+      { menu_code: "MY_REIMBURSEMENT_CLAIMS", label: `<i class="fas fa-receipt" style="margin-right: 8px; width: 18px; text-align: center; color: #f59e0b;"></i>My Reimbursement Claims`, route: "reimbursements" },
+      { menu_code: "REIMBURSEMENT_APPROVALS", label: `<i class="fas fa-file-invoice-dollar" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>Reimbursement Approvals`, route: "staff-reimbursement-approvals" }
+    ];
+    sections.push({
+      section_code: "REIMBURSEMENT",
+      section_label: "REIMBURSEMENT",
+      order: 8,
+      items: reimbursementItems
+    });
+
+    // 7. WORK FLOWS (MYNT_REAL)
+    const myntRealCanonical = getCanonicalSec('MYNT_REAL');
+    const workflowsItems: MenuItem[] = [];
+    if (myntRealCanonical && myntRealCanonical.items) {
+      for (const item of myntRealCanonical.items) {
+        const formatted = formatItem(item);
+        if (formatted) workflowsItems.push(formatted);
+      }
+    }
+    // Guarantee Field Sales in WORKFLOWS
+    if (!workflowsItems.some(i => i.route === 'staff-bank-wise-leads' || (i.menu_code && i.menu_code.includes('BANK_WISE_LEADS')))) {
+      workflowsItems.splice(1, 0, {
+        menu_code: "MNR_BANK_WISE_LEADS",
+        label: `<i class="fas fa-users-gear" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Field Sales`,
+        route: "staff-bank-wise-leads"
+      });
+    }
+    if (workflowsItems.length > 0) {
+      sections.push({
+        section_code: 'WORKFLOWS',
+        section_label: 'WORK FLOWS',
+        order: 9,
+        items: workflowsItems
+      });
+    }
+
+    // 8. SERVICE TICKETS
+    const ticketsCanonical = getCanonicalSec('SERVICE_TICKETS');
+    if (ticketsCanonical && ticketsCanonical.items) {
+      const items = ticketsCanonical.items.map(formatItem).filter((i): i is MenuItem => i !== null);
+      if (items.length > 0) {
+        sections.push({
+          section_code: 'SERVICE_TICKETS',
+          section_label: 'SERVICE TICKETS',
+          order: 10,
+          items: items
+        });
+      }
+    }
+
+    // 9. VGK4U (Section Code: VGK_TEAM - Section Label: VGK4U) - 9 Canonical SubSections!
+    const vgkCanonical = getCanonicalSec('VGK_TEAM');
+    if (vgkCanonical && vgkCanonical.subSections) {
+      const vgkSubSections: SubSection[] = [];
+      for (const sub of vgkCanonical.subSections) {
+        const subItems = sub.items.map(formatItem).filter((i): i is MenuItem => i !== null);
+        if (subItems.length > 0) {
+          vgkSubSections.push({
+            sub_section_code: sub.sub_section_code,
+            sub_section_label: sub.sub_section_label,
+            items: subItems
+          });
         }
-        const secIdLower = secCode.toLowerCase();
-        const secTitleUpper = secTitle.toUpperCase();
+      }
+      if (vgkSubSections.length > 0) {
+        sections.push({
+          section_code: 'VGK_TEAM',
+          section_label: 'VGK4U',
+          order: 18,
+          subSections: vgkSubSections
+        });
+      }
+    }
 
-        if (secIdLower === 'mynt_real' || secIdLower === 'myntreal' || secIdLower === 'workflows' || secTitleUpper === 'MYNT REAL' || secTitleUpper === 'MYNTREAL' || secTitleUpper === 'WORK FLOWS' || secTitleUpper === 'WORKFLOWS') {
-          secCode = 'WORKFLOWS';
-          secTitle = 'WORK FLOWS';
-        }
-
-        if (secIdLower === 'crm' || secIdLower === 'crm_module' || secIdLower === 'crm_leads' || secIdLower === 'crm & leads' || secTitleUpper.includes('CRM')) {
-          secCode = 'CRM_MODULE';
-          secTitle = 'CRM & LEADS';
-        }
-
-        if (sectionMap.has(secCode)) {
-          const existing = sectionMap.get(secCode)!;
-          if (items.length > 0) {
-            existing.items = existing.items || [];
-            const existingCodes = new Set(existing.items.map(i => i.menu_code));
-            for (const it of items) {
-              if (!existingCodes.has(it.menu_code)) {
-                existing.items.push(it);
-                existingCodes.add(it.menu_code);
-              }
-            }
+    // 10. ACCOUNTS & FINANCE (Only if allowed)
+    if (isAllowedAccounts) {
+      const accountsCanonical = getCanonicalSec('ACCOUNTS');
+      if (accountsCanonical && accountsCanonical.subSections) {
+        const accSubSections: SubSection[] = [];
+        for (const sub of accountsCanonical.subSections) {
+          const subItems = sub.items.map(formatItem).filter((i): i is MenuItem => i !== null);
+          if (subItems.length > 0) {
+            accSubSections.push({
+              sub_section_code: sub.sub_section_code,
+              sub_section_label: sub.sub_section_label,
+              items: subItems
+            });
           }
-          if (subSections.length > 0) {
-            existing.subSections = existing.subSections || [];
-            existing.subSections.push(...subSections);
-          }
-        } else {
-          sectionOrderList.push(secCode);
-          sectionMap.set(secCode, {
-            section_code: secCode,
-            section_label: secTitle,
-            order: secCode === 'CRM_MODULE' ? 4 : (sec.order !== undefined ? sec.order : 999),
-            items: items.length > 0 ? items : undefined,
-            subSections: subSections.length > 0 ? subSections : undefined
+        }
+        if (accSubSections.length > 0) {
+          sections.push({
+            section_code: 'ACCOUNTS_EARNINGS',
+            section_label: 'FINANCE & EARNINGS',
+            order: 25,
+            subSections: accSubSections
           });
         }
       }
     }
 
-    // Ensure Auto Dialer is guaranteed in CRM_MODULE section as an independent page
-    let crmSec = sectionMap.get('CRM_MODULE') || sectionMap.get('CRM_LEADS') || sectionMap.get('crm') || sectionMap.get('CRM');
-    if (!crmSec) {
-      crmSec = {
-        section_code: 'CRM_MODULE',
-        section_label: 'CRM & LEADS',
-        order: 4,
-        items: []
-      };
-      sectionMap.set('CRM_MODULE', crmSec);
-      sectionOrderList.push('CRM_MODULE');
-    }
-
-    if (crmSec) {
-      crmSec.items = crmSec.items || [];
-
-      // Guarantee Auto Dialer with explicit clean label & icon
-      const hasAutoDialer = crmSec.items.some(i => i.route === 'auto-dialer' || (i.menu_code && (i.menu_code.toUpperCase().includes('AUTO_DIALER') || i.menu_code.toUpperCase().includes('DIALER'))));
-      if (!hasAutoDialer) {
-        crmSec.items.push({
-          menu_code: "AUTO_DIALER",
-          label: `<i class="fas fa-phone-volume" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Auto Dialer`,
-          route: "auto-dialer"
-        });
-      } else {
-        // Enforce proper label for Auto Dialer
-        for (const item of crmSec.items) {
-          if (item.route === 'auto-dialer' || (item.menu_code && (item.menu_code.toUpperCase().includes('AUTO_DIALER') || item.menu_code.toUpperCase().includes('DIALER')))) {
-            item.label = `<i class="fas fa-phone-volume" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Auto Dialer`;
+    // 11. MYNTOS SAAS (Only if SaaS Admin)
+    if (isSaaSAdmin) {
+      const saasCanonical = getCanonicalSec('MYNTOS_SAAS');
+      if (saasCanonical && saasCanonical.subSections) {
+        const saasSubSections: SubSection[] = [];
+        for (const sub of saasCanonical.subSections) {
+          const subItems = sub.items.map(formatItem).filter((i): i is MenuItem => i !== null);
+          if (subItems.length > 0) {
+            saasSubSections.push({
+              sub_section_code: sub.sub_section_code,
+              sub_section_label: sub.sub_section_label,
+              items: subItems
+            });
           }
         }
-      }
-
-      // Guarantee Calling & Softphone as distinct standalone item
-      const hasSoftphone = crmSec.items.some(i => i.route === 'softphone' || (i.menu_code && (i.menu_code.toUpperCase().includes('SOFTPHONE') || i.menu_code.toUpperCase().includes('CALLING'))));
-      if (!hasSoftphone) {
-        crmSec.items.push({
-          menu_code: "SOFTPHONE",
-          label: `<i class="fas fa-headset" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Calling & Softphone`,
-          route: "softphone"
-        });
-      }
-
-      // Guarantee Digital Catalog as distinct standalone item for sales staff & leadership
-      const hasCatalog = crmSec.items.some(i => i.route === 'digital-catalog' || (i.menu_code && (i.menu_code.toUpperCase().includes('CATALOG'))));
-      if (!hasCatalog) {
-        crmSec.items.push({
-          menu_code: "DIGITAL_CATALOG",
-          label: `<i class="fas fa-book-open" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>Digital Catalog`,
-          route: "digital-catalog"
-        });
-      }
-    }
-
-    // Ensure Field Sales is guaranteed in WORKFLOWS section directly under Executive Dashboard
-    let workflowsSec = sectionMap.get('WORKFLOWS');
-    if (!workflowsSec) {
-      workflowsSec = {
-        section_code: 'WORKFLOWS',
-        section_label: 'WORK FLOWS',
-        order: 10,
-        items: []
-      };
-      sectionMap.set('WORKFLOWS', workflowsSec);
-      sectionOrderList.push('WORKFLOWS');
-    }
-
-    if (workflowsSec) {
-      workflowsSec.items = workflowsSec.items || [];
-      const hasFieldSales = workflowsSec.items.some(i => 
-        i.route === 'staff-bank-wise-leads' || 
-        (i.menu_code && (
-          i.menu_code.toUpperCase().includes('BANK_WISE_LEADS') || 
-          i.menu_code.toUpperCase().includes('FIELD_SALES')
-        ))
-      );
-      if (!hasFieldSales) {
-        workflowsSec.items.push({
-          menu_code: "MNR_BANK_WISE_LEADS",
-          label: `<i class="fas fa-users-gear" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Field Sales`,
-          route: "staff-bank-wise-leads"
-        });
-      } else {
-        // Enforce proper label and icon for Field Sales
-        for (const item of workflowsSec.items) {
-          if (item.route === 'staff-bank-wise-leads' || (item.menu_code && (item.menu_code.toUpperCase().includes('BANK_WISE_LEADS') || item.menu_code.toUpperCase().includes('FIELD_SALES')))) {
-            item.label = `<i class="fas fa-users-gear" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Field Sales`;
-          }
+        if (saasSubSections.length > 0) {
+          sections.push({
+            section_code: 'MYNTOS_SAAS',
+            section_label: 'MYNTOS SAAS',
+            order: 99,
+            subSections: saasSubSections
+          });
         }
       }
     }
 
-    const result = sectionOrderList.map(code => sectionMap.get(code)!);
-    result.sort((a, b) => a.order - b.order);
-
-    // Apply strict web ordering for WORKFLOWS and CRM_MODULE items
-    for (const section of result) {
-      if (section.section_code === 'WORKFLOWS' && section.items) {
-        section.items.sort((a, b) => (WORKFLOWS_ORDER[a.menu_code] || 99) - (WORKFLOWS_ORDER[b.menu_code] || 99));
-      }
-      if (section.section_code === 'CRM_MODULE' && section.items) {
-        section.items.sort((a, b) => (CRM_ORDER[a.menu_code] || CRM_ORDER[a.route] || 99) - (CRM_ORDER[b.menu_code] || CRM_ORDER[b.route] || 99));
-      }
-    }
-
-    return result;
+    return sections;
   }
 
   open(): void {

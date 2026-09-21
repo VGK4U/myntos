@@ -446,7 +446,7 @@ class MNRApp {
 
     window.addEventListener('session-expired', () => {
       console.log('[DC_APP] Session expired event received');
-      if (this.isLoggedIn) {
+      if (this.isLoggedIn && !authService.getAuthState().isLoggedIn) {
         const currentRoute = routerService.getCurrentRoute();
         const portalDashboards: PageRoute[] = ['progress', 'auto-dialer', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'];
         if (!portalDashboards.includes(currentRoute)) {
@@ -458,7 +458,7 @@ class MNRApp {
 
     window.addEventListener('auth-token-expired', () => {
       console.log('[DC_APP] Auth token expired event received');
-      if (this.isLoggedIn) {
+      if (this.isLoggedIn && !authService.getAuthState().isLoggedIn) {
         const currentRoute = routerService.getCurrentRoute();
         const portalDashboards: PageRoute[] = ['progress', 'auto-dialer', 'mnr-dashboard', 'partner-dashboard', 'vgk-member-hub'];
         if (!portalDashboards.includes(currentRoute)) {

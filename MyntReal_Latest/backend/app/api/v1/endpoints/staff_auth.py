@@ -869,13 +869,16 @@ def staff_login(
     except Exception:
         pass
 
+    mobile_access_days = getattr(settings, 'MOBILE_ACCESS_TOKEN_EXPIRE_DAYS', 30)
+    expires_in_seconds = (mobile_access_days * 86400) if getattr(login_data, 'device_id', None) else (session_hours * 3600)
+
     return StaffLoginResponse(
         success=True,
         message=message,
         access_token=token,
         refresh_token=mobile_refresh_token,
         token_type="bearer",
-        expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        expires_in=expires_in_seconds,
         employee=employee_data,
         nda_required=nda_required,
         nda_version_id=active_nda.id if active_nda and nda_required else None,
@@ -1029,11 +1032,11 @@ async def refresh_staff_token(
                 headers={"WWW-Authenticate": "Bearer"}
             )
         
-        # Check token expiry - allow refresh within 24-hour grace period
+        # Check token expiry - allow refresh within 30-day grace period for uninterrupted work
         exp = payload.get("exp")
         if exp:
             exp_datetime = datetime.utcfromtimestamp(exp)
-            grace_period = timedelta(hours=24)
+            grace_period = timedelta(days=30)
             if datetime.utcnow() > exp_datetime + grace_period:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -1063,7 +1066,7 @@ async def refresh_staff_token(
             )
         
         # Generate new token with fresh expiry
-        session_hours = get_staff_setting(db, 'session_timeout_hours', 24)
+        session_hours = get_staff_setting(db, 'session_timeout_hours', 8760)
         new_token = SecurityManager.create_access_token(
             data={
                 "sub": str(employee.id),
@@ -1203,7 +1206,8 @@ async def refresh_staff_mobile_session(
     session.last_used_at = now_ist
     session.expires_at = now_ist + timedelta(days=180)  # 180-day sliding window renewal
 
-    # 2. Issue fresh JWT access token (30 min)
+    # 2. Issue fresh long-lived JWT access token (30 days for mobile persistent sessions)
+    mobile_access_days = getattr(settings, 'MOBILE_ACCESS_TOKEN_EXPIRE_DAYS', 30)
     new_jwt = SecurityManager.create_access_token(
         data={
             "sub": str(employee.id),
@@ -1218,7 +1222,7 @@ async def refresh_staff_mobile_session(
             "team_tag": employee.team_tag,
             "user_type": "staff"
         },
-        expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_delta=timedelta(days=mobile_access_days)
     )
 
     employee_data = employee.to_dict()
@@ -1244,7 +1248,7 @@ async def refresh_staff_mobile_session(
         "access_token": new_jwt,
         "refresh_token": new_refresh_token,
         "token_type": "bearer",
-        "expires_in": settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "expires_in": mobile_access_days * 86400,
         "employee": employee_data
     }
 

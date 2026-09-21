@@ -2574,6 +2574,29 @@
             };
             const res = await fetch(url, options);
             if (res.status === 401) {
+                // Attempt automatic silent token refresh
+                try {
+                    const refreshRes = await fetch('/api/v1/staff/auth/refresh', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    if (refreshRes.ok) {
+                        const refreshData = await refreshRes.json();
+                        if (refreshData && refreshData.access_token) {
+                            localStorage.setItem('staff_token', refreshData.access_token);
+                            localStorage.setItem('token', refreshData.access_token);
+                            options.headers['Authorization'] = `Bearer ${refreshData.access_token}`;
+                            const retryRes = await fetch(url, options);
+                            if (retryRes.ok) return retryRes.json();
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[StaffAuth] Silent refresh error:', e);
+                }
+
                 const urlParams = new URLSearchParams(window.location.search);
                 const leadIdParam = urlParams.get('lead_id') || urlParams.get('leadId');
                 if (leadIdParam && typeof showQuickStaffVerificationModal === 'function') {

@@ -6,6 +6,7 @@
  */
 
 import { registerPlugin, Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 import { apiService } from './api.service';
 import { authService } from './auth.service';
 import { secureStorageService } from './secure-storage.service';
@@ -152,7 +153,7 @@ class IncomingCallAdapter {
         await this.syncPushToken();
       }
 
-      // 6. Bind lifecycle event listeners for login/logout token management
+      // 6. Bind lifecycle event listeners for login/logout and app resume token management
       if (typeof window !== 'undefined') {
         window.addEventListener('login-success', () => {
           this.syncPushToken().catch(err => console.warn('[IncomingCallAdapter] Token sync error on login:', err));
@@ -165,6 +166,23 @@ class IncomingCallAdapter {
         window.addEventListener('logout', () => {
           this.revokePushToken().catch(err => console.warn('[IncomingCallAdapter] Token revoke error on logout:', err));
         });
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible' && authService.getAuthState().isLoggedIn) {
+            this.syncPushToken().catch(() => {});
+          }
+        });
+      }
+
+      if (Capacitor.isNativePlatform()) {
+        try {
+          App.addListener('appStateChange', (state) => {
+            if (state.isActive && authService.getAuthState().isLoggedIn) {
+              this.syncPushToken().catch(() => {});
+            }
+          });
+        } catch (e) {
+          console.warn('[IncomingCallAdapter] App lifecycle listener error:', e);
+        }
       }
 
       console.log('[IncomingCallAdapter] Canonical Incoming Call Adapter successfully initialized.');

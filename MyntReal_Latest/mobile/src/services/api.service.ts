@@ -279,7 +279,10 @@ class ApiService {
               return this.request<T>(method, endpoint, body, isFormData, false, timeoutMs);
             }
           }
-          this.handleSessionExpired(endpoint);
+          const { authService } = await import('./auth.service');
+          if (!authService.getAuthState().isLoggedIn) {
+            this.handleSessionExpired(endpoint);
+          }
         }
         
         // DC-AGREEMENT-TYPE-001: Agreement pending interceptor for mobile

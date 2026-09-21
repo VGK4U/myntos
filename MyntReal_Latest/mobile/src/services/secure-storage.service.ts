@@ -5,6 +5,7 @@
  */
 
 import { registerPlugin, Capacitor } from '@capacitor/core';
+import { Preferences } from '@capacitor/preferences';
 
 export interface SecureStoragePlugin {
   setKey(options: { key: string; value: string }): Promise<{ success: boolean }>;
@@ -72,17 +73,48 @@ class SecureStorageService {
     if (this.cachedDeviceId) {
       return this.cachedDeviceId;
     }
+    // 1. Try native KeyStore / Keychain plugin
     try {
       const res = await NativeSecureStorage.getDeviceId();
       if (res && res.deviceId) {
         this.cachedDeviceId = res.deviceId;
+        try {
+          await Preferences.set({ key: 'mynt_sec_device_id', value: res.deviceId });
+          localStorage.setItem('mynt_sec_device_id', res.deviceId);
+        } catch {}
         return res.deviceId;
       }
     } catch (e) {
       console.warn('[SecureStorage] Error getting deviceId from native plugin:', e);
     }
-    const fallback = `${Capacitor.getPlatform()}_${Math.random().toString(36).substring(2)}_${Date.now()}`;
+
+    // 2. Check Preferences fallback
+    try {
+      const { value: prefId } = await Preferences.get({ key: 'mynt_sec_device_id' });
+      if (prefId) {
+        this.cachedDeviceId = prefId;
+        try { localStorage.setItem('mynt_sec_device_id', prefId); } catch {}
+        return prefId;
+      }
+    } catch {}
+
+    // 3. Check localStorage fallback
+    try {
+      const localId = localStorage.getItem('mynt_sec_device_id');
+      if (localId) {
+        this.cachedDeviceId = localId;
+        try { await Preferences.set({ key: 'mynt_sec_device_id', value: localId }); } catch {}
+        return localId;
+      }
+    } catch {}
+
+    // 4. Generate stable permanent ID and save across all storage tiers
+    const fallback = `${Capacitor.getPlatform()}_${Math.random().toString(36).substring(2)}${Date.now().toString(36)}`;
     this.cachedDeviceId = fallback;
+    try {
+      await Preferences.set({ key: 'mynt_sec_device_id', value: fallback });
+      localStorage.setItem('mynt_sec_device_id', fallback);
+    } catch {}
     return fallback;
   }
 
@@ -90,12 +122,14 @@ class SecureStorageService {
     if (Capacitor.isNativePlatform()) {
       try {
         await NativeSecureStorage.setKey({ key: REFRESH_TOKEN_KEY, value: token });
-        return;
       } catch (e) {
         console.warn('[SecureStorage] Native storage write failed, falling back to local:', e);
       }
     }
-    // Web development & native safety fallback
+    // Mirror to Preferences & localStorage for guaranteed persistence across app updates & cold starts
+    try {
+      await Preferences.set({ key: `mynt_sec_${REFRESH_TOKEN_KEY}`, value: token });
+    } catch {}
     try {
       localStorage.setItem(`mynt_sec_${REFRESH_TOKEN_KEY}`, token);
     } catch (e) {
@@ -112,6 +146,11 @@ class SecureStorageService {
         console.warn('[SecureStorage] Failed to read refresh token from native storage:', e);
       }
     }
+    // Try Preferences fallback
+    try {
+      const { value: prefToken } = await Preferences.get({ key: `mynt_sec_${REFRESH_TOKEN_KEY}` });
+      if (prefToken) return prefToken;
+    } catch {}
     // Web development & native safety fallback
     try {
       return localStorage.getItem(`mynt_sec_${REFRESH_TOKEN_KEY}`) || null;
@@ -126,6 +165,9 @@ class SecureStorageService {
     } catch (e) {
       console.warn('[SecureStorage] Error removing refresh token:', e);
     }
+    try {
+      await Preferences.remove({ key: `mynt_sec_${REFRESH_TOKEN_KEY}` });
+    } catch {}
     try {
       localStorage.removeItem(`mynt_sec_${REFRESH_TOKEN_KEY}`);
     } catch {}

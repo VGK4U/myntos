@@ -81,30 +81,30 @@ class AuthService {
         const restored = JSON.parse(value);
         if (restored.isLoggedIn && restored.tokenExpiresAt > 0 && Date.now() >= restored.tokenExpiresAt) {
           console.log('[DC_AUTH] Restored session access token expired. Checking persistent refresh token...');
+          this.authState = restored;
           const refreshToken = await secureStorageService.getRefreshToken();
           if (refreshToken) {
-            this.authState = restored;
             const refreshed = await this.refreshMobileSession();
             if (refreshed) {
               console.log('[DC_AUTH] Persistent session refreshed successfully on startup');
               return;
             }
-            // If refreshMobileSession() already logged out due to 401/403 rejection, state is cleared
             if (!this.authState.isLoggedIn) {
-              console.log('[DC_AUTH] Refresh token invalidated by server on cold start');
+              console.log('[DC_AUTH] Refresh token permanently revoked by server on cold start');
               return;
             }
-            // If failed due to offline/network issue, retain session in offline mode
             console.log('[DC_AUTH] Network offline on startup; retaining session in offline mode');
             return;
           }
-          console.log('[DC_AUTH] No valid persistent session, clearing state');
-          restored.isLoggedIn = false;
-          restored.user = null;
-          restored.tokenExpiresAt = 0;
-          this.authState = restored;
-          await this.saveAuthState();
-          await apiService.clearToken();
+          // If refresh token not immediately ready, attempt silent re-auth fallback
+          console.log('[DC_AUTH] Refresh token pending. Attempting silent re-auth fallback...');
+          const reAuthed = await this.attemptSilentReAuth();
+          if (reAuthed) {
+            console.log('[DC_AUTH] Silent re-auth succeeded on startup');
+            return;
+          }
+          // Zero auto-logout: Retain session in persistent mode; background refresh will renew when online
+          console.log('[DC_AUTH] Retaining session in persistent mode; background refresh will renew when online');
           return;
         }
         if (restored.isLoggedIn) {
@@ -297,6 +297,8 @@ class AuthService {
       if (response.data.refresh_token) {
         await secureStorageService.setRefreshToken(response.data.refresh_token);
       }
+      // Store credentials in secure vault for silent re-auth fallback across app lifecycles
+      this.saveCredentialsForBiometric(userId, password, portal).catch(() => {});
 
       // DC Protocol: Extract user data based on portal type
       // Staff uses 'employee', MNR uses 'user', Partner uses 'partner'
@@ -319,7 +321,7 @@ class AuthService {
         normalizedUser.partner_type = response.data.partner.category;
       }
 
-      const tokenExpiresIn = response.data.expires_in || response.data.token_expires_in || 1800;
+      const tokenExpiresIn = response.data.expires_in || response.data.token_expires_in || (30 * 86400);
       const tokenExpiresAt = Date.now() + (tokenExpiresIn * 1000);
 
       this.authState = {
@@ -331,6 +333,11 @@ class AuthService {
         tokenExpiresAt
       };
       await this.saveAuthState();
+      try {
+        localStorage.setItem('staff_token', response.data.access_token);
+        localStorage.setItem('token', response.data.access_token);
+        if (normalizedUser) localStorage.setItem('staff_user', JSON.stringify(normalizedUser));
+      } catch {}
 
       // Fetch and store menu settings for Staff portal in background
       if (portal === 'staff') {
@@ -412,11 +419,15 @@ class AuthService {
         await apiService.setToken(access_token);
         
         // 3. Update authState
-        const tokenExpiresIn = expires_in || 1800;
+        const tokenExpiresIn = expires_in || (30 * 86400);
         this.authState.tokenExpiresAt = Date.now() + (tokenExpiresIn * 1000);
         this.authState.lastActivity = Date.now();
         this.authState.isLoggedIn = true;
         await this.saveAuthState();
+        try {
+          localStorage.setItem('staff_token', access_token);
+          localStorage.setItem('token', access_token);
+        } catch {}
         
         // 4. Reset session expired flags
         apiService.resetSessionExpiredFlag();
@@ -426,9 +437,21 @@ class AuthService {
         return true;
       } else {
         const status = response?.status;
-        if (status === 401 || status === 403) {
-          console.warn(`[DC_AUTH] Refresh token rejected or expired on server (HTTP ${status}):`, response?.error);
+        const detail = (response?.error || '').toLowerCase();
+        const isPermanentRevocation = (status === 401 || status === 403) && 
+          (detail.includes('revoked') || detail.includes('locked') || detail.includes('password change') || detail.includes('security update') || detail.includes('denied') || detail.includes('deactivated'));
+
+        if (isPermanentRevocation) {
+          console.warn(`[DC_AUTH] Permanent account revocation on server (HTTP ${status}):`, response?.error);
           await this.logout();
+        } else if (status === 401 || status === 403) {
+          console.log('[DC_AUTH] Refresh token mismatch or expired, attempting silent re-auth fallback...');
+          const reAuthed = await this.attemptSilentReAuth();
+          if (reAuthed) {
+            console.log('[DC_AUTH] Silent re-auth succeeded after refresh mismatch');
+            return true;
+          }
+          console.warn('[DC_AUTH] Silent re-auth pending. Preserving session in offline mode.');
         } else {
           console.warn(`[DC_AUTH] Mobile session refresh failed due to network/server condition (HTTP ${status || 0}). Session preserved for retry when online.`);
         }
