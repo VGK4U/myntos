@@ -16,6 +16,7 @@ const {
     useMultiFileAuthState,
     DisconnectReason,
     fetchLatestBaileysVersion,
+    fetchLatestWaWebVersion,
     Browsers,
     downloadMediaMessage
 } = require('@whiskeysockets/baileys');
@@ -52,6 +53,9 @@ let connectionStatus = ALLOW_LOCAL_SOCKET ? 'disconnected' : 'dev_standby';
 let targetJid = null;
 let clientGen = 0;
 let skipRestoreOnce = false;
+let lastPairingCode = null;
+let lastPairingPhone = null;
+let pairingCodeRequestedAt = 0;
 
 // Prevent process exit on background Baileys socket disconnection (1006 / connection reset)
 const BACKEND_API_BASE = process.env.BACKEND_API_URL || 'http://127.0.0.1:8000';
@@ -532,14 +536,24 @@ async function startWhatsAppBot() {
     }
 
     const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
-    const { version } = await fetchLatestBaileysVersion();
+    
+    let version;
+    try {
+        const waWeb = await fetchLatestWaWebVersion();
+        version = waWeb.version;
+        console.log(`[WA-LIFECYCLE] 🌐 Using live WhatsApp Web production version: ${version.join('.')}`);
+    } catch (verErr) {
+        const fallback = await fetchLatestBaileysVersion();
+        version = fallback.version;
+        console.warn(`[WA-LIFECYCLE] ⚠️ Note on live WA Web version fetch: ${verErr.message}. Using bundled Baileys version: ${version.join('.')}`);
+    }
 
     sock = makeWASocket({
         version,
         auth: state,
         logger: pino({ level: 'silent' }),
         printQRInTerminal: false,
-        browser: Browsers.ubuntu('Chrome'),
+        browser: Browsers.macOS('Desktop'),
         syncFullHistory: false,
         connectTimeoutMs: 60000,
         keepAliveIntervalMs: 30000,
@@ -597,6 +611,9 @@ async function processConnectionUpdate(thisGen, update) {
         lastConnectedTimestamp = Date.now();
         connectionStatus = 'connected';
         currentQr = null;
+        lastPairingCode = null;
+        lastPairingPhone = null;
+        pairingCodeRequestedAt = 0;
         consecutiveAuthFailures = 0;
         console.log(`✅ [WA-LIFECYCLE] WHATSAPP CONNECTED (Gen ${thisGen})! Session is active and authoritative.`);
         await backupSessionToDatabase();
@@ -1052,6 +1069,77 @@ app.get('/qr-data', (req, res) => {
         is_leader: isLeader,
         instance_id: INSTANCE_ID,
         timestamp: Date.now()
+    });
+});
+
+app.post('/api/request-pairing-code', async (req, res) => {
+    try {
+        if (!ALLOW_LOCAL_SOCKET) {
+            return res.status(403).json({ success: false, error: "Local WhatsApp socket is in standby mode." });
+        }
+        if (!isLeader) {
+            if (leaderHost && leaderHost !== '127.0.0.1' && leaderHost !== INSTANCE_HOST) {
+                try {
+                    const proxyResp = await fetch(`http://${leaderHost}:5002/api/request-pairing-code`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(req.body)
+                    });
+                    const proxyData = await proxyResp.json();
+                    return res.status(proxyResp.status).json(proxyData);
+                } catch (pErr) {
+                    return res.status(502).json({ success: false, error: `Cluster leader proxy note: ${pErr.message}` });
+                }
+            }
+        }
+        if (!sock) {
+            return res.status(503).json({ success: false, error: "WhatsApp service is initializing. Please wait a moment and retry." });
+        }
+        if (connectionStatus === 'connected') {
+            return res.status(400).json({ success: false, error: "WhatsApp is already connected." });
+        }
+        let phone = String(req.body?.phone_number || req.body?.phone || '').replace(/\D/g, '');
+        if (!phone) {
+            return res.status(400).json({ success: false, error: "Phone number is required." });
+        }
+        if (phone.length === 10) {
+            phone = '91' + phone;
+        }
+        if (phone.length < 11 || phone.length > 15) {
+            return res.status(400).json({ success: false, error: "Please provide a valid phone number with country code (e.g. 919876543210)." });
+        }
+
+        console.log(`📲 [PAIRING-CODE] Requesting pairing code for ${phone}...`);
+        const code = await sock.requestPairingCode(phone);
+        lastPairingCode = code;
+        lastPairingPhone = phone;
+        pairingCodeRequestedAt = Date.now();
+        console.log(`✅ [PAIRING-CODE] Successfully generated pairing code for ${phone}: ${code}`);
+        syncClusterCoordinator();
+
+        return res.json({
+            success: true,
+            phone: phone,
+            pairing_code: code,
+            formatted_code: code && code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code,
+            expires_in_seconds: 120,
+            timestamp: pairingCodeRequestedAt
+        });
+    } catch (err) {
+        console.error(`❌ [PAIRING-CODE] Error generating pairing code:`, err.message);
+        return res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.get('/api/pairing-code-status', (req, res) => {
+    return res.json({
+        success: true,
+        connected: connectionStatus === 'connected',
+        status: connectionStatus,
+        pairing_code: lastPairingCode,
+        formatted_code: lastPairingCode && lastPairingCode.length === 8 ? `${lastPairingCode.slice(0, 4)}-${lastPairingCode.slice(4)}` : lastPairingCode,
+        phone: lastPairingPhone,
+        age_seconds: pairingCodeRequestedAt > 0 ? Math.round((Date.now() - pairingCodeRequestedAt) / 1000) : 0
     });
 });
 

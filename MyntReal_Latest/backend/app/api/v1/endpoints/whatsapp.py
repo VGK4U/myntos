@@ -6394,6 +6394,89 @@ def get_gateway_status_qr():
     return get_whatsapp_bot_status()
 
 
+@router.post("/request-pairing-code")
+def request_whatsapp_pairing_code(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Proxies pairing code request to the active Baileys WhatsApp Gateway (port 5002).
+    Supports multi-instance Elastic Beanstalk by consulting whatsapp_bot_lease leader_host.
+    """
+    raw_phone = str(payload.get("phone_number") or payload.get("phone") or "").strip()
+    if not raw_phone:
+        raise HTTPException(status_code=400, detail="Phone number is required")
+
+    clean_phone = "".join(filter(str.isdigit, raw_phone))
+    if len(clean_phone) == 10:
+        clean_phone = "91" + clean_phone
+
+    if len(clean_phone) < 11 or len(clean_phone) > 15:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid phone number. Please provide country code followed by number (e.g. 919876543210)."
+        )
+
+    target_urls = ["http://localhost:5002/api/request-pairing-code"]
+    try:
+        from sqlalchemy import text
+        row = db.execute(text("SELECT leader_host FROM whatsapp_bot_lease WHERE id = 1")).fetchone()
+        if row and row[0] and row[0] not in ("127.0.0.1", "localhost"):
+            leader_url = f"http://{row[0]}:5002/api/request-pairing-code"
+            if leader_url not in target_urls:
+                target_urls.insert(0, leader_url)
+    except Exception as e:
+        logger.debug(f"[PAIRING-PROXY] Lease query note: {e}")
+
+    last_error = "WhatsApp gateway offline"
+    for url in target_urls:
+        try:
+            resp = requests.post(url, json={"phone_number": clean_phone}, timeout=15.0)
+            data = resp.json()
+            if resp.status_code == 200 and data.get("success"):
+                return data
+            else:
+                last_error = data.get("error") or f"HTTP {resp.status_code}"
+        except Exception as e:
+            last_error = str(e)
+
+    raise HTTPException(status_code=502, detail=f"Failed to generate pairing code: {last_error}")
+
+
+@router.get("/pairing-code-status")
+def get_whatsapp_pairing_code_status(db: Session = Depends(get_db)):
+    """
+    Returns the latest pairing code status from the active Baileys WhatsApp Gateway.
+    """
+    target_urls = ["http://localhost:5002/api/pairing-code-status"]
+    try:
+        from sqlalchemy import text
+        row = db.execute(text("SELECT leader_host FROM whatsapp_bot_lease WHERE id = 1")).fetchone()
+        if row and row[0] and row[0] not in ("127.0.0.1", "localhost"):
+            leader_url = f"http://{row[0]}:5002/api/pairing-code-status"
+            if leader_url not in target_urls:
+                target_urls.insert(0, leader_url)
+    except Exception as e:
+        logger.debug(f"[PAIRING-PROXY] Lease query note: {e}")
+
+    for url in target_urls:
+        try:
+            resp = requests.get(url, timeout=3.0)
+            if resp.status_code == 200:
+                return resp.json()
+        except Exception:
+            pass
+
+    return {
+        "success": True,
+        "connected": False,
+        "status": "disconnected",
+        "pairing_code": None,
+        "phone": None,
+        "age_seconds": 0
+    }
+
+
 @router.get("/unified-status")
 def get_whatsapp_unified_status(db: Session = Depends(get_db)):
     """

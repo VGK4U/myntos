@@ -1886,44 +1886,210 @@ export class StaffWhatsAppInboxPage {
     const modalWrap = document.getElementById('waCenterModalContainer');
     if (!modalWrap) return;
 
+    let pairingTimerInterval: any = null;
+    let currentPairingRawCode = '';
+
     modalWrap.innerHTML = `
       <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 16px;">
-        <div style="background: #1e293b; border-radius: 16px; padding: 24px; width: 100%; max-width: 390px; border: 1px solid #334155; text-align: center; box-shadow: 0 12px 36px rgba(0,0,0,0.6);">
+        <div style="background: #1e293b; border-radius: 16px; padding: 20px; width: 100%; max-width: 390px; border: 1px solid #334155; text-align: center; box-shadow: 0 12px 36px rgba(0,0,0,0.6);">
           
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-            <div style="font-size: 16px; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
-              <i class="fab fa-whatsapp" style="color: #25d366; font-size: 20px;"></i> Link WhatsApp Web
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="font-size: 15px; font-weight: 700; color: #f8fafc; display: flex; align-items: center; gap: 8px;">
+              <i class="fab fa-whatsapp" style="color: #25d366; font-size: 19px;"></i> Link WhatsApp
             </div>
-            <button id="waQrModalCloseBtn" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer;">✕</button>
+            <button id="waQrModalCloseBtn" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer; padding: 4px;">✕</button>
           </div>
 
-          <p style="font-size: 12px; color: #94a3b8; margin-bottom: 16px; line-height: 1.4;">
-            Open WhatsApp on your phone > <strong>Linked Devices</strong> > <strong>Link a Device</strong> and point your camera here:
-          </p>
+          <!-- Dual Tabs for Mobile -->
+          <div style="display: flex; background: #0f172a; border-radius: 8px; padding: 3px; margin-bottom: 14px; gap: 4px;">
+            <button type="button" id="mobTabQrBtn" style="flex: 1; padding: 7px 6px; font-size: 11.5px; font-weight: 700; border: none; border-radius: 6px; background: #1e293b; color: #25d366; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+              <i class="fas fa-qrcode me-1"></i> Scan QR
+            </button>
+            <button type="button" id="mobTabPhoneBtn" style="flex: 1; padding: 7px 6px; font-size: 11.5px; font-weight: 600; border: none; border-radius: 6px; background: transparent; color: #94a3b8; cursor: pointer;">
+              <i class="fas fa-mobile-alt me-1"></i> Phone Code
+            </button>
+          </div>
 
-          <div id="mobileQrBox" style="background: #fff; padding: 12px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 16px;">
-            ${this.gatewayQr ? `
-              <img id="mobileQrImg" src="${this.gatewayQr.startsWith('http') || this.gatewayQr.startsWith('data:') ? this.gatewayQr : `data:image/png;base64,${this.gatewayQr}`}" alt="QR Code" style="width: 200px; height: 200px; display: block; border-radius: 8px;" />
-            ` : `
-              <div id="mobileQrSpinner" style="width: 200px; height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; font-size: 12px; gap: 8px;">
-                <i class="fas fa-spinner fa-spin" style="font-size: 28px; color: #25d366;"></i>
-                <span>Loading QR Code...</span>
+          <!-- Tab 1: QR Scan -->
+          <div id="mobTabQrContent">
+            <p style="font-size: 11.5px; color: #94a3b8; margin-bottom: 12px; line-height: 1.4; text-align: left; background: #0f172a; padding: 8px 10px; border-radius: 6px;">
+              Open WhatsApp on your phone > <strong>Linked Devices</strong> > <strong>Link a Device</strong> and point camera here:
+            </p>
+
+            <div id="mobileQrBox" style="background: #fff; padding: 12px; border-radius: 12px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,0.3); margin-bottom: 12px;">
+              ${this.gatewayQr ? `
+                <img id="mobileQrImg" src="${this.gatewayQr.startsWith('http') || this.gatewayQr.startsWith('data:') ? this.gatewayQr : `data:image/png;base64,${this.gatewayQr}`}" alt="QR Code" style="width: 180px; height: 180px; display: block; border-radius: 8px;" />
+              ` : `
+                <div id="mobileQrSpinner" style="width: 180px; height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; font-size: 12px; gap: 8px;">
+                  <i class="fas fa-spinner fa-spin" style="font-size: 28px; color: #25d366;"></i>
+                  <span>Loading QR Code...</span>
+                </div>
+              `}
+            </div>
+
+            <div id="mobileQrStatusNote" style="font-size: 11px; color: #64748b;">
+              Live WhatsApp Web Pairing Session
+            </div>
+          </div>
+
+          <!-- Tab 2: Phone Number Pairing Code -->
+          <div id="mobTabPhoneContent" style="display: none;">
+            <p style="font-size: 11.5px; color: #94a3b8; margin-bottom: 12px; line-height: 1.4; text-align: left; background: #0f172a; padding: 8px 10px; border-radius: 6px;">
+              1. Open WhatsApp > <strong>Linked Devices</strong> > <strong>Link a Device</strong><br/>
+              2. Tap <strong style="color: #25d366;">"Link with phone number instead"</strong> at bottom<br/>
+              3. Enter the 8-character pairing code below
+            </p>
+
+            <div style="margin-bottom: 12px; text-align: left;">
+              <label style="display: block; font-size: 11px; font-weight: 600; color: #cbd5e1; margin-bottom: 4px;">WhatsApp Mobile Number</label>
+              <div style="display: flex; gap: 6px;">
+                <input type="text" id="mobPairingCountryCode" value="+91" style="width: 55px; padding: 8px 6px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; font-size: 12px; font-weight: 600; text-align: center;" />
+                <input type="tel" id="mobPairingPhoneInput" placeholder="9876543210" maxlength="15" style="flex: 1; padding: 8px 10px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #f8fafc; font-size: 13px; outline: none;" />
               </div>
-            `}
-          </div>
+            </div>
 
-          <div id="mobileQrStatusNote" style="font-size: 11px; color: #64748b;">
-            Live WhatsApp Web Pairing Session
+            <button type="button" id="mobBtnGenPairingCode" style="width: 100%; padding: 9px; font-size: 12.5px; font-weight: 700; background: #25d366; color: #0f172a; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 12px;">
+              <i class="fas fa-key me-1"></i> Generate Pairing Code
+            </button>
+
+            <!-- Result Card -->
+            <div id="mobPairingResultCard" style="display: none; background: #0f172a; border: 1px solid #22c55e44; border-radius: 10px; padding: 12px; text-align: center;">
+              <div style="font-size: 10px; color: #86efac; font-weight: 600; text-transform: uppercase; margin-bottom: 6px;">Enter on your phone</div>
+              <div id="mobPairingCodeDisplay" style="font-family: monospace; font-size: 22px; font-weight: 800; letter-spacing: 3px; color: #25d366; background: #1e293b; padding: 8px; border-radius: 6px; border: 1px dashed #22c55e; margin-bottom: 8px;">
+                ---- - ----
+              </div>
+              <div style="display: flex; justify-content: center; align-items: center; gap: 8px;">
+                <button type="button" id="mobCopyPairingBtn" style="padding: 4px 10px; font-size: 11px; background: #334155; color: #f8fafc; border: none; border-radius: 4px; cursor: pointer;">
+                  <i class="fas fa-copy me-1"></i> Copy Code
+                </button>
+                <span id="mobPairingCountdown" style="font-size: 11px; color: #94a3b8;">Expires in: 2:00</span>
+              </div>
+              <div style="font-size: 10.5px; color: #22c55e; margin-top: 6px;">
+                <i class="fas fa-spinner fa-spin me-1"></i> Waiting for confirmation...
+              </div>
+            </div>
           </div>
 
         </div>
       </div>
     `;
 
+    // Tab switching listeners
+    const tabQrBtn = document.getElementById('mobTabQrBtn');
+    const tabPhoneBtn = document.getElementById('mobTabPhoneBtn');
+    const tabQrContent = document.getElementById('mobTabQrContent');
+    const tabPhoneContent = document.getElementById('mobTabPhoneContent');
+
+    tabQrBtn?.addEventListener('click', () => {
+      if (tabQrBtn && tabPhoneBtn && tabQrContent && tabPhoneContent) {
+        tabQrBtn.style.background = '#1e293b';
+        tabQrBtn.style.color = '#25d366';
+        tabQrBtn.style.fontWeight = '700';
+        tabPhoneBtn.style.background = 'transparent';
+        tabPhoneBtn.style.color = '#94a3b8';
+        tabPhoneBtn.style.fontWeight = '600';
+        tabQrContent.style.display = 'block';
+        tabPhoneContent.style.display = 'none';
+      }
+    });
+
+    tabPhoneBtn?.addEventListener('click', () => {
+      if (tabQrBtn && tabPhoneBtn && tabQrContent && tabPhoneContent) {
+        tabPhoneBtn.style.background = '#1e293b';
+        tabPhoneBtn.style.color = '#25d366';
+        tabPhoneBtn.style.fontWeight = '700';
+        tabQrBtn.style.background = 'transparent';
+        tabQrBtn.style.color = '#94a3b8';
+        tabQrBtn.style.fontWeight = '600';
+        tabQrContent.style.display = 'none';
+        tabPhoneContent.style.display = 'block';
+
+        // Auto pre-fill phone if available
+        const pInput = document.getElementById('mobPairingPhoneInput') as HTMLInputElement;
+        if (pInput && !pInput.value) {
+          try {
+            const raw = localStorage.getItem('staff_user') || localStorage.getItem('user') || '{}';
+            const u = JSON.parse(raw);
+            let p = String(u.phone || u.mobile || '').replace(/\D/g, '');
+            if (p.length === 12 && p.startsWith('91')) p = p.slice(2);
+            if (p.length === 10) pInput.value = p;
+          } catch (_) {}
+        }
+      }
+    });
+
+    // Pairing code generation listener
+    document.getElementById('mobBtnGenPairingCode')?.addEventListener('click', async () => {
+      const cc = ((document.getElementById('mobPairingCountryCode') as HTMLInputElement)?.value || '+91').replace(/\D/g, '');
+      const num = ((document.getElementById('mobPairingPhoneInput') as HTMLInputElement)?.value || '').replace(/\D/g, '');
+      if (!num || num.length < 7) {
+        alert('Please enter a valid mobile number.');
+        return;
+      }
+      const fullPhone = cc + (num.startsWith(cc) ? num.slice(cc.length) : num);
+      const btn = document.getElementById('mobBtnGenPairingCode') as HTMLButtonElement;
+      const card = document.getElementById('mobPairingResultCard');
+      const display = document.getElementById('mobPairingCodeDisplay');
+      const countdown = document.getElementById('mobPairingCountdown');
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Generating code...';
+      }
+
+      try {
+        const res = await apiService.post<any>('/whatsapp/request-pairing-code', { phone_number: fullPhone });
+        const resData = res.data || res;
+        if (resData && resData.success && resData.pairing_code) {
+          currentPairingRawCode = resData.pairing_code;
+          const fmt = resData.formatted_code || (resData.pairing_code.length === 8 ? `${resData.pairing_code.slice(0, 4)} - ${resData.pairing_code.slice(4)}` : resData.pairing_code);
+          if (display) display.textContent = fmt;
+          if (card) card.style.display = 'block';
+
+          let remaining = resData.expires_in_seconds || 120;
+          if (pairingTimerInterval) clearInterval(pairingTimerInterval);
+          pairingTimerInterval = setInterval(() => {
+            remaining--;
+            const m = Math.floor(remaining / 60);
+            const s = remaining % 60;
+            if (countdown) countdown.textContent = `Expires in: ${m}:${s < 10 ? '0' : ''}${s}`;
+            if (remaining <= 0) {
+              clearInterval(pairingTimerInterval);
+              pairingTimerInterval = null;
+              if (countdown) countdown.textContent = 'Code expired. Generate new.';
+            }
+          }, 1000);
+        } else {
+          alert(res.error || resData?.detail || 'Failed to generate pairing code. Please retry.');
+        }
+      } catch (err: any) {
+        alert(`Error: ${err.message}`);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-key me-1"></i> Generate Pairing Code';
+        }
+      }
+    });
+
+    // Copy pairing code listener
+    document.getElementById('mobCopyPairingBtn')?.addEventListener('click', () => {
+      if (!currentPairingRawCode) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(currentPairingRawCode).then(() => {
+          const btn = document.getElementById('mobCopyPairingBtn');
+          if (btn) btn.textContent = 'Copied!';
+          setTimeout(() => { if (btn) btn.innerHTML = '<i class="fas fa-copy me-1"></i> Copy Code'; }, 2000);
+        }).catch(() => {});
+      }
+    });
+
     document.getElementById('waQrModalCloseBtn')?.addEventListener('click', () => {
       modalWrap.innerHTML = '';
       if (this.qrPollingTimer) clearInterval(this.qrPollingTimer);
       this.qrPollingTimer = null;
+      if (pairingTimerInterval) clearInterval(pairingTimerInterval);
+      pairingTimerInterval = null;
     });
 
     let lastRenderedQr = this.gatewayQr || '';
@@ -1933,6 +2099,8 @@ export class StaffWhatsAppInboxPage {
       if (this.gatewayConnected) {
         clearInterval(this.qrPollingTimer);
         this.qrPollingTimer = null;
+        if (pairingTimerInterval) clearInterval(pairingTimerInterval);
+        pairingTimerInterval = null;
         modalWrap.innerHTML = '';
         this.render();
       } else if (this.gatewayQr && this.gatewayQr !== lastRenderedQr) {
@@ -1948,7 +2116,7 @@ export class StaffWhatsAppInboxPage {
           const qrBox = document.getElementById('mobileQrBox');
           if (qrBox) {
             if (spinner) spinner.remove();
-            qrBox.innerHTML = `<img id="mobileQrImg" src="${normalizedSrc}" alt="QR Code" style="width: 200px; height: 200px; display: block; border-radius: 8px;" />`;
+            qrBox.innerHTML = `<img id="mobileQrImg" src="${normalizedSrc}" alt="QR Code" style="width: 180px; height: 180px; display: block; border-radius: 8px;" />`;
           }
         }
       }

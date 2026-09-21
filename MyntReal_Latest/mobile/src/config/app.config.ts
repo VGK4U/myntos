@@ -113,8 +113,8 @@ function getWsBaseUrl(): string {
 }
 
 export const APP_CONFIG = {
-  VERSION: '2.4.25',
-  BUILD_NUMBER: 25,
+  VERSION: '2.4.26',
+  BUILD_NUMBER: 26,
   BUILD_DATE: '2026-09-21',
   MIN_SUPPORTED_VERSION: '2.4.0',
   
