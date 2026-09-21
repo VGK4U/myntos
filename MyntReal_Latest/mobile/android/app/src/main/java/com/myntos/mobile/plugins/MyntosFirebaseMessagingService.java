@@ -73,6 +73,7 @@ public class MyntosFirebaseMessagingService extends MessagingService {
         String status = data.get("status");
         String dealValue = data.get("deal_value");
         String leadId = data.get("lead_id");
+        String providerCallId = data.get("provider_call_id");
         String subtitleDisplay = data.get("subtitle_display");
 
         if (callerName == null || callerName.trim().isEmpty()) {
