@@ -88,6 +88,14 @@ export interface QueueStats {
   due_today: number;
   new_leads: number;
   second_contact: number;
+  upcoming_today?: number;
+  next_scheduled_lead?: {
+    id: number;
+    name: string;
+    time: string;
+    minutes_away: number;
+    next_followup_date?: string;
+  } | null;
   queue: QueueItem[];
 }
 
@@ -111,10 +119,13 @@ class DialerService {
 
   // ── Queue Fetch ──────────────────────────────────────────────────────────────
 
-  async fetchQueue(companyId?: number): Promise<QueueStats> {
+  async fetchQueue(companyId?: number, includeUpcoming?: boolean): Promise<QueueStats> {
     // DC_DIALER_P1: Throw on failure — caller must handle error, not receive silent empty queue
-    const params = companyId ? `?company_id=${companyId}` : '';
-    const res = await apiService.get<QueueStats>(`/crm/dialer/queue${params}`);
+    const qParams = new URLSearchParams();
+    if (companyId) qParams.set('company_id', String(companyId));
+    if (includeUpcoming) qParams.set('include_upcoming', 'true');
+    const qs = qParams.toString() ? `?${qParams.toString()}` : '';
+    const res = await apiService.get<QueueStats>(`/crm/dialer/queue${qs}`);
     const data = res.data as QueueStats | undefined;
     if (!res.success) {
       throw new Error('Unable to load your call queue. Check your connection and tap Reload.');
@@ -131,7 +142,7 @@ class DialerService {
       if (idx >= 0) this.currentIndex = idx;
       this._pendingCurrentLeadId = null;
     }
-    return data ?? { total: 0, overdue: 0, due_today: 0, new_leads: 0, second_contact: 0, queue: [] };
+    return data ?? { total: 0, overdue: 0, due_today: 0, new_leads: 0, second_contact: 0, upcoming_today: 0, next_scheduled_lead: null, queue: [] };
   }
 
   // ── Session Management ──────────────────────────────────────────────────────

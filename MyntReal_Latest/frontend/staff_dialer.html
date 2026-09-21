@@ -54,6 +54,7 @@
     .dc-badge.yellow { border-top: 3px solid #d97706; } .dc-badge.yellow .badge-num { color: #d97706; }
     .dc-badge.orange { border-top: 3px solid #f97316; } .dc-badge.orange .badge-num { color: #f97316; }
     .dc-badge.blue { border-top: 3px solid #0ea5e9; } .dc-badge.blue .badge-num { color: #0ea5e9; }
+    .dc-badge.purple { border-top: 3px solid #8b5cf6; } .dc-badge.purple .badge-num { color: #8b5cf6; }
 
     .dc-lead-card { background: white; border-radius: 16px; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
     .dc-lead-card.border-overdue { border-left: 5px solid #ef4444; }
@@ -356,6 +357,7 @@
         <div class="dc-badge yellow"><div class="badge-num" id="badge-due">0</div><div class="badge-lbl">Due Today</div></div>
         <div class="dc-badge orange"><div class="badge-num" id="badge-new">0</div><div class="badge-lbl">New</div></div>
         <div class="dc-badge blue"><div class="badge-num" id="badge-second">0</div><div class="badge-lbl">2nd Call</div></div>
+        <div class="dc-badge purple" id="dc-badge-upcoming-wrap" style="cursor:pointer;" onclick="toggleUpcomingQueue()" title="Click to view/load upcoming calls today"><div class="badge-num" id="badge-upcoming">0</div><div class="badge-lbl">Upcoming</div></div>
         <button id="dc-web-refresh-queue" onclick="refreshQueueManual()" style="margin-left:auto;border:1px solid #e5e7eb;border-radius:16px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;background:#f3f4f6;color:#374151;display:inline-flex;align-items:center;gap:4px;" title="Refresh queue with latest leads">
           <i class="fas fa-sync-alt" id="dc-refresh-icon"></i> Refresh
         </button>
@@ -385,7 +387,7 @@
 
       <!-- QUICK SEARCH / OVERRIDE DIAL -->
       <div class="dc-search-card">
-        <div class="dc-search-label"><i class="fas fa-bolt" style="color:#f59e0b"></i> Quick Dial Override</div>
+        <div class="dc-search-label"><i class="fas fa-bolt" style="color:#f59e0b"></i> ⚡ Quick Dial Override (Recent Calls & Direct Dial)</div>
         <div class="dc-search-input-wrap">
           <input type="text" id="dc-search-input" class="dc-search-input" placeholder="Search by name or phone…" autocomplete="off">
           <button class="dc-search-clear" id="dc-search-clear" onclick="dcSearchClear()">✕</button>
@@ -922,6 +924,7 @@
 
   // ── State ───────────────────────────────────────────────────────────────────
   let sessionId = null, sessionStatus = 'none', queue = [], currentIndex = 0;
+  let queueUpcomingToday = 0, queueNextScheduledLead = null, queueUpcomingLoaded = false;
   let selectedOutcome = null, currentLeadId = null, currentLead = null;
   // DC_CAT_DEFER: Categories whose leads have been pushed to end of queue ("save for later")
   let deferredCategoryIds = new Set();
@@ -1147,8 +1150,9 @@
     }
   }
 
-  async function loadQueue() {
-    const data = await apiCall('GET', '/crm/dialer/queue');
+  async function loadQueue(includeUpcoming = false) {
+    const url = includeUpcoming ? '/crm/dialer/queue?include_upcoming=true' : '/crm/dialer/queue';
+    const data = await apiCall('GET', url);
     const payload = (data && data.data) ? data.data : data;
     if (data && data.success && payload) {
       queue = (payload.queue || []).map(l => {
@@ -1159,6 +1163,48 @@
       document.getElementById('badge-due').textContent = payload.due_today || 0;
       document.getElementById('badge-new').textContent = payload.new_leads ?? payload.new ?? 0;
       document.getElementById('badge-second').textContent = payload.second_contact || 0;
+      const bUpcoming = document.getElementById('badge-upcoming');
+      if (bUpcoming) bUpcoming.textContent = payload.upcoming_today || 0;
+      queueUpcomingToday = payload.upcoming_today || 0;
+      queueNextScheduledLead = payload.next_scheduled_lead || null;
+    }
+  }
+
+  async function loadAndStartUpcomingSession() {
+    queueUpcomingLoaded = true;
+    await loadQueue(true);
+    const validQIds = queue
+      .map(l => l.id || l.lead_id)
+      .filter(id => id && !isNaN(parseInt(id)) && parseInt(id) > 0)
+      .map(id => parseInt(id));
+
+    if (validQIds.length === 0) {
+      toast('No upcoming leads found.');
+      return;
+    }
+    const res = await apiCall('POST', '/crm/dialer/session/start', { queue_lead_ids: validQIds });
+    if (res.success) {
+      sessionId = res.session?.id || null;
+      sessionStatus = 'active';
+      updateUI();
+      startSyncPoll();
+      toast('Session started with upcoming leads!');
+    } else {
+      toast('Failed to start session.');
+    }
+  }
+
+  async function toggleUpcomingQueue() {
+    if (queueUpcomingLoaded) {
+      queueUpcomingLoaded = false;
+      await loadQueue(false);
+      updateUI();
+      toast('Returned to current due queue.');
+    } else {
+      queueUpcomingLoaded = true;
+      await loadQueue(true);
+      updateUI();
+      toast('Loaded upcoming leads for today.');
     }
   }
 
@@ -1313,6 +1359,38 @@
       document.getElementById('dc-idle-section').style.display = '';
       document.getElementById('dc-queue-list-wrap').style.display = 'none';
       document.getElementById('dc-analytics-wrap').style.display = 'none';
+
+      const idleEl = document.getElementById('dc-idle-section');
+      if (idleEl) {
+        if (queue.length === 0 && queueUpcomingToday > 0) {
+          let nextLeadHtml = '';
+          if (queueNextScheduledLead) {
+            const timeStr = queueNextScheduledLead.time ? ` at ${queueNextScheduledLead.time}` : '';
+            const nameStr = queueNextScheduledLead.name ? ` (${queueNextScheduledLead.name})` : '';
+            nextLeadHtml = `<div style="font-size:12px;color:#4b5563;margin-top:8px;background:#f3f4f6;padding:6px 12px;border-radius:8px;display:inline-block;">🕒 Next scheduled call: <strong>${timeStr || 'Later today'}${nameStr}</strong></div>`;
+          }
+          idleEl.innerHTML = `
+            <div class="idle-icon" style="font-size:40px;">🎉</div>
+            <h3 style="margin-top:4px;">You're Caught Up on Current Calls!</h3>
+            <p style="margin:4px 0 10px;">All scheduled and overdue leads have been completed. You have <strong>${queueUpcomingToday}</strong> call${queueUpcomingToday === 1 ? '' : 's'} scheduled later today.</p>
+            ${nextLeadHtml}
+            <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;align-items:center;">
+              <button class="dc-btn green" onclick="loadAndStartUpcomingSession()" style="padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;">⚡ Work Ahead: Dial Upcoming Leads (${queueUpcomingToday})</button>
+              <button class="dc-btn" onclick="refreshQueueManual()" style="background:#f3f4f6;color:#4b5563;border:1px solid #d1d5db;padding:6px 16px;border-radius:8px;font-size:12px;">🔄 Check For New Leads</button>
+            </div>`;
+        } else if (queue.length === 0) {
+          idleEl.innerHTML = `
+            <div class="idle-icon" style="font-size:40px;">☕</div>
+            <h3 style="margin-top:4px;">No Calls in Queue</h3>
+            <p style="margin:4px 0 10px;">You are all caught up. No leads are currently due for dialing.</p>
+            <button class="dc-btn" onclick="refreshQueueManual()" style="background:#f3f4f6;color:#4b5563;border:1px solid #d1d5db;padding:6px 16px;border-radius:8px;font-size:12px;margin-top:8px;">🔄 Refresh Queue</button>`;
+        } else {
+          idleEl.innerHTML = `
+            <div class="idle-icon" style="font-size:40px;">📞</div>
+            <h3 style="margin-top:4px;">Ready to Dial</h3>
+            <p style="margin:4px 0 0;">Press Start Session to begin working through your lead queue (${queue.length} leads waiting).</p>`;
+        }
+      }
     }
     renderLeadCard();
     renderQueueList();
@@ -1666,8 +1744,6 @@
       toast('⚠️ A call is already active. Please hang up before dialing another number.');
       return;
     }
-    _dialerClickDebounce = true;
-    setTimeout(() => { _dialerClickDebounce = false; }, 1500);
 
     const pInput = document.getElementById('e-phone');
     const aInput = document.getElementById('e-alt-phone');
@@ -1685,38 +1761,21 @@
       return;
     }
 
-    const leadName = document.getElementById('e-name')?.value || lead.name || 'Customer';
+    const targetLeadId = currentLeadId || lead.id || lead.lead_id;
     lastDialedPhone = targetPhone;
-    if (typeof window.rchSaveLocal === 'function') {
-      window.rchSaveLocal(targetPhone, leadName, { source: 'dialer' });
-    }
-    if (typeof window.rchInvalidateCache === 'function') {
-      window.rchInvalidateCache();
-    }
-
     toast(`📞 Redialing ${maskPhone(targetPhone)}...`);
-    doRedialLead(targetPhone, currentLeadId || lead.id || lead.lead_id);
+    doRedialLead(targetPhone, targetLeadId);
   };
 
   async function doRedialLead(phone, leadId) {
-    callTimerStart = Date.now();
-    bannerCallTimerSeconds = 0;
-    const timer = document.getElementById('dc-call-timer-text');
-    if (timer) { timer.textContent = '00:00'; timer.style.display = 'none'; }
-    updateBannerCallState('dialing', 'Calling...', 'bg-warning text-dark');
-
-    // Notify backend active call state immediately
-    if (leadId) {
-      apiCall('POST', '/crm/dialer/call/active', { lead_id: leadId }).catch(() => {});
+    const lid = leadId || currentLeadId || currentLead?.id || currentLead?.lead_id;
+    if (lid) {
+      // Intentional redial reservation bypasses 24h suppression & 1h cooldown
+      await acquireReservation(lid, true);
     }
-
-    if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
-      const savedPref = sessionStorage.getItem('myntos_preferred_call_method');
-      const method = savedPref || 'plivo';
-      window.PlivoSoftphone.dial(phone, leadId, currentLead?.name, method);
-    } else {
-      window.open('tel:' + phone, '_self');
-    }
+    // Allow doDial to manage debounce and execute canonical softphone dial
+    _dialerClickDebounce = false;
+    doDial(phone, lid, 'plivo');
   }
 
   window.openDialerLeadWhatsApp = function() {
@@ -2430,7 +2489,11 @@
   function bindHandlers() {
     // Session buttons
     document.getElementById('dc-start-btn').addEventListener('click', async () => {
-      await loadQueue();
+      await loadQueue(queueUpcomingLoaded);
+      if (queue.length === 0 && queueUpcomingToday > 0 && !queueUpcomingLoaded) {
+        queueUpcomingLoaded = true;
+        await loadQueue(true);
+      }
       const validQIds = queue
         .map(l => l.id || l.lead_id)
         .filter(id => id && !isNaN(parseInt(id)) && parseInt(id) > 0)
@@ -2438,12 +2501,17 @@
 
       if (validQIds.length === 0 && queue.length > 0) {
         console.error('[AutoDialer] Queue items contain invalid IDs. Reloading queue...', queue);
-        await loadQueue();
+        await loadQueue(queueUpcomingLoaded);
       }
       const finalQIds = queue
         .map(l => l.id || l.lead_id)
         .filter(id => id && !isNaN(parseInt(id)) && parseInt(id) > 0)
         .map(id => parseInt(id));
+
+      if (finalQIds.length === 0) {
+        toast('Queue is empty — no leads to dial.');
+        return;
+      }
 
       const res = await apiCall('POST', '/crm/dialer/session/start', { queue_lead_ids: finalQIds });
       if (res.success) { sessionId = res.session?.id || null; sessionStatus = 'active'; updateUI(); startSyncPoll(); toast('Session started!'); }

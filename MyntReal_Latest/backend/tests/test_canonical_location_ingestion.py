@@ -41,6 +41,7 @@ from app.models.staff_attendance import (
 from app.models.staff_journey import (
     StaffJourney, StaffJourneyTrackPoint, JourneyStatus, JourneyApprovalStatus, JourneyPurpose
 )
+from app.models.staff_journey_checkin import StaffJourneyCheckin
 from app.services.location_ingestion_service import LocationIngestionService
 
 
@@ -60,6 +61,7 @@ class TestCanonicalLocationIngestion(unittest.TestCase):
             StaffAttendanceBreak.__table__,
             StaffJourney.__table__,
             StaffJourneyTrackPoint.__table__,
+            StaffJourneyCheckin.__table__,
             StaffRealtimeLocation.__table__
         ]
         Base.metadata.create_all(bind=self.engine, tables=tables_to_create)

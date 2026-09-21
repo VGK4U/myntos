@@ -1,5 +1,359 @@
 [
   {
+    "id": "log_e2ebca08",
+    "job_id": "wa_daily_morning_wish",
+    "job_name": "WhatsApp 8 AM Morning Wish Dispatch",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Sep 2026, 01:24:51 PM IST",
+    "iso_timestamp": "2026-09-21T13:24:51.509244",
+    "target_summary": "Configured Targets",
+    "targets": [],
+    "sent_count": 5,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "total_eligible": 5,
+      "sent_count": 5,
+      "skipped_count": 0
+    }
+  },
+  {
+    "id": "log_30002002",
+    "job_id": "wa_daily_morning_wish",
+    "job_name": "WhatsApp 8 AM Morning Wish Dispatch",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Sep 2026, 01:18:58 PM IST",
+    "iso_timestamp": "2026-09-21T13:18:58.409508",
+    "target_summary": "Configured Targets",
+    "targets": [],
+    "sent_count": 5,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "total_eligible": 5,
+      "sent_count": 5,
+      "skipped_count": 0
+    }
+  },
+  {
+    "id": "log_6454997e",
+    "job_id": "wa_daily_morning_wish",
+    "job_name": "WhatsApp 8 AM Morning Wish Dispatch",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Sep 2026, 01:11:12 PM IST",
+    "iso_timestamp": "2026-09-21T13:11:12.630422",
+    "target_summary": "Configured Targets",
+    "targets": [],
+    "sent_count": 5,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "total_eligible": 5,
+      "sent_count": 5,
+      "skipped_count": 0
+    }
+  },
+  {
+    "id": "log_c87275a8",
+    "job_id": "wa_daily_morning_wish",
+    "job_name": "WhatsApp 8 AM Morning Wish Dispatch",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Sep 2026, 01:07:50 PM IST",
+    "iso_timestamp": "2026-09-21T13:07:50.958032",
+    "target_summary": "Configured Targets",
+    "targets": [],
+    "sent_count": 5,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "total_eligible": 5,
+      "sent_count": 5,
+      "skipped_count": 0
+    }
+  },
+  {
+    "id": "log_dcdd3ef2",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "21 Sep 2026, 01:00:00 PM IST",
+    "iso_timestamp": "2026-09-21T13:00:00.558020",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_daf60dca",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "21 Sep 2026, 12:30:00 PM IST",
+    "iso_timestamp": "2026-09-21T12:30:00.673446",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_c2960c6a",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Sep 2026, 12:30:00 PM IST",
+    "iso_timestamp": "2026-09-21T12:30:00.440855",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "120363428888306723@g.us"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SKIPPED",
+    "error_message": "No active field staff or journeys today",
+    "detail": {
+      "reason": "no_active_journeys"
+    }
+  },
+  {
+    "id": "log_0eccfa20",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "21 Sep 2026, 12:00:00 PM IST",
+    "iso_timestamp": "2026-09-21T12:00:00.277573",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_ad30aec4",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Sep 2026, 11:30:00 AM IST",
+    "iso_timestamp": "2026-09-21T11:30:00.401432",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "120363428888306723@g.us"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SKIPPED",
+    "error_message": "No active field staff or journeys today",
+    "detail": {
+      "reason": "no_active_journeys"
+    }
+  },
+  {
+    "id": "log_c7f6ea06",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "21 Sep 2026, 11:30:00 AM IST",
+    "iso_timestamp": "2026-09-21T11:30:00.372158",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_bb4e0ce4",
+    "job_id": "wa_bihourly_sales_perf_report",
+    "job_name": "Sales Team 2-Hour Report & Leaderboard",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Sep 2026, 11:30:00 AM IST",
+    "iso_timestamp": "2026-09-21T11:30:00.349584",
+    "target_summary": "Mynt Sales New",
+    "targets": [
+      {
+        "id": 0,
+        "target_type": "group",
+        "name": "Mynt Sales New",
+        "identifier": "120363410784518818@g.us"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "UNCERTAIN",
+    "error_message": "1 dispatches uncertain",
+    "detail": {
+      "success": true,
+      "queued": true,
+      "queue_id": 551,
+      "message": "Enqueued directly to PostgreSQL queue"
+    }
+  },
+  {
+    "id": "log_023ad6d6",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "21 Sep 2026, 11:00:00 AM IST",
+    "iso_timestamp": "2026-09-21T11:00:00.461838",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_139ba19c",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "21 Sep 2026, 10:30:00 AM IST",
+    "iso_timestamp": "2026-09-21T10:30:00.528633",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_203e465b",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "21 Sep 2026, 10:30:00 AM IST",
+    "iso_timestamp": "2026-09-21T10:30:00.261527",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "120363428888306723@g.us"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SKIPPED",
+    "error_message": "No active field staff or journeys today",
+    "detail": {
+      "reason": "no_active_journeys"
+    }
+  },
+  {
     "id": "log_af6b736d",
     "job_id": "wa_daily_morning_wish",
     "job_name": "WhatsApp 8 AM Morning Wish Dispatch",
@@ -15858,396 +16212,6 @@
       "updated": 54,
       "skipped": 0,
       "followups_created": 21
-    }
-  },
-  {
-    "id": "log_47237221",
-    "job_id": "wa_bihourly_sales_perf_report",
-    "job_name": "Sales Team 2-Hour Report & Leaderboard",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "31 Aug 2026, 01:30:04 PM IST",
-    "iso_timestamp": "2026-08-31T13:30:04.171198",
-    "target_summary": "Mynt Sales New",
-    "targets": [
-      {
-        "id": "t1",
-        "type": "group",
-        "name": "Mynt Sales New",
-        "identifier": "120363410784518818@g.us"
-      }
-    ],
-    "sent_count": 1,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "success": true,
-      "data": {
-        "success": true,
-        "sent_count": 1,
-        "failed_count": 0,
-        "results": [
-          {
-            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
-            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
-            "target_type": "group",
-            "resolved_jid": "120363410784518818@g.us",
-            "message_id": "3EB0D3B0CD67D8577DC747",
-            "success": true,
-            "fallback_used": false
-          }
-        ],
-        "message_id": "3EB0D3B0CD67D8577DC747"
-      }
-    }
-  },
-  {
-    "id": "log_81d3e44e",
-    "job_id": "field_staff_journey_report",
-    "job_name": "Field Journey Performance & Leaderboard Report",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "31 Aug 2026, 01:30:02 PM IST",
-    "iso_timestamp": "2026-08-31T13:30:02.802859",
-    "target_summary": "Field Updates",
-    "targets": [
-      {
-        "type": "group",
-        "name": "Field Updates",
-        "identifier": "BctONtnv8431uxxybKBEtS"
-      }
-    ],
-    "sent_count": 1,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "group_posted": true,
-      "alerts_sent": 0,
-      "active_journeys": 1
-    }
-  },
-  {
-    "id": "log_91803d81",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "31 Aug 2026, 01:00:08 PM IST",
-    "iso_timestamp": "2026-08-31T13:00:08.183080",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 47,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 47,
-      "created": 0,
-      "updated": 47,
-      "skipped": 0,
-      "followups_created": 18
-    }
-  },
-  {
-    "id": "log_de880785",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "31 Aug 2026, 01:00:06 PM IST",
-    "iso_timestamp": "2026-08-31T13:00:06.288780",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 47,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 47,
-      "created": 2,
-      "updated": 45,
-      "skipped": 0,
-      "followups_created": 18
-    }
-  },
-  {
-    "id": "log_56c7a7f7",
-    "job_id": "field_staff_journey_report",
-    "job_name": "Field Journey Performance & Leaderboard Report",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "31 Aug 2026, 12:39:30 PM IST",
-    "iso_timestamp": "2026-08-31T12:39:30.044422",
-    "target_summary": "Field Updates",
-    "targets": [
-      {
-        "type": "group",
-        "name": "Field Updates",
-        "identifier": "BctONtnv8431uxxybKBEtS"
-      }
-    ],
-    "sent_count": 1,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "group_posted": true,
-      "alerts_sent": 0,
-      "active_journeys": 1
-    }
-  },
-  {
-    "id": "log_2ea3a604",
-    "job_id": "field_staff_journey_report",
-    "job_name": "Field Journey Performance & Leaderboard Report",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "31 Aug 2026, 12:38:23 PM IST",
-    "iso_timestamp": "2026-08-31T12:38:23.877773",
-    "target_summary": "Field Updates",
-    "targets": [
-      {
-        "type": "group",
-        "name": "Field Updates",
-        "identifier": "BctONtnv8431uxxybKBEtS"
-      }
-    ],
-    "sent_count": 1,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "group_posted": true,
-      "alerts_sent": 0,
-      "active_journeys": 1
-    }
-  },
-  {
-    "id": "log_16ac187c",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "31 Aug 2026, 11:00:04 AM IST",
-    "iso_timestamp": "2026-08-31T11:00:04.856738",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 19,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 19,
-      "created": 1,
-      "updated": 18,
-      "skipped": 0,
-      "followups_created": 9
-    }
-  },
-  {
-    "id": "log_fca1a827",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "31 Aug 2026, 11:00:01 AM IST",
-    "iso_timestamp": "2026-08-31T11:00:01.074751",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 1,
-    "status": "FAILED",
-    "error_message": "(psycopg2.OperationalError) connection to server at \"myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com\" (16.112.74.247), port 5432 failed: FATAL:  remaining connection slots are reserved for roles with privileges of the \"rds_reserved\" role\n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
-    "detail": {
-      "error": "(psycopg2.OperationalError) connection to server at \"myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com\" (16.112.74.247), port 5432 failed: FATAL:  remaining connection slots are reserved for roles with privileges of the \"rds_reserved\" role\n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)"
-    }
-  },
-  {
-    "id": "log_92b3bf1e",
-    "job_id": "field_staff_journey_report",
-    "job_name": "Field Journey Performance & Leaderboard Report",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "31 Aug 2026, 10:30:04 AM IST",
-    "iso_timestamp": "2026-08-31T10:30:04.616545",
-    "target_summary": "Field Updates",
-    "targets": [
-      {
-        "type": "group",
-        "name": "Field Updates",
-        "identifier": "BctONtnv8431uxxybKBEtS"
-      }
-    ],
-    "sent_count": 1,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "group_posted": true,
-      "alerts_sent": 0,
-      "active_journeys": 1
-    }
-  },
-  {
-    "id": "log_3d96c389",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "31 Aug 2026, 10:30:03 AM IST",
-    "iso_timestamp": "2026-08-31T10:30:03.284986",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 1,
-    "status": "FAILED",
-    "error_message": "(psycopg2.OperationalError) connection to server at \"myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com\" (16.112.74.247), port 5432 failed: FATAL:  remaining connection slots are reserved for roles with privileges of the \"rds_reserved\" role\n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
-    "detail": {
-      "error": "(psycopg2.OperationalError) connection to server at \"myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com\" (16.112.74.247), port 5432 failed: FATAL:  remaining connection slots are reserved for roles with privileges of the \"rds_reserved\" role\n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)"
-    }
-  },
-  {
-    "id": "log_9a7d7799",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "31 Aug 2026, 10:30:03 AM IST",
-    "iso_timestamp": "2026-08-31T10:30:03.263590",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 1,
-    "status": "FAILED",
-    "error_message": "(psycopg2.OperationalError) connection to server at \"myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com\" (16.112.74.247), port 5432 failed: FATAL:  remaining connection slots are reserved for roles with privileges of the \"rds_reserved\" role\n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)",
-    "detail": {
-      "error": "(psycopg2.OperationalError) connection to server at \"myntreal-database.c5gywaicq6zu.ap-south-2.rds.amazonaws.com\" (16.112.74.247), port 5432 failed: FATAL:  remaining connection slots are reserved for roles with privileges of the \"rds_reserved\" role\n\n(Background on this error at: https://sqlalche.me/e/20/e3q8)"
-    }
-  },
-  {
-    "id": "log_4499ab17",
-    "job_id": "wa_daily_morning_wish",
-    "job_name": "WhatsApp 8 AM Morning Wish Dispatch",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "31 Aug 2026, 09:46:58 AM IST",
-    "iso_timestamp": "2026-08-31T09:46:58.103022",
-    "target_summary": "Configured Targets",
-    "targets": [],
-    "sent_count": 3847,
-    "failed_count": 2,
-    "status": "FAILED",
-    "error_message": "Failed 2 sends",
-    "detail": {
-      "total_eligible": 3914,
-      "sent_count": 3847,
-      "skipped_count": 65
-    }
-  },
-  {
-    "id": "log_39138ad3",
-    "job_id": "wa_daily_morning_wish",
-    "job_name": "WhatsApp 8 AM Morning Wish Dispatch",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "31 Aug 2026, 09:46:58 AM IST",
-    "iso_timestamp": "2026-08-31T09:46:58.035410",
-    "target_summary": "Configured Targets",
-    "targets": [],
-    "sent_count": 3848,
-    "failed_count": 1,
-    "status": "FAILED",
-    "error_message": "Failed 1 sends",
-    "detail": {
-      "total_eligible": 3914,
-      "sent_count": 3848,
-      "skipped_count": 65
-    }
-  },
-  {
-    "id": "log_7d6cf7bb",
-    "job_id": "wa_bihourly_sales_perf_report",
-    "job_name": "Sales Team 2-Hour Report & Leaderboard",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "31 Aug 2026, 09:30:04 AM IST",
-    "iso_timestamp": "2026-08-31T09:30:04.404822",
-    "target_summary": "Mynt Sales New",
-    "targets": [
-      {
-        "id": "t1",
-        "type": "group",
-        "name": "Mynt Sales New",
-        "identifier": "120363410784518818@g.us"
-      }
-    ],
-    "sent_count": 1,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "success": true,
-      "data": {
-        "success": true,
-        "sent_count": 1,
-        "failed_count": 0,
-        "results": [
-          {
-            "intended_target": "LfX8mGootXa7SpwNIz7P5C",
-            "clean_code": "LfX8mGootXa7SpwNIz7P5C",
-            "target_type": "group",
-            "resolved_jid": "120363410784518818@g.us",
-            "message_id": "3EB0102BBA278AEEB69D50",
-            "success": true,
-            "fallback_used": false
-          }
-        ],
-        "message_id": "3EB0102BBA278AEEB69D50"
-      }
     }
   }
 ]

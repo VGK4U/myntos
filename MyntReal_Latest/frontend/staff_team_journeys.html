@@ -1185,6 +1185,22 @@
             
             const modal = new bootstrap.Modal(document.getElementById('journeyDetailModal'));
             
+            let displayDurationMins = Math.round(journey.total_duration_minutes || 0);
+            let displayAvgSpeed = Math.round(journey.average_speed_kmh || 0);
+
+            if (displayDurationMins <= 0 && journey.start_time) {
+                const sTime = new Date(journey.start_time).getTime();
+                const eTime = journey.end_time ? new Date(journey.end_time).getTime() : Date.now();
+                if (!isNaN(sTime) && eTime > sTime) {
+                    displayDurationMins = Math.round((eTime - sTime) / 60000);
+                    if (displayDurationMins > 0 && (journey.total_distance_km || 0) > 0) {
+                        displayAvgSpeed = Math.round((journey.total_distance_km / (displayDurationMins / 60)));
+                    }
+                }
+            }
+            
+            const isOngoing = !journey.end_time || journey.status === 'in_progress' || journey.status === 'IN_PROGRESS';
+
             document.getElementById('journeyDetails').innerHTML = `
                 <div class="mb-3 p-3" style="background: rgba(255,255,255,0.08); border-radius: 10px;">
                     <h6 class="mb-2"><i class="fas fa-info-circle me-2"></i>Journey Info</h6>
@@ -1194,8 +1210,8 @@
                         <strong>Client:</strong> ${journey.client_name || '-'}<br>
                         <strong>Transport:</strong> ${formatTransport(journey.transport_mode)}<br>
                         <strong>Distance:</strong> ${(journey.total_distance_km || 0).toFixed(2)} km<br>
-                        <strong>Duration:</strong> ${Math.round(journey.total_duration_minutes || 0)} mins<br>
-                        <strong>Avg Speed:</strong> ${Math.round(journey.average_speed_kmh || 0)} km/h<br>
+                        <strong>Duration:</strong> ${displayDurationMins} mins${isOngoing ? ' <span class="badge bg-primary text-white" style="font-size: 10px;">Live</span>' : ''}<br>
+                        <strong>Avg Speed:</strong> ${displayAvgSpeed} km/h<br>
                         <strong>Max Speed:</strong> ${Math.round(journey.max_speed_kmh || 0)} km/h<br>
                         <strong>Reimbursement:</strong> 
                         ${journey.is_reimbursable ? 

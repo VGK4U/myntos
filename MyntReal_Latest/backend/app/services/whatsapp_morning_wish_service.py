@@ -339,6 +339,23 @@ def dispatch_daily_morning_wishes(
         company_id=1
     )
 
+    # Scanned WhatsApp Anti-Ban Safety Hold
+    import os
+    if not force_test and os.getenv("HOLD_MORNING_WHATSAPP_DISPATCHES", "true").lower() == "true":
+        logger.info("⏸️ [WA-MORNING-WISH-HELD] Cold lead morning wishes held to protect Scanned SIM from bulk bans.")
+        if exec_record:
+            exec_record.status = "HELD"
+            exec_record.error_message = "Temporarily held to protect Scanned WhatsApp SIM"
+            db.commit()
+        return {
+            "success": True,
+            "status": "HELD",
+            "message": "Morning wishes temporarily held to protect Scanned WhatsApp SIM while Meta Cloud API deadlock is resolved.",
+            "sent_count": 0,
+            "skipped_count": 0,
+            "failed_count": 0
+        }
+
     leads = get_eligible_leads_for_morning_wish(db)
     if limit_count and limit_count > 0:
         leads = leads[:limit_count]

@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "your-secret-key-here"  # Will be overridden by environment
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    MOBILE_ACCESS_TOKEN_EXPIRE_DAYS: int = 30
+    MOBILE_ACCESS_TOKEN_EXPIRE_DAYS: int = 180
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     # CORS Configuration

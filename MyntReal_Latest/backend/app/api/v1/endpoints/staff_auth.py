@@ -869,7 +869,7 @@ def staff_login(
     except Exception:
         pass
 
-    mobile_access_days = getattr(settings, 'MOBILE_ACCESS_TOKEN_EXPIRE_DAYS', 30)
+    mobile_access_days = getattr(settings, 'MOBILE_ACCESS_TOKEN_EXPIRE_DAYS', 180)
     expires_in_seconds = (mobile_access_days * 86400) if getattr(login_data, 'device_id', None) else (session_hours * 3600)
 
     return StaffLoginResponse(
@@ -1206,8 +1206,8 @@ async def refresh_staff_mobile_session(
     session.last_used_at = now_ist
     session.expires_at = now_ist + timedelta(days=180)  # 180-day sliding window renewal
 
-    # 2. Issue fresh long-lived JWT access token (30 days for mobile persistent sessions)
-    mobile_access_days = getattr(settings, 'MOBILE_ACCESS_TOKEN_EXPIRE_DAYS', 30)
+    # 2. Issue fresh long-lived JWT access token (180 days for mobile persistent sessions)
+    mobile_access_days = getattr(settings, 'MOBILE_ACCESS_TOKEN_EXPIRE_DAYS', 180)
     new_jwt = SecurityManager.create_access_token(
         data={
             "sub": str(employee.id),

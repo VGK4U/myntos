@@ -116,6 +116,23 @@ def run_vgk_member_zero_lead_motivational_dispatch(db: Session, trigger_type: st
         company_id=1
     )
 
+    # Scanned WhatsApp Anti-Ban Safety Hold
+    import os
+    if trigger_type == "SCHEDULED" and os.getenv("HOLD_MORNING_WHATSAPP_DISPATCHES", "true").lower() == "true":
+        logger.info("⏸️ [VGK-MOTIVATION-HELD] Daily 0-lead partner motivational dispatch held to protect Scanned SIM.")
+        if exec_rec:
+            exec_rec.status = "HELD"
+            exec_rec.error_message = "Temporarily held to protect Scanned WhatsApp SIM"
+            db.commit()
+        return {
+            "success": True,
+            "status": "HELD",
+            "message": "0-lead motivational messages temporarily held to protect Scanned WhatsApp SIM while Meta API deadlock is resolved.",
+            "dispatched_count": 0,
+            "skipped_count": 0,
+            "failed_count": 0
+        }
+
     # 1. Fetch community proof stats
     stats_query = text("""
         SELECT 

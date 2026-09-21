@@ -48,6 +48,7 @@ from sqlalchemy.exc import IntegrityError
 from app.models.staff_journey import (
     StaffJourney, StaffJourneyTrackPoint, JourneyStatus, JourneyApprovalStatus
 )
+from app.models.staff_journey_checkin import StaffJourneyCheckin
 from app.models.staff_attendance import (
     StaffAttendance, StaffRealtimeLocation, StaffAttendanceBreak,
     generate_realtime_dc_code, get_indian_time, get_indian_date
@@ -317,6 +318,20 @@ class LocationIngestionService:
             ).first()
 
         if existing_point:
+            try:
+                tp_count = db.query(func.count(StaffJourneyTrackPoint.id)).filter(
+                    StaffJourneyTrackPoint.journey_id == journey_id
+                ).scalar() or 0
+            except Exception:
+                tp_count = 0
+
+            try:
+                stops_count = db.query(func.count(StaffJourneyCheckin.id)).filter(
+                    StaffJourneyCheckin.journey_id == journey_id
+                ).scalar() or 0
+            except Exception:
+                stops_count = 0
+
             return {
                 "success": True,
                 "duplicate": True,
@@ -329,7 +344,9 @@ class LocationIngestionService:
                 "max_speed_kmh": round(journey.max_speed_kmh or 0, 1),
                 "reimbursement_amount": journey.reimbursement_amount if journey.is_reimbursable else 0,
                 "wvv_compliant": existing_point.wvv_compliant,
-                "wvv_reason": existing_point.compliance_reason
+                "wvv_reason": existing_point.compliance_reason,
+                "track_points_count": tp_count,
+                "stops_count": stops_count
             }
 
         # Check latest recorded point for chronological order
@@ -435,6 +452,20 @@ class LocationIngestionService:
         db.commit()
         db.refresh(new_point)
 
+        try:
+            tp_count = db.query(func.count(StaffJourneyTrackPoint.id)).filter(
+                StaffJourneyTrackPoint.journey_id == journey_id
+            ).scalar() or 0
+        except Exception:
+            tp_count = 0
+
+        try:
+            stops_count = db.query(func.count(StaffJourneyCheckin.id)).filter(
+                StaffJourneyCheckin.journey_id == journey_id
+            ).scalar() or 0
+        except Exception:
+            stops_count = 0
+
         return {
             "success": True,
             "duplicate": False,
@@ -447,7 +478,9 @@ class LocationIngestionService:
             "reimbursement_amount": journey.reimbursement_amount if journey.is_reimbursable else 0,
             "wvv_compliant": wvv_compliant,
             "wvv_reason": wvv_reason,
-            "wvv_accuracy_m": round(accuracy_m, 0) if accuracy_m else None
+            "wvv_accuracy_m": round(accuracy_m, 0) if accuracy_m else None,
+            "track_points_count": tp_count,
+            "stops_count": stops_count
         }
 
     @classmethod

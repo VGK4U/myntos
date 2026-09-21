@@ -1058,7 +1058,7 @@ def _get_dialer_suppression_data(
     return suppressed_phones, future_deferred_lead_ids
 
 
-def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Optional[int] = None) -> List[dict]:
+def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Optional[int] = None, include_upcoming: bool = False) -> List[dict]:
     """Build prioritized lead queue for a staff member.
 
     DC_TIER_QUEUE: Queue is built in two ordered tiers:
@@ -1070,6 +1070,20 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
     that company only (preserves existing filter-by-company behaviour).
     Falls back to flat queue if base_company_id is not set.
     """
+    # Test accounts never participate in the auto dialer (unless explicit test flag set)
+    if (staff.emp_code or '').startswith('EMP_TEST_') and not os.getenv('ALLOW_TEST_STAFF_DIALER'):
+        return []
+
+    role_name = (getattr(staff.role, 'role_name', '') or '').strip()
+    role_code = (getattr(staff.role, 'role_code', '') or '').strip().lower()
+    staff_type = (getattr(staff, 'staff_type', '') or '').strip().upper()
+    is_leadership = bool(
+        role_name == 'Key Leadership'
+        or role_code in ('key_leadership', 'leadership_role', 'director')
+        or staff_type in ('KEY_LEADERSHIP', 'DIRECTOR')
+        or (staff.emp_code or '').strip().upper() in ('MR10018', 'MR10025')
+    )
+
     emp_id = staff.id
     emp_code = staff.emp_code
     user_ref = str(staff.id)
@@ -1080,11 +1094,12 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
         db=db, user_ref=user_ref, portal=portal, staff_id=emp_id
     )
 
-    # DC_NMC_FIX: Permanently exclude unassigned leads this user dismissed as "not my category"
+    # DC_NMC_FIX: Exclude unassigned leads this user dismissed as "not my category" within rolling 7-day window
+    nmc_cutoff = _now - timedelta(days=7)
     nmc_rows = db.execute(text("""
         SELECT DISTINCT lead_id FROM crm_dialer_attempts
-        WHERE user_ref = :ref AND call_outcome = 'not_my_category'
-    """), {"ref": user_ref}).fetchall()
+        WHERE user_ref = :ref AND call_outcome = 'not_my_category' AND created_at >= :nmc_cutoff
+    """), {"ref": user_ref, "nmc_cutoff": nmc_cutoff}).fetchall()
     nmc_excluded = {r[0] for r in nmc_rows}
 
     # DC_CAT_PRIORITY: Category/segment preference sort function — shared across both tiers
@@ -1125,39 +1140,38 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
         a_q = db.query(CRMLead).filter(*a_filter).all()
         a_ids = {l.id for l in a_q}
 
-        # DC_INACTIVE_STAFF_QUEUE: Fetch inactive/resigned staff IDs so their leads enter dialer pool
+        # DC_INACTIVE_STAFF_QUEUE: Fetch inactive/resigned staff IDs and codes so their leads enter dialer pool
         inactive_staff_rows = db.query(StaffEmployee.id, StaffEmployee.emp_code).filter(
             or_(StaffEmployee.status != 'active', StaffEmployee.is_deleted == True)
         ).all()
         inactive_staff_ids = {s.id for s in inactive_staff_rows}
-        inactive_staff_codes = {s.emp_code for s in inactive_staff_rows if s.emp_code}
+        inactive_staff_codes = {s.emp_code for s in inactive_staff_rows if s.emp_code} | {str(s.id) for s in inactive_staff_rows}
 
         # Unassigned & Inactive-Staff leads — secondary pool for this company set
-        u_exclude = a_ids | nmc_excluded | future_deferred_lead_ids
+        u_exclude = a_ids | future_deferred_lead_ids
+        u_filter_inactive = and_(
+            or_(
+                CRMLead.telecaller_id.in_(inactive_staff_ids),
+                CRMLead.field_staff_id.in_(inactive_staff_ids),
+                CRMLead.handler_id.in_(inactive_staff_codes),
+                and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id.in_(inactive_staff_ids)),
+            )
+        )
+        u_filter_unassigned = and_(
+            CRMLead.telecaller_id.is_(None),
+            CRMLead.field_staff_id.is_(None),
+            CRMLead.primary_owner_id.is_(None),
+            or_(
+                CRMLead.handler_type == 'unassigned',
+                CRMLead.handler_id.is_(None),
+                CRMLead.handler_id == '',
+            ),
+            *( [CRMLead.id.notin_(nmc_excluded)] if nmc_excluded else [] )
+        )
         u_filter = [
             CRMLead.company_id.in_(co_ids),
             _dialer_active_filter(_now),
-            or_(
-                # Truly unassigned leads: NO telecaller assigned, NO field staff, NO handler
-                and_(
-                    CRMLead.telecaller_id.is_(None),
-                    CRMLead.field_staff_id.is_(None),
-                    CRMLead.primary_owner_id.is_(None),
-                    or_(
-                        CRMLead.handler_type == 'unassigned',
-                        CRMLead.handler_id.is_(None),
-                        CRMLead.handler_id == '',
-                    ),
-                ),
-                # Or leads assigned to an inactive / resigned staff member
-                and_(
-                    or_(
-                        CRMLead.telecaller_id.in_(inactive_staff_ids),
-                        CRMLead.handler_id.in_(inactive_staff_codes),
-                        and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id.in_(inactive_staff_ids)),
-                    )
-                )
-            ),
+            or_(u_filter_unassigned, u_filter_inactive),
             # Guard: next_followup_date must not be in the future
             or_(
                 CRMLead.next_followup_date.is_(None),
@@ -1165,7 +1179,7 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
             ),
         ]
 
-        # CRM Settings Handler eligibility scoping for unassigned leads (Rule 9: Parity with crm.py)
+        # CRM Settings Handler eligibility scoping for unassigned leads (Rule 9: Parity with crm.py lines 5354-5357)
         role_code = (getattr(staff, 'role_code', '') or '').lower()
         staff_type = (getattr(staff, 'staff_type', '') or '').lower()
         is_dialer_admin = bool(
@@ -1184,14 +1198,26 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
                     *[and_(CRMLead.company_id == co, CRMLead.category_id == cat) for co, cat in co_cats]
                 ))
             else:
-                u_filter.append(CRMLead.id == -1)
+                # DC_CRM_PARITY: Parity with crm.py lines 5354-5357
+                # If staff has no explicit category handler mapping in these companies,
+                # fall back to allowing leads in the staff member's accessible companies
+                # instead of killing the query with CRMLead.id == -1!
+                staff_cos = _get_staff_company_ids(staff)
+                matching_cos = [c for c in co_ids if c in staff_cos]
+                if matching_cos:
+                    u_filter.append(CRMLead.company_id.in_(matching_cos))
+                else:
+                    u_filter.append(CRMLead.id == -1)
 
-        if u_exclude:
-            u_filter.append(CRMLead.id.notin_(u_exclude))
-        u_q = db.query(CRMLead).filter(*u_filter).order_by(
-            case((CRMLead.status.in_(['new', 'fresh', 'New', 'Fresh']), 1), else_=2),
-            CRMLead.created_at.desc()
-        ).limit(300).all()
+        if is_leadership:
+            u_q = []
+        else:
+            if u_exclude:
+                u_filter.append(CRMLead.id.notin_(u_exclude))
+            u_q = db.query(CRMLead).filter(*u_filter).order_by(
+                case((CRMLead.status.in_(['new', 'fresh', 'New', 'Fresh']), 1), else_=2),
+                CRMLead.created_at.desc()
+            ).limit(300).all()
 
         # Phone validation and phone-level suppression (Rules 2, 8)
         valid_leads = [
@@ -1252,10 +1278,21 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
             seen_phones.add(clean_p)
         final_queue.append(item)
 
+    # DC_UPCOMING_AHEAD: If include_upcoming is requested, append upcoming leads due later today
+    if include_upcoming:
+        _, _, upcoming_items = _get_upcoming_stats_for_staff(staff, db, company_id)
+        for item in upcoming_items:
+            clean_p = re.sub(r'[^\d]', '', str(item.get('phone') or ''))[-10:]
+            if clean_p and len(clean_p) == 10:
+                if clean_p in seen_phones:
+                    continue
+                seen_phones.add(clean_p)
+            final_queue.append(item)
+
     return final_queue
 
 
-def _build_queue_for_mnr(user: User, db: Session) -> List[dict]:
+def _build_queue_for_mnr(user: User, db: Session, include_upcoming: bool = False) -> List[dict]:
     """Build prioritized lead queue for an MNR member."""
     user_id = user.id
     user_ref = str(user.id)
@@ -1280,37 +1317,37 @@ def _build_queue_for_mnr(user: User, db: Session) -> List[dict]:
     assigned_q = db.query(CRMLead).filter(*assigned_filter).all()
     assigned_ids = {l.id for l in assigned_q}
 
+    # DC_NMC_FIX: Exclude unassigned leads this user dismissed as "not my category" within rolling 7-day window
+    nmc_cutoff = _mnr_now - timedelta(days=7)
     nmc_rows = db.execute(text("""
         SELECT DISTINCT lead_id FROM crm_dialer_attempts
-        WHERE user_ref = :ref AND call_outcome = 'not_my_category'
-    """), {"ref": user_ref}).fetchall()
+        WHERE user_ref = :ref AND call_outcome = 'not_my_category' AND created_at >= :nmc_cutoff
+    """), {"ref": user_ref, "nmc_cutoff": nmc_cutoff}).fetchall()
     nmc_excluded = {r[0] for r in nmc_rows}
 
     # Unassigned new leads in companies linked to this member
     company_ids = _get_mnr_company_ids(user, db)
     unassigned_leads = []
     if company_ids:
-        u_exclude = assigned_ids | nmc_excluded | future_deferred_lead_ids
+        u_exclude = assigned_ids | future_deferred_lead_ids
         unassigned_filter = [
             CRMLead.company_id.in_(company_ids),
             _dialer_active_filter(_mnr_now),
             or_(
-                and_(
-                    or_(
-                        CRMLead.handler_type == 'unassigned',
-                        CRMLead.handler_id.is_(None),
-                        CRMLead.handler_id == '',
-                    ),
-                    CRMLead.telecaller_id.is_(None),
-                    CRMLead.field_staff_id.is_(None),
-                    CRMLead.primary_owner_id.is_(None),
-                )
+                CRMLead.handler_type == 'unassigned',
+                CRMLead.handler_id.is_(None),
+                CRMLead.handler_id == '',
             ),
+            CRMLead.telecaller_id.is_(None),
+            CRMLead.field_staff_id.is_(None),
+            CRMLead.primary_owner_id.is_(None),
             or_(
                 CRMLead.next_followup_date.is_(None),
                 CRMLead.next_followup_date <= _mnr_now,
             ),
         ]
+        if nmc_excluded:
+            unassigned_filter.append(CRMLead.id.notin_(nmc_excluded))
         if u_exclude:
             unassigned_filter.append(CRMLead.id.notin_(u_exclude))
         unassigned_leads = db.query(CRMLead).filter(*unassigned_filter).order_by(
@@ -1339,6 +1376,17 @@ def _build_queue_for_mnr(user: User, db: Session) -> List[dict]:
                 continue
             seen_phones.add(clean_p)
         final_queue.append(item)
+
+    # DC_UPCOMING_AHEAD: If include_upcoming is requested, append upcoming leads due later today
+    if include_upcoming:
+        _, _, upcoming_items = _get_upcoming_stats_for_mnr(user, db)
+        for item in upcoming_items:
+            clean_p = re.sub(r'[^\d]', '', str(item.get('phone') or ''))[-10:]
+            if clean_p and len(clean_p) == 10:
+                if clean_p in seen_phones:
+                    continue
+                seen_phones.add(clean_p)
+            final_queue.append(item)
 
     return final_queue
 
@@ -1449,6 +1497,192 @@ def _lead_to_queue_item(lead: CRMLead, slot_type: str, cat_map: Optional[dict] =
         'dial_count': dial_count,
         'has_connected': has_connected,
     }
+
+
+def _get_upcoming_stats_for_staff(staff: StaffEmployee, db: Session, company_id: Optional[int] = None) -> tuple:
+    """
+    Returns (upcoming_count: int, next_scheduled_lead: Optional[dict], upcoming_lead_items: List[dict])
+    Finds leads assigned to this staff member (or inactive staff in accessible companies)
+    where _now < next_followup_date < today_end, not in won/lost/completed/do_not_call, and phone is valid & not suppressed.
+    """
+    if (staff.emp_code or '').startswith('EMP_TEST_'):
+        return 0, None, []
+
+    _now = get_ist_now()
+    today_start = _now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start + timedelta(days=1)
+
+    co_ids = [company_id] if company_id else _get_staff_company_ids(staff)
+    if not co_ids:
+        return 0, None, []
+
+    emp_id = staff.id
+    emp_code = staff.emp_code
+    user_ref = str(staff.id)
+    suppressed_phones, _ = _get_dialer_suppression_data(db=db, user_ref=user_ref, portal='staff', staff_id=emp_id)
+
+    role_name = (getattr(staff.role, 'role_name', '') or '').strip()
+    role_code = (getattr(staff.role, 'role_code', '') or '').strip().lower()
+    staff_type = (getattr(staff, 'staff_type', '') or '').strip().upper()
+    is_leadership = bool(
+        role_name == 'Key Leadership'
+        or role_code in ('key_leadership', 'leadership_role', 'director')
+        or staff_type in ('KEY_LEADERSHIP', 'DIRECTOR')
+        or (staff.emp_code or '').strip().upper() in ('MR10018', 'MR10025')
+    )
+
+    if is_leadership:
+        assigned_cond = or_(
+            and_(CRMLead.handler_type == 'staff', CRMLead.handler_id == emp_code),
+            CRMLead.telecaller_id == emp_id,
+            CRMLead.field_staff_id == emp_id,
+            and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id == emp_id),
+        )
+    else:
+        # Inactive staff rows
+        inactive_staff_rows = db.query(StaffEmployee.id, StaffEmployee.emp_code).filter(
+            or_(StaffEmployee.status != 'active', StaffEmployee.is_deleted == True)
+        ).all()
+        inactive_staff_ids = {s.id for s in inactive_staff_rows}
+        inactive_staff_codes = {s.emp_code for s in inactive_staff_rows if s.emp_code} | {str(s.id) for s in inactive_staff_rows}
+
+        # Assigned to this staff member OR assigned to an inactive staff member in their accessible companies
+        assigned_cond = or_(
+            and_(CRMLead.handler_type == 'staff', CRMLead.handler_id == emp_code),
+            CRMLead.telecaller_id == emp_id,
+            CRMLead.field_staff_id == emp_id,
+            and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id == emp_id),
+            CRMLead.telecaller_id.in_(inactive_staff_ids),
+            CRMLead.field_staff_id.in_(inactive_staff_ids),
+            CRMLead.handler_id.in_(inactive_staff_codes),
+            and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id.in_(inactive_staff_ids)),
+        )
+
+    leads = db.query(CRMLead).filter(
+        CRMLead.company_id.in_(co_ids),
+        assigned_cond,
+        CRMLead.next_followup_date > _now,
+        CRMLead.next_followup_date < today_end,
+        _dialer_active_filter(_now),
+    ).order_by(CRMLead.next_followup_date.asc()).all()
+
+    valid_leads = [
+        l for l in leads
+        if CanonicalPhoneValidator.is_valid(l.phone)
+        and re.sub(r'[^\d]', '', str(l.phone or ''))[-10:] not in suppressed_phones
+        and (not l.alternate_phone or re.sub(r'[^\d]', '', str(l.alternate_phone or ''))[-10:] not in suppressed_phones)
+    ]
+
+    if not valid_leads:
+        return 0, None, []
+
+    cat_map = _build_category_map(valid_leads, db)
+    stats_map = _build_lead_attempt_stats([l.id for l in valid_leads], db)
+    items = []
+    seen_phones = set()
+    for l in valid_leads:
+        clean_p = re.sub(r'[^\d]', '', str(l.phone or ''))[-10:]
+        if clean_p and len(clean_p) == 10:
+            if clean_p in seen_phones:
+                continue
+            seen_phones.add(clean_p)
+        item = _lead_to_queue_item(l, 'assigned', cat_map, stats_map)
+        item['queue_priority'] = 'upcoming'
+        items.append(item)
+
+    upcoming_count = len(items)
+    earliest = items[0] if items else None
+    next_lead = None
+    if earliest:
+        dt = earliest.get('next_followup_date')
+        dt_obj = None
+        if isinstance(dt, str):
+            try:
+                dt_obj = datetime.fromisoformat(dt)
+            except Exception:
+                dt_obj = None
+        elif isinstance(dt, datetime):
+            dt_obj = dt
+        mins_away = max(0, int((dt_obj - _now).total_seconds() / 60)) if dt_obj else 0
+        time_str = dt_obj.strftime('%I:%M %p') if dt_obj else 'Later today'
+        next_lead = {
+            'id': earliest.get('id'),
+            'name': earliest.get('name') or 'Scheduled Customer',
+            'time': time_str,
+            'minutes_away': mins_away,
+            'next_followup_date': dt_obj.isoformat() if dt_obj else None
+        }
+
+    return upcoming_count, next_lead, items
+
+
+def _get_upcoming_stats_for_mnr(user: User, db: Session) -> tuple:
+    """
+    Returns (upcoming_count: int, next_scheduled_lead: Optional[dict], upcoming_lead_items: List[dict])
+    for MNR member assigned leads where _now < next_followup_date < today_end.
+    """
+    _now = get_ist_now()
+    today_start = _now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start + timedelta(days=1)
+    user_id = user.id
+    user_ref = str(user.id)
+    suppressed_phones, _ = _get_dialer_suppression_data(db=db, user_ref=user_ref, portal='mnr')
+
+    leads = db.query(CRMLead).filter(
+        CRMLead.mnr_handler_id == user_id,
+        CRMLead.next_followup_date > _now,
+        CRMLead.next_followup_date < today_end,
+        _dialer_active_filter(_now),
+    ).order_by(CRMLead.next_followup_date.asc()).all()
+
+    valid_leads = [
+        l for l in leads
+        if CanonicalPhoneValidator.is_valid(l.phone)
+        and re.sub(r'[^\d]', '', str(l.phone or ''))[-10:] not in suppressed_phones
+        and (not l.alternate_phone or re.sub(r'[^\d]', '', str(l.alternate_phone or ''))[-10:] not in suppressed_phones)
+    ]
+
+    if not valid_leads:
+        return 0, None, []
+
+    cat_map = _build_category_map(valid_leads, db)
+    stats_map = _build_lead_attempt_stats([l.id for l in valid_leads], db)
+    items = []
+    seen_phones = set()
+    for l in valid_leads:
+        clean_p = re.sub(r'[^\d]', '', str(l.phone or ''))[-10:]
+        if clean_p and len(clean_p) == 10:
+            if clean_p in seen_phones:
+                continue
+            seen_phones.add(clean_p)
+        item = _lead_to_queue_item(l, 'assigned', cat_map, stats_map)
+        item['queue_priority'] = 'upcoming'
+        items.append(item)
+
+    upcoming_count = len(items)
+    earliest = items[0] if items else None
+    next_lead = None
+    if earliest:
+        dt = earliest.get('next_followup_date')
+        dt_obj = None
+        if isinstance(dt, str):
+            try:
+                dt_obj = datetime.fromisoformat(dt)
+            except Exception:
+                dt_obj = None
+        elif isinstance(dt, datetime):
+            dt_obj = dt
+        mins_away = max(0, int((dt_obj - _now).total_seconds() / 60)) if dt_obj else 0
+        time_str = dt_obj.strftime('%I:%M %p') if dt_obj else 'Later today'
+        next_lead = {
+            'id': earliest.get('id'),
+            'name': earliest.get('name') or 'Scheduled Customer',
+            'time': time_str,
+            'minutes_away': mins_away,
+            'next_followup_date': dt_obj.isoformat() if dt_obj else None
+        }
+
+    return upcoming_count, next_lead, items
 
 
 def _get_session_table_row(session_id: int, db: Session):
@@ -1636,6 +1870,7 @@ async def get_missed_callbacks(
 @router.get("/dialer/queue")
 async def get_dialer_queue(
     company_id: Optional[int] = Query(None),
+    include_upcoming: bool = Query(False),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user_hybrid)
 ):
@@ -1644,16 +1879,20 @@ async def get_dialer_queue(
     Staff → assigned leads first, then unassigned new.
     MNR  → assigned leads first, then company-linked unassigned.
     Excludes: won, lost, completed, do_not_call.
+    DC_UPCOMING_001: Supports include_upcoming query param to work ahead of schedule,
+    and returns upcoming_today count + next_scheduled_lead metadata.
     """
     if hasattr(current_user, 'emp_code'):
         # Staff portal
         staff = db.query(StaffEmployee).filter(StaffEmployee.id == current_user.id).first()
         if not staff:
             raise HTTPException(status_code=404, detail="Staff record not found")
-        queue = _build_queue_for_staff(staff, db, company_id)
+        upcoming_count, next_lead, _ = _get_upcoming_stats_for_staff(staff, db, company_id)
+        queue = _build_queue_for_staff(staff, db, company_id, include_upcoming)
     else:
         # MNR portal
-        queue = _build_queue_for_mnr(current_user, db)
+        upcoming_count, next_lead, _ = _get_upcoming_stats_for_mnr(current_user, db)
+        queue = _build_queue_for_mnr(current_user, db, include_upcoming)
 
     return {
         "success": True,
@@ -1662,6 +1901,8 @@ async def get_dialer_queue(
         "due_today": sum(1 for i in queue if i['queue_priority'] == 'due_today'),
         "new_leads": sum(1 for i in queue if i['queue_priority'] == 'new'),
         "second_contact": sum(1 for i in queue if i['queue_priority'] == 'second_contact'),
+        "upcoming_today": upcoming_count,
+        "next_scheduled_lead": next_lead,
         "queue": queue
     }
 

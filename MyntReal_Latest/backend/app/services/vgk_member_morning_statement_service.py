@@ -70,6 +70,23 @@ def run_vgk_member_daily_morning_statement_dispatch(db: Session, trigger_type: s
         company_id=1
     )
 
+    # Scanned WhatsApp Anti-Ban Safety Hold
+    import os
+    if trigger_type == "SCHEDULED" and os.getenv("HOLD_MORNING_WHATSAPP_DISPATCHES", "true").lower() == "true":
+        logger.info("⏸️ [VGK-STATEMENT-HELD] Daily member revenue statement dispatch held to protect Scanned SIM.")
+        if exec_rec:
+            exec_rec.status = "HELD"
+            exec_rec.error_message = "Temporarily held to protect Scanned WhatsApp SIM"
+            db.commit()
+        return {
+            "success": True,
+            "status": "HELD",
+            "message": "Partner statements temporarily held to protect Scanned WhatsApp SIM while Meta API deadlock is resolved.",
+            "dispatched_count": 0,
+            "skipped_count": 0,
+            "failed_count": 0
+        }
+
     query = text("""
         SELECT p.id, p.partner_name, p.partner_code, p.phone, p.whatsapp_number, COUNT(c.id) AS lead_count
         FROM official_partners p

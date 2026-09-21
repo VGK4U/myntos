@@ -2715,7 +2715,8 @@ async def get_team_live_locations(
             # Use last known location even if older than 10 minutes
             if loc:
                 marker = loc.to_map_marker()
-                marker["status"] = "on_journey"
+                marker["status"] = "journey"
+                marker["is_on_journey"] = True
                 marker["employee"] = {
                     "id": member.id,
                     "emp_code": member.emp_code,
@@ -2746,7 +2747,8 @@ async def get_team_live_locations(
                     "name": member.full_name,
                     "lat": float(journey.start_latitude) if journey.start_latitude else None,
                     "lng": float(journey.start_longitude) if journey.start_longitude else None,
-                    "status": "on_journey",
+                    "status": "journey",
+                    "is_on_journey": True,
                     "break_type": None,
                     "captured_at": now.isoformat(),
                     "accuracy_m": None,

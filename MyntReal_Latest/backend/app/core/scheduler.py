@@ -5129,6 +5129,11 @@ def job_daily_whatsapp_morning_wish():
     """
     DC-WA-MORNING-WISH-001: Dispatches daily 8:00 AM morning wish to all eligible new & uncontacted leads.
     """
+    import os
+    if os.getenv("HOLD_MORNING_WHATSAPP_DISPATCHES", "true").lower() == "true":
+        logger.info("⏸️ [WA-DISPATCH-HELD] job_daily_whatsapp_morning_wish held: Cold lead morning wishes paused to protect Scanned SIM while Meta API deadlock is resolved.")
+        return
+
     from app.core.database import SessionLocal
     from app.services.whatsapp_morning_wish_service import dispatch_daily_morning_wishes
 
@@ -5180,6 +5185,11 @@ def job_daily_vgk4u_morning_wish():
 
 # DC-VGK-MEMBER-STATEMENT-001: Daily 7:30 AM VGK Members Revenue Statement Dispatch
 def job_daily_vgk_member_morning_statement():
+    import os
+    if os.getenv("HOLD_MORNING_WHATSAPP_DISPATCHES", "true").lower() == "true":
+        logger.info("⏸️ [WA-DISPATCH-HELD] job_daily_vgk_member_morning_statement held: Partner revenue statements paused on WhatsApp to protect Scanned SIM (partners check portal directly).")
+        return
+
     from app.core.database import SessionLocal
     from app.services.vgk_member_morning_statement_service import run_vgk_member_daily_morning_statement_dispatch
 
@@ -5196,6 +5206,11 @@ def job_daily_vgk_member_morning_statement():
 
 # DC-VGK-0LEAD-MOTIVATION-001: Daily 7:30 AM VGK 0-Lead Partner Motivational Dispatch
 def job_daily_vgk_zero_lead_motivational():
+    import os
+    if os.getenv("HOLD_MORNING_WHATSAPP_DISPATCHES", "true").lower() == "true":
+        logger.info("⏸️ [WA-DISPATCH-HELD] job_daily_vgk_zero_lead_motivational held: 0-lead partner motivational messages paused on WhatsApp to protect Scanned SIM.")
+        return
+
     from app.core.database import SessionLocal
     from app.services.vgk_member_zero_lead_motivational_service import run_vgk_member_zero_lead_motivational_dispatch
 

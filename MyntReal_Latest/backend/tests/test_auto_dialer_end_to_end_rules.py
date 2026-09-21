@@ -62,6 +62,7 @@ def insert_attempt(db, lead_id, user_ref, portal, call_outcome, duration_seconds
 
 
 def run_all_tests():
+    os.environ['ALLOW_TEST_STAFF_DIALER'] = '1'
     db = SessionLocal()
     print("=" * 70)
     print("STARTING AUTO DIALER END-TO-END RULES VERIFICATION")
@@ -79,9 +80,15 @@ def run_all_tests():
         staff_a = db.query(StaffEmployee).filter(StaffEmployee.id == 321).first()
         staff_b = db.query(StaffEmployee).filter(StaffEmployee.id == 322).first()
         if not staff_a or not staff_b:
-            active_staff = db.query(StaffEmployee).filter(StaffEmployee.status == 'active').limit(2).all()
+            active_staff = db.query(StaffEmployee).filter(StaffEmployee.status == 'active', StaffEmployee.is_deleted == False).limit(2).all()
             staff_a = active_staff[0]
             staff_b = active_staff[1]
+        
+        staff_a.status = 'active'
+        staff_a.is_deleted = False
+        staff_b.status = 'active'
+        staff_b.is_deleted = False
+        db.commit()
 
         user_a = staff_a
         user_b = staff_b

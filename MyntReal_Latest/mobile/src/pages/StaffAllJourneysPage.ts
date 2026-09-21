@@ -20,7 +20,8 @@ interface Journey {
   end_location: string;
   transport_mode: string;
   purpose: string;
-  distance_km: number;
+  distance_km?: number;
+  total_distance_km?: number;
   duration_minutes: number;
   status: string;
   reimbursement_amount?: number;
@@ -177,7 +178,7 @@ export class StaffAllJourneysPage {
     const totalKmEl = document.getElementById('totalKm');
     const totalReimbEl = document.getElementById('totalReimb');
     if (totalEl) totalEl.textContent = this.journeys.length.toString();
-    if (totalKmEl) totalKmEl.textContent = this.journeys.reduce((sum, j) => sum + (j.distance_km || 0), 0).toFixed(1);
+    if (totalKmEl) totalKmEl.textContent = this.journeys.reduce((sum, j) => sum + (j.total_distance_km || j.distance_km || 0), 0).toFixed(1);
     if (totalReimbEl) totalReimbEl.textContent = '₹' + this.journeys.reduce((sum, j) => sum + (j.reimbursement_amount || 0), 0).toFixed(0);
 
     if (this.journeys.length === 0) {
@@ -185,7 +186,12 @@ export class StaffAllJourneysPage {
       return;
     }
 
-    listContainer.innerHTML = this.journeys.map(j => `
+    listContainer.innerHTML = this.journeys.map(j => {
+      const dist = (j.total_distance_km !== undefined && j.total_distance_km !== null)
+        ? j.total_distance_km
+        : (j.distance_km || 0);
+
+      return `
       <div class="list-card journey-card">
         <div class="journey-header">
           <div class="employee-info-row">
@@ -220,7 +226,7 @@ export class StaffAllJourneysPage {
 
         <div class="journey-stats">
           <div class="stat-item">
-            <span class="stat-val">${j.distance_km?.toFixed(1) || 0} km</span>
+            <span class="stat-val">${dist.toFixed(1)} km</span>
             <span class="stat-lbl">Distance</span>
           </div>
           <div class="stat-item">
@@ -235,7 +241,8 @@ export class StaffAllJourneysPage {
           ` : ''}
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   private getInitials(name: string): string {

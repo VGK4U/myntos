@@ -33,6 +33,7 @@ def run_migrations():
     logger.info("==================================================")
     
     # 1. Check DB connectivity
+    import app.models  # Register all models with Base.metadata
     from app.core.database import engine, SessionLocal, run_pending_migrations, Base
     from sqlalchemy import text
     
@@ -917,6 +918,27 @@ def run_migrations():
                 """))
                 logger.info("✅ mobile_device_sessions table ensured")
 
+                # 4.25b mobile_device_push_tokens (FCM / APNs Softphone Incoming Push Wake-Up)
+                conn.execute(text("""
+                    CREATE TABLE IF NOT EXISTS mobile_device_push_tokens (
+                        id SERIAL PRIMARY KEY,
+                        company_id INTEGER NOT NULL REFERENCES associated_companies(id) ON DELETE CASCADE,
+                        staff_id INTEGER NOT NULL REFERENCES staff_employees(id) ON DELETE CASCADE,
+                        device_id VARCHAR(100) NOT NULL,
+                        platform VARCHAR(20) NOT NULL,
+                        push_token TEXT NOT NULL,
+                        token_type VARCHAR(30) NOT NULL DEFAULT 'fcm_data',
+                        app_version VARCHAR(30),
+                        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                        created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+                        CONSTRAINT uq_staff_device_token_type UNIQUE (staff_id, device_id, token_type)
+                    );
+                    CREATE INDEX IF NOT EXISTS ix_mdpt_staff_active ON mobile_device_push_tokens(staff_id, is_active);
+                    CREATE INDEX IF NOT EXISTS ix_mdpt_company_staff ON mobile_device_push_tokens(company_id, staff_id);
+                """))
+                logger.info("✅ mobile_device_push_tokens table ensured")
+
                 # 4.26 Direct team lead referral points schema & vgk_points_ledger constraint
                 conn.execute(text("ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded BOOLEAN NOT NULL DEFAULT FALSE;"))
                 conn.execute(text("ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded_at TIMESTAMP NULL;"))
@@ -989,7 +1011,7 @@ def run_migrations():
                 raise RuntimeError("Gate Failed: crm_leads missing tenant_id column")
 
             # Check 3: required tables exist
-            required_tables = ['staff_company_memberships', 'crm_lead_phones', 'crm_lead_phone_provenances', 'mobile_device_sessions']
+            required_tables = ['staff_company_memberships', 'crm_lead_phones', 'crm_lead_phone_provenances', 'mobile_device_sessions', 'mobile_device_push_tokens']
             res_tbls = conn.execute(text(f"""
                 SELECT table_name FROM information_schema.tables 
                 WHERE table_name IN ({', '.join(repr(t) for t in required_tables)})

@@ -67,7 +67,16 @@ function _fmtLastContact(
 
 export class AutoDialerPage {
   private container: HTMLElement;
-  private queueStats = { total: 0, overdue: 0, due_today: 0, new_leads: 0, second_contact: 0 };
+  private queueStats: {
+    total: number;
+    overdue: number;
+    due_today: number;
+    new_leads: number;
+    second_contact: number;
+    upcoming_today?: number;
+    next_scheduled_lead?: { id: number; name: string; time: string; minutes_away: number; next_followup_date?: string; } | null;
+  } = { total: 0, overdue: 0, due_today: 0, new_leads: 0, second_contact: 0, upcoming_today: 0, next_scheduled_lead: null };
+  private includeUpcoming = false;
   private queueLoadError = false;
   private queueLoadErrorMsg = '';
   private sessionActive = false;
@@ -180,18 +189,23 @@ export class AutoDialerPage {
 
   // ── Data Loading ─────────────────────────────────────────────────────────────
 
-  private async _loadQueue(): Promise<void> {
+  private async _loadQueue(includeUpcoming?: boolean): Promise<void> {
     // DC_DIALER_P1: Catch fetch errors — do not silently return empty queue
+    if (includeUpcoming !== undefined) {
+      this.includeUpcoming = includeUpcoming;
+    }
     try {
       this.queueLoadError = false;
       this.queueLoadErrorMsg = '';
-      const data = await dialerService.fetchQueue();
+      const data = await dialerService.fetchQueue(undefined, this.includeUpcoming);
       this.queueStats = {
         total: data.total || 0,
         overdue: data.overdue || 0,
         due_today: data.due_today || 0,
         new_leads: data.new_leads || 0,
         second_contact: data.second_contact || 0,
+        upcoming_today: data.upcoming_today || 0,
+        next_scheduled_lead: data.next_scheduled_lead || null,
       };
       this.currentLead = dialerService.getCurrentLead();
     } catch (err: any) {
@@ -246,10 +260,17 @@ export class AutoDialerPage {
       alert(this.queueLoadErrorMsg || 'Queue failed to load. Tap Reload to retry.');
       return;
     }
-    const queue = dialerService.getQueue();
+    let queue = dialerService.getQueue();
     if (queue.length === 0) {
-      alert('No leads in queue. Your queue is empty.');
-      return;
+      if ((this.queueStats.upcoming_today || 0) > 0 && !this.includeUpcoming) {
+        this.includeUpcoming = true;
+        await this._loadQueue(true);
+        queue = dialerService.getQueue();
+      }
+      if (queue.length === 0) {
+        alert('No leads in queue. Your queue is empty.');
+        return;
+      }
     }
     const session = await dialerService.startSession(dialerService.getQueueLeadIds());
     if (session) {
@@ -362,7 +383,10 @@ export class AutoDialerPage {
 
   // Primary dial: dials directly via built-in Plivo WebRTC softphone
   private _dial(phone: string, lead: QueueItem, isIntentional: boolean = false): void {
-    if (this.isDialingInProgress || this.activeSoftphoneDial) {
+    if (isIntentional) {
+      this.activeSoftphoneDial = false;
+      this.isDialingInProgress = false;
+    } else if (this.isDialingInProgress || this.activeSoftphoneDial) {
       console.warn('[AutoDialer] Dial already in progress, ignoring duplicate action.');
       return;
     }
@@ -372,7 +396,7 @@ export class AutoDialerPage {
   }
 
   private async _dialSoftphone(phone: string, lead: QueueItem, isIntentional: boolean = false): Promise<void> {
-    if (this.isDialingInProgress) return;
+    if (!isIntentional && this.isDialingInProgress) return;
     this.isDialingInProgress = true;
     telephonyService.prepareAudioOnUserGesture();
     const dialBtns = this.container?.querySelectorAll<HTMLButtonElement>('.dc-dial-btn, .dc-direct-mobile-btn');
@@ -920,6 +944,8 @@ export class AutoDialerPage {
       if (this.activeSoftphoneDial && telephonyService.isCallActive()) {
         telephonyService.endCall();
       }
+      this.activeSoftphoneDial = false;
+      this.isDialingInProgress = false;
 
       void this._openPopup(canonicalId, elapsedSec, {
         notes: inCallNotes,
@@ -1042,6 +1068,8 @@ export class AutoDialerPage {
   ): Promise<void> {
     if (this.popupOpen) return;
     this.popupOpen = true;
+    this.activeSoftphoneDial = false;
+    this.isDialingInProgress = false;
     this._removeCallingScreen();
     // Clear active call so web desktop knows this call has ended
     void dialerService.clearCallActive();
@@ -1420,8 +1448,45 @@ export class AutoDialerPage {
         alert('No phone number available to redial.');
         return;
       }
+
+      // 1. Cancel popup auto-save countdown timer so it doesn't fire while new call is active
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+
+      // 2. Remove the after-call popup overlay from the DOM and reset popup state
+      overlay.remove();
+      this.popupOpen = false;
+
+      // 3. Clear any lingering telephony state or dial locks
+      if (telephonyService.isCallActive()) {
+        telephonyService.endCall();
+      }
+      this.activeSoftphoneDial = false;
+      this.isDialingInProgress = false;
+
+      // 4. Save to dial history
       this._saveToLocalDialHistory(targetPhone, this.popupLeadData?.name || 'Customer');
-      void this._executeDial(targetPhone, this.popupLeadData || { lead_id: leadId, phone: targetPhone }, this.callMethod || 'softphone', true);
+
+      // 5. Build canonical QueueItem payload
+      const canonicalId = (this.popupLeadData && (this.popupLeadData.id || this.popupLeadData.lead_id)) || leadId;
+      const redialLead: QueueItem = {
+        ...(this.popupLeadData || {}),
+        id: canonicalId,
+        lead_id: canonicalId,
+        phone: targetPhone,
+        name: this.popupLeadData?.name || 'Customer Lead',
+        category_id: this.popupLeadData?.category_id,
+        category_name: this.popupLeadData?.category_name,
+        status: this.popupLeadData?.status,
+        is_hot_lead: this.popupLeadData?.is_hot_lead,
+        is_fresh_lead: this.popupLeadData?.is_fresh_lead,
+        company_id: this.popupLeadData?.company_id,
+      } as any;
+
+      // 6. Connect via canonical regular autodialer dial method with intentional flag
+      this._dial(targetPhone, redialLead, true);
     };
     overlay.querySelector('#dc-popup-redial')?.addEventListener('click', _handlePopupRedial);
     overlay.querySelector('#dc-popup-header-redial')?.addEventListener('click', _handlePopupRedial);
@@ -2361,6 +2426,7 @@ export class AutoDialerPage {
         <div class="dc-badge yellow"><span>${s.due_today}</span>Due Today</div>
         <div class="dc-badge orange"><span>${s.new_leads}</span>New</div>
         <div class="dc-badge blue"><span>${s.second_contact}</span>2nd Call</div>
+        ${(s.upcoming_today || 0) > 0 ? `<div class="dc-badge purple" style="background:#f3e8ff;color:#7e22ce;"><span>${s.upcoming_today}</span>Upcoming</div>` : ''}
         <div class="dc-badge grey"><span>${s.total}</span>Total</div>
         <button id="dc-cat-priority-toggle" style="margin-left:auto;border:1px solid #e5e7eb;border-radius:16px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;${btnStyle}">${btnLabel}</button>
       </div>`;
@@ -2997,7 +3063,7 @@ export class AutoDialerPage {
     const hasContactsApi = typeof (navigator as any).contacts !== 'undefined';
     return `
       <div class="dc-search-bar-wrap">
-        <div class="dc-srch-label">⚡ Quick Dial Override</div>
+        <div class="dc-srch-label">⚡ Quick Dial Override (Recent Calls & Direct Dial)</div>
         <div class="dc-srch-input-row">
           <input id="dc-srch-input" class="dc-srch-input" type="text"
             placeholder="Name or phone number…"
@@ -3272,11 +3338,44 @@ export class AutoDialerPage {
   }
 
   private _renderIdleState(): string {
+    const s = this.queueStats;
+    const hasUpcoming = (s.upcoming_today || 0) > 0;
+
+    if (s.total === 0 && hasUpcoming) {
+      let nextLeadText = '';
+      if (s.next_scheduled_lead) {
+        const timeStr = s.next_scheduled_lead.time ? ` at ${s.next_scheduled_lead.time}` : '';
+        const nameStr = s.next_scheduled_lead.name ? ` (${s.next_scheduled_lead.name})` : '';
+        nextLeadText = `<div style="font-size:12px;color:#4b5563;margin-top:8px;background:#f3f4f6;padding:6px 12px;border-radius:8px;display:inline-block;">🕒 Next scheduled call: <strong>${timeStr || 'Later today'}${nameStr}</strong></div>`;
+      }
+      return `
+        <div class="dc-idle-state" style="padding:28px 20px;text-align:center;">
+          <div style="font-size:48px;margin-bottom:8px;">🎉</div>
+          <h3 style="font-size:18px;font-weight:700;color:#111827;margin-bottom:4px;">You're Caught Up on Current Calls!</h3>
+          <p style="font-size:13px;color:#6b7280;margin:0 0 12px;">All scheduled and overdue leads have been completed. You have <strong>${s.upcoming_today}</strong> call${s.upcoming_today === 1 ? '' : 's'} scheduled later today.</p>
+          ${nextLeadText}
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;align-items:center;">
+            <button class="dc-ctrl-btn start large" id="dc-work-ahead-btn" style="background:#0ea5e9;margin-top:0;">⚡ Work Ahead: Dial Upcoming Leads (${s.upcoming_today})</button>
+            <button class="dc-ctrl-btn pause" id="dc-reload-queue-btn-idle" style="color:#4b5563;border:1px solid #d1d5db;background:#fff;margin-top:0;padding:8px 20px;">🔄 Check For New Leads</button>
+          </div>
+        </div>`;
+    }
+
+    if (s.total === 0) {
+      return `
+        <div class="dc-idle-state" style="padding:28px 20px;text-align:center;">
+          <div style="font-size:48px;margin-bottom:8px;">☕</div>
+          <h3 style="font-size:18px;font-weight:700;color:#111827;margin-bottom:4px;">No Calls in Queue</h3>
+          <p style="font-size:13px;color:#6b7280;margin:0 0 12px;">You are all caught up. No leads are currently due for dialing.</p>
+          <button class="dc-ctrl-btn pause" id="dc-reload-queue-btn-idle" style="color:#4b5563;border:1px solid #d1d5db;background:#fff;margin-top:8px;padding:8px 20px;">🔄 Refresh Queue</button>
+        </div>`;
+    }
+
     return `
       <div class="dc-idle-state">
         <div style="font-size:48px;margin-bottom:12px;">📞</div>
         <h3>Ready to Dial</h3>
-        <p>${this.queueStats.total} leads in your queue · ${this.queueStats.overdue} overdue</p>
+        <p>${s.total} leads in your queue · ${s.overdue} overdue</p>
         <button class="dc-ctrl-btn start large" id="dc-start-btn-idle">▶ Start Dialing Session</button>
       </div>`;
   }
@@ -3297,6 +3396,15 @@ export class AutoDialerPage {
   private _attachMainListeners(): void {
     document.getElementById('dc-start-btn')?.addEventListener('click', () => this._startSession());
     document.getElementById('dc-start-btn-idle')?.addEventListener('click', () => this._startSession());
+    document.getElementById('dc-work-ahead-btn')?.addEventListener('click', async () => {
+      this.includeUpcoming = true;
+      await this._loadQueue(true);
+      await this._startSession();
+    });
+    document.getElementById('dc-reload-queue-btn-idle')?.addEventListener('click', async () => {
+      await this._loadQueue();
+      this._render();
+    });
     document.getElementById('dc-reload-queue-btn')?.addEventListener('click', async () => {
       await this._loadQueue();
       this._render();

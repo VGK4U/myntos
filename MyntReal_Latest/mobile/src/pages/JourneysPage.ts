@@ -14,12 +14,16 @@ interface Journey {
   date: string;
   start_time: string;
   end_time: string | null;
-  start_location: string | null;
-  end_location: string | null;
-  distance_km: number | null;
+  start_location?: string | null;
+  start_address?: string | null;
+  end_location?: string | null;
+  end_address?: string | null;
+  distance_km?: number | null;
+  total_distance_km?: number | null;
   transport_mode: string;
   company_name: string;
   status: string;
+  approval_status?: string | null;
   reimbursement_amount: number | null;
   purpose: string | null;
 }
@@ -190,6 +194,8 @@ export class JourneysPage {
           const todayStr = new Date().toISOString().split('T')[0];
           const journeyDate = journey.start_time ? journey.start_time.split('T')[0] : todayStr;
           const isStale = journeyDate < todayStr;
+          const trackPoints = response.data.track_points || [];
+          const detectedStops = this.detectStopsWithTimestamps(trackPoints);
           this.activeJourney = {
             id: journey.id,
             start_time: journey.start_time,
@@ -197,6 +203,9 @@ export class JourneysPage {
             transport_mode: this.formatTransportMode(journey.transport_mode) || 'N/A',
             purpose: this.formatPurpose(journey.purpose) || 'N/A',
             session_token: storedToken || undefined,
+            distance_km: journey.total_distance_km ?? 0,
+            track_points_count: trackPoints.length,
+            stops_count: detectedStops.length,
             is_stale: isStale,
             stale_date: isStale ? journeyDate : undefined
           } as any;
@@ -949,10 +958,14 @@ export class JourneysPage {
 
     // Calculate stats - Web Parity
     const totalJourneys = this.journeys.length;
-    const totalDistance = this.journeys.reduce((sum, j) => sum + (j.distance_km || 0), 0);
-    const approvedJourneys = this.journeys.filter(j => j.status?.toLowerCase() === 'approved');
+    const totalDistance = this.journeys.reduce((sum, j) => sum + (j.total_distance_km || j.distance_km || 0), 0);
+    const approvedJourneys = this.journeys.filter(j => 
+      j.approval_status?.toLowerCase() === 'approved' || j.status?.toLowerCase() === 'approved'
+    );
     const pendingJourneys = this.journeys.filter(j => 
-      j.status?.toLowerCase() === 'pending' || j.status?.toLowerCase() === 'in_progress'
+      j.approval_status?.toLowerCase() === 'pending' || 
+      j.status?.toLowerCase() === 'pending' || 
+      j.status?.toLowerCase() === 'in_progress'
     );
     const totalApproved = approvedJourneys.reduce((sum, j) => sum + (j.reimbursement_amount || 0), 0);
     const pendingCount = pendingJourneys.length;
@@ -967,34 +980,43 @@ export class JourneysPage {
     if (totalReimbursementEl) totalReimbursementEl.textContent = `₹${totalApproved.toFixed(0)}`;
     if (pendingCountEl) pendingCountEl.textContent = pendingCount.toString();
 
-    listContainer.innerHTML = this.journeys.map(journey => `
+    listContainer.innerHTML = this.journeys.map(journey => {
+      const dist = (journey.total_distance_km !== undefined && journey.total_distance_km !== null)
+        ? journey.total_distance_km
+        : (journey.distance_km || 0);
+      const startLoc = journey.start_address || journey.start_location || 'Start Location';
+      const endLoc = journey.end_address || journey.end_location || 'End Location';
+      const displayStatus = journey.approval_status || journey.status || 'Completed';
+
+      return `
       <div class="list-item card journey-item" data-journey-id="${journey.id}">
         <div class="item-header">
           <span class="item-date">${this.formatDate(journey.date)}</span>
-          <span class="status-badge ${journey.status?.toLowerCase() || 'completed'}">${journey.status || 'Completed'}</span>
+          <span class="status-badge ${displayStatus.toLowerCase()}">${displayStatus}</span>
         </div>
         <div class="journey-route">
           <div class="route-point start">
             <span class="route-dot"></span>
-            <span class="route-text">${journey.start_location || 'Start Location'}</span>
+            <span class="route-text">${startLoc}</span>
             <span class="route-time">${this.formatTime(journey.start_time)}</span>
           </div>
           <div class="route-line"></div>
           <div class="route-point end">
             <span class="route-dot"></span>
-            <span class="route-text">${journey.end_location || 'End Location'}</span>
+            <span class="route-text">${endLoc}</span>
             <span class="route-time">${journey.end_time ? this.formatTime(journey.end_time) : '--:--'}</span>
           </div>
         </div>
         <div class="journey-meta">
           <span class="meta-item">${this.getTransportIcon(journey.transport_mode)} ${journey.transport_mode || 'Vehicle'}</span>
-          <span class="meta-item">📍 ${journey.distance_km ? journey.distance_km.toFixed(1) + ' km' : '--'}</span>
+          <span class="meta-item">📍 ${dist > 0 ? dist.toFixed(1) + ' km' : '--'}</span>
           <span class="meta-item">💰 ₹${journey.reimbursement_amount?.toFixed(0) || '0'}</span>
         </div>
         ${journey.company_name ? `<div class="journey-company">${journey.company_name}</div>` : ''}
         <div class="view-details-hint">Tap to view route details →</div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
     // Attach click handlers to journey items
     listContainer.querySelectorAll('.journey-item').forEach(item => {
