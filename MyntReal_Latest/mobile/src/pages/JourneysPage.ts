@@ -201,6 +201,14 @@ export class JourneysPage {
             stale_date: isStale ? journeyDate : undefined
           } as any;
           console.log('[JourneysPage] Active journey found:', this.activeJourney, 'isStale:', isStale);
+          if (journey.id) {
+            try {
+              gpsService.startJourneyTracking(journey.id);
+              console.log(`[JourneysPage] Resumed GPS tracking for active journey ${journey.id}`);
+            } catch (gpsErr: any) {
+              console.warn('[JourneysPage] Failed to resume GPS tracking for active journey:', gpsErr);
+            }
+          }
           this.startHeartbeat();
         }
       }

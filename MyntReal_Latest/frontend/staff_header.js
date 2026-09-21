@@ -616,6 +616,108 @@ window.StaffHeader = window.StaffHeader || {
             body.embed-mode .vgk-assistant-widget {
                 display: none !important;
             }
+
+            /* ── DC Protocol: DC_MOBILE_TABLE_FREEZE_RESOLUTION_001 ── */
+            /* Universal Mobile Table Responsiveness & Adaptive Sticky Freezing (Option A) */
+            @media (max-width: 768px), (pointer: coarse) {
+                /* 1. Unfreeze 3rd+ sticky columns so they don't block 90%+ of the mobile screen */
+                .mb-sticky-3, .tpt-sticky-3, .sc-mgr, .exec-sc-3, .exec-sc-4, .exec-sc-5,
+                .hours-summary-table tbody td:nth-child(2),
+                .attendance-details-table tbody td:nth-child(2),
+                .hours-summary-table thead th:nth-child(2),
+                .attendance-details-table thead th:nth-child(2) {
+                    position: static !important;
+                    left: auto !important;
+                    box-shadow: none !important;
+                    border-right: none !important;
+                    z-index: auto !important;
+                    max-width: none !important;
+                    width: auto !important;
+                }
+
+                /* 2. Compact remaining frozen columns (# and Code) to <= 122px total */
+                .mb-sticky-1, .tpt-sticky-1 {
+                    position: sticky !important;
+                    left: 0 !important;
+                    width: 38px !important;
+                    min-width: 38px !important;
+                    max-width: 38px !important;
+                    z-index: 15 !important;
+                    background: #fff;
+                }
+                .mb-sticky-2, .tpt-sticky-2 {
+                    position: sticky !important;
+                    left: 38px !important;
+                    width: 84px !important;
+                    min-width: 84px !important;
+                    max-width: 84px !important;
+                    border-right: 2px solid #e5e7eb !important;
+                    box-shadow: 2px 0 4px -1px rgba(0,0,0,0.08) !important;
+                    z-index: 15 !important;
+                    background: #fff;
+                }
+                th.mb-sticky-1, th.tpt-sticky-1, th.mb-sticky-2, th.tpt-sticky-2 {
+                    background: #f9fafb !important;
+                    z-index: 25 !important;
+                }
+
+                /* 3. Smooth momentum touch scrolling with zero gesture trapping */
+                .table-scroll-wrap, .table-responsive, [class*="table-scroll"], .dw-table-scroll, div[style*="overflow-x:auto"] {
+                    overflow-x: auto !important;
+                    -webkit-overflow-scrolling: touch !important;
+                    touch-action: pan-x pan-y !important;
+                    overscroll-behavior-x: contain !important;
+                }
+            }
+
+            /* Embedded Web View Mobile Rule Enforcement */
+            body.embed-mode .mb-sticky-3, body.embed-mode .tpt-sticky-3, body.embed-mode .sc-mgr, 
+            body.embed-mode .exec-sc-3, body.embed-mode .exec-sc-4, body.embed-mode .exec-sc-5,
+            body.embed-mode .hours-summary-table tbody td:nth-child(2),
+            body.embed-mode .attendance-details-table tbody td:nth-child(2),
+            body.embed-mode .hours-summary-table thead th:nth-child(2),
+            body.embed-mode .attendance-details-table thead th:nth-child(2) {
+                position: static !important;
+                left: auto !important;
+                box-shadow: none !important;
+                border-right: none !important;
+                z-index: auto !important;
+                max-width: none !important;
+                width: auto !important;
+            }
+            body.embed-mode .mb-sticky-1, body.embed-mode .tpt-sticky-1 {
+                position: sticky !important;
+                left: 0 !important;
+                width: 38px !important;
+                min-width: 38px !important;
+                max-width: 38px !important;
+                z-index: 15 !important;
+                background: #fff;
+            }
+            body.embed-mode .mb-sticky-2, body.embed-mode .tpt-sticky-2 {
+                position: sticky !important;
+                left: 38px !important;
+                width: 84px !important;
+                min-width: 84px !important;
+                max-width: 84px !important;
+                border-right: 2px solid #e5e7eb !important;
+                box-shadow: 2px 0 4px -1px rgba(0,0,0,0.08) !important;
+                z-index: 15 !important;
+                background: #fff;
+            }
+            body.embed-mode th.mb-sticky-1, body.embed-mode th.tpt-sticky-1, 
+            body.embed-mode th.mb-sticky-2, body.embed-mode th.tpt-sticky-2 {
+                background: #f9fafb !important;
+                z-index: 25 !important;
+            }
+            body.embed-mode .table-scroll-wrap, body.embed-mode .table-responsive, 
+            body.embed-mode [class*="table-scroll"], body.embed-mode .dw-table-scroll, 
+            body.embed-mode div[style*="overflow-x:auto"] {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                touch-action: pan-x pan-y !important;
+                overscroll-behavior-x: contain !important;
+            }
         </style>
     `,
 

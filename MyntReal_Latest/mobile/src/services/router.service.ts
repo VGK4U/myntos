@@ -219,7 +219,8 @@ export type PageRoute =
   | 'staff-vgk-coupons'
   | 'staff-vgk-promo-codes'
   | 'staff-vgk-vendors'
-  | 'real-dreams-marketplace';
+  | 'real-dreams-marketplace'
+  | 'embed-view';
 
 interface RouteConfig {
   id: PageRoute;
@@ -329,6 +330,7 @@ class RouterService {
     'staff-vgk-promo-codes': { id: 'staff-vgk-promo-codes', title: 'VGK Promo Codes', icon: 'percent', showInTabs: false, portal: 'staff' },
     'staff-vgk-vendors': { id: 'staff-vgk-vendors', title: 'Vendor Management', icon: 'briefcase', showInTabs: false, portal: 'staff' },
     'real-dreams-marketplace': { id: 'real-dreams-marketplace', title: 'Property Marketplace', icon: 'grid', showInTabs: false, portal: 'staff' },
+    'embed-view': { id: 'embed-view', title: 'Staff Portal', icon: 'globe', showInTabs: false, portal: 'staff' },
     // Location Tracking Section - New Routes
     'staff-all-location-tracker': { id: 'staff-all-location-tracker', title: 'All Location Tracker', icon: 'map-pin', showInTabs: false, portal: 'staff' },
     'staff-team-live-tracker': { id: 'staff-team-live-tracker', title: 'Team Live Tracker', icon: 'navigation', showInTabs: false, portal: 'staff' },

@@ -799,6 +799,34 @@
                 padding: 10px 12px;
                 font-size: 12px;
             }
+
+            /* DC Protocol: DC_MOBILE_TABLE_FREEZE_RESOLUTION_001 (Option A) */
+            /* Unfreeze Employee Name column on mobile so the 31-day calendar has space to scroll */
+            .hours-summary-table thead th:nth-child(2),
+            .attendance-details-table thead th:nth-child(2),
+            .hours-summary-table tbody td:nth-child(2),
+            .attendance-details-table tbody td:nth-child(2) {
+                position: static !important;
+                left: auto !important;
+                box-shadow: none !important;
+                border-right: none !important;
+                min-width: 140px !important;
+                max-width: none !important;
+            }
+            .hours-summary-table thead th:nth-child(1),
+            .attendance-details-table thead th:nth-child(1),
+            .hours-summary-table tbody td:nth-child(1),
+            .attendance-details-table tbody td:nth-child(1) {
+                min-width: 90px !important;
+                max-width: 90px !important;
+                width: 90px !important;
+            }
+            .table-responsive {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                touch-action: pan-x pan-y !important;
+                overscroll-behavior-x: contain !important;
+            }
         }
 
         /* Extra small screens (< 480px) */

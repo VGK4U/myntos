@@ -123,6 +123,7 @@ import { ServiceRevenuePage } from './pages/ServiceRevenuePage';
 import { CreateAnnouncementPage } from './pages/CreateAnnouncementPage';
 import { EditAnnouncementPage } from './pages/EditAnnouncementPage';
 import { DigitalCatalogPage } from './pages/DigitalCatalogPage';
+import { StaffEmbedPage } from './pages/StaffEmbedPage';
 // MNR Portal Pages
 import { MNRDashboard } from './pages/mnr/MNRDashboard';
 import { MNRIncome } from './pages/mnr/MNRIncome';
@@ -683,6 +684,20 @@ class MNRApp {
     if (!targetRoute) {
       if (searchParamsObj['lead_id'] || searchParamsObj['leadId'] || searchParamsObj['dial']) {
         return { route: 'softphone', params: searchParamsObj };
+      }
+      if (normalizedPath.startsWith('/staff/') || normalizedPath.startsWith('/rvz/') || normalizedPath.startsWith('/partner/')) {
+        const embedParams: Record<string, string> = {
+          url: normalizedPath,
+          title: 'Staff Portal',
+          ...searchParamsObj
+        };
+        if (queryPart) {
+          const urlParams = new URLSearchParams(queryPart);
+          urlParams.forEach((val, key) => {
+            embedParams[key] = val;
+          });
+        }
+        return { route: 'embed-view', params: embedParams };
       }
       return null;
     }
@@ -1467,16 +1482,46 @@ class MNRApp {
       case 'partner-new-order':
         page = new PartnerOrders(this.pageContainer);
         break;
+
+      case 'embed-view':
+        page = new StaffEmbedPage(this.pageContainer, routerService.getRouteParams());
+        break;
       
-      default:
+      default: {
+        const routeStr = String(route);
+        const routeParams = routerService.getRouteParams() || {};
+        if (routeParams.url || routeStr.startsWith('/') || routeStr.startsWith('staff-') || routeStr.startsWith('rvz-') || routeStr.startsWith('partner-')) {
+          let fallbackUrl = routeParams.url;
+          if (!fallbackUrl) {
+            if (routeStr.startsWith('/')) {
+              fallbackUrl = routeStr;
+            } else if (routeStr.startsWith('staff-')) {
+              fallbackUrl = `/staff/${routeStr.replace(/^staff-/, '').replace(/-/g, '/')}`;
+            } else if (routeStr.startsWith('rvz-')) {
+              fallbackUrl = `/rvz/${routeStr.replace(/^rvz-/, '').replace(/-/g, '/')}`;
+            } else if (routeStr.startsWith('partner-')) {
+              fallbackUrl = `/partner/${routeStr.replace(/^partner-/, '').replace(/-/g, '/')}`;
+            } else {
+              fallbackUrl = `/staff/${routeStr.replace(/-/g, '/')}`;
+            }
+          }
+          page = new StaffEmbedPage(this.pageContainer, {
+            url: fallbackUrl,
+            title: routeParams.title || 'Staff Portal',
+            tab: routeParams.tab
+          });
+          break;
+        }
+
         this.pageContainer.innerHTML = `
           <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;padding:24px;text-align:center;">
             <i class="fas fa-exclamation-circle" style="font-size:48px;color:#ef4444;margin-bottom:16px;"></i>
             <h3 style="color:#fff;margin:0 0 8px;">Page Not Found</h3>
-            <p style="color:rgba(255,255,255,0.6);margin:0 0 20px;">The page "${route}" could not be loaded.</p>
+            <p style="color:rgba(255,255,255,0.6);margin:0 0 20px;">The page "${routeStr}" could not be loaded.</p>
             <button onclick="window.routerService?.navigate(window.routerService?.currentRoute?.startsWith('partner-') ? 'partner-dashboard' : 'dashboard')" style="background:#6366f1;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:14px;cursor:pointer;">Go to Home</button>
           </div>`;
         return;
+      }
     }
 
     // DC_PAGE_HEADER_PRE_INIT: Attach header listeners immediately upon construction, before waiting for async page.init()

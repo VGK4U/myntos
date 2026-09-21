@@ -24,12 +24,12 @@ export class StaffVGKMembersPage {
     return `
       <div style="background:#f8fafc;min-height:100vh;padding-bottom:70px">
         ${PageHeader.render({ title: 'VGK Channel Partners', showBack: true })}
-        <div style="padding:8px 6px;min-height:calc(100vh - 110px)">
+        <div style="padding:8px 6px;min-height:calc(100vh - 110px);-webkit-overflow-scrolling:touch;">
           <iframe
             id="staff-vgk-members-frame"
             src="${srcUrl}"
-            allow="microphone; autoplay"
-            style="width:100%;height:calc(100vh - 120px);border:0;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08)"
+            allow="microphone; camera; autoplay; clipboard-write; geolocation"
+            style="width:100%;height:calc(100vh - 120px);border:0;background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.08);touch-action:auto;"
             loading="lazy"
             title="VGK Channel Partners"
           ></iframe>

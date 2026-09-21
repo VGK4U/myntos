@@ -219,6 +219,35 @@
         .data-table td { padding: 12px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
         .data-table tr:hover { background: #f9fafb; }
         .empty-state { text-align: center; padding: 40px; color: #9ca3af; font-size: 14px; }
+
+        /* DC Protocol: DC_MOBILE_TABLE_FREEZE_RESOLUTION_001 (Option A) */
+        @media (max-width: 768px) {
+            .sc-emp, .sc-mgr,
+            .exec-sc-3, .exec-sc-4, .exec-sc-5 {
+                position: static !important;
+                left: auto !important;
+                box-shadow: none !important;
+                border-right: none !important;
+                min-width: 120px !important;
+                max-width: none !important;
+            }
+            .sc-dept, .exec-sc-1 {
+                min-width: 80px !important;
+                max-width: 80px !important;
+                width: 80px !important;
+            }
+            .exec-sc-2 {
+                left: 80px !important;
+                min-width: 80px !important;
+                max-width: 80px !important;
+            }
+            .exec-table-wrapper, .snap-table-wrap, div[style*="overflow-x:auto"] {
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                touch-action: pan-x pan-y !important;
+                overscroll-behavior-x: contain !important;
+            }
+        }
     </style>
 </head>
 <body>

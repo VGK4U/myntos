@@ -419,6 +419,79 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
 
 /* Filter Strips & General Mobile Adjustments */
 @media (max-width: 768px) {
+    /* DC Protocol: DC_MOBILE_TABLE_FREEZE_RESOLUTION_001 (Option A) */
+    /* 1. Unfreeze Name column (mb-sticky-3 / tpt-sticky-3) so 70%+ of the mobile screen is scrollable */
+    .mb-sticky-3, .tpt-sticky-3 {
+        position: static !important;
+        width: auto !important;
+        min-width: 140px !important;
+        max-width: none !important;
+        box-shadow: none !important;
+        border-right: none !important;
+        z-index: auto !important;
+    }
+    /* 2. Compact # and Code frozen columns to <= 122px total */
+    .mb-sticky-1, .tpt-sticky-1 {
+        position: sticky !important;
+        left: 0 !important;
+        width: 38px !important;
+        min-width: 38px !important;
+        max-width: 38px !important;
+        z-index: 15 !important;
+        background: #fff;
+    }
+    .mb-sticky-2, .tpt-sticky-2 {
+        position: sticky !important;
+        left: 38px !important;
+        width: 84px !important;
+        min-width: 84px !important;
+        max-width: 84px !important;
+        border-right: 2px solid #e5e7eb !important;
+        box-shadow: 2px 0 4px -1px rgba(0,0,0,0.08) !important;
+        z-index: 15 !important;
+        background: #fff;
+    }
+    th.mb-sticky-1, th.tpt-sticky-1, th.mb-sticky-2, th.tpt-sticky-2 {
+        background: #f9fafb !important;
+        z-index: 25 !important;
+    }
+    .table-scroll-wrap {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        touch-action: pan-x pan-y !important;
+        overscroll-behavior-x: contain !important;
+    }
+
+    /* Filter Bar clean mobile wrap */
+    .filter-bar {
+        padding: 12px !important;
+        gap: 8px !important;
+    }
+    .filter-bar .fgroup {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+    .period-btns {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        gap: 6px !important;
+        padding-bottom: 4px !important;
+        width: 100% !important;
+    }
+    .period-btn {
+        flex: 0 0 auto !important;
+        white-space: nowrap !important;
+        padding: 6px 12px !important;
+        font-size: 12px !important;
+    }
+    .btn-filter, #advSearchBtn {
+        flex: 1 1 auto !important;
+        justify-content: center !important;
+        text-align: center !important;
+    }
+
     #execFilterBar, #tabEarnings > div:first-child, #tabEarnings > div:nth-child(2),
     #tabTopPartnersTab > div > div:nth-child(2),
     #tabIncomeDash > div:nth-child(2), #tabIncomeDash > div:nth-child(3),
@@ -437,13 +510,13 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
         min-width: 0 !important;
         box-sizing: border-box;
     }
-    .period-strip, .period-btns {
+    .period-strip {
         width: 100%;
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
     }
-    .me-period-btn, .period-btn {
+    .me-period-btn {
         flex: 1 1 auto;
         text-align: center;
     }

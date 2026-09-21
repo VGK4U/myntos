@@ -578,20 +578,25 @@ export class SideDrawer {
       el.addEventListener('click', () => {
         const rawRoute = (el as HTMLElement).dataset.route!;
         const tab = (el as HTMLElement).dataset.tab;
+        const rawLabel = (el.querySelector('.menu-label')?.textContent || '').trim();
         
         let targetRoute = ROUTE_PATH_MAP[rawRoute] || ROUTE_PATH_MAP[rawRoute.replace(/\/$/, '')];
-        if (!targetRoute) {
-          if (rawRoute.startsWith('/staff/')) {
-            targetRoute = rawRoute.replace('/staff/', '').replace(/\//g, '-');
-          } else {
-            targetRoute = rawRoute;
-          }
+        if (!targetRoute && !rawRoute.startsWith('/')) {
+          targetRoute = rawRoute;
         }
 
-        if (tab) {
-          routerService.navigate(targetRoute as PageRoute, { tab });
+        if (targetRoute) {
+          if (tab) {
+            routerService.navigate(targetRoute as PageRoute, { tab });
+          } else {
+            routerService.navigate(targetRoute as PageRoute);
+          }
         } else {
-          routerService.navigate(targetRoute as PageRoute);
+          routerService.navigate('embed-view' as PageRoute, {
+            url: rawRoute,
+            title: rawLabel || 'Staff Portal',
+            tab: tab || ''
+          });
         }
         this.close();
       });
@@ -778,6 +783,11 @@ export class SideDrawer {
     const isAllowedAccounts = isSupreme || isAccountsStaff;
     const isRestrictedSales = ['MN10009', 'MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'].includes(empCode);
 
+    const internalTypes = ['MYNT_REAL', 'MN_STAFF', 'VGK4U', 'INTERNAL', 'STAFF', 'ADMIN', 'HR', 'MANAGER', 'EXECUTIVE', 'FIELD_EXECUTIVE', 'SUPER_ADMIN', 'FREELANCER'];
+    const isInternalType = staffType && internalTypes.includes(staffType);
+    const isInternalCompany = user?.base_company_id && [1, 2, 3, 4, 88].includes(Number(user.base_company_id));
+    const isSaaSTenant = !isSaaSAdmin && !isInternalType && !isInternalCompany && (staffType === 'TENANT_ADMIN' || staffType === 'SAAS_CLIENT' || staffType === 'SAAS_TENANT' || user?.company_segment === 'SEGMENT_B_SAAS');
+
     const formatItem = (item: SidebarItem): MenuItem | null => {
       // Permission check (skip if not supreme and path not allowed)
       if (!isSupreme && this.allowedPaths !== '*') {
@@ -793,21 +803,23 @@ export class SideDrawer {
         }
       }
 
+      // Razorpay & A1Top dashboards only for MR10001 and Accounts department
+      if (item.route === '/staff/configuration/razorpay' || item.route === '/staff/configuration/a1top') {
+        const empId = user.emp_code || user.employee_code || user.employee_id || '';
+        const deptName = (user.department || user.department_name || '').toLowerCase();
+        const isAllowed = (empId === 'MR10001') || (deptName === 'accounts');
+        if (!isAllowed) {
+          return null;
+        }
+      }
+
       // Sales restriction
       if (isRestrictedSales && (item.route === '/staff/leads' || item.menu_code === 'STAFF_LEADS' || item.menu_code === 'LEADS_MASTER')) {
         return null;
       }
 
-      let route = ROUTE_PATH_MAP[item.route] || ROUTE_PATH_MAP[item.route.replace(/\/$/, '')];
-      if (!route) {
-        if (item.route.startsWith('/staff/')) {
-          route = item.route.replace('/staff/', '').replace(/\//g, '-');
-        } else {
-          route = item.route;
-        }
-      }
-
-      let label = item.label;
+      const route = item.route;
+      const label = item.label;
       let tab: string | undefined = TAB_MAP[item.route];
       if (!tab) {
         const cUpper = (item.menu_code || '').toUpperCase();
@@ -838,242 +850,138 @@ export class SideDrawer {
 
     const sections: MenuSection[] = [];
 
-    // Helper to find canonical section by code
-    const getCanonicalSec = (code: string) => CANONICAL_MENU_MASTER.find(s => s.section_code === code);
+    for (const section of CANONICAL_MENU_MASTER) {
+      // Skip PROGRESS section since its items are pinned in topItems
+      if (section.section_code === 'PROGRESS') {
+        continue;
+      }
 
-    // 1. HR
-    const hrCanonical = getCanonicalSec('HR');
-    if (hrCanonical) {
-      const hrSubSections: SubSection[] = [];
-      if (hrCanonical.subSections) {
-        for (const sub of hrCanonical.subSections) {
-          const items = sub.items.map(formatItem).filter((i): i is MenuItem => i !== null);
-          if (items.length > 0) {
-            hrSubSections.push({
-              sub_section_code: sub.sub_section_code,
-              sub_section_label: sub.sub_section_label,
-              items: items
-            });
+      const sCode = (section.section_code || '').toUpperCase();
+      const sTitle = (section.section_label || '').toUpperCase();
+      const isSaasSection = sCode === 'VGK_SAAS' || sCode === 'MYNTOS_SAAS' || sTitle.includes('MYNTOS SAAS') || sTitle.includes('SAAS');
+
+      // For SaaS tenants, completely exclude internal platform and group company sections
+      if (isSaaSTenant) {
+        const saasRestricted = ['MNR', 'MYNT', 'VGK', 'META', 'CONFIG', 'NOT IN USE', 'NOT_IN_USE', 'PARTNER', 'INTERNAL'];
+        if (saasRestricted.some(k => sCode.includes(k) || sTitle.includes(k))) {
+          if (!isSaasSection) {
+            continue;
           }
         }
       }
-      if (hrSubSections.length > 0) {
-        sections.push({
-          section_code: 'HR',
-          section_label: 'HR',
-          order: 2,
-          subSections: hrSubSections
-        });
+
+      // If user is not allowed Accounts, hide ACCOUNTS section
+      if (!isAllowedAccounts && (sCode.includes('ACCOUNT') || sTitle.includes('ACCOUNT') || sCode.includes('FINANCE'))) {
+        continue;
       }
-    }
 
-    // 2. CRM & LEADS
-    const crmCanonical = getCanonicalSec('CRM_LEADS');
-    const crmItems: MenuItem[] = [];
-    if (crmCanonical && crmCanonical.items) {
-      for (const item of crmCanonical.items) {
-        const formatted = formatItem(item);
-        if (formatted) crmItems.push(formatted);
+      // Global Directive: Remove META ADS, CONFIGURATION, SAAS, INTERNAL for general staff unless granted or SaaS admin
+      if (!isSaaSAdmin) {
+        const globalRestrictedKeywords = ['META', 'CONFIG', 'SAAS', 'INTERNAL'];
+        if (globalRestrictedKeywords.some(k => sCode.includes(k) || sTitle.includes(k))) {
+          if (this.allowedPaths !== '*' && this.allowedPaths instanceof Set) {
+            const allowedSet = this.allowedPaths as Set<string>;
+            const allSecRoutes = [
+              ...(section.items || []).map(i => i.route),
+              ...(section.subSections || []).flatMap(sub => sub.items.map(i => i.route))
+            ];
+            const hasAnyRoute = allSecRoutes.some(r => allowedSet.has(r) || allowedSet.has(r.replace(/\/$/, '')));
+            if (!hasAnyRoute) {
+              continue;
+            }
+          } else if (!isSupreme) {
+            continue;
+          }
+        }
+      } else {
+        // For SaaS Admins, only restrict non-applicable internal sections if not super user
+        if (empCode !== 'MR10001' && empCode !== 'MR10025') {
+          const nonSaasRestricted = ['META', 'INTERNAL'];
+          if (nonSaasRestricted.some(k => sCode.includes(k) || sTitle.includes(k))) {
+            continue;
+          }
+        }
       }
-    }
-    // Guarantee Calling & Softphone, Auto Dialer, Digital Catalog in CRM
-    if (!crmItems.some(i => i.route === 'auto-dialer')) {
-      crmItems.push({
-        menu_code: 'AUTO_DIALER',
-        label: `<i class="fas fa-phone-volume" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Auto Dialer`,
-        route: 'auto-dialer'
-      });
-    }
-    if (!crmItems.some(i => i.route === 'softphone')) {
-      crmItems.push({
-        menu_code: 'SOFTPHONE',
-        label: `<i class="fas fa-headset" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Calling & Softphone`,
-        route: 'softphone'
-      });
-    }
-    if (!crmItems.some(i => i.route === 'digital-catalog')) {
-      crmItems.push({
-        menu_code: 'DIGITAL_CATALOG',
-        label: `<i class="fas fa-book-open" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>Digital Catalog`,
-        route: 'digital-catalog'
-      });
-    }
-    if (crmItems.length > 0) {
-      sections.push({
-        section_code: 'CRM_MODULE',
-        section_label: 'CRM & LEADS',
-        order: 4,
-        items: crmItems
-      });
-    }
 
-    // 3. TASK MANAGEMENT
-    const taskCanonical = getCanonicalSec('TASK_MANAGEMENT');
-    if (taskCanonical && taskCanonical.items) {
-      const items = taskCanonical.items.map(formatItem).filter((i): i is MenuItem => i !== null);
-      if (items.length > 0) {
-        sections.push({
-          section_code: 'TASK_MANAGEMENT',
-          section_label: 'TASK MANAGEMENT',
-          order: 5,
-          items: items
-        });
+      // Additional Directive for MR10018: Remove NOT IN USE, MNR, NDA, ZYNOVA (preserves MYNTOS SAAS)
+      if (empCode === 'MR10018') {
+        const mr10018RestrictedKeywords = ['NOT IN USE', 'NOT_IN_USE', 'MNR', 'NDA', 'ZYNOVA', 'ZINOVA'];
+        if (mr10018RestrictedKeywords.some(k => (sCode.includes(k) || sTitle.includes(k)) && !isSaasSection)) {
+          continue;
+        }
       }
-    }
 
-    // 4. KRA MANAGEMENT
-    const kraCanonical = getCanonicalSec('KRA_MANAGEMENT');
-    if (kraCanonical && kraCanonical.items) {
-      const items = kraCanonical.items.map(formatItem).filter((i): i is MenuItem => i !== null);
-      if (items.length > 0) {
-        sections.push({
-          section_code: 'KRA_MANAGEMENT',
-          section_label: 'KRA MANAGEMENT',
-          order: 6,
-          items: items
-        });
+      // Hide NOT_IN_USE
+      if (sCode === 'NOT_IN_USE' || sTitle === 'NOT IN USE') {
+        continue;
       }
-    }
 
-    // 5. JOURNEY TRACKING
-    const journeyCanonical = getCanonicalSec('FIELD_LOCATION_TRACKING');
-    if (journeyCanonical && journeyCanonical.items) {
-      const items = journeyCanonical.items.map(formatItem).filter((i): i is MenuItem => i !== null);
-      if (items.length > 0) {
-        sections.push({
-          section_code: 'JOURNEY_TRACKING',
-          section_label: 'JOURNEY TRACKING',
-          order: 7,
-          items: items
-        });
+      const sectionItems: MenuItem[] = [];
+      const sectionSubSections: SubSection[] = [];
+
+      // Process items
+      if (section.items) {
+        for (const item of section.items) {
+          const formatted = formatItem(item);
+          if (formatted) {
+            sectionItems.push(formatted);
+          }
+        }
       }
-    }
 
-    // 6. REIMBURSEMENT
-    const reimbursementItems: MenuItem[] = [
-      { menu_code: "MY_REIMBURSEMENT_CLAIMS", label: `<i class="fas fa-receipt" style="margin-right: 8px; width: 18px; text-align: center; color: #f59e0b;"></i>My Reimbursement Claims`, route: "reimbursements" },
-      { menu_code: "REIMBURSEMENT_APPROVALS", label: `<i class="fas fa-file-invoice-dollar" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>Reimbursement Approvals`, route: "staff-reimbursement-approvals" }
-    ];
-    sections.push({
-      section_code: "REIMBURSEMENT",
-      section_label: "REIMBURSEMENT",
-      order: 8,
-      items: reimbursementItems
-    });
-
-    // 7. WORK FLOWS (MYNT_REAL)
-    const myntRealCanonical = getCanonicalSec('MYNT_REAL');
-    const workflowsItems: MenuItem[] = [];
-    if (myntRealCanonical && myntRealCanonical.items) {
-      for (const item of myntRealCanonical.items) {
-        const formatted = formatItem(item);
-        if (formatted) workflowsItems.push(formatted);
-      }
-    }
-    // Guarantee Field Sales in WORKFLOWS
-    if (!workflowsItems.some(i => i.route === 'staff-bank-wise-leads' || (i.menu_code && i.menu_code.includes('BANK_WISE_LEADS')))) {
-      workflowsItems.splice(1, 0, {
-        menu_code: "MNR_BANK_WISE_LEADS",
-        label: `<i class="fas fa-users-gear" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Field Sales`,
-        route: "staff-bank-wise-leads"
-      });
-    }
-    if (workflowsItems.length > 0) {
-      sections.push({
-        section_code: 'WORKFLOWS',
-        section_label: 'WORK FLOWS',
-        order: 9,
-        items: workflowsItems
-      });
-    }
-
-    // 8. SERVICE TICKETS
-    const ticketsCanonical = getCanonicalSec('SERVICE_TICKETS');
-    if (ticketsCanonical && ticketsCanonical.items) {
-      const items = ticketsCanonical.items.map(formatItem).filter((i): i is MenuItem => i !== null);
-      if (items.length > 0) {
-        sections.push({
-          section_code: 'SERVICE_TICKETS',
-          section_label: 'SERVICE TICKETS',
-          order: 10,
-          items: items
-        });
-      }
-    }
-
-    // 9. VGK4U (Section Code: VGK_TEAM - Section Label: VGK4U) - 9 Canonical SubSections!
-    const vgkCanonical = getCanonicalSec('VGK_TEAM');
-    if (vgkCanonical && vgkCanonical.subSections) {
-      const vgkSubSections: SubSection[] = [];
-      for (const sub of vgkCanonical.subSections) {
-        const subItems = sub.items.map(formatItem).filter((i): i is MenuItem => i !== null);
-        if (subItems.length > 0) {
-          vgkSubSections.push({
-            sub_section_code: sub.sub_section_code,
-            sub_section_label: sub.sub_section_label,
-            items: subItems
+      // Guarantee Softphone, Auto Dialer, Digital Catalog in CRM
+      if (sCode === 'CRM_LEADS') {
+        if (!sectionItems.some(i => i.route === 'auto-dialer' || i.route === '/staff/dialer')) {
+          sectionItems.push({
+            menu_code: 'AUTO_DIALER',
+            label: `<i class="fas fa-phone-volume" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Auto Dialer`,
+            route: '/staff/dialer'
+          });
+        }
+        if (!sectionItems.some(i => i.route === 'softphone' || i.route === '/staff/softphone')) {
+          sectionItems.push({
+            menu_code: 'SOFTPHONE',
+            label: `<i class="fas fa-headset" style="margin-right: 8px; width: 18px; text-align: center; color: #38bdf8;"></i>Calling & Softphone`,
+            route: '/staff/softphone'
+          });
+        }
+        if (!sectionItems.some(i => i.route === 'digital-catalog' || i.route === '/staff/catalog-library' || i.route === '/staff/configuration/catalog')) {
+          sectionItems.push({
+            menu_code: 'DIGITAL_CATALOG',
+            label: `<i class="fas fa-book-open" style="margin-right: 8px; width: 18px; text-align: center; color: #10b981;"></i>Digital Catalog`,
+            route: '/staff/catalog-library'
           });
         }
       }
-      if (vgkSubSections.length > 0) {
-        sections.push({
-          section_code: 'VGK_TEAM',
-          section_label: 'VGK4U',
-          order: 18,
-          subSections: vgkSubSections
-        });
-      }
-    }
 
-    // 10. ACCOUNTS & FINANCE (Only if allowed)
-    if (isAllowedAccounts) {
-      const accountsCanonical = getCanonicalSec('ACCOUNTS');
-      if (accountsCanonical && accountsCanonical.subSections) {
-        const accSubSections: SubSection[] = [];
-        for (const sub of accountsCanonical.subSections) {
-          const subItems = sub.items.map(formatItem).filter((i): i is MenuItem => i !== null);
+      // Process subSections
+      if (section.subSections) {
+        for (const sub of section.subSections) {
+          const subItems: MenuItem[] = [];
+          for (const item of sub.items) {
+            const formatted = formatItem(item);
+            if (formatted) {
+              subItems.push(formatted);
+            }
+          }
           if (subItems.length > 0) {
-            accSubSections.push({
+            sectionSubSections.push({
               sub_section_code: sub.sub_section_code,
               sub_section_label: sub.sub_section_label,
               items: subItems
             });
           }
         }
-        if (accSubSections.length > 0) {
-          sections.push({
-            section_code: 'ACCOUNTS_EARNINGS',
-            section_label: 'FINANCE & EARNINGS',
-            order: 25,
-            subSections: accSubSections
-          });
-        }
       }
-    }
 
-    // 11. MYNTOS SAAS (Only if SaaS Admin)
-    if (isSaaSAdmin) {
-      const saasCanonical = getCanonicalSec('MYNTOS_SAAS');
-      if (saasCanonical && saasCanonical.subSections) {
-        const saasSubSections: SubSection[] = [];
-        for (const sub of saasCanonical.subSections) {
-          const subItems = sub.items.map(formatItem).filter((i): i is MenuItem => i !== null);
-          if (subItems.length > 0) {
-            saasSubSections.push({
-              sub_section_code: sub.sub_section_code,
-              sub_section_label: sub.sub_section_label,
-              items: subItems
-            });
-          }
-        }
-        if (saasSubSections.length > 0) {
-          sections.push({
-            section_code: 'MYNTOS_SAAS',
-            section_label: 'MYNTOS SAAS',
-            order: 99,
-            subSections: saasSubSections
-          });
-        }
+      if (sectionItems.length > 0 || sectionSubSections.length > 0) {
+        sections.push({
+          section_code: section.section_code,
+          section_label: section.section_label,
+          order: section.order,
+          items: sectionItems.length > 0 ? sectionItems : undefined,
+          subSections: sectionSubSections.length > 0 ? sectionSubSections : undefined
+        });
       }
     }
 

@@ -527,6 +527,10 @@ class GpsService {
     if (GPS_DEBUG()) console.log('[DC_GPS] Switching to background mode - reduced frequency');
     this.stopHeartbeat();
     
+    if (Capacitor.isNativePlatform() && !this.isNativeBackgroundActive && this.shouldBeTracking()) {
+      this.startNativeBackgroundTracking();
+    }
+
     if (mobileScheduler.isScheduled(SCHEDULER_BACKGROUND_ID)) return;
     
     mobileScheduler.schedule(
@@ -923,6 +927,11 @@ class GpsService {
       batteryService.startMonitoring();
     }
     
+    // DC_JOURNEY_NATIVE_BG: Guarantee native background location service is running for active journey
+    if (Capacitor.isNativePlatform() && !this.isNativeBackgroundActive) {
+      this.startNativeBackgroundTracking();
+    }
+
     if (mobileScheduler.isScheduled(SCHEDULER_TRACKPOINT_ID)) return;
 
     mobileScheduler.schedule(
@@ -931,7 +940,7 @@ class GpsService {
         await this.sendTrackPoint();
       },
       TRACK_POINT_INTERVAL_MS,
-      { runImmediately: false, immediateOnResume: true, runInBackground: false }
+      { runImmediately: false, immediateOnResume: true, runInBackground: true }
     );
 
     if (GPS_DEBUG()) console.log(`[DC_GPS] Journey tracking started for ID: ${journeyId}`);
@@ -948,6 +957,7 @@ class GpsService {
     if (wasJourneyActive && !this.shouldBeTracking()) {
       this.stopTracking();
       batteryService.stopMonitoring();
+      this.stopNativeBackgroundTracking();
     }
     
     if (GPS_DEBUG()) console.log('[DC_GPS] Journey tracking stopped');
@@ -960,9 +970,10 @@ class GpsService {
     const loc = this.currentLocation;
     const journeyId = this.activeJourneyId;
 
-    // WVV Protocol: Only send if accuracy <= 100m for reimbursement
-    if (loc.accuracy_m > WVV_MAX_ACCURACY_METERS) {
-      if (GPS_DEBUG()) console.log(`[DC_GPS] Track point skipped: accuracy ${loc.accuracy_m.toFixed(0)}m exceeds WVV limit`);
+    // DC_GPS_DUAL_TIER_001: Accept degraded GPS up to 500m so the visual route is preserved.
+    // The backend WVV engine automatically validates <= 100m for financial reimbursement.
+    if (loc.accuracy_m > HEARTBEAT_MAX_ACCURACY_METERS) {
+      if (GPS_DEBUG()) console.log(`[DC_GPS] Track point skipped: accuracy ${loc.accuracy_m.toFixed(0)}m exceeds 500m limit`);
       return;
     }
 

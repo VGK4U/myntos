@@ -575,7 +575,55 @@ class TestCanonicalLocationIngestion(unittest.TestCase):
         # 2. Tie-break strictly chose the MAX(id) row
         self.assertEqual(results[0].id, higher_id)
 
+    def test_18_realtime_telemetry_bridges_to_active_journey(self):
+        """18. Verify that continuous background telemetry automatically feeds active journey track points and updates distance."""
+        obs1_id = str(uuid.uuid4())
+        fix1 = {
+            "latitude": 17.7100,
+            "longitude": 83.3100,
+            "accuracy_m": 20.0,
+            "speed_kmh": 12.0,
+            "battery_percentage": 90,
+            "client_observation_id": obs1_id,
+            "source": "native_background",
+            "timestamp": "2026-09-06T11:00:00"
+        }
+        res1 = LocationIngestionService.ingest_realtime_location(db=self.db, employee_id=101, observation_data=fix1)
+        self.assertTrue(res1["success"])
+
+        # Check that StaffJourneyTrackPoint was created by the bridge
+        tp1 = self.db.query(StaffJourneyTrackPoint).filter(StaffJourneyTrackPoint.client_observation_id == obs1_id).first()
+        self.assertIsNotNone(tp1)
+        self.assertEqual(tp1.journey_id, 701)
+        self.assertEqual(tp1.latitude, 17.7100)
+        self.assertEqual(tp1.distance_from_prev, 0.0)
+
+        # Ingest a second moving point 1 km away
+        obs2_id = str(uuid.uuid4())
+        fix2 = {
+            "latitude": 17.7190,
+            "longitude": 83.3190,
+            "accuracy_m": 25.0,
+            "speed_kmh": 18.0,
+            "battery_percentage": 88,
+            "client_observation_id": obs2_id,
+            "source": "native_background",
+            "timestamp": "2026-09-06T11:05:00"
+        }
+        res2 = LocationIngestionService.ingest_realtime_location(db=self.db, employee_id=101, observation_data=fix2)
+        self.assertTrue(res2["success"])
+        tp2 = self.db.query(StaffJourneyTrackPoint).filter(StaffJourneyTrackPoint.client_observation_id == obs2_id).first()
+        self.assertIsNotNone(tp2)
+        self.assertGreater(tp2.distance_from_prev, 0.5)
+
+        # Verify journey distance and reimbursement updated
+        journey = self.db.query(StaffJourney).filter(StaffJourney.id == 701).first()
+        self.assertGreater(journey.total_distance_km, 0.5)
+        self.assertGreater(journey.reimbursable_distance_km, 0.5)
+        self.assertGreater(journey.reimbursement_amount, 0.0)
+
 
 if __name__ == '__main__':
     unittest.main()
+
 

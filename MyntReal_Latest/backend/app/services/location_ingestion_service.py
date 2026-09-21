@@ -506,7 +506,10 @@ class LocationIngestionService:
         ).first()
 
         # Generate DC Code (for display / legacy audit purposes)
-        dc_code = generate_realtime_dc_code(emp_code, now)
+        # Suffix with observation id slice to prevent collisions during rapid batch queue drain
+        base_dc_code = generate_realtime_dc_code(emp_code, now)
+        obs_suffix = obs['client_observation_id'].replace('-', '')[-6:] if obs.get('client_observation_id') else f"{now.microsecond:06d}"
+        dc_code = f"{base_dc_code}-{obs_suffix}"[:50]
 
         # Deduplication check
         if not obs["is_legacy"]:
@@ -621,6 +624,21 @@ class LocationIngestionService:
                     "worked_minutes": attendance.worked_minutes if attendance else 0
                 }
             raise
+
+        # DC_JOURNEY_REALTIME_BRIDGE: Bridge telemetry to active journey track points
+        if active_journey and active_journey.status == JourneyStatus.IN_PROGRESS:
+            try:
+                cls.ingest_journey_track_point(
+                    db=db,
+                    journey_id=active_journey.id,
+                    employee_id=employee_id,
+                    observation_data=obs,
+                    http_request=request
+                )
+            except Exception as journey_bridge_err:
+                logger.warning(
+                    f"[DC_JOURNEY_BRIDGE_ERR] Failed to bridge realtime telemetry to journey {active_journey.id}: {journey_bridge_err}"
+                )
 
         return {
             "success": True,
