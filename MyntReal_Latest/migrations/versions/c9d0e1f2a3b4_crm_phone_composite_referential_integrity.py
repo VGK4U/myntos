@@ -21,43 +21,71 @@ def upgrade():
     op.execute(sa.text("SET lock_timeout = '5s';"))
     op.execute(sa.text("SET statement_timeout = '30s';"))
 
+    bind = op.get_bind()
+
     # 2. Supporting composite UNIQUE on crm_leads(tenant_id, company_id, id)
-    op.create_unique_constraint(
-        'uq_crm_leads_tenant_company_id',
-        'crm_leads',
-        ['tenant_id', 'company_id', 'id']
-    )
+    has_uq1 = bind.execute(sa.text(
+        "SELECT 1 FROM pg_constraint WHERE conname = 'uq_crm_leads_tenant_company_id'"
+    )).scalar()
+    if not has_uq1:
+        op.create_unique_constraint(
+            'uq_crm_leads_tenant_company_id',
+            'crm_leads',
+            ['tenant_id', 'company_id', 'id']
+        )
 
     # 3. Supporting composite UNIQUE on crm_lead_phones(id, tenant_id, company_id, lead_id)
-    op.create_unique_constraint(
-        'uq_crm_lead_phones_composite_id',
-        'crm_lead_phones',
-        ['id', 'tenant_id', 'company_id', 'lead_id']
-    )
+    has_uq2 = bind.execute(sa.text(
+        "SELECT 1 FROM pg_constraint WHERE conname = 'uq_crm_lead_phones_composite_id'"
+    )).scalar()
+    if not has_uq2:
+        op.create_unique_constraint(
+            'uq_crm_lead_phones_composite_id',
+            'crm_lead_phones',
+            ['id', 'tenant_id', 'company_id', 'lead_id']
+        )
 
     # 4. Replace unary fk_crm_lead_phones_lead with composite (tenant_id, company_id, lead_id)
-    op.drop_constraint('fk_crm_lead_phones_lead', 'crm_lead_phones', type_='foreignkey')
-    op.create_foreign_key(
-        'fk_crm_lead_phones_composite_lead',
-        'crm_lead_phones',
-        'crm_leads',
-        ['tenant_id', 'company_id', 'lead_id'],
-        ['tenant_id', 'company_id', 'id'],
-        ondelete='CASCADE',
-        onupdate='RESTRICT'
-    )
+    has_unary_fk1 = bind.execute(sa.text(
+        "SELECT 1 FROM pg_constraint WHERE conname = 'fk_crm_lead_phones_lead'"
+    )).scalar()
+    if has_unary_fk1:
+        op.drop_constraint('fk_crm_lead_phones_lead', 'crm_lead_phones', type_='foreignkey')
+
+    has_comp_fk1 = bind.execute(sa.text(
+        "SELECT 1 FROM pg_constraint WHERE conname = 'fk_crm_lead_phones_composite_lead'"
+    )).scalar()
+    if not has_comp_fk1:
+        op.create_foreign_key(
+            'fk_crm_lead_phones_composite_lead',
+            'crm_lead_phones',
+            'crm_leads',
+            ['tenant_id', 'company_id', 'lead_id'],
+            ['tenant_id', 'company_id', 'id'],
+            ondelete='CASCADE',
+            onupdate='RESTRICT'
+        )
 
     # 5. Replace unary fk_crm_lead_phone_prov_assoc with composite (phone_association_id, tenant_id, company_id, lead_id)
-    op.drop_constraint('fk_crm_lead_phone_prov_assoc', 'crm_lead_phone_provenances', type_='foreignkey')
-    op.create_foreign_key(
-        'fk_crm_lead_phone_prov_composite_assoc',
-        'crm_lead_phone_provenances',
-        'crm_lead_phones',
-        ['phone_association_id', 'tenant_id', 'company_id', 'lead_id'],
-        ['id', 'tenant_id', 'company_id', 'lead_id'],
-        ondelete='CASCADE',
-        onupdate='RESTRICT'
-    )
+    has_unary_fk2 = bind.execute(sa.text(
+        "SELECT 1 FROM pg_constraint WHERE conname = 'fk_crm_lead_phone_prov_assoc'"
+    )).scalar()
+    if has_unary_fk2:
+        op.drop_constraint('fk_crm_lead_phone_prov_assoc', 'crm_lead_phone_provenances', type_='foreignkey')
+
+    has_comp_fk2 = bind.execute(sa.text(
+        "SELECT 1 FROM pg_constraint WHERE conname = 'fk_crm_lead_phone_prov_composite_assoc'"
+    )).scalar()
+    if not has_comp_fk2:
+        op.create_foreign_key(
+            'fk_crm_lead_phone_prov_composite_assoc',
+            'crm_lead_phone_provenances',
+            'crm_lead_phones',
+            ['phone_association_id', 'tenant_id', 'company_id', 'lead_id'],
+            ['id', 'tenant_id', 'company_id', 'lead_id'],
+            ondelete='CASCADE',
+            onupdate='RESTRICT'
+        )
 
 
 def downgrade():

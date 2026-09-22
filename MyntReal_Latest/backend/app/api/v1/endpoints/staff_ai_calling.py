@@ -2320,6 +2320,7 @@ def _dispatch_call(
     twilio_token = _get_twilio_token()
     twilio_from = _get_twilio_from()
 
+    plivo_error = None
     # Priority 1: Plivo
     if plivo_id and plivo_token:
         try:
@@ -2330,9 +2331,22 @@ def _dispatch_call(
             plivo_incoming = f"{incoming_url}{sep_in}provider=plivo"
             plivo_status = f"{status_url}{sep_st}provider=plivo"
 
+            # Plivo requires E.164 destination digits without leading '+'
+            clean_dest = "".join([c for c in phone if c.isdigit()])
+            if len(clean_dest) == 10:
+                plivo_to = f"91{clean_dest}"
+            elif len(clean_dest) == 11 and clean_dest.startswith('0'):
+                plivo_to = f"91{clean_dest[1:]}"
+            else:
+                plivo_to = clean_dest
+
+            clean_from = "".join([c for c in plivo_caller_id if c.isdigit()])
+            if not clean_from:
+                clean_from = "918031728899"
+
             body = {
-                "from": plivo_caller_id,
-                "to": phone,
+                "from": clean_from,
+                "to": plivo_to,
                 "answer_url": plivo_incoming,
                 "answer_method": "POST",
                 "hangup_url": plivo_status,
@@ -2350,39 +2364,44 @@ def _dispatch_call(
                 logger.info(f"[AI_CALLING] Plivo call initiated for log {log_id}: {call_sid}")
                 return call_sid, "plivo"
             else:
-                err_msg = res_json.get("error") or res_json.get("message") or f"HTTP {resp.status_code}"
-                logger.warning(f"[AI_CALLING] Plivo call failed ({err_msg}). Checking Twilio fallback...")
-                if not (twilio_sid and twilio_token and twilio_from):
-                    raise RuntimeError(f"Plivo error: {err_msg}")
+                plivo_error = res_json.get("error") or res_json.get("message") or f"HTTP {resp.status_code}"
+                logger.warning(f"[AI_CALLING] Plivo call failed ({plivo_error}). Checking Twilio fallback...")
         except Exception as e:
-            if not (twilio_sid and twilio_token and twilio_from):
-                raise
+            plivo_error = str(e)
             logger.warning(f"[AI_CALLING] Plivo dispatch error: {e}. Checking Twilio fallback...")
 
     # Priority 2: Twilio fallback
     if twilio_sid and twilio_token and twilio_from:
-        from twilio.rest import Client as TwilioClient
-        tc = TwilioClient(twilio_sid, twilio_token)
-        sep_in = "&" if "?" in incoming_url else "?"
-        sep_st = "&" if "?" in status_url else "?"
-        sep_rc = "&" if "?" in rec_url else "?"
-        twilio_incoming = f"{incoming_url}{sep_in}provider=twilio"
-        twilio_status = f"{status_url}{sep_st}provider=twilio"
-        twilio_rec = f"{rec_url}{sep_rc}provider=twilio"
+        try:
+            from twilio.rest import Client as TwilioClient
+            tc = TwilioClient(twilio_sid, twilio_token)
+            sep_in = "&" if "?" in incoming_url else "?"
+            sep_st = "&" if "?" in status_url else "?"
+            sep_rc = "&" if "?" in rec_url else "?"
+            twilio_incoming = f"{incoming_url}{sep_in}provider=twilio"
+            twilio_status = f"{status_url}{sep_st}provider=twilio"
+            twilio_rec = f"{rec_url}{sep_rc}provider=twilio"
 
-        call = tc.calls.create(
-            to=phone,
-            from_=twilio_from,
-            url=twilio_incoming,
-            status_callback=twilio_status,
-            status_callback_event=["completed", "failed", "busy", "no-answer"],
-            record=True,
-            recording_status_callback=twilio_rec,
-            recording_status_callback_method="POST",
-            timeout=30,
-        )
-        logger.info(f"[AI_CALLING] Twilio call initiated for log {log_id}: {call.sid}")
-        return call.sid, "twilio"
+            call = tc.calls.create(
+                to=phone,
+                from_=twilio_from,
+                url=twilio_incoming,
+                status_callback=twilio_status,
+                status_callback_event=["completed", "failed", "busy", "no-answer"],
+                record=True,
+                recording_status_callback=twilio_rec,
+                recording_status_callback_method="POST",
+                timeout=30,
+            )
+            logger.info(f"[AI_CALLING] Twilio call initiated for log {log_id}: {call.sid}")
+            return call.sid, "twilio"
+        except Exception as tw_err:
+            if plivo_error:
+                raise RuntimeError(f"Plivo dispatch failed: {plivo_error}. (Twilio fallback also failed: {tw_err})")
+            raise
+
+    if plivo_error:
+        raise RuntimeError(f"Plivo dispatch failed: {plivo_error}")
 
     raise RuntimeError("No telephony provider credentials available (Plivo and Twilio both unconfigured or failed)")
 
@@ -3013,6 +3032,10 @@ def make_test_call(
         clean = _re.sub(r'\x1b\[[0-9;]*m', '', raw)
         cl = clean.lower()
 
+        # ── Surface Plivo errors directly ──
+        if "plivo" in cl:
+            raise HTTPException(status_code=400, detail=clean)
+
         # ── Extract Twilio error code if present ──
         code_match = _re.search(r'\b(2\d{4})\b', clean)
         twilio_code = code_match.group(1) if code_match else ""
@@ -3631,209 +3654,239 @@ async def webhook_voice_select(
     for agent selection (Vidya / Karthik) in the detected language.
     """
     form_data = await request.form()
-    call_sid  = form_data.get("CallUUID") or form_data.get("CallSid") or ""
+    call_sid  = (
+        form_data.get("CallUUID")
+        or form_data.get("CallSid")
+        or request.query_params.get("CallUUID")
+        or request.query_params.get("CallSid")
+        or ""
+    ).strip()
     is_plivo  = _is_plivo_request(request, form_data, provider)
     provider_str = "plivo" if is_plivo else "twilio"
     provider_qs = f"&amp;provider={provider_str}"
 
-    # Mark call connected; create session — pre-load campaign persona if set
-    db.execute(text(
-        "UPDATE ai_call_logs SET status='connected', call_sid=:sid WHERE id=:id"
-    ), {"id": log_id, "sid": call_sid})
+    try:
+        campaign_id = int(getattr(campaign_id, 'default', campaign_id) if hasattr(campaign_id, 'default') else campaign_id)
+    except Exception:
+        campaign_id = 0
+    try:
+        is_test = int(getattr(is_test, 'default', is_test) if hasattr(is_test, 'default') else is_test)
+    except Exception:
+        is_test = 0
+    lang = str(getattr(lang, 'default', lang) if hasattr(lang, 'default') else (lang or "hi"))
+    name = str(getattr(name, 'default', name) if hasattr(name, 'default') else (name or ""))
+    segment = str(getattr(segment, 'default', segment) if hasattr(segment, 'default') else (segment or ""))
 
-    # Fetch campaign preset persona + segment (if not already passed in URL)
-    preset_agent, preset_voice, camp_segment = _get_campaign_persona(db, campaign_id)
+    if not call_sid:
+        call_sid = f"log_{log_id}_{int(datetime.utcnow().timestamp())}"
 
-    # Lead gender lookup:
-    lead_gender = None
-    if log_id:
-        try:
-            lead_row = db.execute(text("""
-                SELECT cl.gender FROM ai_call_logs l
-                JOIN crm_leads cl ON cl.id = l.lead_id
-                WHERE l.id = :lid
-            """), {"lid": log_id}).fetchone()
-            if lead_row:
-                lead_gender = lead_row[0]
-        except Exception as _e:
-            logger.warning(f"[AI-CALLING] Could not fetch lead gender for log_id {log_id}: {_e}")
+    try:
+        # Mark call connected; create session — pre-load campaign persona if set
+        db.execute(text(
+            "UPDATE ai_call_logs SET status='connected', call_sid=:sid WHERE id=:id"
+        ), {"id": log_id, "sid": call_sid})
 
-    gender_agent, gender_voice = resolve_persona_from_lead_gender(lead_gender)
-    init_agent = preset_agent or gender_agent
-    init_voice = preset_voice or gender_voice
-    # Use URL-passed segment first; fall back to campaign segment
-    effective_segment = segment or camp_segment or ""
+        # Fetch campaign preset persona + segment (if not already passed in URL)
+        preset_agent, preset_voice, camp_segment = _get_campaign_persona(db, campaign_id)
 
-    db.execute(text("""
-        INSERT INTO ai_call_sessions
-            (call_sid, campaign_id, log_id, lead_id, language, conversation, agent_voice, agent_name)
-        SELECT :sid, NULLIF(:camp, 0), :lid, cl.lead_id, :lang, :conv, :voice, :aname
-        FROM ai_call_logs cl WHERE cl.id = :lid
-        ON CONFLICT (call_sid) DO UPDATE
-            SET language = EXCLUDED.language,
-                agent_voice = EXCLUDED.agent_voice,
-                agent_name  = EXCLUDED.agent_name
-    """), {
-        "sid": call_sid, "camp": campaign_id, "lid": log_id, "lang": lang,
-        "conv": json.dumps([]), "voice": init_voice, "aname": init_agent,
-    })
-    db.commit()
+        # Lead gender lookup:
+        lead_gender = None
+        if log_id:
+            try:
+                lead_row = db.execute(text("""
+                    SELECT cl.gender FROM ai_call_logs l
+                    JOIN crm_leads cl ON cl.id = l.lead_id
+                    WHERE l.id = :lid
+                """), {"lid": log_id}).fetchone()
+                if lead_row:
+                    lead_gender = lead_row[0]
+            except Exception as _e:
+                logger.warning(f"[AI-CALLING] Could not fetch lead gender for log_id {log_id}: {_e}")
 
-    base       = _webhook_base(request)
-    seg_qs     = f"&amp;segment={_urlquote(effective_segment, safe='')}" if effective_segment else ""
-    is_test_qs = f"&amp;is_test={is_test}" if is_test else ""
-
-    # ── RETURNING CALLER: skip selection if preferences saved ──────────────────
-    # Look up this lead's saved lang + agent choice from their last call.
-    pref_row = db.execute(text("""
-        SELECT cl.ai_language, cl.ai_preferred_agent, cl.ai_preferred_voice
-        FROM ai_call_logs l
-        JOIN crm_leads cl ON cl.id = l.lead_id
-        WHERE l.id = :lid AND cl.ai_preferred_agent IS NOT NULL
-              AND cl.ai_language IS NOT NULL
-    """), {"lid": log_id}).fetchone()
-
-    # DC-LANG-FIX B: Test calls always skip the returning-caller shortcut so the
-    # tester experiences the full selected-language flow without a Hindi override.
-    # Campaign calls honour the URL ?lang= (which is already the campaign language
-    # after Fix A) but still respect the customer's saved agent/voice preference.
-    if pref_row and pref_row[0] and pref_row[1] and pref_row[2] and not is_test:
-        # ── Returning caller: use campaign-selected language, keep saved agent/voice ──
-        # Use the URL ?lang= (= campaign default_language) instead of the lead's saved
-        # ai_language so a Telugu campaign cannot be overridden by a prior Hindi call.
-        saved_lang   = lang           # ← Campaign/URL language takes priority
-        saved_agent  = pref_row[1]    # ← Customer's preferred agent is preserved
-        saved_voice  = pref_row[2]    # ← Customer's preferred voice is preserved
-        twilio_lang  = LANG_MAP.get(saved_lang, "hi-IN")
-
-        # Update session with saved preferences immediately
-        db.execute(text("""
-            UPDATE ai_call_sessions
-            SET language = :lang, agent_voice = :voice, agent_name = :aname,
-                updated_at = NOW()
-            WHERE log_id = :lid
-        """), {"lang": saved_lang, "voice": saved_voice, "aname": saved_agent, "lid": log_id})
-        db.commit()
-
-        # Build greeting for saved agent — respect lead source for intro phrasing
-        source_type = _get_lead_source_type(db, log_id)
-        greeting = _build_greeting(saved_agent, saved_lang, name, effective_segment, source_type)
-        if not greeting:
-            greeting = _build_greeting(saved_agent, "en", name, effective_segment, source_type)
+        gender_agent, gender_voice = resolve_persona_from_lead_gender(lead_gender)
+        init_agent = preset_agent or gender_agent
+        init_voice = preset_voice or gender_voice
+        # Use URL-passed segment first; fall back to campaign segment
+        effective_segment = segment or camp_segment or ""
 
         db.execute(text("""
-            UPDATE ai_call_sessions
-            SET conversation = :conv, updated_at = NOW()
-            WHERE log_id = :lid
-        """), {"conv": json.dumps([{"role": "assistant", "content": greeting}]), "lid": log_id})
+            INSERT INTO ai_call_sessions
+                (call_sid, campaign_id, log_id, lead_id, language, conversation, agent_voice, agent_name)
+            VALUES
+                (:sid, NULLIF(:camp, 0), :lid, (SELECT lead_id FROM ai_call_logs WHERE id = :lid), :lang, :conv, :voice, :aname)
+            ON CONFLICT (call_sid) DO UPDATE
+                SET language = EXCLUDED.language,
+                    agent_voice = EXCLUDED.agent_voice,
+                    agent_name  = EXCLUDED.agent_name,
+                    updated_at  = NOW()
+        """), {
+            "sid": call_sid, "camp": campaign_id, "lid": log_id, "lang": lang,
+            "conv": json.dumps([]), "voice": init_voice, "aname": init_agent,
+        })
         db.commit()
 
-        respond_url = (
-            f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
-            f"?lang={saved_lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
+        base       = _webhook_base(request)
+        seg_qs     = f"&amp;segment={_urlquote(effective_segment, safe='')}" if effective_segment else ""
+        is_test_qs = f"&amp;is_test={is_test}" if is_test else ""
+
+        # ── RETURNING CALLER: skip selection if preferences saved ──────────────────
+        # Look up this lead's saved lang + agent choice from their last call.
+        pref_row = db.execute(text("""
+            SELECT cl.ai_language, cl.ai_preferred_agent, cl.ai_preferred_voice
+            FROM ai_call_logs l
+            JOIN crm_leads cl ON cl.id = l.lead_id
+            WHERE l.id = :lid AND cl.ai_preferred_agent IS NOT NULL
+                  AND cl.ai_language IS NOT NULL
+        """), {"lid": log_id}).fetchone()
+
+        # DC-LANG-FIX B: Test calls always skip the returning-caller shortcut so the
+        # tester experiences the full selected-language flow without a Hindi override.
+        # Campaign calls honour the URL ?lang= (which is already the campaign language
+        # after Fix A) but still respect the customer's saved agent/voice preference.
+        if pref_row and pref_row[0] and pref_row[1] and pref_row[2] and not is_test:
+            # ── Returning caller: use campaign-selected language, keep saved agent/voice ──
+            # Use the URL ?lang= (= campaign default_language) instead of the lead's saved
+            # ai_language so a Telugu campaign cannot be overridden by a prior Hindi call.
+            saved_lang   = lang           # ← Campaign/URL language takes priority
+            saved_agent  = pref_row[1]    # ← Customer's preferred agent is preserved
+            saved_voice  = pref_row[2]    # ← Customer's preferred voice is preserved
+            twilio_lang  = LANG_MAP.get(saved_lang, "hi-IN")
+
+            # Update session with saved preferences immediately
+            db.execute(text("""
+                UPDATE ai_call_sessions
+                SET language = :lang, agent_voice = :voice, agent_name = :aname,
+                    updated_at = NOW()
+                WHERE log_id = :lid
+            """), {"lang": saved_lang, "voice": saved_voice, "aname": saved_agent, "lid": log_id})
+            db.commit()
+
+            # Build greeting for saved agent — respect lead source for intro phrasing
+            source_type = _get_lead_source_type(db, log_id)
+            greeting = _build_greeting(saved_agent, saved_lang, name, effective_segment, source_type)
+            if not greeting:
+                greeting = _build_greeting(saved_agent, "en", name, effective_segment, source_type)
+
+            db.execute(text("""
+                UPDATE ai_call_sessions
+                SET conversation = :conv, updated_at = NOW()
+                WHERE log_id = :lid
+            """), {"conv": json.dumps([{"role": "assistant", "content": greeting}]), "lid": log_id})
+            db.commit()
+
+            respond_url = (
+                f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
+                f"?lang={saved_lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
+            )
+
+            audio_serve_url = None
+            try:
+                greeting_audio = await asyncio.wait_for(
+                    asyncio.to_thread(_generate_tts, greeting, saved_lang, saved_voice),
+                    timeout=11.0,
+                )
+                if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)) \
+                        and os.path.getsize(os.path.join(AI_AUDIO_DIR, greeting_audio)) > 0:
+                    db.execute(text("UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"),
+                               {"url": greeting_audio, "id": log_id})
+                    db.commit()
+                    audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
+                    logger.info(f"[VOICE-SELECT] ✅ Returning caller log={log_id} saved={saved_agent}/{saved_lang}")
+            except Exception as _e:
+                logger.warning(f"[VOICE-SELECT] TTS failed for returning caller log={log_id}: {_e}")
+
+            greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
+            return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
+
+        # ── CAMPAIGN CALL or Non-Hindi: skip IVR, greet directly in campaign language ──
+        # For ANY campaign call (campaign_id != 0), the language is already set by the campaign.
+        # No IVR selection needed — go straight to the greeting in the chosen language.
+        # IVR is only shown for standalone test/manual calls with no campaign where lang='hi'.
+        if lang != "hi" or campaign_id != 0:
+            direct_agent = preset_agent or "Vidya"
+            direct_voice = preset_voice or "nova"
+            twilio_lang  = LANG_MAP.get(lang, "hi-IN")
+
+            # Commit language + agent into session
+            db.execute(text("""
+                UPDATE ai_call_sessions
+                SET language = :lang, agent_voice = :voice, agent_name = :aname, updated_at = NOW()
+                WHERE log_id = :lid
+            """), {"lang": lang, "voice": direct_voice, "aname": direct_agent, "lid": log_id})
+            db.commit()
+
+            # Save language + agent preference to lead record (if linked to a real lead)
+            db.execute(text("""
+                UPDATE crm_leads
+                SET ai_language = :lang, ai_preferred_agent = :agent, ai_preferred_voice = :voice
+                WHERE id = (SELECT lead_id FROM ai_call_logs WHERE id = :lid)
+                  AND (SELECT lead_id FROM ai_call_logs WHERE id = :lid) IS NOT NULL
+            """), {"lang": lang, "agent": direct_agent, "voice": direct_voice, "lid": log_id})
+            db.commit()
+
+            source_type = _get_lead_source_type(db, log_id)
+            greeting = _build_greeting(direct_agent, lang, name, effective_segment, source_type)
+            if not greeting:
+                greeting = _build_greeting(direct_agent, "en", name, effective_segment, source_type)
+
+            db.execute(text("""
+                UPDATE ai_call_sessions
+                SET conversation = :conv, updated_at = NOW()
+                WHERE log_id = :lid
+            """), {"conv": json.dumps([{"role": "assistant", "content": greeting}]), "lid": log_id})
+            db.commit()
+
+            respond_url = (
+                f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
+                f"?lang={lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
+            )
+
+            audio_serve_url = None
+            try:
+                greeting_audio = await asyncio.wait_for(
+                    asyncio.to_thread(_generate_tts, greeting, lang, direct_voice),
+                    timeout=11.0,
+                )
+                if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)) \
+                        and os.path.getsize(os.path.join(AI_AUDIO_DIR, greeting_audio)) > 0:
+                    db.execute(text("UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"),
+                               {"url": greeting_audio, "id": log_id})
+                    db.commit()
+                    audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
+                    logger.info(f"[VOICE-SELECT] ✅ Pre-selected lang={lang} agent={direct_agent} log={log_id}")
+            except Exception as _e:
+                logger.warning(f"[VOICE-SELECT] Pre-selected TTS failed log={log_id}: {_e}")
+
+            greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
+            return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
+
+        # ── NEW CALLER (Hindi / unspecified): show language → agent selection IVR ──
+        # Only reached when lang='hi' (no explicit pre-selection). The caller chooses
+        # their language by speaking — existing flow is completely unchanged.
+        lang_url = (
+            f"{base}/api/v1/staff/ai-calling/webhook/lang-confirm"
+            f"?log_id={log_id}&amp;name={_urlquote(name, safe='')}"
+            f"&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
         )
 
-        audio_serve_url = None
-        try:
-            greeting_audio = await asyncio.wait_for(
-                asyncio.to_thread(_generate_tts, greeting, saved_lang, saved_voice),
-                timeout=11.0,
-            )
-            if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)) \
-                    and os.path.getsize(os.path.join(AI_AUDIO_DIR, greeting_audio)) > 0:
-                db.execute(text("UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"),
-                           {"url": greeting_audio, "id": log_id})
-                db.commit()
-                audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
-                logger.info(f"[VOICE-SELECT] ✅ Returning caller log={log_id} saved={saved_agent}/{saved_lang}")
-        except Exception as _e:
-            logger.warning(f"[VOICE-SELECT] TTS failed for returning caller log={log_id}: {_e}")
-
-        greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
-        return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
-
-    # ── CAMPAIGN CALL or Non-Hindi: skip IVR, greet directly in campaign language ──
-    # For ANY campaign call (campaign_id != 0), the language is already set by the campaign.
-    # No IVR selection needed — go straight to the greeting in the chosen language.
-    # IVR is only shown for standalone test/manual calls with no campaign where lang='hi'.
-    if lang != "hi" or campaign_id != 0:
-        direct_agent = preset_agent or "Vidya"
-        direct_voice = preset_voice or "nova"
-        twilio_lang  = LANG_MAP.get(lang, "hi-IN")
-
-        # Commit language + agent into session
-        db.execute(text("""
-            UPDATE ai_call_sessions
-            SET language = :lang, agent_voice = :voice, agent_name = :aname, updated_at = NOW()
-            WHERE log_id = :lid
-        """), {"lang": lang, "voice": direct_voice, "aname": direct_agent, "lid": log_id})
-        db.commit()
-
-        # Save language + agent preference to lead record (if linked to a real lead)
-        db.execute(text("""
-            UPDATE crm_leads
-            SET ai_language = :lang, ai_preferred_agent = :agent, ai_preferred_voice = :voice
-            WHERE id = (SELECT lead_id FROM ai_call_logs WHERE id = :lid)
-              AND (SELECT lead_id FROM ai_call_logs WHERE id = :lid) IS NOT NULL
-        """), {"lang": lang, "agent": direct_agent, "voice": direct_voice, "lid": log_id})
-        db.commit()
-
-        source_type = _get_lead_source_type(db, log_id)
-        greeting = _build_greeting(direct_agent, lang, name, effective_segment, source_type)
-        if not greeting:
-            greeting = _build_greeting(direct_agent, "en", name, effective_segment, source_type)
-
-        db.execute(text("""
-            UPDATE ai_call_sessions
-            SET conversation = :conv, updated_at = NOW()
-            WHERE log_id = :lid
-        """), {"conv": json.dumps([{"role": "assistant", "content": greeting}]), "lid": log_id})
-        db.commit()
-
-        respond_url = (
-            f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
-            f"?lang={lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
+        # Greeting + language choice prompt — accepts BOTH key press AND speech.
+        # DTMF: 1=Hindi, 2=Telugu, 3=English (reliable; speech often fails in hi-IN mode).
+        name_greeting = f" {name}!" if name else "!"
+        lang_prompt = (
+            f"Namaste{name_greeting} Welcome to Mynt Real LLP. "
+            "Hindi ke liye 1 dabayein ya Hindi kahiye. "
+            "Telugu ke liye 2 dabayein ya Telugu cheppandi. "
+            "For English press 3 or say English."
         )
 
-        audio_serve_url = None
+        return _build_menu_gather_xml(is_plivo, lang_url, "hi-IN", lang_prompt, num_digits=1, timeout=7)
+    except Exception as exc:
+        logger.error(f"[AI-CALLING] Unhandled exception in webhook_voice_select for log_id={log_id}: {exc}", exc_info=True)
         try:
-            greeting_audio = await asyncio.wait_for(
-                asyncio.to_thread(_generate_tts, greeting, lang, direct_voice),
-                timeout=11.0,
-            )
-            if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)) \
-                    and os.path.getsize(os.path.join(AI_AUDIO_DIR, greeting_audio)) > 0:
-                db.execute(text("UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"),
-                           {"url": greeting_audio, "id": log_id})
-                db.commit()
-                audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
-                logger.info(f"[VOICE-SELECT] ✅ Pre-selected lang={lang} agent={direct_agent} log={log_id}")
-        except Exception as _e:
-            logger.warning(f"[VOICE-SELECT] Pre-selected TTS failed log={log_id}: {_e}")
-
-        greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
-        return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
-
-    # ── NEW CALLER (Hindi / unspecified): show language → agent selection IVR ──
-    # Only reached when lang='hi' (no explicit pre-selection). The caller chooses
-    # their language by speaking — existing flow is completely unchanged.
-    lang_url = (
-        f"{base}/api/v1/staff/ai-calling/webhook/lang-confirm"
-        f"?log_id={log_id}&amp;name={_urlquote(name, safe='')}"
-        f"&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
-    )
-
-    # Greeting + language choice prompt — accepts BOTH key press AND speech.
-    # DTMF: 1=Hindi, 2=Telugu, 3=English (reliable; speech often fails in hi-IN mode).
-    name_greeting = f" {name}!" if name else "!"
-    lang_prompt = (
-        f"Namaste{name_greeting} Welcome to Mynt Real LLP. "
-        "Hindi ke liye 1 dabayein ya Hindi kahiye. "
-        "Telugu ke liye 2 dabayein ya Telugu cheppandi. "
-        "For English press 3 or say English."
-    )
-
-    return _build_menu_gather_xml(is_plivo, lang_url, "hi-IN", lang_prompt, num_digits=1, timeout=7)
+            db.rollback()
+        except Exception:
+            pass
+        return _twiml_error_hangup(lang, is_plivo=is_plivo)
 
 
 @router.post("/webhook/lang-confirm")
@@ -3856,132 +3909,159 @@ async def webhook_lang_confirm(
     form_data = await request.form()
     speech    = (form_data.get("Speech") or form_data.get("SpeechResult") or "").strip()
     digits    = (form_data.get("Digits") or "").strip()
-    call_sid  = form_data.get("CallUUID") or form_data.get("CallSid") or ""
+    call_sid  = (
+        form_data.get("CallUUID")
+        or form_data.get("CallSid")
+        or request.query_params.get("CallUUID")
+        or request.query_params.get("CallSid")
+        or ""
+    ).strip()
     is_plivo  = _is_plivo_request(request, form_data, provider)
     provider_str = "plivo" if is_plivo else "twilio"
     provider_qs = f"&amp;provider={provider_str}"
 
-    # DTMF takes priority: 1=Hindi, 2=Telugu, 3=English (reliable vs. hi-IN STT)
-    _digit_map = {"1": "hi", "2": "te", "3": "en"}
-    if digits and digits in _digit_map:
-        detected_lang = _digit_map[digits]
-        logger.info(f"[LANG-CONFIRM] DTMF={digits} → lang={detected_lang} log={log_id}")
-    else:
-        detected_lang = _detect_language(speech)
-        logger.info(f"[LANG-CONFIRM] Speech={repr(speech)} → lang={detected_lang} log={log_id}")
-    twilio_lang   = LANG_MAP.get(detected_lang, "hi-IN")
+    try:
+        campaign_id = int(getattr(campaign_id, 'default', campaign_id) if hasattr(campaign_id, 'default') else campaign_id)
+    except Exception:
+        campaign_id = 0
+    try:
+        is_test = int(getattr(is_test, 'default', is_test) if hasattr(is_test, 'default') else is_test)
+    except Exception:
+        is_test = 0
 
-    # Persist detected language into session
-    db.execute(text("""
-        UPDATE ai_call_sessions
-        SET language = :lang, updated_at = NOW()
-        WHERE log_id = :lid
-    """), {"lang": detected_lang, "lid": log_id})
-    db.commit()
+    if not call_sid:
+        call_sid = f"log_{log_id}_{int(datetime.utcnow().timestamp())}"
 
-    base       = _webhook_base(request)
-    # Use URL segment or fall back to campaign segment
-    preset_agent, preset_voice, camp_segment = _get_campaign_persona(db, campaign_id)
-    # If campaign preset agent is not set, resolve from lead gender if known (male or female)
-    if not (preset_agent and preset_voice) and log_id:
-        try:
-            lead_row = db.execute(text("""
-                SELECT cl.gender FROM ai_call_logs l
-                JOIN crm_leads cl ON cl.id = l.lead_id
-                WHERE l.id = :lid
-            """), {"lid": log_id}).fetchone()
-            if lead_row and lead_row[0] in ('male', 'female'):
-                preset_agent, preset_voice = resolve_persona_from_lead_gender(lead_row[0])
-        except Exception:
-            pass
-    effective_segment = segment or camp_segment or ""
-    seg_qs     = f"&amp;segment={_urlquote(effective_segment, safe='')}" if effective_segment else ""
-    is_test_qs = f"&amp;is_test={is_test}" if is_test else ""
+    detected_lang = "hi"
+    try:
+        # DTMF takes priority: 1=Hindi, 2=Telugu, 3=English (reliable vs. hi-IN STT)
+        _digit_map = {"1": "hi", "2": "te", "3": "en"}
+        if digits and digits in _digit_map:
+            detected_lang = _digit_map[digits]
+            logger.info(f"[LANG-CONFIRM] DTMF={digits} → lang={detected_lang} log={log_id}")
+        else:
+            detected_lang = _detect_language(speech)
+            logger.info(f"[LANG-CONFIRM] Speech={repr(speech)} → lang={detected_lang} log={log_id}")
+        twilio_lang   = LANG_MAP.get(detected_lang, "hi-IN")
 
-    # ── Campaign with PRESET AGENT: skip agent-selection prompt ─────────────────
-    # If the campaign already has a configured agent (Teja/Vidya), don't ask
-    # the caller to choose — go straight to greeting with the preset agent.
-    if preset_agent and preset_voice:
-        # Update session with preset agent
+        # Persist detected language into session
         db.execute(text("""
             UPDATE ai_call_sessions
-            SET agent_name = :aname, agent_voice = :voice, updated_at = NOW()
+            SET language = :lang, updated_at = NOW()
             WHERE log_id = :lid
-        """), {"aname": preset_agent, "voice": preset_voice, "lid": log_id})
+        """), {"lang": detected_lang, "lid": log_id})
         db.commit()
 
-        source_type = _get_lead_source_type(db, log_id)
-        greeting = _build_greeting(preset_agent, detected_lang, name, effective_segment, source_type)
-        if not greeting:
-            greeting = _build_greeting(preset_agent, "en", name, effective_segment, source_type)
+        base       = _webhook_base(request)
+        # Use URL segment or fall back to campaign segment
+        preset_agent, preset_voice, camp_segment = _get_campaign_persona(db, campaign_id)
+        # If campaign preset agent is not set, resolve from lead gender if known (male or female)
+        if not (preset_agent and preset_voice) and log_id:
+            try:
+                lead_row = db.execute(text("""
+                    SELECT cl.gender FROM ai_call_logs l
+                    JOIN crm_leads cl ON cl.id = l.lead_id
+                    WHERE l.id = :lid
+                """), {"lid": log_id}).fetchone()
+                if lead_row and lead_row[0] in ('male', 'female'):
+                    preset_agent, preset_voice = resolve_persona_from_lead_gender(lead_row[0])
+            except Exception:
+                pass
+        effective_segment = segment or camp_segment or ""
+        seg_qs     = f"&amp;segment={_urlquote(effective_segment, safe='')}" if effective_segment else ""
+        is_test_qs = f"&amp;is_test={is_test}" if is_test else ""
 
-        db.execute(text("""
-            UPDATE ai_call_sessions
-            SET conversation = :conv, updated_at = NOW()
-            WHERE log_id = :lid
-        """), {"conv": json.dumps([{"role": "assistant", "content": greeting}]), "lid": log_id})
-        db.commit()
+        # ── Campaign with PRESET AGENT: skip agent-selection prompt ─────────────────
+        # If the campaign already has a configured agent (Teja/Vidya), don't ask
+        # the caller to choose — go straight to greeting with the preset agent.
+        if preset_agent and preset_voice:
+            # Update session with preset agent
+            db.execute(text("""
+                UPDATE ai_call_sessions
+                SET agent_name = :aname, agent_voice = :voice, updated_at = NOW()
+                WHERE log_id = :lid
+            """), {"aname": preset_agent, "voice": preset_voice, "lid": log_id})
+            db.commit()
 
-        # Save language + agent preference to lead record
-        db.execute(text("""
-            UPDATE crm_leads
-            SET ai_language = :lang, ai_preferred_agent = :agent, ai_preferred_voice = :voice
-            WHERE id = (SELECT lead_id FROM ai_call_logs WHERE id = :lid)
-              AND (SELECT lead_id FROM ai_call_logs WHERE id = :lid) IS NOT NULL
-        """), {"lang": detected_lang, "agent": preset_agent, "voice": preset_voice, "lid": log_id})
-        db.commit()
+            source_type = _get_lead_source_type(db, log_id)
+            greeting = _build_greeting(preset_agent, detected_lang, name, effective_segment, source_type)
+            if not greeting:
+                greeting = _build_greeting(preset_agent, "en", name, effective_segment, source_type)
 
-        respond_url = (
-            f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
-            f"?lang={detected_lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
+            db.execute(text("""
+                UPDATE ai_call_sessions
+                SET conversation = :conv, updated_at = NOW()
+                WHERE log_id = :lid
+            """), {"conv": json.dumps([{"role": "assistant", "content": greeting}]), "lid": log_id})
+            db.commit()
+
+            # Save language + agent preference to lead record
+            db.execute(text("""
+                UPDATE crm_leads
+                SET ai_language = :lang, ai_preferred_agent = :agent, ai_preferred_voice = :voice
+                WHERE id = (SELECT lead_id FROM ai_call_logs WHERE id = :lid)
+                  AND (SELECT lead_id FROM ai_call_logs WHERE id = :lid) IS NOT NULL
+            """), {"lang": detected_lang, "agent": preset_agent, "voice": preset_voice, "lid": log_id})
+            db.commit()
+
+            respond_url = (
+                f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
+                f"?lang={detected_lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
+            )
+
+            audio_serve_url = None
+            try:
+                greeting_audio = await asyncio.wait_for(
+                    asyncio.to_thread(_generate_tts, greeting, detected_lang, preset_voice),
+                    timeout=11.0,
+                )
+                if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)) \
+                        and os.path.getsize(os.path.join(AI_AUDIO_DIR, greeting_audio)) > 0:
+                    db.execute(text("UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"),
+                               {"url": greeting_audio, "id": log_id})
+                    db.commit()
+                    audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
+                    logger.info(f"[LANG-CONFIRM] ✅ Preset agent {preset_agent} log={log_id} lang={detected_lang}")
+            except Exception as _e:
+                logger.warning(f"[LANG-CONFIRM] TTS failed for preset agent log={log_id}: {_e}")
+
+            greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
+            return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
+
+        # ── No preset agent: show agent selection prompt ─────────────────────────────
+        # voice-confirm URL now carries the DETECTED language
+        confirm_url = (
+            f"{base}/api/v1/staff/ai-calling/webhook/voice-confirm"
+            f"?log_id={log_id}&amp;lang={detected_lang}&amp;name={_urlquote(name, safe='')}"
+            f"&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
         )
 
-        audio_serve_url = None
+        # Agent selection prompt in the detected language
+        # DTMF: 1=Vidya (lady), 2=Teja (male)
+        AGENT_PROMPTS = {
+            "hi": (
+                "Dhanyavaad! Lady agent Vidya ke liye 1 dabayein ya Vidya kahiye. "
+                "Male agent Teja ke liye 2 dabayein ya Teja kahiye."
+            ),
+            "te": (
+                "Dhanyavaadalu! Lady agent Vidya kosam 1 press cheyandi ya Vidya cheppandi. "
+                "Male agent Teja kosam 2 press cheyandi ya Teja cheppandi."
+            ),
+            "en": (
+                "Thank you! Press 1 or say Vidya for our lady agent. "
+                "Press 2 or say Teja for our male agent."
+            ),
+        }
+        agent_prompt = AGENT_PROMPTS[detected_lang]
+
+        return _build_menu_gather_xml(is_plivo, confirm_url, twilio_lang, agent_prompt, num_digits=1, timeout=7)
+    except Exception as exc:
+        logger.error(f"[AI-CALLING] Unhandled exception in webhook_lang_confirm for log_id={log_id}: {exc}", exc_info=True)
         try:
-            greeting_audio = await asyncio.wait_for(
-                asyncio.to_thread(_generate_tts, greeting, detected_lang, preset_voice),
-                timeout=11.0,
-            )
-            if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)) \
-                    and os.path.getsize(os.path.join(AI_AUDIO_DIR, greeting_audio)) > 0:
-                db.execute(text("UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"),
-                           {"url": greeting_audio, "id": log_id})
-                db.commit()
-                audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
-                logger.info(f"[LANG-CONFIRM] ✅ Preset agent {preset_agent} log={log_id} lang={detected_lang}")
-        except Exception as _e:
-            logger.warning(f"[LANG-CONFIRM] TTS failed for preset agent log={log_id}: {_e}")
-
-        greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
-        return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
-
-    # ── No preset agent: show agent selection prompt ─────────────────────────────
-    # voice-confirm URL now carries the DETECTED language
-    confirm_url = (
-        f"{base}/api/v1/staff/ai-calling/webhook/voice-confirm"
-        f"?log_id={log_id}&amp;lang={detected_lang}&amp;name={_urlquote(name, safe='')}"
-        f"&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
-    )
-
-    # Agent selection prompt in the detected language
-    # DTMF: 1=Vidya (lady), 2=Teja (male)
-    AGENT_PROMPTS = {
-        "hi": (
-            "Dhanyavaad! Lady agent Vidya ke liye 1 dabayein ya Vidya kahiye. "
-            "Male agent Teja ke liye 2 dabayein ya Teja kahiye."
-        ),
-        "te": (
-            "Dhanyavaadalu! Lady agent Vidya kosam 1 press cheyandi ya Vidya cheppandi. "
-            "Male agent Teja kosam 2 press cheyandi ya Teja cheppandi."
-        ),
-        "en": (
-            "Thank you! Press 1 or say Vidya for our lady agent. "
-            "Press 2 or say Teja for our male agent."
-        ),
-    }
-    agent_prompt = AGENT_PROMPTS[detected_lang]
-
-    return _build_menu_gather_xml(is_plivo, confirm_url, twilio_lang, agent_prompt, num_digits=1, timeout=7)
+            db.rollback()
+        except Exception:
+            pass
+        return _twiml_error_hangup(detected_lang, is_plivo=is_plivo)
 
 
 @router.post("/webhook/voice-confirm")
@@ -4002,100 +4082,126 @@ async def webhook_voice_confirm(
     directly — NO redirect to /webhook/incoming needed.
     """
     form_data = await request.form()
-    call_sid  = form_data.get("CallUUID") or form_data.get("CallSid") or ""
+    call_sid  = (
+        form_data.get("CallUUID")
+        or form_data.get("CallSid")
+        or request.query_params.get("CallUUID")
+        or request.query_params.get("CallSid")
+        or ""
+    ).strip()
     speech    = (form_data.get("Speech") or form_data.get("SpeechResult") or "").strip()
     digits    = (form_data.get("Digits") or "").strip()
     is_plivo  = _is_plivo_request(request, form_data, provider)
     provider_str = "plivo" if is_plivo else "twilio"
     provider_qs = f"&amp;provider={provider_str}"
 
-    # DTMF takes priority: 1=Vidya (lady), 2=Teja (male)
-    if digits == "1":
-        detected_agent, detected_voice = "Vidya", "nova"
-        logger.info(f"[VOICE-CONFIRM] DTMF=1 → Vidya log={log_id}")
-    elif digits == "2":
-        detected_agent, detected_voice = "Teja", "onyx"
-        logger.info(f"[VOICE-CONFIRM] DTMF=2 → Teja log={log_id}")
-    else:
-        detected_agent, detected_voice = _detect_voice_choice(speech)
-    twilio_lang = LANG_MAP.get(lang, "hi-IN")
-
-    # If caller gave no clear agent signal, fall back to what's already in the session
-    # (pre-loaded from campaign preset in webhook_voice_select / lang-confirm)
-    if detected_agent is None:
-        sess_pre = db.execute(text(
-            "SELECT agent_name, agent_voice FROM ai_call_sessions WHERE log_id=:lid"
-        ), {"lid": log_id}).fetchone()
-        agent_name = (sess_pre[0] if sess_pre and sess_pre[0] else None) or "Vidya"
-        tts_voice  = (sess_pre[1] if sess_pre and sess_pre[1] else None) or "nova"
-    else:
-        agent_name = detected_agent
-        tts_voice  = detected_voice
-
-    # Use URL segment or fall back to campaign segment
-    _, _, camp_segment = _get_campaign_persona(db, campaign_id)
-    effective_segment = segment or camp_segment or ""
-
-    # Build greeting — respect lead source so we don't say "enquiry ki thi" to reference/cold leads
-    source_type = _get_lead_source_type(db, log_id)
-    greeting    = _build_greeting(agent_name, lang, name, effective_segment, source_type)
-    if not greeting:
-        greeting = _build_greeting(agent_name, "en", name, effective_segment, source_type)
-
-    # Save chosen agent into session + mark call connected
-    db.execute(text("""
-        UPDATE ai_call_sessions
-        SET agent_voice = :voice, agent_name = :aname,
-            conversation = :conv, updated_at = NOW()
-        WHERE log_id = :lid
-    """), {
-        "voice": tts_voice, "aname": agent_name,
-        "conv": json.dumps([{"role": "assistant", "content": greeting}]),
-        "lid": log_id,
-    })
-    db.execute(text(
-        "UPDATE ai_call_logs SET status='connected', call_sid=:sid WHERE id=:id"
-    ), {"id": log_id, "sid": call_sid})
-    # ── Save language + agent preference to the lead record for future calls ──
-    # This lets us skip the selection prompts on repeat calls to the same contact.
-    db.execute(text("""
-        UPDATE crm_leads
-        SET ai_language        = :lang,
-            ai_preferred_agent = :agent,
-            ai_preferred_voice = :voice
-        WHERE id = (SELECT lead_id FROM ai_call_logs WHERE id = :lid)
-          AND (SELECT lead_id FROM ai_call_logs WHERE id = :lid) IS NOT NULL
-    """), {"lang": lang, "agent": agent_name, "voice": tts_voice, "lid": log_id})
-    db.commit()
-
-    base = _webhook_base(request)
-    seg_qs     = f"&amp;segment={_urlquote(effective_segment, safe='')}" if effective_segment else ""
-    is_test_qs = f"&amp;is_test={is_test}"                     if is_test else ""
-    respond_url = (
-        f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
-        f"?lang={lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
-    )
-
-    # Generate greeting TTS inline with the chosen voice (11s timeout → Polly fallback).
-    audio_serve_url = None
     try:
-        greeting_audio = await asyncio.wait_for(
-            asyncio.to_thread(_generate_tts, greeting, lang, tts_voice),
-            timeout=11.0,
-        )
-        if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)) \
-                and os.path.getsize(os.path.join(AI_AUDIO_DIR, greeting_audio)) > 0:
-            db.execute(text(
-                "UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"
-            ), {"url": greeting_audio, "id": log_id})
-            db.commit()
-            audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
-            logger.info(f"[VOICE-CONFIRM] ✅ Greeting ready log={log_id} agent={agent_name} voice={tts_voice} file={greeting_audio}")
-    except Exception as _tts_err:
-        logger.warning(f"[VOICE-CONFIRM] TTS failed log={log_id}: {_tts_err} — using Polly fallback")
+        campaign_id = int(getattr(campaign_id, 'default', campaign_id) if hasattr(campaign_id, 'default') else campaign_id)
+    except Exception:
+        campaign_id = 0
+    try:
+        is_test = int(getattr(is_test, 'default', is_test) if hasattr(is_test, 'default') else is_test)
+    except Exception:
+        is_test = 0
 
-    greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
-    return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
+    if not call_sid:
+        call_sid = f"log_{log_id}_{int(datetime.utcnow().timestamp())}"
+
+    try:
+        # DTMF takes priority: 1=Vidya (lady), 2=Teja (male)
+        if digits == "1":
+            detected_agent, detected_voice = "Vidya", "nova"
+            logger.info(f"[VOICE-CONFIRM] DTMF=1 → Vidya log={log_id}")
+        elif digits == "2":
+            detected_agent, detected_voice = "Teja", "onyx"
+            logger.info(f"[VOICE-CONFIRM] DTMF=2 → Teja log={log_id}")
+        else:
+            detected_agent, detected_voice = _detect_voice_choice(speech)
+        twilio_lang = LANG_MAP.get(lang, "hi-IN")
+
+        # If caller gave no clear agent signal, fall back to what's already in the session
+        # (pre-loaded from campaign preset in webhook_voice_select / lang-confirm)
+        if detected_agent is None:
+            sess_pre = db.execute(text(
+                "SELECT agent_name, agent_voice FROM ai_call_sessions WHERE log_id=:lid"
+            ), {"lid": log_id}).fetchone()
+            agent_name = (sess_pre[0] if sess_pre and sess_pre[0] else None) or "Vidya"
+            tts_voice  = (sess_pre[1] if sess_pre and sess_pre[1] else None) or "nova"
+        else:
+            agent_name = detected_agent
+            tts_voice  = detected_voice
+
+        # Use URL segment or fall back to campaign segment
+        _, _, camp_segment = _get_campaign_persona(db, campaign_id)
+        effective_segment = segment or camp_segment or ""
+
+        # Build greeting — respect lead source so we don't say "enquiry ki thi" to reference/cold leads
+        source_type = _get_lead_source_type(db, log_id)
+        greeting    = _build_greeting(agent_name, lang, name, effective_segment, source_type)
+        if not greeting:
+            greeting = _build_greeting(agent_name, "en", name, effective_segment, source_type)
+
+        # Save chosen agent into session + mark call connected
+        db.execute(text("""
+            UPDATE ai_call_sessions
+            SET agent_voice = :voice, agent_name = :aname,
+                conversation = :conv, updated_at = NOW()
+            WHERE log_id = :lid
+        """), {
+            "voice": tts_voice, "aname": agent_name,
+            "conv": json.dumps([{"role": "assistant", "content": greeting}]),
+            "lid": log_id,
+        })
+        db.execute(text(
+            "UPDATE ai_call_logs SET status='connected', call_sid=:sid WHERE id=:id"
+        ), {"id": log_id, "sid": call_sid})
+        # ── Save language + agent preference to the lead record for future calls ──
+        # This lets us skip the selection prompts on repeat calls to the same contact.
+        db.execute(text("""
+            UPDATE crm_leads
+            SET ai_language        = :lang,
+                ai_preferred_agent = :agent,
+                ai_preferred_voice = :voice
+            WHERE id = (SELECT lead_id FROM ai_call_logs WHERE id = :lid)
+              AND (SELECT lead_id FROM ai_call_logs WHERE id = :lid) IS NOT NULL
+        """), {"lang": lang, "agent": agent_name, "voice": tts_voice, "lid": log_id})
+        db.commit()
+
+        base = _webhook_base(request)
+        seg_qs     = f"&amp;segment={_urlquote(effective_segment, safe='')}" if effective_segment else ""
+        is_test_qs = f"&amp;is_test={is_test}"                     if is_test else ""
+        respond_url = (
+            f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
+            f"?lang={lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
+        )
+
+        # Generate greeting TTS inline with the chosen voice (11s timeout → Polly fallback).
+        audio_serve_url = None
+        try:
+            greeting_audio = await asyncio.wait_for(
+                asyncio.to_thread(_generate_tts, greeting, lang, tts_voice),
+                timeout=11.0,
+            )
+            if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)) \
+                    and os.path.getsize(os.path.join(AI_AUDIO_DIR, greeting_audio)) > 0:
+                db.execute(text(
+                    "UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"
+                ), {"url": greeting_audio, "id": log_id})
+                db.commit()
+                audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
+                logger.info(f"[VOICE-CONFIRM] ✅ Greeting ready log={log_id} agent={agent_name} voice={tts_voice} file={greeting_audio}")
+        except Exception as _tts_err:
+            logger.warning(f"[VOICE-CONFIRM] TTS failed log={log_id}: {_tts_err} — using Polly fallback")
+
+        greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
+        return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
+    except Exception as exc:
+        logger.error(f"[AI-CALLING] Unhandled exception in webhook_voice_confirm for log_id={log_id}: {exc}", exc_info=True)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return _twiml_error_hangup(lang, is_plivo=is_plivo)
 
 
 # ─────────────────────────────────────────────────────────
@@ -4121,74 +4227,95 @@ async def webhook_incoming(
     """
     # Read form data FIRST — must happen before any await/processing
     form_data = await request.form()
-    call_sid  = form_data.get("CallUUID") or form_data.get("CallSid") or ""
+    call_sid  = (
+        form_data.get("CallUUID")
+        or form_data.get("CallSid")
+        or request.query_params.get("CallUUID")
+        or request.query_params.get("CallSid")
+        or ""
+    ).strip()
     is_plivo  = _is_plivo_request(request, form_data, provider)
     provider_str = "plivo" if is_plivo else "twilio"
     provider_qs = f"&amp;provider={provider_str}"
 
+    if not call_sid:
+        call_sid = f"log_{log_id}_{int(datetime.utcnow().timestamp())}"
+
     twilio_lang = LANG_MAP.get(lang, "hi-IN")
 
-    # Read agent choice set by voice-confirm (Vidya/nova or Karthik/onyx)
-    sess_pre = db.execute(text(
-        "SELECT agent_name, agent_voice FROM ai_call_sessions WHERE log_id=:lid"
-    ), {"lid": log_id}).fetchone()
-    incoming_agent_name  = (sess_pre[0] if sess_pre and sess_pre[0] else "Vidya") or "Vidya"
-    incoming_agent_voice = (sess_pre[1] if sess_pre and sess_pre[1] else "nova")  or "nova"
+    try:
+        # Read agent choice set by voice-confirm (Vidya/nova or Karthik/onyx)
+        sess_pre = db.execute(text(
+            "SELECT agent_name, agent_voice FROM ai_call_sessions WHERE log_id=:lid"
+        ), {"lid": log_id}).fetchone()
+        incoming_agent_name  = (sess_pre[0] if sess_pre and sess_pre[0] else "Vidya") or "Vidya"
+        incoming_agent_voice = (sess_pre[1] if sess_pre and sess_pre[1] else "nova")  or "nova"
 
-    # Build greeting respecting lead source — don't say "enquiry ki thi" for reference/cold leads
-    source_type = _get_lead_source_type(db, log_id)
-    greeting = _build_greeting(incoming_agent_name, lang, name, segment, source_type)
-    if not greeting:
-        greeting = _build_greeting(incoming_agent_name, "en", name, segment, source_type)
+        # Build greeting respecting lead source — don't say "enquiry ki thi" for reference/cold leads
+        source_type = _get_lead_source_type(db, log_id)
+        greeting = _build_greeting(incoming_agent_name, lang, name, segment, source_type)
+        if not greeting:
+            greeting = _build_greeting(incoming_agent_name, "en", name, segment, source_type)
 
-    # Update status and save session — fast DB ops only
-    db.execute(text(
-        "UPDATE ai_call_logs SET status='connected', call_sid=:sid WHERE id=:id"
-    ), {"id": log_id, "sid": call_sid})
+        # Update status and save session — fast DB ops only
+        db.execute(text(
+            "UPDATE ai_call_logs SET status='connected', call_sid=:sid WHERE id=:id"
+        ), {"id": log_id, "sid": call_sid})
 
-    db.execute(text("""
-        INSERT INTO ai_call_sessions
-            (call_sid, campaign_id, log_id, lead_id, language, conversation, agent_voice, agent_name)
-        SELECT :sid, NULLIF(:camp, 0), :lid, cl.lead_id, :lang, :conv, :voice, :aname
-        FROM ai_call_logs cl WHERE cl.id = :lid
-        ON CONFLICT (call_sid) DO UPDATE
-            SET conversation = EXCLUDED.conversation
-    """), {
-        "sid": call_sid,
-        "camp": campaign_id, "lid": log_id, "lang": lang,
-        "conv": json.dumps([{"role": "assistant", "content": greeting}]),
-        "voice": incoming_agent_voice, "aname": incoming_agent_name,
-    })
-    db.commit()
+        db.execute(text("""
+            INSERT INTO ai_call_sessions
+                (call_sid, campaign_id, log_id, lead_id, language, conversation, agent_voice, agent_name)
+            VALUES
+                (:sid, NULLIF(:camp, 0), :lid, (SELECT lead_id FROM ai_call_logs WHERE id = :lid), :lang, :conv, :voice, :aname)
+            ON CONFLICT (call_sid) DO UPDATE
+                SET conversation = EXCLUDED.conversation,
+                    language = EXCLUDED.language,
+                    agent_voice = EXCLUDED.agent_voice,
+                    agent_name = EXCLUDED.agent_name,
+                    updated_at = NOW()
+        """), {
+            "sid": call_sid,
+            "camp": campaign_id, "lid": log_id, "lang": lang,
+            "conv": json.dumps([{"role": "assistant", "content": greeting}]),
+            "voice": incoming_agent_voice, "aname": incoming_agent_name,
+        })
+        db.commit()
 
-    base        = _webhook_base(request)
-    respond_url = f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
-    extra_qs    = f"&amp;segment={_urlquote(segment, safe='')}&amp;is_test={is_test}" if segment or is_test else ""
+        base        = _webhook_base(request)
+        respond_url = f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
+        extra_qs    = f"&amp;segment={_urlquote(segment, safe='')}&amp;is_test={is_test}" if segment or is_test else ""
 
-    # Use pre-generated greeting audio (from voice-confirm background task).
-    # Falls back to inline TTS with the correct agent voice, or Polly as last resort.
-    log_row = db.execute(
-        text("SELECT greeting_audio_url FROM ai_call_logs WHERE id=:lid"), {"lid": log_id}
-    ).fetchone()
-    pre_greeting_audio = log_row[0] if log_row else None
+        # Use pre-generated greeting audio (from voice-confirm background task).
+        # Falls back to inline TTS with the correct agent voice, or Polly as last resort.
+        log_row = db.execute(
+            text("SELECT greeting_audio_url FROM ai_call_logs WHERE id=:lid"), {"lid": log_id}
+        ).fetchone()
+        pre_greeting_audio = log_row[0] if log_row else None
 
-    audio_serve_url = None
-    if pre_greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, pre_greeting_audio)):
-        audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{pre_greeting_audio}"
-    else:
+        audio_serve_url = None
+        if pre_greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, pre_greeting_audio)):
+            audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{pre_greeting_audio}"
+        else:
+            try:
+                greeting_audio = await asyncio.wait_for(
+                    asyncio.to_thread(_generate_tts, greeting, lang, incoming_agent_voice),
+                    timeout=12.0,
+                )
+                if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)):
+                    audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
+            except Exception:
+                pass
+
+        greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
+        action_dest = f"{respond_url}?lang={lang}&amp;campaign_id={campaign_id}{extra_qs}{provider_qs}"
+        return _build_speech_gather_xml(is_plivo, action_dest, twilio_lang, greeting_block)
+    except Exception as exc:
+        logger.error(f"[AI-CALLING] Unhandled exception in webhook_incoming for log_id={log_id}: {exc}", exc_info=True)
         try:
-            greeting_audio = await asyncio.wait_for(
-                asyncio.to_thread(_generate_tts, greeting, lang, incoming_agent_voice),
-                timeout=12.0,
-            )
-            if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)):
-                audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
+            db.rollback()
         except Exception:
             pass
-
-    greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
-    action_dest = f"{respond_url}?lang={lang}&amp;campaign_id={campaign_id}{extra_qs}{provider_qs}"
-    return _build_speech_gather_xml(is_plivo, action_dest, twilio_lang, greeting_block)
+        return _twiml_error_hangup(lang, is_plivo=is_plivo)
 
 
 def _get_campaign_company(db: Session, campaign_id: int) -> int:
@@ -4214,147 +4341,178 @@ async def webhook_respond(
     """
     form          = await request.form()
     speech_result = (form.get("Speech") or form.get("SpeechResult") or "").strip()
-    form_call_sid = form.get("CallUUID") or form.get("CallSid") or ""
+    form_call_sid = (
+        form.get("CallUUID")
+        or form.get("CallSid")
+        or request.query_params.get("CallUUID")
+        or request.query_params.get("CallSid")
+        or ""
+    ).strip()
     is_plivo      = _is_plivo_request(request, form, provider)
     provider_str  = "plivo" if is_plivo else "twilio"
     provider_qs   = f"&amp;provider={provider_str}"
     twilio_lang   = LANG_MAP.get(lang, "hi-IN")
 
-    session_row = db.execute(text(
-        "SELECT conversation, language, agent_name, agent_voice FROM ai_call_sessions WHERE log_id=:lid"
-    ), {"lid": log_id}).fetchone()
+    try:
+        campaign_id = int(getattr(campaign_id, 'default', campaign_id) if hasattr(campaign_id, 'default') else campaign_id)
+    except Exception:
+        campaign_id = 0
+    try:
+        is_test = int(getattr(is_test, 'default', is_test) if hasattr(is_test, 'default') else is_test)
+    except Exception:
+        is_test = 0
 
-    conversation     = json.loads(session_row[0]) if session_row and session_row[0] else []
-    # Use the session's saved language as the primary source of truth.
-    effective_lang   = (session_row[1] if session_row and session_row[1] else None) or lang
-    twilio_lang      = LANG_MAP.get(effective_lang, "hi-IN")
-    sess_agent_name  = (session_row[2] if session_row and session_row[2] else "Vidya") or "Vidya"
-    sess_agent_voice = (session_row[3] if session_row and session_row[3] else "nova")  or "nova"
+    lang = str(getattr(lang, 'default', lang) if hasattr(lang, 'default') else (lang or "hi"))
+    segment = str(getattr(segment, 'default', segment) if hasattr(segment, 'default') else (segment or ""))
+    twilio_lang = LANG_MAP.get(lang, "hi-IN")
 
-    if speech_result:
-        conversation.append({"role": "user", "content": speech_result})
-        detected = _detect_lang(speech_result)
-        if detected != effective_lang and not (detected == "en" and effective_lang in ("te", "hi")):
-            effective_lang = detected
-            try:
-                db.execute(text(
-                    "UPDATE ai_call_sessions SET language=:lang WHERE log_id=:lid"
-                ), {"lang": effective_lang, "lid": log_id})
-                db.commit()
-            except Exception:
-                pass
+    if not form_call_sid:
+        form_call_sid = f"_ncs_{log_id}"
 
-        pref_change = _detect_pref_change(speech_result)
-        if pref_change:
-            try:
-                if pref_change[0] == "agent":
-                    _, new_agent, new_voice = pref_change
-                    sess_agent_name  = new_agent
-                    sess_agent_voice = new_voice
-                    db.execute(text("""
-                        UPDATE ai_call_sessions
-                        SET agent_name = :aname, agent_voice = :voice, updated_at = NOW()
-                        WHERE log_id = :lid
-                    """), {"aname": new_agent, "voice": new_voice, "lid": log_id})
-                    db.execute(text("""
-                        UPDATE crm_leads
-                        SET ai_preferred_agent = :agent, ai_preferred_voice = :voice
-                        WHERE id = (SELECT lead_id FROM ai_call_logs WHERE id = :lid)
-                          AND (SELECT lead_id FROM ai_call_logs WHERE id = :lid) IS NOT NULL
-                    """), {"agent": new_agent, "voice": new_voice, "lid": log_id})
-                    db.commit()
-                    logger.info(f"[RESPOND] 🔄 Agent changed → {new_agent} log={log_id}")
-                elif pref_change[0] == "lang":
-                    _, new_lang = pref_change
-                    effective_lang = new_lang
+    effective_lang = lang
+    try:
+        session_row = db.execute(text(
+            "SELECT conversation, language, agent_name, agent_voice FROM ai_call_sessions WHERE log_id=:lid"
+        ), {"lid": log_id}).fetchone()
+
+        conversation     = json.loads(session_row[0]) if session_row and session_row[0] else []
+        # Use the session's saved language as the primary source of truth.
+        effective_lang   = (session_row[1] if session_row and session_row[1] else None) or lang
+        twilio_lang      = LANG_MAP.get(effective_lang, "hi-IN")
+        sess_agent_name  = (session_row[2] if session_row and session_row[2] else "Vidya") or "Vidya"
+        sess_agent_voice = (session_row[3] if session_row and session_row[3] else "nova")  or "nova"
+
+        if speech_result:
+            conversation.append({"role": "user", "content": speech_result})
+            detected = _detect_lang(speech_result)
+            if detected != effective_lang and not (detected == "en" and effective_lang in ("te", "hi")):
+                effective_lang = detected
+                try:
                     db.execute(text(
                         "UPDATE ai_call_sessions SET language=:lang WHERE log_id=:lid"
-                    ), {"lang": new_lang, "lid": log_id})
-                    db.execute(text("""
-                        UPDATE crm_leads
-                        SET ai_language = :lang
-                        WHERE id = (SELECT lead_id FROM ai_call_logs WHERE id = :lid)
-                          AND (SELECT lead_id FROM ai_call_logs WHERE id = :lid) IS NOT NULL
-                    """), {"lang": new_lang, "lid": log_id})
+                    ), {"lang": effective_lang, "lid": log_id})
                     db.commit()
-                    logger.info(f"[RESPOND] 🔄 Language changed → {new_lang} log={log_id}")
-            except Exception as _pce:
-                logger.warning(f"[RESPOND] Pref-change save failed log={log_id}: {_pce}")
+                except Exception:
+                    pass
 
-    company_id    = _get_campaign_company(db, campaign_id)
-    system_prompt = _build_system_prompt(
-        db, company_id, effective_lang, segment=segment, is_test=bool(is_test),
-        agent_name=sess_agent_name,
-    )
+            pref_change = _detect_pref_change(speech_result)
+            if pref_change:
+                try:
+                    if pref_change[0] == "agent":
+                        _, new_agent, new_voice = pref_change
+                        sess_agent_name  = new_agent
+                        sess_agent_voice = new_voice
+                        db.execute(text("""
+                            UPDATE ai_call_sessions
+                            SET agent_name = :aname, agent_voice = :voice, updated_at = NOW()
+                            WHERE log_id = :lid
+                        """), {"aname": new_agent, "voice": new_voice, "lid": log_id})
+                        db.execute(text("""
+                            UPDATE crm_leads
+                            SET ai_preferred_agent = :agent, ai_preferred_voice = :voice
+                            WHERE id = (SELECT lead_id FROM ai_call_logs WHERE id = :lid)
+                              AND (SELECT lead_id FROM ai_call_logs WHERE id = :lid) IS NOT NULL
+                        """), {"agent": new_agent, "voice": new_voice, "lid": log_id})
+                        db.commit()
+                        logger.info(f"[RESPOND] 🔄 Agent changed → {new_agent} log={log_id}")
+                    elif pref_change[0] == "lang":
+                        _, new_lang = pref_change
+                        effective_lang = new_lang
+                        db.execute(text(
+                            "UPDATE ai_call_sessions SET language=:lang WHERE log_id=:lid"
+                        ), {"lang": new_lang, "lid": log_id})
+                        db.execute(text("""
+                            UPDATE crm_leads
+                            SET ai_language = :lang
+                            WHERE id = (SELECT lead_id FROM ai_call_logs WHERE id = :lid)
+                              AND (SELECT lead_id FROM ai_call_logs WHERE id = :lid) IS NOT NULL
+                        """), {"lang": new_lang, "lid": log_id})
+                        db.commit()
+                        logger.info(f"[RESPOND] 🔄 Language changed → {new_lang} log={log_id}")
+                except Exception as _pce:
+                    logger.warning(f"[RESPOND] Pref-change save failed log={log_id}: {_pce}")
 
-    if not speech_result:
-        silence_reply = (
-            "క్షమించండి, మీ మాటలు వినలేకపోయాను. దయచేసి మళ్ళీ చెప్పగలరా?"
-            if effective_lang == "te" else
-            "Sorry, I couldn't hear you. Could you please repeat?"
-            if effective_lang == "en" else
-            "क्षमा करें, मुझे आपकी बात सुनाई नहीं दी। क्या आप फिर से बोल सकते हैं?"
+        company_id    = _get_campaign_company(db, campaign_id)
+        system_prompt = _build_system_prompt(
+            db, company_id, effective_lang, segment=segment, is_test=bool(is_test),
+            agent_name=sess_agent_name,
         )
-        respond_url  = f"{_webhook_base(request)}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
-        extra_qs     = f"&amp;segment={_urlquote(segment, safe='')}&amp;is_test={is_test}" if segment or is_test else ""
-        silence_url  = f"{respond_url}?lang={effective_lang}&amp;campaign_id={campaign_id}{extra_qs}{provider_qs}"
-        silence_block = _build_speak_or_say(is_plivo, silence_reply, twilio_lang)
-        return _build_speech_gather_xml(is_plivo, silence_url, twilio_lang, silence_block)
 
-    # Mark session as processing so the poll endpoint can distinguish states.
-    db.execute(text("""
-        INSERT INTO ai_call_sessions (call_sid, log_id, campaign_id, language, conversation, next_audio_url)
-        VALUES (:sid, :lid, NULLIF(:camp,0), :lang, :conv, 'PROCESSING')
-        ON CONFLICT (call_sid) DO UPDATE
-            SET next_audio_url = 'PROCESSING',
-                next_reply_text = NULL,
-                conversation    = EXCLUDED.conversation,
-                updated_at      = NOW()
-    """), {
-        "sid":  form_call_sid or f"_ncs_{log_id}",
-        "lid":  log_id, "camp": campaign_id, "lang": effective_lang,
-        "conv": json.dumps(conversation),
-    })
-    db.execute(text(
-        "UPDATE ai_call_logs SET transcript=:trans WHERE id=:id"
-    ), {"trans": json.dumps(conversation), "id": log_id})
-    db.commit()
+        if not speech_result:
+            silence_reply = (
+                "క్షమించండి, మీ మాటలు వినలేకపోయాను. దయచేసి మళ్ళీ చెప్పగలరా?"
+                if effective_lang == "te" else
+                "Sorry, I couldn't hear you. Could you please repeat?"
+                if effective_lang == "en" else
+                "क्षमा करें, मुझे आपकी बात सुनाई नहीं दी। क्या आप फिर से बोल सकते हैं?"
+            )
+            respond_url  = f"{_webhook_base(request)}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
+            extra_qs     = f"&amp;segment={_urlquote(segment, safe='')}&amp;is_test={is_test}" if segment or is_test else ""
+            silence_url  = f"{respond_url}?lang={effective_lang}&amp;campaign_id={campaign_id}{extra_qs}{provider_qs}"
+            silence_block = _build_speak_or_say(is_plivo, silence_reply, twilio_lang)
+            return _build_speech_gather_xml(is_plivo, silence_url, twilio_lang, silence_block)
 
-    # Fire GPT + TTS in background (will write result back to ai_call_sessions.next_audio_url)
-    asyncio.create_task(_bg_gpt_tts(log_id, conversation, system_prompt, effective_lang))
-    # Kick off filler generation for this language in background (no-op if already cached)
-    asyncio.create_task(asyncio.to_thread(_ensure_fillers_sync, effective_lang))
+        # Mark session as processing so the poll endpoint can distinguish states.
+        db.execute(text("""
+            INSERT INTO ai_call_sessions (call_sid, log_id, campaign_id, language, conversation, next_audio_url)
+            VALUES (:sid, :lid, NULLIF(:camp,0), :lang, :conv, 'PROCESSING')
+            ON CONFLICT (call_sid) DO UPDATE
+                SET next_audio_url = 'PROCESSING',
+                    next_reply_text = NULL,
+                    conversation    = EXCLUDED.conversation,
+                    updated_at      = NOW()
+        """), {
+            "sid":  form_call_sid,
+            "lid":  log_id, "camp": campaign_id, "lang": effective_lang,
+            "conv": json.dumps(conversation),
+        })
+        db.execute(text(
+            "UPDATE ai_call_logs SET transcript=:trans WHERE id=:id"
+        ), {"trans": json.dumps(conversation), "id": log_id})
+        db.commit()
 
-    # Return immediately — play a filler phrase so the customer stays engaged,
-    # then redirect to poll once GPT+TTS is ready.
-    base     = _webhook_base(request)
-    poll_url = (
-        f"{base}/api/v1/staff/ai-calling/webhook/poll/{log_id}"
-        f"?lang={effective_lang}&amp;campaign_id={campaign_id}"
-    )
-    if segment:
-        poll_url += f"&amp;segment={_urlquote(segment, safe='')}"
-    if is_test:
-        poll_url += f"&amp;is_test={is_test}"
-    poll_url += provider_qs
+        # Fire GPT + TTS in background (will write result back to ai_call_sessions.next_audio_url)
+        asyncio.create_task(_bg_gpt_tts(log_id, conversation, system_prompt, effective_lang))
+        # Kick off filler generation for this language in background (no-op if already cached)
+        asyncio.create_task(asyncio.to_thread(_ensure_fillers_sync, effective_lang))
 
-    _filler_say_map = {
-        "hi": ("Haan ji, ek pal mein batata hoon..." if sess_agent_voice != "nova"
-               else "Haan ji, ek pal mein batati hoon..."),
-        "te": "Avunu, okka nimisham...",
-        "en": "Sure, just a moment...",
-    }
-    filler_files = _FILLER_CACHE.get(effective_lang, []) if sess_agent_voice == "nova" else []
-    if filler_files:
-        filler_fname = _random.choice(filler_files)
-        filler_block = f'<Play>{base}/api/v1/staff/ai-calling/audio/{filler_fname}</Play>'
-        pause_sec    = 1
-    else:
-        _filler_say  = _filler_say_map.get(effective_lang, "Just a moment...")
-        filler_block = _build_speak_or_say(is_plivo, _filler_say, twilio_lang)
-        pause_sec    = 2
+        # Return immediately — play a filler phrase so the customer stays engaged,
+        # then redirect to poll once GPT+TTS is ready.
+        base     = _webhook_base(request)
+        poll_url = (
+            f"{base}/api/v1/staff/ai-calling/webhook/poll/{log_id}"
+            f"?lang={effective_lang}&amp;campaign_id={campaign_id}"
+        )
+        if segment:
+            poll_url += f"&amp;segment={_urlquote(segment, safe='')}"
+        if is_test:
+            poll_url += f"&amp;is_test={is_test}"
+        poll_url += provider_qs
 
-    return _build_wait_redirect_xml(is_plivo, f"{poll_url}&amp;attempt=1", pause_sec=pause_sec, prefix_block=filler_block)
+        _filler_say_map = {
+            "hi": ("Haan ji, ek pal mein batata hoon..." if sess_agent_voice != "nova"
+                   else "Haan ji, ek pal mein batati hoon..."),
+            "te": "Avunu, okka nimisham...",
+            "en": "Sure, just a moment...",
+        }
+        filler_files = _FILLER_CACHE.get(effective_lang, []) if sess_agent_voice == "nova" else []
+        if filler_files:
+            filler_fname = _random.choice(filler_files)
+            filler_block = f'<Play>{base}/api/v1/staff/ai-calling/audio/{filler_fname}</Play>'
+            pause_sec    = 1
+        else:
+            _filler_say  = _filler_say_map.get(effective_lang, "Just a moment...")
+            filler_block = _build_speak_or_say(is_plivo, _filler_say, twilio_lang)
+            pause_sec    = 2
+
+        return _build_wait_redirect_xml(is_plivo, f"{poll_url}&amp;attempt=1", pause_sec=pause_sec, prefix_block=filler_block)
+    except Exception as exc:
+        logger.error(f"[AI-CALLING] Unhandled exception in webhook_respond for log_id={log_id}: {exc}", exc_info=True)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return _twiml_error_hangup(effective_lang, is_plivo=is_plivo)
 
 
 @router.post("/webhook/poll/{log_id}")
@@ -4379,6 +4537,22 @@ async def webhook_poll(
     provider_str = "plivo" if is_plivo else "twilio"
     provider_qs = f"&amp;provider={provider_str}"
 
+    try:
+        campaign_id = int(getattr(campaign_id, 'default', campaign_id) if hasattr(campaign_id, 'default') else campaign_id)
+    except Exception:
+        campaign_id = 0
+    try:
+        is_test = int(getattr(is_test, 'default', is_test) if hasattr(is_test, 'default') else is_test)
+    except Exception:
+        is_test = 0
+    try:
+        attempt = int(getattr(attempt, 'default', attempt) if hasattr(attempt, 'default') else attempt)
+    except Exception:
+        attempt = 1
+
+    lang = str(getattr(lang, 'default', lang) if hasattr(lang, 'default') else (lang or "hi"))
+    segment = str(getattr(segment, 'default', segment) if hasattr(segment, 'default') else (segment or ""))
+
     MAX_POLLS = 10  # 10 × 3s = 30s max wait
     twilio_lang = LANG_MAP.get(lang, "hi-IN")
     base        = _webhook_base(request)
@@ -4391,82 +4565,90 @@ async def webhook_poll(
         + provider_qs
     )
 
-    row = db.execute(text(
-        "SELECT next_audio_url, next_reply_text, status FROM ai_call_sessions WHERE log_id=:lid"
-    ), {"lid": log_id}).fetchone()
+    try:
+        row = db.execute(text(
+            "SELECT next_audio_url, next_reply_text, status FROM ai_call_sessions WHERE log_id=:lid"
+        ), {"lid": log_id}).fetchone()
 
-    audio_url_val = row[0] if row else None
-    reply_text    = row[1] if row else ""
-    sess_status   = row[2] if row else "active"
+        audio_url_val = row[0] if row else None
+        reply_text    = row[1] if row else ""
+        sess_status   = row[2] if row else "active"
 
-    # ── Case A: still processing → poll again
-    if audio_url_val in (None, "PROCESSING"):
-        if attempt >= MAX_POLLS:
-            fallback = (
-                "एक क्षण रुकिए, मैं आपकी बात समझ रहा हूं।"
+        # ── Case A: still processing → poll again
+        if audio_url_val in (None, "PROCESSING"):
+            if attempt >= MAX_POLLS:
+                fallback = (
+                    "एक क्षण रुकिए, मैं आपकी बात समझ रहा हूं।"
+                    if lang == "hi" else
+                    "ఒక్క నిమిషం, మీ మాటలు అర్థం చేసుకుంటున్నాను."
+                    if lang == "te" else
+                    "One moment, I'm processing your response."
+                )
+                fallback_block = _build_speak_or_say(is_plivo, fallback, twilio_lang)
+                return _build_speech_gather_xml(is_plivo, f"{respond_url}{extra_qs}", twilio_lang, fallback_block)
+            else:
+                next_poll = f"{poll_url}{extra_qs}&amp;attempt={attempt + 1}"
+                return _build_wait_redirect_xml(is_plivo, next_poll, pause_sec=1)
+
+        # ── Case B: error → fallback Say/Speak + continue
+        if audio_url_val == "ERROR":
+            db.execute(text(
+                "UPDATE ai_call_sessions SET next_audio_url=NULL, next_reply_text=NULL WHERE log_id=:lid"
+            ), {"lid": log_id})
+            db.commit()
+            err_msg = (
+                "क्षमा करें, कोई तकनीकी समस्या आई। क्या आप अपनी बात दोहरा सकते हैं?"
                 if lang == "hi" else
-                "ఒక్క నిమిషం, మీ మాటలు అర్థం చేసుకుంటున్నాను."
+                "క్షమించండి, సాంకేతిక సమస్య వచ్చింది. దయచేసి మళ్ళీ చెప్పగలరా?"
                 if lang == "te" else
-                "One moment, I'm processing your response."
+                "Sorry, a technical issue occurred. Could you please repeat?"
             )
-            fallback_block = _build_speak_or_say(is_plivo, fallback, twilio_lang)
-            return _build_speech_gather_xml(is_plivo, f"{respond_url}{extra_qs}", twilio_lang, fallback_block)
-        else:
-            next_poll = f"{poll_url}{extra_qs}&amp;attempt={attempt + 1}"
-            return _build_wait_redirect_xml(is_plivo, next_poll, pause_sec=1)
+            err_block = _build_speak_or_say(is_plivo, err_msg, twilio_lang)
+            return _build_speech_gather_xml(is_plivo, f"{respond_url}{extra_qs}", twilio_lang, err_block)
 
-    # ── Case B: error → fallback Say/Speak + continue
-    if audio_url_val == "ERROR":
+        # ── Case C: audio URL is set — verify file actually exists on disk
+        if audio_url_val not in (None, "PROCESSING", "ERROR", "FALLBACK"):
+            audio_disk_path = os.path.join(AI_AUDIO_DIR, os.path.basename(audio_url_val))
+            if not os.path.exists(audio_disk_path):
+                if attempt >= MAX_POLLS:
+                    pass  # fall through to FALLBACK below
+                else:
+                    next_poll = f"{poll_url}{extra_qs}&amp;attempt={attempt + 1}"
+                    return _build_wait_redirect_xml(is_plivo, next_poll, pause_sec=2)
+
+        # ── Consume and play
         db.execute(text(
             "UPDATE ai_call_sessions SET next_audio_url=NULL, next_reply_text=NULL WHERE log_id=:lid"
         ), {"lid": log_id})
         db.commit()
-        err_msg = (
-            "क्षमा करें, कोई तकनीकी समस्या आई। क्या आप अपनी बात दोहरा सकते हैं?"
-            if lang == "hi" else
-            "క్షమించండి, సాంకేతిక సమస్య వచ్చింది. దయచేసి మళ్ళీ చెప్పగలరా?"
-            if lang == "te" else
-            "Sorry, a technical issue occurred. Could you please repeat?"
-        )
-        err_block = _build_speak_or_say(is_plivo, err_msg, twilio_lang)
-        return _build_speech_gather_xml(is_plivo, f"{respond_url}{extra_qs}", twilio_lang, err_block)
 
-    # ── Case C: audio URL is set — verify file actually exists on disk
-    if audio_url_val not in (None, "PROCESSING", "ERROR", "FALLBACK"):
-        audio_disk_path = os.path.join(AI_AUDIO_DIR, os.path.basename(audio_url_val))
-        if not os.path.exists(audio_disk_path):
-            if attempt >= MAX_POLLS:
-                pass  # fall through to FALLBACK below
-            else:
-                next_poll = f"{poll_url}{extra_qs}&amp;attempt={attempt + 1}"
-                return _build_wait_redirect_xml(is_plivo, next_poll, pause_sec=2)
+        should_hangup  = sess_status in ("end_call_pending", "callback_pending")
+        call_outcome   = "callback" if sess_status == "callback_pending" else "qualified"
 
-    # ── Consume and play
-    db.execute(text(
-        "UPDATE ai_call_sessions SET next_audio_url=NULL, next_reply_text=NULL WHERE log_id=:lid"
-    ), {"lid": log_id})
-    db.commit()
+        if should_hangup:
+            conv_row = db.execute(text(
+                "SELECT conversation FROM ai_call_sessions WHERE log_id=:lid"
+            ), {"lid": log_id}).fetchone()
+            conv = json.loads(conv_row[0]) if conv_row and conv_row[0] else []
+            _finalize_call(db, log_id, call_outcome, conv, lang, campaign_id)
 
-    should_hangup  = sess_status in ("end_call_pending", "callback_pending")
-    call_outcome   = "callback" if sess_status == "callback_pending" else "qualified"
+        if audio_url_val == "FALLBACK" or not audio_url_val:
+            play_block = _build_speak_or_say(is_plivo, reply_text or "Thank you for speaking with us.", twilio_lang)
+        else:
+            audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{audio_url_val}"
+            play_block = f'<Play>{audio_serve_url}</Play>'
 
-    if should_hangup:
-        conv_row = db.execute(text(
-            "SELECT conversation FROM ai_call_sessions WHERE log_id=:lid"
-        ), {"lid": log_id}).fetchone()
-        conv = json.loads(conv_row[0]) if conv_row and conv_row[0] else []
-        _finalize_call(db, log_id, call_outcome, conv, lang, campaign_id)
-
-    if audio_url_val == "FALLBACK" or not audio_url_val:
-        play_block = _build_speak_or_say(is_plivo, reply_text or "Thank you for speaking with us.", twilio_lang)
-    else:
-        audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{audio_url_val}"
-        play_block = f'<Play>{audio_serve_url}</Play>'
-
-    if should_hangup:
-        return _build_hangup_xml(is_plivo, play_block, pause_sec=1)
-    else:
-        return _build_speech_gather_xml(is_plivo, f"{respond_url}{extra_qs}", twilio_lang, play_block)
+        if should_hangup:
+            return _build_hangup_xml(is_plivo, play_block, pause_sec=1)
+        else:
+            return _build_speech_gather_xml(is_plivo, f"{respond_url}{extra_qs}", twilio_lang, play_block)
+    except Exception as exc:
+        logger.error(f"[AI-CALLING] Unhandled exception in webhook_poll for log_id={log_id}: {exc}", exc_info=True)
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return _twiml_error_hangup(lang, is_plivo=is_plivo)
 
 
 @router.post("/webhook/recording")
@@ -5084,418 +5266,435 @@ async def webhook_status(
     db: Session = Depends(get_db),
 ):
     """Twilio or Plivo fires this on call completion."""
-    form        = await request.form()
-    call_status = (form.get("CallStatus") or form.get("Event") or "completed").strip().lower()
-    raw_dur     = form.get("CallDuration") or form.get("Duration") or form.get("BillDuration") or 0
     try:
-        duration = int(float(raw_dur))
-    except (ValueError, TypeError):
-        duration = 0
-
-    call_sid = (form.get("CallUUID") or form.get("CallSid") or "").strip()
-
-    status_map = {
-        "completed": "completed",
-        "failed": "failed",
-        "busy": "busy",
-        "no-answer": "no_answer",
-        "no_answer": "no_answer",
-        "timeout": "no_answer",
-        "rejected": "busy",
-        "canceled": "canceled",
-        "cancelled": "canceled",
-        "in-progress": "connected",
-        "ringing": "dialing",
-        "queued": "dialing",
-    }
-    final_status = status_map.get(call_status, "completed")
-
-    log_row = db.execute(text(
-        "SELECT transcript, language_used, campaign_id, lead_id, attempt_number FROM ai_call_logs WHERE id=:id"
-    ), {"id": log_id}).fetchone()
-
-    transcript, lang, campaign_id, lead_id, attempt_number = [], "hi", 0, 0, 1
-    if log_row:
+        form        = await request.form()
+        call_status = (form.get("CallStatus") or form.get("Event") or "completed").strip().lower()
+        raw_dur     = form.get("CallDuration") or form.get("Duration") or form.get("BillDuration") or 0
         try:
-            transcript = json.loads(log_row[0] or "[]")
-        except Exception:
-            transcript = []
-        lang           = log_row[1] or "hi"
-        campaign_id    = log_row[2] or 0
-        lead_id        = log_row[3] or 0
-        attempt_number = log_row[4] or 1
+            duration = int(float(raw_dur))
+        except (ValueError, TypeError):
+            duration = 0
 
-    # Always run GPT analysis if there's a transcript (even on disconnect/busy)
-    # so we can extract lead details regardless of call outcome.
-    analysis: dict = {}
-    if transcript:
-        try:
-            analysis      = _gpt_summarize(transcript, lang)
-            outcome       = analysis.get("outcome", "no_answer")
-            summary       = analysis.get("summary", "")
-            detected_lang = analysis.get("detected_language", lang)
-        except Exception as _se:
-            logger.warning(f"[STATUS] GPT summarize failed log={log_id}: {_se}")
+        call_sid = (form.get("CallUUID") or form.get("CallSid") or "").strip()
+
+        status_map = {
+            "completed": "completed",
+            "failed": "failed",
+            "busy": "busy",
+            "no-answer": "no_answer",
+            "no_answer": "no_answer",
+            "timeout": "no_answer",
+            "rejected": "busy",
+            "canceled": "canceled",
+            "cancelled": "canceled",
+            "in-progress": "connected",
+            "ringing": "dialing",
+            "queued": "dialing",
+        }
+        final_status = status_map.get(call_status, "completed")
+
+        log_row = db.execute(text(
+            "SELECT transcript, language_used, campaign_id, lead_id, attempt_number FROM ai_call_logs WHERE id=:id"
+        ), {"id": log_id}).fetchone()
+
+        transcript, lang, campaign_id, lead_id, attempt_number = [], "hi", 0, 0, 1
+        if log_row:
+            try:
+                transcript = json.loads(log_row[0] or "[]")
+            except Exception:
+                transcript = []
+            lang           = log_row[1] or "hi"
+            campaign_id    = log_row[2] or 0
+            lead_id        = log_row[3] or 0
+            attempt_number = log_row[4] or 1
+
+        # Always run GPT analysis if there's a transcript (even on disconnect/busy)
+        # so we can extract lead details regardless of call outcome.
+        analysis: dict = {}
+        if transcript:
+            try:
+                analysis      = _gpt_summarize(transcript, lang)
+                outcome       = analysis.get("outcome", "no_answer")
+                summary       = analysis.get("summary", "")
+                detected_lang = analysis.get("detected_language", lang)
+            except Exception as _se:
+                logger.warning(f"[STATUS] GPT summarize failed log={log_id}: {_se}")
+                outcome = "no_answer" if final_status in ("no_answer","busy","failed","canceled") else "completed"
+                summary = ""
+                detected_lang = lang
+        else:
             outcome = "no_answer" if final_status in ("no_answer","busy","failed","canceled") else "completed"
             summary = ""
             detected_lang = lang
-    else:
-        outcome = "no_answer" if final_status in ("no_answer","busy","failed","canceled") else "completed"
-        summary = ""
-        detected_lang = lang
 
-    # Compute retry time for failed/missed calls
-    next_retry_at = None
-    if final_status in ("no_answer", "busy", "failed", "canceled") and campaign_id:
-        try:
-            retry_cfg = db.execute(text(
-                "SELECT retry_1_hours, retry_2_hours, retry_day2_offset, retry_day10_offset"
-                " FROM ai_campaigns WHERE id=:id"
-            ), {"id": campaign_id}).fetchone()
-            if retry_cfg:
-                r1h, r2h, rd2, rd10 = retry_cfg
-                if attempt_number == 1:
-                    next_retry_at = datetime.utcnow() + timedelta(hours=int(r1h or 2))
-                elif attempt_number == 2:
-                    next_retry_at = datetime.utcnow() + timedelta(hours=int(r2h or 4))
-                elif attempt_number == 3:
-                    next_retry_at = datetime.utcnow() + timedelta(days=int(rd2 or 2))
-                elif attempt_number == 4:
-                    next_retry_at = datetime.utcnow() + timedelta(days=int(rd10 or 10))
-                # attempt_number >= 5: no more scheduled retries
-        except Exception as retry_err:
-            logger.warning(f"[AI_CALLING] Could not compute retry time: {retry_err}")
+        # Compute retry time for failed/missed calls
+        next_retry_at = None
+        if final_status in ("no_answer", "busy", "failed", "canceled") and campaign_id:
+            try:
+                retry_cfg = db.execute(text(
+                    "SELECT retry_1_hours, retry_2_hours, retry_day2_offset, retry_day10_offset"
+                    " FROM ai_campaigns WHERE id=:id"
+                ), {"id": campaign_id}).fetchone()
+                if retry_cfg:
+                    r1h, r2h, rd2, rd10 = retry_cfg
+                    if attempt_number == 1:
+                        next_retry_at = datetime.utcnow() + timedelta(hours=int(r1h or 2))
+                    elif attempt_number == 2:
+                        next_retry_at = datetime.utcnow() + timedelta(hours=int(r2h or 4))
+                    elif attempt_number == 3:
+                        next_retry_at = datetime.utcnow() + timedelta(days=int(rd2 or 2))
+                    elif attempt_number == 4:
+                        next_retry_at = datetime.utcnow() + timedelta(days=int(rd10 or 10))
+                    # attempt_number >= 5: no more scheduled retries
+            except Exception as retry_err:
+                logger.warning(f"[AI_CALLING] Could not compute retry time: {retry_err}")
 
-    update_params = {
-        "status": final_status,
-        "dur": duration,
-        "outcome": outcome or "no_answer",
-        "summary": summary,
-        "id": log_id,
-        "retry_at": next_retry_at,
-    }
-    if call_sid:
-        db.execute(text("""
-            UPDATE ai_call_logs
-            SET status=:status, duration_seconds=:dur, outcome=:outcome,
-                ai_summary=:summary, ended_at=NOW(), next_retry_at=:retry_at,
-                call_sid=CASE WHEN call_sid IS NULL OR call_sid LIKE 'plivo_%' THEN :sid ELSE call_sid END
-            WHERE id=:id
-        """), {**update_params, "sid": call_sid})
-    else:
-        db.execute(text("""
-            UPDATE ai_call_logs
-            SET status=:status, duration_seconds=:dur, outcome=:outcome,
-                ai_summary=:summary, ended_at=NOW(), next_retry_at=:retry_at
-            WHERE id=:id
-        """), update_params)
-
-    # ── Full CRM lead update with every extracted detail ───────────────────────
-    # Parse numerics safely
-    def _to_float(v):
-        try:
-            return float(str(v).replace(",", "").replace("₹","").replace("L","00000").replace("K","000"))
-        except Exception:
-            return None
-
-    # Helper: fetch agent name from session (Vidya / Karthik)
-    def _get_agent_name_for_log(log_id_: int) -> str:
-        try:
-            row = db.execute(text(
-                "SELECT s.agent_name FROM ai_call_sessions s WHERE s.log_id = :lid LIMIT 1"
-            ), {"lid": log_id_}).fetchone()
-            return row[0] if row and row[0] else "AI Assistant"
-        except Exception:
-            return "AI Assistant"
-
-    # Helper: insert a remark into crm_lead_notes attributed to the AI agent
-    def _write_ai_call_note(target_lead_id: int, agent: str,
-                             note_outcome: str, note_summary: str,
-                             status_before: Optional[str], status_after: Optional[str],
-                             note_lang: str, note_duration: int,
-                             note_followup, note_rich: Optional[str]) -> None:
-        try:
-            LANG_LABELS = {"hi": "Hindi", "te": "Telugu", "en": "English"}
-            OUTCOME_LABELS = {
-                "interested": "Interested", "qualified": "Qualified",
-                "callback": "Callback Requested", "connected": "Connected",
-                "in_progress": "In Progress", "not_interested": "Not Interested",
-                "no_answer": "No Answer", "busy": "Busy",
-                "failed": "Failed", "canceled": "Canceled",
-            }
-            dur_str = (f"{note_duration//60}m {note_duration%60}s"
-                       if note_duration and note_duration >= 60 else f"{note_duration or 0}s")
-            lang_str = LANG_LABELS.get(note_lang, note_lang.upper())
-            outcome_str = OUTCOME_LABELS.get(note_outcome or "", note_outcome or "No Answer")
-
-            status_line = ""
-            if status_before and status_after:
-                if status_before != status_after:
-                    status_line = f"\n🔄 CRM Status: {status_before} → {status_after}"
-                else:
-                    status_line = f"\n📌 CRM Status: {status_before} (unchanged)"
-
-            note_lines = [
-                f"📞 AI Call by {agent}",
-                f"Outcome: {outcome_str}  |  Language: {lang_str}  |  Duration: {dur_str}",
-                status_line,
-            ]
-            if note_summary:
-                note_lines.append(f"\n📝 Summary: {note_summary}")
-            if note_rich:
-                note_lines.append(f"💡 Key Info: {note_rich}")
-            if note_followup:
-                note_lines.append(f"📅 Next Follow-up: {note_followup}")
-
-            note_text = "\n".join(line for line in note_lines if line is not None)
-
+        update_params = {
+            "status": final_status,
+            "dur": duration,
+            "outcome": outcome or "no_answer",
+            "summary": summary,
+            "id": log_id,
+            "retry_at": next_retry_at,
+        }
+        if call_sid:
             db.execute(text("""
-                INSERT INTO crm_lead_notes
-                    (company_id, lead_id, note, is_private, created_by_type, created_by_id, created_at, updated_at)
-                VALUES
-                    (4, :lid, :note, FALSE, 'ai_agent', :agent, NOW(), NOW())
-            """), {"lid": target_lead_id, "note": note_text, "agent": agent})
-        except Exception as _ne:
-            logger.warning(f"[STATUS] CRM note insert failed lead={target_lead_id}: {_ne}")
+                UPDATE ai_call_logs
+                SET status=:status, duration_seconds=:dur, outcome=:outcome,
+                    ai_summary=:summary, ended_at=NOW(), next_retry_at=:retry_at,
+                    call_sid=CASE WHEN call_sid IS NULL OR call_sid LIKE 'plivo_%' THEN :sid ELSE call_sid END
+                WHERE id=:id
+            """), {**update_params, "sid": call_sid})
+        else:
+            db.execute(text("""
+                UPDATE ai_call_logs
+                SET status=:status, duration_seconds=:dur, outcome=:outcome,
+                    ai_summary=:summary, ended_at=NOW(), next_retry_at=:retry_at
+                WHERE id=:id
+            """), update_params)
 
-    a_name     = analysis.get("customer_name")  or None
-    a_phone    = analysis.get("customer_phone") or None
-    a_email    = analysis.get("customer_email") or None
-    a_city     = analysis.get("city")           or None
-    a_loc      = analysis.get("location_preference") or None
-    a_prop     = analysis.get("property_type")  or None
-    a_bmin     = _to_float(analysis.get("budget_min"))
-    a_bmax     = _to_float(analysis.get("budget_max"))
-    a_req      = analysis.get("requirements")   or None
-    a_timeline = analysis.get("timeline")       or None
-    a_notes    = analysis.get("notes")          or None
-    a_followup = analysis.get("next_follow_up_date") or None
-    a_interest = analysis.get("interest_level") or None
-    # Build a rich comment string for recent_comments
-    comment_parts = []
-    if summary:   comment_parts.append(f"[AI Summary] {summary}")
-    if a_notes:   comment_parts.append(f"[Notes] {a_notes}")
-    if a_timeline:comment_parts.append(f"[Timeline] {a_timeline}")
-    if a_interest:comment_parts.append(f"[Interest] {a_interest}")
-    rich_comment = " | ".join(comment_parts) or None
+        # ── Full CRM lead update with every extracted detail ───────────────────────
+        # Parse numerics safely
+        def _to_float(v):
+            try:
+                return float(str(v).replace(",", "").replace("₹","").replace("L","00000").replace("K","000"))
+            except Exception:
+                return None
 
-    # Map AI call outcome to CRM pipeline status progression
-    _OUTCOME_TO_CRM_STATUS = {
-        "interested":     "interested",
-        "qualified":      "qualified",
-        "callback":       "contacted",
-        "connected":      "contacted",
-        "in_progress":    "contacted",
-        "not_interested": "lost",
-    }
-    new_crm_status = _OUTCOME_TO_CRM_STATUS.get(outcome or "", None)
+        # Helper: fetch agent name from session (Vidya / Karthik)
+        def _get_agent_name_for_log(log_id_: int) -> str:
+            try:
+                row = db.execute(text(
+                    "SELECT s.agent_name FROM ai_call_sessions s WHERE s.log_id = :lid LIMIT 1"
+                ), {"lid": log_id_}).fetchone()
+                return row[0] if row and row[0] else "AI Assistant"
+            except Exception:
+                return "AI Assistant"
 
-    # ── If lead_id exists → update it with all extracted info ─────────────────
-    if lead_id:
-        status_update_clause = (
-            "status = CASE WHEN status NOT IN ('won','qualified','proposal','loan_process') THEN :new_crm_status ELSE status END,"
-            if new_crm_status else ""
-        )
-        db.execute(text(f"""
-            UPDATE crm_leads
-            SET ai_status          = :outcome,
-                ai_summary         = :summary,
-                ai_language        = :lang,
-                ai_last_called_at  = NOW(),
-                ai_call_count      = COALESCE(ai_call_count, 0) + 1,
-                last_contact_date  = NOW(),
-                updated_at         = NOW(),
-                {status_update_clause}
-                name               = COALESCE(NULLIF(:aname,''),  name),
-                email              = COALESCE(NULLIF(:aemail,''), email),
-                city               = COALESCE(NULLIF(:acity,''),  city),
-                looking_for        = COALESCE(NULLIF(:aloc,''),   looking_for),
-                requirements       = COALESCE(NULLIF(:areq,''),   requirements),
-                budget_min         = COALESCE(:abmin, budget_min),
-                budget_max         = COALESCE(:abmax, budget_max),
-                next_followup_date = CASE WHEN :afollowup::date IS NOT NULL
-                                         THEN :afollowup::date ELSE next_followup_date END,
-                recent_comments    = CASE WHEN :rcomment IS NOT NULL
-                                         THEN :rcomment ELSE recent_comments END
-            WHERE id = :lid
-        """), {
-            "outcome": outcome or "no_answer", "summary": summary,
-            "lang": detected_lang, "lid": lead_id,
-            "aname": a_name, "aemail": a_email, "acity": a_city,
-            "aloc": (f"{a_loc} | {a_prop}" if a_loc and a_prop else a_loc or a_prop),
-            "areq": a_req, "abmin": a_bmin, "abmax": a_bmax,
-            "afollowup": a_followup,
-            "rcomment": rich_comment,
-            **({"new_crm_status": new_crm_status} if new_crm_status else {}),
-        })
-        # Snapshot crm_status_after for history tracking
-        updated_status = db.execute(text(
-            "SELECT status FROM crm_leads WHERE id = :lid"
-        ), {"lid": lead_id}).scalar()
-        db.execute(text(
-            "UPDATE ai_call_logs SET crm_status_after = :csa WHERE id = :lid"
-        ), {"csa": updated_status, "lid": log_id})
-        # Write CRM note visible in lead timeline
-        _agent = _get_agent_name_for_log(log_id)
-        _status_before_snap = db.execute(text(
-            "SELECT crm_status_before FROM ai_call_logs WHERE id=:lid"
-        ), {"lid": log_id}).scalar()
-        _write_ai_call_note(lead_id, _agent, outcome or "no_answer", summary,
-                            _status_before_snap, updated_status,
-                            detected_lang, duration, a_followup, rich_comment)
+        # Helper: insert a remark into crm_lead_notes attributed to the AI agent
+        def _write_ai_call_note(target_lead_id: int, agent: str,
+                                 note_outcome: str, note_summary: str,
+                                 status_before: Optional[str], status_after: Optional[str],
+                                 note_lang: str, note_duration: int,
+                                 note_followup, note_rich: Optional[str]) -> None:
+            try:
+                LANG_LABELS = {"hi": "Hindi", "te": "Telugu", "en": "English"}
+                OUTCOME_LABELS = {
+                    "interested": "Interested", "qualified": "Qualified",
+                    "callback": "Callback Requested", "connected": "Connected",
+                    "in_progress": "In Progress", "not_interested": "Not Interested",
+                    "no_answer": "No Answer", "busy": "Busy",
+                    "failed": "Failed", "canceled": "Canceled",
+                }
+                dur_str = (f"{note_duration//60}m {note_duration%60}s"
+                           if note_duration and note_duration >= 60 else f"{note_duration or 0}s")
+                lang_str = LANG_LABELS.get(note_lang, note_lang.upper())
+                outcome_str = OUTCOME_LABELS.get(note_outcome or "", note_outcome or "No Answer")
 
-    else:
-        # ── No lead_id — try to find by phone, or create a new lead ──────────
-        # (This happens for manual test calls that weren't tied to a CRM lead)
-        log_row = db.execute(text(
-            "SELECT l.phone_dialed, l.company_id, l.campaign_id FROM ai_call_logs l WHERE l.id = :lid"
-        ), {"lid": log_id}).fetchone()
-        phone_from_log = log_row[0] if log_row else None
-        call_company_id = log_row[1] if log_row else None
-        call_campaign_id = log_row[2] if log_row else None
+                status_line = ""
+                if status_before and status_after:
+                    if status_before != status_after:
+                        status_line = f"\n🔄 CRM Status: {status_before} → {status_after}"
+                    else:
+                        status_line = f"\n📌 CRM Status: {status_before} (unchanged)"
 
-        if not call_company_id and call_campaign_id:
-            call_company_id = db.execute(text(
-                "SELECT company_id FROM ai_campaigns WHERE id = :cid"
-            ), {"cid": call_campaign_id}).scalar()
+                note_lines = [
+                    f"📞 AI Call by {agent}",
+                    f"Outcome: {outcome_str}  |  Language: {lang_str}  |  Duration: {dur_str}",
+                    status_line,
+                ]
+                if note_summary:
+                    note_lines.append(f"\n📝 Summary: {note_summary}")
+                if note_rich:
+                    note_lines.append(f"💡 Key Info: {note_rich}")
+                if note_followup:
+                    note_lines.append(f"📅 Next Follow-up: {note_followup}")
 
-        phone_to_use = a_phone or phone_from_log
+                note_text = "\n".join(line for line in note_lines if line is not None)
 
-        call_tenant_id = None
-        if call_company_id:
-            call_tenant_id = db.execute(text(
-                "SELECT client_id FROM associated_companies WHERE id = :cid"
-            ), {"cid": call_company_id}).scalar()
-
-        if phone_to_use and call_company_id and call_tenant_id:
-            from app.services.crm_dedup_service import find_phone_duplicate
-            dup_lead = find_phone_duplicate(
-                db=db,
-                tenant_id=call_tenant_id,
-                company_id=call_company_id,
-                phone=phone_to_use,
-                with_lock=True
-            )
-
-            if dup_lead:
-                lead_id = dup_lead.id
-                phone_status_clause = (
-                    "status = CASE WHEN status NOT IN ('won','qualified','proposal','loan_process') THEN :new_crm_status ELSE status END,"
-                    if new_crm_status else ""
-                )
-                db.execute(text(f"""
-                    UPDATE crm_leads
-                    SET ai_status=:outcome, ai_summary=:summary, ai_language=:lang,
-                        ai_last_called_at=NOW(), ai_call_count=COALESCE(ai_call_count,0)+1,
-                        last_contact_date=NOW(), updated_at=NOW(),
-                        {phone_status_clause}
-                        city               = COALESCE(NULLIF(:acity,''),  city),
-                        looking_for        = COALESCE(NULLIF(:aloc,''),   looking_for),
-                        requirements       = COALESCE(NULLIF(:areq,''),   requirements),
-                        budget_min         = COALESCE(:abmin, budget_min),
-                        budget_max         = COALESCE(:abmax, budget_max),
-                        next_followup_date = CASE WHEN :afollowup::date IS NOT NULL
-                                                 THEN :afollowup::date ELSE next_followup_date END,
-                        recent_comments    = CASE WHEN :rcomment IS NOT NULL
-                                                 THEN :rcomment ELSE recent_comments END
-                    WHERE id = :lid
-                """), {
-                    "outcome": outcome or "no_answer", "summary": summary,
-                    "lang": detected_lang, "lid": lead_id,
-                    "acity": a_city, "aloc": (f"{a_loc} | {a_prop}" if a_loc and a_prop else a_loc or a_prop),
-                    "areq": a_req, "abmin": a_bmin, "abmax": a_bmax,
-                    "afollowup": a_followup, "rcomment": rich_comment,
-                    **({"new_crm_status": new_crm_status} if new_crm_status else {}),
-                })
-                # Link the log to this lead + snapshot crm_status_after
-                updated_status_p = db.execute(text(
-                    "SELECT status FROM crm_leads WHERE id = :lid"
-                ), {"lid": lead_id}).scalar()
-                db.execute(text(
-                    "UPDATE ai_call_logs SET lead_id=:lid, crm_status_after=:csa WHERE id=:log"
-                ), {"lid": lead_id, "csa": updated_status_p, "log": log_id})
-                # Write CRM note
-                _agent_p = _get_agent_name_for_log(log_id)
-                _status_before_p = db.execute(text(
-                    "SELECT crm_status_before FROM ai_call_logs WHERE id=:lid"
-                ), {"lid": log_id}).scalar()
-                _write_ai_call_note(lead_id, _agent_p, outcome or "no_answer", summary,
-                                    _status_before_p, updated_status_p,
-                                    detected_lang, duration, a_followup, rich_comment)
-
-            elif outcome in QUALIFIED_OUTCOMES or (a_interest and a_interest in ("high", "medium")):
-                # Only auto-create a new lead if there's genuine interest and valid tenancy
-                new_lead = db.execute(text("""
-                    INSERT INTO crm_leads
-                        (tenant_id, company_id, name, phone, email, city, looking_for, requirements,
-                         budget_min, budget_max, source, status, priority, description,
-                         ai_status, ai_summary, ai_language, ai_last_called_at, ai_call_count,
-                         next_followup_date, last_contact_date, recent_comments,
-                         created_at, updated_at)
+                db.execute(text("""
+                    INSERT INTO crm_lead_notes
+                        (company_id, lead_id, note, is_private, created_by_type, created_by_id, created_at, updated_at)
                     VALUES
-                        (:tid, :cid, :aname, :phone, :aemail, :acity, :aloc, :areq,
-                         :abmin, :abmax, 'AI Call', 'New', 'medium',
-                         :desc, :outcome, :summary, :lang, NOW(), 1,
-                         :afollowup, NOW(), :rcomment, NOW(), NOW())
-                    RETURNING id
-                """), {
-                    "tid": call_tenant_id, "cid": call_company_id,
-                    "aname": a_name or "Unknown", "phone": phone_to_use,
-                    "aemail": a_email, "acity": a_city,
-                    "aloc": (f"{a_loc} | {a_prop}" if a_loc and a_prop else a_loc or a_prop),
-                    "areq": a_req, "abmin": a_bmin, "abmax": a_bmax,
-                    "desc": f"Auto-created from AI call. Timeline: {a_timeline or 'Not mentioned'}",
-                    "outcome": outcome or "no_answer", "summary": summary, "lang": detected_lang,
-                    "afollowup": a_followup, "rcomment": rich_comment,
-                }).fetchone()
-                if new_lead:
-                    db.execute(text("UPDATE ai_call_logs SET lead_id=:lid WHERE id=:log"),
-                               {"lid": new_lead[0], "log": log_id})
-                    logger.info(f"[STATUS] ✅ New CRM lead created id={new_lead[0]} log={log_id}")
-                    lead_obj = db.query(CRMLead).filter(CRMLead.id == new_lead[0]).first()
-                    if lead_obj:
-                        from app.services.crm_phone_sync_service import sync_lead_phone_identities
-                        sync_lead_phone_identities(
-                            db=db,
-                            lead=lead_obj,
-                            phone_raw=phone_to_use,
-                            source_channel='ai_calling',
-                            source_ref=f"ai_call_log_{log_id}",
-                            with_lock=False
-                        )
-                    # Write CRM note for the new lead
-                    _agent_n = _get_agent_name_for_log(log_id)
-                    _write_ai_call_note(new_lead[0], _agent_n, outcome or "no_answer", summary,
-                                        None, "contacted", detected_lang, duration,
-                                        a_followup, rich_comment)
-        elif not call_company_id or not call_tenant_id:
-            logger.warning(f"[STATUS] Skipped auto CRM lead creation for log {log_id}: Missing company_id or tenant_id (fail closed)")
+                        (4, :lid, :note, FALSE, 'ai_agent', :agent, NOW(), NOW())
+                """), {"lid": target_lead_id, "note": note_text, "agent": agent})
+            except Exception as _ne:
+                logger.warning(f"[STATUS] CRM note insert failed lead={target_lead_id}: {_ne}")
 
-    if campaign_id:
-        db.execute(text("""
-            UPDATE ai_campaigns
-            SET calls_made = COALESCE(calls_made,0)+1,
-                calls_connected = COALESCE(calls_connected,0) + CASE WHEN :connected THEN 1 ELSE 0 END,
-                calls_qualified = COALESCE(calls_qualified,0) + CASE WHEN :qualified THEN 1 ELSE 0 END,
-                updated_at = NOW()
-            WHERE id=:cid
-        """), {
-            "connected": final_status == "completed",
-            "qualified": outcome in QUALIFIED_OUTCOMES,
-            "cid": campaign_id,
-        })
+        a_name     = analysis.get("customer_name")  or None
+        a_phone    = analysis.get("customer_phone") or None
+        a_email    = analysis.get("customer_email") or None
+        a_city     = analysis.get("city")           or None
+        a_loc      = analysis.get("location_preference") or None
+        a_prop     = analysis.get("property_type")  or None
+        a_bmin     = _to_float(analysis.get("budget_min"))
+        a_bmax     = _to_float(analysis.get("budget_max"))
+        a_req      = analysis.get("requirements")   or None
+        a_timeline = analysis.get("timeline")       or None
+        a_notes    = analysis.get("notes")          or None
+        a_followup = analysis.get("next_follow_up_date") or None
+        parsed_followup = None
+        if a_followup:
+            try:
+                parsed_followup = datetime.fromisoformat(str(a_followup).strip()[:10]).date()
+            except Exception:
+                try:
+                    import dateutil.parser
+                    parsed_followup = dateutil.parser.parse(str(a_followup)).date()
+                except Exception:
+                    parsed_followup = None
 
-    db.commit()
-    _clean_old_audio()
+        a_interest = analysis.get("interest_level") or None
+        # Build a rich comment string for recent_comments
+        comment_parts = []
+        if summary:   comment_parts.append(f"[AI Summary] {summary}")
+        if a_notes:   comment_parts.append(f"[Notes] {a_notes}")
+        if a_timeline:comment_parts.append(f"[Timeline] {a_timeline}")
+        if a_interest:comment_parts.append(f"[Interest] {a_interest}")
+        rich_comment = " | ".join(comment_parts) or None
 
-    # Auto-advance: dial next lead(s) to keep concurrency filled
-    if campaign_id:
+        # Map AI call outcome to CRM pipeline status progression
+        _OUTCOME_TO_CRM_STATUS = {
+            "interested":     "interested",
+            "qualified":      "qualified",
+            "callback":       "contacted",
+            "connected":      "contacted",
+            "in_progress":    "contacted",
+            "not_interested": "lost",
+        }
+        new_crm_status = _OUTCOME_TO_CRM_STATUS.get(outcome or "", None)
+
+        # ── If lead_id exists → update it with all extracted info ─────────────────
+        if lead_id:
+            status_update_clause = (
+                "status = CASE WHEN status NOT IN ('won','qualified','proposal','loan_process') THEN :new_crm_status ELSE status END,"
+                if new_crm_status else ""
+            )
+            db.execute(text(f"""
+                UPDATE crm_leads
+                SET ai_status          = :outcome,
+                    ai_summary         = :summary,
+                    ai_language        = :lang,
+                    ai_last_called_at  = NOW(),
+                    ai_call_count      = COALESCE(ai_call_count, 0) + 1,
+                    last_contact_date  = NOW(),
+                    updated_at         = NOW(),
+                    {status_update_clause}
+                    name               = COALESCE(NULLIF(:aname,''),  name),
+                    email              = COALESCE(NULLIF(:aemail,''), email),
+                    city               = COALESCE(NULLIF(:acity,''),  city),
+                    looking_for        = COALESCE(NULLIF(:aloc,''),   looking_for),
+                    requirements       = COALESCE(NULLIF(:areq,''),   requirements),
+                    budget_min         = COALESCE(:abmin, budget_min),
+                    budget_max         = COALESCE(:abmax, budget_max),
+                    next_followup_date = COALESCE(:afollowup, next_followup_date),
+                    recent_comments    = CASE WHEN :rcomment IS NOT NULL
+                                             THEN :rcomment ELSE recent_comments END
+                WHERE id = :lid
+            """), {
+                "outcome": outcome or "no_answer", "summary": summary,
+                "lang": detected_lang, "lid": lead_id,
+                "aname": a_name, "aemail": a_email, "acity": a_city,
+                "aloc": (f"{a_loc} | {a_prop}" if a_loc and a_prop else a_loc or a_prop),
+                "areq": a_req, "abmin": a_bmin, "abmax": a_bmax,
+                "afollowup": parsed_followup,
+                "rcomment": rich_comment,
+                **({"new_crm_status": new_crm_status} if new_crm_status else {}),
+            })
+            # Snapshot crm_status_after for history tracking
+            updated_status = db.execute(text(
+                "SELECT status FROM crm_leads WHERE id = :lid"
+            ), {"lid": lead_id}).scalar()
+            db.execute(text(
+                "UPDATE ai_call_logs SET crm_status_after = :csa WHERE id = :lid"
+            ), {"csa": updated_status, "lid": log_id})
+            # Write CRM note visible in lead timeline
+            _agent = _get_agent_name_for_log(log_id)
+            _status_before_snap = db.execute(text(
+                "SELECT crm_status_before FROM ai_call_logs WHERE id=:lid"
+            ), {"lid": log_id}).scalar()
+            _write_ai_call_note(lead_id, _agent, outcome or "no_answer", summary,
+                                _status_before_snap, updated_status,
+                                detected_lang, duration, a_followup, rich_comment)
+
+        else:
+            # ── No lead_id — try to find by phone, or create a new lead ──────────
+            # (This happens for manual test calls that weren't tied to a CRM lead)
+            log_row = db.execute(text(
+                "SELECT l.phone_dialed, l.company_id, l.campaign_id FROM ai_call_logs l WHERE l.id = :lid"
+            ), {"lid": log_id}).fetchone()
+            phone_from_log = log_row[0] if log_row else None
+            call_company_id = log_row[1] if log_row else None
+            call_campaign_id = log_row[2] if log_row else None
+
+            if not call_company_id and call_campaign_id:
+                call_company_id = db.execute(text(
+                    "SELECT company_id FROM ai_campaigns WHERE id = :cid"
+                ), {"cid": call_campaign_id}).scalar()
+
+            phone_to_use = a_phone or phone_from_log
+
+            call_tenant_id = None
+            if call_company_id:
+                call_tenant_id = db.execute(text(
+                    "SELECT client_id FROM associated_companies WHERE id = :cid"
+                ), {"cid": call_company_id}).scalar()
+
+            if phone_to_use and call_company_id and call_tenant_id:
+                from app.services.crm_dedup_service import find_phone_duplicate
+                dup_lead = find_phone_duplicate(
+                    db=db,
+                    tenant_id=call_tenant_id,
+                    company_id=call_company_id,
+                    phone=phone_to_use,
+                    with_lock=True
+                )
+
+                if dup_lead:
+                    lead_id = dup_lead.id
+                    phone_status_clause = (
+                        "status = CASE WHEN status NOT IN ('won','qualified','proposal','loan_process') THEN :new_crm_status ELSE status END,"
+                        if new_crm_status else ""
+                    )
+                    db.execute(text(f"""
+                        UPDATE crm_leads
+                        SET ai_status=:outcome, ai_summary=:summary, ai_language=:lang,
+                            ai_last_called_at=NOW(), ai_call_count=COALESCE(ai_call_count,0)+1,
+                            last_contact_date=NOW(), updated_at=NOW(),
+                            {phone_status_clause}
+                            city               = COALESCE(NULLIF(:acity,''),  city),
+                            looking_for        = COALESCE(NULLIF(:aloc,''),   looking_for),
+                            requirements       = COALESCE(NULLIF(:areq,''),   requirements),
+                            budget_min         = COALESCE(:abmin, budget_min),
+                            budget_max         = COALESCE(:abmax, budget_max),
+                            next_followup_date = COALESCE(:afollowup, next_followup_date),
+                            recent_comments    = CASE WHEN :rcomment IS NOT NULL
+                                                     THEN :rcomment ELSE recent_comments END
+                        WHERE id = :lid
+                    """), {
+                        "outcome": outcome or "no_answer", "summary": summary,
+                        "lang": detected_lang, "lid": lead_id,
+                        "acity": a_city, "aloc": (f"{a_loc} | {a_prop}" if a_loc and a_prop else a_loc or a_prop),
+                        "areq": a_req, "abmin": a_bmin, "abmax": a_bmax,
+                        "afollowup": parsed_followup, "rcomment": rich_comment,
+                        **({"new_crm_status": new_crm_status} if new_crm_status else {}),
+                    })
+                    # Link the log to this lead + snapshot crm_status_after
+                    updated_status_p = db.execute(text(
+                        "SELECT status FROM crm_leads WHERE id = :lid"
+                    ), {"lid": lead_id}).scalar()
+                    db.execute(text(
+                        "UPDATE ai_call_logs SET lead_id=:lid, crm_status_after=:csa WHERE id=:log"
+                    ), {"lid": lead_id, "csa": updated_status_p, "log": log_id})
+                    # Write CRM note
+                    _agent_p = _get_agent_name_for_log(log_id)
+                    _status_before_p = db.execute(text(
+                        "SELECT crm_status_before FROM ai_call_logs WHERE id=:lid"
+                    ), {"lid": log_id}).scalar()
+                    _write_ai_call_note(lead_id, _agent_p, outcome or "no_answer", summary,
+                                        _status_before_p, updated_status_p,
+                                        detected_lang, duration, parsed_followup or a_followup, rich_comment)
+
+                elif outcome in QUALIFIED_OUTCOMES or (a_interest and a_interest in ("high", "medium")):
+                    # Only auto-create a new lead if there's genuine interest and valid tenancy
+                    new_lead = db.execute(text("""
+                        INSERT INTO crm_leads
+                            (tenant_id, company_id, name, phone, email, city, looking_for, requirements,
+                             budget_min, budget_max, source, status, priority, handler_type, description,
+                             ai_status, ai_summary, ai_language, ai_last_called_at, ai_call_count,
+                             next_followup_date, last_contact_date, recent_comments,
+                             created_at, updated_at)
+                        VALUES
+                            (:tid, :cid, :aname, :phone, :aemail, :acity, :aloc, :areq,
+                             :abmin, :abmax, 'AI Call', 'New', 'medium', 'unassigned',
+                             :desc, :outcome, :summary, :lang, NOW(), 1,
+                             :afollowup, NOW(), :rcomment, NOW(), NOW())
+                        RETURNING id
+                    """), {
+                        "tid": call_tenant_id, "cid": call_company_id,
+                        "aname": a_name or "Unknown", "phone": phone_to_use,
+                        "aemail": a_email, "acity": a_city,
+                        "aloc": (f"{a_loc} | {a_prop}" if a_loc and a_prop else a_loc or a_prop),
+                        "areq": a_req, "abmin": a_bmin, "abmax": a_bmax,
+                        "desc": f"Auto-created from AI call. Timeline: {a_timeline or 'Not mentioned'}",
+                        "outcome": outcome or "no_answer", "summary": summary, "lang": detected_lang,
+                        "afollowup": parsed_followup, "rcomment": rich_comment,
+                    }).fetchone()
+                    if new_lead:
+                        db.execute(text("UPDATE ai_call_logs SET lead_id=:lid WHERE id=:log"),
+                                   {"lid": new_lead[0], "log": log_id})
+                        logger.info(f"[STATUS] ✅ New CRM lead created id={new_lead[0]} log={log_id}")
+                        lead_obj = db.query(CRMLead).filter(CRMLead.id == new_lead[0]).first()
+                        if lead_obj:
+                            from app.services.crm_phone_sync_service import sync_lead_phone_identities
+                            sync_lead_phone_identities(
+                                db=db,
+                                lead=lead_obj,
+                                phone_raw=phone_to_use,
+                                source_channel='ai_calling',
+                                source_ref=f"ai_call_log_{log_id}",
+                                with_lock=False
+                            )
+                        # Write CRM note for the new lead
+                        _agent_n = _get_agent_name_for_log(log_id)
+                        _write_ai_call_note(new_lead[0], _agent_n, outcome or "no_answer", summary,
+                                            None, "contacted", detected_lang, duration,
+                                            a_followup, rich_comment)
+            elif not call_company_id or not call_tenant_id:
+                logger.warning(f"[STATUS] Skipped auto CRM lead creation for log {log_id}: Missing company_id or tenant_id (fail closed)")
+
+        if campaign_id:
+            db.execute(text("""
+                UPDATE ai_campaigns
+                SET calls_made = COALESCE(calls_made,0)+1,
+                    calls_connected = COALESCE(calls_connected,0) + CASE WHEN :connected THEN 1 ELSE 0 END,
+                    calls_qualified = COALESCE(calls_qualified,0) + CASE WHEN :qualified THEN 1 ELSE 0 END,
+                    updated_at = NOW()
+                WHERE id=:cid
+            """), {
+                "connected": final_status == "completed",
+                "qualified": outcome in QUALIFIED_OUTCOMES,
+                "cid": campaign_id,
+            })
+
+        db.commit()
+        _clean_old_audio()
+
+        # Auto-advance: dial next lead(s) to keep concurrency filled
+        if campaign_id:
+            try:
+                _try_advance_campaign(db, campaign_id, _webhook_base(request))
+            except Exception as adv_err:
+                logger.error(f"[AI_CALLING] Auto-advance error: {adv_err}")
+
+        return Response(content="OK", media_type="text/plain")
+    except Exception as exc:
+        logger.error(f"[AI-CALLING] Unhandled exception in webhook_status for log_id={log_id}: {exc}", exc_info=True)
         try:
-            _try_advance_campaign(db, campaign_id, _webhook_base(request))
-        except Exception as adv_err:
-            logger.error(f"[AI_CALLING] Auto-advance error: {adv_err}")
-
-    return Response(content="OK", media_type="text/plain")
+            db.rollback()
+        except Exception:
+            pass
+        return Response(content="ERROR", media_type="text/plain", status_code=200)
 
 
 def _finalize_call(db: Session, log_id: int, outcome: str, transcript: list,

@@ -11,11 +11,14 @@ import os
 import sys
 import xml.etree.ElementTree as ET
 from unittest.mock import patch, MagicMock
+from concurrent.futures import ThreadPoolExecutor
 import pytest
 from starlette.requests import Request
+from sqlalchemy import text
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from app.core.database import SessionLocal
 from app.api.v1.endpoints.staff_ai_calling import (
     _get_plivo_auth_id,
     _get_plivo_auth_token,
@@ -36,6 +39,10 @@ from app.api.v1.endpoints.staff_ai_calling import (
     _webhook_base,
     resolve_persona_from_lead_gender,
     make_test_call,
+    webhook_voice_select,
+    webhook_respond,
+    webhook_poll,
+    webhook_status,
 )
 
 
@@ -91,8 +98,8 @@ def test_dispatch_call_selects_plivo_when_both_present():
         url, kwargs = mock_req_post.call_args
         assert "api.plivo.com/v1/Account/PL_TEST_ID/Call/" in url[0]
         assert kwargs["auth"] == ("PL_TEST_ID", "PL_TEST_TOKEN")
-        assert kwargs["json"]["from"] == "+918031728899"
-        assert kwargs["json"]["to"] == "+919876543210"
+        assert kwargs["json"]["from"] == "918031728899"
+        assert kwargs["json"]["to"] == "919876543210"
         assert kwargs["json"]["answer_url"].startswith("https://example.com/voice-select")
         assert "provider=plivo" in kwargs["json"]["answer_url"]
         assert kwargs["json"]["hangup_url"].startswith("https://example.com/status")
@@ -421,8 +428,8 @@ def test_make_test_call_routes_to_plivo():
         mock_req_post.assert_called_once()
         url, kwargs = mock_req_post.call_args
         assert "api.plivo.com/v1/Account/PL_AUTH/Call/" in url[0]
-        assert kwargs["json"]["to"] == "+919876543210"
-        assert kwargs["json"]["from"] == "+918031728899"
+        assert kwargs["json"]["to"] == "919876543210"
+        assert kwargs["json"]["from"] == "918031728899"
         assert "lang=te" in kwargs["json"]["answer_url"]
 
 
@@ -482,4 +489,554 @@ def test_recording_callback_dual_parameters():
     assert rec_url_tw == "https://api.twilio.com/recordings/RE12345"
     assert rec_sid_tw == "RE12345"
     assert call_sid_tw == "CA12345"
+
+
+# ─── 7. CALL_SID UNIQUE CONSTRAINT, ATOMIC UPSERT & FLOW RESILIENCE ─────────
+
+def test_unique_call_sid_session_creation():
+    """Verify unique call_sid session creation and constraint enforcement in DB."""
+    db = SessionLocal()
+    test_sid = "test_unique_call_sid_session_101"
+    log_id = None
+    try:
+        log_id = db.execute(text(
+            "INSERT INTO ai_call_logs (company_id, phone_dialed, status) VALUES (4, '+919876543210', 'initiated') RETURNING id"
+        )).scalar()
+        db.commit()
+
+        # Insert initial session
+        db.execute(text("""
+            INSERT INTO ai_call_sessions
+                (call_sid, log_id, language, agent_voice, agent_name)
+            VALUES
+                (:sid, :lid, :lang, :voice, :aname)
+            ON CONFLICT (call_sid) DO UPDATE
+                SET language = EXCLUDED.language,
+                    agent_name = EXCLUDED.agent_name
+        """), {"sid": test_sid, "lid": log_id, "lang": "te", "voice": "Polly.Kavya", "aname": "Vidya"})
+        db.commit()
+
+        row = db.execute(text(
+            "SELECT call_sid, language, agent_name FROM ai_call_sessions WHERE call_sid = :sid"
+        ), {"sid": test_sid}).fetchone()
+        assert row is not None
+        assert row[0] == test_sid
+        assert row[1] == "te"
+        assert row[2] == "Vidya"
+    finally:
+        db.execute(text("DELETE FROM ai_call_sessions WHERE call_sid = :sid"), {"sid": test_sid})
+        if log_id:
+            db.execute(text("DELETE FROM ai_call_logs WHERE id = :id"), {"id": log_id})
+        db.commit()
+        db.close()
+
+
+def test_repeated_webhook_atomic_on_conflict_update():
+    """Verify repeated webhooks for the same CallUUID execute atomic update without duplicate key errors."""
+    db = SessionLocal()
+    test_sid = "test_repeated_call_sid_202"
+    log_id = None
+    try:
+        log_id = db.execute(text(
+            "INSERT INTO ai_call_logs (company_id, phone_dialed, status) VALUES (4, '+919876543210', 'initiated') RETURNING id"
+        )).scalar()
+        db.commit()
+
+        # 1. Initial webhook arrival
+        db.execute(text("""
+            INSERT INTO ai_call_sessions
+                (call_sid, log_id, language, agent_voice, agent_name)
+            VALUES
+                (:sid, :lid, :lang, :voice, :aname)
+            ON CONFLICT (call_sid) DO UPDATE
+                SET language = EXCLUDED.language,
+                    agent_name = EXCLUDED.agent_name
+        """), {"sid": test_sid, "lid": log_id, "lang": "te", "voice": "Polly.Kavya", "aname": "Vidya"})
+        db.commit()
+
+        # 2. Repeated webhook arrival with updated params (e.g. carrier retry or voice confirmation)
+        db.execute(text("""
+            INSERT INTO ai_call_sessions
+                (call_sid, log_id, language, agent_voice, agent_name)
+            VALUES
+                (:sid, :lid, :lang, :voice, :aname)
+            ON CONFLICT (call_sid) DO UPDATE
+                SET language = EXCLUDED.language,
+                    agent_name = EXCLUDED.agent_name
+        """), {"sid": test_sid, "lid": log_id, "lang": "hi", "voice": "Polly.Aditi", "aname": "Teja"})
+        db.commit()
+
+        # Verify exactly one row exists and values are updated
+        rows = db.execute(text(
+            "SELECT call_sid, language, agent_name FROM ai_call_sessions WHERE call_sid = :sid"
+        ), {"sid": test_sid}).fetchall()
+        assert len(rows) == 1
+        assert rows[0][0] == test_sid
+        assert rows[0][1] == "hi"
+        assert rows[0][2] == "Teja"
+    finally:
+        db.execute(text("DELETE FROM ai_call_sessions WHERE call_sid = :sid"), {"sid": test_sid})
+        if log_id:
+            db.execute(text("DELETE FROM ai_call_logs WHERE id = :id"), {"id": log_id})
+        db.commit()
+        db.close()
+
+
+def test_concurrent_webhooks_same_call_sid():
+    """Verify concurrent webhooks for the same CallUUID are thread-safe and avoid race duplicates."""
+    db = SessionLocal()
+    test_sid = "test_concurrent_call_sid_303"
+    log_id = None
+    try:
+        log_id = db.execute(text(
+            "INSERT INTO ai_call_logs (company_id, phone_dialed, status) VALUES (4, '+919876543210', 'initiated') RETURNING id"
+        )).scalar()
+        db.commit()
+        db.close()
+
+        def worker(worker_id):
+            w_db = SessionLocal()
+            try:
+                w_db.execute(text("""
+                    INSERT INTO ai_call_sessions
+                        (call_sid, log_id, language, agent_voice, agent_name)
+                    VALUES
+                        (:sid, :lid, :lang, :voice, :aname)
+                    ON CONFLICT (call_sid) DO UPDATE
+                        SET language = EXCLUDED.language,
+                            agent_name = EXCLUDED.agent_name
+                """), {
+                    "sid": test_sid,
+                    "lid": log_id,
+                    "lang": f"l_{worker_id}",
+                    "voice": "Polly.Kavya",
+                    "aname": f"Agent_{worker_id}",
+                })
+                w_db.commit()
+                return True
+            finally:
+                w_db.close()
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            results = list(executor.map(worker, range(5)))
+        assert all(results)
+
+        v_db = SessionLocal()
+        rows = v_db.execute(text(
+            "SELECT call_sid, language, agent_name FROM ai_call_sessions WHERE call_sid = :sid"
+        ), {"sid": test_sid}).fetchall()
+        assert len(rows) == 1
+        v_db.close()
+    finally:
+        cleanup_db = SessionLocal()
+        cleanup_db.execute(text("DELETE FROM ai_call_sessions WHERE call_sid = :sid"), {"sid": test_sid})
+        if log_id:
+            cleanup_db.execute(text("DELETE FROM ai_call_logs WHERE id = :id"), {"id": log_id})
+        cleanup_db.commit()
+        cleanup_db.close()
+
+
+def test_webhook_voice_select_plivo_xml_response():
+    """Verify webhook_voice_select produces valid Plivo XML with <GetInput> and <Speak>."""
+    import asyncio
+    from starlette.datastructures import FormData
+
+    async def _async_test():
+        db = SessionLocal()
+        test_sid = "test_voice_select_plivo_xml_404"
+        log_id = None
+        try:
+            log_id = db.execute(text(
+                "INSERT INTO ai_call_logs (company_id, phone_dialed, status) VALUES (4, '+919876543210', 'initiated') RETURNING id"
+            )).scalar()
+            db.commit()
+
+            req = MagicMock()
+            async def fake_form():
+                return FormData({"CallUUID": test_sid, "From": "+918031728899", "To": "+919876543210"})
+            req.form = fake_form
+            req.query_params = {}
+            req.headers = {"user-agent": "Plivo-Voice-Callback"}
+            req.base_url = "https://www.myntreal.com"
+
+            resp = await webhook_voice_select(
+                request=req,
+                log_id=log_id,
+                lang="te",
+                campaign_id=0,
+                is_test=1,
+                provider="plivo",
+                db=db,
+            )
+
+            assert resp.status_code == 200
+            assert resp.media_type == "application/xml"
+            xml_str = resp.body.decode("utf-8")
+            assert "<GetInput" in xml_str
+            assert "<Speak" in xml_str
+            assert 'language="te-IN"' in xml_str
+
+            root = ET.fromstring(xml_str)
+            assert root.tag == "Response"
+            assert root.find("GetInput") is not None
+        finally:
+            db.execute(text("DELETE FROM ai_call_sessions WHERE call_sid = :sid"), {"sid": test_sid})
+            if log_id:
+                db.execute(text("DELETE FROM ai_call_logs WHERE id = :id"), {"id": log_id})
+            db.commit()
+            db.close()
+
+    asyncio.run(_async_test())
+
+
+def test_webhook_database_failure_fallback_xml():
+    """Verify unexpected database failures return graceful Plivo XML instead of HTTP 500 JSON."""
+    import asyncio
+    from starlette.datastructures import FormData
+
+    async def _async_test():
+        mock_db = MagicMock()
+        mock_db.execute.side_effect = Exception("Simulated DB connection failure")
+
+        req = MagicMock()
+        async def fake_form():
+            return FormData({"CallUUID": "error-test-call-uuid", "From": "+918031728899", "To": "+919876543210"})
+        req.form = fake_form
+        req.query_params = {}
+        req.headers = {"user-agent": "Plivo-Voice-Callback"}
+        req.base_url = "https://www.myntreal.com"
+
+        resp = await webhook_voice_select(
+            request=req,
+            log_id=999,
+            lang="te",
+            provider="plivo",
+            db=mock_db,
+        )
+
+        assert resp.status_code == 200
+        assert resp.media_type == "application/xml"
+        xml_str = resp.body.decode("utf-8")
+        assert "<Response>" in xml_str
+        assert "<Speak" in xml_str
+        assert "<Hangup" in xml_str
+        assert "{" not in xml_str  # Must NOT be JSON error!
+
+        root = ET.fromstring(xml_str)
+        assert root.tag == "Response"
+        assert root.find("Speak") is not None
+        assert root.find("Hangup") is not None
+
+    asyncio.run(_async_test())
+
+
+def test_complete_voice_flow_step_1_2_3():
+    """Verify the complete multi-turn flow: voice-select -> speech (respond) -> poll."""
+    import asyncio
+    from starlette.datastructures import FormData
+
+    async def _async_flow():
+        db = SessionLocal()
+        test_sid = "test_complete_flow_call_sid_505"
+        log_id = None
+        try:
+            log_id = db.execute(text(
+                "INSERT INTO ai_call_logs (company_id, phone_dialed, status) VALUES (4, '+919876543210', 'initiated') RETURNING id"
+            )).scalar()
+            db.commit()
+
+            # Step 1: Plivo hits webhook_voice_select
+            req1 = MagicMock()
+            async def form1():
+                return FormData({"CallUUID": test_sid, "From": "+918031728899", "To": "+919876543210"})
+            req1.form = form1
+            req1.query_params = {}
+            req1.headers = {"user-agent": "Plivo-Voice-Callback"}
+            req1.base_url = "https://www.myntreal.com"
+
+            resp1 = await webhook_voice_select(
+                request=req1,
+                log_id=log_id,
+                lang="te",
+                campaign_id=0,
+                is_test=1,
+                provider="plivo",
+                db=db,
+            )
+            assert resp1.status_code == 200
+            root1 = ET.fromstring(resp1.body.decode("utf-8"))
+            assert root1.find("GetInput") is not None
+
+            # Step 2: Customer speaks, Plivo forwards speech to webhook_respond
+            req2 = MagicMock()
+            async def form2():
+                return FormData({"CallUUID": test_sid, "Speech": "Namaskaram, details cheppandi"})
+            req2.form = form2
+            req2.query_params = {}
+            req2.headers = {"user-agent": "Plivo-Voice-Callback"}
+            req2.base_url = "https://www.myntreal.com"
+
+            with patch("app.api.v1.endpoints.staff_ai_calling._bg_gpt_tts"):
+                resp2 = await webhook_respond(
+                    log_id=log_id,
+                    request=req2,
+                    lang="te",
+                    campaign_id=0,
+                    is_test=1,
+                    provider="plivo",
+                    db=db,
+                )
+                assert resp2.status_code == 200
+                root2 = ET.fromstring(resp2.body.decode("utf-8"))
+                assert root2.find("Redirect") is not None
+                assert root2.find("Wait") is not None
+
+            # Step 3: Plivo redirects to webhook_poll
+            db.execute(text(
+                "UPDATE ai_call_sessions SET next_reply_text='Meeru adigina details ivi...', next_audio_url='FALLBACK' WHERE log_id=:lid"
+            ), {"lid": log_id})
+            db.commit()
+
+            req3 = MagicMock()
+            async def form3():
+                return FormData({"CallUUID": test_sid})
+            req3.form = form3
+            req3.query_params = {}
+            req3.headers = {"user-agent": "Plivo-Voice-Callback"}
+            req3.base_url = "https://www.myntreal.com"
+
+            resp3 = await webhook_poll(
+                log_id=log_id,
+                request=req3,
+                lang="te",
+                campaign_id=0,
+                is_test=1,
+                attempt=1,
+                provider="plivo",
+                db=db,
+            )
+            assert resp3.status_code == 200
+            xml3 = resp3.body.decode("utf-8")
+            root3 = ET.fromstring(xml3)
+            assert root3.find("GetInput") is not None
+            assert "Meeru adigina details ivi..." in xml3
+        finally:
+            db.execute(text("DELETE FROM ai_call_sessions WHERE call_sid = :sid"), {"sid": test_sid})
+            if log_id:
+                db.execute(text("DELETE FROM ai_call_logs WHERE id = :id"), {"id": log_id})
+            db.commit()
+            db.close()
+
+    asyncio.run(_async_flow())
+
+
+def test_webhook_status_followup_and_lead_update():
+    """Verify webhook_status safely processes call completion, parses followup dates, and updates lead without SQL syntax error."""
+    import asyncio
+    from starlette.datastructures import FormData
+
+    async def _async_status():
+        db = SessionLocal()
+        test_sid = "test_status_callback_sid_606"
+        test_phone = "+919999888771"
+        log_id = None
+        lead_id = None
+        try:
+            # 1. Create a test lead with required priority and handler_type
+            lead_id = db.execute(text("""
+                INSERT INTO crm_leads (
+                    tenant_id, company_id, name, phone, status, priority, handler_type, created_at, updated_at
+                ) VALUES (
+                    1, 4, 'Test Followup Lead', :phone, 'New', 'high', 'unassigned', NOW(), NOW()
+                ) RETURNING id
+            """), {"phone": test_phone}).scalar()
+            db.commit()
+
+            # 2. Create test call log linked to lead with transcript
+            log_id = db.execute(text("""
+                INSERT INTO ai_call_logs (
+                    company_id, lead_id, phone_dialed, status, transcript, language_used, created_at
+                ) VALUES (
+                    4, :lid, :phone, 'connected', '[{"speaker":"ai","text":"hello"}]', 'te', NOW()
+                ) RETURNING id
+            """), {"lid": lead_id, "phone": test_phone}).scalar()
+            db.commit()
+
+            # 3. Create test session with conversation & analysis
+            db.execute(text("""
+                INSERT INTO ai_call_sessions (call_sid, log_id, lead_id, language, agent_name, agent_voice, conversation)
+                VALUES (:sid, :lid, :lead_id, 'te', 'Vidya', 'nova', '[]')
+            """), {"sid": test_sid, "lid": log_id, "lead_id": lead_id})
+            db.commit()
+
+            # 4. Invoke webhook_status with Plivo completed callback
+            req = MagicMock()
+            async def form_status():
+                return FormData({
+                    "CallUUID": test_sid,
+                    "CallStatus": "completed",
+                    "Duration": "45",
+                })
+            req.form = form_status
+            req.query_params = {}
+            req.headers = {"user-agent": "Plivo-Voice-Callback"}
+            req.base_url = "https://www.myntreal.com"
+
+            with patch("app.api.v1.endpoints.staff_ai_calling._gpt_summarize") as mock_sum:
+                mock_sum.return_value = {
+                    "outcome": "interested",
+                    "summary": "Customer interested in 3BHK villa",
+                    "next_follow_up_date": "2026-09-30",
+                    "city": "Vijayawada",
+                    "location_preference": "Poranki",
+                    "property_type": "Villa",
+                    "budget_min": "1 Cr",
+                    "budget_max": "1.5 Cr",
+                    "interest_level": "high",
+                    "detected_language": "te",
+                }
+
+                resp = await webhook_status(
+                    log_id=log_id,
+                    request=req,
+                    db=db,
+                )
+
+                assert resp.status_code == 200
+                assert resp.body.decode("utf-8") == "OK"
+
+            # 5. Verify lead was updated with followup date and summary
+            lead_row = db.execute(text("""
+                SELECT ai_status, ai_summary, next_followup_date, looking_for
+                FROM crm_leads WHERE id = :lid
+            """), {"lid": lead_id}).fetchone()
+
+            assert lead_row is not None
+            assert lead_row[0] == "interested"
+            assert "3BHK villa" in (lead_row[1] or "")
+            assert str(lead_row[2]).startswith("2026-09-30")
+            assert "Poranki" in (lead_row[3] or "")
+        finally:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            try:
+                db.execute(text("DELETE FROM ai_call_sessions WHERE call_sid = :sid"), {"sid": test_sid})
+                if log_id:
+                    db.execute(text("DELETE FROM ai_call_logs WHERE id = :id"), {"id": log_id})
+                if lead_id:
+                    db.execute(text("DELETE FROM crm_lead_notes WHERE lead_id = :id"), {"id": lead_id})
+                    db.execute(text("DELETE FROM crm_leads WHERE id = :id"), {"id": lead_id})
+                db.commit()
+            except Exception:
+                pass
+            db.close()
+
+    asyncio.run(_async_status())
+
+
+def test_webhook_status_autocreates_lead_when_unlinked():
+    """Verify webhook_status safely auto-creates a new lead with handler_type when an unlinked qualified call finishes."""
+    import asyncio
+    from starlette.datastructures import FormData
+
+    async def _async_unlinked():
+        db = SessionLocal()
+        test_sid = "test_status_callback_sid_707"
+        test_phone = "+919999888772"
+        log_id = None
+        new_lead_id = None
+        try:
+            # 1. Create test call log WITHOUT lead_id
+            log_id = db.execute(text("""
+                INSERT INTO ai_call_logs (
+                    company_id, phone_dialed, status, transcript, language_used, created_at
+                ) VALUES (
+                    4, :phone, 'connected', '[{"speaker":"ai","text":"hello"}]', 'te', NOW()
+                ) RETURNING id
+            """), {"phone": test_phone}).scalar()
+            db.commit()
+
+            # 2. Create session
+            db.execute(text("""
+                INSERT INTO ai_call_sessions (call_sid, log_id, language, agent_name, agent_voice, conversation)
+                VALUES (:sid, :lid, 'te', 'Vidya', 'nova', '[]')
+            """), {"sid": test_sid, "lid": log_id})
+            db.commit()
+
+            req = MagicMock()
+            async def form_status():
+                return FormData({
+                    "CallUUID": test_sid,
+                    "CallStatus": "completed",
+                    "Duration": "60",
+                })
+            req.form = form_status
+            req.query_params = {}
+            req.headers = {"user-agent": "Plivo-Voice-Callback"}
+            req.base_url = "https://www.myntreal.com"
+
+            with patch("app.api.v1.endpoints.staff_ai_calling._gpt_summarize") as mock_sum:
+                mock_sum.return_value = {
+                    "outcome": "interested",
+                    "summary": "Customer looking for plot in Gannavaram",
+                    "next_follow_up_date": "2026-10-05",
+                    "city": "Vijayawada",
+                    "location_preference": "Gannavaram",
+                    "property_type": "Plot",
+                    "budget_min": "40 L",
+                    "budget_max": "60 L",
+                    "interest_level": "high",
+                    "detected_language": "te",
+                    "customer_name": "Rao Garu",
+                }
+
+                resp = await webhook_status(
+                    log_id=log_id,
+                    request=req,
+                    db=db,
+                )
+
+                assert resp.status_code == 200
+                assert resp.body.decode("utf-8") == "OK"
+
+            # 3. Verify lead was created and attached to log
+            log_row = db.execute(text("SELECT lead_id FROM ai_call_logs WHERE id = :id"), {"id": log_id}).fetchone()
+            assert log_row is not None
+            new_lead_id = log_row[0]
+            assert new_lead_id is not None
+
+            lead_row = db.execute(text("""
+                SELECT name, phone, priority, handler_type, looking_for, ai_status
+                FROM crm_leads WHERE id = :lid
+            """), {"lid": new_lead_id}).fetchone()
+            assert lead_row is not None
+            assert lead_row[0] == "Rao Garu"
+            assert lead_row[1] == test_phone
+            assert lead_row[2] == "medium"
+            assert lead_row[3] == "unassigned"
+            assert "Gannavaram" in lead_row[4]
+            assert lead_row[5] == "interested"
+        finally:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            try:
+                db.execute(text("DELETE FROM ai_call_sessions WHERE call_sid = :sid"), {"sid": test_sid})
+                if log_id:
+                    db.execute(text("DELETE FROM ai_call_logs WHERE id = :id"), {"id": log_id})
+                if new_lead_id:
+                    db.execute(text("DELETE FROM crm_lead_notes WHERE lead_id = :id"), {"id": new_lead_id})
+                    db.execute(text("DELETE FROM crm_lead_identities WHERE lead_id = :id"), {"id": new_lead_id})
+                    db.execute(text("DELETE FROM crm_leads WHERE id = :id"), {"id": new_lead_id})
+                db.commit()
+            except Exception:
+                pass
+            db.close()
+
+    asyncio.run(_async_unlinked())
+
+
 

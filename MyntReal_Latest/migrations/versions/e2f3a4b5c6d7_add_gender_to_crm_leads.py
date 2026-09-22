@@ -21,8 +21,13 @@ def upgrade():
     op.execute(sa.text("SET lock_timeout = '5s';"))
     op.execute(sa.text("SET statement_timeout = '30s';"))
 
-    # 2. Add nullable gender column to crm_leads
-    op.add_column('crm_leads', sa.Column('gender', sa.String(length=20), nullable=True))
+    # 2. Add nullable gender column to crm_leads if not exists
+    bind = op.get_bind()
+    has_col = bind.execute(sa.text(
+        "SELECT 1 FROM information_schema.columns WHERE table_name='crm_leads' AND column_name='gender'"
+    )).scalar()
+    if not has_col:
+        op.add_column('crm_leads', sa.Column('gender', sa.String(length=20), nullable=True))
 
 
 def downgrade():

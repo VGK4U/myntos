@@ -20,7 +20,7 @@ APP_NAME = 'vgk4u'
 ENV_NAME = 'Vgk4u-env'
 S3_BUCKET = 'elasticbeanstalk-ap-south-2-251714435676'
 TIMESTAMP = int(time.time() * 1000)
-VERSION_LABEL = f'v2.4.27-softphone-duration-lead-gender-mobile-parity-{TIMESTAMP}'
+VERSION_LABEL = f'v2.4.28-ai-calling-resilience-plivo-session-parity-{TIMESTAMP}'
 S3_KEY = f'deployments/{VERSION_LABEL}.zip'
 ZIP_PATH = os.path.join(os.path.dirname(__file__), '..', 'deployment.zip')
 
@@ -42,6 +42,14 @@ try:
     from scripts.run_schema_migrations import run_migrations
     run_migrations()
     print("✅ Pre-deployment database migrations successfully synchronized.")
+
+    from alembic.config import Config
+    from alembic import command
+    alembic_cfg = Config(os.path.join(os.path.dirname(__file__), '..', 'alembic.ini'))
+    if prod_db_url:
+        alembic_cfg.set_main_option("sqlalchemy.url", prod_db_url)
+    command.upgrade(alembic_cfg, "head")
+    print("✅ Alembic migrations successfully upgraded to head.")
 except Exception as mig_err:
     print(f"❌ CRITICAL PRE-DEPLOYMENT MIGRATION FAILURE: {mig_err}")
     print("🛑 DEPLOYMENT ABORTED: Production database schema cannot be verified or migrated.")
@@ -59,7 +67,7 @@ eb.create_application_version(
         'S3Bucket': S3_BUCKET,
         'S3Key': S3_KEY
     },
-    Description='MyntOS v2.4.27: Sales performance report all-mediums talk time, IST timezone cutoff fix, softphone deduplication'[:190],
+    Description='MyntOS v2.4.28: AI calling Plivo webhook resilience, unique call_sid constraint, CRM follow-up parsing, unlinked lead auto-creation'[:190],
     AutoCreateApplication=False
 )
 print("Application version created.")
