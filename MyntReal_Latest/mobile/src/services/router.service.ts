@@ -74,6 +74,8 @@ export type PageRoute =
   // Location Tracking Section - New
   | 'staff-all-location-tracker'
   | 'staff-team-live-tracker'
+  | 'all-location-tracker'
+  | 'team-live-tracker'
   // Reimbursement Section - New
   | 'staff-reimbursement-approvals'
   | 'staff-procurement-requests'
@@ -334,6 +336,8 @@ class RouterService {
     // Location Tracking Section - New Routes
     'staff-all-location-tracker': { id: 'staff-all-location-tracker', title: 'All Location Tracker', icon: 'map-pin', showInTabs: false, portal: 'staff' },
     'staff-team-live-tracker': { id: 'staff-team-live-tracker', title: 'Team Live Tracker', icon: 'navigation', showInTabs: false, portal: 'staff' },
+    'all-location-tracker': { id: 'staff-all-location-tracker', title: 'All Location Tracker', icon: 'map-pin', showInTabs: false, portal: 'staff' },
+    'team-live-tracker': { id: 'staff-team-live-tracker', title: 'Team Live Tracker', icon: 'navigation', showInTabs: false, portal: 'staff' },
     // Reimbursement Section - New Routes
     'staff-reimbursement-approvals': { id: 'staff-reimbursement-approvals', title: 'Reimbursement Approvals', icon: 'check-circle', showInTabs: false, portal: 'staff' },
     'staff-procurement-requests': { id: 'staff-procurement-requests', title: 'Procurement Requests', icon: 'file-text', showInTabs: false, portal: 'staff' },
@@ -469,6 +473,10 @@ class RouterService {
     let targetRoute: PageRoute = route;
     if (route === 'catalog-library' || route === 'staff-catalog-library' || (route as string) === 'catalog') {
       targetRoute = 'digital-catalog';
+    } else if ((route as string) === 'all-location-tracker') {
+      targetRoute = 'staff-all-location-tracker';
+    } else if ((route as string) === 'team-live-tracker') {
+      targetRoute = 'staff-team-live-tracker';
     }
     if (addToHistory && this.currentRoute !== targetRoute) {
       this.history.push(this.currentRoute);

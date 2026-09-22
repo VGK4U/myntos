@@ -14,6 +14,53 @@
   /* ── Modal HTML ──────────────────────────────────────────────────────────── */
   var MODAL_HTML = [
     '<div id="_lwaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000000;align-items:center;justify-content:center;padding:16px;box-sizing:border-box">',
+    '<style>',
+    '  #_lwaModal {',
+    '    --bs-body-color: #0f172a !important;',
+    '    --bs-body-bg: #ffffff !important;',
+    '    --bs-border-color: #cbd5e1 !important;',
+    '    --bs-tertiary-bg: #f8fafc !important;',
+    '    --bs-secondary-bg: #f1f5f9 !important;',
+    '    --bs-emphasis-color: #0f172a !important;',
+    '    --bs-secondary-color: #475569 !important;',
+    '    color-scheme: light !important;',
+    '    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;',
+    '    color: #0f172a !important;',
+    '  }',
+    '  #_lwaModal * { box-sizing: border-box !important; }',
+    '  #_lwaModal div, #_lwaModal span, #_lwaModal p, #_lwaModal small { color-scheme: light !important; }',
+    '  #_lwaModal input, #_lwaModal select, #_lwaModal textarea {',
+    '    background-color: #ffffff !important;',
+    '    color: #0f172a !important;',
+    '    border: 1.5px solid #cbd5e1 !important;',
+    '    color-scheme: light !important;',
+    '    -webkit-text-fill-color: #0f172a !important;',
+    '    font-size: 12.5px !important;',
+    '  }',
+    '  #_lwaModal input:focus, #_lwaModal select:focus, #_lwaModal textarea:focus {',
+    '    background-color: #ffffff !important;',
+    '    color: #0f172a !important;',
+    '    border-color: #10b981 !important;',
+    '    outline: none !important;',
+    '    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2) !important;',
+    '    -webkit-text-fill-color: #0f172a !important;',
+    '  }',
+    '  #_lwaModal input::placeholder, #_lwaModal textarea::placeholder {',
+    '    color: #64748b !important;',
+    '    -webkit-text-fill-color: #64748b !important;',
+    '    opacity: 1 !important;',
+    '  }',
+    '  #_lwaModal select option {',
+    '    background-color: #ffffff !important;',
+    '    color: #0f172a !important;',
+    '    -webkit-text-fill-color: #0f172a !important;',
+    '  }',
+    '  #_lwaModal label {',
+    '    color: #1e293b !important;',
+    '    font-weight: 700 !important;',
+    '    -webkit-text-fill-color: #1e293b !important;',
+    '  }',
+    '</style>',
     '<div style="background:#fff;border-radius:16px;width:100%;max-width:540px;max-height:92vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.3)">',
 
     /* header */
@@ -26,10 +73,10 @@
     /* body */
     '<div style="padding:18px">',
 
-    /* mode toggle */
-    '<div style="display:flex;gap:8px;margin-bottom:16px;background:#f3f4f6;border-radius:10px;padding:4px">',
-    '<button id="_lwaBtnScanned" onclick="window._lwaMode(\'scanned\')" style="flex:1;padding:8px 6px;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s"><i class="fas fa-qrcode text-success"></i> 📱 Scanned WhatsApp<small style="display:block;font-weight:400;font-size:10px;margin-top:1px">Employee Account · Scanned</small></button>',
-    '<button id="_lwaBtnComp"    onclick="window._lwaMode(\'company\')" style="flex:1;padding:8px 6px;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s"><i class="fas fa-building text-primary"></i> 🏢 Official WhatsApp<small style="display:block;font-weight:400;font-size:10px;margin-top:1px">Meta Cloud API · Verified</small></button>',
+    /* mode toggle: simplified to Scan and API */
+    '<div style="display:flex;gap:8px;margin-bottom:14px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;padding:4px">',
+    '<button id="_lwaBtnScanned" type="button" onclick="window._lwaMode(\'scanned\')" style="flex:1;padding:8px 12px;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s"><i class="fas fa-qrcode text-success"></i> <span>Scan</span> <span id="_lwaScanTopPill" style="background:#10b981;color:#fff;font-size:9.5px;padding:2px 7px;border-radius:10px;font-weight:700">● Active</span></button>',
+    '<button id="_lwaBtnComp"    type="button" onclick="window._lwaMode(\'company\')" style="flex:1;padding:8px 12px;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s"><i class="fas fa-cloud text-primary"></i> <span>API</span> <span id="_lwaApiTopPill" style="background:#64748b;color:#fff;font-size:9.5px;padding:2px 7px;border-radius:10px;font-weight:600">Meta</span></button>',
     '</div>',
 
     /* 1-tap quick responses */
@@ -74,7 +121,7 @@
     '</div>',
 
     '<div id="_lwaFilters" style="display:flex;gap:8px;margin-bottom:8px">',
-    '<select id="_lwaSeg" onchange="window._lwaLoadTpls()" style="flex:1;font-size:12px;padding:6px 8px;border:1px solid #e5e7eb;border-radius:7px;background:#fff">',
+    '<select id="_lwaSeg" onchange="window._lwaLoadTpls()" style="flex:1;font-size:12px;padding:6px 8px;border:1.5px solid #cbd5e1;border-radius:7px;background:#ffffff !important;color:#0f172a !important;-webkit-text-fill-color:#0f172a !important;color-scheme:light !important">',
     '<option value="">🏢 All Segments</option>',
     '<option value="solar">☀️ Solar</option>',
     '<option value="real_estate">🏡 Real Estate</option>',
@@ -90,7 +137,7 @@
     '<option value="general">🌐 MNR General</option>',
     '<option value="system">🤖 System</option>',
     '</select>',
-    '<select id="_lwaCat" onchange="window._lwaLoadTpls()" style="flex:1;font-size:12px;padding:6px 8px;border:1px solid #e5e7eb;border-radius:7px;background:#fff">',
+    '<select id="_lwaCat" onchange="window._lwaLoadTpls()" style="flex:1;font-size:12px;padding:6px 8px;border:1.5px solid #cbd5e1;border-radius:7px;background:#ffffff !important;color:#0f172a !important;-webkit-text-fill-color:#0f172a !important;color-scheme:light !important">',
     '<option value="">All Categories</option>',
     '<option value="MARKETING">Marketing</option>',
     '<option value="UTILITY">Utility</option>',
@@ -100,13 +147,13 @@
 
     /* search bar for template content / name */
     '<div style="position:relative;margin-bottom:8px">',
-    '<input type="text" id="_lwaTplSearch" placeholder="🔍 Search template content or name..." oninput="window._lwaFilterTpls()" style="width:100%;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;padding:6px 10px;box-sizing:border-box">',
+    '<input type="text" id="_lwaTplSearch" placeholder="🔍 Search template content or name..." oninput="window._lwaFilterTpls()" style="width:100%;font-size:12px;border:1.5px solid #cbd5e1;border-radius:7px;padding:7px 10px;box-sizing:border-box;background:#ffffff !important;color:#0f172a !important;-webkit-text-fill-color:#0f172a !important;color-scheme:light !important">',
     '</div>',
 
     /* template selector */
     '<div style="margin-bottom:12px">',
-    '<label id="_lwaTplLbl" style="font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Template (Approved &amp; Ready)</label>',
-    '<select id="_lwaTpl" onchange="window._lwaTplChange()" style="width:100%;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;padding:6px 9px;background:#fff;box-sizing:border-box">',
+    '<label id="_lwaTplLbl" style="font-size:10.5px;font-weight:700;color:#1e293b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Template (Approved &amp; Ready)</label>',
+    '<select id="_lwaTpl" onchange="window._lwaTplChange()" style="width:100%;font-size:12px;border:1.5px solid #cbd5e1;border-radius:7px;padding:7px 9px;background:#ffffff !important;color:#0f172a !important;-webkit-text-fill-color:#0f172a !important;color-scheme:light !important;box-sizing:border-box">',
     '<option value="">— Loading templates… —</option>',
     '</select>',
     '<div id="_lwaNoTpl" style="display:none;margin-top:6px;font-size:11px;color:#b45309;background:#fef3c7;border:1px solid #fde68a;border-radius:6px;padding:8px 10px">',
@@ -161,42 +208,43 @@
     /* smart recipient search */
     '<div id="_lwaSearchBox" style="margin-bottom:12px;position:relative">',
     '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">',
-    '<label style="font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin:0"><i class="fas fa-search text-success me-1"></i> Search Recipient (Name or 3+ Digits)</label>',
+    '<label style="font-size:10.5px;font-weight:700;color:#1e293b;text-transform:uppercase;letter-spacing:.04em;margin:0"><i class="fas fa-search text-success me-1"></i> Search Recipient (Name or 3+ Digits)</label>',
     '<span style="font-size:10px;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;padding:1px 6px;border-radius:4px;font-weight:600">Leads · Calls · Partners</span>',
     '</div>',
     '<div style="position:relative">',
-    '<input type="text" id="_lwaSearchInp" placeholder="Search contact by name or digits (or type 10-digit number below)..." onfocus="if(!this.value) window._lwaSearchRecipients(\'\')" oninput="window._lwaSearchRecipients(this.value)" autocomplete="off" style="width:100%;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;padding:7px 10px;box-sizing:border-box">',
+    '<input type="text" id="_lwaSearchInp" placeholder="Search contact by name or digits (or type 10-digit number below)..." onfocus="if(!this.value) window._lwaSearchRecipients(\'\')" oninput="window._lwaSearchRecipients(this.value)" autocomplete="off" style="width:100%;font-size:12.5px;border:1.5px solid #cbd5e1;border-radius:7px;padding:7px 10px;box-sizing:border-box;background:#ffffff !important;color:#0f172a !important;-webkit-text-fill-color:#0f172a !important;color-scheme:light !important">',
     '<div id="_lwaSearchResults" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #10b981;border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,0.18);max-height:220px;overflow-y:auto;z-index:1000"></div>',
     '</div>',
     '</div>',
 
     /* recipient phone */
     '<div style="margin-bottom:12px">',
-    '<label style="font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Recipient Mobile Number</label>',
+    '<label style="font-size:10.5px;font-weight:700;color:#1e293b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Recipient Mobile Number</label>',
     '<div style="display:flex;gap:6px">',
-    '<input type="tel" id="_lwaPhoneInp" style="flex:1;font-size:13px;border:1px solid #e5e7eb;border-radius:7px;padding:7px 10px;box-sizing:border-box" placeholder="10-digit mobile number">',
+    '<input type="tel" id="_lwaPhoneInp" style="flex:1;font-size:13px;border:1.5px solid #cbd5e1;border-radius:7px;padding:7px 10px;box-sizing:border-box;background:#ffffff !important;color:#0f172a !important;-webkit-text-fill-color:#0f172a !important;color-scheme:light !important" placeholder="10-digit mobile number">',
     '<button type="button" id="_lwaPhoneEditBtn" onclick="window._lwaUnlockPhone()" style="display:none;padding:7px 12px;border:1px solid #d1d5db;border-radius:7px;background:#f9fafb;color:#374151;font-size:12px;cursor:pointer" title="Change Number"><i class="fas fa-edit"></i></button>',
     '</div>',
     '</div>',
 
     /* message */
     '<div style="margin-bottom:12px">',
-    '<label style="font-size:10.5px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Message <small style="text-transform:none;font-weight:400">(auto-filled from template, or write custom)</small></label>',
-    '<textarea id="_lwaMsg" rows="6" style="width:100%;font-size:13px;font-family:\'Segoe UI\',system-ui,-apple-system,sans-serif;line-height:1.55;border:1px solid #e5e7eb;border-radius:7px;padding:10px;resize:vertical;box-sizing:border-box;white-space:pre-wrap" placeholder="Select a template above or type your message…"></textarea>',
+    '<label style="font-size:10.5px;font-weight:700;color:#1e293b;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:4px">Message <small style="text-transform:none;font-weight:400;color:#64748b">(auto-filled from template, or write custom)</small></label>',
+    '<textarea id="_lwaMsg" rows="6" style="width:100%;font-size:13px;font-family:\'Segoe UI\',system-ui,-apple-system,sans-serif;line-height:1.55;border:1.5px solid #cbd5e1;border-radius:7px;padding:10px;resize:vertical;box-sizing:border-box;white-space:pre-wrap;background:#ffffff !important;color:#0f172a !important;-webkit-text-fill-color:#0f172a !important;color-scheme:light !important" placeholder="Select a template above or type your message…"></textarea>',
     '</div>',
 
     /* result */
     '<div id="_lwaResult" style="display:none;padding:9px 12px;border-radius:8px;font-size:12px;margin-bottom:12px"></div>',
 
-    /* buttons */
-    '<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap">',
+    /* buttons: Both Scan and API available side-by-side with live active highlight */
+    '<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap;border-top:1px solid #e2e8f0;padding-top:12px;margin-top:8px">',
     '<div style="display:flex;gap:6px">',
     '<button type="button" onclick="window._lwaDirectWeb()" style="padding:8px 12px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer" title="Open direct chat in WhatsApp Web"><i class="fab fa-whatsapp me-1"></i>Direct Web</button>',
-    '<button type="button" onclick="window._lwaCopyText()" style="padding:8px 12px;background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" title="Copy message to clipboard"><i class="fas fa-copy me-1"></i>Copy</button>',
+    '<button type="button" onclick="window._lwaCopyText()" style="padding:8px 12px;background:#f8fafc;color:#334155;border:1px solid #cbd5e1;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer" title="Copy message to clipboard"><i class="fas fa-copy me-1"></i>Copy</button>',
     '</div>',
-    '<div style="display:flex;gap:8px">',
-    '<button onclick="window._lwaClose()" style="padding:8px 16px;border:1.5px solid #e5e7eb;border-radius:8px;background:#fff;color:#374151;font-size:12px;cursor:pointer">Cancel</button>',
-    '<button id="_lwaSend" onclick="window._lwaDoSend()" style="padding:8px 20px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;min-width:140px"><i class="fab fa-whatsapp"></i> <span id="_lwaSendLbl">Send via 🏢 Official WhatsApp</span></button>',
+    '<div style="display:flex;gap:8px;align-items:center">',
+    '<button type="button" onclick="window._lwaClose()" style="padding:8px 14px;border:1.5px solid #cbd5e1;border-radius:8px;background:#fff;color:#475569;font-size:12px;font-weight:600;cursor:pointer">Cancel</button>',
+    '<button type="button" id="_lwaBtnSendScan" onclick="window._lwaSendWithMode(\'scanned\')" style="padding:8px 18px;background:#10b981;color:#fff;border:2px solid #059669;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(16,185,129,0.35)"><i class="fas fa-qrcode"></i> <span>Scan</span> <span id="_lwaScanBotBadge" style="background:#047857;color:#fff;font-size:9.5px;padding:1px 6px;border-radius:10px;font-weight:700">● Active</span></button>',
+    '<button type="button" id="_lwaBtnSendApi" onclick="window._lwaSendWithMode(\'company\')" style="padding:8px 18px;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;opacity:0.9"><i class="fas fa-cloud"></i> <span>API</span> <span id="_lwaApiBotBadge" style="background:#3b82f6;color:#fff;font-size:9.5px;padding:1px 6px;border-radius:10px;font-weight:600">Meta</span></button>',
     '</div>',
     '</div>',
 
@@ -204,7 +252,7 @@
   ].join('');
 
   /* ── State ───────────────────────────────────────────────────────────────── */
-  var _s = { leadId: null, phone: null, name: null, companyId: null, mode: 'company', tpls: [], bodyTpl: '' };
+  var _s = { leadId: null, phone: null, name: null, companyId: null, mode: 'scanned', tpls: [], bodyTpl: '' };
 
   /* ── Inject modal ────────────────────────────────────────────────────────── */
   function _ensure() {
@@ -344,20 +392,44 @@
     var bComp = document.getElementById('_lwaBtnComp');
     if (bScan && bComp) {
       bScan.style.background = isScanned ? '#fff' : 'transparent';
-      bScan.style.color      = isScanned ? '#128c7e' : '#6b7280';
+      bScan.style.color      = isScanned ? '#047857' : '#64748b';
+      bScan.style.border     = isScanned ? '1.5px solid #10b981' : '1px solid transparent';
       bScan.style.boxShadow  = isScanned ? '0 1px 4px rgba(0,0,0,.1)' : 'none';
 
       bComp.style.background = !isScanned ? '#fff' : 'transparent';
-      bComp.style.color      = !isScanned ? '#2563eb' : '#6b7280';
+      bComp.style.color      = !isScanned ? '#1d4ed8' : '#64748b';
+      bComp.style.border     = !isScanned ? '1.5px solid #2563eb' : '1px solid transparent';
       bComp.style.boxShadow  = !isScanned ? '0 1px 4px rgba(0,0,0,.1)' : 'none';
     }
 
-    var lbl = document.getElementById('_lwaSendLbl');
-    if (lbl) lbl.textContent = isScanned ? 'Send via 📱 Scanned WhatsApp' : 'Send via 🏢 Official WhatsApp';
+    var btnSendScan = document.getElementById('_lwaBtnSendScan');
+    var btnSendApi  = document.getElementById('_lwaBtnSendApi');
+    if (btnSendScan && btnSendApi) {
+      if (isScanned) {
+        btnSendScan.style.background = '#10b981';
+        btnSendScan.style.color      = '#fff';
+        btnSendScan.style.border     = '2px solid #059669';
+        btnSendScan.style.boxShadow  = '0 0 0 3px rgba(16,185,129,0.25)';
+        btnSendScan.style.opacity    = '1';
 
-    var sendBtn = document.getElementById('_lwaSend');
-    if (sendBtn) {
-      sendBtn.style.background = isScanned ? '#128c7e' : '#2563eb';
+        btnSendApi.style.background  = '#eff6ff';
+        btnSendApi.style.color       = '#1d4ed8';
+        btnSendApi.style.border      = '1.5px solid #bfdbfe';
+        btnSendApi.style.boxShadow   = 'none';
+        btnSendApi.style.opacity     = '0.9';
+      } else {
+        btnSendApi.style.background  = '#2563eb';
+        btnSendApi.style.color       = '#fff';
+        btnSendApi.style.border      = '2px solid #1d4ed8';
+        btnSendApi.style.boxShadow   = '0 0 0 3px rgba(37,99,235,0.25)';
+        btnSendApi.style.opacity     = '1';
+
+        btnSendScan.style.background = '#ecfdf5';
+        btnSendScan.style.color      = '#047857';
+        btnSendScan.style.border     = '1.5px solid #a7f3d0';
+        btnSendScan.style.boxShadow  = 'none';
+        btnSendScan.style.opacity    = '0.9';
+      }
     }
 
     var tplLbl = document.getElementById('_lwaTplLbl');
@@ -552,6 +624,12 @@
       return;
     }
 
+    /* When user selects a template, default to Scan mode only as instructed */
+    if (_s.mode !== 'scanned') {
+      _s.mode = 'scanned';
+      _applyModeStyle();
+    }
+
     var tpl = _s.tpls.find(function (t) { return String(t.id) === String(tplId); });
     if (!tpl) return;
 
@@ -571,9 +649,9 @@
       uniqueIndices.forEach(function (idx) {
         var defaultVal = (idx === '1') ? (_s.name || '') : '';
         html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">' +
-          '<label style="font-size:11px;font-weight:600;width:30px">#' + idx + '</label>' +
+          '<label style="font-size:11px;font-weight:700;color:#1e293b;width:30px">#' + idx + '</label>' +
           '<input type="text" id="_lwaVar_' + idx + '" value="' + _esc(defaultVal) + '" oninput="window._lwaPreview()" ' +
-          'style="flex:1;font-size:12px;border:1px solid #e5e7eb;border-radius:6px;padding:5px 8px" placeholder="Value for {{' + idx + '}}">' +
+          'style="flex:1;font-size:12px;border:1.5px solid #cbd5e1;border-radius:6px;padding:5px 8px;background:#ffffff !important;color:#0f172a !important;-webkit-text-fill-color:#0f172a !important;color-scheme:light !important" placeholder="Value for {{' + idx + '}}">' +
           '</div>';
       });
       varBox.innerHTML = html;
@@ -629,8 +707,10 @@
       varVals[k] = inp.value;
     });
 
-    var btn = document.getElementById('_lwaSend');
-    btn.disabled = true;
+    var btnScan = document.getElementById('_lwaBtnSendScan');
+    var btnApi  = document.getElementById('_lwaBtnSendApi');
+    if (btnScan) btnScan.disabled = true;
+    if (btnApi) btnApi.disabled = true;
 
     function _getAuthToken() {
       try {
@@ -646,7 +726,7 @@
 
     /* Scanned mode send */
     if (_s.mode === 'scanned') {
-      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending via Bot…';
+      if (btnScan) btnScan.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending Scan…';
       _showRes('', null);
       fetch('/api/v1/whatsapp/send-message', {
         method: 'POST', credentials: 'include',
@@ -664,8 +744,8 @@
       .then(function(r) { return r.json(); })
       .then(function(d) {
         if (d.success || d.status === 'sent') {
-          btn.innerHTML = '<i class="fas fa-check"></i> Sent via Bot ✓';
-          _showRes('✅ Sent via 📱 Scanned WhatsApp! (Dispatched & Tracked)', true);
+          if (btnScan) btnScan.innerHTML = '<i class="fas fa-check"></i> Sent Scan ✓';
+          _showRes('✅ Sent via Scan WhatsApp! (Dispatched &amp; Tracked)', true);
           if (_s.leadId && _s.leadId !== 'new' && !isNaN(parseInt(_s.leadId, 10))) {
             fetch(API + '/crm-lead-send/' + _s.leadId + '/log-direct', {
               method: 'POST', credentials: 'include',
@@ -688,24 +768,30 @@
               })
             }).catch(function(e) { console.warn('[lwa] log-catalog-dispatch non-fatal', e); });
           }
-          setTimeout(function() { document.getElementById('_lwaModal').style.display = 'none'; }, 2500);
+          setTimeout(function() { document.getElementById('_lwaModal').style.display = 'none'; }, 2000);
         } else {
           var errDetail = d.detail || d.message || d.error || d.reason || 'Gateway dispatch failed';
           _showRes('❌ ' + errDetail, false);
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fas fa-qrcode"></i> <span id="_lwaSendLbl">Send via Scanned Bot</span>';
+          if (btnScan) {
+            btnScan.disabled = false;
+            btnScan.innerHTML = '<i class="fas fa-qrcode"></i> <span>Scan</span> <span id="_lwaScanBotBadge" style="background:#047857;color:#fff;font-size:9.5px;padding:1px 6px;border-radius:10px;font-weight:700">● Active</span>';
+          }
+          if (btnApi) btnApi.disabled = false;
         }
       })
       .catch(function(e) {
         _showRes('Network error: ' + e.message, false);
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-qrcode"></i> <span id="_lwaSendLbl">Send via Scanned Bot</span>';
+        if (btnScan) {
+          btnScan.disabled = false;
+          btnScan.innerHTML = '<i class="fas fa-qrcode"></i> <span>Scan</span> <span id="_lwaScanBotBadge" style="background:#047857;color:#fff;font-size:9.5px;padding:1px 6px;border-radius:10px;font-weight:700">● Active</span>';
+        }
+        if (btnApi) btnApi.disabled = false;
       });
       return;
     }
 
     /* Company mode send */
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending via Meta…';
+    if (btnApi) btnApi.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending API…';
     _showRes('', null);
 
     var isNumericLead = _s.leadId && !isNaN(parseInt(_s.leadId, 10)) && parseInt(_s.leadId, 10) > 0;
@@ -731,8 +817,8 @@
     .then(function(r) { return r.json(); })
     .then(function(d) {
       if (d.success) {
-        btn.innerHTML = '<i class="fas fa-check"></i> Sent ✓';
-        _showRes('✅ Sent via 🏢 Official WhatsApp! WAMID: ' + (d.wamid || 'N/A') + ' (Dispatched & Tracked)', true);
+        if (btnApi) btnApi.innerHTML = '<i class="fas fa-check"></i> Sent API ✓';
+        _showRes('✅ Sent via WhatsApp API! WAMID: ' + (d.wamid || 'N/A') + ' (Dispatched &amp; Tracked)', true);
         if (_s.catalogId) {
           fetch('/api/v1/digital-catalogs/' + _s.catalogId + '/log-dispatch', {
             method: 'POST', credentials: 'include',
@@ -749,18 +835,24 @@
             })
           }).catch(function(e) { console.warn('[lwa] log-catalog-dispatch non-fatal', e); });
         }
-        setTimeout(function() { document.getElementById('_lwaModal').style.display = 'none'; }, 3000);
+        setTimeout(function() { document.getElementById('_lwaModal').style.display = 'none'; }, 2000);
       } else {
         var reason = d.reason || d.detail || d.error || 'Meta dispatch failed';
         _showRes('❌ ' + reason, false);
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fab fa-whatsapp"></i> <span id="_lwaSendLbl">Send via Meta</span>';
+        if (btnApi) {
+          btnApi.disabled = false;
+          btnApi.innerHTML = '<i class="fas fa-cloud"></i> <span>API</span> <span id="_lwaApiBotBadge" style="background:#3b82f6;color:#fff;font-size:9.5px;padding:1px 6px;border-radius:10px;font-weight:600">Meta</span>';
+        }
+        if (btnScan) btnScan.disabled = false;
       }
     })
     .catch(function(e) {
       _showRes('Network error: ' + e.message, false);
-      btn.disabled = false;
-      btn.innerHTML = '<i class="fab fa-whatsapp"></i> <span id="_lwaSendLbl">Send via Meta</span>';
+      if (btnApi) {
+        btnApi.disabled = false;
+        btnApi.innerHTML = '<i class="fas fa-cloud"></i> <span>API</span> <span id="_lwaApiBotBadge" style="background:#3b82f6;color:#fff;font-size:9.5px;padding:1px 6px;border-radius:10px;font-weight:600">Meta</span>';
+      }
+      if (btnScan) btnScan.disabled = false;
     });
   }
 
@@ -1523,6 +1615,7 @@
   function _bindGlobals() {
     window._lwaClose           = function() { document.getElementById('_lwaModal').style.display = 'none'; };
     window._lwaMode            = function(m) { _s.mode = m; _applyModeStyle(); _loadTpls(); };
+    window._lwaSendWithMode    = function(m) { _s.mode = m; _applyModeStyle(); _doSend(); };
     window._lwaLoadTpls        = function() { _loadTpls(); };
     window._lwaTplChange       = function() { _onTplChange(); };
     window._lwaPreview         = function() { _buildPreview(); };
@@ -1550,6 +1643,30 @@
     };
   }
 
+  function _checkBotLiveStatus() {
+    fetch('/api/v1/whatsapp/bot-status', { credentials: 'include' })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        var isConn = d && (d.connected === true || d.status === 'connected');
+        var scanTop = document.getElementById('_lwaScanTopPill');
+        var scanBot = document.getElementById('_lwaScanBotBadge');
+        if (scanTop && scanBot) {
+          if (isConn) {
+            scanTop.innerHTML = '● Active &amp; Ready';
+            scanTop.style.background = '#10b981';
+            scanBot.innerHTML = '● Active &amp; Ready';
+            scanBot.style.background = '#047857';
+          } else {
+            scanTop.innerHTML = '● Connecting / QR';
+            scanTop.style.background = '#f59e0b';
+            scanBot.innerHTML = '● Connecting / QR';
+            scanBot.style.background = '#d97706';
+          }
+        }
+      })
+      .catch(function() {});
+  }
+
   /* ── Public entry point ──────────────────────────────────────────────────── */
   window.openLeadWAModal = function(leadId, phone, name, companyId, initialMessage, context) {
     _ensure();
@@ -1561,7 +1678,7 @@
     var catalogId = ctxObj.catalogId || null;
     var forcedCatKey = ctxObj.catalogKey || null;
 
-    _s = { leadId: leadId, phone: cleanP, name: name, companyId: companyId, mode: 'company', tpls: [], bodyTpl: '', context: ctxStr, catalogId: catalogId };
+    _s = { leadId: leadId, phone: cleanP, name: name, companyId: companyId, mode: 'scanned', tpls: [], bodyTpl: '', context: ctxStr, catalogId: catalogId };
 
     /* reset UI */
     document.getElementById('_lwaSub').textContent     = (name || 'Contact') + (cleanP ? (' · ' + _maskPhone(cleanP)) : '');
@@ -1645,10 +1762,18 @@
     
     document.getElementById('_lwaVars').style.display  = 'none';
     document.getElementById('_lwaVarBox').innerHTML    = '';
-    document.getElementById('_lwaNoTpl').style.display = 'none';
-    document.getElementById('_lwaResult').style.display= 'none';
-    document.getElementById('_lwaSend').disabled       = false;
+    var bSendScan = document.getElementById('_lwaBtnSendScan');
+    var bSendApi  = document.getElementById('_lwaBtnSendApi');
+    if (bSendScan) {
+      bSendScan.disabled = false;
+      bSendScan.innerHTML = '<i class="fas fa-qrcode"></i> <span>Scan</span> <span id="_lwaScanBotBadge" style="background:#047857;color:#fff;font-size:9.5px;padding:1px 6px;border-radius:10px;font-weight:700">● Active</span>';
+    }
+    if (bSendApi) {
+      bSendApi.disabled = false;
+      bSendApi.innerHTML = '<i class="fas fa-cloud"></i> <span>API</span> <span id="_lwaApiBotBadge" style="background:#3b82f6;color:#fff;font-size:9.5px;padding:1px 6px;border-radius:10px;font-weight:600">Meta</span>';
+    }
     _applyModeStyle();
+    _checkBotLiveStatus();
 
     document.getElementById('_lwaModal').style.display = 'flex';
     _loadTpls();

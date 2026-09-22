@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 COL_MAP = {
     'name': ['full_name', 'name', 'full name', 'customer name', 'lead name',
              'your name', 'applicant name', 'contact name'],
+    'gender': ['gender', 'sex'],
     'first_name': ['first_name', 'first name'],
     'last_name':  ['last_name', 'last name', 'surname'],
     'phone': ['phone_number', 'phone', 'mobile', 'mobile number', 'contact number',
@@ -219,6 +220,16 @@ def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
     investment_capacity = get('investment_capacity') or None
     planning_start      = get('planning_start') or None
     full_time_business  = get('full_time_business') or None
+    raw_gender          = get('gender') or None
+    gender              = None
+    if raw_gender:
+        _g = str(raw_gender).strip().lower()
+        if _g in ('male', 'm'):
+            gender = 'male'
+        elif _g in ('female', 'f'):
+            gender = 'female'
+        elif _g in ('unknown', 'other', 'u'):
+            gender = 'unknown'
 
     # Build description — DC Protocol Apr 2026: capture all recognised extra fields
     desc_parts = [f"Imported from {source_tag}"]
@@ -287,6 +298,7 @@ def row_to_crm_lead(row: List[str], col_map: Dict[str, int],
         'company_id':           target_company_id,
         'category_id':          target_category_id,
         'name':                 name[:200],
+        'gender':               gender,
         'phone':                phone[:20]  if phone else None,
         'email':                email[:200] if email else None,
         'city':                 city[:100]  if city  else None,

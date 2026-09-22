@@ -840,9 +840,20 @@ export class StaffLeadsPage {
           <div class="modal-body" style="padding: 24px; overflow-y: auto; flex: 1; max-height: calc(90vh - 180px);">
             <div class="form-section" style="margin-bottom: 20px;">
               <div class="section-title" style="font-size: 12px; font-weight: 600; color: #10b981; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(16, 185, 129, 0.2);">Basic Information</div>
-              <div class="form-group" style="margin-bottom: 16px;">
-                <label style="display: flex; align-items: center; gap: 6px; color: #a8c0d8; font-size: 13px; font-weight: 500; margin-bottom: 8px;">Name <span class="required" style="color: #f87171;">*</span></label>
-                <input type="text" id="leadName" class="form-input" placeholder="Full name" style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.08); background: rgba(13, 27, 42, 0.6) !important; color: #e6f1ff !important; font-size: 15px; box-sizing: border-box;">
+              <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label style="display: flex; align-items: center; gap: 6px; color: #a8c0d8; font-size: 13px; font-weight: 500; margin-bottom: 8px;">Name <span class="required" style="color: #f87171;">*</span></label>
+                  <input type="text" id="leadName" class="form-input" placeholder="Full name" style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.08); background: rgba(13, 27, 42, 0.6) !important; color: #e6f1ff !important; font-size: 15px; box-sizing: border-box;">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label style="display: flex; align-items: center; gap: 6px; color: #a8c0d8; font-size: 13px; font-weight: 500; margin-bottom: 8px;">Gender</label>
+                  <select id="leadGender" class="form-select" style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 2px solid rgba(255, 255, 255, 0.08); background: rgba(13, 27, 42, 0.6) !important; color: #e6f1ff !important; font-size: 15px; box-sizing: border-box; appearance: none;">
+                    <option value="">Not Specified</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="unknown">Unknown</option>
+                  </select>
+                </div>
               </div>
               <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
                 <div class="form-group" style="margin-bottom: 16px;">
@@ -2504,6 +2515,8 @@ export class StaffLeadsPage {
     if (aInp) { aInp.readOnly = false; aInp.value = ''; aInp.dataset.rawPhone = ''; }
     const aBtn = document.getElementById('leadMobileSecondaryEditBtn');
     if (aBtn) aBtn.style.display = 'none';
+    const genderSel = document.getElementById('leadGender') as HTMLSelectElement;
+    if (genderSel) genderSel.value = '';
     (document.getElementById('leadEmail') as HTMLInputElement).value = '';
     (document.getElementById('leadCategory') as HTMLSelectElement).value = '';
     (document.getElementById('leadPriority') as HTMLSelectElement).value = 'normal';
@@ -2636,6 +2649,8 @@ export class StaffLeadsPage {
     }
     const aBtn = document.getElementById('leadMobileSecondaryEditBtn');
     if (aBtn) aBtn.style.display = (lead as any).alternate_phone ? 'inline-block' : 'none';
+    const genderSel = document.getElementById('leadGender') as HTMLSelectElement;
+    if (genderSel) genderSel.value = (lead as any).gender || '';
 
     (document.getElementById('leadEmail') as HTMLInputElement).value = lead.email || '';
     (document.getElementById('leadCategory') as HTMLSelectElement).value = lead.category_id?.toString() || lead.category || '';
@@ -2789,6 +2804,7 @@ export class StaffLeadsPage {
 
       const payload: any = {
         name,
+        gender: (document.getElementById('leadGender') as HTMLSelectElement)?.value || null,
         email: email || null,
         category_id: categoryId ? parseInt(categoryId) : null,
         priority: priority || 'medium',

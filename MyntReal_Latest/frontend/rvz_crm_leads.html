@@ -433,11 +433,20 @@
                         </div>
                         
                         <div class="row mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4 col-12 mb-2 mb-md-0">
                                 <label class="form-label">Name *</label>
                                 <input type="text" class="form-control" id="leadName" required minlength="2">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4 col-12 mb-2 mb-md-0">
+                                <label class="form-label">Gender</label>
+                                <select class="form-select" id="leadGender">
+                                    <option value="">Not Specified</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="unknown">Unknown</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 col-12">
                                 <label class="form-label">Category</label>
                                 <select class="form-select" id="leadCategory"></select>
                             </div>
@@ -2202,6 +2211,8 @@
         function openAddModal() {
             document.getElementById('leadModalTitle').innerHTML = '<i class="fas fa-user-plus me-2"></i>Add New Lead';
             document.getElementById('leadForm').reset();
+            const gSel = document.getElementById('leadGender');
+            if (gSel) gSel.value = '';
             document.getElementById('leadId').value = '';
             document.getElementById('leadDependsOnStaffId').value = '';
             document.getElementById('pincodeStatus').innerHTML = '';
@@ -2389,6 +2400,8 @@
                     }
                     document.getElementById('leadId').value = lead.id;
                     document.getElementById('leadName').value = lead.name;
+                    const gSel = document.getElementById('leadGender');
+                    if (gSel) gSel.value = lead.gender || '';
                     document.getElementById('leadEmail').value = lead.email || '';
                     document.getElementById('leadPhone').value = lead.phone || '';
                     document.getElementById('leadPhonePrimaryWhatsapp').checked = lead.phone_primary_whatsapp || false;
@@ -3155,6 +3168,7 @@
 
             const leadData = {
                 name: document.getElementById('leadName').value,
+                gender: document.getElementById('leadGender')?.value || null,
                 email: document.getElementById('leadEmail').value || null,
                 phone_primary_whatsapp: document.getElementById('leadPhonePrimaryWhatsapp').checked,
                 phone_secondary_whatsapp: document.getElementById('leadPhoneSecondaryWhatsapp').checked,

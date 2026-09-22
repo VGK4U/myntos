@@ -194,7 +194,7 @@ const DIGITAL_CATALOGS: Record<string, DigitalCatalogInfo> = {
 class UnifiedWAModal {
   private modalEl: HTMLElement | null = null;
   private currentOptions: WAModalOptions | null = null;
-  private activeMode: 'scanned' | 'meta_api' = 'meta_api';
+  private activeMode: 'scanned' | 'meta_api' = 'scanned';
 
   private selectedCatalogKey: string = 'solar';
   private selectedCatalogLang: string = 'te';
@@ -563,6 +563,12 @@ class UnifiedWAModal {
       return;
     }
 
+    // Default to Scan mode on template selection as requested by user
+    if (this.activeMode !== 'scanned') {
+      this.activeMode = 'scanned';
+      this.updateModeUI();
+    }
+
     const tpl = this.canonicalTemplates.find(t => String(t.id) === String(tplId) || String(t.slug) === String(tplId));
     if (!tpl) return;
 
@@ -620,7 +626,7 @@ class UnifiedWAModal {
 
   open(options: WAModalOptions): void {
     this.currentOptions = options;
-    this.activeMode = 'meta_api';
+    this.activeMode = 'scanned';
     this.render();
   }
 
@@ -661,21 +667,17 @@ class UnifiedWAModal {
           <button class="uwa-close-btn" id="uwaCloseBtn">&times;</button>
         </div>
 
-        <!-- Mode Selector (Scanned WA vs Meta Cloud API) -->
-        <div class="uwa-mode-bar">
-          <button class="uwa-mode-btn ${this.activeMode === 'scanned' ? 'active' : ''}" id="uwaModeScannedBtn">
-            <i class="fas fa-qrcode"></i>
-            <div>
-              <strong>📱 Scanned WhatsApp</strong>
-              <small>Employee Account · Scanned</small>
-            </div>
+        <!-- Mode Selector (Scan vs API) -->
+        <div class="uwa-mode-bar" style="display: flex; gap: 8px; margin-bottom: 12px; background: var(--bg-tertiary, #151521); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 4px;">
+          <button class="uwa-mode-btn ${this.activeMode === 'scanned' ? 'active' : ''}" id="uwaModeScannedBtn" style="flex: 1; padding: 8px 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <i class="fas fa-qrcode text-emerald-500"></i>
+            <span>Scan</span>
+            <span style="background: #10b981; color: #fff; font-size: 9.5px; padding: 2px 6px; border-radius: 10px; font-weight: 700;">● Active</span>
           </button>
-          <button class="uwa-mode-btn ${this.activeMode === 'meta_api' ? 'active' : ''}" id="uwaModeMetaBtn">
-            <i class="fas fa-building"></i>
-            <div>
-              <strong>🏢 Official WhatsApp</strong>
-              <small>Meta Cloud API · Verified</small>
-            </div>
+          <button class="uwa-mode-btn ${this.activeMode === 'meta_api' ? 'active' : ''}" id="uwaModeMetaBtn" style="flex: 1; padding: 8px 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <i class="fas fa-cloud text-blue-500"></i>
+            <span>API</span>
+            <span style="background: #64748b; color: #fff; font-size: 9.5px; padding: 2px 6px; border-radius: 10px; font-weight: 600;">Meta</span>
           </button>
         </div>
 
@@ -836,13 +838,21 @@ class UnifiedWAModal {
         <!-- Status & Result feedback -->
         <div id="uwaFeedbackBox" class="uwa-feedback-box" style="display:none;"></div>
 
-        <!-- Action Footer -->
-        <div class="uwa-footer">
-          <button class="btn btn-outline uwa-cancel-btn" id="uwaCancelBtn">Cancel</button>
-          <button class="btn btn-primary uwa-send-btn" id="uwaSendBtn">
-            <i class="fas fa-paper-plane me-1"></i>
-            <span id="uwaSendBtnLabel">Send via 🏢 Official WhatsApp</span>
-          </button>
+        <!-- Action Footer: Both Scan and API available side-by-side with live active highlight -->
+        <div class="uwa-footer" style="display: flex; gap: 8px; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; margin-top: 10px;">
+          <button class="btn btn-outline uwa-cancel-btn" id="uwaCancelBtn" style="padding: 9px 14px; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; background: transparent; color: #9ca3af; font-size: 12px; font-weight: 600;">Cancel</button>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn uwa-send-btn" id="uwaSendScanBtn" style="padding: 9px 16px; background: #10b981; color: #fff; border: 2px solid #059669; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16,185,129,0.35);">
+              <i class="fas fa-qrcode"></i>
+              <span>Scan</span>
+              <span id="uwaScanBotBadge" style="background: #047857; color: #fff; font-size: 9.5px; padding: 1px 6px; border-radius: 10px; font-weight: 700;">● Active</span>
+            </button>
+            <button class="btn uwa-send-btn" id="uwaSendApiBtn" style="padding: 9px 16px; background: #1e293b; color: #60a5fa; border: 1.5px solid #3b82f6; border-radius: 8px; font-size: 12.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; opacity: 0.9;">
+              <i class="fas fa-cloud"></i>
+              <span>API</span>
+              <span id="uwaApiBotBadge" style="background: #1e40af; color: #fff; font-size: 9.5px; padding: 1px 6px; border-radius: 10px; font-weight: 600;">Meta</span>
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -864,7 +874,24 @@ class UnifiedWAModal {
 
     this.attachEvents();
     this.updateModeUI();
+    void this.checkBotStatus();
     void this.loadCanonicalTemplates();
+  }
+
+  private async checkBotStatus(): Promise<void> {
+    try {
+      const res = await apiService.get<any>('/whatsapp/bot-status');
+      const isConn = res?.success && (res.data?.connected === true || res.data?.status === 'connected');
+      const scanTopPill = this.modalEl?.querySelector('#uwaModeScannedBtn span:last-child') as HTMLElement;
+      const scanBotBadge = document.getElementById('uwaScanBotBadge');
+      if (isConn) {
+        if (scanTopPill) { scanTopPill.textContent = '● Active & Ready'; scanTopPill.style.background = '#10b981'; }
+        if (scanBotBadge) { scanBotBadge.textContent = '● Active & Ready'; scanBotBadge.style.background = '#047857'; }
+      } else {
+        if (scanTopPill) { scanTopPill.textContent = '● Connecting / QR'; scanTopPill.style.background = '#f59e0b'; }
+        if (scanBotBadge) { scanBotBadge.textContent = '● Connecting / QR'; scanBotBadge.style.background = '#d97706'; }
+      }
+    } catch (_) {}
   }
 
   private attachEvents(): void {
@@ -928,26 +955,60 @@ class UnifiedWAModal {
       });
     });
 
-    // Send Button
+    // Send Buttons (Both Scan and API available at bottom)
+    document.getElementById('uwaSendScanBtn')?.addEventListener('click', () => {
+      this.activeMode = 'scanned';
+      this.updateModeUI();
+      void this.handleSend();
+    });
+    document.getElementById('uwaSendApiBtn')?.addEventListener('click', () => {
+      this.activeMode = 'meta_api';
+      this.updateModeUI();
+      void this.handleSend();
+    });
     document.getElementById('uwaSendBtn')?.addEventListener('click', () => this.handleSend());
   }
 
   private updateModeUI(): void {
     const scannedBtn = document.getElementById('uwaModeScannedBtn');
     const metaBtn = document.getElementById('uwaModeMetaBtn');
-    const sendBtnLabel = document.getElementById('uwaSendBtnLabel');
-    const sendBtn = document.getElementById('uwaSendBtn') as HTMLButtonElement;
+    const sendScanBtn = document.getElementById('uwaSendScanBtn') as HTMLButtonElement;
+    const sendApiBtn = document.getElementById('uwaSendApiBtn') as HTMLButtonElement;
 
     if (this.activeMode === 'scanned') {
       scannedBtn?.classList.add('active');
       metaBtn?.classList.remove('active');
-      if (sendBtnLabel) sendBtnLabel.textContent = 'Send via 📱 Scanned WhatsApp';
-      if (sendBtn) sendBtn.style.background = '#16a34a';
+      if (sendScanBtn) {
+        sendScanBtn.style.background = '#10b981';
+        sendScanBtn.style.color = '#fff';
+        sendScanBtn.style.border = '2px solid #059669';
+        sendScanBtn.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.25)';
+        sendScanBtn.style.opacity = '1';
+      }
+      if (sendApiBtn) {
+        sendApiBtn.style.background = '#1e293b';
+        sendApiBtn.style.color = '#94a3b8';
+        sendApiBtn.style.border = '1px solid rgba(255,255,255,0.15)';
+        sendApiBtn.style.boxShadow = 'none';
+        sendApiBtn.style.opacity = '0.85';
+      }
     } else {
       scannedBtn?.classList.remove('active');
       metaBtn?.classList.add('active');
-      if (sendBtnLabel) sendBtnLabel.textContent = 'Send via 🏢 Official WhatsApp';
-      if (sendBtn) sendBtn.style.background = '#2563eb';
+      if (sendApiBtn) {
+        sendApiBtn.style.background = '#2563eb';
+        sendApiBtn.style.color = '#fff';
+        sendApiBtn.style.border = '2px solid #1d4ed8';
+        sendApiBtn.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.25)';
+        sendApiBtn.style.opacity = '1';
+      }
+      if (sendScanBtn) {
+        sendScanBtn.style.background = '#1e293b';
+        sendScanBtn.style.color = '#94a3b8';
+        sendScanBtn.style.border = '1px solid rgba(255,255,255,0.15)';
+        sendScanBtn.style.boxShadow = 'none';
+        sendScanBtn.style.opacity = '0.85';
+      }
     }
   }
 
@@ -955,8 +1016,9 @@ class UnifiedWAModal {
     if (!this.currentOptions) return;
 
     const textEl = document.getElementById('uwaMessageText') as HTMLTextAreaElement;
+    const sendScanBtn = document.getElementById('uwaSendScanBtn') as HTMLButtonElement;
+    const sendApiBtn = document.getElementById('uwaSendApiBtn') as HTMLButtonElement;
     const sendBtn = document.getElementById('uwaSendBtn') as HTMLButtonElement;
-    const sendBtnLabel = document.getElementById('uwaSendBtnLabel');
 
     let msg = (textEl?.value || '').trim();
     if (!msg) {
@@ -979,11 +1041,13 @@ class UnifiedWAModal {
       return;
     }
 
+    if (sendScanBtn) sendScanBtn.disabled = true;
+    if (sendApiBtn) sendApiBtn.disabled = true;
     if (sendBtn) sendBtn.disabled = true;
 
     // Mode 1: WhatsApp API (Meta Cloud)
     if (this.activeMode === 'meta_api') {
-      if (sendBtnLabel) sendBtnLabel.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending via Meta API...';
+      if (sendApiBtn) sendApiBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending API...';
       this.showFeedback('Dispatching via WhatsApp Cloud API...', 'info');
 
       try {
@@ -1005,26 +1069,32 @@ class UnifiedWAModal {
               send_status: 'sent'
             }).catch(e => console.warn('[UnifiedWAModal] log-dispatch error:', e));
           }
-          if (sendBtnLabel) sendBtnLabel.innerHTML = '<i class="fas fa-check me-1"></i> Sent Successfully ✓';
+          if (sendApiBtn) sendApiBtn.innerHTML = '<i class="fas fa-check me-1"></i> Sent API ✓';
           this.showFeedback('✅ Dispatched via WhatsApp Meta Cloud API (Official Business)', 'success');
-          setTimeout(() => this.close(), 2500);
+          setTimeout(() => this.close(), 2000);
         } else {
           const errorMsg = response.error || response.data?.reason || 'Meta API not available.';
           this.showFeedback(`❌ Meta API Error: ${errorMsg}`, 'error');
-          if (sendBtn) sendBtn.disabled = false;
-          if (sendBtnLabel) sendBtnLabel.textContent = 'Retry Send';
+          if (sendApiBtn) {
+            sendApiBtn.disabled = false;
+            sendApiBtn.innerHTML = '<i class="fas fa-cloud"></i> <span>API</span> <span id="uwaApiBotBadge" style="background:#1e40af; color:#fff; font-size:9.5px; padding:1px 6px; border-radius:10px; font-weight:600;">Meta</span>';
+          }
+          if (sendScanBtn) sendScanBtn.disabled = false;
         }
       } catch (err: any) {
         console.warn('[UnifiedWAModal] Meta API failed:', err);
         this.showFeedback(`❌ Meta API Network error: ${err.message || 'Server unreachable'}`, 'error');
-        if (sendBtn) sendBtn.disabled = false;
-        if (sendBtnLabel) sendBtnLabel.textContent = 'Retry Send';
+        if (sendApiBtn) {
+          sendApiBtn.disabled = false;
+          sendApiBtn.innerHTML = '<i class="fas fa-cloud"></i> <span>API</span> <span id="uwaApiBotBadge" style="background:#1e40af; color:#fff; font-size:9.5px; padding:1px 6px; border-radius:10px; font-weight:600;">Meta</span>';
+        }
+        if (sendScanBtn) sendScanBtn.disabled = false;
       }
       return;
     }
 
     // Mode 2: Scan WhatsApp (Personal / Common Number)
-    if (sendBtnLabel) sendBtnLabel.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending via Personal WA...';
+    if (sendScanBtn) sendScanBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Sending Scan...';
     this.showFeedback('Connecting to WhatsApp Bot Gateway...', 'info');
 
     try {
@@ -1047,20 +1117,26 @@ class UnifiedWAModal {
             send_status: 'sent'
           }).catch(e => console.warn('[UnifiedWAModal] log-dispatch error:', e));
         }
-        if (sendBtnLabel) sendBtnLabel.innerHTML = '<i class="fas fa-check me-1"></i> Sent Successfully ✓';
+        if (sendScanBtn) sendScanBtn.innerHTML = '<i class="fas fa-check me-1"></i> Sent Scan ✓';
         this.showFeedback(`✅ Dispatched via Personal Scanned WhatsApp! Sender: ${this.escapeHtml(authService.getAuthState().user?.full_name || 'Staff')}`, 'success');
-        setTimeout(() => this.close(), 2500);
+        setTimeout(() => this.close(), 2000);
       } else {
         const errorMsg = response.error || 'Personal WhatsApp Web is disconnected or unlinked.';
-        this.showFeedback(`❌ Personal WA: ${errorMsg}. You can switch to "WhatsApp API" mode above to send via Official Meta Business.`, 'error');
-        if (sendBtn) sendBtn.disabled = false;
-        if (sendBtnLabel) sendBtnLabel.textContent = 'Retry Send';
+        this.showFeedback(`❌ Personal WA: ${errorMsg}. You can switch to "API" mode to send via Official Meta Business.`, 'error');
+        if (sendScanBtn) {
+          sendScanBtn.disabled = false;
+          sendScanBtn.innerHTML = '<i class="fas fa-qrcode"></i> <span>Scan</span> <span id="uwaScanBotBadge" style="background:#047857; color:#fff; font-size:9.5px; padding:1px 6px; border-radius:10px; font-weight:700;">● Active</span>';
+        }
+        if (sendApiBtn) sendApiBtn.disabled = false;
       }
     } catch (err: any) {
       console.error('[UnifiedWAModal] Send error:', err);
-      this.showFeedback(`❌ Personal WhatsApp Gateway offline. You can switch to "WhatsApp API" above to send via Meta Cloud.`, 'error');
-      if (sendBtn) sendBtn.disabled = false;
-      if (sendBtnLabel) sendBtnLabel.textContent = 'Retry Send';
+      this.showFeedback('❌ Personal WhatsApp Gateway offline. You can switch to "API" to send via Meta Cloud.', 'error');
+      if (sendScanBtn) {
+        sendScanBtn.disabled = false;
+        sendScanBtn.innerHTML = '<i class="fas fa-qrcode"></i> <span>Scan</span> <span id="uwaScanBotBadge" style="background:#047857; color:#fff; font-size:9.5px; padding:1px 6px; border-radius:10px; font-weight:700;">● Active</span>';
+      }
+      if (sendApiBtn) sendApiBtn.disabled = false;
     }
   }
 

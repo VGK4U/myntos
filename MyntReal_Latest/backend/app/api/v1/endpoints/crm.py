@@ -14,7 +14,7 @@ from sqlalchemy import func, or_, and_, text, extract
 from typing import Optional, List, Tuple, Any, Set
 from datetime import datetime, timedelta, date
 import pytz as _pytz
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, validator
 
 from app.services.crm_dedup_service import (
     normalize_phone,
@@ -737,6 +737,7 @@ def _auto_align_category_from_looking_for(db, company_id: int, looking_for: Opti
 
 class LeadCreate(BaseModel):
     name: str
+    gender: Optional[str] = None
     company_id: Optional[int] = None  # DC Protocol: Optional at creation, mandatory at deal close/won
     email: Optional[str] = None
     phone: Optional[str] = None
@@ -804,9 +805,22 @@ class LeadCreate(BaseModel):
     primary_owner_id: Optional[int] = None
     primary_owner_type: Optional[str] = None
 
+    @validator('gender', pre=True)
+    def validate_gender(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            v = v.strip().lower()
+            if not v:
+                return None
+            if v in ('male', 'female', 'unknown'):
+                return v
+        raise ValueError("Invalid gender. Allowed values are 'male', 'female', 'unknown', or null.")
+
 
 class LeadUpdate(BaseModel):
     name: Optional[str] = None
+    gender: Optional[str] = None
     company_id: Optional[int] = None  # DC Protocol: Can be updated, mandatory at deal close/won
     email: Optional[str] = None
     phone: Optional[str] = None
@@ -929,6 +943,18 @@ class LeadUpdate(BaseModel):
     team_senior_partner_id: Optional[int] = None
     team_extended_partner_id: Optional[int] = None
     team_core_partner_id: Optional[int] = None
+
+    @validator('gender', pre=True)
+    def validate_gender(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            v = v.strip().lower()
+            if not v:
+                return None
+            if v in ('male', 'female', 'unknown'):
+                return v
+        raise ValueError("Invalid gender. Allowed values are 'male', 'female', 'unknown', or null.")
 
 
 class LeadAssign(BaseModel):
@@ -10484,6 +10510,7 @@ def create_lead(
         tenant_id=ctx.tenant_id,
         company_id=resolved_company_id,
         name=lead_data.name,
+        gender=lead_data.gender,
         email=lead_data.email,
         phone=lead_data.phone,
         phone_primary_whatsapp=lead_data.phone_primary_whatsapp or False,
@@ -11799,6 +11826,7 @@ def update_lead(
         'priority':              'classification',
         'category_id':           'classification',
         'name':                  'customer',
+        'gender':                'customer',
         'email':                 'customer',
         'phone':                 'customer',
         'alternate_phone':       'customer',
@@ -17144,6 +17172,7 @@ async def create_lead_unified(
         tenant_id=resolved_tenant_id,
         company_id=company_id,
         name=lead_data.name,
+        gender=lead_data.gender,
         phone=lead_data.phone,
         phone_primary_whatsapp=lead_data.phone_primary_whatsapp or False,
         alternate_phone=lead_data.alternate_phone,

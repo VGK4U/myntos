@@ -1024,12 +1024,55 @@ async def plivo_application_hangup(
                 logger.error(f"[PLIVO-HANGUP-SIG] Rejecting unauthorized hangup request: CallUUID={call_uuid}, UA={headers.get('user-agent')}")
                 raise HTTPException(status_code=401, detail="Invalid Plivo V3 Webhook Signature")
 
-    # Check multiple duration keys from Plivo Dial action and Hangup callback
-    dur_candidate = payload.get("DialBLegDuration") or payload.get("Duration") or payload.get("BillDuration") or payload.get("dial_bleg_duration") or "0"
+    # Check duration keys from Plivo Dial action and Hangup callback:
+    # 1. In <Dial> flows, DialBLegDuration is the true conversation duration with the recipient (Leg B).
+    # 2. BillDuration reflects actual billed conversation seconds (0 if recipient never answered).
+    # 3. For outbound calls, 'Duration' is the total Leg-A lifetime (including dialing/ringing time).
+    #    Never fall back to Leg-A 'Duration' if the recipient never answered.
+    b_leg_dur_raw = payload.get("DialBLegDuration") or payload.get("dial_bleg_duration")
+    bill_dur_raw = payload.get("BillDuration") or payload.get("bill_duration")
+    leg_a_dur_raw = payload.get("Duration") or payload.get("duration") or "0"
+
+    b_leg_dur = int(b_leg_dur_raw) if b_leg_dur_raw and str(b_leg_dur_raw).isdigit() else 0
+    bill_dur = int(bill_dur_raw) if bill_dur_raw and str(bill_dur_raw).isdigit() else 0
     try:
-        duration_sec = int(dur_candidate)
+        leg_a_dur = int(leg_a_dur_raw)
     except (ValueError, TypeError):
-        duration_sec = 0
+        leg_a_dur = 0
+
+    is_outbound_call = (
+        (session and session.direction == "outbound") or
+        str(payload.get("From", "")).startswith("sip:agent") or
+        "phone.plivo.com" in str(payload.get("From", "")) or
+        bool(dial_bleg_uuid) or
+        bool(payload.get("DialBLegDuration"))
+    )
+
+    if is_outbound_call:
+        is_already_connected = bool(
+            session and (
+                session.status in (CallStateEnum.CONNECTED.value, "answered", "in-progress") or
+                session.answered_at is not None
+            )
+        )
+        if b_leg_dur > 0:
+            duration_sec = b_leg_dur
+        elif bill_dur > 0 and (dial_bleg_status in ("answered", "completed") or is_already_connected):
+            duration_sec = bill_dur
+        elif is_already_connected and dial_bleg_status not in ("no-answer", "busy", "timeout", "failed", "rejected", "cancel", "canceled"):
+            # Call was verified as connected/answered in-flight; use leg_a_dur if b_leg/bill_dur not passed
+            duration_sec = leg_a_dur
+        else:
+            # Destination party never answered; ring time is 0s conversation duration
+            duration_sec = 0
+    else:
+        # Inbound call directly to DID/IVR: customer is Leg A
+        if bill_dur > 0:
+            duration_sec = bill_dur
+        elif b_leg_dur > 0:
+            duration_sec = b_leg_dur
+        else:
+            duration_sec = leg_a_dur
 
     hangup_cause_name = payload.get("HangupCauseName") or payload.get("HangupCause", "")
     hangup_cause_code = payload.get("HangupCauseCode")
@@ -1122,7 +1165,10 @@ async def plivo_application_hangup(
                 StaffCallLog.device_call_id == session.call_session_id
             ).first()
             call_dt = session.answered_at or session.started_at or session.created_at or get_indian_time()
-            call_type_val = 'OUTGOING' if target_state == CallStateEnum.ENDED.value and (session.duration_seconds or 0) > 0 else 'MISSED'
+            if (session.duration_seconds or 0) > 0 and target_state == CallStateEnum.ENDED.value:
+                call_type_val = 'INCOMING' if session.direction == 'inbound' else 'OUTGOING'
+            else:
+                call_type_val = 'MISSED'
             if not existing_log:
                 db.add(StaffCallLog(
                     company_id=session.company_id or 1,
@@ -2645,7 +2691,7 @@ def list_incoming_calls(
                 computed_type = 'voicemail'
                 type_label = 'Voicemail'
                 badge_variant = 'purple'
-            elif dur > 0 or st_lower in ('answered', 'completed'):
+            elif dur > 0:
                 computed_type = 'inbound_answered'
                 type_label = 'Incoming'
                 badge_variant = 'success'
@@ -2654,7 +2700,7 @@ def list_incoming_calls(
                 type_label = 'Missed by Staff'
                 badge_variant = 'danger'
         else: # outbound
-            if dur > 0 or st_lower in ('answered', 'completed'):
+            if dur > 0:
                 computed_type = 'outbound_answered'
                 type_label = 'Outgoing'
                 badge_variant = 'primary'
@@ -3315,12 +3361,10 @@ def stream_call_recording(
                 recs = plivo_resp.json().get("objects", [])
                 recs.sort(key=lambda r: float(r.get("recording_start_ms", 0) or 0), reverse=True)
                 
-                # Match by provider_call_id or recent session order
+                # Match strictly by provider_call_id (Never fall back to unrelated account recordings)
                 matched_rec = None
                 if session.provider_call_id:
                     matched_rec = next((r for r in recs if r.get("call_uuid") in str(session.provider_call_id)), None)
-                if not matched_rec and recs:
-                    matched_rec = recs[0] # Most recent recording
 
                 if matched_rec and matched_rec.get("recording_url"):
                     m_url = matched_rec["recording_url"]
@@ -3329,7 +3373,8 @@ def stream_call_recording(
                     session.recording_status = "AVAILABLE"
                     if m_dur > 0:
                         session.recording_duration_seconds = m_dur
-                        session.duration_seconds = m_dur
+                        if not session.duration_seconds or session.duration_seconds == 0:
+                            session.duration_seconds = m_dur
                     db.commit()
 
                     audio_resp = _requests.get(m_url, auth=(plivo_auth_id, plivo_auth_token), timeout=12)
@@ -3350,10 +3395,13 @@ def stream_call_recording(
         except Exception:
             pass
 
-    # 4. Fallback: Spoken announcement
-    dur = session.duration_seconds or 10
-    wav_bytes = _generate_synthetic_call_audio(dur)
-    return _serve_audio_bytes(request, wav_bytes, media_type="audio/wav")
+    # 4. Fallback: Spoken announcement only for genuinely answered calls
+    dur = session.duration_seconds or 0
+    if dur > 0 and session.answered_at:
+        wav_bytes = _generate_synthetic_call_audio(dur)
+        return _serve_audio_bytes(request, wav_bytes, media_type="audio/wav")
+
+    raise HTTPException(status_code=404, detail="No audio recording available for unanswered or zero-duration call")
 
 
 @router.get("/calls/{phone}/customer-history")

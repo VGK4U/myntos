@@ -669,14 +669,24 @@ class MNRApp {
       '/rvz/real-dreams/marketplace': 'real-dreams-marketplace',
       '/real-dreams/marketplace': 'real-dreams-marketplace',
       '/staff/dashboard': 'dashboard',
-      '/staff/progress': 'progress'
+      '/staff/progress': 'progress',
+      '/staff/team-live-tracker': 'staff-team-live-tracker',
+      '/staff/team-location-tracker': 'staff-team-live-tracker',
+      '/staff/all-location-tracker': 'staff-all-location-tracker',
+      '/staff/all-location-history': 'staff-all-location-tracker',
+      '/team-live-tracker': 'staff-team-live-tracker',
+      '/all-location-tracker': 'staff-all-location-tracker'
     };
 
     let targetRoute: PageRoute | null = routeMap[normalizedPath] || routeMap[normalizedPath.replace(/\/$/, '')] || null;
 
     if (!targetRoute) {
       const rawName = normalizedPath.replace(/^\/staff\//, '').replace(/^\//, '').replace(/\/$/, '');
-      if (routerService.getRouteConfig(rawName as PageRoute)) {
+      if (rawName === 'team-live-tracker' || rawName === 'team-location-tracker') {
+        targetRoute = 'staff-team-live-tracker';
+      } else if (rawName === 'all-location-tracker' || rawName === 'all-location-history') {
+        targetRoute = 'staff-all-location-tracker';
+      } else if (routerService.getRouteConfig(rawName as PageRoute)) {
         targetRoute = rawName as PageRoute;
       }
     }
@@ -1159,9 +1169,11 @@ class MNRApp {
         break;
       
       // New Location Tracking Section Pages
+      case 'all-location-tracker':
       case 'staff-all-location-tracker':
         page = new StaffAllLocationTrackerPage(this.pageContainer);
         break;
+      case 'team-live-tracker':
       case 'staff-team-live-tracker':
         page = new StaffTeamLiveTrackerPage(this.pageContainer);
         break;

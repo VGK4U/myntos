@@ -20,12 +20,13 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request,
 from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func, or_, and_
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from datetime import datetime, timedelta
 from urllib.parse import quote as _urlquote
 import pytz
 import json
 import logging
+import re
 import os
 import hashlib
 import uuid
@@ -33,6 +34,7 @@ import asyncio
 import random as _random
 from collections import defaultdict as _defaultdict
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.database import SessionLocal as _SessionLocal
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
@@ -72,6 +74,18 @@ def _get_twilio_from():
 def _get_openai_key():
     _reload_env()
     return os.environ.get("OPENAI_API_KEY", "")
+
+def _get_plivo_auth_id():
+    _reload_env()
+    return os.environ.get("PLIVO_AUTH_ID") or getattr(settings, "PLIVO_AUTH_ID", None)
+
+def _get_plivo_auth_token():
+    _reload_env()
+    return os.environ.get("PLIVO_AUTH_TOKEN") or getattr(settings, "PLIVO_AUTH_TOKEN", None)
+
+def _get_plivo_caller_id():
+    _reload_env()
+    return os.environ.get("PLIVO_DEFAULT_CALLER_ID") or getattr(settings, "PLIVO_DEFAULT_CALLER_ID", "+918031728899")
 
 TWILIO_SID   = _get_twilio_sid()
 TWILIO_TOKEN = _get_twilio_token()
@@ -225,11 +239,20 @@ def get_ist_now():
 
 
 def _webhook_base(request: Request) -> str:
-    # DC Protocol: In Replit production deployments REPL_DEPLOYMENT is set; always use
-    # canonical public domain so webhook/share URLs are never the worf.replit.dev dev domain.
+    # 1. Explicit webhook base URL override if configured
+    configured_base = os.environ.get("WEBHOOK_BASE_URL") or getattr(settings, "WEBHOOK_BASE_URL", None)
+    if configured_base:
+        return str(configured_base).rstrip("/")
+    # 2. Check forwarded headers or host
+    _RAW_HOSTS = {"127.0.0.1:8000", "localhost:8000", "localhost", "0.0.0.0:8000"}
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+    proto = request.headers.get("x-forwarded-proto", "https" if request.url.scheme == "https" else "http")
+    if host and host.strip() not in _RAW_HOSTS:
+        return f"{proto}://{host.strip()}".rstrip("/")
+    # 3. Production domain fallback
     if os.environ.get("ENVIRONMENT", "").lower() == "production":
-        return "https://mnrteam.com"
-    # Dev: prefer the Replit preview domain so webhooks reach the running server
+        return "https://www.myntreal.com"
+    # 4. Replit dev domain if present
     dev_domain = os.environ.get("REPLIT_DEV_DOMAIN", "")
     if dev_domain:
         return f"https://{dev_domain}"
@@ -260,9 +283,11 @@ def _naturalise_tts_text(text: str, language: str = "hi") -> str:
     # Replace bare "Vidya" or "Karthik" (not already surrounded by punctuation/ellipsis)
     text = re.sub(r'(?<![.,…])\bVidya\b(?![.,…])', '... Vidya,', text)
     text = re.sub(r'(?<![.,…])\bKarthik\b(?![.,…])', '... Karthik,', text)
+    text = re.sub(r'(?<![.,…])\bTeja\b(?![.,…])', '... Teja,', text)
     # Clean up any double-pause artefacts introduced by the greeting template
     text = re.sub(r'\.{3}\s*\.\.\.\s*Vidya,', '... Vidya,', text)
     text = re.sub(r'\.{3}\s*\.\.\.\s*Karthik,', '... Karthik,', text)
+    text = re.sub(r'\.{3}\s*\.\.\.\s*Teja,', '... Teja,', text)
 
     # Vizag → Visakhapatnam so TTS pronounces it correctly
     text = re.sub(r'\bVizag\b', 'Visakhapatnam', text, flags=re.IGNORECASE)
@@ -1144,7 +1169,7 @@ IMPORTANT: Only pitch solar savings after you know their consumption. Never pitc
         solar_pitch_block = ""
 
     # Gender-aware language fragments (Hindi) based on agent name
-    _is_male = agent_name.lower() in ("karthik", "arjun", "rahul", "ravi")
+    _is_male = agent_name.lower() in ("teja", "karthik", "arjun", "rahul", "ravi")
     _g_raha   = "raha" if _is_male else "rahi"
     _g_sakta  = "sakta" if _is_male else "sakti"
     _g_batata = "batata" if _is_male else "batati"
@@ -2274,6 +2299,94 @@ def preview_lead_pool(
     }
 
 
+def _dispatch_call(
+    phone: str,
+    incoming_url: str,
+    status_url: str,
+    rec_url: str,
+    log_id: int,
+) -> tuple[str, str]:
+    """
+    Dispatches outbound AI call with strict Plivo-first precedence.
+    Plivo is selected whenever Plivo credentials exist.
+    Twilio is used ONLY as fallback when Plivo is unavailable.
+    Returns (call_sid, provider_name).
+    """
+    plivo_id = _get_plivo_auth_id()
+    plivo_token = _get_plivo_auth_token()
+    plivo_caller_id = _get_plivo_caller_id()
+
+    twilio_sid = _get_twilio_sid()
+    twilio_token = _get_twilio_token()
+    twilio_from = _get_twilio_from()
+
+    # Priority 1: Plivo
+    if plivo_id and plivo_token:
+        try:
+            import requests as _requests
+            plivo_url = f"https://api.plivo.com/v1/Account/{plivo_id}/Call/"
+            sep_in = "&" if "?" in incoming_url else "?"
+            sep_st = "&" if "?" in status_url else "?"
+            plivo_incoming = f"{incoming_url}{sep_in}provider=plivo"
+            plivo_status = f"{status_url}{sep_st}provider=plivo"
+
+            body = {
+                "from": plivo_caller_id,
+                "to": phone,
+                "answer_url": plivo_incoming,
+                "answer_method": "POST",
+                "hangup_url": plivo_status,
+                "hangup_method": "POST",
+            }
+            resp = _requests.post(
+                plivo_url,
+                json=body,
+                auth=(plivo_id, plivo_token),
+                timeout=10,
+            )
+            res_json = resp.json() if resp.text else {}
+            if resp.status_code < 400:
+                call_sid = res_json.get("request_uuid") or res_json.get("api_id") or f"plivo_{log_id}"
+                logger.info(f"[AI_CALLING] Plivo call initiated for log {log_id}: {call_sid}")
+                return call_sid, "plivo"
+            else:
+                err_msg = res_json.get("error") or res_json.get("message") or f"HTTP {resp.status_code}"
+                logger.warning(f"[AI_CALLING] Plivo call failed ({err_msg}). Checking Twilio fallback...")
+                if not (twilio_sid and twilio_token and twilio_from):
+                    raise RuntimeError(f"Plivo error: {err_msg}")
+        except Exception as e:
+            if not (twilio_sid and twilio_token and twilio_from):
+                raise
+            logger.warning(f"[AI_CALLING] Plivo dispatch error: {e}. Checking Twilio fallback...")
+
+    # Priority 2: Twilio fallback
+    if twilio_sid and twilio_token and twilio_from:
+        from twilio.rest import Client as TwilioClient
+        tc = TwilioClient(twilio_sid, twilio_token)
+        sep_in = "&" if "?" in incoming_url else "?"
+        sep_st = "&" if "?" in status_url else "?"
+        sep_rc = "&" if "?" in rec_url else "?"
+        twilio_incoming = f"{incoming_url}{sep_in}provider=twilio"
+        twilio_status = f"{status_url}{sep_st}provider=twilio"
+        twilio_rec = f"{rec_url}{sep_rc}provider=twilio"
+
+        call = tc.calls.create(
+            to=phone,
+            from_=twilio_from,
+            url=twilio_incoming,
+            status_callback=twilio_status,
+            status_callback_event=["completed", "failed", "busy", "no-answer"],
+            record=True,
+            recording_status_callback=twilio_rec,
+            recording_status_callback_method="POST",
+            timeout=30,
+        )
+        logger.info(f"[AI_CALLING] Twilio call initiated for log {log_id}: {call.sid}")
+        return call.sid, "twilio"
+
+    raise RuntimeError("No telephony provider credentials available (Plivo and Twilio both unconfigured or failed)")
+
+
 # ─────────────────────────────────────────────────────────
 # CAMPAIGN CONTROL
 # ─────────────────────────────────────────────────────────
@@ -2305,7 +2418,13 @@ def start_campaign(
     """), {"cid": campaign_id})
     db.commit()
 
-    has_telephony = (TWILIO_SID and TWILIO_TOKEN and TWILIO_FROM) or (getattr(settings, 'PLIVO_AUTH_ID', None) and getattr(settings, 'PLIVO_AUTH_TOKEN', None))
+    plivo_id = _get_plivo_auth_id()
+    plivo_token = _get_plivo_auth_token()
+    twilio_sid = _get_twilio_sid()
+    twilio_token = _get_twilio_token()
+    twilio_from = _get_twilio_from()
+
+    has_telephony = (plivo_id and plivo_token) or (twilio_sid and twilio_token and twilio_from)
     if not has_telephony:
         raise HTTPException(status_code=503, detail="Telephony provider credentials (Plivo / Twilio) not configured — cannot initiate calls")
     if not OPENAI_KEY:
@@ -2419,13 +2538,6 @@ def start_campaign(
 
     initiated = 0
     errors    = []
-    tc = None
-    if TWILIO_SID and TWILIO_TOKEN and TWILIO_FROM:
-        try:
-            from twilio.rest import Client as TwilioClient
-            tc = TwilioClient(TWILIO_SID, TWILIO_TOKEN)
-        except Exception:
-            tc = None
 
     for lead in leads:
         lead_id, phone, lead_name, saved_lang, lead_crm_status = lead
@@ -2461,35 +2573,13 @@ def start_campaign(
                 f"{webhook_base}/api/v1/staff/ai-calling/webhook/recording?log_id={log_id}"
             )
             
-            call_sid = ""
-            if tc:
-                call = tc.calls.create(
-                    to=phone,
-                    from_=TWILIO_FROM,
-                    url=call_incoming_url,
-                    status_callback=f"{status_url}?log_id={log_id}",
-                    status_callback_event=["completed", "failed", "busy", "no-answer"],
-                    record=True,
-                    recording_status_callback=rec_cb,
-                    recording_status_callback_method="POST",
-                    timeout=30,
-                )
-                call_sid = call.sid
-            elif getattr(settings, 'PLIVO_AUTH_ID', None):
-                import requests as _requests
-                plivo_url = f"https://api.plivo.com/v1/Account/{settings.PLIVO_AUTH_ID}/Call/"
-                caller_id_val = getattr(settings, 'PLIVO_DEFAULT_CALLER_ID', '+918031728899')
-                body = {
-                    "from": caller_id_val,
-                    "to": phone,
-                    "answer_url": call_incoming_url,
-                    "answer_method": "POST",
-                    "hangup_url": f"{status_url}?log_id={log_id}",
-                    "hangup_method": "POST"
-                }
-                resp = _requests.post(plivo_url, json=body, auth=(settings.PLIVO_AUTH_ID, settings.PLIVO_AUTH_TOKEN), timeout=10)
-                res_json = resp.json()
-                call_sid = res_json.get("request_uuid") or res_json.get("api_id") or f"plivo_{log_id}"
+            call_sid, provider_used = _dispatch_call(
+                phone=phone,
+                incoming_url=call_incoming_url,
+                status_url=f"{status_url}?log_id={log_id}",
+                rec_url=rec_cb,
+                log_id=log_id,
+            )
 
             db.execute(text(
                 "UPDATE ai_call_logs SET call_sid=:sid, status='dialing' WHERE id=:id"
@@ -2776,9 +2866,6 @@ def _try_advance_campaign(db: Session, campaign_id: int, webhook_base: str) -> N
         incoming_url = f"{webhook_base}/api/v1/staff/ai-calling/webhook/voice-select"
         status_url   = f"{webhook_base}/api/v1/staff/ai-calling/webhook/status"
 
-        from twilio.rest import Client as TwilioClient
-        tc = TwilioClient(TWILIO_SID, TWILIO_TOKEN)
-
         for (lead_id, phone, lead_name, saved_lang, lead_crm_status) in leads_to_dial:
             # DC-LANG-FIX: Campaign language has priority over lead's saved language.
             lang  = default_lang or saved_lang
@@ -2809,35 +2896,13 @@ def _try_advance_campaign(db: Session, campaign_id: int, webhook_base: str) -> N
                 call_incoming_url = (f"{incoming_url}?log_id={log_id}&lang={lang}"
                                      f"&name={_urlquote(lead_name or '', safe='')}&campaign_id={campaign_id}{seg_param}")
 
-                call_sid = ""
-                if tc:
-                    call = tc.calls.create(
-                        to=phone,
-                        from_=TWILIO_FROM,
-                        url=call_incoming_url,
-                        status_callback=f"{status_url}?log_id={log_id}",
-                        status_callback_event=["completed", "failed", "busy", "no-answer"],
-                        record=True,
-                        recording_status_callback=rec_cb2,
-                        recording_status_callback_method="POST",
-                        timeout=30,
-                    )
-                    call_sid = call.sid
-                elif getattr(settings, 'PLIVO_AUTH_ID', None):
-                    import requests as _requests
-                    plivo_url = f"https://api.plivo.com/v1/Account/{settings.PLIVO_AUTH_ID}/Call/"
-                    caller_id_val = getattr(settings, 'PLIVO_DEFAULT_CALLER_ID', '+918031728899')
-                    body = {
-                        "from": caller_id_val,
-                        "to": phone,
-                        "answer_url": call_incoming_url,
-                        "answer_method": "POST",
-                        "hangup_url": f"{status_url}?log_id={log_id}",
-                        "hangup_method": "POST"
-                    }
-                    resp = _requests.post(plivo_url, json=body, auth=(settings.PLIVO_AUTH_ID, settings.PLIVO_AUTH_TOKEN), timeout=10)
-                    res_json = resp.json()
-                    call_sid = res_json.get("request_uuid") or res_json.get("api_id") or f"plivo_{log_id}"
+                call_sid, provider_used = _dispatch_call(
+                    phone=phone,
+                    incoming_url=call_incoming_url,
+                    status_url=f"{status_url}?log_id={log_id}",
+                    rec_url=rec_cb2,
+                    log_id=log_id,
+                )
 
                 db.execute(text(
                     "UPDATE ai_call_logs SET call_sid=:sid, status='dialing' WHERE id=:id"
@@ -2883,12 +2948,14 @@ def make_test_call(
     if not phone.startswith("+"):
         phone = "+91" + phone.lstrip("0")
 
+    plivo_id = _get_plivo_auth_id()
+    plivo_token = _get_plivo_auth_token()
     twilio_sid = _get_twilio_sid()
     twilio_token = _get_twilio_token()
     twilio_from = _get_twilio_from()
     openai_key = _get_openai_key()
 
-    has_telephony = (twilio_sid and twilio_token and twilio_from) or (getattr(settings, 'PLIVO_AUTH_ID', None) and getattr(settings, 'PLIVO_AUTH_TOKEN', None))
+    has_telephony = (plivo_id and plivo_token) or (twilio_sid and twilio_token and twilio_from)
     if not has_telephony:
         raise HTTPException(status_code=503, detail="Telephony provider credentials (Plivo / Twilio) not configured")
 
@@ -2915,40 +2982,14 @@ def make_test_call(
     status_url = f"{webhook_base}/api/v1/staff/ai-calling/webhook/status?log_id={log_id}"
 
     try:
-        call_sid = ""
-        if twilio_sid and twilio_token and twilio_from:
-            from twilio.rest import Client as TwilioClient
-            tc = TwilioClient(twilio_sid, twilio_token)
-            recording_url = (
-                f"{webhook_base}/api/v1/staff/ai-calling/webhook/recording?log_id={log_id}"
-            )
-            call = tc.calls.create(
-                to=phone,
-                from_=twilio_from,
-                url=incoming_url,
-                status_callback=status_url,
-                status_callback_event=["completed", "failed", "busy", "no-answer"],
-                record=True,
-                recording_status_callback=recording_url,
-                recording_status_callback_method="POST",
-                timeout=30,
-            )
-            call_sid = call.sid
-        elif getattr(settings, 'PLIVO_AUTH_ID', None):
-            import requests as _requests
-            plivo_url = f"https://api.plivo.com/v1/Account/{settings.PLIVO_AUTH_ID}/Call/"
-            caller_id_val = getattr(settings, 'PLIVO_DEFAULT_CALLER_ID', '+918031728899')
-            body = {
-                "from": caller_id_val,
-                "to": phone,
-                "answer_url": incoming_url,
-                "answer_method": "POST",
-                "hangup_url": status_url,
-                "hangup_method": "POST"
-            }
-            resp = _requests.post(plivo_url, json=body, auth=(settings.PLIVO_AUTH_ID, settings.PLIVO_AUTH_TOKEN), timeout=10)
-            res_json = resp.json()
-            call_sid = res_json.get("request_uuid") or res_json.get("api_id") or f"plivo_{log_id}"
+        recording_url = f"{webhook_base}/api/v1/staff/ai-calling/webhook/recording?log_id={log_id}"
+        call_sid, provider_used = _dispatch_call(
+            phone=phone,
+            incoming_url=incoming_url,
+            status_url=status_url,
+            rec_url=recording_url,
+            log_id=log_id,
+        )
 
         db.execute(text(
             "UPDATE ai_call_logs SET call_sid=:sid, status='dialing' WHERE id=:id"
@@ -2956,11 +2997,13 @@ def make_test_call(
         db.commit()
         return {
             "success": True,
-            "message": f"Test call initiated to {phone}",
+            "message": f"Test call initiated to {phone} via {provider_used.capitalize()}",
             "log_id": log_id,
             "call_sid": call_sid,
             "language": language,
             "segment": segment or "All segments",
+            "provider": provider_used,
+            "caller_id": _get_plivo_caller_id() if provider_used == "plivo" else twilio_from,
         }
     except Exception as e:
         db.execute(text("UPDATE ai_call_logs SET status='failed' WHERE id=:id"), {"id": log_id})
@@ -3100,7 +3143,7 @@ def _segment_kind(segment: str) -> str:
 
 def _segment_agent_intro(kind: str, agent_name: str, lang: str) -> str:
     """Return a short segment-specific identity phrase for the system prompt opening."""
-    is_male = agent_name.lower() == "karthik"
+    is_male = agent_name.lower() in ("karthik", "teja")
     _g = "raha" if is_male else "rahi"
     if kind == "solar":
         return {
@@ -3139,7 +3182,8 @@ def _build_greeting(
       'reference' → neutral intro without assuming caller knows about the company
       'cold'      → cold intro with segment-specific pitch hook
     """
-    is_male   = agent_name.lower() == "karthik"
+    is_male   = agent_name.lower() in ("karthik", "teja")
+    m_name    = "Teja" if "teja" in agent_name.lower() else ("Karthik" if "karthik" in agent_name.lower() else agent_name)
     kind      = _segment_kind(segment)
 
     # ── Time-based greeting ───────────────────────────────────────────────────
@@ -3218,9 +3262,9 @@ def _build_greeting(
         _enq_en = f"You had enquired with us {_brand_en.split('—')[1].strip() if '—' in _brand_en else _brand_en}, and I'm following up personally — is this a good time to talk?"
         if is_male:
             return {
-                "hi": f"{_wish_hi}{name_part_hi} ji! Main Karthik bol raha hoon {_from_hi}. {_enq_hi}",
-                "te": f"{_wish_te}{name_part_te}! Nenu Karthik ni, {_from_te} matladutunna. {_enq_te}",
-                "en": f"{_wish_en}{name_part_en}! This is Karthik calling {_from_en}. {_enq_en}",
+                "hi": f"{_wish_hi}{name_part_hi} ji! Main {m_name} bol raha hoon {_from_hi}. {_enq_hi}",
+                "te": f"{_wish_te}{name_part_te}! Nenu {m_name} ni, {_from_te} matladutunna. {_enq_te}",
+                "en": f"{_wish_en}{name_part_en}! This is {m_name} calling {_from_en}. {_enq_en}",
             }.get(lang, "")
         else:
             return {
@@ -3232,9 +3276,9 @@ def _build_greeting(
     elif source_type == "reference":
         if is_male:
             return {
-                "hi": f"{_wish_hi}{name_part_hi} ji! Main Karthik bol raha hoon {_from_hi} — {_brand_hi.split('—')[1].strip() if '—' in _brand_hi else _brand_hi}. Aapka number hamare ek associate ne share kiya tha. {_hook_hi}",
-                "te": f"{_wish_te}{name_part_te}! Nenu Karthik ni, {_from_te} matladutunna — {_brand_te.split('—')[1].strip() if '—' in _brand_te else _brand_te}. Mee number maa associate share chesaaru. {_hook_te}",
-                "en": f"{_wish_en}{name_part_en}! This is Karthik {_from_en} — {_brand_en.split('—')[1].strip() if '—' in _brand_en else _brand_en}. One of our associates shared your number. {_hook_en}",
+                "hi": f"{_wish_hi}{name_part_hi} ji! Main {m_name} bol raha hoon {_from_hi} — {_brand_hi.split('—')[1].strip() if '—' in _brand_hi else _brand_hi}. Aapka number hamare ek associate ne share kiya tha. {_hook_hi}",
+                "te": f"{_wish_te}{name_part_te}! Nenu {m_name} ni, {_from_te} matladutunna — {_brand_te.split('—')[1].strip() if '—' in _brand_te else _brand_te}. Mee number maa associate share chesaaru. {_hook_te}",
+                "en": f"{_wish_en}{name_part_en}! This is {m_name} {_from_en} — {_brand_en.split('—')[1].strip() if '—' in _brand_en else _brand_en}. One of our associates shared your number. {_hook_en}",
             }.get(lang, "")
         else:
             return {
@@ -3246,9 +3290,9 @@ def _build_greeting(
     else:  # cold
         if is_male:
             return {
-                "hi": f"{_wish_hi}{name_part_hi} ji! Main Karthik bol raha hoon {_from_hi}. {_hook_hi}",
-                "te": f"{_wish_te}{name_part_te}! Nenu Karthik ni, {_from_te} matladutunna. {_hook_te}",
-                "en": f"{_wish_en}{name_part_en}! This is Karthik {_from_en}. {_hook_en}",
+                "hi": f"{_wish_hi}{name_part_hi} ji! Main {m_name} bol raha hoon {_from_hi}. {_hook_hi}",
+                "te": f"{_wish_te}{name_part_te}! Nenu {m_name} ni, {_from_te} matladutunna. {_hook_te}",
+                "en": f"{_wish_en}{name_part_en}! This is {m_name} {_from_en}. {_hook_en}",
             }.get(lang, "")
         else:
             return {
@@ -3258,23 +3302,170 @@ def _build_greeting(
             }.get(lang, "")
 
 
-def _twiml_error_hangup(lang: str = "hi") -> Response:
-    """Return a graceful TwiML response when a webhook crashes unexpectedly.
+def _xml_escape(text: str) -> str:
+    if not text:
+        return ""
+    return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+def _is_plivo_request(request: Request, form_data: dict, provider_hint: Optional[str] = None) -> bool:
+    if provider_hint == "plivo":
+        return True
+    if provider_hint == "twilio":
+        return False
+    if form_data.get("CallUUID") or form_data.get("ALegUUID") or form_data.get("Speech"):
+        return True
+    if form_data.get("CallSid") or form_data.get("AccountSid") or form_data.get("SpeechResult"):
+        return False
+    ua = request.headers.get("user-agent", "").lower()
+    if "plivo" in ua or request.headers.get("x-plivo-signature") or request.headers.get("x-plivo-signature-v2") or request.headers.get("x-plivo-signature-v3"):
+        return True
+    return bool(getattr(settings, "PLIVO_AUTH_ID", None) and getattr(settings, "PLIVO_AUTH_TOKEN", None))
+
+
+def _build_response_xml(inner_xml: str) -> Response:
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+{inner_xml}
+</Response>"""
+    return Response(content=xml, media_type="application/xml")
+
+
+def _build_speak_or_say(
+    is_plivo: bool,
+    text: str,
+    lang_code: str = "en-IN",
+    voice: str = "Polly.Aditi",
+) -> str:
+    safe = _xml_escape(text)
+    if is_plivo:
+        return f'<Speak voice="{voice}" language="{lang_code}">{safe}</Speak>'
+    else:
+        return f'<Say voice="{voice}">{safe}</Say>'
+
+
+def _format_greeting_block(
+    is_plivo: bool,
+    audio_serve_url: Optional[str],
+    fallback_text: str,
+    lang_code: str = "en-IN",
+    voice: str = "Polly.Aditi",
+) -> str:
+    if audio_serve_url:
+        return f'<Play>{audio_serve_url}</Play>'
+    return _build_speak_or_say(is_plivo, fallback_text, lang_code, voice)
+
+
+def _build_speech_gather_xml(
+    is_plivo: bool,
+    action_url: str,
+    lang_code: str,
+    content_block: str,
+    timeout: int = 8,
+    redirect_url: Optional[str] = None,
+) -> Response:
+    redir = redirect_url or action_url
+    if is_plivo:
+        inner = (
+            f'  <GetInput inputType="speech" action="{action_url}" method="POST"\n'
+            f'            language="{lang_code}" speechModel="phone_call" executionTimeout="{timeout}">\n'
+            f'    {content_block}\n'
+            f'  </GetInput>\n'
+            f'  <Redirect method="POST">{redir}</Redirect>'
+        )
+    else:
+        inner = (
+            f'  <Gather input="speech" action="{action_url}"\n'
+            f'          language="{lang_code}" timeout="{timeout}" speechTimeout="auto" method="POST">\n'
+            f'    {content_block}\n'
+            f'  </Gather>\n'
+            f'  <Redirect method="POST">{redir}</Redirect>'
+        )
+    return _build_response_xml(inner)
+
+
+def _build_menu_gather_xml(
+    is_plivo: bool,
+    action_url: str,
+    lang_code: str,
+    prompt_text: str,
+    num_digits: int = 1,
+    timeout: int = 7,
+    voice: str = "Polly.Aditi",
+    redirect_url: Optional[str] = None,
+) -> Response:
+    redir = redirect_url or action_url
+    prompt_block = _build_speak_or_say(is_plivo, prompt_text, lang_code, voice)
+    if is_plivo:
+        inner = (
+            f'  <GetInput inputType="speech dtmf" action="{action_url}" method="POST"\n'
+            f'            language="{lang_code}" speechModel="phone_call" numDigits="{num_digits}" executionTimeout="{timeout}">\n'
+            f'    {prompt_block}\n'
+            f'  </GetInput>\n'
+            f'  <Redirect method="POST">{redir}</Redirect>'
+        )
+    else:
+        inner = (
+            f'  <Gather input="speech dtmf" action="{action_url}" language="{lang_code}"\n'
+            f'          timeout="{timeout}" speechTimeout="auto" numDigits="{num_digits}" method="POST">\n'
+            f'    {prompt_block}\n'
+            f'  </Gather>\n'
+            f'  <Redirect method="POST">{redir}</Redirect>'
+        )
+    return _build_response_xml(inner)
+
+
+def _build_wait_redirect_xml(
+    is_plivo: bool,
+    redirect_url: str,
+    pause_sec: int = 1,
+    prefix_block: str = "",
+) -> Response:
+    pause_tag = f'<Wait length="{pause_sec}"/>' if is_plivo else f'<Pause length="{pause_sec}"/>'
+    prefix = f"  {prefix_block}\n" if prefix_block else ""
+    inner = f"{prefix}  {pause_tag}\n  <Redirect method=\"POST\">{redirect_url}</Redirect>"
+    return _build_response_xml(inner)
+
+
+def _build_hangup_xml(
+    is_plivo: bool,
+    play_block: str,
+    pause_sec: int = 1,
+) -> Response:
+    pause_tag = f'<Wait length="{pause_sec}"/>' if is_plivo else f'<Pause length="{pause_sec}"/>'
+    inner = f"  {play_block}\n  {pause_tag}\n  <Hangup/>"
+    return _build_response_xml(inner)
+
+
+def _twiml_error_hangup(lang: str = "hi", is_plivo: bool = True) -> Response:
+    """Return a graceful XML response when a webhook crashes unexpectedly.
     Caller hears a polite 'technical difficulty' message and the call ends cleanly."""
     messages = {
         "hi": "Maafi chahte hain, abhi kuch technical samasya aa gayi hai. Hum jald hi wapas call karenge.",
-        "te": "Mannam cheyandi, ippudu kొంcht technical samasya vastondi. Meeru mariyu call chestamu.",
+        "te": "Mannam cheyandi, ippudu konchem technical samasya vastondi. Meeru mariyu call chestamu.",
         "en": "We apologise for the inconvenience. A technical issue has occurred. We will call you back shortly.",
     }
     msg = messages.get(lang, messages["hi"])
-    xml = (
-        '<?xml version="1.0" encoding="UTF-8"?>'
-        "<Response>"
-        f'<Say voice="Polly.Aditi" language="hi-IN">{msg}</Say>'
-        "<Hangup/>"
-        "</Response>"
-    )
-    return Response(content=xml, media_type="application/xml")
+    lang_code = LANG_MAP.get(lang, "hi-IN")
+    play_block = _build_speak_or_say(is_plivo, msg, lang_code=lang_code, voice="Polly.Aditi")
+    return _build_hangup_xml(is_plivo, play_block, pause_sec=1)
+
+
+def resolve_persona_from_lead_gender(lead_gender: Optional[str]) -> Tuple[str, str]:
+    """
+    Confirmed AI Persona Mapping:
+    - 'male' -> ('Teja', 'onyx')
+    - 'female' -> ('Vidya', 'nova')
+    - 'unknown' / NULL / empty / other -> ('Vidya', 'nova') (deterministic fallback)
+    """
+    if not lead_gender:
+        return "Vidya", "nova"
+    g = str(lead_gender).strip().lower()
+    if g == "male":
+        return "Teja", "onyx"
+    elif g == "female":
+        return "Vidya", "nova"
+    return "Vidya", "nova"
 
 
 def _get_campaign_persona(db: Session, campaign_id: int) -> tuple:
@@ -3290,9 +3481,11 @@ def _get_campaign_persona(db: Session, campaign_id: int) -> tuple:
             return None, None, (row[1] or "") if row else ""
         pname = (row[0] or "").strip().lower()
         segment = (row[1] or "") if row else ""
-        if "karthik" in pname:
-            return "Karthik", "onyx", segment
-        return "Vidya", "nova", segment
+        if "teja" in pname or "karthik" in pname:
+            return "Teja", "onyx", segment
+        if "vidya" in pname:
+            return "Vidya", "nova", segment
+        return None, None, segment
     except Exception:
         return None, None, ""
 
@@ -3300,15 +3493,25 @@ def _get_campaign_persona(db: Session, campaign_id: int) -> tuple:
 def _detect_voice_choice(speech: str) -> tuple:
     """Returns (agent_name, tts_voice) based on customer's spoken choice.
     Returns (None, None) if no clear signal — caller will fall back to campaign preset or default."""
-    s = speech.lower()
-    # Male / Karthik signals
-    if any(w in s for w in ("karthik", "male", "gents", "anna", "bhai", "brother",
-                             "sir", "man", "uncle", "boys", "boy", "he ", "him")):
-        return "Karthik", "onyx"
-    # Female / Vidya signals
-    if any(w in s for w in ("vidya", "lady", "female", "madam", "ladies", "woman",
-                             "akka", "sister", "amma", "she ", "her")):
+    s = (speech or "").lower()
+    # Female / Vidya signals (use word boundaries to avoid "male" inside "female", "man" inside "woman")
+    female_words = (
+        "vidya", "lady", "female", "madam", "ladies", "woman",
+        "akka", "sister", "amma", "she", "her"
+    )
+    has_female = any(re.search(r'\b' + re.escape(w) + r'\b', s) for w in female_words)
+
+    # Male / Teja signals
+    male_words = (
+        "teja", "karthik", "male", "gents", "anna", "bhai", "brother",
+        "sir", "man", "uncle", "boys", "boy", "he", "him"
+    )
+    has_male = any(re.search(r'\b' + re.escape(w) + r'\b', s) for w in male_words)
+
+    if has_female and not has_male:
         return "Vidya", "nova"
+    if has_male and not has_female:
+        return "Teja", "onyx"
     # No clear signal — let caller preset / campaign preset decide
     return None, None
 
@@ -3327,18 +3530,18 @@ def _detect_pref_change(speech: str):
     s = s_raw.lower()
 
     # --- explicit agent switch signals ---
-    wants_karthik = any(w in s for w in (
-        "karthik", "male agent", "male wala", "bhai se", "anna se",
-        "gent se", "man se", "male voice", "karthik chahiye", "karthik se",
+    wants_male = any(w in s for w in (
+        "teja", "teja chahiye", "teja se", "karthik", "male agent", "male wala",
+        "bhai se", "anna se", "gent se", "man se", "male voice", "karthik chahiye", "karthik se",
     ))
     wants_vidya = any(w in s for w in (
         "vidya", "lady agent", "lady wali", "akka se", "amma se",
         "female agent", "female se", "madam se", "woman se", "vidya chahiye",
         "vidya se",
     ))
-    if wants_karthik and not wants_vidya:
-        return ("agent", "Karthik", "onyx")
-    if wants_vidya and not wants_karthik:
+    if wants_male and not wants_vidya:
+        return ("agent", "Teja", "onyx")
+    if wants_vidya and not wants_male:
         return ("agent", "Vidya", "nova")
 
     # --- explicit language switch — romanized keywords (any language context) ---
@@ -3418,6 +3621,7 @@ async def webhook_voice_select(
     campaign_id: int = Query(0),
     segment: str = Query(""),
     is_test: int = Query(0),
+    provider: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
     """
@@ -3427,7 +3631,10 @@ async def webhook_voice_select(
     for agent selection (Vidya / Karthik) in the detected language.
     """
     form_data = await request.form()
-    call_sid  = form_data.get("CallSid", "")
+    call_sid  = form_data.get("CallUUID") or form_data.get("CallSid") or ""
+    is_plivo  = _is_plivo_request(request, form_data, provider)
+    provider_str = "plivo" if is_plivo else "twilio"
+    provider_qs = f"&amp;provider={provider_str}"
 
     # Mark call connected; create session — pre-load campaign persona if set
     db.execute(text(
@@ -3436,8 +3643,24 @@ async def webhook_voice_select(
 
     # Fetch campaign preset persona + segment (if not already passed in URL)
     preset_agent, preset_voice, camp_segment = _get_campaign_persona(db, campaign_id)
-    init_agent = preset_agent or "Vidya"
-    init_voice = preset_voice or "nova"
+
+    # Lead gender lookup:
+    lead_gender = None
+    if log_id:
+        try:
+            lead_row = db.execute(text("""
+                SELECT cl.gender FROM ai_call_logs l
+                JOIN crm_leads cl ON cl.id = l.lead_id
+                WHERE l.id = :lid
+            """), {"lid": log_id}).fetchone()
+            if lead_row:
+                lead_gender = lead_row[0]
+        except Exception as _e:
+            logger.warning(f"[AI-CALLING] Could not fetch lead gender for log_id {log_id}: {_e}")
+
+    gender_agent, gender_voice = resolve_persona_from_lead_gender(lead_gender)
+    init_agent = preset_agent or gender_agent
+    init_voice = preset_voice or gender_voice
     # Use URL-passed segment first; fall back to campaign segment
     effective_segment = segment or camp_segment or ""
 
@@ -3507,11 +3730,10 @@ async def webhook_voice_select(
 
         respond_url = (
             f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
-            f"?lang={saved_lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}"
+            f"?lang={saved_lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
         )
 
-        safe_greeting = greeting.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        greeting_block = f'<Say voice="Polly.Aditi">{safe_greeting}</Say>'
+        audio_serve_url = None
         try:
             greeting_audio = await asyncio.wait_for(
                 asyncio.to_thread(_generate_tts, greeting, saved_lang, saved_voice),
@@ -3522,20 +3744,13 @@ async def webhook_voice_select(
                 db.execute(text("UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"),
                            {"url": greeting_audio, "id": log_id})
                 db.commit()
-                greeting_block = f'<Play>{base}/api/v1/staff/ai-calling/audio/{greeting_audio}</Play>'
+                audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
                 logger.info(f"[VOICE-SELECT] ✅ Returning caller log={log_id} saved={saved_agent}/{saved_lang}")
         except Exception as _e:
             logger.warning(f"[VOICE-SELECT] TTS failed for returning caller log={log_id}: {_e}")
 
-        twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Gather input="speech" action="{respond_url}"
-          language="{twilio_lang}" timeout="8" speechTimeout="auto" method="POST">
-    {greeting_block}
-  </Gather>
-  <Redirect method="POST">{respond_url}</Redirect>
-</Response>"""
-        return Response(content=twiml, media_type="application/xml")
+        greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
+        return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
 
     # ── CAMPAIGN CALL or Non-Hindi: skip IVR, greet directly in campaign language ──
     # For ANY campaign call (campaign_id != 0), the language is already set by the campaign.
@@ -3577,11 +3792,10 @@ async def webhook_voice_select(
 
         respond_url = (
             f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
-            f"?lang={lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}"
+            f"?lang={lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
         )
 
-        safe_greeting = greeting.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        greeting_block = f'<Say voice="Polly.Aditi">{safe_greeting}</Say>'
+        audio_serve_url = None
         try:
             greeting_audio = await asyncio.wait_for(
                 asyncio.to_thread(_generate_tts, greeting, lang, direct_voice),
@@ -3592,20 +3806,13 @@ async def webhook_voice_select(
                 db.execute(text("UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"),
                            {"url": greeting_audio, "id": log_id})
                 db.commit()
-                greeting_block = f'<Play>{base}/api/v1/staff/ai-calling/audio/{greeting_audio}</Play>'
+                audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
                 logger.info(f"[VOICE-SELECT] ✅ Pre-selected lang={lang} agent={direct_agent} log={log_id}")
         except Exception as _e:
             logger.warning(f"[VOICE-SELECT] Pre-selected TTS failed log={log_id}: {_e}")
 
-        twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Gather input="speech" action="{respond_url}"
-          language="{twilio_lang}" timeout="8" speechTimeout="auto" method="POST">
-    {greeting_block}
-  </Gather>
-  <Redirect method="POST">{respond_url}</Redirect>
-</Response>"""
-        return Response(content=twiml, media_type="application/xml")
+        greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
+        return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
 
     # ── NEW CALLER (Hindi / unspecified): show language → agent selection IVR ──
     # Only reached when lang='hi' (no explicit pre-selection). The caller chooses
@@ -3613,7 +3820,7 @@ async def webhook_voice_select(
     lang_url = (
         f"{base}/api/v1/staff/ai-calling/webhook/lang-confirm"
         f"?log_id={log_id}&amp;name={_urlquote(name, safe='')}"
-        f"&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}"
+        f"&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
     )
 
     # Greeting + language choice prompt — accepts BOTH key press AND speech.
@@ -3626,15 +3833,7 @@ async def webhook_voice_select(
         "For English press 3 or say English."
     )
 
-    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Gather input="speech dtmf" action="{lang_url}" language="hi-IN"
-          timeout="7" speechTimeout="auto" numDigits="1" method="POST">
-    <Say voice="Polly.Aditi">{lang_prompt}</Say>
-  </Gather>
-  <Redirect method="POST">{lang_url}</Redirect>
-</Response>"""
-    return Response(content=twiml, media_type="application/xml")
+    return _build_menu_gather_xml(is_plivo, lang_url, "hi-IN", lang_prompt, num_digits=1, timeout=7)
 
 
 @router.post("/webhook/lang-confirm")
@@ -3645,6 +3844,7 @@ async def webhook_lang_confirm(
     campaign_id: int = Query(0),
     segment: str = Query(""),
     is_test: int = Query(0),
+    provider: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
     """
@@ -3654,8 +3854,12 @@ async def webhook_lang_confirm(
     All in one webhook — no redirect needed.
     """
     form_data = await request.form()
-    speech    = form_data.get("SpeechResult", "").strip()
-    digits    = form_data.get("Digits", "").strip()
+    speech    = (form_data.get("Speech") or form_data.get("SpeechResult") or "").strip()
+    digits    = (form_data.get("Digits") or "").strip()
+    call_sid  = form_data.get("CallUUID") or form_data.get("CallSid") or ""
+    is_plivo  = _is_plivo_request(request, form_data, provider)
+    provider_str = "plivo" if is_plivo else "twilio"
+    provider_qs = f"&amp;provider={provider_str}"
 
     # DTMF takes priority: 1=Hindi, 2=Telugu, 3=English (reliable vs. hi-IN STT)
     _digit_map = {"1": "hi", "2": "te", "3": "en"}
@@ -3678,12 +3882,24 @@ async def webhook_lang_confirm(
     base       = _webhook_base(request)
     # Use URL segment or fall back to campaign segment
     preset_agent, preset_voice, camp_segment = _get_campaign_persona(db, campaign_id)
+    # If campaign preset agent is not set, resolve from lead gender if known (male or female)
+    if not (preset_agent and preset_voice) and log_id:
+        try:
+            lead_row = db.execute(text("""
+                SELECT cl.gender FROM ai_call_logs l
+                JOIN crm_leads cl ON cl.id = l.lead_id
+                WHERE l.id = :lid
+            """), {"lid": log_id}).fetchone()
+            if lead_row and lead_row[0] in ('male', 'female'):
+                preset_agent, preset_voice = resolve_persona_from_lead_gender(lead_row[0])
+        except Exception:
+            pass
     effective_segment = segment or camp_segment or ""
     seg_qs     = f"&amp;segment={_urlquote(effective_segment, safe='')}" if effective_segment else ""
     is_test_qs = f"&amp;is_test={is_test}" if is_test else ""
 
     # ── Campaign with PRESET AGENT: skip agent-selection prompt ─────────────────
-    # If the campaign already has a configured agent (Karthik/Vidya), don't ask
+    # If the campaign already has a configured agent (Teja/Vidya), don't ask
     # the caller to choose — go straight to greeting with the preset agent.
     if preset_agent and preset_voice:
         # Update session with preset agent
@@ -3717,11 +3933,10 @@ async def webhook_lang_confirm(
 
         respond_url = (
             f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
-            f"?lang={detected_lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}"
+            f"?lang={detected_lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
         )
 
-        safe_greeting = greeting.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        greeting_block = f'<Say voice="Polly.Aditi">{safe_greeting}</Say>'
+        audio_serve_url = None
         try:
             greeting_audio = await asyncio.wait_for(
                 asyncio.to_thread(_generate_tts, greeting, detected_lang, preset_voice),
@@ -3732,56 +3947,41 @@ async def webhook_lang_confirm(
                 db.execute(text("UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"),
                            {"url": greeting_audio, "id": log_id})
                 db.commit()
-                greeting_block = f'<Play>{base}/api/v1/staff/ai-calling/audio/{greeting_audio}</Play>'
+                audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
                 logger.info(f"[LANG-CONFIRM] ✅ Preset agent {preset_agent} log={log_id} lang={detected_lang}")
         except Exception as _e:
             logger.warning(f"[LANG-CONFIRM] TTS failed for preset agent log={log_id}: {_e}")
 
-        twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Gather input="speech" action="{respond_url}"
-          language="{twilio_lang}" timeout="8" speechTimeout="auto" method="POST">
-    {greeting_block}
-  </Gather>
-  <Redirect method="POST">{respond_url}</Redirect>
-</Response>"""
-        return Response(content=twiml, media_type="application/xml")
+        greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
+        return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
 
     # ── No preset agent: show agent selection prompt ─────────────────────────────
     # voice-confirm URL now carries the DETECTED language
     confirm_url = (
         f"{base}/api/v1/staff/ai-calling/webhook/voice-confirm"
         f"?log_id={log_id}&amp;lang={detected_lang}&amp;name={_urlquote(name, safe='')}"
-        f"&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}"
+        f"&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
     )
 
     # Agent selection prompt in the detected language
-    # DTMF: 1=Vidya (lady), 2=Karthik (male)
+    # DTMF: 1=Vidya (lady), 2=Teja (male)
     AGENT_PROMPTS = {
         "hi": (
             "Dhanyavaad! Lady agent Vidya ke liye 1 dabayein ya Vidya kahiye. "
-            "Male agent Karthik ke liye 2 dabayein ya Karthik kahiye."
+            "Male agent Teja ke liye 2 dabayein ya Teja kahiye."
         ),
         "te": (
             "Dhanyavaadalu! Lady agent Vidya kosam 1 press cheyandi ya Vidya cheppandi. "
-            "Male agent Karthik kosam 2 press cheyandi ya Karthik cheppandi."
+            "Male agent Teja kosam 2 press cheyandi ya Teja cheppandi."
         ),
         "en": (
             "Thank you! Press 1 or say Vidya for our lady agent. "
-            "Press 2 or say Karthik for our male agent."
+            "Press 2 or say Teja for our male agent."
         ),
     }
     agent_prompt = AGENT_PROMPTS[detected_lang]
 
-    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Gather input="speech dtmf" action="{confirm_url}" language="{twilio_lang}"
-          timeout="7" speechTimeout="auto" numDigits="1" method="POST">
-    <Say voice="Polly.Aditi">{agent_prompt}</Say>
-  </Gather>
-  <Redirect method="POST">{confirm_url}</Redirect>
-</Response>"""
-    return Response(content=twiml, media_type="application/xml")
+    return _build_menu_gather_xml(is_plivo, confirm_url, twilio_lang, agent_prompt, num_digits=1, timeout=7)
 
 
 @router.post("/webhook/voice-confirm")
@@ -3793,29 +3993,29 @@ async def webhook_voice_confirm(
     campaign_id: int = Query(0),
     segment: str = Query(""),
     is_test: int = Query(0),
+    provider: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
     """
-    Processes the customer's voice-choice (Vidya / Karthik), generates the
+    Processes the customer's voice-choice (Vidya / Teja), generates the
     greeting TTS inline, updates the session, and returns greeting + gather TwiML
     directly — NO redirect to /webhook/incoming needed.
-
-    Design decision: merging confirm + greet into ONE webhook eliminates the
-    <Redirect> step entirely, which was the root cause of "Application Error"
-    (XML encoding issues with & in redirect URLs, plus an extra roundtrip).
     """
     form_data = await request.form()
-    call_sid  = form_data.get("CallSid", "")
-    speech    = form_data.get("SpeechResult", "").strip()
-    digits    = form_data.get("Digits", "").strip()
+    call_sid  = form_data.get("CallUUID") or form_data.get("CallSid") or ""
+    speech    = (form_data.get("Speech") or form_data.get("SpeechResult") or "").strip()
+    digits    = (form_data.get("Digits") or "").strip()
+    is_plivo  = _is_plivo_request(request, form_data, provider)
+    provider_str = "plivo" if is_plivo else "twilio"
+    provider_qs = f"&amp;provider={provider_str}"
 
-    # DTMF takes priority: 1=Vidya (lady), 2=Karthik (male)
+    # DTMF takes priority: 1=Vidya (lady), 2=Teja (male)
     if digits == "1":
         detected_agent, detected_voice = "Vidya", "nova"
         logger.info(f"[VOICE-CONFIRM] DTMF=1 → Vidya log={log_id}")
     elif digits == "2":
-        detected_agent, detected_voice = "Karthik", "onyx"
-        logger.info(f"[VOICE-CONFIRM] DTMF=2 → Karthik log={log_id}")
+        detected_agent, detected_voice = "Teja", "onyx"
+        logger.info(f"[VOICE-CONFIRM] DTMF=2 → Teja log={log_id}")
     else:
         detected_agent, detected_voice = _detect_voice_choice(speech)
     twilio_lang = LANG_MAP.get(lang, "hi-IN")
@@ -3873,13 +4073,11 @@ async def webhook_voice_confirm(
     is_test_qs = f"&amp;is_test={is_test}"                     if is_test else ""
     respond_url = (
         f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
-        f"?lang={lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}"
+        f"?lang={lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
     )
 
     # Generate greeting TTS inline with the chosen voice (11s timeout → Polly fallback).
-    # OpenAI TTS for a 30-word greeting typically takes 2-5s — well within Twilio's 15s budget.
-    safe_greeting = greeting.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    greeting_block = f'<Say voice="Polly.Aditi">{safe_greeting}</Say>'
+    audio_serve_url = None
     try:
         greeting_audio = await asyncio.wait_for(
             asyncio.to_thread(_generate_tts, greeting, lang, tts_voice),
@@ -3891,20 +4089,13 @@ async def webhook_voice_confirm(
                 "UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"
             ), {"url": greeting_audio, "id": log_id})
             db.commit()
-            greeting_block = f'<Play>{base}/api/v1/staff/ai-calling/audio/{greeting_audio}</Play>'
+            audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
             logger.info(f"[VOICE-CONFIRM] ✅ Greeting ready log={log_id} agent={agent_name} voice={tts_voice} file={greeting_audio}")
     except Exception as _tts_err:
         logger.warning(f"[VOICE-CONFIRM] TTS failed log={log_id}: {_tts_err} — using Polly fallback")
 
-    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Gather input="speech" action="{respond_url}"
-          language="{twilio_lang}" timeout="8" speechTimeout="auto" method="POST">
-    {greeting_block}
-  </Gather>
-  <Redirect method="POST">{respond_url}</Redirect>
-</Response>"""
-    return Response(content=twiml, media_type="application/xml")
+    greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
+    return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
 
 
 # ─────────────────────────────────────────────────────────
@@ -3920,16 +4111,20 @@ async def webhook_incoming(
     campaign_id: int = Query(0),
     segment: str = Query(""),
     is_test: int = Query(0),
+    provider: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
     """
-    Twilio calls this when the lead picks up.
-    Returns TwiML immediately using a static greeting (no GPT/TTS here —
-    avoids Twilio's 5-second webhook timeout). GPT kicks in from webhook_respond onwards.
+    Telephony provider calls this when the lead picks up.
+    Returns XML immediately using a static greeting (no GPT/TTS here —
+    avoids webhook timeout). GPT kicks in from webhook_respond onwards.
     """
     # Read form data FIRST — must happen before any await/processing
     form_data = await request.form()
-    call_sid = form_data.get("CallSid", "")
+    call_sid  = form_data.get("CallUUID") or form_data.get("CallSid") or ""
+    is_plivo  = _is_plivo_request(request, form_data, provider)
+    provider_str = "plivo" if is_plivo else "twilio"
+    provider_qs = f"&amp;provider={provider_str}"
 
     twilio_lang = LANG_MAP.get(lang, "hi-IN")
 
@@ -3977,31 +4172,23 @@ async def webhook_incoming(
     ).fetchone()
     pre_greeting_audio = log_row[0] if log_row else None
 
-    greeting_block = f'<Say voice="Polly.Aditi">{greeting}</Say>'  # final fallback
+    audio_serve_url = None
     if pre_greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, pre_greeting_audio)):
-        # Pre-generated audio ready — zero wait, instant playback
-        greeting_block = f'<Play>{base}/api/v1/staff/ai-calling/audio/{pre_greeting_audio}</Play>'
+        audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{pre_greeting_audio}"
     else:
-        # Pre-gen not ready — generate now (5-10s, rare) using the chosen agent's voice
         try:
             greeting_audio = await asyncio.wait_for(
                 asyncio.to_thread(_generate_tts, greeting, lang, incoming_agent_voice),
                 timeout=12.0,
             )
-            greeting_block = f'<Play>{base}/api/v1/staff/ai-calling/audio/{greeting_audio}</Play>'
+            if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)):
+                audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
         except Exception:
-            pass  # keep Polly fallback
+            pass
 
-    # greeting_block is INSIDE <Gather> — customer can barge-in at any point.
-    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Gather input="speech" action="{respond_url}?lang={lang}&amp;campaign_id={campaign_id}{extra_qs}"
-          language="{twilio_lang}" timeout="8" speechTimeout="auto" method="POST">
-    {greeting_block}
-  </Gather>
-  <Redirect method="POST">{respond_url}?lang={lang}&amp;campaign_id={campaign_id}{extra_qs}</Redirect>
-</Response>"""
-    return Response(content=twiml, media_type="application/xml")
+    greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
+    action_dest = f"{respond_url}?lang={lang}&amp;campaign_id={campaign_id}{extra_qs}{provider_qs}"
+    return _build_speech_gather_xml(is_plivo, action_dest, twilio_lang, greeting_block)
 
 
 def _get_campaign_company(db: Session, campaign_id: int) -> int:
@@ -4017,16 +4204,21 @@ async def webhook_respond(
     campaign_id: int = Query(0),
     segment: str = Query(""),
     is_test: int = Query(0),
+    provider: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
     """
-    Twilio calls this after the lead speaks (SpeechResult in form body).
+    Telephony provider calls this after the lead speaks (Speech or SpeechResult in form body).
     Returns IMMEDIATELY with a brief pause + redirect to /webhook/poll/{log_id}
-    while GPT + TTS run in a background task. This avoids proxy/Twilio timeouts.
+    while GPT + TTS run in a background task. This avoids proxy/provider timeouts.
     """
-    form         = await request.form()
-    speech_result = form.get("SpeechResult", "").strip()
-    twilio_lang  = LANG_MAP.get(lang, "hi-IN")
+    form          = await request.form()
+    speech_result = (form.get("Speech") or form.get("SpeechResult") or "").strip()
+    form_call_sid = form.get("CallUUID") or form.get("CallSid") or ""
+    is_plivo      = _is_plivo_request(request, form, provider)
+    provider_str  = "plivo" if is_plivo else "twilio"
+    provider_qs   = f"&amp;provider={provider_str}"
+    twilio_lang   = LANG_MAP.get(lang, "hi-IN")
 
     session_row = db.execute(text(
         "SELECT conversation, language, agent_name, agent_voice FROM ai_call_sessions WHERE log_id=:lid"
@@ -4034,8 +4226,6 @@ async def webhook_respond(
 
     conversation     = json.loads(session_row[0]) if session_row and session_row[0] else []
     # Use the session's saved language as the primary source of truth.
-    # The URL ?lang= param is a fallback only — it might reflect the campaign default
-    # rather than the language the caller actually chose during the selection flow.
     effective_lang   = (session_row[1] if session_row and session_row[1] else None) or lang
     twilio_lang      = LANG_MAP.get(effective_lang, "hi-IN")
     sess_agent_name  = (session_row[2] if session_row and session_row[2] else "Vidya") or "Vidya"
@@ -4043,15 +4233,9 @@ async def webhook_respond(
 
     if speech_result:
         conversation.append({"role": "user", "content": speech_result})
-        # Auto-detect language from customer's Unicode script (Telugu / Hindi).
-        # IMPORTANT: Do NOT downgrade from a regional language (te/hi) to 'en'.
-        # 'en' is the default fallback when Twilio STT transcribes in Latin script
-        # (common for Telugu speech via te-IN STT). We only switch when a DIFFERENT
-        # regional language is clearly detected.
         detected = _detect_lang(speech_result)
         if detected != effective_lang and not (detected == "en" and effective_lang in ("te", "hi")):
             effective_lang = detected
-            # Persist the switch so all subsequent turns use the new language
             try:
                 db.execute(text(
                     "UPDATE ai_call_sessions SET language=:lang WHERE log_id=:lid"
@@ -4060,10 +4244,6 @@ async def webhook_respond(
             except Exception:
                 pass
 
-        # ── Explicit preference-change detection ─────────────────────────────
-        # If the caller explicitly asks to switch language or agent mid-call,
-        # update the session AND save the new preference to crm_leads so future
-        # calls remember their updated choice automatically.
         pref_change = _detect_pref_change(speech_result)
         if pref_change:
             try:
@@ -4076,7 +4256,6 @@ async def webhook_respond(
                         SET agent_name = :aname, agent_voice = :voice, updated_at = NOW()
                         WHERE log_id = :lid
                     """), {"aname": new_agent, "voice": new_voice, "lid": log_id})
-                    # Persist to lead record
                     db.execute(text("""
                         UPDATE crm_leads
                         SET ai_preferred_agent = :agent, ai_preferred_voice = :voice
@@ -4091,7 +4270,6 @@ async def webhook_respond(
                     db.execute(text(
                         "UPDATE ai_call_sessions SET language=:lang WHERE log_id=:lid"
                     ), {"lang": new_lang, "lid": log_id})
-                    # Persist to lead record
                     db.execute(text("""
                         UPDATE crm_leads
                         SET ai_language = :lang
@@ -4110,8 +4288,6 @@ async def webhook_respond(
     )
 
     if not speech_result:
-        # No speech — no-input fast path: respond inline (no GPT needed, tiny latency)
-        # Use effective_lang (from session) — NOT url-param lang which may be stale
         silence_reply = (
             "క్షమించండి, మీ మాటలు వినలేకపోయాను. దయచేసి మళ్ళీ చెప్పగలరా?"
             if effective_lang == "te" else
@@ -4121,19 +4297,11 @@ async def webhook_respond(
         )
         respond_url  = f"{_webhook_base(request)}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
         extra_qs     = f"&amp;segment={_urlquote(segment, safe='')}&amp;is_test={is_test}" if segment or is_test else ""
-        twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Gather input="speech" action="{respond_url}?lang={effective_lang}&amp;campaign_id={campaign_id}{extra_qs}"
-          language="{twilio_lang}" timeout="8" speechTimeout="auto" method="POST">
-    <Say voice="Polly.Aditi">{silence_reply}</Say>
-  </Gather>
-  <Redirect method="POST">{respond_url}?lang={effective_lang}&amp;campaign_id={campaign_id}{extra_qs}</Redirect>
-</Response>"""
-        return Response(content=twiml, media_type="application/xml")
+        silence_url  = f"{respond_url}?lang={effective_lang}&amp;campaign_id={campaign_id}{extra_qs}{provider_qs}"
+        silence_block = _build_speak_or_say(is_plivo, silence_reply, twilio_lang)
+        return _build_speech_gather_xml(is_plivo, silence_url, twilio_lang, silence_block)
 
     # Mark session as processing so the poll endpoint can distinguish states.
-    # Use upsert in case webhook_incoming session insert hasn't committed yet.
-    form_call_sid = form.get("CallSid", "")
     db.execute(text("""
         INSERT INTO ai_call_sessions (call_sid, log_id, campaign_id, language, conversation, next_audio_url)
         VALUES (:sid, :lid, NULLIF(:camp,0), :lang, :conv, 'PROCESSING')
@@ -4168,8 +4336,8 @@ async def webhook_respond(
         poll_url += f"&amp;segment={_urlquote(segment, safe='')}"
     if is_test:
         poll_url += f"&amp;is_test={is_test}"
+    poll_url += provider_qs
 
-    # ── Filler: audio fillers are Vidya-voice only — use <Say> for Karthik ──────
     _filler_say_map = {
         "hi": ("Haan ji, ek pal mein batata hoon..." if sess_agent_voice != "nova"
                else "Haan ji, ek pal mein batati hoon..."),
@@ -4180,19 +4348,13 @@ async def webhook_respond(
     if filler_files:
         filler_fname = _random.choice(filler_files)
         filler_block = f'<Play>{base}/api/v1/staff/ai-calling/audio/{filler_fname}</Play>'
-        pause_sec    = 1   # filler already fills ~2s; short extra pause before poll
+        pause_sec    = 1
     else:
         _filler_say  = _filler_say_map.get(effective_lang, "Just a moment...")
-        filler_block = f'<Say voice="Polly.Aditi">{_filler_say}</Say>'
+        filler_block = _build_speak_or_say(is_plivo, _filler_say, twilio_lang)
         pause_sec    = 2
 
-    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  {filler_block}
-  <Pause length="{pause_sec}"/>
-  <Redirect method="POST">{poll_url}&amp;attempt=1</Redirect>
-</Response>"""
-    return Response(content=twiml, media_type="application/xml")
+    return _build_wait_redirect_xml(is_plivo, f"{poll_url}&amp;attempt=1", pause_sec=pause_sec, prefix_block=filler_block)
 
 
 @router.post("/webhook/poll/{log_id}")
@@ -4204,13 +4366,19 @@ async def webhook_poll(
     segment: str = Query(""),
     is_test: int = Query(0),
     attempt: int = Query(1),
+    provider: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
     """
-    Polling endpoint called by Twilio after the pause in webhook_respond.
+    Polling endpoint called after the pause in webhook_respond.
     Checks if the background GPT+TTS task has finished. If ready, plays the audio
-    and presents the next Gather. If not ready, adds another short pause + redirect.
+    and presents the next speech input. If not ready, adds another short pause + redirect.
     """
+    form = await request.form()
+    is_plivo = _is_plivo_request(request, form, provider)
+    provider_str = "plivo" if is_plivo else "twilio"
+    provider_qs = f"&amp;provider={provider_str}"
+
     MAX_POLLS = 10  # 10 × 3s = 30s max wait
     twilio_lang = LANG_MAP.get(lang, "hi-IN")
     base        = _webhook_base(request)
@@ -4220,6 +4388,7 @@ async def webhook_poll(
         f"?lang={lang}&amp;campaign_id={campaign_id}"
         + (f"&amp;segment={_urlquote(segment, safe='')}" if segment else "")
         + (f"&amp;is_test={is_test}" if is_test else "")
+        + provider_qs
     )
 
     row = db.execute(text(
@@ -4233,7 +4402,6 @@ async def webhook_poll(
     # ── Case A: still processing → poll again
     if audio_url_val in (None, "PROCESSING"):
         if attempt >= MAX_POLLS:
-            # Fallback: use Twilio <Say> inline
             fallback = (
                 "एक क्षण रुकिए, मैं आपकी बात समझ रहा हूं।"
                 if lang == "hi" else
@@ -4241,27 +4409,13 @@ async def webhook_poll(
                 if lang == "te" else
                 "One moment, I'm processing your response."
             )
-            twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Gather input="speech" action="{respond_url}{extra_qs}"
-          language="{twilio_lang}" timeout="8" speechTimeout="auto" method="POST">
-    <Say voice="Polly.Aditi">{fallback}</Say>
-  </Gather>
-  <Redirect method="POST">{respond_url}{extra_qs}</Redirect>
-</Response>"""
+            fallback_block = _build_speak_or_say(is_plivo, fallback, twilio_lang)
+            return _build_speech_gather_xml(is_plivo, f"{respond_url}{extra_qs}", twilio_lang, fallback_block)
         else:
             next_poll = f"{poll_url}{extra_qs}&amp;attempt={attempt + 1}"
-            # Always use a short pause in poll — filler was already played
-            # in webhook_respond so the customer has already heard one.
-            # Playing another here causes the "multiple fillers" problem.
-            twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Pause length="1"/>
-  <Redirect method="POST">{next_poll}</Redirect>
-</Response>"""
-        return Response(content=twiml, media_type="application/xml")
+            return _build_wait_redirect_xml(is_plivo, next_poll, pause_sec=1)
 
-    # ── Case B: error → fallback Say + continue
+    # ── Case B: error → fallback Say/Speak + continue
     if audio_url_val == "ERROR":
         db.execute(text(
             "UPDATE ai_call_sessions SET next_audio_url=NULL, next_reply_text=NULL WHERE log_id=:lid"
@@ -4274,33 +4428,18 @@ async def webhook_poll(
             if lang == "te" else
             "Sorry, a technical issue occurred. Could you please repeat?"
         )
-        twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Gather input="speech" action="{respond_url}{extra_qs}"
-          language="{twilio_lang}" timeout="8" speechTimeout="auto" method="POST">
-    <Say voice="Polly.Aditi">{err_msg}</Say>
-  </Gather>
-  <Redirect method="POST">{respond_url}{extra_qs}</Redirect>
-</Response>"""
-        return Response(content=twiml, media_type="application/xml")
+        err_block = _build_speak_or_say(is_plivo, err_msg, twilio_lang)
+        return _build_speech_gather_xml(is_plivo, f"{respond_url}{extra_qs}", twilio_lang, err_block)
 
     # ── Case C: audio URL is set — verify file actually exists on disk
-    # (Background TTS task may have written the URL to DB but the file write
-    #  may not be flushed yet — especially under multi-worker race conditions.)
     if audio_url_val not in (None, "PROCESSING", "ERROR", "FALLBACK"):
         audio_disk_path = os.path.join(AI_AUDIO_DIR, os.path.basename(audio_url_val))
         if not os.path.exists(audio_disk_path):
-            # File not on disk yet — treat as still PROCESSING (poll again)
             if attempt >= MAX_POLLS:
                 pass  # fall through to FALLBACK below
             else:
                 next_poll = f"{poll_url}{extra_qs}&amp;attempt={attempt + 1}"
-                twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Pause length="2"/>
-  <Redirect method="POST">{next_poll}</Redirect>
-</Response>"""
-                return Response(content=twiml, media_type="application/xml")
+                return _build_wait_redirect_xml(is_plivo, next_poll, pause_sec=2)
 
     # ── Consume and play
     db.execute(text(
@@ -4308,7 +4447,6 @@ async def webhook_poll(
     ), {"lid": log_id})
     db.commit()
 
-    # Check if call should end (status set by _bg_gpt_tts)
     should_hangup  = sess_status in ("end_call_pending", "callback_pending")
     call_outcome   = "callback" if sess_status == "callback_pending" else "qualified"
 
@@ -4319,33 +4457,16 @@ async def webhook_poll(
         conv = json.loads(conv_row[0]) if conv_row and conv_row[0] else []
         _finalize_call(db, log_id, call_outcome, conv, lang, campaign_id)
 
-    # Build play block
     if audio_url_val == "FALLBACK" or not audio_url_val:
-        play_block = f'<Say voice="Polly.Aditi">{reply_text or "Thank you for speaking with us."}</Say>'
+        play_block = _build_speak_or_say(is_plivo, reply_text or "Thank you for speaking with us.", twilio_lang)
     else:
         audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{audio_url_val}"
         play_block = f'<Play>{audio_serve_url}</Play>'
 
     if should_hangup:
-        twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  {play_block}
-  <Pause length="1"/>
-  <Hangup/>
-</Response>"""
+        return _build_hangup_xml(is_plivo, play_block, pause_sec=1)
     else:
-        # play_block is INSIDE <Gather> so the customer can barge-in (interrupt Vidya)
-        # at any point. Twilio stops audio immediately when speech is detected.
-        twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Gather input="speech" action="{respond_url}{extra_qs}"
-          language="{twilio_lang}" timeout="8" speechTimeout="auto" method="POST">
-    {play_block}
-  </Gather>
-  <Redirect method="POST">{respond_url}{extra_qs}</Redirect>
-</Response>"""
-
-    return Response(content=twiml, media_type="application/xml")
+        return _build_speech_gather_xml(is_plivo, f"{respond_url}{extra_qs}", twilio_lang, play_block)
 
 
 @router.post("/webhook/recording")
@@ -4355,17 +4476,17 @@ async def webhook_recording(
     db: Session = Depends(get_db),
 ):
     """
-    Twilio posts here when a call recording is ready.
+    Telephony provider posts here when a call recording is ready.
     Stores the recording URL in ai_call_logs.recording_url.
+    Supports both Plivo (RecordUrl, RecordingID) and Twilio (RecordingUrl, RecordingSid).
     """
     form          = await request.form()
-    recording_url = form.get("RecordingUrl", "")
-    recording_sid = form.get("RecordingSid", "")
-    call_sid      = form.get("CallSid", "")
+    recording_url = form.get("RecordUrl") or form.get("RecordingUrl") or ""
+    recording_sid = form.get("RecordingID") or form.get("RecordingSid") or ""
+    call_sid      = form.get("CallUUID") or form.get("CallSid") or ""
 
     if recording_url:
-        # Append .mp3 so it streams directly in browser
-        if not recording_url.endswith(".mp3"):
+        if not recording_url.endswith(".mp3") and not recording_url.endswith(".wav"):
             recording_url = recording_url + ".mp3"
 
         if log_id:
@@ -4373,7 +4494,6 @@ async def webhook_recording(
                 "UPDATE ai_call_logs SET recording_url=:url WHERE id=:id"
             ), {"url": recording_url, "id": log_id})
         else:
-            # Fall back to CallSid lookup
             db.execute(text(
                 "UPDATE ai_call_logs SET recording_url=:url WHERE call_sid=:sid"
             ), {"url": recording_url, "sid": call_sid})
@@ -4389,7 +4509,7 @@ async def proxy_recording(
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user),
 ):
-    """Stream Twilio recording through backend with auth so browser can play it."""
+    """Stream provider recording through backend with auth so browser can play it."""
     import httpx as _httpx
     row = db.execute(text(
         "SELECT recording_url FROM ai_call_logs WHERE id=:id AND company_id=:cid"
@@ -4398,7 +4518,15 @@ async def proxy_recording(
         raise HTTPException(status_code=404, detail="Recording not found")
     rec_url = row[0]
     try:
-        r = _httpx.get(rec_url, auth=(TWILIO_SID, TWILIO_TOKEN), timeout=20, follow_redirects=True)
+        auth_creds = None
+        if "twilio.com" in rec_url:
+            auth_creds = (TWILIO_SID, TWILIO_TOKEN)
+        elif "plivo.com" in rec_url:
+            plivo_id = _get_plivo_auth_id()
+            plivo_token = _get_plivo_auth_token()
+            if plivo_id and plivo_token:
+                auth_creds = (plivo_id, plivo_token)
+        r = _httpx.get(rec_url, auth=auth_creds, timeout=20, follow_redirects=True)
         r.raise_for_status()
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Could not fetch recording: {e}")
@@ -4955,15 +5083,30 @@ async def webhook_status(
     log_id: int = Query(...),
     db: Session = Depends(get_db),
 ):
-    """Twilio fires this on call completion."""
+    """Twilio or Plivo fires this on call completion."""
     form        = await request.form()
-    call_status = form.get("CallStatus", "completed")
-    duration    = int(form.get("CallDuration", 0) or 0)
+    call_status = (form.get("CallStatus") or form.get("Event") or "completed").strip().lower()
+    raw_dur     = form.get("CallDuration") or form.get("Duration") or form.get("BillDuration") or 0
+    try:
+        duration = int(float(raw_dur))
+    except (ValueError, TypeError):
+        duration = 0
+
+    call_sid = (form.get("CallUUID") or form.get("CallSid") or "").strip()
 
     status_map = {
-        "completed": "completed", "failed": "failed",
-        "busy": "busy", "no-answer": "no_answer",
+        "completed": "completed",
+        "failed": "failed",
+        "busy": "busy",
+        "no-answer": "no_answer",
+        "no_answer": "no_answer",
+        "timeout": "no_answer",
+        "rejected": "busy",
         "canceled": "canceled",
+        "cancelled": "canceled",
+        "in-progress": "connected",
+        "ringing": "dialing",
+        "queued": "dialing",
     }
     final_status = status_map.get(call_status, "completed")
 
@@ -5023,13 +5166,29 @@ async def webhook_status(
         except Exception as retry_err:
             logger.warning(f"[AI_CALLING] Could not compute retry time: {retry_err}")
 
-    db.execute(text("""
-        UPDATE ai_call_logs
-        SET status=:status, duration_seconds=:dur, outcome=:outcome,
-            ai_summary=:summary, ended_at=NOW(), next_retry_at=:retry_at
-        WHERE id=:id
-    """), {"status": final_status, "dur": duration, "outcome": outcome or "no_answer",
-           "summary": summary, "id": log_id, "retry_at": next_retry_at})
+    update_params = {
+        "status": final_status,
+        "dur": duration,
+        "outcome": outcome or "no_answer",
+        "summary": summary,
+        "id": log_id,
+        "retry_at": next_retry_at,
+    }
+    if call_sid:
+        db.execute(text("""
+            UPDATE ai_call_logs
+            SET status=:status, duration_seconds=:dur, outcome=:outcome,
+                ai_summary=:summary, ended_at=NOW(), next_retry_at=:retry_at,
+                call_sid=CASE WHEN call_sid IS NULL OR call_sid LIKE 'plivo_%' THEN :sid ELSE call_sid END
+            WHERE id=:id
+        """), {**update_params, "sid": call_sid})
+    else:
+        db.execute(text("""
+            UPDATE ai_call_logs
+            SET status=:status, duration_seconds=:dur, outcome=:outcome,
+                ai_summary=:summary, ended_at=NOW(), next_retry_at=:retry_at
+            WHERE id=:id
+        """), update_params)
 
     # ── Full CRM lead update with every extracted detail ───────────────────────
     # Parse numerics safely

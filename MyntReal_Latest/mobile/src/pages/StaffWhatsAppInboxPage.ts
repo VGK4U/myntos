@@ -2141,7 +2141,7 @@ export class StaffWhatsAppInboxPage {
 
     let activeModalEmojiCat = 'smileys';
     let showModalEmoji = false;
-    let currentMode: 'scanned' | 'company' = 'company';
+    let currentMode: 'scanned' | 'company' = 'scanned';
     let selectedContactPhone = (phoneNum || '').replace(/[^0-9]/g, '').slice(-10);
     let selectedContactName = '';
     let selectedContactLeadId: string | null = null;
@@ -2170,15 +2170,13 @@ export class StaffWhatsAppInboxPage {
 
           <div style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
             
-            <!-- Mode Switcher (Scan WhatsApp vs WhatsApp API) -->
+            <!-- Mode Switcher (Scan vs API) -->
             <div style="display: flex; gap: 8px; background: #0f172a; border-radius: 10px; padding: 4px; border: 1px solid #334155;">
-              <button id="waModeScanBtn" style="flex: 1; padding: 8px 6px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; background: transparent; color: #94a3b8;">
-                <i class="fas fa-qrcode text-success"></i> Scan WhatsApp
-                <small style="display: block; font-weight: 400; font-size: 10px; opacity: 0.9; margin-top: 2px;">Common Number · Gateway</small>
+              <button id="waModeScanBtn" style="flex: 1; padding: 8px 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; background: #059669; color: #fff; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <i class="fas fa-qrcode text-emerald-400"></i> Scan <span style="background: #10b981; color: #fff; font-size: 9.5px; padding: 1px 6px; border-radius: 10px; font-weight: 700;">● Active</span>
               </button>
-              <button id="waModeCompBtn" style="flex: 1; padding: 8px 6px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.15s; background: #2563eb; color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2);">
-                <i class="fas fa-building text-primary"></i> WhatsApp API
-                <small style="display: block; font-weight: 400; font-size: 10px; opacity: 0.9; margin-top: 2px;">Meta Cloud API</small>
+              <button id="waModeCompBtn" style="flex: 1; padding: 8px 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.15s; background: transparent; color: #94a3b8; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <i class="fas fa-cloud text-blue-400"></i> API <span style="background: #64748b; color: #fff; font-size: 9.5px; padding: 1px 6px; border-radius: 10px; font-weight: 600;">Meta</span>
               </button>
             </div>
 
@@ -2358,11 +2356,17 @@ export class StaffWhatsAppInboxPage {
               </div>
             </div>
 
-            <!-- Send Action Button -->
+            <!-- Send Action Buttons: Dual Scan and API side-by-side -->
             <div style="display: flex; gap: 8px;">
-              <button id="waModalSendBtn" style="flex: 1; padding: 12px; border-radius: 10px; background: linear-gradient(135deg, #2563eb, #3b82f6); color: #fff; font-size: 14px; font-weight: 700; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(37,99,235,0.4);">
-                <i class="fab fa-whatsapp" style="font-size: 18px;"></i>
-                <span id="waModalSendBtnText">Send via WhatsApp API</span>
+              <button id="waModalSendScanBtn" type="button" style="flex: 1; padding: 12px; border-radius: 10px; background: #10b981; color: #fff; font-size: 13.5px; font-weight: 700; border: 2px solid #059669; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(16,185,129,0.35);">
+                <i class="fas fa-qrcode" style="font-size: 16px;"></i>
+                <span>Scan</span>
+                <span id="waModalScanBadge" style="background: #047857; color: #fff; font-size: 9.5px; padding: 1px 6px; border-radius: 10px; font-weight: 700;">● Active</span>
+              </button>
+              <button id="waModalSendApiBtn" type="button" style="flex: 1; padding: 12px; border-radius: 10px; background: #1e293b; color: #60a5fa; font-size: 13.5px; font-weight: 700; border: 1.5px solid #3b82f6; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; opacity: 0.9;">
+                <i class="fas fa-cloud" style="font-size: 16px;"></i>
+                <span>API</span>
+                <span id="waModalApiBadge" style="background: #1e40af; color: #fff; font-size: 9.5px; padding: 1px 6px; border-radius: 10px; font-weight: 600;">Meta</span>
               </button>
             </div>
 
@@ -2396,8 +2400,8 @@ export class StaffWhatsAppInboxPage {
     const tplLabel = document.getElementById('waTplLabel');
     const varSection = document.getElementById('waVarSection');
     const varInputsContainer = document.getElementById('waVarInputsContainer');
-    const sendBtn = document.getElementById('waModalSendBtn') as HTMLButtonElement;
-    const sendBtnText = document.getElementById('waModalSendBtnText');
+    const sendScanBtn = document.getElementById('waModalSendScanBtn') as HTMLButtonElement;
+    const sendApiBtn = document.getElementById('waModalSendApiBtn') as HTMLButtonElement;
 
     const btnScan = document.getElementById('waModeScanBtn');
     const btnComp = document.getElementById('waModeCompBtn');
@@ -2422,15 +2426,39 @@ export class StaffWhatsAppInboxPage {
       if (mode === 'scanned') {
         if (btnScan) { btnScan.style.background = '#059669'; btnScan.style.color = '#fff'; }
         if (btnComp) { btnComp.style.background = 'transparent'; btnComp.style.color = '#94a3b8'; }
-        if (tplLabel) tplLabel.textContent = 'Template (Optional — Any Active)';
-        if (sendBtnText) sendBtnText.textContent = 'Send via Scan WhatsApp';
-        if (sendBtn) sendBtn.style.background = 'linear-gradient(135deg, #059669, #10b981)';
+        if (tplLabel) tplLabel.textContent = 'Template (Scanned Session Approved)';
+        if (sendScanBtn) {
+          sendScanBtn.style.background = '#10b981';
+          sendScanBtn.style.color = '#fff';
+          sendScanBtn.style.border = '2px solid #059669';
+          sendScanBtn.style.boxShadow = '0 4px 12px rgba(16,185,129,0.35)';
+          sendScanBtn.style.opacity = '1';
+        }
+        if (sendApiBtn) {
+          sendApiBtn.style.background = '#1e293b';
+          sendApiBtn.style.color = '#94a3b8';
+          sendApiBtn.style.border = '1px solid #334155';
+          sendApiBtn.style.boxShadow = 'none';
+          sendApiBtn.style.opacity = '0.85';
+        }
       } else {
         if (btnComp) { btnComp.style.background = '#2563eb'; btnComp.style.color = '#fff'; }
         if (btnScan) { btnScan.style.background = 'transparent'; btnScan.style.color = '#94a3b8'; }
         if (tplLabel) tplLabel.textContent = 'Template (Meta-Approved Only)';
-        if (sendBtnText) sendBtnText.textContent = 'Send via WhatsApp API';
-        if (sendBtn) sendBtn.style.background = 'linear-gradient(135deg, #2563eb, #3b82f6)';
+        if (sendApiBtn) {
+          sendApiBtn.style.background = '#2563eb';
+          sendApiBtn.style.color = '#fff';
+          sendApiBtn.style.border = '2px solid #1d4ed8';
+          sendApiBtn.style.boxShadow = '0 4px 12px rgba(37,99,235,0.35)';
+          sendApiBtn.style.opacity = '1';
+        }
+        if (sendScanBtn) {
+          sendScanBtn.style.background = '#1e293b';
+          sendScanBtn.style.color = '#94a3b8';
+          sendScanBtn.style.border = '1px solid #334155';
+          sendScanBtn.style.boxShadow = 'none';
+          sendScanBtn.style.opacity = '0.85';
+        }
       }
       loadCrmTemplates();
     };
@@ -2475,7 +2503,21 @@ export class StaffWhatsAppInboxPage {
 
     segSelect?.addEventListener('change', loadCrmTemplates);
     catSelect?.addEventListener('change', loadCrmTemplates);
-    applyMode('company');
+    applyMode('scanned');
+
+    void apiService.get<any>('/whatsapp/bot-status').then(res => {
+      const isConn = res?.success && (res.data?.connected === true || res.data?.status === 'connected');
+      const badge = document.getElementById('waModalScanBadge');
+      if (badge) {
+        if (isConn) {
+          badge.textContent = '● Active & Ready';
+          badge.style.background = '#047857';
+        } else {
+          badge.textContent = '● Connecting / QR';
+          badge.style.background = '#d97706';
+        }
+      }
+    }).catch(() => {});
 
     // Template Change Handler with Variable Extraction
     tplSelect?.addEventListener('change', () => {
@@ -2484,6 +2526,10 @@ export class StaffWhatsAppInboxPage {
         selectedTemplateObj = null;
         if (varSection) varSection.style.display = 'none';
         return;
+      }
+
+      if (currentMode !== 'scanned') {
+        applyMode('scanned');
       }
 
       selectedTemplateObj = fetchedTemplates.find((t: any) => String(t.id || t.template_id) === String(tplId));
@@ -2791,8 +2837,8 @@ export class StaffWhatsAppInboxPage {
       }
     });
 
-    // Unified Send Action
-    document.getElementById('waModalSendBtn')?.addEventListener('click', async () => {
+    // Dual Send Actions: Scan and API
+    const doSend = async (sendMode: 'scanned' | 'company') => {
       let targetPhone = selectedContactPhone;
       if (!targetPhone) {
         const rawInput = phoneInput?.value?.trim() || '';
@@ -2812,11 +2858,17 @@ export class StaffWhatsAppInboxPage {
       const attachSig = sigCheck?.checked ?? true;
       const cleanText = text || '';
 
-      if (sendBtn) sendBtn.disabled = true;
-      if (sendBtnText) sendBtnText.textContent = currentMode === 'company' ? 'Sending via Meta API...' : 'Sending via WhatsApp Bot...';
+      if (sendScanBtn) sendScanBtn.disabled = true;
+      if (sendApiBtn) sendApiBtn.disabled = true;
+
+      if (sendMode === 'scanned') {
+        if (sendScanBtn) sendScanBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending Scan...';
+      } else {
+        if (sendApiBtn) sendApiBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending API...';
+      }
 
       try {
-        if (currentMode === 'company') {
+        if (sendMode === 'company') {
           // Meta Cloud API Send
           const tplId = selectedTemplateObj ? (selectedTemplateObj.id || selectedTemplateObj.template_id) : null;
           const leadId = selectedContactLeadId || '0';
@@ -2854,10 +2906,19 @@ export class StaffWhatsAppInboxPage {
         await this.loadCurrentTab();
       } catch (err: any) {
         alert(`Failed to send message: ${err.message || 'Unknown error'}`);
-        if (sendBtn) sendBtn.disabled = false;
-        if (sendBtnText) sendBtnText.textContent = currentMode === 'company' ? 'Send via WhatsApp API' : 'Send via Scan WhatsApp';
+        if (sendScanBtn) {
+          sendScanBtn.disabled = false;
+          sendScanBtn.innerHTML = '<i class="fas fa-qrcode" style="font-size: 16px;"></i> <span>Scan</span> <span id="waModalScanBadge" style="background: #047857; color: #fff; font-size: 9.5px; padding: 1px 6px; border-radius: 10px; font-weight: 700;">● Active</span>';
+        }
+        if (sendApiBtn) {
+          sendApiBtn.disabled = false;
+          sendApiBtn.innerHTML = '<i class="fas fa-cloud" style="font-size: 16px;"></i> <span>API</span> <span id="waModalApiBadge" style="background: #1e40af; color: #fff; font-size: 9.5px; padding: 1px 6px; border-radius: 10px; font-weight: 600;">Meta</span>';
+        }
       }
-    });
+    };
+
+    sendScanBtn?.addEventListener('click', () => doSend('scanned'));
+    sendApiBtn?.addEventListener('click', () => doSend('company'));
   }
 
   private openAssignModal(phone: string, name: string): void {

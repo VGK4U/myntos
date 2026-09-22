@@ -1281,6 +1281,13 @@ export class JourneysPage {
           const hours = Math.floor(durationMins / 60);
           const mins = durationMins % 60;
           duration = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+        } else if (journey.start_time) {
+          const startDate = new Date(journey.start_time);
+          const diffMs = Math.max(0, Date.now() - startDate.getTime());
+          durationMins = Math.round(diffMs / 60000);
+          const hours = Math.floor(durationMins / 60);
+          const mins = durationMins % 60;
+          duration = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
         }
 
         // Detect stops with timestamps

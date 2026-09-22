@@ -854,7 +854,7 @@ AI will automatically:
     <div class="ai-modal-body">
       <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:11px 14px;margin-bottom:18px;font-size:12px;color:#78350f">
         <i class="fas fa-info-circle me-1"></i>
-        This places a real Twilio call to the number you enter. The AI will respond using the selected language and segment's catalogue entries — exactly as it would in a live campaign.
+        This places a real call to the number you enter via Plivo (+91 80 3172 8899). The AI will respond using the selected language and segment's catalogue entries — exactly as it would in a live campaign.
       </div>
       <div class="row g-3">
         <div class="col-md-7">
@@ -2926,7 +2926,7 @@ async function placeTestCall() {
           </div>
           <div style="font-size:11px;color:#4b5563">
             <i class="fas fa-info-circle me-1"></i>
-            Note: The call will come from an international number (+1) — this is your Twilio caller ID. The AI conversation works exactly the same.
+            Note: The call will come from ${d.caller_id || '+91 80 3172 8899'} (${d.provider === 'twilio' ? 'Twilio' : 'Plivo'}). The AI conversation works exactly the same.
           </div>
           <div style="font-size:11px;color:#4b5563;margin-top:4px">
             After the call ends, open the <strong>Call History</strong> tab to read the transcript.

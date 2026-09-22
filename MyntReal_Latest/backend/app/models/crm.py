@@ -91,6 +91,7 @@ class CRMLead(BaseModel):
     company_id = Column(Integer, ForeignKey('associated_companies.id'), nullable=False, index=True)
     
     name = Column(String(200), nullable=False)
+    gender = Column(String(20), nullable=True, default=None)
     email = Column(String(255), nullable=True)
     phone = Column(String(20), nullable=True)
     phone_primary_whatsapp = Column(Boolean, default=False, nullable=False)
@@ -323,6 +324,7 @@ class CRMLead(BaseModel):
             'tenant_id': self.tenant_id,
             'company_id': self.company_id,
             'name': self.name,
+            'gender': getattr(self, 'gender', None),
             'email': self.email,
             'phone': self.phone,
             'formatted_phone': f"+91{self.phone}" if self.phone and not self.phone.startswith('+') else (self.phone or ''),

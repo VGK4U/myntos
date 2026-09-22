@@ -430,10 +430,23 @@ export class TeamJourneysPage {
         this.currentTrackPoints = trackPoints;
         
         let duration = '--';
-        if (journey.start_time && journey.end_time) {
-          const diffMs = new Date(journey.end_time).getTime() - new Date(journey.start_time).getTime();
-          const mins = Math.round(diffMs / 60000);
-          duration = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
+        let durationMins = 0;
+        if (journey.start_time) {
+          const startTimeMs = new Date(journey.start_time).getTime();
+          const endTimeMs = journey.end_time ? new Date(journey.end_time).getTime() : Date.now();
+          if (!isNaN(startTimeMs) && !isNaN(endTimeMs) && endTimeMs >= startTimeMs) {
+            const diffMs = endTimeMs - startTimeMs;
+            durationMins = Math.round(diffMs / 60000);
+            duration = durationMins >= 60 ? `${Math.floor(durationMins / 60)}h ${durationMins % 60}m` : `${durationMins}m`;
+          }
+        } else if (journey.total_duration_minutes) {
+          durationMins = Math.round(journey.total_duration_minutes);
+          duration = durationMins >= 60 ? `${Math.floor(durationMins / 60)}h ${durationMins % 60}m` : `${durationMins}m`;
+        }
+
+        let avgSpeed = Math.round(journey.average_speed_kmh || 0);
+        if (avgSpeed === 0 && durationMins > 0 && (journey.total_distance_km || 0) > 0) {
+          avgSpeed = Math.round((journey.total_distance_km || 0) / (durationMins / 60));
         }
 
         const stops = this.detectStops(trackPoints);
@@ -487,7 +500,7 @@ export class TeamJourneysPage {
                 <div style="font-size: 10px; color: #8892b0; text-transform: uppercase;">GPS Pts</div>
               </div>
               <div style="background: rgba(22,33,62,0.8); padding: 12px 8px; border-radius: 8px; text-align: center;">
-                <div style="font-size: 18px; font-weight: bold; color: #fff;">${Math.round(journey.average_speed_kmh || 0)}</div>
+                <div style="font-size: 18px; font-weight: bold; color: #fff;">${avgSpeed}</div>
                 <div style="font-size: 10px; color: #8892b0; text-transform: uppercase;">Avg km/h</div>
               </div>
               <div style="background: rgba(22,33,62,0.8); padding: 12px 8px; border-radius: 8px; text-align: center;">
@@ -820,6 +833,13 @@ export class TeamJourneysPage {
           duration = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
         } else if (journey.total_duration_minutes) {
           const durationMins = Math.round(journey.total_duration_minutes);
+          const hours = Math.floor(durationMins / 60);
+          const mins = durationMins % 60;
+          duration = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+        } else if (journey.start_time) {
+          const startDate = new Date(journey.start_time);
+          const diffMs = Math.max(0, Date.now() - startDate.getTime());
+          const durationMins = Math.round(diffMs / 60000);
           const hours = Math.floor(durationMins / 60);
           const mins = durationMins % 60;
           duration = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;

@@ -4,6 +4,7 @@ Generates bi-hourly updates (9:30 AM - 7:30 PM IST) with comparison against prev
 """
 
 import os
+import re
 import json
 import logging
 import datetime
@@ -11,11 +12,24 @@ import pytz
 from datetime import timedelta
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, and_
 
 logger = logging.getLogger(__name__)
 
 SNAPSHOT_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "storage", "sales_perf_snapshots.json")
+
+
+def _get_ist_now() -> datetime.datetime:
+    """Returns current naive datetime in Asia/Kolkata (IST)."""
+    return datetime.datetime.now(pytz.timezone('Asia/Kolkata')).replace(tzinfo=None)
+
+
+def _clean_name_tokens(name_str: str) -> List[str]:
+    """Extracts lowercase tokens of at least 3 chars excluding common titles/stopwords for precise matching."""
+    if not name_str:
+        return []
+    words = re.sub(r'[^a-zA-Z0-9\s]', ' ', name_str).lower().split()
+    return [w for w in words if len(w) >= 3 and w not in ('mrs', 'mr', 'ms', 'dr', 'agent', 'team', 'vgk', 'supreme')]
 
 
 def _format_seconds_to_hhmmss(total_seconds: int) -> str:
@@ -56,8 +70,8 @@ def get_today_sales_performance_stats(db: Session, start_date=None, end_date=Non
     from sqlalchemy import text
     from app.models.crm import CRMLead
 
-    # IST Today Range (+5:30)
-    ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
+    # IST Today Range
+    ist_now = _get_ist_now()
     if not end_date:
         end_date = ist_now.date()
     if not start_date:
@@ -66,8 +80,10 @@ def get_today_sales_performance_stats(db: Session, start_date=None, end_date=Non
     start_date_str = start_date.strftime("%Y-%m-%d")
     end_date_str = end_date.strftime("%Y-%m-%d")
 
-    start_dt_utc = datetime.datetime.combine(start_date, datetime.time.min) - timedelta(hours=5, minutes=30)
-    end_dt_utc = datetime.datetime.combine(end_date, datetime.time.max) - timedelta(hours=5, minutes=30)
+    # Authoritative IST bounds: PostgreSQL columns (voip_call_sessions.created_at, operator_calls.started_at,
+    # crm_leads.created_at) store naive datetimes in IST (Asia/Kolkata).
+    start_dt = datetime.datetime.combine(start_date, datetime.time.min)
+    end_dt = datetime.datetime.combine(end_date, datetime.time.max)
 
     if start_date == end_date:
         if start_date == ist_now.date():
@@ -79,7 +95,6 @@ def get_today_sales_performance_stats(db: Session, start_date=None, end_date=Non
 
     from app.models.operator_calls import OperatorCall
     from app.models.voip_call_session import VoIPCallSession
-    from sqlalchemy import and_
 
     # 1. Tele Sales / Telecaller Department Staff (Authoritative database attributes, strictly excluding Freelancers & Service/Non-caller staff)
     staff_rows = db.execute(text("""
@@ -115,6 +130,23 @@ def get_today_sales_performance_stats(db: Session, start_date=None, end_date=Non
         GROUP BY e.id, e.full_name, e.emp_code
     """)).fetchall()
 
+    # Pre-fetch pure Cloud Operator Calls (MyOperator virtual numbers)
+    # Strictly exclude softphone/WebRTC mirrors (call_id prefixed with plivo_, webrtc_, mock_, vcs_)
+    pure_op_calls = db.query(OperatorCall).filter(
+        OperatorCall.started_at >= start_dt,
+        OperatorCall.started_at <= end_dt,
+        ~OperatorCall.call_id.like('plivo_%'),
+        ~OperatorCall.call_id.like('webrtc_%'),
+        ~OperatorCall.call_id.like('mock_%'),
+        ~OperatorCall.call_id.like('vcs_%')
+    ).all()
+
+    # Pre-fetch Browser Softphone (VoIP / Plivo / WebRTC in-app calls)
+    day_voip_calls = db.query(VoIPCallSession).filter(
+        VoIPCallSession.created_at >= start_dt,
+        VoIPCallSession.created_at <= end_dt
+    ).all()
+
     leaderboard = []
     total_calls = 0
     total_talk_seconds = 0
@@ -137,33 +169,32 @@ def get_today_sales_performance_stats(db: Session, start_date=None, end_date=Non
         m_dur = int(m_row.dur or 0) if m_row else 0
         m_missed = m_row.missed if m_row else 0
 
-        # Operator Cloud Calls (MyOperator virtual numbers)
-        words = [w for w in s.full_name.replace('.', ' ').split() if len(w) >= 3 and w.lower() not in ('ms', 'mrs', 'mr', 'dr')]
-        filters = [OperatorCall.handled_by.ilike(f'%{w}%') for w in words]
-        op_calls = db.query(OperatorCall).filter(
-            OperatorCall.started_at >= start_dt_utc,
-            OperatorCall.started_at <= end_dt_utc,
-            or_(*filters)
-        ).all() if filters else []
+        # Operator Cloud Calls (MyOperator virtual numbers) with disambiguated staff name matching
+        s_tokens = set(_clean_name_tokens(s.full_name))
+        staff_op_calls = []
+        for opc in pure_op_calls:
+            hb = opc.handled_by or ''
+            hb_tokens = _clean_name_tokens(hb)
+            if hb_tokens and all(w in s_tokens for w in hb_tokens):
+                staff_op_calls.append(opc)
 
-        op_cnt = len(op_calls)
-        op_dur = sum(c.duration_seconds or 0 for c in op_calls if c.status == 'answered')
-        op_missed = sum(1 for c in op_calls if c.status == 'missed')
+        op_cnt = len(staff_op_calls)
+        op_dur = sum(c.duration_seconds or 0 for c in staff_op_calls if c.status == 'answered')
+        op_missed = sum(1 for c in staff_op_calls if c.status == 'missed')
 
         # 3. Browser Softphone (VoIP / Plivo / WebRTC in-app calls)
-        voip_filters = [VoIPCallSession.operator_id == s.id]
-        if words:
-            voip_filters.append(and_(VoIPCallSession.operator_name.isnot(None), or_(*[VoIPCallSession.operator_name.ilike(f'%{w}%') for w in words])))
+        staff_voip_calls = []
+        for vc in day_voip_calls:
+            if vc.operator_id == s.id:
+                staff_voip_calls.append(vc)
+            elif not vc.operator_id and vc.operator_name:
+                vc_tokens = _clean_name_tokens(vc.operator_name)
+                if vc_tokens and all(w in s_tokens for w in vc_tokens):
+                    staff_voip_calls.append(vc)
 
-        voip_calls = db.query(VoIPCallSession).filter(
-            or_(*voip_filters),
-            VoIPCallSession.created_at >= start_dt_utc,
-            VoIPCallSession.created_at <= end_dt_utc
-        ).all()
-
-        v_cnt = len(voip_calls)
-        v_dur = sum(v.duration_seconds or 0 for v in voip_calls if (v.duration_seconds or 0) > 0)
-        v_missed = sum(1 for v in voip_calls if (v.duration_seconds or 0) == 0 and v.status in ('no_answer', 'failed', 'busy', 'cancelled', 'ended', 'dialing', 'rejected', 'missed'))
+        v_cnt = len(staff_voip_calls)
+        v_dur = sum(v.duration_seconds or 0 for v in staff_voip_calls if (v.duration_seconds or 0) > 0)
+        v_missed = sum(1 for v in staff_voip_calls if (v.duration_seconds or 0) == 0 and v.status in ('no_answer', 'failed', 'busy', 'cancelled', 'ended', 'dialing', 'rejected', 'missed'))
 
         staff_tot_calls = m_cnt + op_cnt + v_cnt
         staff_tot_talk = m_dur + op_dur + v_dur
@@ -193,9 +224,10 @@ def get_today_sales_performance_stats(db: Session, start_date=None, end_date=Non
 
     # 3. New Leads Intake
     new_leads = db.query(func.count(CRMLead.id)).filter(
-        CRMLead.created_at >= start_dt_utc,
-        CRMLead.created_at <= end_dt_utc
+        CRMLead.created_at >= start_dt,
+        CRMLead.created_at <= end_dt
     ).scalar() or 0
+
 
     return {
         "timestamp_ist": ist_now.strftime("%Y-%m-%d %H:%M:%S"),
@@ -244,7 +276,7 @@ def generate_bi_hourly_performance_message(db: Session, slot_name: str = "Bi-Hou
     """
     current_stats = get_today_sales_performance_stats(db)
 
-    ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
+    ist_now = _get_ist_now()
     date_key = ist_now.strftime("%Y-%m-%d")
     previous_stats = _load_previous_snapshot(date_key)
 
@@ -293,12 +325,18 @@ def generate_bi_hourly_performance_message(db: Session, slot_name: str = "Bi-Hou
 
         missed_str = f" *(🔴 {item['missed_count']} Missed)*" if item.get('missed_count', 0) > 0 else ""
         
-        # Softphone breakdown after overall talk time
-        softphone_detail_str = ""
+        # Multi-medium breakdown for transparent reporting across all mediums
+        medium_parts = []
         if item.get('softphone_call_count', 0) > 0:
-            softphone_detail_str = f" *(💻 Softphone: {item['softphone_call_count']} Calls · {item['softphone_talk_formatted']})*"
+            medium_parts.append(f"💻 Softphone: {item['softphone_call_count']} Calls · {item['softphone_talk_formatted']}")
+        if item.get('sim_call_count', 0) > 0:
+            medium_parts.append(f"📱 SIM: {item['sim_call_count']} Calls · {_format_seconds_to_smart_time(item.get('sim_talk_seconds', 0))}")
+        if item.get('operator_call_count', 0) > 0:
+            medium_parts.append(f"☁️ Operator: {item['operator_call_count']} Calls · {_format_seconds_to_smart_time(item.get('operator_talk_seconds', 0))}")
 
-        lb_text_lines.append(f"{idx+1}. {medal} *{staff_name}* — {item['call_count']} Calls{missed_str} | {item['talk_time_formatted']} Talk Time{softphone_detail_str}{staff_delta_str}")
+        breakdown_str = f" *({' | '.join(medium_parts)})*" if medium_parts else ""
+
+        lb_text_lines.append(f"{idx+1}. {medal} *{staff_name}* — {item['call_count']} Calls{missed_str} | {item['talk_time_formatted']} Talk Time{breakdown_str}{staff_delta_str}")
 
     if not active_staff:
         lb_text_lines.append("*(No staff calls recorded yet today)*")
@@ -339,7 +377,7 @@ def get_today_solar_people_stats(db: Session, target_date=None) -> Dict[str, Any
     from app.models.staff_work_interval import StaffWorkInterval
     from app.models.staff_kra import StaffKRADailyInstance, StaffKRATemplate
 
-    ist_now = datetime.datetime.utcnow() + timedelta(hours=5, minutes=30)
+    ist_now = _get_ist_now()
     if not target_date:
         target_date = ist_now.date()
 
