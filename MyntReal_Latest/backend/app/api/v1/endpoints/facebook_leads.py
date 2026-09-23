@@ -482,7 +482,9 @@ async def pull_meta_leads(
     from app.core.security_encryption import decrypt_credential_safe
 
     pages = db.execute(sqlt(
-        "SELECT page_id, page_name, access_token, crm_segment, company_id FROM facebook_pages WHERE is_active = True AND access_token IS NOT NULL AND access_token != ''"
+        "SELECT page_id, page_name, access_token, crm_segment, company_id FROM facebook_pages "
+        "WHERE is_active = True AND access_token IS NOT NULL AND access_token != '' "
+        "AND page_id NOT LIKE 'page_%' AND page_id NOT LIKE 'meta_page_%' ORDER BY id ASC"
     )).fetchall()
 
     ingested_count = 0
@@ -544,6 +546,10 @@ async def pull_meta_leads(
                     else:
                         skipped_count += 1
                 except Exception as ex:
+                    try:
+                        db.rollback()
+                    except Exception:
+                        pass
                     errors.append(f"Lead {lead_id}: {str(ex)}")
 
     return {

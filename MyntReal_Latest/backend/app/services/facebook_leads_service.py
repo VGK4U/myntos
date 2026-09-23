@@ -374,7 +374,7 @@ class FacebookLeadsService:
         url = f"https://graph.facebook.com/{self.api_version}/{lead_id}"
         params = {
             'access_token': token,
-            'fields': 'id,created_time,field_data,form_id,page_id,ad_id,adset_id,campaign_id'
+            'fields': 'id,created_time,field_data,form_id,ad_id,adset_id,campaign_id'
         }
         return self._execute_graph_api_request(url, params=params, timeout=15)
 
@@ -386,7 +386,7 @@ class FacebookLeadsService:
         url = f"https://graph.facebook.com/{self.api_version}/{form_id}/leads"
         params: Optional[Dict[str, Any]] = {
             'access_token': access_token,
-            'fields': 'id,created_time,field_data,form_id,page_id,ad_id,adset_id,campaign_id',
+            'fields': 'id,created_time,field_data,form_id,ad_id,adset_id,campaign_id',
             'limit': 100
         }
 
