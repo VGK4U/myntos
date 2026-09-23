@@ -534,7 +534,7 @@ export class StaffLeadsPage {
                 <option value="Direct" ${this.sourceFilter === 'Direct' ? 'selected' : ''}>Direct</option>
                 <option value="Referral" ${this.sourceFilter === 'Referral' ? 'selected' : ''}>Referral</option>
                 <option value="Website" ${this.sourceFilter === 'Website' ? 'selected' : ''}>Website</option>
-                <option value="Social Media" ${this.sourceFilter === 'Social Media' ? 'selected' : ''}>Social Media</option>
+                <option value="Online - M" ${this.sourceFilter === 'Online - M' ? 'selected' : ''}>Online - M</option>
               </select>
             </div>
             <div class="filter-group flex-grow">
@@ -900,7 +900,7 @@ export class StaffLeadsPage {
                   <option value="Direct">Direct</option>
                   <option value="Referral">Referral</option>
                   <option value="Website">Website</option>
-                  <option value="Social Media">Social Media</option>
+                  <option value="Online - M">Online - M</option>
                   <option value="Cold Call">Cold Call</option>
                   <option value="Event">Event</option>
                 </select>

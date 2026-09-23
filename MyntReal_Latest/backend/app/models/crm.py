@@ -5,7 +5,7 @@ Supports leads from any category: Real Estate, EV, Solar, Distributorship, etc.
 Handlers can be: Staff Employees, Official Partners, or MNR Members
 """
 
-from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, Date, Text, ForeignKey, Enum, Float, Index, UniqueConstraint, Numeric, text, JSON
+from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, Date, Text, ForeignKey, Enum, Float, Index, UniqueConstraint, Numeric, text, JSON, event
 from sqlalchemy.orm import relationship
 from app.models.base import BaseModel
 from datetime import datetime
@@ -711,14 +711,13 @@ DEFAULT_LEAD_SOURCES = [
     {'name': 'Referral', 'description': 'Referred by existing customer/partner', 'display_order': 2},
     {'name': 'Walk-in', 'description': 'Walk-in inquiry', 'display_order': 3},
     {'name': 'Phone Call', 'description': 'Direct phone inquiry', 'display_order': 4},
-    {'name': 'Social Media', 'description': 'From social media platforms', 'display_order': 5},
-    {'name': 'Online - M', 'description': 'Online Meta / Facebook Lead Ads campaign', 'display_order': 6},
-    {'name': 'Advertisement', 'description': 'Response to advertisement', 'display_order': 7},
-    {'name': 'Event/Exhibition', 'description': 'From trade shows or events', 'display_order': 8},
-    {'name': 'Partner', 'description': 'Lead from partner network', 'display_order': 9},
-    {'name': 'MNR', 'description': 'Lead sourced via MNR Member (ground source)', 'display_order': 10},
-    {'name': 'VGK4U', 'description': 'Lead submitted via VGK4U member portal', 'display_order': 11},
-    {'name': 'Other', 'description': 'Other sources', 'display_order': 12},
+    {'name': 'Online - M', 'description': 'Online Meta / Facebook / Instagram Lead Ads campaign', 'display_order': 5},
+    {'name': 'Advertisement', 'description': 'Response to advertisement', 'display_order': 6},
+    {'name': 'Event/Exhibition', 'description': 'From trade shows or events', 'display_order': 7},
+    {'name': 'Partner', 'description': 'Lead from partner network', 'display_order': 8},
+    {'name': 'MNR', 'description': 'Lead sourced via MNR Member (ground source)', 'display_order': 9},
+    {'name': 'VGK4U', 'description': 'Lead submitted via VGK4U member portal', 'display_order': 10},
+    {'name': 'Other', 'description': 'Other sources', 'display_order': 11},
 ]
 
 # [DC-VGK-SOURCE] VGK4U member portal source name constant
@@ -1082,4 +1081,57 @@ class CRMLeadPhoneProvenance(BaseModel):
     source_channel = Column(String(50), default='manual', nullable=False)
     source_ref = Column(Text, nullable=True)
     captured_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+
+
+TERMINAL_LEAD_STATUSES = {'lost', 'won', 'completed', 'do_not_call'}
+
+
+def auto_cancel_lead_followups_for_status(db, lead_id: int, new_status: str):
+    """
+    Cancel open scheduled follow-ups and clear next_followup_date when a lead is moved
+    to terminal status ('lost', 'won', 'completed', 'do_not_call').
+    """
+    st = str(new_status or '').strip().lower()
+    if st in TERMINAL_LEAD_STATUSES:
+        db.execute(text("""
+            UPDATE crm_lead_followups
+            SET status = 'cancelled',
+                notes = COALESCE(notes, '') || ' [System: Auto-closed due to lead status ' || :st || ']'
+            WHERE lead_id = :lid AND status = 'scheduled'
+        """), {"st": st, "lid": lead_id})
+        db.execute(text("""
+            UPDATE crm_leads
+            SET next_followup_date = NULL
+            WHERE id = :lid AND next_followup_date IS NOT NULL
+        """), {"lid": lead_id})
+
+
+@event.listens_for(CRMLead, 'before_update')
+def on_crm_lead_before_update(mapper, connection, target):
+    """
+    Auto-Cancel Hook: When a lead is moved to a terminal status ('lost', 'won', 'completed', 'do_not_call'),
+    any open scheduled follow-up is automatically cancelled and next_followup_date is cleared.
+    """
+    st = str(getattr(target, 'status', '') or '').strip().lower()
+    if st in TERMINAL_LEAD_STATUSES:
+        if getattr(target, 'next_followup_date', None) is not None:
+            target.next_followup_date = None
+        if getattr(target, 'id', None):
+            connection.execute(
+                text("""
+                    UPDATE crm_lead_followups
+                    SET status = 'cancelled',
+                        notes = COALESCE(notes, '') || ' [System: Auto-closed due to lead status ' || :st || ']'
+                    WHERE lead_id = :lid AND status = 'scheduled'
+                """),
+                {"st": st, "lid": target.id}
+            )
+            connection.execute(
+                text("""
+                    UPDATE crm_leads
+                    SET next_followup_date = NULL
+                    WHERE id = :lid AND next_followup_date IS NOT NULL
+                """),
+                {"lid": target.id}
+            )
 

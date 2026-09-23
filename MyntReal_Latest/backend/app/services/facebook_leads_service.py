@@ -729,7 +729,7 @@ class FacebookLeadsService:
             'name':                name[:200],
             'email':               email[:200] if email else None,
             'phone':               phone[:20]  if phone else None,
-            'source':              'Social Media',
+            'source':              'Online - M',
             'source_details':      json.dumps(source_details)[:1000],
             'status':              'new',
             'priority':            'high',

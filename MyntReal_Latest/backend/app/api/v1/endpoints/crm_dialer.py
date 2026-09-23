@@ -1215,9 +1215,17 @@ def _build_queue_for_staff(staff: StaffEmployee, db: Session, company_id: Option
             if u_exclude:
                 u_filter.append(CRMLead.id.notin_(u_exclude))
             u_q = db.query(CRMLead).filter(*u_filter).order_by(
-                case((CRMLead.status.in_(['new', 'fresh', 'New', 'Fresh']), 1), else_=2),
+                case(
+                    (and_(CRMLead.next_followup_date.isnot(None), CRMLead.next_followup_date <= _now), 1),
+                    (CRMLead.status.in_(['new', 'fresh', 'New', 'Fresh']), 2),
+                    else_=3
+                ),
+                case(
+                    (and_(CRMLead.next_followup_date.isnot(None), CRMLead.next_followup_date <= _now), CRMLead.next_followup_date),
+                    else_=None
+                ).desc().nullslast(),
                 CRMLead.created_at.desc()
-            ).limit(300).all()
+            ).limit(500).all()
 
         # Phone validation and phone-level suppression (Rules 2, 8)
         valid_leads = [
@@ -2554,6 +2562,9 @@ async def log_dialer_attempt(
             lead.lost_at = now
         elif target_status != 'lost':
             lead.lost_at = None  # Clear lost_at if status moves away from 'lost'
+        if target_status in ('lost', 'won', 'completed', 'do_not_call'):
+            from app.models.crm import auto_cancel_lead_followups_for_status
+            auto_cancel_lead_followups_for_status(db, lead.id, target_status)
         if new_priority:
             lead.priority = new_priority
         if new_source is not None and str(new_source).strip():
@@ -2655,59 +2666,62 @@ async def log_dialer_attempt(
             except Exception as cl_err:
                 logger.warning(f"[DC_DIALER] StaffCallLog insertion error: {cl_err}")
 
-        # DC_AUTO_ASSIGN: Authoritative Connected Call Telecaller Binding (Rule 1 & Rule 13)
+        # DC_AUTO_ASSIGN: Authoritative Connected Call & First-Touch Telecaller Binding (Rule 1 & Rule 13)
         from app.api.v1.endpoints.crm import is_lead_owned_by_inactive_staff
         is_inactive_owner, inactive_emp = is_lead_owned_by_inactive_staff(lead, db)
         is_genuine_connected_call = is_attempt_connected(call_outcome, duration_seconds)
+        is_status_updated = bool(new_status and str(new_status).strip().lower() not in ('', 'none') and new_status != lead.status)
+        is_unassigned_or_inactive = bool(lead.telecaller_id is None or is_inactive_owner)
 
-        if is_staff and (is_genuine_connected_call or (next_followup_date and not do_not_call)):
-            # Rule 1: IF lead.telecaller_id IS NULL -> set lead.telecaller_id = current staff. ELSE -> preserve existing telecaller_id.
-            if lead.telecaller_id is None:
-                prev_handler_type = lead.handler_type
-                prev_handler_id = lead.handler_id
+        if is_staff and is_unassigned_or_inactive and (is_genuine_connected_call or (next_followup_date and not do_not_call) or is_status_updated):
+            prev_handler_type = lead.handler_type
+            prev_handler_id = lead.handler_id
 
-                lead.telecaller_id = current_user.id
-                if not lead.handler_id or lead.handler_type in (None, 'unassigned') or is_inactive_owner:
-                    lead.handler_type = 'staff'
-                    lead.handler_id = str(getattr(current_user, 'emp_code', None) or current_user.id)
-                if not lead.primary_owner_id or is_inactive_owner:
-                    lead.primary_owner_type = 'staff'
-                    lead.primary_owner_id = current_user.id
+            lead.telecaller_id = current_user.id
+            lead.handler_type = 'staff'
+            lead.handler_id = str(getattr(current_user, 'emp_code', None) or current_user.id)
+            if not lead.primary_owner_id or is_inactive_owner:
+                lead.primary_owner_type = 'staff'
+                lead.primary_owner_id = current_user.id
 
-                trigger_desc = f"connected call ({call_outcome or f'{duration_seconds}s'})" if is_genuine_connected_call else f"call follow-up ({call_outcome or 'follow-up scheduled'})"
-                assign_reason = (
-                    f"[Auto-Assign] Lead reassigned from inactive employee {getattr(inactive_emp, 'full_name', getattr(inactive_emp, 'emp_code', 'Past Staff'))} to {getattr(current_user, 'name', 'Staff')} ({getattr(current_user, 'emp_code', current_user.id)}) upon {trigger_desc}."
-                    if is_inactive_owner
-                    else f"[Auto-Assign] Lead assigned to {getattr(current_user, 'name', 'Staff')} ({getattr(current_user, 'emp_code', current_user.id)}) upon {trigger_desc}."
-                )
-                auto_assign_note = CRMLeadNote(
+            trigger_desc = (
+                f"connected call ({call_outcome or f'{duration_seconds}s'})"
+                if is_genuine_connected_call
+                else (f"status updated to '{target_status}'" if is_status_updated else f"call follow-up ({call_outcome or 'follow-up scheduled'})")
+            )
+            assign_reason = (
+                f"[Auto-Assign] Lead reassigned from inactive employee {getattr(inactive_emp, 'full_name', getattr(inactive_emp, 'emp_code', 'Past Staff'))} to {getattr(current_user, 'name', 'Staff')} ({getattr(current_user, 'emp_code', current_user.id)}) upon {trigger_desc}."
+                if is_inactive_owner
+                else f"[Auto-Assign] Lead assigned to {getattr(current_user, 'name', 'Staff')} ({getattr(current_user, 'emp_code', current_user.id)}) upon {trigger_desc}."
+            )
+            auto_assign_note = CRMLeadNote(
+                company_id=lead.company_id,
+                lead_id=lead.id,
+                note=assign_reason,
+                is_private=False,
+                created_by_type=handler_type,
+                created_by_id=handler_id,
+            )
+            db.add(auto_assign_note)
+
+            try:
+                assignment = CRMLeadAssignment(
                     company_id=lead.company_id,
                     lead_id=lead.id,
-                    note=assign_reason,
-                    is_private=False,
-                    created_by_type=handler_type,
-                    created_by_id=handler_id,
+                    from_handler_type=prev_handler_type or ('staff' if is_inactive_owner else 'unassigned'),
+                    from_handler_id=str(prev_handler_id or (inactive_emp.emp_code if inactive_emp else '') or ''),
+                    to_handler_type='staff',
+                    to_handler_id=str(getattr(current_user, 'emp_code', None) or current_user.id),
+                    reason=assign_reason,
+                    assigned_by_type='staff',
+                    assigned_by_id=str(getattr(current_user, 'emp_code', None) or current_user.id)
                 )
-                db.add(auto_assign_note)
+                db.add(assignment)
+            except Exception as asgn_err:
+                logger.warning(f"[DC_DIALER] Failed to log CRMLeadAssignment: {asgn_err}")
 
-                try:
-                    assignment = CRMLeadAssignment(
-                        company_id=lead.company_id,
-                        lead_id=lead.id,
-                        from_handler_type=prev_handler_type or ('staff' if is_inactive_owner else 'unassigned'),
-                        from_handler_id=str(prev_handler_id or (inactive_emp.emp_code if inactive_emp else '') or ''),
-                        to_handler_type='staff',
-                        to_handler_id=str(getattr(current_user, 'emp_code', None) or current_user.id),
-                        reason=assign_reason,
-                        assigned_by_type='staff',
-                        assigned_by_id=str(getattr(current_user, 'emp_code', None) or current_user.id)
-                    )
-                    db.add(assignment)
-                except Exception as asgn_err:
-                    logger.warning(f"[DC_DIALER] Failed to log CRMLeadAssignment: {asgn_err}")
-
-            # Transition status from new/fresh to contacted
-            if lead.status in ('new', 'fresh', 'New', 'Fresh', None) or not lead.status:
+            # Transition status from new/fresh to contacted if not already updated to a specific status
+            if (lead.status in ('new', 'fresh', 'New', 'Fresh', None) or not lead.status) and not is_status_updated:
                 lead.status = 'contacted'
 
         # DC_CADENCE_LIMITER: Auto-retire chronic non-connected leads (>= 5 failed attempts) to 'unresponsive'
@@ -3219,6 +3233,8 @@ async def toggle_do_not_call(
     else:
         lead.status = 'do_not_call'
         action = "marked do_not_call"
+        from app.models.crm import auto_cancel_lead_followups_for_status
+        auto_cancel_lead_followups_for_status(db, lead.id, 'do_not_call')
 
     db.commit()
     return {"success": True, "lead_id": lead_id, "action": action, "new_status": lead.status}

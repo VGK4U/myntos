@@ -666,7 +666,7 @@ export class StaffTeamLeadsPage {
                   <option value="Direct">Direct</option>
                   <option value="Referral">Referral</option>
                   <option value="Website">Website</option>
-                  <option value="Social Media">Social Media</option>
+                  <option value="Online - M">Online - M</option>
                   <option value="Cold Call">Cold Call</option>
                 </select>
               </div>

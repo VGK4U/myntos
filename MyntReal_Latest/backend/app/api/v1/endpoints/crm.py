@@ -260,7 +260,7 @@ def get_authorized_lead(
             if is_downline_assigned:
                 return lead
         
-        # If unassigned and allowed for claiming
+        # If unassigned or inactive and allowed for claiming
         if allow_unassigned and lead.company_id in ctx.accessible_company_ids:
             is_canon_unassigned = (
                 lead.telecaller_id is None and
@@ -268,7 +268,8 @@ def get_authorized_lead(
                 lead.field_staff_id is None and
                 lead.handler_type in (None, 'unassigned')
             )
-            if is_canon_unassigned:
+            is_inactive, _ = is_lead_owned_by_inactive_staff(lead, db)
+            if is_canon_unassigned or is_inactive:
                 return lead
 
         # Operational Company Membership check
@@ -5328,15 +5329,30 @@ def list_leads(
         )
         query = query.filter(~_is_canon_unassigned)
     elif scope in ('fresh', 'unassigned'):
-        # Unassigned / fresh leads available for claiming
-        u_conds = [
-            ~CRMLead.status.in_(['won', 'lost']),
+        # Unassigned / fresh leads + inactive staff leads available for claiming
+        inactive_staff_rows = db.query(StaffEmployee.id, StaffEmployee.emp_code).filter(
+            or_(StaffEmployee.status != 'active', StaffEmployee.is_deleted == True)
+        ).all()
+        inactive_staff_ids = {s.id for s in inactive_staff_rows}
+        inactive_staff_codes = {s.emp_code for s in inactive_staff_rows if s.emp_code} | {str(s.id) for s in inactive_staff_rows}
+
+        unassigned_lead_cond = and_(
             CRMLead.handler_type == 'unassigned',
             CRMLead.telecaller_id.is_(None),
             CRMLead.field_staff_id.is_(None),
             CRMLead.primary_owner_id.is_(None),
             or_(CRMLead.handler_id.is_(None), CRMLead.handler_id == ''),
             or_(CRMLead.mnr_handler_id.is_(None), CRMLead.mnr_handler_id == '')
+        )
+        inactive_staff_lead_cond = or_(
+            CRMLead.telecaller_id.in_(inactive_staff_ids),
+            CRMLead.field_staff_id.in_(inactive_staff_ids),
+            CRMLead.handler_id.in_(inactive_staff_codes),
+            and_(CRMLead.primary_owner_type == 'staff', CRMLead.primary_owner_id.in_(inactive_staff_ids))
+        )
+        u_conds = [
+            ~CRMLead.status.in_(['won', 'lost', 'completed', 'do_not_call']),
+            or_(unassigned_lead_cond, inactive_staff_lead_cond)
         ]
         if not has_view_all:
             target_ids = all_downline_ids if is_leader else [current_employee.id]
@@ -5344,7 +5360,11 @@ def list_leads(
             if eligibility:
                 u_conds.append(or_(*[and_(CRMLead.company_id == co, CRMLead.category_id == cat) for co, cat in eligibility]))
             else:
-                u_conds.append(CRMLead.id == -1)
+                staff_cos = ctx.accessible_company_ids
+                if staff_cos:
+                    u_conds.append(CRMLead.company_id.in_(staff_cos))
+                else:
+                    u_conds.append(CRMLead.id == -1)
         fresh_cond = and_(*u_conds)
         # Category-Driven Fresh Leads Routing strictly scoped by company_filter_clause
         if company_filter_clause is not None:
@@ -11416,7 +11436,7 @@ def update_lead(
     if not ctx or ctx.staff_id != current_employee.id:
         ctx = auth_context_service.build_context(db, current_employee)
 
-    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True)
+    lead = get_authorized_lead(db, lead_id, current_employee, for_mutation=True, allow_unassigned=True)
         
     _validate_freelancer_lead_access(lead, current_employee)
     
@@ -11433,7 +11453,8 @@ def update_lead(
         lead.field_staff_id == _upd_emp_id or
         (_upd_emp_code and lead.handler_id == _upd_emp_code)
     )
-    if not _upd_is_admin and not _upd_is_self and not _upd_is_assigned and lead.company_id != company_id:
+    _is_inact_or_unassigned = bool(lead.telecaller_id is None or is_lead_owned_by_inactive_staff(lead, db)[0])
+    if not _upd_is_admin and not _upd_is_self and not _upd_is_assigned and not _is_inact_or_unassigned and lead.company_id != company_id:
         print(f"[DC-LEAD-400] Lead {lead_id}: company mismatch — lead.company_id={lead.company_id}, request company_id={company_id}")
         raise HTTPException(
             status_code=400, 
@@ -11939,23 +11960,49 @@ def update_lead(
     _status_changed = ('status' in update_data and update_data['status'] != _pre_commit_status)
     _followup_added = ('next_followup_date' in update_data and update_data['next_followup_date'] is not None)
     if (_status_changed or _followup_added) and current_employee and hasattr(current_employee, 'id'):
-        is_inactive_owner = False
-        if lead.telecaller_id:
-            _st = db.query(StaffEmployee.status, StaffEmployee.is_deleted).filter(StaffEmployee.id == lead.telecaller_id).first()
-            if _st and (_st[0] != 'active' or _st[1]):
-                is_inactive_owner = True
-        elif lead.primary_owner_id and lead.primary_owner_type == 'staff':
-            _sp = db.query(StaffEmployee.status, StaffEmployee.is_deleted).filter(StaffEmployee.id == lead.primary_owner_id).first()
-            if _sp and (_sp[0] != 'active' or _sp[1]):
-                is_inactive_owner = True
+        is_inactive_owner, inact_emp = is_lead_owned_by_inactive_staff(lead, db)
+        is_unassigned_or_inactive = (lead.telecaller_id is None or is_inactive_owner)
+        if is_unassigned_or_inactive:
+            prev_handler_type = lead.handler_type
+            prev_handler_id = lead.handler_id
 
-        if is_inactive_owner or not lead.telecaller_id:
             lead.handler_type = 'staff'
             lead.handler_id = current_employee.emp_code
             lead.telecaller_id = current_employee.id
             if not lead.primary_owner_id or is_inactive_owner:
                 lead.primary_owner_type = 'staff'
                 lead.primary_owner_id = current_employee.id
+
+            trigger_desc = f"status updated to '{lead.status}'" if _status_changed else "follow-up scheduled"
+            assign_reason = (
+                f"[Auto-Assign] Lead reassigned from inactive employee {getattr(inact_emp, 'full_name', getattr(inact_emp, 'emp_code', 'Past Staff'))} to {getattr(current_employee, 'full_name', 'Staff')} ({current_employee.emp_code}) upon {trigger_desc}."
+                if is_inactive_owner
+                else f"[Auto-Assign] Lead assigned to {getattr(current_employee, 'full_name', 'Staff')} ({current_employee.emp_code}) upon {trigger_desc}."
+            )
+            auto_assign_note = CRMLeadNote(
+                company_id=lead.company_id or company_id,
+                lead_id=lead.id,
+                note=assign_reason,
+                is_private=False,
+                created_by_type='staff',
+                created_by_id=current_employee.emp_code,
+            )
+            db.add(auto_assign_note)
+            try:
+                assignment = CRMLeadAssignment(
+                    company_id=lead.company_id or company_id,
+                    lead_id=lead.id,
+                    from_handler_type=prev_handler_type or ('staff' if is_inactive_owner else 'unassigned'),
+                    from_handler_id=str(prev_handler_id or (inact_emp.emp_code if inact_emp else '') or ''),
+                    to_handler_type='staff',
+                    to_handler_id=current_employee.emp_code,
+                    reason=assign_reason,
+                    assigned_by_type='staff',
+                    assigned_by_id=current_employee.emp_code
+                )
+                db.add(assignment)
+            except Exception as asgn_err:
+                logger.warning(f"[DC_CRM] Failed to log CRMLeadAssignment on status update: {asgn_err}")
 
     # DC-NOTE-AUDIT: When recent_comments is added or modified, log a CRMLeadNote entry showing who updated it
     if 'recent_comments' in update_data and update_data['recent_comments']:
@@ -12012,6 +12059,9 @@ def update_lead(
             lead.lost_at = get_indian_time()
         elif update_data['status'] != 'lost':
             lead.lost_at = None
+        if update_data['status'] in ('lost', 'won', 'completed', 'do_not_call'):
+            from app.models.crm import auto_cancel_lead_followups_for_status
+            auto_cancel_lead_followups_for_status(db, lead.id, update_data['status'])
     # DC-TEAM-ASSIGN-001 (Jun 2026): stamp actual_close_date when status→completed
     if 'status' in update_data and update_data['status'] == 'completed' and not lead.actual_close_date:
         lead.actual_close_date = get_indian_time()
@@ -12821,6 +12871,9 @@ def bulk_update_leads(
                 old_status = lead.status
                 lead.status = bulk_data.status
                 changes.append(f"Status: {old_status} → {bulk_data.status}")
+                if bulk_data.status in ('lost', 'won', 'completed', 'do_not_call'):
+                    from app.models.crm import auto_cancel_lead_followups_for_status
+                    auto_cancel_lead_followups_for_status(db, lead.id, bulk_data.status)
             
             if bulk_data.priority and lead.priority != bulk_data.priority:
                 old_priority = lead.priority
