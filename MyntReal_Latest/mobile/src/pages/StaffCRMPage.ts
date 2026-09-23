@@ -18,6 +18,8 @@ import { apiService } from '../services/api.service';
 import { PageHeader } from '../components/PageHeader';
 import { routerService } from '../services/router.service';
 import { callController } from '../services/call-controller';
+import { UniversalLeadHistoryModal } from '../components/UniversalLeadHistoryModal';
+import { UniversalQualityReviewModal } from '../components/UniversalQualityReviewModal';
 
 interface Company {
   id: number;
@@ -138,6 +140,9 @@ export class StaffCRMPage {
     past7.setDate(past7.getDate() - 6);
     this.qaRangeFrom = past7.toISOString().split('T')[0];
     this.qaRangeTo = this.qaDate;
+    if (typeof window !== 'undefined') {
+      (window as any).refreshCrmQualityData = () => this.loadQualityReport();
+    }
   }
 
   async init(): Promise<void> {
@@ -371,11 +376,13 @@ export class StaffCRMPage {
 
     // Pre-fill telecallers
     if (this.dashData?.team_performance?.employees) {
-      this.drilldownTelecallers = this.dashData.team_performance.employees.map((e: any) => ({
-        id: e.emp_id,
-        name: e.name,
-        emp_code: e.emp_code
-      }));
+      this.drilldownTelecallers = this.dashData.team_performance.employees
+        .filter((e: any) => e.emp_code !== 'MR10001')
+        .map((e: any) => ({
+          id: e.emp_id,
+          name: e.name,
+          emp_code: e.emp_code
+        }));
     }
 
     this.render();
@@ -533,6 +540,17 @@ export class StaffCRMPage {
     const h = Math.floor(secs / 3600);
     const m = Math.floor((secs % 3600) / 60);
     return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  private fmtCallDuration(secs: number | null | undefined): string {
+    const s = parseInt(String(secs), 10) || 0;
+    if (s <= 0) return '<span style="color:#94a3b8;">0s</span>';
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const remSec = s % 60;
+    if (h > 0) return `${h}h ${m > 0 ? m + 'm ' : ''}${remSec > 0 ? remSec + 's' : ''}`.trim();
+    if (m > 0) return `${m}m ${remSec > 0 ? remSec + 's' : ''}`.trim();
+    return `${remSec}s`;
   }
 
   private fmtTalkTime(secs: number | null | undefined): string {
@@ -1134,7 +1152,7 @@ export class StaffCRMPage {
       return `<div style="text-align:center; padding:32px; color:#94a3b8;">No team members data available.</div>`;
     }
 
-    const allEmployees = tp.employees || [];
+    const allEmployees = (tp.employees || []).filter((e: any) => e.emp_code !== 'MR10001');
     const specialRows = tp.special_rows || [];
 
     // Filter employees by multi-select if active
@@ -1259,7 +1277,7 @@ export class StaffCRMPage {
   private renderCallsTab(): string {
     const o = this.ctData?.overview || {};
     const trend = (this.ctData?.daily_trend || []).slice().reverse();
-    const perStaff = this.ctData?.per_staff || [];
+    const perStaff = (this.ctData?.per_staff || []).filter((s: any) => s.emp_code !== 'MR10001');
 
     const connectedCalls = Math.max((o.outgoing || 0) + (o.incoming || 0) - (o.missed || 0), 0);
     const ansRate = o.total_calls > 0 ? (connectedCalls / o.total_calls * 100).toFixed(1) + '%' : '0%';
@@ -1357,11 +1375,15 @@ export class StaffCRMPage {
           </div>
 
           <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
-            <table style="width:100%; min-width:850px; border-collapse:collapse; font-size:11.5px;">
+            <table style="width:100%; min-width:1050px; border-collapse:collapse; font-size:11.5px;">
               <thead>
                 <tr style="background:#f8fafc; border-bottom:2px solid #cbd5e1;">
                   <th style="padding:8px 6px; text-align:center; width:35px;">#</th>
                   <th style="padding:8px 10px; text-align:left;">Employee</th>
+                  <th style="padding:8px 8px; text-align:center;">Active Time</th>
+                  <th style="padding:8px 8px; text-align:center; color:#2563eb;">Auto Dialer Used</th>
+                  <th style="padding:8px 8px; text-align:center; color:#0284c7;">Softphone Used</th>
+                  <th style="padding:8px 8px; text-align:center; color:#64748b;">Others</th>
                   <th style="padding:8px 8px; text-align:center;">Total Calls</th>
                   <th style="padding:8px 8px; text-align:center; color:#166534;">Outgoing</th>
                   <th style="padding:8px 8px; text-align:center; color:#1e40af;">Incoming</th>
@@ -1379,6 +1401,13 @@ export class StaffCRMPage {
                       <div style="font-weight:700; color:#0f172a;">${this.escapeHtml(s.name || s.staff_name || '-')}</div>
                       <div style="font-size:9.5px; color:#64748b;">${this.escapeHtml(s.emp_code || '')} ${s.department ? '· ' + this.escapeHtml(s.department) : ''}</div>
                     </td>
+                    <td style="padding:7px 8px; text-align:center;">
+                      <div style="font-weight:700; color:#0f172a;">${s.active_time_hours || (s.active_time_minutes ? (s.active_time_minutes / 60).toFixed(2) + ' hrs' : '0.00 hrs')}</div>
+                      <span style="display:inline-block; font-size:9px; font-weight:700; padding:1px 5px; border-radius:4px; background:${(s.active_percentage || 0) >= 70 ? '#dcfce7; color:#15803d;' : (s.active_percentage || 0) >= 40 ? '#fef3c7; color:#b45309;' : '#f1f5f9; color:#64748b;'}">${s.active_percentage || 0}%</span>
+                    </td>
+                    <td style="padding:7px 8px; text-align:center; color:#2563eb; font-weight:700;">${s.autodialer_hours || (s.autodialer_duration_seconds ? (s.autodialer_duration_seconds / 3600).toFixed(2) + ' hrs' : '0.00 hrs')}</td>
+                    <td style="padding:7px 8px; text-align:center; color:#0284c7; font-weight:700;">${s.softphone_hours || (s.softphone_duration_seconds ? (s.softphone_duration_seconds / 3600).toFixed(2) + ' hrs' : '0.00 hrs')}</td>
+                    <td style="padding:7px 8px; text-align:center; color:#64748b; font-weight:600;" title="${this.escapeHtml(s.other_breakdown || '')}">${s.other_hours || (s.other_duration_seconds ? (s.other_duration_seconds / 3600).toFixed(2) + ' hrs' : '0.00 hrs')}</td>
                     <td style="padding:7px 8px; text-align:center; font-weight:800;">${this.fmtNum(s.total_calls)}</td>
                     <td style="padding:7px 8px; text-align:center; color:#15803d; font-weight:700;">${this.fmtNum(s.outgoing)}</td>
                     <td style="padding:7px 8px; text-align:center; color:#1d4ed8; font-weight:700;">${this.fmtNum(s.incoming)}</td>
@@ -1404,11 +1433,15 @@ export class StaffCRMPage {
           </div>
 
           <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
-            <table style="width:100%; min-width:650px; border-collapse:collapse; font-size:11.5px;">
+            <table style="width:100%; min-width:1150px; border-collapse:collapse; font-size:11.5px;">
               <thead>
                 <tr style="background:#f8fafc; border-bottom:2px solid #cbd5e1;">
                   <th style="padding:8px 10px; text-align:left;">Staff</th>
                   <th style="padding:8px 8px; text-align:left;">Dept</th>
+                  <th style="padding:8px 8px; text-align:center;">Active Time</th>
+                  <th style="padding:8px 8px; text-align:center; color:#2563eb;">Auto Dialer Used</th>
+                  <th style="padding:8px 8px; text-align:center; color:#0284c7;">Softphone Used</th>
+                  <th style="padding:8px 8px; text-align:center; color:#64748b;">Others</th>
                   <th style="padding:8px 6px; text-align:center;">10-12</th>
                   <th style="padding:8px 6px; text-align:center;">12-14</th>
                   <th style="padding:8px 6px; text-align:center;">14-16</th>
@@ -1419,19 +1452,40 @@ export class StaffCRMPage {
                 </tr>
               </thead>
               <tbody>
-                ${(this.ctSlotData?.per_staff || []).map((row: any) => `
+                ${(this.ctSlotData?.per_staff || []).filter((row: any) => row.emp_code !== 'MR10001').map((row: any) => {
+                  const activeHrs = row.active_time_hours || (row.active_time_minutes ? (row.active_time_minutes / 60).toFixed(2) + ' hrs' : '0.00 hrs');
+                  const autodialerHrs = row.autodialer_hours || (row.autodialer_duration_seconds ? (row.autodialer_duration_seconds / 3600).toFixed(2) + ' hrs' : '0.00 hrs');
+                  const softphoneHrs = row.softphone_hours || (row.softphone_duration_seconds ? (row.softphone_duration_seconds / 3600).toFixed(2) + ' hrs' : '0.00 hrs');
+                  const otherHrs = row.other_hours || (row.other_duration_seconds ? (row.other_duration_seconds / 3600).toFixed(2) + ' hrs' : '0.00 hrs');
+                  const activePct = row.active_percentage || 0;
+                  const renderSlot = (slotObj: any) => {
+                    if (!slotObj || (!slotObj.calls && !slotObj.duration_hours)) {
+                      return `<span style="color:#94a3b8; font-size:10.5px;">0.00 hrs / 0</span>`;
+                    }
+                    const dur = slotObj.duration_hours || '0.00 hrs';
+                    const calls = slotObj.calls || 0;
+                    return `<div><span style="font-weight:700; color:#0f172a; font-size:11px;">${dur}</span> <span style="color:#64748b; font-size:10.5px;">/ ${calls}</span></div>`;
+                  };
+                  return `
                   <tr style="border-bottom:1px solid #f1f5f9;">
                     <td style="padding:7px 10px; font-weight:700;">${this.escapeHtml(row.name || '-')} <small style="color:#64748b;">(${this.escapeHtml(row.emp_code || '')})</small></td>
                     <td style="padding:7px 8px; color:#64748b;">${this.escapeHtml(row.department || '-')}</td>
-                    <td style="padding:7px 6px; text-align:center;">${(row.slots && row.slots.slot_1 && row.slots.slot_1.calls) || 0}</td>
-                    <td style="padding:7px 6px; text-align:center;">${(row.slots && row.slots.slot_2 && row.slots.slot_2.calls) || 0}</td>
-                    <td style="padding:7px 6px; text-align:center;">${(row.slots && row.slots.slot_3 && row.slots.slot_3.calls) || 0}</td>
-                    <td style="padding:7px 6px; text-align:center;">${(row.slots && row.slots.slot_4 && row.slots.slot_4.calls) || 0}</td>
-                    <td style="padding:7px 6px; text-align:center;">${(row.slots && row.slots.slot_5 && row.slots.slot_5.calls) || 0}</td>
-                    <td style="padding:7px 6px; text-align:center;">${(row.slots && row.slots.other && row.slots.other.calls) || 0}</td>
-                    <td style="padding:7px 8px; text-align:center; font-weight:800; color:#2563eb;">${(row.total && row.total.calls) || 0}</td>
+                    <td style="padding:7px 8px; text-align:center;">
+                      <div style="font-weight:700; color:#0f172a;">${activeHrs}</div>
+                      <span style="display:inline-block; font-size:9px; font-weight:700; padding:1px 5px; border-radius:4px; background:${activePct >= 70 ? '#dcfce7; color:#15803d;' : activePct >= 40 ? '#fef3c7; color:#b45309;' : '#f1f5f9; color:#64748b;'}">${activePct}%</span>
+                    </td>
+                    <td style="padding:7px 8px; text-align:center; color:#2563eb; font-weight:700;">${autodialerHrs}</td>
+                    <td style="padding:7px 8px; text-align:center; color:#0284c7; font-weight:700;">${softphoneHrs}</td>
+                    <td style="padding:7px 8px; text-align:center; color:#64748b; font-weight:600;" title="${this.escapeHtml(row.other_breakdown || '')}">${otherHrs}</td>
+                    <td style="padding:7px 6px; text-align:center;">${renderSlot(row.slots && row.slots.slot_1)}</td>
+                    <td style="padding:7px 6px; text-align:center;">${renderSlot(row.slots && row.slots.slot_2)}</td>
+                    <td style="padding:7px 6px; text-align:center;">${renderSlot(row.slots && row.slots.slot_3)}</td>
+                    <td style="padding:7px 6px; text-align:center;">${renderSlot(row.slots && row.slots.slot_4)}</td>
+                    <td style="padding:7px 6px; text-align:center;">${renderSlot(row.slots && row.slots.slot_5)}</td>
+                    <td style="padding:7px 6px; text-align:center;">${renderSlot(row.slots && row.slots.other)}</td>
+                    <td style="padding:7px 8px; text-align:center; font-weight:800; color:#2563eb;">${renderSlot(row.total)}</td>
                   </tr>
-                `).join('')}
+                `;}).join('')}
               </tbody>
             </table>
           </div>
@@ -1458,7 +1512,7 @@ export class StaffCRMPage {
                   <th style="padding:6px 8px; text-align:center;">Type</th>
                   <th style="padding:6px 8px; text-align:center;">Duration</th>
                   <th style="padding:6px 8px; text-align:left;">Lead Name</th>
-                  <th style="padding:6px 8px; text-align:center;">Recording</th>
+                  <th style="padding:6px 8px; text-align:center; min-width:140px;">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -1472,14 +1526,24 @@ export class StaffCRMPage {
                       <td style="padding:6px 8px; white-space:nowrap;">${c.call_datetime ? new Date(c.call_datetime).toLocaleString('en-IN') : '-'}</td>
                       <td style="padding:6px 8px; font-weight:700;">${this.escapeHtml(c.phone_number || '-')}</td>
                       <td style="padding:6px 8px; text-align:center;">${this.callTypeBadge(c)}</td>
-                      <td style="padding:6px 8px; text-align:center;">${this.fmtDurationSec(c.duration_seconds)}</td>
+                      <td style="padding:6px 8px; text-align:center;">${this.fmtCallDuration(c.duration_seconds)}</td>
                       <td style="padding:6px 8px;">${this.escapeHtml(c.matched_lead_name || c.contact_name_crm || c.contact_name || '-')}</td>
-                      <td style="padding:6px 8px; text-align:center;">
-                        ${hasRec ? `
-                          <button class="play-audio-btn" data-recid="${c.recording_id}" style="background:#0284c7; color:#fff; border:none; border-radius:4px; padding:2px 8px; font-size:10px; font-weight:700; cursor:pointer;">
-                            <i class="fas fa-play me-1"></i>Play
+                      <td style="padding:6px 8px; text-align:center; white-space:nowrap;">
+                        <div style="display:inline-flex; align-items:center; gap:4px; justify-content:center;">
+                          ${hasRec ? `
+                            <button class="play-audio-btn" data-recid="${c.recording_id}" style="background:#0284c7; color:#fff; border:none; border-radius:4px; padding:2px 6px; font-size:10px; font-weight:700; cursor:pointer;" title="Play Recording">
+                              <i class="fas fa-play me-1"></i>Play
+                            </button>
+                          ` : ''}
+                          <button class="ct-open-history-btn" data-phone="${this.escapeHtml(c.phone_number || '')}" data-leadid="${c.matched_lead_id || c.contact_lead_id || 0}" data-leadname="${this.escapeHtml(c.matched_lead_name || c.contact_name_crm || c.contact_name || '')}" style="background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; border-radius:4px; padding:2px 6px; font-size:10px; font-weight:700; cursor:pointer;" title="Universal History">
+                            <i class="fas fa-history me-1"></i>History
                           </button>
-                        ` : '<span style="color:#cbd5e1;">—</span>'}
+                          ${hasRec ? `
+                            <button class="ct-open-review-btn" data-callid="${c.id || 0}" data-sessionid="${this.escapeHtml(c.call_session_id || '')}" data-phone="${this.escapeHtml(c.phone_number || '')}" data-leadid="${c.matched_lead_id || c.contact_lead_id || 0}" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; border-radius:4px; padding:2px 6px; font-size:10px; font-weight:700; cursor:pointer;" title="Quality Review">
+                              <i class="fas fa-star me-1"></i>Review
+                            </button>
+                          ` : ''}
+                        </div>
                       </td>
                     </tr>
                   `;
@@ -2353,6 +2417,42 @@ export class StaffCRMPage {
     });
     document.getElementById('closeStaffCrmAudioBtn')?.addEventListener('click', () => {
       this.closeAudioPlayer();
+    });
+
+    // Staff Call Action: Universal History
+    this.container.querySelectorAll('.ct-open-history-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const t = e.currentTarget as HTMLElement;
+        const phone = t.dataset.phone || '';
+        const leadId = Number(t.dataset.leadid) || 0;
+        const leadName = t.dataset.leadname || '';
+        UniversalLeadHistoryModal.open({
+          entityType: 'crm_lead',
+          entityId: leadId,
+          phone: phone,
+          name: leadName && leadName !== '-' ? leadName : ''
+        });
+      });
+    });
+
+    // Staff Call Action: Quality Review
+    this.container.querySelectorAll('.ct-open-review-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const t = e.currentTarget as HTMLElement;
+        const callId = Number(t.dataset.callid) || 0;
+        const sessionId = t.dataset.sessionid || '';
+        const phone = t.dataset.phone || '';
+        const leadId = Number(t.dataset.leadid) || 0;
+        UniversalQualityReviewModal.open({
+          callLogId: callId,
+          callSessionId: sessionId,
+          phone: phone,
+          leadId: leadId,
+          onSaved: () => {
+            this.loadQualityReport();
+          }
+        });
+      });
     });
 
     // QA Mode & Submit

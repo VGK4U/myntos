@@ -244,6 +244,9 @@
             <button id="scrmHeaderWaBtn" type="button" class="btn btn-sm" style="background: #25D366; color: white; font-weight: 700; border-radius: 8px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(37, 211, 102, 0.3);">
               <i class="fab fa-whatsapp"></i> WA
             </button>
+            <button id="scrmHeaderHistoryBtn" type="button" class="btn btn-sm" style="background: #4f46e5; color: white; font-weight: 700; border-radius: 8px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);">
+              <i class="fas fa-history"></i> History
+            </button>
             <button type="button" onclick="window.closeSoftphoneCRMLeadModal()" style="
               background: rgba(255, 255, 255, 0.08);
               border: 1px solid rgba(255, 255, 255, 0.15);
@@ -927,6 +930,36 @@
         } else {
           window.open(`https://wa.me/91${cleanPhone}`, '_blank');
         }
+      };
+    }
+
+    const historyBtn = document.getElementById('scrmHeaderHistoryBtn');
+    if (historyBtn) {
+      historyBtn.onclick = () => {
+        const triggerOpen = () => {
+          if (typeof window.openUniversalHistory === 'function') {
+            window.openUniversalHistory({
+              entityType: 'crm_lead',
+              entityId: leadId,
+              name: (currentLead && currentLead.name) || name || `Lead #${leadId}`,
+              phone: (currentLead && (currentLead.phone || currentLead.alternate_phone)) || cleanPhone || '',
+              category: (currentLead && currentLead.category) || 'CRM Lead'
+            });
+            const rootEl = document.getElementById('uhmModalRoot');
+            if (rootEl) {
+              rootEl.style.zIndex = '100000001';
+            }
+          }
+        };
+
+        if (!window.openUniversalHistory && typeof document !== 'undefined') {
+          const s = document.createElement('script');
+          s.src = '/public/js/universal-history-modal.js';
+          s.onload = triggerOpen;
+          document.head.appendChild(s);
+          return;
+        }
+        triggerOpen();
       };
     }
 

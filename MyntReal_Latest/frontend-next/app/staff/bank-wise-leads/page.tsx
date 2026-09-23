@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useCallback } from "react";
 import api from "@/lib/api";
@@ -37,6 +37,7 @@ const STAGE_COLORS: Record<string, string> = {
   balance_pending: "bg-orange-100 text-orange-800",
   approved: "bg-green-100 text-green-800",
   rejected: "bg-red-100 text-red-800",
+  bank_not_interested: "bg-red-100 text-red-800",
   disbursed: "bg-blue-100 text-blue-800",
   closed: "bg-gray-100 text-gray-700",
 };
@@ -128,6 +129,7 @@ export default function BankWiseLeadsPage() {
                 <SelectItem value="balance_pending">Balance Pending</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
                 <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="bank_not_interested">Bank Not Interested</SelectItem>
                 <SelectItem value="disbursed">Disbursed</SelectItem>
                 <SelectItem value="closed">Closed</SelectItem>
               </SelectContent>

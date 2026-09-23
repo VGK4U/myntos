@@ -17,6 +17,9 @@ interface AttendanceRecord {
   clock_out_time: string | null;
   total_hours: number | null;
   worked_hours?: number | null;
+  active_minutes?: number | null;
+  active_hours?: number | null;
+  active_percentage?: number | null;
   status: string;
   clock_in_location: string | null;
   clock_out_location: string | null;
@@ -278,6 +281,10 @@ export class AttendancePage {
             <span class="time-label">Hours:</span>
             <span class="time-value ${(record.total_hours || record.worked_hours || 0) < 8 ? 'warning' : ''}">${(record.total_hours || record.worked_hours) ? (record.total_hours || record.worked_hours)!.toFixed(1) : '--'}</span>
             ${record.has_photos ? '<span class="photo-indicator" title="Has photos">📷</span>' : ''}
+          </div>
+          <div class="time-row">
+            <span class="time-label">Active:</span>
+            <span class="time-value" style="color:#059669; font-weight:700;">${record.active_hours ? record.active_hours.toFixed(1) + 'h' : (record.active_minutes ? (record.active_minutes / 60).toFixed(1) + 'h' : '--')} ${record.active_percentage != null ? `(${record.active_percentage}%)` : ''}</span>
           </div>
         </div>
         <div class="record-actions">

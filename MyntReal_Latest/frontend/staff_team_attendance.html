@@ -217,6 +217,7 @@
                                     <th class="sortable" data-sort="clock_out" onclick="sortTable('clock_out')">Clock Out <i class="fas fa-sort"></i></th>
                                     <th>Out Location</th>
                                     <th class="sortable" data-sort="hours_worked" onclick="sortTable('hours_worked')">Hours Worked <i class="fas fa-sort"></i></th>
+                                    <th class="sortable" data-sort="active_time" onclick="sortTable('active_time')">Active Time (%) <i class="fas fa-sort"></i></th>
                                     <th class="sortable" data-sort="break_time" onclick="sortTable('break_time')">Break Time <i class="fas fa-sort"></i></th>
                                     <th id="actionHeader" style="display: none;">Action</th>
                                     <th>Photos</th>
@@ -224,7 +225,7 @@
                             </thead>
                             <tbody id="attendanceTableBody">
                                 <tr>
-                                    <td colspan="13" class="text-center py-4">
+                                    <td colspan="14" class="text-center py-4">
                                         <i class="fas fa-spinner fa-spin"></i> Loading...
                                     </td>
                                 </tr>
@@ -478,7 +479,7 @@
         
         function renderTable(members) {
             const tbody = document.getElementById('attendanceTableBody');
-            const colSpan = canAdminClockout ? 14 : 13;
+            const colSpan = canAdminClockout ? 15 : 14;
             
             if (!members || members.length === 0) {
                 tbody.innerHTML = `
@@ -515,6 +516,7 @@
                 }
                 
                 const photoCell = formatPhotoCell(member);
+                const activeTimeDisplay = member.active_minutes ? `<strong>${formatHoursMinutes(member.active_minutes)}</strong> <span class="badge badge-office" style="font-size: 10px; margin-left: 4px;">${member.active_percentage || 0}%</span>` : (member.hours_worked ? `<span class="text-muted">0m</span> <span class="badge badge-wfh" style="font-size: 10px; margin-left: 4px;">0%</span>` : '-');
                 
                 return `
                     <tr class="${rowClass}">
@@ -539,6 +541,7 @@
                         <td>${member.clock_out ? formatTime(member.clock_out) : '-'}</td>
                         <td>${clockOutLocationCell}</td>
                         <td>${member.hours_worked ? formatHoursMinutes(member.hours_worked) : '-'}</td>
+                        <td>${activeTimeDisplay}</td>
                         <td>${member.break_minutes ? formatHoursMinutes(member.break_minutes) : '-'}</td>
                         ${actionCell}
                         ${photoCell}
@@ -875,6 +878,10 @@
                         valA = a.hours_worked || 0;
                         valB = b.hours_worked || 0;
                         break;
+                    case 'active_time':
+                        valA = a.active_minutes || 0;
+                        valB = b.active_minutes || 0;
+                        break;
                     case 'break_time':
                         valA = a.break_minutes || 0;
                         valB = b.break_minutes || 0;
@@ -892,5 +899,6 @@
             renderTable(sorted);
         }
     </script>
+    <script src="/shared/staff_engagement_tracker.js"></script>
 </body>
 </html>

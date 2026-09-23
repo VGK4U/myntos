@@ -15,6 +15,7 @@ import { unifiedWAModal } from '../components/UnifiedWAModal';
 import { unifiedShareLeadModal } from '../components/UnifiedShareLeadModal';
 import { callController } from '../services/call-controller';
 import { telephonyService, TelephonyCallSession } from '../services/telephony.service';
+import { UniversalLeadHistoryModal } from '../components/UniversalLeadHistoryModal';
 
 const LEAD_STATUSES = [
   { value: 'new', label: 'New' },
@@ -890,9 +891,14 @@ export class AutoDialerPage {
 
         <!-- Card 4: Previous Call History & Notes (Async loaded) -->
         <div class="dc-call-card" id="dc-incall-history-card">
-          <div class="dc-call-card-header">
-            <span class="dc-call-card-title">📜 Interaction History</span>
-            <span id="dc-incall-history-badge" class="text-xs text-gray-400">Loading…</span>
+          <div class="dc-call-card-header" style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+              <span class="dc-call-card-title">📜 Interaction History</span>
+              <span id="dc-incall-history-badge" class="text-xs text-gray-400 ms-2">Loading…</span>
+            </div>
+            <button id="dc-incall-open-history-btn" type="button" style="background:#4f46e5;color:white;border:none;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+              <i class="fas fa-history"></i> History
+            </button>
           </div>
           <div id="dc-incall-history-content" class="dc-incall-history-list">
             <div class="dc-lds-spinner" style="padding:12px 0;font-size:13px;color:#9ca3af;">⏳ Loading previous interaction history…</div>
@@ -967,6 +973,16 @@ export class AutoDialerPage {
 
     // Asynchronously fetch and populate interaction history
     void this._loadInCallHistory(canonicalId);
+
+    document.getElementById('dc-incall-open-history-btn')?.addEventListener('click', () => {
+      UniversalLeadHistoryModal.open({
+        entityType: 'crm_lead',
+        entityId: canonicalId,
+        name: lead.name || 'Lead',
+        phone: lead.phone || '',
+        category: lead.category || 'Auto Dialer'
+      });
+    });
   }
 
   private async _loadInCallHistory(leadId: number): Promise<void> {

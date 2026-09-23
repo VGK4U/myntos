@@ -472,7 +472,7 @@ def evaluate_file_v18_ledger(db: Session, lead_id: int) -> Dict[str, Any]:
 
     total_economic_cash_paid = v1_wallet_cash + advance_cash
 
-    RECOVERY_STAGES = {'different_vendor', 'cancelled', 'loan_rejected', 'not_interested', 'lost'}
+    RECOVERY_STAGES = {'different_vendor', 'cancelled', 'loan_rejected', 'not_interested', 'lost', 'bank_not_interested'}
 
     # Case 1: Dead / Lost / Cancelled file
     if pipe_status in RECOVERY_STAGES or (pipe_status is None and total_economic_cash_paid == 0):

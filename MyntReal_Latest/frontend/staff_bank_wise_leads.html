@@ -10,6 +10,7 @@
     <script src="/public/js/staff-fetch.js"></script>
   <script src="/public/js/nda-enforcement.js"></script>
     <script src="/public/js/mnr-map-modal.js"></script>
+    <script src="/public/js/universal-history-modal.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -302,6 +303,11 @@
             </button>
           </li>
           <li class="nav-item">
+            <button class="nav-link fw-bold py-1 px-3 text-dark bg-white border" id="tabBankNotInterestedBtn" onclick="switchMainTab('bank-not-interested')" style="border-radius: 6px; font-size: 11.5px; padding: 4px 10px;">
+              <i class="fas fa-user-slash me-1 text-danger"></i>Bank Not Interested (<span id="tabBankNotInterestedCount" class="badge bg-danger text-white ms-1" style="font-size:9.5px;padding:1px 5px">0</span>)
+            </button>
+          </li>
+          <li class="nav-item">
             <button class="nav-link fw-bold py-1 px-3 text-dark bg-white border" id="tabBranchBankSummaryBtn" onclick="switchMainTab('branch-bank-summary')" style="border-radius: 6px; font-size: 11.5px; padding: 4px 10px;">
               <i class="fas fa-sitemap me-1 text-info"></i>Branch & Bank Summary (<span id="tabBranchBankCount" class="badge bg-info text-dark ms-1" style="font-size:9.5px;padding:1px 5px">0</span>)
             </button>
@@ -435,6 +441,7 @@
               <option value="balance_pending">Balance Pending</option>
               <option value="net_meter_pending">Net Meter Pending</option>
               <option value="electricity_bill_change">Electricity Bill Change Pending</option>
+              <option value="bank_not_interested">Bank Not Interested</option>
             </select>
           </div>
           <div class="col-md-3">
@@ -648,6 +655,7 @@
             const pendingBtn = document.getElementById('tabBalancePendingBtn');
             const netMeterBtn = document.getElementById('tabNetMeterPendingBtn');
             const ebBtn = document.getElementById('tabElectricityBillBtn');
+            const notInterestedBtn = document.getElementById('tabBankNotInterestedBtn');
             const branchBankBtn = document.getElementById('tabBranchBankSummaryBtn');
             const groundSourceBtn = document.getElementById('tabGroundSourceSummaryBtn');
 
@@ -656,6 +664,7 @@
                 { id: pendingBtn, tab: 'balance-pending', activeClass: ['active', 'bg-warning', 'text-dark'], inactiveClass: ['bg-white', 'text-dark', 'border'] },
                 { id: netMeterBtn, tab: 'net-meter-pending', activeClass: ['active', 'bg-purple', 'text-white'], inactiveClass: ['bg-white', 'text-dark', 'border'] },
                 { id: ebBtn, tab: 'electricity-bill-change', activeClass: ['active', 'bg-primary', 'text-white'], inactiveClass: ['bg-white', 'text-dark', 'border'] },
+                { id: notInterestedBtn, tab: 'bank-not-interested', activeClass: ['active', 'bg-danger', 'text-white'], inactiveClass: ['bg-white', 'text-dark', 'border'] },
                 { id: branchBankBtn, tab: 'branch-bank-summary', activeClass: ['active', 'bg-info', 'text-dark'], inactiveClass: ['bg-white', 'text-dark', 'border'] },
                 { id: groundSourceBtn, tab: 'ground-source-summary', activeClass: ['active', 'bg-success', 'text-white'], inactiveClass: ['bg-white', 'text-dark', 'border'] }
             ];
@@ -705,7 +714,7 @@
 
         function isBankLead(l) {
             const stage = (l.solar_pipeline_stage || l.solar_pipeline_status || l.stage || '').toLowerCase();
-            return stage === 'pending_with_bank' || stage === 'at bank' || stage === 'at_bank' || stage.includes('bank');
+            return (stage === 'pending_with_bank' || stage === 'at bank' || stage === 'at_bank' || stage.includes('bank')) && !stage.includes('not_interested') && !stage.includes('not interested');
         }
 
         function isBalancePendingLead(l) {
@@ -723,6 +732,11 @@
             return stage === 'electricity_bill_change' || stage === 'electricity_bill' || stage === 'eb_name_change' || stage.includes('electricity') || stage.includes('eb_name') || stage.includes('bill_change');
         }
 
+        function isBankNotInterestedLead(l) {
+            const stage = (l.solar_pipeline_stage || l.solar_pipeline_status || l.stage || '').toLowerCase();
+            return stage === 'bank_not_interested' || stage === 'bank not interested' || stage.includes('bank_not_interested') || (stage.includes('bank') && (stage.includes('not_interested') || stage.includes('not interested')));
+        }
+
         function getActiveLeads() {
             if (currentMainTab === 'balance-pending') {
                 return globalBankLeads.filter(isBalancePendingLead);
@@ -730,6 +744,8 @@
                 return globalBankLeads.filter(isNetMeterPendingLead);
             } else if (currentMainTab === 'electricity-bill-change') {
                 return globalBankLeads.filter(isElectricityBillChangeLead);
+            } else if (currentMainTab === 'bank-not-interested') {
+                return globalBankLeads.filter(isBankNotInterestedLead);
             }
             return globalBankLeads.filter(isBankLead);
         }
@@ -796,6 +812,7 @@
                     const pendingLeads = globalBankLeads.filter(isBalancePendingLead);
                     const netMeterLeads = globalBankLeads.filter(isNetMeterPendingLead);
                     const ebLeads = globalBankLeads.filter(isElectricityBillChangeLead);
+                    const notInterestedLeads = globalBankLeads.filter(isBankNotInterestedLead);
 
                     const branchBankKeys = new Set(globalBankLeads.map(l => `${l.bank_name || 'Unassigned'}:::${l.bank_branch || 'N/A'}`));
                     const groundSourceKeys = new Set(globalBankLeads.map(l => l.ground_source_name || 'Unassigned'));
@@ -804,6 +821,7 @@
                     document.getElementById('tabPendingCount').innerText = pendingLeads.length;
                     if (document.getElementById('tabNetMeterCount')) document.getElementById('tabNetMeterCount').innerText = netMeterLeads.length;
                     if (document.getElementById('tabElectricityBillCount')) document.getElementById('tabElectricityBillCount').innerText = ebLeads.length;
+                    if (document.getElementById('tabBankNotInterestedCount')) document.getElementById('tabBankNotInterestedCount').innerText = notInterestedLeads.length;
                     document.getElementById('tabBranchBankCount').innerText = branchBankKeys.size;
                     document.getElementById('tabGroundSourceCount').innerText = groundSourceKeys.size;
 
@@ -1104,14 +1122,15 @@
             const isPendingTab = (currentMainTab === 'balance-pending');
             const isNetMeterTab = (currentMainTab === 'net-meter-pending');
             const isEBTab = (currentMainTab === 'electricity-bill-change');
+            const isNotInterestedTab = (currentMainTab === 'bank-not-interested');
             
             // Labels
             const lblFiles = document.getElementById('lblTotalFiles');
             const lblValue = document.getElementById('lblTotalValue');
             const lblBank = document.getElementById('lblTopBank');
-            if (lblFiles) lblFiles.innerText = isPendingTab ? 'Total Balance Pending Leads' : (isNetMeterTab ? 'Total Net Meter Pending Leads' : (isEBTab ? 'Total Electricity Bill Change Leads' : 'Total Files At Bank'));
-            if (lblValue) lblValue.innerText = isPendingTab ? 'Total Pending Balance' : (isNetMeterTab ? 'Total Net Meter Portfolio' : (isEBTab ? 'Total EB Change Portfolio' : 'Total Bank Portfolio'));
-            if (lblBank) lblBank.innerText = isPendingTab ? 'Top Pending Bank' : (isNetMeterTab ? 'Top Net Meter Bank' : (isEBTab ? 'Top EB Change Bank' : 'Top Processing Bank'));
+            if (lblFiles) lblFiles.innerText = isPendingTab ? 'Total Balance Pending Leads' : (isNetMeterTab ? 'Total Net Meter Pending Leads' : (isEBTab ? 'Total Electricity Bill Change Leads' : (isNotInterestedTab ? 'Total Bank Not Interested Leads' : 'Total Files At Bank')));
+            if (lblValue) lblValue.innerText = isPendingTab ? 'Total Pending Balance' : (isNetMeterTab ? 'Total Net Meter Portfolio' : (isEBTab ? 'Total EB Change Portfolio' : (isNotInterestedTab ? 'Total Lost/Not Interested Value' : 'Total Bank Portfolio')));
+            if (lblBank) lblBank.innerText = isPendingTab ? 'Top Pending Bank' : (isNetMeterTab ? 'Top Net Meter Bank' : (isEBTab ? 'Top EB Change Bank' : (isNotInterestedTab ? 'Top Bank' : 'Top Processing Bank')));
 
             // Metrics calculation
             const totalCount = activeLeads ? activeLeads.length : 0;
@@ -1294,13 +1313,16 @@
                 const upStaffName = l.uport_staff_name || '—';
 
                 const cleanGsP = (l.ground_source_phone || '').replace(/\D/g, '').slice(-10);
-                const gsCallBtn = l.ground_source_phone 
-                    ? `<br><button type="button" class="btn btn-sm btn-outline-warning py-0 px-2 mt-1" style="font-size:10px;font-weight:600;display:inline-block" onclick="event.stopPropagation(); triggerLeadCall('${cleanGsP}', '${escJs(l.ground_source_name)} (Ground Source)')" title="Call Ground Source via Softphone"><i class="fas fa-phone-alt me-1"></i>${maskPhone(l.ground_source_phone)}</button>` 
+                const gsHistoryBtn = (l.ground_source_name || l.ground_source_phone)
+                    ? ` <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1 mt-1 ms-1" style="font-size:10px;font-weight:600;display:inline-block" onclick="event.stopPropagation(); openVgkMemberUniversalHistory('${escJs(l.ground_source_name)}', '${cleanGsP}', ${l.ground_source_id || 0})" title="Ground Source Universal History"><i class="fas fa-history me-1"></i>History</button>`
                     : '';
+                const gsCallBtn = l.ground_source_phone 
+                    ? `<br><button type="button" class="btn btn-sm btn-outline-warning py-0 px-2 mt-1" style="font-size:10px;font-weight:600;display:inline-block" onclick="event.stopPropagation(); triggerLeadCall('${cleanGsP}', '${escJs(l.ground_source_name)} (Ground Source)')" title="Call Ground Source via Softphone"><i class="fas fa-phone-alt me-1"></i>${maskPhone(l.ground_source_phone)}</button>${gsHistoryBtn}` 
+                    : (gsHistoryBtn ? `<br>${gsHistoryBtn}` : '');
 
                 const cleanUpP = (l.upliner_phone || '').replace(/\D/g, '').slice(-10);
                 const gsUplinerInfo = (l.upliner_name && l.upliner_name !== '—' && l.upliner_name !== 'Direct / None')
-                    ? `<br><small class="text-muted" style="font-size:10px;font-weight:600" title="Ground Source Upliner"><i class="fas fa-user-shield text-warning me-1"></i>${esc(l.upliner_name)}${l.upliner_phone ? ` <button type="button" class="btn btn-link p-0 text-warning fw-bold" style="font-size:10px;text-decoration:none" onclick="event.stopPropagation(); triggerLeadCall('${cleanUpP}', '${escJs(l.upliner_name)} (Upliner)')">(${maskPhone(l.upliner_phone)})</button>` : ''}</small>`
+                    ? `<br><small class="text-muted" style="font-size:10px;font-weight:600" title="Ground Source Upliner"><i class="fas fa-user-shield text-warning me-1"></i>${esc(l.upliner_name)}${l.upliner_phone ? ` <button type="button" class="btn btn-link p-0 text-warning fw-bold" style="font-size:10px;text-decoration:none" onclick="event.stopPropagation(); triggerLeadCall('${cleanUpP}', '${escJs(l.upliner_name)} (Upliner)')">(${maskPhone(l.upliner_phone)})</button>` : ''} <button type="button" class="btn btn-link p-0 text-primary ms-1" style="font-size:10px;text-decoration:none" onclick="event.stopPropagation(); openVgkMemberUniversalHistory('${escJs(l.upliner_name)}', '${cleanUpP}', ${l.upliner_id || 0})" title="Upliner Universal History"><i class="fas fa-history"></i></button></small>`
                     : '';
 
                 const cleanGsSupportP = (l.ground_support_phone || '').replace(/\D/g, '').slice(-10);
@@ -1335,7 +1357,7 @@
                     <td style="font-weight:600;color:#1e293b">
                         <span class="clickable-label" onclick="applyCustomFilter('search', '${escJs(l.customer_name)}')" title="Click to filter by Lead Name: ${esc(l.customer_name)}">${esc(l.customer_name)}</span>
                     </td>
-                    <td><button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 text-nowrap" onclick="triggerLeadCall('${cleanCustPhone}', '${escJs(l.customer_name)}', ${l.id})" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${maskPhone(l.phone_number)}</button></td>
+                    <td><button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 text-nowrap" onclick="triggerLeadCall('${cleanCustPhone}', '${escJs(l.customer_name)}', ${l.id})" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${maskPhone(l.phone_number)}</button> <button type="button" class="btn btn-sm py-0 px-2 text-nowrap ms-1" onclick="openLeadHistory(${l.id}, '${escJs(l.customer_name)}', '${cleanCustPhone}')" title="Universal History" style="font-size:10.5px;font-weight:600;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe"><i class="fas fa-history me-1"></i>History</button></td>
                     <td style="white-space:nowrap">
                         <button class="btn btn-sm btn-outline-success py-0 px-2 text-nowrap" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'discom_link')" title="DISCOM Document Link" style="font-size:10.5px;font-weight:700">
                             <i class="fas fa-bolt me-1"></i>DISCOM
@@ -1350,7 +1372,9 @@
                     <td style="color:#7c3aed;font-weight:600">
                         <i class="fas fa-user-tie me-1"></i><span class="clickable-label" onclick="applyCustomFilter('uportStaff', '${escJs(upStaffName)}')" title="Click to filter by Up-port Staff: ${esc(upStaffName)}">${esc(upStaffName)}</span>
                     </td>
-                    <td><span style="display:inline-block;padding:2px 8px;border-radius:12px;background:${currentMainTab === 'balance-pending' ? '#fffbeb' : '#e0f2fe'};color:${currentMainTab === 'balance-pending' ? '#b45309' : '#0369a1'};border:1px solid ${currentMainTab === 'balance-pending' ? '#fde68a' : '#bae6fd'};font-size:10px;font-weight:700">${esc(l.solar_pipeline_stage || l.stage || (currentMainTab === 'balance-pending' ? 'Bal Pending' : 'At Bank'))}</span></td>
+                    <td>
+                        <span style="display:inline-block;padding:2px 8px;border-radius:12px;background:${(currentMainTab === 'bank-not-interested' || (l.solar_pipeline_stage || l.stage || '').toLowerCase().includes('not_interested') || (l.solar_pipeline_stage || l.stage || '').toLowerCase().includes('not interested')) ? '#fee2e2' : (currentMainTab === 'balance-pending' ? '#fffbeb' : '#e0f2fe')};color:${(currentMainTab === 'bank-not-interested' || (l.solar_pipeline_stage || l.stage || '').toLowerCase().includes('not_interested') || (l.solar_pipeline_stage || l.stage || '').toLowerCase().includes('not interested')) ? '#b91c1c' : (currentMainTab === 'balance-pending' ? '#b45309' : '#0369a1')};border:1px solid ${(currentMainTab === 'bank-not-interested' || (l.solar_pipeline_stage || l.stage || '').toLowerCase().includes('not_interested') || (l.solar_pipeline_stage || l.stage || '').toLowerCase().includes('not interested')) ? '#fca5a5' : (currentMainTab === 'balance-pending' ? '#fde68a' : '#bae6fd')};font-size:10px;font-weight:700">${esc(l.solar_pipeline_stage || l.stage || (currentMainTab === 'balance-pending' ? 'Bal Pending' : (currentMainTab === 'bank-not-interested' ? 'Bank Not Interested' : 'At Bank')))}</span>
+                    </td>
                     <td style="color:#7c3aed">
                         <span class="clickable-label" onclick="applyCustomFilter('search', '${escJs(l.brand_name)}')" title="Click to filter by Brand: ${esc(l.brand_name)}">${esc(l.brand_name || '—')}</span>
                     </td>
@@ -1393,7 +1417,10 @@
                             <h6 class="mb-0 mt-1" style="font-weight:700;color:#1e293b"><span class="clickable-label" onclick="applyCustomFilter('search', '${escJs(l.customer_name)}')">${idx + 1}. ${esc(l.customer_name)}</span></h6>
                             <div class="small text-muted"><i class="fas fa-map-marker-alt me-1"></i><span class="clickable-label" onclick="applyCustomFilter('search', '${escJs(l.city_district)}')">${esc(l.city_district)}</span></div>
                         </div>
-                        <span class="days-badge ${dayClass}">${l.stage_days}d</span>
+                        <div class="text-end">
+                            <span class="days-badge ${dayClass}">${l.stage_days}d</span>
+                            <div class="mt-1"><span style="display:inline-block;padding:1px 6px;border-radius:10px;background:${(currentMainTab === 'bank-not-interested' || (l.solar_pipeline_stage || l.stage || '').toLowerCase().includes('not_interested') || (l.solar_pipeline_stage || l.stage || '').toLowerCase().includes('not interested')) ? '#fee2e2' : (currentMainTab === 'balance-pending' ? '#fffbeb' : '#e0f2fe')};color:${(currentMainTab === 'bank-not-interested' || (l.solar_pipeline_stage || l.stage || '').toLowerCase().includes('not_interested') || (l.solar_pipeline_stage || l.stage || '').toLowerCase().includes('not interested')) ? '#b91c1c' : (currentMainTab === 'balance-pending' ? '#b45309' : '#0369a1')};border:1px solid ${(currentMainTab === 'bank-not-interested' || (l.solar_pipeline_stage || l.stage || '').toLowerCase().includes('not_interested') || (l.solar_pipeline_stage || l.stage || '').toLowerCase().includes('not interested')) ? '#fca5a5' : (currentMainTab === 'balance-pending' ? '#fde68a' : '#bae6fd')};font-size:9.5px;font-weight:700">${esc(l.solar_pipeline_stage || l.stage || (currentMainTab === 'balance-pending' ? 'Bal Pending' : (currentMainTab === 'bank-not-interested' ? 'Bank Not Interested' : 'At Bank')))}</span></div>
+                        </div>
                     </div>
 
                     <div class="row g-2 mb-2 small">
@@ -1418,12 +1445,37 @@
                         <button class="btn btn-sm btn-outline-success py-1 px-2 flex-grow-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'discom_link')" style="font-size:11px;font-weight:700"><i class="fas fa-bolt me-1"></i>DISCOM</button>
                         <button class="btn btn-sm btn-outline-info py-1 px-2 flex-grow-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'bank_link')" style="font-size:11px;font-weight:700"><i class="fas fa-university me-1"></i>Bank</button>
                         <button type="button" class="btn btn-sm btn-outline-primary py-1 px-2 flex-grow-1" onclick="triggerLeadCall('${cleanCustPhone}', '${escJs(l.customer_name)}', ${l.id})" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>Call</button>
+                        <button type="button" class="btn btn-sm py-1 px-2 flex-grow-1" onclick="openLeadHistory(${l.id}, '${escJs(l.customer_name)}', '${cleanCustPhone}')" style="font-size:11px;font-weight:600;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe"><i class="fas fa-history me-1"></i>History</button>
                         ${l.ground_source_phone ? `<button type="button" class="btn btn-sm btn-outline-warning py-1 px-2 flex-grow-1" onclick="triggerLeadCall('${cleanGsPhone}', '${escJs(l.ground_source_name)} (Ground Source)')" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>Source</button>` : ''}
                         <a href="${l.google_maps_url}" target="_blank" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size:11px"><i class="fas fa-map-marker-alt me-1"></i>Map</a>
                     </div>
                 </div>`;
             });
             container.innerHTML = html;
+        }
+
+        function openLeadHistory(leadId, name, phone) {
+            if (window.openUniversalHistory) {
+                window.openUniversalHistory({
+                    entityType: 'crm_lead',
+                    entityId: leadId,
+                    name: name || `Lead #${leadId}`,
+                    phone: phone || '',
+                    category: 'Bank Wise Lead'
+                });
+            }
+        }
+
+        function openVgkMemberUniversalHistory(name, phone, memberId) {
+            if (window.openUniversalHistory) {
+                window.openUniversalHistory({
+                    entityType: 'vgk_member',
+                    entityId: memberId || 0,
+                    name: name || 'VGK Member',
+                    phone: phone || '',
+                    category: 'VGK Member / Ground Source'
+                });
+            }
         }
 
         const BANK_ALIAS_MAP = {
@@ -1715,8 +1767,10 @@
                         key: key,
                         sourceName: sName,
                         sourcePhone: l.ground_source_phone || '',
+                        sourceMemberId: l.ground_source_id || 0,
                         uplinerName: l.upliner_name || '',
                         uplinerPhone: l.upliner_phone || '',
+                        uplinerMemberId: l.upliner_id || 0,
                         areas: new Set(),
                         cities: new Set(),
                         leads: [],
@@ -1733,8 +1787,10 @@
                 groups[key].totalValue += (l.deal_value || 0);
                 if (l.stage_days > groups[key].maxDays) groups[key].maxDays = l.stage_days;
                 if (!groups[key].sourcePhone && l.ground_source_phone) groups[key].sourcePhone = l.ground_source_phone;
+                if (!groups[key].sourceMemberId && l.ground_source_id) groups[key].sourceMemberId = l.ground_source_id;
                 if ((!groups[key].uplinerName || groups[key].uplinerName === '—') && l.upliner_name && l.upliner_name !== '—') groups[key].uplinerName = l.upliner_name;
                 if (!groups[key].uplinerPhone && l.upliner_phone) groups[key].uplinerPhone = l.upliner_phone;
+                if (!groups[key].uplinerMemberId && l.upliner_id) groups[key].uplinerMemberId = l.upliner_id;
                 if (l.area && l.area !== '—' && l.area !== 'None') groups[key].areas.add(l.area.trim());
                 if (l.city && l.city !== '—' && l.city !== 'None') groups[key].cities.add(l.city.trim());
                 else if (l.city_district && l.city_district !== '—') groups[key].cities.add(l.city_district.trim());
@@ -1779,17 +1835,20 @@
                 const valText = g.totalValue ? `₹${(g.totalValue / 100000).toFixed(2)}L` : '—';
                 const cleanGsPhone = (g.sourcePhone || '').replace(/\D/g, '').slice(-10);
                 const callBtn = g.sourcePhone ? `<button type="button" class="btn btn-sm btn-outline-warning py-0 px-2" style="font-size:11px;font-weight:600" onclick="event.stopPropagation(); triggerLeadCall('${cleanGsPhone}', '${escJs(g.sourceName)} (Ground Source)')" title="Call Ground Source via Softphone"><i class="fas fa-phone-alt me-1"></i>${maskPhone(g.sourcePhone)}</button>` : '';
+                const gsHistoryBtn = (g.sourcePhone || g.sourceName) ? `<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 ms-1" style="font-size:11px;font-weight:600" onclick="event.stopPropagation(); openVgkMemberUniversalHistory('${escJs(g.sourceName)}', '${cleanGsPhone}', ${g.sourceMemberId || 0})" title="View Ground Source Communication & Call History"><i class="fas fa-history me-1"></i>History</button>` : '';
 
                 // Upliner Badge & Call Button
                 const hasUpliner = g.uplinerName && g.uplinerName !== '—' && g.uplinerName !== 'Direct / None';
                 const cleanUpPhone = (g.uplinerPhone || '').replace(/\D/g, '').slice(-10);
                 const uplinerCallBtn = g.uplinerPhone ? `<button type="button" class="btn btn-sm btn-outline-warning py-0 px-2 ms-1" style="font-size:10.5px;font-weight:600" onclick="event.stopPropagation(); triggerLeadCall('${cleanUpPhone}', '${escJs(g.uplinerName)} (Upliner)')" title="Call Upliner via Softphone"><i class="fas fa-phone-alt me-1"></i>${maskPhone(g.uplinerPhone)}</button>` : '';
+                const uplinerHistoryBtn = hasUpliner ? `<button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 ms-1" style="font-size:10.5px;font-weight:600" onclick="event.stopPropagation(); openVgkMemberUniversalHistory('${escJs(g.uplinerName)}', '${cleanUpPhone}', ${g.uplinerMemberId || 0})" title="View Upliner Communication & Call History"><i class="fas fa-history me-1"></i>History</button>` : '';
                 const uplinerBadge = hasUpliner ? `
                     <div class="d-inline-flex align-items-center">
                         <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1 clickable-label" style="font-size:11.5px;font-weight:700" onclick="applyCustomFilter('upliner', '${escJs(g.uplinerName)}')" title="Click to filter by Upliner: ${esc(g.uplinerName)}">
                             <i class="fas fa-user-shield text-warning-emphasis me-1"></i>Upliner: <span class="text-primary">${esc(g.uplinerName)}</span>
                         </span>
                         ${uplinerCallBtn}
+                        ${uplinerHistoryBtn}
                     </div>` : '';
 
                 // Location Summary (Area & City)
@@ -1815,6 +1874,7 @@
                         <div class="d-flex align-items-center flex-wrap gap-2">
                             <span class="badge bg-warning text-dark px-2 py-1 clickable-label" style="font-size:13px;font-weight:800" onclick="applyCustomFilter('member', '${escJs(g.sourceName)}')" title="Click to filter by Ground Source"><i class="fas fa-user-tag me-1"></i>${esc(g.sourceName)}</span>
                             ${callBtn}
+                            ${gsHistoryBtn}
                             ${uplinerBadge}
                             ${locBadge}
                             <span class="badge bg-success px-2 py-1" style="font-weight:700">${g.leads.length} Files</span>
@@ -1863,7 +1923,9 @@
                         const gsStaffName = l.ground_support_name || l.field_staff_name || '—';
                         const stageLabel = l.solar_pipeline_stage || l.stage || (currentMainTab === 'balance-pending' ? 'Bal Pending' : 'At Bank');
                         const leadLoc = (l.area && l.area !== '—') ? `${l.area}, ${l.city_district || l.city || ''}` : (l.city_district || l.city || '—');
-                        const leadUp = (l.upliner_name && l.upliner_name !== '—') ? `${esc(l.upliner_name)}${l.upliner_phone ? `<br><small class="text-muted">${maskPhone(l.upliner_phone)}</small>` : ''}` : '—';
+                        const leadUpPhone = (l.upliner_phone || '').replace(/\D/g, '').slice(-10);
+                        const leadUpHistoryBtn = (l.upliner_name && l.upliner_name !== '—') ? ` <button type="button" class="btn btn-link p-0 text-primary ms-1" style="font-size:10px;text-decoration:none" onclick="event.stopPropagation(); openVgkMemberUniversalHistory('${escJs(l.upliner_name)}', '${leadUpPhone}', ${l.upliner_id || 0})" title="View Upliner History"><i class="fas fa-history"></i></button>` : '';
+                        const leadUp = (l.upliner_name && l.upliner_name !== '—') ? `${esc(l.upliner_name)}${l.upliner_phone ? `<br><small class="text-muted">${maskPhone(l.upliner_phone)}</small>` : ''}${leadUpHistoryBtn}` : '—';
 
                         const cleanCustPhone = (l.phone_number || '').replace(/\D/g, '').slice(-10);
                         html += `<tr>
@@ -1871,7 +1933,12 @@
                             <td class="fw-semibold text-primary clickable-label" onclick="applyCustomFilter('telecaller', '${escJs(l.telecaller_name)}')">${esc(l.telecaller_name || '—')}</td>
                             <td class="fw-bold text-success clickable-label" onclick="applyCustomFilter('bank', '${escJs(l.bank_name)}')">${esc(l.bank_name || '—')} (${esc(l.bank_branch || 'N/A')})</td>
                             <td class="fw-bold text-dark clickable-label" onclick="applyCustomFilter('search', '${escJs(l.customer_name)}')">${esc(l.customer_name)}</td>
-                            <td><button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 text-nowrap" onclick="triggerLeadCall('${cleanCustPhone}', '${escJs(l.customer_name)}', ${l.id})" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${maskPhone(l.phone_number)}</button></td>
+                            <td>
+                                <div class="d-flex align-items-center gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2 text-nowrap" onclick="triggerLeadCall('${cleanCustPhone}', '${escJs(l.customer_name)}', ${l.id})" style="font-size:11px;font-weight:600"><i class="fas fa-phone-alt me-1"></i>${maskPhone(l.phone_number)}</button>
+                                    <button type="button" class="btn btn-sm py-0 px-2 text-nowrap" onclick="openLeadHistory(${l.id}, '${escJs(l.customer_name)}', '${cleanCustPhone}')" style="font-size:11px;font-weight:600;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe" title="Lead Communication & Call History"><i class="fas fa-history me-1"></i>History</button>
+                                </div>
+                            </td>
                             <td style="white-space:nowrap">
                                 <button class="btn btn-sm btn-outline-success py-0 px-2 text-nowrap" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'discom_link')" title="DISCOM Document Link" style="font-size:10px;font-weight:700"><i class="fas fa-bolt me-1"></i>DISCOM</button>
                                 <button class="btn btn-sm btn-outline-info py-0 px-2 text-nowrap ms-1" onclick="openSolarDocsDirectTab(${l.id}, '${escJs(l.customer_name)}', 'bank_link')" title="Bank Document Link" style="font-size:10px;font-weight:700"><i class="fas fa-university me-1"></i>Bank</button>

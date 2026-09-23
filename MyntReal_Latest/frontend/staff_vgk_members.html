@@ -13,6 +13,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="/public/js/mnr-map-modal.js"></script>
 <script src="/public/js/modal-resizable.js"></script>
+<script src="/public/js/universal-history-modal.js"></script>
 <style>
 /* ── DC-TPT-DRILLDOWN-001: Leaderboard Lead Drilldown Modal (Matches Executive Dashboard) ── */
 #tptEdOverlay {
@@ -5592,6 +5593,17 @@ async function dialMember(memberId) {
 }
 
 async function openMemberHistory(memberId) {
+  const m = (window._vgkMemberCache && window._vgkMemberCache[memberId]) || {};
+  if (window.openUniversalHistory) {
+    window.openUniversalHistory({
+      entityType: 'vgk_member',
+      entityId: memberId,
+      name: m.partner_name || `Member #${memberId}`,
+      phone: m.phone || '',
+      category: 'VGK Member'
+    });
+    return;
+  }
   _currentHistoryMemberId = memberId;
   const modal = document.getElementById('vgkHistoryModal');
   if (modal) modal.style.display = 'flex';

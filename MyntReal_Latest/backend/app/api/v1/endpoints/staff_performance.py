@@ -2003,7 +2003,7 @@ def get_incentive_achievements(
                 "COALESCE(d.name, 'Unassigned') as department_name "
                 "FROM staff_employees e "
                 "LEFT JOIN staff_departments d ON d.id = e.department_id "
-                "WHERE e.id = ANY(:ids) AND e.status = 'active' AND e.is_deleted = FALSE "
+                "WHERE e.id = ANY(:ids) AND e.is_deleted = FALSE "
                 "AND e.emp_code NOT LIKE 'EMP_TEST_%' "
                 "AND (e.staff_type IS NULL OR e.staff_type NOT IN ('SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'))"
             ), {'ids': int_ids}).fetchall()
@@ -2011,6 +2011,20 @@ def get_incentive_achievements(
             for eid in emp_map:
                 if eid not in emp_data:
                     emp_data[eid] = {}
+
+    # DC-INCENTIVE-HISTORICAL-RESIGNED-001: Any employee who closed deals or generated achievements in this period
+    # MUST have their name, emp_code, and department resolved from staff_employees even if their status is currently 'resigned' or inactive.
+    missing_lead_eids = [int(k) for k in emp_data.keys() if str(k).isdigit() and str(k) not in emp_map]
+    if missing_lead_eids:
+        missing_emps = db.execute(text(
+            "SELECT e.id, e.emp_code, COALESCE(e.full_name, e.emp_code) as name, e.department_id, "
+            "COALESCE(d.name, 'Unassigned') as department_name "
+            "FROM staff_employees e "
+            "LEFT JOIN staff_departments d ON d.id = e.department_id "
+            "WHERE e.id = ANY(:ids) AND e.is_deleted = FALSE"
+        ), {'ids': missing_lead_eids}).fetchall()
+        for r in missing_emps:
+            emp_map[str(r[0])] = {'emp_code': r[1], 'name': r[2], 'dept_id': r[3], 'department': r[4]}
 
     # DC-INCENTIVE-EMP-TARGETS-001: Load per-employee incentive min-targets for this month.
     # Keyed as {emp_id_str: {category_slug: min_target_float}}. Default = 2.0 when not set.
@@ -3196,17 +3210,20 @@ def get_incentive_employee_targets(
 ):
     """Return all active employees + their saved min targets for the given month/year."""
     all_companies = (company_id == 0)
-    # Build employee query — skip company filter when "All Companies" selected
+    # Build employee query — include active employees AND any employees who have saved targets or closed deals for this month
     emp_q = (
         "SELECT e.id, COALESCE(e.full_name, e.emp_code) AS name, e.emp_code, e.department_id, "
         "COALESCE(d.name, 'Unassigned') AS department_name "
         "FROM staff_employees e "
         "LEFT JOIN staff_departments d ON d.id = e.department_id "
-        "WHERE e.status='active'"
+        "WHERE (e.status='active' OR e.id IN (SELECT employee_id FROM staff_incentive_employee_targets WHERE month=:mo AND year=:yr)) "
+        "AND e.is_deleted = FALSE"
         + ("" if all_companies else " AND e.base_company_id=:cid")
         + " ORDER BY e.full_name, e.emp_code"
     )
-    emp_params: dict = {} if all_companies else {'cid': company_id}
+    emp_params: dict = {'mo': month, 'yr': year}
+    if not all_companies:
+        emp_params['cid'] = company_id
     emps = db.execute(text(emp_q), emp_params).fetchall()
     
     _all_emp_int_ids = [int(r[0]) for r in emps]

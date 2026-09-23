@@ -46,7 +46,7 @@ ELIGIBLE_STAGES = {
 }
 
 # Stages that trigger recovery of already-released advances
-RECOVERY_STAGES = {'loan_rejected', 'not_interested', 'cancelled'}
+RECOVERY_STAGES = {'loan_rejected', 'not_interested', 'cancelled', 'bank_not_interested'}
 
 
 def _get_ist():

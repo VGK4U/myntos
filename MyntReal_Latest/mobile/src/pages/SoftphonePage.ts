@@ -19,6 +19,7 @@ import { PageHeader } from '../components/PageHeader';
 import { unifiedWAModal } from '../components/UnifiedWAModal';
 import { APP_CONFIG } from '../config/app.config';
 import { recordingPlayerService } from '../services/recording-player.service';
+import { UniversalLeadHistoryModal } from '../components/UniversalLeadHistoryModal';
 
 export type SoftphoneScope = 'dialer' | 'my' | 'new_calls' | 'team' | 'contacts' | 'overall';
 export type ContactSourceType = 'all' | 'leads' | 'vgk' | 'mnr' | 'synced_contacts';
@@ -1800,6 +1801,9 @@ export class SoftphonePage {
                   <button class="crm-lead-trigger-btn" data-lead-id="${this.escapeAttr(String(c.lead_id))}" data-phone="${cleanPhone}" data-name="${this.escapeAttr(c.name)}" data-company-id="${this.escapeAttr(String(c.company_id || ''))}" title="CRM Lead Details" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                     <i class="fas fa-address-card fa-xs"></i>
                   </button>
+                  <button class="open-lead-history-btn" data-lead-id="${this.escapeAttr(String(c.lead_id))}" data-phone="${cleanPhone}" data-name="${this.escapeAttr(c.name)}" title="Universal History" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); color: #818cf8; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-history fa-xs"></i>
+                  </button>
                 ` : ''}
                 <button class="customer-history-trigger-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(c.name)}" title="Customer Timeline" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                   <i class="fas fa-clock-rotate-left fa-xs"></i>
@@ -1986,6 +1990,9 @@ export class SoftphonePage {
             ${(c.crm_lead_id || c.effective_lead_id || c.lead_id) ? `
               <button class="crm-lead-trigger-btn" data-lead-id="${this.escapeAttr(String(c.crm_lead_id || c.effective_lead_id || c.lead_id))}" data-phone="${cleanPhone}" data-name="${this.escapeAttr(name)}" data-company-id="${this.escapeAttr(String(c.company_id || ''))}" title="CRM Lead Details" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b; cursor: pointer; display: flex; align-items: center; justify-content: center;">
                 <i class="fas fa-address-card fa-xs"></i>
+              </button>
+              <button class="open-lead-history-btn" data-lead-id="${this.escapeAttr(String(c.crm_lead_id || c.effective_lead_id || c.lead_id))}" data-phone="${cleanPhone}" data-name="${this.escapeAttr(name)}" title="Universal History" style="width: 32px; height: 32px; border-radius: 50%; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); color: #818cf8; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-history fa-xs"></i>
               </button>
             ` : ''}
 
@@ -2723,6 +2730,9 @@ export class SoftphonePage {
               <button class="crm-lead-trigger-btn" data-lead-id="${leadIdStr}" data-phone="${cleanPhone}" data-name="${this.escapeAttr(this.isPlaceholderName(custName) ? '' : custName)}" data-company-id="${this.escapeAttr(String(data?.lead?.company_id || ''))}" title="CRM Lead Details" style="padding: 6px 12px; border-radius: 16px; background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #fbbf24; font-size: 11.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
                 <i class="fas fa-address-card"></i> CRM
               </button>
+              <button class="open-lead-history-btn" data-lead-id="${leadIdStr}" data-phone="${cleanPhone}" data-name="${this.escapeAttr(this.isPlaceholderName(custName) ? '' : custName)}" title="Universal History" style="padding: 6px 12px; border-radius: 16px; background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.4); color: #a5b4fc; font-size: 11.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                <i class="fas fa-history"></i> History
+              </button>
             ` : ''}
             <button class="wa-action-btn" data-phone="${cleanPhone}" data-name="${this.escapeAttr(this.isPlaceholderName(custName) ? '' : custName)}" data-lead-id="${leadIdStr}" title="Send WhatsApp / Digital Catalog" style="padding: 6px 12px; border-radius: 16px; background: #25d366; border: none; color: #fff; font-size: 11.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);">
               <i class="fab fa-whatsapp"></i> WhatsApp
@@ -3144,6 +3154,26 @@ export class SoftphonePage {
         }
       });
     });
+
+    // Universal Lead History trigger
+    this.container.querySelectorAll('.open-lead-history-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = btn as HTMLElement;
+        const leadId = parseInt(target.dataset.leadId || '0');
+        const phone = target.dataset.phone || '';
+        const name = target.dataset.name || 'Lead';
+        if (leadId) {
+          UniversalLeadHistoryModal.open({
+            entityType: 'crm_lead',
+            entityId: leadId,
+            name,
+            phone,
+            category: 'Softphone Center'
+          });
+        }
+      });
+    });
   }
 
   private attachContactCardListeners(): void {
@@ -3520,6 +3550,25 @@ export class SoftphonePage {
           const companyId = target.dataset.companyId || '';
           if (leadId) {
             this.openCRMLeadModal(leadId, phone, name, companyId);
+          }
+        });
+      });
+
+      container.querySelectorAll('.open-lead-history-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const target = btn as HTMLElement;
+          const leadId = parseInt(target.dataset.leadId || '0');
+          const phone = target.dataset.phone || '';
+          const name = target.dataset.name || 'Lead';
+          if (leadId) {
+            UniversalLeadHistoryModal.open({
+              entityType: 'crm_lead',
+              entityId: leadId,
+              name,
+              phone,
+              category: 'Softphone Center'
+            });
           }
         });
       });

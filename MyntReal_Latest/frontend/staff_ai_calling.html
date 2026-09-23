@@ -15,9 +15,9 @@
 body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f3f4f6;min-height:100vh}
 .main-content{margin-left:280px;padding-top:88px;min-height:100vh;transition:margin-left .3s}
 @media(max-width:768px){.main-content{margin-left:0}}
-.content-area{padding:20px}
+.content-area{padding:20px 24px;width:100%;max-width:100%;box-sizing:border-box}
 /* ─── Main layout ─── */
-.ai-main{max-width:1400px;margin:0 auto;padding-bottom:40px}
+.ai-main{width:100%;max-width:100%;margin:0;padding-bottom:40px}
 /* ─── Page tabs ─── */
 .page-tabs{display:flex;gap:3px;background:#e0e1fd;border-radius:12px;padding:3px;margin-bottom:0;width:fit-content;flex-wrap:wrap}
 .page-tab{padding:7px 16px;border-radius:9px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;background:transparent;color:#6366f1}
@@ -38,11 +38,33 @@ body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background:#f3f4f6;
 .voice-active-badge{position:absolute;top:12px;right:12px;background:var(--ai-primary);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;display:none}
 .voice-card.selected .voice-active-badge{display:inline}
 /* ─── Stats strip ─── */
-.stats-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:14px}
-.stat-card{background:#fff;border-radius:var(--card-radius);padding:12px 16px;border:1px solid #e0e1fd;display:flex;flex-direction:column;gap:2px}
-.stat-card .lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6b7280}
-.stat-card .val{font-size:22px;font-weight:800;color:var(--ai-primary)}
-.stat-card .sub{font-size:10px;color:#9ca3af}
+.stats-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:16px}
+@media(max-width:1150px){.stats-strip{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:640px){.stats-strip{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:#fff;border-radius:var(--card-radius);padding:12px 14px;border:1px solid #e0e1fd;display:flex;align-items:center;gap:12px;transition:all .2s ease;box-shadow:0 1px 4px rgba(99,102,241,.04);min-width:0}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(99,102,241,.09);border-color:#c7d2fe}
+.stat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.stat-info{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.stat-card .lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-card .val{font-size:22px;font-weight:800;color:#1e1b4b;line-height:1.2}
+.stat-card .sub{font-size:10px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ─── Nav & Action Bar ─── */
+.ai-nav-card{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;background:#fff;border:1px solid #e0e1fd;border-radius:var(--card-radius);padding:8px 12px;margin-bottom:18px;box-shadow:0 1px 4px rgba(99,102,241,.04)}
+.ai-nav-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.engine-badge{display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;color:#166534}
+.live-pulse{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 0 rgba(34,197,94,.7);animation:pulse-green 1.8s infinite}
+@keyframes pulse-green{0%{box-shadow:0 0 0 0 rgba(34,197,94,.7)}70%{box-shadow:0 0 0 6px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+.btn-test-call{background:linear-gradient(135deg,#f59e0b,#d97706);border:none;box-shadow:0 2px 8px rgba(245,158,11,.25);font-weight:700;border-radius:9px;padding:8px 18px;color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-size:13px;transition:all .2s}
+.btn-test-call:hover{background:linear-gradient(135deg,#d97706,#b45309);box-shadow:0 4px 12px rgba(245,158,11,.35);color:#fff}
+/* ─── Action Buttons in Table ─── */
+.btn-ai-action{padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #e0e1fd;background:#fff;color:#4b5563;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s}
+.btn-ai-action:hover{background:#f0f1fe;color:var(--ai-primary);border-color:#a5b4fc}
+.btn-ai-action-primary{background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none}
+.btn-ai-action-primary:hover{background:linear-gradient(135deg,#4f46e5,#4338ca);color:#fff}
+.btn-ai-action-success{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+.btn-ai-action-success:hover{background:#bbf7d0;color:#166534}
+.btn-ai-action-purple{background:#ede9fe;color:#7c3aed;border-color:#ddd6fe}
+.btn-ai-action-purple:hover{background:#ddd6fe;color:#6d28d9}
 /* ─── Cards ─── */
 .ai-card{background:#fff;border-radius:var(--card-radius);border:1px solid #e0e1fd;overflow:hidden;margin-bottom:20px}
 .ai-card-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid #f0f1fe;background:linear-gradient(135deg,#fafafe,#f5f5ff)}
@@ -134,9 +156,9 @@ textarea.form-control{resize:vertical;min-height:90px}
 .status-same{color:#9ca3af}
 /* ─── Call log table ─── */
 .log-table{width:100%;border-collapse:collapse;font-size:13px}
-.log-table th{padding:10px 12px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;border-bottom:2px solid #e0e1fd;white-space:nowrap}
-.log-table td{padding:11px 12px;border-bottom:1px solid #f0f1fe;vertical-align:middle}
-.log-table tr:hover td{background:#fafafe}
+.log-table th{padding:11px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#64748b;background:#f8fafc;border-bottom:2px solid #e0e1fd;white-space:nowrap}
+.log-table td{padding:12px 14px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+.log-table tr:hover td{background:#f8faff}
 .outcome-pill{padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase}
 .outcome-pill.qualified,.outcome-pill.interested{background:#dcfce7;color:#15803d}
 .outcome-pill.callback{background:#fef3c7;color:#92400e}
@@ -174,7 +196,7 @@ textarea.form-control{resize:vertical;min-height:90px}
 .btn-ai-ghost:hover{background:#f0f1fe}
 .btn-ai-sm{padding:5px 12px;font-size:12px}
 /* ─── Empty state ─── */
-.empty-state{text-align:center;padding:60px 20px;color:#9ca3af}
+.empty-state{text-align:center;padding:60px 20px;color:#9ca3af;grid-column:1/-1;width:100%}
 .empty-state i{font-size:48px;color:#e0e1fd;margin-bottom:16px}
 .empty-state p{font-size:14px}
 /* ─── Toast ─── */
@@ -238,28 +260,97 @@ textarea.form-control{resize:vertical;min-height:90px}
 
   <!-- Stats strip -->
   <div class="stats-strip" id="statsStrip">
-    <div class="stat-card"><div class="lbl">Total Campaigns</div><div class="val" id="statCamps">—</div><div class="sub">all time</div></div>
-    <div class="stat-card"><div class="lbl">Active Now</div><div class="val" id="statActive" style="color:#22c55e">—</div><div class="sub">running</div></div>
-    <div class="stat-card"><div class="lbl">Total Calls Made</div><div class="val" id="statMade">—</div><div class="sub">across campaigns</div></div>
-    <div class="stat-card"><div class="lbl">Connected</div><div class="val" id="statConnected" style="color:#06b6d4">—</div><div class="sub">answered</div></div>
-    <div class="stat-card"><div class="lbl">Qualified Leads</div><div class="val" id="statQual" style="color:#22c55e">—</div><div class="sub">ready for handoff</div></div>
-    <div class="stat-card"><div class="lbl">Catalogue Entries</div><div class="val" id="statCat" style="color:#8b5cf6">—</div><div class="sub">AI knowledge base</div></div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#ede9fe;color:#7c3aed">
+        <i class="fas fa-broadcast-tower"></i>
+      </div>
+      <div class="stat-info">
+        <div class="lbl">Campaigns</div>
+        <div class="val" id="statCamps">—</div>
+        <div class="sub">Total configured</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#dcfce7;color:#16a34a">
+        <i class="fas fa-bolt"></i>
+      </div>
+      <div class="stat-info">
+        <div class="lbl">Active Now</div>
+        <div class="val" id="statActive" style="color:#16a34a">—</div>
+        <div class="sub">Running live</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#e0f2fe;color:#0284c7">
+        <i class="fas fa-phone-volume"></i>
+      </div>
+      <div class="stat-info">
+        <div class="lbl">Calls Made</div>
+        <div class="val" id="statMade">—</div>
+        <div class="sub">Across campaigns</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#cffafe;color:#0891b2">
+        <i class="fas fa-headset"></i>
+      </div>
+      <div class="stat-info">
+        <div class="lbl">Connected</div>
+        <div class="val" id="statConnected" style="color:#0891b2">—</div>
+        <div class="sub">Customer answered</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef3c7;color:#d97706">
+        <i class="fas fa-user-check"></i>
+      </div>
+      <div class="stat-info">
+        <div class="lbl">Qualified</div>
+        <div class="val" id="statQual" style="color:#16a34a">—</div>
+        <div class="sub">Handoff ready</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fae8ff;color:#a855f7">
+        <i class="fas fa-brain"></i>
+      </div>
+      <div class="stat-info">
+        <div class="lbl">Catalogue</div>
+        <div class="val" id="statCat" style="color:#9333ea">—</div>
+        <div class="sub">Knowledge entries</div>
+      </div>
+    </div>
   </div>
 
-  <!-- Page tabs + Test Call -->
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;padding:10px 0 0">
+  <!-- Navigation & Action Bar -->
+  <div class="ai-nav-card">
     <div class="page-tabs" style="margin-bottom:0">
       <button class="page-tab active" id="tabCamp" onclick="switchTab('campaigns')"><i class="fas fa-broadcast-tower me-1"></i>Campaigns</button>
-      <button class="page-tab" id="tabCat" onclick="switchTab('catalogue')"><i class="fas fa-brain me-1"></i>Knowledge & AI</button>
-      <button class="page-tab" id="tabFaqs" onclick="switchTab('faqs')"><i class="fas fa-question-circle me-1"></i>FAQs & Info</button>
+      <button class="page-tab" id="tabCat" onclick="switchTab('catalogue')"><i class="fas fa-brain me-1"></i>Knowledge &amp; AI</button>
+      <button class="page-tab" id="tabMissingInfo" onclick="switchTab('missing-info')">
+        <i class="fas fa-question-circle me-1"></i>Missing Information
+        <span class="badge" id="missingInfoPendingBadge" style="display:none;background:#ef4444;color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;margin-left:4px">0</span>
+      </button>
+      <button class="page-tab" id="tabFaqs" onclick="switchTab('faqs')"><i class="fas fa-book me-1"></i>FAQs &amp; Info</button>
       <button class="page-tab" id="tabLogs" onclick="switchTab('logs')"><i class="fas fa-history me-1"></i>Call History</button>
       <button class="page-tab" id="tabVoice" onclick="switchTab('voice')"><i class="fas fa-microphone-alt me-1"></i>Voice Settings</button>
       <button class="page-tab" id="tabExec" onclick="switchTab('exec')"><i class="fas fa-chart-line me-1"></i>Executive Dashboard</button>
-      <button class="page-tab" id="tabUsage" onclick="switchTab('usage')" style="display:none"><i class="fas fa-chart-bar me-1"></i>Usage & Cost</button>
+      <button class="page-tab" id="tabUsage" onclick="switchTab('usage')" style="display:none"><i class="fas fa-chart-bar me-1"></i>Usage &amp; Cost</button>
     </div>
-    <button class="btn-ai btn-ai-primary" onclick="openTestCall()" style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;box-shadow:0 2px 8px rgba(245,158,11,.3)">
-      <i class="fas fa-phone-alt"></i> Test Call
-    </button>
+    <div class="ai-nav-actions">
+      <div class="engine-badge" title="Telephony WebRTC & Gemini Multi-Project Pool is operational">
+        <span class="live-pulse"></span>
+        <span>Gemini 3.1 &amp; Plivo Ready</span>
+      </div>
+      <button class="btn-test-call" onclick="openTestCall()">
+        <i class="fas fa-phone-alt"></i> Test Call
+      </button>
+    </div>
   </div>
 
   <!-- ════ TAB: CAMPAIGNS ════ -->
@@ -278,12 +369,17 @@ textarea.form-control{resize:vertical;min-height:90px}
         <h6 style="font-size:14px;font-weight:700;color:#1e1b4b;margin:0"><i class="fas fa-history me-2" style="color:var(--ai-accent)"></i>Recent Call Activity</h6>
         <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="switchTab('logs')"><i class="fas fa-external-link-alt"></i> See All</button>
       </div>
-      <div style="overflow-x:auto;border:1px solid #e0e1fd;border-radius:12px;background:#fff">
-        <table class="log-table">
+      <div style="overflow-x:auto;border:1px solid #e0e1fd;border-radius:12px;background:#fff;box-shadow:0 1px 4px rgba(99,102,241,.04)">
+        <table class="log-table" style="width:100%;margin:0">
           <thead><tr>
-            <th>Lead</th><th>Phone</th><th>Language</th><th>Status</th><th>Outcome</th><th>Duration</th><th>Date &amp; Time</th><th>Actions</th>
+            <th style="width:26%">Lead &amp; Contact</th>
+            <th style="width:14%">Language</th>
+            <th style="width:20%">Status &amp; Outcome</th>
+            <th style="width:12%">Duration</th>
+            <th style="width:18%">Date &amp; Time</th>
+            <th style="width:10%;text-align:right">Actions</th>
           </tr></thead>
-          <tbody id="recentLogsTbody"><tr><td colspan="8" style="text-align:center;padding:24px;color:#9ca3af"><i class="fas fa-spinner ai-spin"></i> Loading…</td></tr></tbody>
+          <tbody id="recentLogsTbody"><tr><td colspan="6" style="text-align:center;padding:24px;color:#9ca3af"><i class="fas fa-spinner ai-spin"></i> Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -478,6 +574,94 @@ textarea.form-control{resize:vertical;min-height:90px}
     </div><!-- /cat-grid -->
   </div>
 
+  <!-- ════ TAB: MISSING INFORMATION ════ -->
+  <div id="paneMissingInfo" style="display:none">
+    <!-- Header strip -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+      <div>
+        <h5 style="font-size:16px;font-weight:700;color:#1e1b4b;margin:0 0 4px">
+          <i class="fas fa-question-circle me-2" style="color:var(--ai-primary)"></i>Missing Information / Uncatalogued Questions
+        </h5>
+        <div style="font-size:12px;color:#6b7280">
+          Questions asked by customers during AI calls that were not in the approved catalogue. Review, answer, and optionally save to Knowledge Base.
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="loadMissingInfo()">
+          <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Stats for Missing Info -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:12px;margin-bottom:18px">
+      <div style="background:#fff;border:1px solid #e0e1fd;border-radius:12px;padding:12px 16px">
+        <div style="font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase">Total Captured</div>
+        <div style="font-size:20px;font-weight:800;color:#1e1b4b" id="miStatTotal">0</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#fffbeb,#fff);border:1.5px solid #fde68a;border-radius:12px;padding:12px 16px">
+        <div style="font-size:11px;font-weight:600;color:#d97706;text-transform:uppercase">Pending Action</div>
+        <div style="font-size:20px;font-weight:800;color:#b45309" id="miStatPending">0</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#f0fdf4,#fff);border:1.5px solid #bbf7d0;border-radius:12px;padding:12px 16px">
+        <div style="font-size:11px;font-weight:600;color:#16a34a;text-transform:uppercase">Answered</div>
+        <div style="font-size:20px;font-weight:800;color:#15803d" id="miStatAnswered">0</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 16px">
+        <div style="font-size:11px;font-weight:600;color:#9ca3af;text-transform:uppercase">Cancelled</div>
+        <div style="font-size:20px;font-weight:800;color:#6b7280" id="miStatCancelled">0</div>
+      </div>
+    </div>
+
+    <!-- Filters & Search Toolbar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;background:#fff;border:1px solid #e0e1fd;border-radius:12px;padding:12px 16px;margin-bottom:16px">
+      <!-- Status Pills -->
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <span style="font-size:12px;font-weight:600;color:#4b5563;margin-right:6px">Status:</span>
+        <button class="btn-ai btn-ai-sm mi-filter-btn" id="miFilterPending" onclick="filterMissingInfoStatus('pending')" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:20px;font-weight:700">
+          Pending (<span id="miPillPendingCount">0</span>)
+        </button>
+        <button class="btn-ai btn-ai-sm mi-filter-btn" id="miFilterAll" onclick="filterMissingInfoStatus('all')" style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:20px">
+          All (<span id="miPillTotalCount">0</span>)
+        </button>
+        <button class="btn-ai btn-ai-sm mi-filter-btn" id="miFilterAnswered" onclick="filterMissingInfoStatus('answered')" style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:20px">
+          Answered (<span id="miPillAnsweredCount">0</span>)
+        </button>
+        <button class="btn-ai btn-ai-sm mi-filter-btn" id="miFilterCancelled" onclick="filterMissingInfoStatus('cancelled')" style="background:#f3f4f6;color:#374151;border:1px solid #e5e7eb;border-radius:20px">
+          Cancelled (<span id="miPillCancelledCount">0</span>)
+        </button>
+      </div>
+
+      <!-- Search Input -->
+      <div style="position:relative;width:280px;max-width:100%">
+        <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:12px"></i>
+        <input type="text" id="miSearchInput" placeholder="Search questions, leads, phones…"
+               style="width:100%;padding:7px 12px 7px 30px;border-radius:8px;border:1.5px solid #e0e1fd;font-size:12px;outline:none"
+               oninput="onMissingInfoSearchInput()"/>
+      </div>
+    </div>
+
+    <!-- Table Container -->
+    <div style="overflow-x:auto;border:1px solid #e0e1fd;border-radius:12px;background:#fff;box-shadow:0 2px 8px rgba(99,102,241,.04)">
+      <table class="log-table" style="width:100%;margin:0">
+        <thead>
+          <tr>
+            <th style="min-width:160px">Lead / Contact</th>
+            <th style="min-width:140px">Campaign / Log</th>
+            <th style="min-width:280px">Uncatalogued Question</th>
+            <th style="min-width:220px">AI Fallback Response</th>
+            <th style="min-width:110px">Date &amp; Time</th>
+            <th style="min-width:90px">Status</th>
+            <th style="min-width:160px;text-align:right">Action</th>
+          </tr>
+        </thead>
+        <tbody id="missingInfoTbody">
+          <tr><td colspan="7" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner ai-spin me-2"></i>Loading questions…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- ════ TAB: FAQS & ADDITIONAL INFO ════ -->
   <div id="paneFaqs" style="display:none">
     <div class="cat-grid" style="align-items:start">
@@ -587,69 +771,173 @@ AI will automatically:
 
   <!-- ════ TAB: CALL HISTORY ════ -->
   <div id="paneLogs" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
-      <h5 style="font-size:16px;font-weight:700;color:#1e1b4b;margin:0"><i class="fas fa-history me-2" style="color:var(--ai-accent)"></i>All Call Logs</h5>
-      <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="loadAllLogs()"><i class="fas fa-sync-alt"></i> Refresh</button>
+    <div class="ai-card" style="margin-bottom:24px">
+      <div class="ai-card-header" style="flex-wrap:wrap;gap:12px;padding:14px 20px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="background:#e0e7ff;color:#4f46e5;width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px">
+            <i class="fas fa-history"></i>
+          </div>
+          <div>
+            <h6 style="font-size:15px;font-weight:700;color:#1e1b4b;margin:0">All Call Logs</h6>
+            <div style="font-size:11px;color:#6b7280;margin-top:2px">Real-time telephonic recordings, customer transcripts, and AI qualification outcomes</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div style="position:relative;width:220px">
+            <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:11px"></i>
+            <input type="text" id="logsSearchInput" placeholder="Filter lead, phone, notes…" oninput="filterLogsTable()"
+                   style="width:100%;padding:6px 10px 6px 28px;border-radius:8px;border:1.5px solid #e0e1fd;font-size:12px;outline:none"/>
+          </div>
+          <select id="logsOutcomeFilter" onchange="filterLogsTable()" style="padding:6px 10px;border-radius:8px;border:1.5px solid #e0e1fd;font-size:12px;outline:none;background:#fff;color:#374151">
+            <option value="">All Outcomes</option>
+            <option value="qualified">Qualified</option>
+            <option value="interested">Interested</option>
+            <option value="callback">Callback</option>
+            <option value="not_interested">Not Interested</option>
+            <option value="no_answer">No Answer</option>
+          </select>
+          <select id="logsStatusFilter" onchange="filterLogsTable()" style="padding:6px 10px;border-radius:8px;border:1.5px solid #e0e1fd;font-size:12px;outline:none;background:#fff;color:#374151">
+            <option value="">All Statuses</option>
+            <option value="completed">Completed</option>
+            <option value="dialing">Dialing</option>
+            <option value="initiated">Initiated</option>
+            <option value="failed">Failed</option>
+          </select>
+          <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="loadAllLogs(_allLogsOffset)"><i class="fas fa-sync-alt"></i> Refresh</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="log-table" style="width:100%;margin:0">
+          <thead>
+            <tr>
+              <th style="width:24%">Lead &amp; Contact</th>
+              <th style="width:16%">Campaign &amp; Segment</th>
+              <th style="width:12%">Language &amp; Attempt</th>
+              <th style="width:16%">Result &amp; CRM Stage</th>
+              <th style="width:10%">Duration</th>
+              <th style="width:12%">Date &amp; Time</th>
+              <th style="width:10%;text-align:right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="allLogsTbody">
+            <tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner ai-spin"></i> Loading call logs…</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="allLogsPager" style="display:flex;justify-content:space-between;align-items:center;padding:12px 20px;border-top:1px solid #f0f1fe;font-size:12px;color:#6b7280"></div>
     </div>
-    <div style="overflow-x:auto;border:1px solid #e0e1fd;border-radius:12px;background:#fff">
-      <table class="log-table">
-        <thead><tr>
-          <th>Lead</th><th>Phone</th><th>Campaign</th><th>Language</th><th>Attempt</th>
-          <th>Status</th><th>Outcome</th><th>CRM Change</th><th>Duration</th><th>Date &amp; Time</th><th>Actions</th>
-        </tr></thead>
-        <tbody id="allLogsTbody"><tr><td colspan="11" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner ai-spin"></i> Loading…</td></tr></tbody>
-      </table>
-    </div>
-    <div id="allLogsPager" style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px"></div>
   </div>
 
   <!-- ════ TAB: VOICE SETTINGS ════ -->
   <div id="paneVoice" style="display:none">
-    <div style="max-width:860px;margin:0 auto">
-
-      <!-- Header -->
-      <div style="margin-bottom:24px">
-        <h5 style="font-size:16px;font-weight:700;color:#1e1b4b;margin:0 0 6px">Vidya's Voice</h5>
-        <p style="font-size:13px;color:#6b7280;margin:0">Choose which voice Vidya uses on every call — greeting, responses, and filler phrases all use the same voice throughout.</p>
-      </div>
-
-      <!-- Preview language selector -->
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">
-        <span style="font-size:12px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px">Preview language:</span>
-        <div style="display:flex;gap:6px">
-          <button class="voice-lang-btn active" data-lang="hi" onclick="setPreviewLang('hi',this)">Hindi</button>
-          <button class="voice-lang-btn" data-lang="te" onclick="setPreviewLang('te',this)">Telugu</button>
-          <button class="voice-lang-btn" data-lang="en" onclick="setPreviewLang('en',this)">English</button>
-        </div>
-      </div>
-
-      <!-- Voice cards grid -->
-      <div id="voiceGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:28px">
-        <div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner ai-spin"></i> Loading…</div>
-      </div>
-
-      <!-- Save bar -->
-      <div style="background:#f8f9ff;border:1px solid #e0e1fd;border-radius:12px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+    <div class="ai-card" style="margin-bottom:24px">
+      <div class="ai-card-header" style="flex-wrap:wrap;gap:12px;padding:16px 20px">
         <div>
-          <div style="font-size:13px;font-weight:600;color:#1e1b4b">Selected: <span id="selectedVoiceLabel" style="color:var(--ai-primary)">—</span></div>
-          <div style="font-size:12px;color:#9ca3af;margin-top:2px">This voice is used for all languages on every call</div>
+          <h6 style="font-size:15px;font-weight:700;color:#1e1b4b;margin:0">
+            <i class="fas fa-microphone-alt me-2" style="color:var(--ai-primary)"></i>Voice &amp; Persona Settings
+          </h6>
+          <div style="font-size:11px;color:#6b7280;margin-top:2px">Vidya (Primary Female Agent) and Teja (Primary Male Agent) voices across Telugu, English, and Hindi</div>
         </div>
-        <button class="btn-ai btn-ai-primary" id="saveVoiceBtn" onclick="saveVoice()" style="min-width:120px" disabled>
-          <i class="fas fa-save me-1"></i> Save Voice
-        </button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Preview Language:</span>
+          <div style="display:flex;gap:4px">
+            <button class="voice-lang-btn active" data-lang="te" onclick="setPreviewLang('te',this)">Telugu</button>
+            <button class="voice-lang-btn" data-lang="en" onclick="setPreviewLang('en',this)">English</button>
+            <button class="voice-lang-btn" data-lang="hi" onclick="setPreviewLang('hi',this)">Hindi</button>
+          </div>
+        </div>
+      </div>
+      <div class="ai-card-body">
+        <!-- Persona Resolution Banner -->
+        <div style="background:#f8f9ff;border:1px solid #e0e1fd;border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="background:#e0e7ff;width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#4f46e5;font-size:16px">
+              <i class="fas fa-user-friends"></i>
+            </div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#1e1b4b">Deterministic Persona Resolution</div>
+              <div style="font-size:11px;color:#6b7280;margin-top:2px">Female leads route to <strong>Vidya</strong> (Aoede / Nova). Male leads route to <strong>Teja</strong> (Puck / Onyx). Unknown leads default to <strong>Vidya</strong>.</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span class="badge" style="background:#fce7f3;color:#db2777;border:1px solid #fbcfe8;font-size:11px;padding:5px 12px;border-radius:20px;font-weight:700">♀ Vidya (Aoede)</span>
+            <span class="badge" style="background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;font-size:11px;padding:5px 12px;border-radius:20px;font-weight:700">♂ Teja (Puck)</span>
+          </div>
+        </div>
+
+        <!-- Voice cards grid -->
+        <div id="voiceGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:24px">
+          <div style="grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner ai-spin"></i> Loading available voices…</div>
+        </div>
+
+        <!-- Save bar -->
+        <div style="background:#f8f9ff;border:1px solid #e0e1fd;border-radius:12px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#1e1b4b">Selected Voice: <span id="selectedVoiceLabel" style="color:var(--ai-primary)">—</span></div>
+            <div style="font-size:11px;color:#6b7280;margin-top:2px">Vidya uses this voice timbre for all multilingual calls</div>
+          </div>
+          <button class="btn-ai btn-ai-primary" id="saveVoiceBtn" onclick="saveVoice()" style="min-width:130px" disabled>
+            <i class="fas fa-save me-1"></i> Save Selection
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- ══════════════════════════════════ PANE: USAGE & COST ══════════════════════════════════ -->
+  <!-- ══════════════════════════════════ PANE: USAGE & GEMINI POOL ══════════════════════════════════ -->
   <div id="paneUsage" style="display:none">
-    <div style="max-width:960px;margin:0 auto">
 
-      <!-- Header -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px">
+      <!-- Section 1: Multi-Project Gemini Account Pool -->
+      <div style="background:#fff;border-radius:16px;border:1px solid #e0e7ff;padding:24px;margin-bottom:32px;box-shadow:0 2px 8px rgba(99,102,241,0.04)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <h5 style="font-size:16px;font-weight:700;color:#1e1b4b;margin:0"><i class="fas fa-layer-group me-2" style="color:#6366f1"></i>Gemini Multi-Project Accounts &amp; Quota Pool</h5>
+              <span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px">Auto Failover</span>
+            </div>
+            <p style="font-size:12px;color:#6b7280;margin:4px 0 0">Register multiple Google Cloud Gemini AI Studio accounts. If a project hits HTTP 429 quota exhaustion, it cools down for 60s while calls seamlessly route to backup accounts.</p>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="loadGeminiPool()">
+              <i class="fas fa-sync-alt me-1"></i> Refresh Pool
+            </button>
+            <button class="btn-ai btn-ai-primary btn-ai-sm" onclick="openAddGeminiProjectModal()">
+              <i class="fas fa-plus me-1"></i> Add Project Account
+            </button>
+          </div>
+        </div>
+
+        <!-- Pool Summary Badges -->
+        <div id="poolSummaryBar" style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+          <div style="background:#f8f9ff;border:1px solid #e0e1fd;border-radius:10px;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:8px">
+            <i class="fas fa-server" style="color:#6366f1"></i>
+            <span style="color:#6b7280">Total Accounts:</span>
+            <strong id="poolCountTotal" style="color:#1e1b4b">0</strong>
+          </div>
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:8px">
+            <i class="fas fa-check-circle" style="color:#16a34a"></i>
+            <span style="color:#6b7280">Active / Operational:</span>
+            <strong id="poolCountActive" style="color:#15803d">0</strong>
+          </div>
+          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:8px">
+            <i class="fas fa-hourglass-half" style="color:#d97706"></i>
+            <span style="color:#6b7280">In Cooldown (429):</span>
+            <strong id="poolCountCooldown" style="color:#b45309">0</strong>
+          </div>
+        </div>
+
+        <!-- Pool Accounts Container -->
+        <div id="geminiPoolLoading" style="text-align:center;padding:24px;color:#9ca3af">
+          <i class="fas fa-spinner ai-spin fa-lg me-2" style="color:#6366f1"></i>Loading Gemini project accounts...
+        </div>
+        <div id="geminiPoolList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px"></div>
+      </div>
+
+      <!-- Section 2: Usage & Cost Analytics -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
         <div>
-          <h5 style="font-size:16px;font-weight:700;color:#1e1b4b;margin:0 0 4px"><i class="fas fa-chart-bar me-2" style="color:#6366f1"></i>Usage & Cost Analytics</h5>
-          <p style="font-size:12px;color:#9ca3af;margin:0">OpenAI (GPT-4o + TTS) and Twilio call costs. Restricted to VGK Mentor &amp; Accounts.</p>
+          <h5 style="font-size:16px;font-weight:700;color:#1e1b4b;margin:0 0 4px"><i class="fas fa-chart-line me-2" style="color:#6366f1"></i>AI Calling Usage &amp; Costs</h5>
+          <p style="font-size:12px;color:#9ca3af;margin:0">Real-time Gemini token metrics, TTS voice generations, and Plivo PSTN call expenses. Restricted to VGK Mentor &amp; Accounts.</p>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <select id="usageDays" onchange="loadUsageStats()" style="padding:6px 12px;border-radius:8px;border:1px solid #e0e7ff;font-size:13px;color:#4f46e5;background:#fff">
@@ -668,7 +956,7 @@ AI will automatically:
       <div id="usageAccessDenied" style="display:none;text-align:center;padding:60px 20px">
         <i class="fas fa-lock fa-3x" style="color:#e0e7ff;margin-bottom:16px;display:block"></i>
         <div style="font-weight:700;color:#6366f1;font-size:15px;margin-bottom:8px">Access Restricted</div>
-        <div style="color:#9ca3af;font-size:13px">Usage & cost data is only visible to VGK Mentor and Accounts department staff.</div>
+        <div style="color:#9ca3af;font-size:13px">Usage &amp; cost data is only visible to VGK Mentor and Accounts department staff.</div>
       </div>
 
       <!-- Stats loading spinner -->
@@ -679,39 +967,45 @@ AI will automatically:
       <!-- Stats content (shown after load) -->
       <div id="usageContent" style="display:none">
 
-        <!-- Grand total + KB savings banner -->
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:28px" id="usageSummaryCards"></div>
+        <!-- Summary cards -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:24px" id="usageSummaryCards"></div>
 
         <!-- Pricing note -->
-        <div id="usagePricingNote" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 16px;font-size:11px;color:#6b7280;margin-bottom:24px"></div>
+        <div id="usagePricingNote" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;font-size:12px;color:#4b5563;margin-bottom:24px;line-height:1.5"></div>
 
-        <!-- Two-column: OpenAI breakdown + Twilio summary -->
+        <!-- Two-column: Gemini breakdown + Plivo summary -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px">
 
-          <!-- OpenAI breakdown -->
+          <!-- Gemini breakdown -->
           <div style="background:#fff;border-radius:14px;border:1px solid #e0e7ff;padding:20px">
             <h6 style="font-size:13px;font-weight:700;color:#1e1b4b;margin:0 0 14px">
-              <i class="fas fa-robot me-2" style="color:#6366f1"></i>OpenAI Usage
+              <i class="fas fa-brain me-2" style="color:#6366f1"></i>Gemini AI Usage &amp; Costs
             </h6>
-            <table style="width:100%;border-collapse:collapse;font-size:12px" id="usageOAITable">
+            <table style="width:100%;border-collapse:collapse;font-size:12px" id="usageGeminiTable">
               <thead>
                 <tr style="color:#9ca3af;border-bottom:1px solid #f1f5f9">
-                  <th style="text-align:left;padding:4px 0;font-weight:600">Type</th>
-                  <th style="text-align:right;padding:4px 4px;font-weight:600">Count</th>
-                  <th style="text-align:right;padding:4px 4px;font-weight:600">Tokens / Chars</th>
-                  <th style="text-align:right;padding:4px 0;font-weight:600">Cost (USD)</th>
+                  <th style="text-align:left;padding:6px 0;font-weight:600">Event / Source</th>
+                  <th style="text-align:right;padding:6px 4px;font-weight:600">Count</th>
+                  <th style="text-align:right;padding:6px 4px;font-weight:600">Tokens / Chars</th>
+                  <th style="text-align:right;padding:6px 0;font-weight:600">Cost (USD)</th>
                 </tr>
               </thead>
-              <tbody id="usageOAIBody"></tbody>
+              <tbody id="usageGeminiBody"></tbody>
             </table>
+
+            <!-- Per Project Breakdown -->
+            <div id="projectBreakdownWrap" style="margin-top:20px;border-top:1px solid #f1f5f9;padding-top:14px">
+              <h6 style="font-size:12px;font-weight:700;color:#6b7280;margin:0 0 8px;text-transform:uppercase;letter-spacing:0.5px">Project Account Breakdown</h6>
+              <div id="projectBreakdownList" style="font-size:12px"></div>
+            </div>
           </div>
 
-          <!-- Twilio summary -->
+          <!-- Plivo summary -->
           <div style="background:#fff;border-radius:14px;border:1px solid #e0e7ff;padding:20px">
             <h6 style="font-size:13px;font-weight:700;color:#1e1b4b;margin:0 0 14px">
-              <i class="fas fa-phone-alt me-2" style="color:#10b981"></i>Twilio Calls
+              <i class="fas fa-phone-alt me-2" style="color:#10b981"></i>Plivo Calls &amp; PSTN Costs
             </h6>
-            <div id="usageTwilioDetails"></div>
+            <div id="usagePlivoDetails"></div>
           </div>
         </div>
 
@@ -725,7 +1019,7 @@ AI will automatically:
               <thead>
                 <tr style="color:#9ca3af;border-bottom:1px solid #f1f5f9">
                   <th style="text-align:left;padding:6px 0;font-weight:600">Date</th>
-                  <th style="text-align:right;font-weight:600">GPT Calls</th>
+                  <th style="text-align:right;font-weight:600">Gemini Calls</th>
                   <th style="text-align:right;font-weight:600">TTS Gens</th>
                   <th style="text-align:right;font-weight:600">KB Hits</th>
                   <th style="text-align:right;font-weight:600">Est. Cost</th>
@@ -737,7 +1031,6 @@ AI will automatically:
         </div>
 
       </div><!-- /usageContent -->
-    </div>
   </div><!-- /paneUsage -->
 
   <!-- ════ TAB: EXECUTIVE DASHBOARD ════ -->
@@ -1301,6 +1594,156 @@ AI will automatically:
   </div>
 </div>
 
+<!-- Missing Information Answer Modal -->
+<div class="ai-modal-overlay" id="modalMissingInfoAnswer">
+  <div class="ai-modal" style="max-width:620px;width:95%">
+    <div class="ai-modal-header">
+      <span style="font-weight:700;display:flex;align-items:center;gap:8px;font-size:15px">
+        <i class="fas fa-edit" style="color:var(--ai-primary)"></i> Answer Customer Question
+      </span>
+      <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="closeModal('modalMissingInfoAnswer')"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="padding:22px">
+      <!-- Context Strip -->
+      <div style="background:#f8f9ff;border:1px solid #e0e1fd;border-radius:10px;padding:12px 14px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-bottom:6px">
+          <span><i class="fas fa-user me-1"></i><strong id="miModalLeadName">—</strong> (<span id="miModalLeadPhone">—</span>)</span>
+          <span><i class="fas fa-bullhorn me-1"></i><span id="miModalCampName">—</span></span>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:#4f46e5;text-transform:uppercase;margin-bottom:2px">Question Asked by Customer:</div>
+        <div style="font-size:14px;font-weight:600;color:#1e1b4b;line-height:1.4" id="miModalQuestion">—</div>
+      </div>
+
+      <!-- Existing catalogue check section -->
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:12px;font-weight:700;color:#374151">Check Existing Knowledge Base</span>
+          <button type="button" class="btn-ai btn-ai-ghost btn-ai-sm" onclick="miCheckExistingCatalogue()" style="font-size:11px;padding:3px 8px">
+            <i class="fas fa-search me-1"></i> Search Matching KB
+          </button>
+        </div>
+        <div id="miExistingKbMatches" style="display:none;background:#fefce8;border:1px solid #fef08a;border-radius:8px;padding:10px 12px;font-size:12px;max-height:120px;overflow-y:auto;margin-bottom:8px"></div>
+      </div>
+
+      <!-- Staff Answer Input -->
+      <div style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <label style="font-size:12px;font-weight:700;color:#374151;margin:0">Official Answer / Information: <span style="color:#ef4444">*</span></label>
+          <span style="font-size:11px;color:#9ca3af">Clear answer for AI to use in Telugu &amp; English</span>
+        </div>
+        <textarea id="miAnswerText" rows="4" placeholder="Enter the accurate, official answer to this question..."
+                  style="width:100%;border:1.5px solid #e0e1fd;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.5;outline:none;box-sizing:border-box"></textarea>
+      </div>
+
+      <!-- Add to KB Option -->
+      <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:12px 14px;margin-bottom:16px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#166534;cursor:pointer;margin:0">
+          <input type="checkbox" id="miSaveToKbCheck" checked onchange="toggleMiKbOptions()" style="width:16px;height:16px;accent-color:#16a34a"/>
+          <span>Add this answer to Product Catalogue / Knowledge Base</span>
+        </label>
+        <div id="miKbOptionsSection" style="margin-top:10px;padding-top:10px;border-top:1px dashed #bbf7d0">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Segment / Project</label>
+              <input type="text" id="miKbSegment" placeholder="e.g. General, or Project Name"
+                     style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:12px;box-sizing:border-box"/>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Category</label>
+              <select id="miKbCategory" style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:12px;background:#fff;box-sizing:border-box">
+                <option value="FAQs" selected>FAQs</option>
+                <option value="Pricing">Pricing</option>
+                <option value="Project Details">Project Details</option>
+                <option value="Location">Location</option>
+                <option value="Amenities">Amenities</option>
+                <option value="Payment Plan">Payment Plan</option>
+                <option value="RERA &amp; Legal">RERA &amp; Legal</option>
+                <option value="USPs">USPs</option>
+                <option value="Contact">Contact</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Entry Title</label>
+            <input type="text" id="miKbTitle" placeholder="Concise title for the knowledge entry"
+                   style="width:100%;border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:12px;box-sizing:border-box"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;justify-content:flex-end;gap:10px">
+        <button type="button" class="btn-ai btn-ai-ghost" onclick="closeModal('modalMissingInfoAnswer')">Cancel</button>
+        <button type="button" class="btn-ai btn-ai-primary" id="btnSubmitMiAnswer" onclick="submitMissingInfoAction()">
+          <i class="fas fa-check me-1"></i> Save Answer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Gemini Project Modal -->
+<div class="ai-modal-overlay" id="modalAddGeminiProject">
+  <div class="ai-modal" style="width:min(540px,95vw)">
+    <div class="ai-modal-header">
+      <h5><i class="fas fa-key me-2" style="color:var(--ai-primary)"></i>Add Gemini Project Account</h5>
+      <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="closeModal('modalAddGeminiProject')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="ai-modal-body">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div>
+          <label class="form-label" style="font-weight:600;font-size:12px;color:#374151">Account / Project Label <span style="color:#ef4444">*</span></label>
+          <input type="text" class="form-control" id="geminiAccName" placeholder="e.g. Gemini Production Failover 1" />
+          <div style="font-size:11px;color:#9ca3af;margin-top:3px">Human-readable label to identify which Google Cloud project / API Studio account this belongs to.</div>
+        </div>
+        <div>
+          <label class="form-label" style="font-weight:600;font-size:12px;color:#374151">Google Gemini API Key <span style="color:#ef4444">*</span></label>
+          <div style="position:relative">
+            <input type="password" class="form-control" id="geminiAccKey" placeholder="AIzaSy..." style="padding-right:40px;font-family:monospace" />
+            <button type="button" onclick="toggleGeminiKeyVis()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;color:#9ca3af;cursor:pointer">
+              <i class="fas fa-eye" id="geminiAccKeyEye"></i>
+            </button>
+          </div>
+          <div style="font-size:11px;color:#9ca3af;margin-top:3px">Must begin with AIzaSy... Raw keys are stored encrypted and masked in all UI responses.</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label class="form-label" style="font-weight:600;font-size:12px;color:#374151">Routing Priority</label>
+            <select class="form-select" id="geminiAccPriority">
+              <option value="1">1 (Primary routing)</option>
+              <option value="2" selected>2 (Secondary failover)</option>
+              <option value="3">3 (Tertiary failover)</option>
+              <option value="4">4 (Standby fallback)</option>
+            </select>
+            <div style="font-size:11px;color:#9ca3af;margin-top:3px">Lower numbers are queried first.</div>
+          </div>
+          <div>
+            <label class="form-label" style="font-weight:600;font-size:12px;color:#374151">MyntOS-Configured Daily Limit</label>
+            <input type="number" class="form-control" id="geminiAccLimit" value="1500" min="100" max="100000" />
+            <div style="font-size:11px;color:#9ca3af;margin-top:3px">MyntOS daily limit ceiling (Google free tier baseline is 1,500 req/day).</div>
+          </div>
+        </div>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-top:4px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:12px;color:#4b5563;font-weight:600">Validate Key with Google AI:</span>
+            <button type="button" class="btn-ai btn-ai-ghost btn-ai-sm" id="btnTestNewKey" onclick="testNewGeminiKey()">
+              <i class="fas fa-vial me-1"></i> Test Connection
+            </button>
+          </div>
+          <div id="testNewKeyResult" style="display:none;margin-top:8px;font-size:12px;padding:8px 10px;border-radius:6px"></div>
+        </div>
+      </div>
+    </div>
+    <div class="ai-modal-footer">
+      <button class="btn-ai btn-ai-ghost" onclick="closeModal('modalAddGeminiProject')">Cancel</button>
+      <button class="btn-ai btn-ai-primary" id="btnSaveGeminiAccount" onclick="saveGeminiProjectAccount()">
+        <i class="fas fa-plus-circle me-1"></i> Add Account to Pool
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div id="aiToast"><div class="ai-toast" id="aiToastMsg"></div></div>
 
@@ -1333,6 +1776,8 @@ function switchTab(tab) {
   _currentTab = tab;
   document.getElementById('tabCamp').classList.toggle('active', tab === 'campaigns');
   document.getElementById('tabCat').classList.toggle('active', tab === 'catalogue');
+  const miTab = document.getElementById('tabMissingInfo');
+  if (miTab) miTab.classList.toggle('active', tab === 'missing-info');
   document.getElementById('tabFaqs').classList.toggle('active', tab === 'faqs');
   document.getElementById('tabLogs').classList.toggle('active', tab === 'logs');
   document.getElementById('tabVoice').classList.toggle('active', tab === 'voice');
@@ -1340,24 +1785,27 @@ function switchTab(tab) {
   document.getElementById('tabUsage').classList.toggle('active', tab === 'usage');
   document.getElementById('paneCampaigns').style.display = tab === 'campaigns' ? '' : 'none';
   document.getElementById('paneCatalogue').style.display = tab === 'catalogue' ? '' : 'none';
+  const miPane = document.getElementById('paneMissingInfo');
+  if (miPane) miPane.style.display = tab === 'missing-info' ? '' : 'none';
   document.getElementById('paneFaqs').style.display = tab === 'faqs' ? '' : 'none';
   document.getElementById('paneLogs').style.display = tab === 'logs' ? '' : 'none';
   document.getElementById('paneVoice').style.display = tab === 'voice' ? '' : 'none';
   document.getElementById('paneExec').style.display = tab === 'exec' ? '' : 'none';
   document.getElementById('paneUsage').style.display = tab === 'usage' ? '' : 'none';
   if (tab === 'catalogue') { loadCatalogue(); renderKcChat(); loadGaps(); loadCallUQ(); }
+  if (tab === 'missing-info') { loadMissingInfo(); }
   if (tab === 'faqs') { loadFaqsTab(); }
   if (tab === 'logs') loadAllLogs();
   if (tab === 'voice') loadVoiceSettings();
-  if (tab === 'usage') loadUsageStats();
+  if (tab === 'usage') { loadUsageStats(); loadGeminiPool(); }
   if (tab === 'exec') { populateExecFilters(); loadExecStats(); }
 }
 
 // ─── Voice Settings ───────────────────────────────────────────────────────────
 const VOICE_META = {
-  nova:    { label:'Nova',    gender:'female',  desc:'Energetic and bright. Best for conversational sales calls in Hindi & Telugu.',   rec:true },
+  nova:    { label:'Nova',    gender:'female',  desc:'Energetic and bright. Best for conversational sales calls in Telugu & English.', rec:true },
   shimmer: { label:'Shimmer', gender:'female',  desc:'Warm and friendly. Excellent for English calls — sounds like a trusted advisor.' , rec:false },
-  alloy:   { label:'Alloy',   gender:'neutral', desc:'Balanced and versatile. Works well across all three languages.'                  , rec:false },
+  alloy:   { label:'Alloy',   gender:'neutral', desc:'Balanced and versatile. Works well across Telugu and English.'                    , rec:false },
   fable:   { label:'Fable',   gender:'neutral', desc:'Expressive and narrative. Great for detailed property explanations.'            , rec:false },
   echo:    { label:'Echo',    gender:'male',    desc:'Soft and measured. Professional tone for formal corporate interactions.'         , rec:false },
   onyx:    { label:'Onyx',    gender:'male',    desc:'Deep and authoritative. Commanding presence — best for senior-level pitches.'   , rec:false },
@@ -1365,7 +1813,7 @@ const VOICE_META = {
 
 let _selectedVoice = 'nova';
 let _savedVoice    = 'nova';
-let _previewLang   = 'hi';
+let _previewLang   = 'te';
 let _previewAudio  = null;
 
 function setPreviewLang(lang, btn) {
@@ -1522,57 +1970,91 @@ async function loadCampaigns() {
   loadRecentLogs();
 }
 
+// ─── Global Date & Time Utilities (Timezone Safe) ───
+function parseServerDate(iso) {
+  if (!iso) return null;
+  if (iso.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(iso)) {
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function relTimeGlobal(iso) {
+  if (!iso) return '—';
+  const d = parseServerDate(iso);
+  if (!d) return '—';
+  const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (diff <= 15) return 'Just now';
+  if (diff < 60) return diff + 's ago';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  return Math.floor(diff / 86400) + 'd ago';
+}
+
+function fmtDateTime(iso) {
+  if (!iso) return { date: '—', time: '—', rel: '—' };
+  const d = parseServerDate(iso);
+  if (!d) return { date: '—', time: '—', rel: '—' };
+  const ist = { timeZone: 'Asia/Kolkata' };
+  const date = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', ...ist });
+  const time = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, ...ist }) + ' IST';
+  return { date, time, rel: relTimeGlobal(iso) };
+}
+
+function langLabel(code) { return {hi:'Hindi',te:'Telugu',en:'English'}[code] || code; }
+function fmtDuration(s) {
+  if (!s || isNaN(s) || Number(s) <= 0) return '—';
+  const sec = Math.round(Number(s));
+  const m = Math.floor(sec / 60), r = sec % 60;
+  return m > 0 ? `${m}m ${r}s` : `${r}s`;
+}
+
 async function loadRecentLogs() {
   const tbody = document.getElementById('recentLogsTbody');
   if (!tbody) return;
   try {
     const d = await staffFetchJson(`${API}/logs?limit=10&offset=0`);
     if (!d.logs?.length) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#9ca3af">No calls yet</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:#9ca3af"><i class="fas fa-phone-slash me-2"></i>No calls yet</td></tr>';
       return;
     }
-    const utc = (iso) => iso && !iso.endsWith('Z') && !iso.includes('+') ? iso + 'Z' : iso;
-    const relTime = (iso) => {
-      if (!iso) return '—';
-      const diff = Math.floor((Date.now() - new Date(utc(iso))) / 1000);
-      if (diff < 60) return diff + 's ago';
-      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-      return Math.floor(diff / 86400) + 'd ago';
-    };
-    const fmtDT = (iso) => {
-      if (!iso) return '<span style="color:#9ca3af">—</span>';
-      const d = new Date(utc(iso));
-      const ist = {timeZone:'Asia/Kolkata'};
-      const date = d.toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric', ...ist});
-      const time = d.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', hour12:true, ...ist});
-      return `<div style="font-size:12px;font-weight:600;color:#1e1b4b">${date}</div>
-              <div style="font-size:11px;color:#6366f1">${time}</div>
-              <div style="font-size:10px;color:#9ca3af">${relTime(iso)}</div>`;
-    };
-    const langLbl = (c) => ({ hi: 'Hindi', te: 'Telugu', en: 'English' }[c] || c);
     const statusColor = (s) => s === 'completed' ? '#15803d' : s === 'connected' ? '#0369a1' : '#6b7280';
     const outcomeColor = (o) => ({ qualified: '#15803d', interested: '#0369a1', callback: '#92400e', not_interested: '#991b1b' }[o] || '#6b7280');
+
     tbody.innerHTML = d.logs.map(l => {
       const phone = (l.phone_dialed || '').replace(/(\d{5})\d{5}/, '$1•••••');
-      const dur = l.duration_seconds ? `${Math.floor(l.duration_seconds/60)}m ${l.duration_seconds%60}s` : '—';
+      const dur = fmtDuration(l.duration_seconds);
       const outcome = l.outcome ? `<span style="font-size:11px;font-weight:700;color:${outcomeColor(l.outcome)}">${l.outcome.toUpperCase().replace(/_/g,' ')}</span>` : '<span style="color:#9ca3af">—</span>';
+      const dt = fmtDateTime(l.started_at);
+
       return `<tr>
-        <td style="font-weight:600;font-size:13px">${l.lead_name||'<span style="color:#9ca3af">Test Call</span>'}</td>
-        <td style="font-size:12px;color:#6366f1">${phone||'—'}</td>
-        <td><span style="font-size:11px;font-weight:600;background:#e0e7ff;color:#4338ca;padding:2px 8px;border-radius:10px">${langLbl(l.language)}</span></td>
-        <td><span style="font-size:11px;font-weight:700;color:${statusColor(l.status)}">${(l.status||'').toUpperCase()}</span></td>
-        <td>${outcome}</td>
-        <td style="font-size:12px;color:#6b7280">${dur}</td>
-        <td style="white-space:nowrap">${fmtDT(l.started_at)}</td>
-        <td>
+        <td style="padding:10px 14px;vertical-align:top">
+          <div style="font-weight:700;font-size:13px;color:#1e1b4b">${escapeHtml(l.lead_name || 'Direct / Test Call')}</div>
+          <div style="font-size:11px;color:#6366f1;margin-top:2px"><i class="fas fa-phone-alt me-1" style="font-size:9px;color:#a5b4fc"></i>${phone || '—'}</div>
+        </td>
+        <td style="padding:10px 14px;vertical-align:top">
+          <span style="font-size:11px;font-weight:600;background:#e0e7ff;color:#4338ca;padding:2px 8px;border-radius:10px">${langLabel(l.language)}</span>
+        </td>
+        <td style="padding:10px 14px;vertical-align:top">
+          <span style="font-size:11px;font-weight:700;color:${statusColor(l.status)}">${(l.status||'').toUpperCase()}</span>
+          <div style="margin-top:2px">${outcome}</div>
+        </td>
+        <td style="padding:10px 14px;vertical-align:top;font-size:12px;color:#4b5563">${dur}</td>
+        <td style="padding:10px 14px;vertical-align:top;white-space:nowrap">
+          <div style="font-size:12px;font-weight:600;color:#1e1b4b">${dt.date}</div>
+          <div style="font-size:11px;color:#6366f1">${dt.time}</div>
+          <div style="font-size:10px;color:#9ca3af"><i class="far fa-clock me-1"></i>${dt.rel}</div>
+        </td>
+        <td style="padding:10px 14px;vertical-align:top;text-align:right">
           <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="viewTranscript(${l.id})" title="View transcript"><i class="fas fa-eye"></i></button>
         </td>
       </tr>`;
     }).join('');
   } catch (_) {
     const tbody2 = document.getElementById('recentLogsTbody');
-    if (tbody2) tbody2.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:#9ca3af">Could not load recent calls</td></tr>';
+    if (tbody2) tbody2.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#9ca3af">Could not load recent calls</td></tr>';
   }
 }
 
@@ -1584,9 +2066,6 @@ function renderCampaigns() {
   }
   grid.innerHTML = _campaigns.map(c => campCardHtml(c)).join('');
 }
-
-function langLabel(code) { return {hi:'Hindi',te:'Telugu',en:'English'}[code] || code; }
-function fmtDuration(s) { if (!s) return '--'; const m = Math.floor(s/60), sec = s%60; return `${m}m ${sec}s`; }
 
 function campCardHtml(c) {
   const statusCls = c.status === 'active' ? 'active-camp' : c.status === 'paused' ? 'paused-camp' : '';
@@ -2036,14 +2515,9 @@ async function viewLogs(id, name) {
       return;
     }
     const outcomeClass = (o) => o ? o.replace(/[^a-z_]/g,'') : 'no_answer';
-    const _utc = (iso) => iso && !iso.endsWith('Z') && !iso.includes('+') ? iso + 'Z' : iso;
     const fmtDTModal = (iso) => {
-      if (!iso) return '—';
-      const d = new Date(_utc(iso));
-      const ist = {timeZone:'Asia/Kolkata'};
-      const date = d.toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric', ...ist});
-      const time = d.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', hour12:true, ...ist});
-      return `${date} ${time}`;
+      const dt = fmtDateTime(iso);
+      return dt === '—' || !dt.date ? '—' : `${dt.date} ${dt.time}`;
     };
     document.getElementById('logsTbody').innerHTML = d.logs.map(l => {
       const isFirst = !l.first_called_at || l.first_called_at === l.started_at;
@@ -2941,7 +3415,22 @@ async function placeTestCall() {
     result.style.display = 'block';
     result.style.background = '#fef2f2';
     result.style.border = '1px solid #fca5a5';
-    result.innerHTML = `<i class="fas fa-exclamation-circle me-2" style="color:#dc2626"></i><span style="color:#991b1b">${e.message}</span>`;
+    const isAnswerUrlErr = /answer_url parameter is not valid/i.test(e.message) || /Plivo dispatch failed/i.test(e.message);
+    if (isAnswerUrlErr) {
+      result.innerHTML = `
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <i class="fas fa-exclamation-triangle" style="color:#dc2626;font-size:16px;margin-top:2px"></i>
+          <div>
+            <div style="font-weight:700;color:#991b1b;margin-bottom:3px">Plivo Webhook Notice (Local vs Production)</div>
+            <div style="font-size:12px;color:#7f1d1d;line-height:1.4">${escapeHtml(e.message)}</div>
+            <div style="margin-top:8px;padding-top:8px;border-top:1px dashed #fca5a5;font-size:11px;color:#991b1b;line-height:1.4">
+              <strong>Why this happens:</strong> Plivo Cloud rejects <code>localhost</code> / <code>127.0.0.1</code> URLs for outbound callbacks. In production on AWS (<strong>https://www.myntreal.com</strong>), this connects automatically. For local end-to-end testing, set an ngrok URL in <code>WEBHOOK_BASE_URL</code>.
+            </div>
+          </div>
+        </div>`;
+    } else {
+      result.innerHTML = `<i class="fas fa-exclamation-circle me-2" style="color:#dc2626"></i><span style="color:#991b1b">${escapeHtml(e.message)}</span>`;
+    }
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-phone-alt"></i> Place Test Call';
     btn.style.background = '';
@@ -2954,42 +3443,27 @@ async function placeTestCall() {
 
 let _allLogsOffset = 0;
 const _allLogsLimit = 50;
+let _cachedAllLogs = [];
 
 async function loadAllLogs(offset = 0) {
   _allLogsOffset = offset;
   const tbody = document.getElementById('allLogsTbody');
-  tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner ai-spin"></i> Loading…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-spinner ai-spin"></i> Loading call logs…</td></tr>';
   try {
     const [d, uqCountsData] = await Promise.all([
       staffFetchJson(`${API}/logs?limit=${_allLogsLimit}&offset=${offset}`),
       staffFetchJson(`${API}/unanswered-questions/count-by-log`).catch(() => ({ counts: {} })),
     ]);
     const uqCounts = uqCountsData.counts || {};
-    if (!d.logs?.length) {
-      tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:40px;color:#9ca3af">No call logs yet</td></tr>';
+    _cachedAllLogs = d.logs || [];
+    if (!_cachedAllLogs.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af"><i class="fas fa-phone-slash me-2"></i>No call logs found</td></tr>';
       document.getElementById('allLogsPager').innerHTML = '';
       return;
     }
     const outcomeClass = (o) => o ? o.replace(/[^a-z_]/g,'') : 'no_answer';
-    const relTime = (iso) => {
-      if (!iso) return '—';
-      const _u = (s) => s && !s.endsWith('Z') && !s.includes('+') ? s + 'Z' : s;
-      const diff = Math.floor((Date.now() - new Date(_u(iso)))/1000);
-      if (diff < 60) return diff + 's ago';
-      if (diff < 3600) return Math.floor(diff/60) + 'm ago';
-      if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
-      return Math.floor(diff/86400) + 'd ago';
-    };
-    const fmtDateTime = (iso) => {
-      if (!iso) return '—';
-      const _u = (s) => s && !s.endsWith('Z') && !s.includes('+') ? s + 'Z' : s;
-      const d = new Date(_u(iso));
-      const ist = {timeZone:'Asia/Kolkata'};
-      const date = d.toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric', ...ist});
-      const time = d.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', hour12:true, ...ist});
-      return {date, time, rel: relTime(iso)};
-    };
-    tbody.innerHTML = d.logs.map(l => {
+
+    tbody.innerHTML = _cachedAllLogs.map(l => {
       const phone = l.phone_dialed || '';
       const phoneMask = phone.replace(/(\d{5})\d{5}/, '$1•••••');
       const nameEsc = (l.lead_name||'Test Call').replace(/'/g,"\\'");
@@ -3005,55 +3479,76 @@ async function loadAllLogs(offset = 0) {
            </span>`
         : '';
       const rowStyle = uqCount > 0 ? 'border-left:3px solid #f59e0b;background:rgba(254,243,199,0.18)' : '';
+      const dt = fmtDateTime(l.started_at);
+
       return `
-      <tr style="${rowStyle}">
-        <td>
-          <div style="font-weight:600;font-size:13px">${l.lead_name||'<span style="color:#9ca3af">Test Call</span>'}</div>
-          ${uqBadge ? `<div style="margin-top:3px">${uqBadge}</div>` : ''}
+      <tr style="${rowStyle}" class="log-row" data-outcome="${escapeHtml(l.outcome || '')}" data-status="${escapeHtml(l.status || '')}" data-search="${escapeHtml((l.lead_name || '') + ' ' + (phone) + ' ' + (l.campaign_name || '') + ' ' + (l.segment || '')).toLowerCase()}">
+        <td style="padding:12px 14px;vertical-align:top">
+          <div style="font-weight:700;font-size:13px;color:#1e1b4b">${escapeHtml(l.lead_name || 'Direct / Test Call')}</div>
+          <div style="margin-top:3px;display:flex;align-items:center;gap:6px">
+            <span onclick="viewPhoneHistory('${phoneEsc}','${nameEsc}')"
+                  style="color:#6366f1;font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px"
+                  title="View all calls to this number">
+              <i class="fas fa-phone-alt" style="font-size:10px;color:#a5b4fc;margin-right:2px"></i>${phoneMask || '—'}
+            </span>
+            ${l.segment ? `<span class="badge" style="background:#f1f5f9;color:#475569;font-size:10px;padding:2px 6px;border-radius:4px">${escapeHtml(l.segment)}</span>` : ''}
+          </div>
+          ${uqBadge ? `<div style="margin-top:5px">${uqBadge}</div>` : ''}
         </td>
-        <td>
-          <span onclick="viewPhoneHistory('${phoneEsc}','${nameEsc}')"
-                style="color:#6366f1;font-size:12px;cursor:pointer;text-decoration:underline;text-underline-offset:3px"
-                title="View all calls to this number">${phoneMask||'—'}</span>
+        <td style="padding:12px 14px;vertical-align:top">
+          <div style="font-size:13px;font-weight:600;color:#374151">${escapeHtml(l.campaign_name || 'Direct Call')}</div>
+          <div style="font-size:11px;color:#9ca3af;margin-top:2px">Log #${l.id}</div>
         </td>
-        <td style="font-size:12px;color:#6b7280">${l.campaign_name||'<span style="color:#a5b4fc">Test</span>'}</td>
-        <td><span class="meta-pill lang">${langLabel(langCode)}</span></td>
-        <td style="text-align:center">#${l.attempt||1}</td>
-        <td><span class="status-badge ${l.status==='completed'?'completed':l.status==='failed'?'stopped':'draft'}">${l.status||'—'}</span></td>
-        <td>${l.outcome?`<span class="outcome-pill ${outcomeClass(l.outcome)}">${l.outcome.replace('_',' ')}</span>`:'—'}</td>
-        <td style="white-space:nowrap;font-size:11px">${
-          l.crm_status_before && l.crm_status_after && l.crm_status_before !== l.crm_status_after
-            ? `<span style="color:#9ca3af">${l.crm_status_before}</span> <i class="fas fa-arrow-right" style="color:#6366f1;font-size:9px"></i> <span style="background:#d1fae5;color:#065f46;padding:2px 7px;border-radius:10px;font-weight:700">${l.crm_status_after}</span>`
-            : l.crm_status_before
-              ? `<span style="color:#9ca3af">${l.crm_status_before}</span>`
-              : '<span style="color:#e5e7eb">—</span>'
-        }</td>
-        <td>${fmtDuration(l.duration_seconds)}</td>
-        <td style="white-space:nowrap">${(() => {
-          const dt = fmtDateTime(l.started_at);
-          if (dt === '—') return '<span style="color:#9ca3af">—</span>';
-          const firstDt = l.first_called_at && l.first_called_at !== l.started_at ? fmtDateTime(l.first_called_at) : null;
-          return `<div style="font-size:12px;font-weight:600;color:#1e1b4b">${dt.date}</div>
-                  <div style="font-size:11px;color:#6366f1">${dt.time}</div>
-                  <div style="font-size:10px;color:#9ca3af">${dt.rel}</div>
-                  ${firstDt ? `<div style="font-size:10px;color:#a78bfa;margin-top:3px">1st: ${firstDt.date} ${firstDt.time}</div>` : ''}`;
-        })()}</td>
-        <td>
-          <div style="display:flex;gap:5px;align-items:center;flex-wrap:nowrap">
-            <button class="btn-ai btn-ai-sm" style="background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;padding:4px 8px;font-size:11px;gap:4px"
+        <td style="padding:12px 14px;vertical-align:top">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span class="meta-pill lang" style="font-size:11px">${langLabel(langCode)}</span>
+            <span class="badge" style="background:#f8fafc;color:#64748b;border:1px solid #e2e8f0;font-size:10px;padding:3px 6px;border-radius:6px">#${l.attempt || 1}</span>
+          </div>
+        </td>
+        <td style="padding:12px 14px;vertical-align:top">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span class="status-badge ${l.status==='completed'?'completed':l.status==='failed'?'stopped':'draft'}" style="font-size:10px;padding:2px 8px">${l.status || '—'}</span>
+            ${l.outcome ? `<span class="outcome-pill ${outcomeClass(l.outcome)}" style="font-size:10px;padding:2px 8px">${l.outcome.replace(/_/g,' ')}</span>` : ''}
+          </div>
+          ${l.crm_status_before && l.crm_status_after && l.crm_status_before !== l.crm_status_after ? `
+            <div style="margin-top:6px;font-size:11px;display:flex;align-items:center;gap:4px">
+              <span style="color:#94a3b8">${escapeHtml(l.crm_status_before)}</span>
+              <i class="fas fa-arrow-right" style="color:#6366f1;font-size:9px"></i>
+              <span style="background:#d1fae5;color:#065f46;padding:1px 6px;border-radius:6px;font-weight:700">${escapeHtml(l.crm_status_after)}</span>
+            </div>
+          ` : l.crm_status_before ? `
+            <div style="margin-top:4px;font-size:11px;color:#94a3b8">Stage: ${escapeHtml(l.crm_status_before)}</div>
+          ` : ''}
+        </td>
+        <td style="padding:12px 14px;vertical-align:top;font-size:12px;color:#374151;white-space:nowrap">
+          <div style="display:flex;align-items:center;gap:4px;font-weight:600">
+            <i class="fas fa-stopwatch" style="color:#94a3b8;font-size:11px"></i>
+            <span>${fmtDuration(l.duration_seconds)}</span>
+          </div>
+        </td>
+        <td style="padding:12px 14px;vertical-align:top;white-space:nowrap">
+          ${dt === '—' || !dt.date ? '<span style="color:#9ca3af">—</span>' : `
+            <div style="font-size:12px;font-weight:700;color:#1e1b4b">${dt.date}</div>
+            <div style="font-size:11px;color:#6366f1;margin-top:1px">${dt.time}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:1px"><i class="far fa-clock me-1"></i>${dt.rel}</div>
+          `}
+        </td>
+        <td style="padding:12px 14px;vertical-align:top;text-align:right">
+          <div style="display:flex;gap:4px;align-items:center;justify-content:flex-end;flex-wrap:wrap">
+            <button class="btn-ai-action btn-ai-action-primary"
                     onclick="redialNumber('${phoneEsc}','${langCode}','${nameEsc}','${segEsc}')"
                     title="Redial this number">
               <i class="fas fa-redo-alt"></i> Redial
             </button>
-            <button class="btn-ai btn-ai-ghost btn-ai-sm" style="padding:4px 8px;font-size:11px"
+            <button class="btn-ai-action"
                     onclick="viewPhoneHistory('${phoneEsc}','${nameEsc}')"
                     title="View all call history for this number">
-              <i class="fas fa-list-ul"></i> View
+              <i class="fas fa-history"></i>
             </button>
-            ${l.has_transcript?`<button class="btn-ai btn-ai-ghost btn-ai-sm" style="padding:4px 7px;font-size:11px" onclick="viewTranscript(${l.id})" title="View transcript"><i class="fas fa-comments"></i></button>`:''}
-            ${l.recording_url?`<button class="btn-ai btn-ai-sm" style="background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;padding:4px 9px;font-size:11px;gap:4px" onclick="playRecording(${l.id},this)" title="Play call recording"><i class="fas fa-play-circle"></i> Rec</button>`:''}
-            ${l.recording_url?`<button class="btn-ai btn-ai-sm" style="background:#ede9fe;color:#7c3aed;border:1px solid #ddd6fe;padding:4px 8px;font-size:11px" onclick="shareRecording(${l.id})" title="Share recording (3-hour link)"><i class="fas fa-share-alt"></i></button>`:''}
-            ${l.lead_id?`<button class="btn-ai btn-ai-ghost btn-ai-sm" style="padding:4px 7px;font-size:11px;color:#dc2626;border-color:#fca5a5" onclick="resetAiPreference(${l.lead_id},'${nameEsc}')" title="Clear saved language/agent preference so next call starts fresh"><i class="fas fa-language"></i></button>`:''}
+            ${l.has_transcript ? `<button class="btn-ai-action" onclick="viewTranscript(${l.id})" title="View call transcript"><i class="fas fa-file-alt"></i></button>` : ''}
+            ${l.recording_url ? `<button class="btn-ai-action btn-ai-action-success" onclick="playRecording(${l.id},this)" title="Play call recording"><i class="fas fa-play"></i> Rec</button>` : ''}
+            ${l.recording_url ? `<button class="btn-ai-action btn-ai-action-purple" onclick="shareRecording(${l.id})" title="Share recording"><i class="fas fa-share-alt"></i></button>` : ''}
+            ${l.lead_id ? `<button class="btn-ai-action" style="color:#dc2626;border-color:#fca5a5" onclick="resetAiPreference(${l.lead_id},'${nameEsc}')" title="Clear AI language preference"><i class="fas fa-language"></i></button>` : ''}
           </div>
         </td>
       </tr>`;
@@ -3062,12 +3557,55 @@ async function loadAllLogs(offset = 0) {
     // Pagination
     const total = d.total || 0;
     const pager = document.getElementById('allLogsPager');
-    let pagerHtml = `<span style="font-size:12px;color:#6b7280;align-self:center">Showing ${offset+1}–${Math.min(offset+_allLogsLimit,total)} of ${total}</span>`;
+    let pagerHtml = `<span style="font-size:12px;color:#6b7280;align-self:center">Showing ${offset+1}–${Math.min(offset+_allLogsLimit,total)} of ${total}</span><div style="display:flex;gap:6px">`;
     if (offset > 0) pagerHtml += `<button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="loadAllLogs(${offset-_allLogsLimit})"><i class="fas fa-chevron-left"></i> Prev</button>`;
     if (offset + _allLogsLimit < total) pagerHtml += `<button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="loadAllLogs(${offset+_allLogsLimit})">Next <i class="fas fa-chevron-right"></i></button>`;
+    pagerHtml += '</div>';
     pager.innerHTML = pagerHtml;
+
+    // Apply any active filters
+    filterLogsTable();
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--ai-danger)">${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--ai-danger)"><i class="fas fa-exclamation-triangle me-2"></i>${escapeHtml(e.message)}</td></tr>`;
+  }
+}
+
+function filterLogsTable() {
+  const q = (document.getElementById('logsSearchInput')?.value || '').toLowerCase().trim();
+  const outcome = (document.getElementById('logsOutcomeFilter')?.value || '').toLowerCase().trim();
+  const status = (document.getElementById('logsStatusFilter')?.value || '').toLowerCase().trim();
+
+  const rows = document.querySelectorAll('#allLogsTbody tr.log-row');
+  let visibleCount = 0;
+  rows.forEach(r => {
+    const rowSearch = r.getAttribute('data-search') || '';
+    const rowOutcome = (r.getAttribute('data-outcome') || '').toLowerCase();
+    const rowStatus = (r.getAttribute('data-status') || '').toLowerCase();
+
+    const matchesQ = !q || rowSearch.includes(q);
+    const matchesOutcome = !outcome || rowOutcome === outcome;
+    const matchesStatus = !status || rowStatus === status;
+
+    if (matchesQ && matchesOutcome && matchesStatus) {
+      r.style.display = '';
+      visibleCount++;
+    } else {
+      r.style.display = 'none';
+    }
+  });
+
+  const emptyRow = document.getElementById('logsNoMatchRow');
+  if (visibleCount === 0 && rows.length > 0) {
+    if (!emptyRow) {
+      const tr = document.createElement('tr');
+      tr.id = 'logsNoMatchRow';
+      tr.innerHTML = '<td colspan="7" style="text-align:center;padding:32px;color:#9ca3af"><i class="fas fa-filter me-2"></i>No call logs match the selected filters</td>';
+      document.getElementById('allLogsTbody').appendChild(tr);
+    } else {
+      emptyRow.style.display = '';
+    }
+  } else if (emptyRow) {
+    emptyRow.style.display = 'none';
   }
 }
 
@@ -3263,7 +3801,7 @@ async function resetAiPreference(leadId, leadName) {
     const d = await r.json();
     if (!r.ok) throw new Error(d.detail || 'Reset failed');
     showToast(`Preference cleared for ${displayName} — next call will pick language fresh`, 'success');
-    loadCallHistory();
+    loadAllLogs();
   } catch (e) {
     showToast(e.message || 'Reset failed', 'error');
   }
@@ -3308,10 +3846,12 @@ async function loadPhoneHistory(phone, name) {
         <span style="color:#9ca3af">Last called: ${relTimeGlobal(last.started_at)}</span>
       </div>`;
     const outcomeClass = o => o ? o.replace(/[^a-z_]/g,'') : 'no_answer';
-    tbody.innerHTML = logs.map(l => `
+    tbody.innerHTML = logs.map(l => {
+      const dt = fmtDateTime(l.started_at);
+      return `
       <tr>
         <td style="font-size:12px;white-space:nowrap">
-          ${l.started_at ? new Date((s=>s&&!s.endsWith('Z')&&!s.includes('+')?s+'Z':s)(l.started_at)).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Kolkata'}) : '—'}
+          ${dt === '—' || !dt.date ? '—' : `<div>${dt.date}</div><div style="font-size:11px;color:#6366f1">${dt.time}</div>`}
         </td>
         <td style="font-size:12px;color:#6b7280">${l.campaign_name||'<span style="color:#a5b4fc">Test</span>'}</td>
         <td><span class="meta-pill lang">${langLabel(l.language||'hi')}</span></td>
@@ -3330,20 +3870,12 @@ async function loadPhoneHistory(phone, name) {
             </button>
           </div>
         </td>
-      </tr>`).join('');
+      </tr>`;
+    }).join('');
   } catch (e) {
     meta.innerHTML = `<span style="color:var(--ai-danger)"><i class="fas fa-exclamation-circle me-1"></i>${e.message}</span>`;
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--ai-danger)">${e.message}</td></tr>`;
   }
-}
-
-function relTimeGlobal(iso) {
-  if (!iso) return '—';
-  const diff = Math.floor((Date.now() - new Date(iso)) / 1000);
-  if (diff < 60) return diff + 's ago';
-  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-  return Math.floor(diff / 86400) + 'd ago';
 }
 
 // ═══════════════════════════════════
@@ -3368,8 +3900,8 @@ async function shareRecording(logId) {
     const d = await staffFetchJson(`${API}/recording-share/${logId}`, {method:'POST'});
     if (!d.success) throw new Error(d.detail || 'Failed');
     const url = d.share_url;
-    const _eu = (s) => s && !s.endsWith('Z') && !s.includes('+') ? s + 'Z' : s;
-    const exp = new Date(_eu(d.expires_at)).toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', timeZone:'Asia/Kolkata'});
+    const dExp = parseServerDate(d.expires_at);
+    const exp = dExp ? dExp.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', timeZone:'Asia/Kolkata'}) + ' IST' : '—';
     body.innerHTML = `
       <p style="font-size:13px;color:#6b7280;margin-bottom:14px">
         Share this link to let anyone play the recording <strong>without logging in</strong>. It expires in 3 hours.
@@ -4003,21 +4535,29 @@ async function saveCallUQ(uqId, saveToKb) {
 
 // ─── Usage & Cost Analytics ───────────────────────────────────────────────────
 async function loadUsageStats() {
-  document.getElementById('usageLoading').style.display = '';
-  document.getElementById('usageContent').style.display = 'none';
-  document.getElementById('usageAccessDenied').style.display = 'none';
+  const loadingEl = document.getElementById('usageLoading');
+  const contentEl = document.getElementById('usageContent');
+  const deniedEl = document.getElementById('usageAccessDenied');
+  if (loadingEl) loadingEl.style.display = '';
+  if (contentEl) contentEl.style.display = 'none';
+  if (deniedEl) deniedEl.style.display = 'none';
+
   const days = document.getElementById('usageDays').value;
   try {
     const d = await staffFetchJson(`${API}/usage-stats?days=${days}`);
 
+    // Fallback support for responses with either gemini/plivo or legacy openai/twilio
+    const gem = d.gemini || d.openai || {};
+    const pl = d.plivo || d.twilio || {};
+
     // ── Summary cards ────────────────────────────────────────────────────────
     const cards = [
-      { label: 'Total Spend', value: `$${d.grand_total_usd.toFixed(4)}`, icon: 'fa-dollar-sign', color: '#6366f1' },
-      { label: 'OpenAI Cost', value: `$${d.openai.total_cost_usd.toFixed(4)}`, icon: 'fa-robot', color: '#8b5cf6' },
-      { label: 'Twilio Cost', value: `$${d.twilio.estimated_cost_usd.toFixed(4)}`, icon: 'fa-phone-alt', color: '#10b981' },
-      { label: 'GPT Calls', value: d.openai.gpt_calls.toLocaleString(), icon: 'fa-brain', color: '#f59e0b' },
-      { label: 'KB Direct Hits', value: d.openai.kb_hits.toLocaleString(), icon: 'fa-bolt', color: '#22c55e' },
-      { label: 'KB Saved', value: `$${d.openai.kb_saved_usd.toFixed(4)}`, icon: 'fa-piggy-bank', color: '#0ea5e9' },
+      { label: 'Total Spend', value: `$${(d.grand_total_usd || 0).toFixed(4)}`, icon: 'fa-dollar-sign', color: '#6366f1' },
+      { label: 'Gemini AI Cost', value: `$${(gem.total_cost_usd || 0).toFixed(4)}`, icon: 'fa-brain', color: '#8b5cf6' },
+      { label: 'Plivo Call Cost', value: `$${(pl.estimated_cost_usd || 0).toFixed(4)}`, icon: 'fa-phone-alt', color: '#10b981' },
+      { label: 'Gemini Calls', value: (gem.conversation_calls || gem.gpt_calls || 0).toLocaleString(), icon: 'fa-robot', color: '#f59e0b' },
+      { label: 'TTS Voice Gens', value: (gem.tts_gens || 0).toLocaleString(), icon: 'fa-volume-up', color: '#ec4899' },
+      { label: 'KB Saved', value: `$${(gem.kb_saved_usd || 0).toFixed(4)}`, icon: 'fa-piggy-bank', color: '#0ea5e9' },
     ];
     document.getElementById('usageSummaryCards').innerHTML = cards.map(c => `
       <div style="background:#fff;border-radius:14px;border:1px solid #e0e7ff;padding:18px 20px">
@@ -4032,67 +4572,415 @@ async function loadUsageStats() {
     `).join('');
 
     // ── Pricing note ─────────────────────────────────────────────────────────
-    document.getElementById('usagePricingNote').innerHTML =
-      `<i class="fas fa-info-circle me-1"></i>${d.pricing_note}`;
+    if (document.getElementById('usagePricingNote')) {
+      document.getElementById('usagePricingNote').innerHTML =
+        `<i class="fas fa-info-circle me-1" style="color:#6366f1"></i>${d.pricing_note || 'Costs calculated from Google Gemini token rates and Plivo voice outbound pricing.'}`;
+    }
 
-    // ── OpenAI breakdown table ────────────────────────────────────────────────
-    const typeLabel = { gpt4o_call: 'GPT-4o Response', tts_generation: 'TTS Voice Gen', kb_hit: 'KB Direct Hit' };
+    // ── Gemini breakdown table ────────────────────────────────────────────────
+    const typeLabel = {
+      gemini_conversation: 'Gemini Conversation (Flash-Lite)',
+      gemini_tts: 'Gemini Flash TTS Voice',
+      kb_hit: 'KB Direct Instant Match',
+      gpt4o_call: 'Conversation Response',
+      tts_generation: 'TTS Voice Gen',
+    };
     const srcBadge = s => s === 'kb'
-      ? '<span style="background:#dcfce7;color:#166534;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700">KB</span>'
-      : '<span style="background:#ede9fe;color:#6d28d9;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700">GPT</span>';
-    document.getElementById('usageOAIBody').innerHTML = d.openai.breakdown.map(r => `
-      <tr style="border-bottom:1px solid #f8fafc">
-        <td style="padding:8px 0;color:#374151">${typeLabel[r.event_type] || r.event_type} ${srcBadge(r.source)}</td>
-        <td style="padding:8px 4px;text-align:right;color:#6b7280">${r.count.toLocaleString()}</td>
-        <td style="padding:8px 4px;text-align:right;color:#6b7280">${r.input_tokens + r.output_tokens > 0 ? (r.input_tokens + r.output_tokens).toLocaleString() + ' tok' : r.characters > 0 ? r.characters.toLocaleString() + ' ch' : '—'}</td>
-        <td style="padding:8px 0;text-align:right;font-weight:700;color:#1e1b4b">$${r.cost_usd.toFixed(5)}</td>
-      </tr>
-    `).join('') || '<tr><td colspan="4" style="color:#9ca3af;padding:16px 0;text-align:center">No OpenAI usage logged yet</td></tr>';
+      ? '<span style="background:#dcfce7;color:#166534;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700">KB Match</span>'
+      : `<span style="background:#ede9fe;color:#6d28d9;border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700">${s || 'Gemini'}</span>`;
 
-    // ── Twilio summary ───────────────────────────────────────────────────────
-    const tw = d.twilio;
-    document.getElementById('usageTwilioDetails').innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:10px">
-        ${[
-          ['Total Calls', tw.total_calls.toLocaleString()],
-          ['Completed Calls', tw.completed_calls.toLocaleString()],
-          ['Total Minutes', tw.total_minutes.toFixed(2) + ' min'],
-          ['Avg Duration', tw.avg_duration_seconds.toFixed(0) + ' sec'],
-          ['Est. Cost (India PSTN)', '$' + tw.estimated_cost_usd.toFixed(4)],
-        ].map(([l,v]) => `
-          <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f1f5f9;padding-bottom:8px">
-            <span style="font-size:12px;color:#6b7280">${l}</span>
-            <span style="font-size:13px;font-weight:700;color:#1e1b4b">${v}</span>
-          </div>
-        `).join('')}
-        <div style="font-size:10px;color:#d1d5db;margin-top:4px">* Twilio cost is an estimate (~$0.0085/min outbound India, blended carrier fees)</div>
-      </div>`;
+    const bList = gem.breakdown || [];
+    const tbody = document.getElementById('usageGeminiBody');
+    if (tbody) {
+      tbody.innerHTML = bList.map(r => `
+        <tr style="border-bottom:1px solid #f8fafc">
+          <td style="padding:8px 0;color:#374151">${typeLabel[r.event_type] || r.event_type} ${srcBadge(r.source)}</td>
+          <td style="padding:8px 4px;text-align:right;color:#6b7280">${(r.count || 0).toLocaleString()}</td>
+          <td style="padding:8px 4px;text-align:right;color:#6b7280">${(r.input_tokens || 0) + (r.output_tokens || 0) > 0 ? ((r.input_tokens || 0) + (r.output_tokens || 0)).toLocaleString() + ' tok' : (r.characters || 0) > 0 ? (r.characters || 0).toLocaleString() + ' ch' : '—'}</td>
+          <td style="padding:8px 0;text-align:right;font-weight:700;color:#1e1b4b">$${(r.cost_usd || 0).toFixed(5)}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="4" style="color:#9ca3af;padding:16px 0;text-align:center">No Gemini usage logged yet</td></tr>';
+    }
+
+    // ── Per Project Breakdown ────────────────────────────────────────────────
+    const pBreakdown = gem.project_breakdown || [];
+    const pWrap = document.getElementById('projectBreakdownWrap');
+    const pList = document.getElementById('projectBreakdownList');
+    if (pWrap && pList) {
+      if (pBreakdown.length > 0) {
+        pWrap.style.display = '';
+        pList.innerHTML = `
+          <table style="width:100%;border-collapse:collapse;font-size:11px">
+            <thead>
+              <tr style="color:#9ca3af;border-bottom:1px solid #f1f5f9">
+                <th style="text-align:left;padding:5px 0">Project</th>
+                <th style="text-align:right;padding:5px 4px">Requests</th>
+                <th style="text-align:right;padding:5px 4px">Errors</th>
+                <th style="text-align:right;padding:5px 0">Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${pBreakdown.map(p => `
+                <tr style="border-bottom:1px solid #f8fafc">
+                  <td style="padding:5px 0;font-weight:600;color:#374151">${p.name || p.project_id}</td>
+                  <td style="text-align:right;color:#6b7280;padding:5px 4px">${(p.requests || 0).toLocaleString()}</td>
+                  <td style="text-align:right;color:${(p.errors || 0) > 0 ? '#ef4444' : '#6b7280'};padding:5px 4px">${p.errors || 0}</td>
+                  <td style="text-align:right;font-weight:700;color:#1e1b4b;padding:5px 0">$${(p.cost_usd || 0).toFixed(4)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>`;
+      } else {
+        pWrap.style.display = 'none';
+      }
+    }
+
+    // ── Plivo summary ────────────────────────────────────────────────────────
+    const plDetails = document.getElementById('usagePlivoDetails');
+    if (plDetails) {
+      plDetails.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${[
+            ['Total Calls Placed', (pl.total_calls || 0).toLocaleString()],
+            ['Completed Answered Calls', (pl.completed_calls || 0).toLocaleString()],
+            ['Total Voice Minutes', (pl.total_minutes || 0).toFixed(2) + ' min'],
+            ['Average Duration', (pl.avg_duration_seconds || 0).toFixed(0) + ' sec'],
+            ['Est. Voice PSTN Cost', '$' + (pl.estimated_cost_usd || 0).toFixed(4)],
+          ].map(([l,v]) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f1f5f9;padding-bottom:8px">
+              <span style="font-size:12px;color:#6b7280">${l}</span>
+              <span style="font-size:13px;font-weight:700;color:#1e1b4b">${v}</span>
+            </div>
+          `).join('')}
+          <div style="font-size:10px;color:#9ca3af;margin-top:4px"><i class="fas fa-info-circle me-1"></i>Plivo PSTN outbound rate calculated at blended ~$0.0075/minute for Indian telecom carriers.</div>
+        </div>`;
+    }
 
     // ── Daily table ──────────────────────────────────────────────────────────
-    document.getElementById('usageDailyBody').innerHTML = d.daily.map(row => `
-      <tr style="border-bottom:1px solid #f8fafc">
-        <td style="padding:7px 0;color:#374151;font-size:12px">${row.date}</td>
-        <td style="text-align:right;color:#8b5cf6;font-size:12px">${(row.gpt4o_call||0).toLocaleString()}</td>
-        <td style="text-align:right;color:#6366f1;font-size:12px">${(row.tts_generation||0).toLocaleString()}</td>
-        <td style="text-align:right;color:#22c55e;font-size:12px">${(row.kb_hit||0).toLocaleString()}</td>
-        <td style="text-align:right;font-weight:700;color:#1e1b4b;font-size:12px">$${row.cost_usd.toFixed(5)}</td>
-      </tr>
-    `).join('') || '<tr><td colspan="5" style="color:#9ca3af;padding:16px 0;text-align:center">No daily data yet</td></tr>';
+    const dBody = document.getElementById('usageDailyBody');
+    if (dBody) {
+      dBody.innerHTML = (d.daily || []).map(row => `
+        <tr style="border-bottom:1px solid #f8fafc">
+          <td style="padding:7px 0;color:#374151;font-size:12px">${row.date}</td>
+          <td style="text-align:right;color:#8b5cf6;font-size:12px">${(row.conversation || row.gpt4o_call || 0).toLocaleString()}</td>
+          <td style="text-align:right;color:#6366f1;font-size:12px">${(row.tts_generation || 0).toLocaleString()}</td>
+          <td style="text-align:right;color:#22c55e;font-size:12px">${(row.kb_hit || 0).toLocaleString()}</td>
+          <td style="text-align:right;font-weight:700;color:#1e1b4b;font-size:12px">$${(row.cost_usd || 0).toFixed(5)}</td>
+        </tr>
+      `).join('') || '<tr><td colspan="5" style="color:#9ca3af;padding:16px 0;text-align:center">No daily data yet</td></tr>';
+    }
 
-    document.getElementById('usageLoading').style.display = 'none';
-    document.getElementById('usageContent').style.display = '';
+    if (loadingEl) loadingEl.style.display = 'none';
+    if (contentEl) contentEl.style.display = '';
 
   } catch (e) {
-    document.getElementById('usageLoading').style.display = 'none';
+    if (loadingEl) loadingEl.style.display = 'none';
     if (e.message && e.message.includes('403')) {
-      document.getElementById('usageAccessDenied').style.display = '';
+      if (deniedEl) deniedEl.style.display = '';
     } else {
-      document.getElementById('usageAccessDenied').style.display = '';
-      document.getElementById('usageAccessDenied').innerHTML = `
-        <i class="fas fa-exclamation-circle fa-3x" style="color:#fca5a5;margin-bottom:16px;display:block"></i>
-        <div style="font-weight:700;color:#dc2626;font-size:15px;margin-bottom:8px">Could not load usage data</div>
-        <div style="color:#9ca3af;font-size:13px">${e.message}</div>`;
+      if (deniedEl) {
+        deniedEl.style.display = '';
+        deniedEl.innerHTML = `
+          <i class="fas fa-exclamation-circle fa-3x" style="color:#fca5a5;margin-bottom:16px;display:block"></i>
+          <div style="font-weight:700;color:#dc2626;font-size:15px;margin-bottom:8px">Could not load usage data</div>
+          <div style="color:#9ca3af;font-size:13px">${e.message}</div>`;
+      }
     }
+  }
+}
+
+// ─── Gemini Multi-Project Account Pool Management ─────────────────────────────
+async function loadGeminiPool() {
+  const loadingEl = document.getElementById('geminiPoolLoading');
+  const listEl = document.getElementById('geminiPoolList');
+  if (loadingEl) loadingEl.style.display = '';
+  if (listEl) listEl.innerHTML = '';
+
+  try {
+    const data = await staffFetchJson(`${API}/gemini-pool`);
+    if (loadingEl) loadingEl.style.display = 'none';
+
+    const accounts = data.accounts || [];
+    const total = data.total_accounts || accounts.length;
+    const active = data.active_accounts || accounts.filter(a => a.status === 'active').length;
+    const cooldown = accounts.filter(a => a.status === 'cooldown').length;
+
+    const elTotal = document.getElementById('poolCountTotal');
+    const elActive = document.getElementById('poolCountActive');
+    const elCooldown = document.getElementById('poolCountCooldown');
+    if (elTotal) elTotal.textContent = total;
+    if (elActive) elActive.textContent = active;
+    if (elCooldown) elCooldown.textContent = cooldown;
+
+    if (!accounts.length) {
+      if (listEl) {
+        listEl.innerHTML = `
+          <div style="grid-column:1/-1;text-align:center;padding:30px;color:#9ca3af;background:#f9fafb;border-radius:12px">
+            <i class="fas fa-layer-group fa-2x" style="margin-bottom:8px;color:#cbd5e1"></i>
+            <div>No Gemini project accounts found. Click "Add Project Account" above to register accounts.</div>
+          </div>`;
+      }
+      return;
+    }
+
+    if (listEl) {
+      listEl.innerHTML = accounts.map(acc => {
+        const isCooldown = acc.status === 'cooldown';
+        const isActive = acc.status === 'active';
+        const isStandby = acc.status === 'standby';
+
+        let statusBadge = '';
+        if (isActive) {
+          statusBadge = '<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700"><i class="fas fa-check-circle me-1"></i>Active</span>';
+        } else if (isCooldown) {
+          statusBadge = `<span style="background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700"><i class="fas fa-hourglass-half me-1"></i>Cooldown (${acc.cooldown_remaining_sec || 0}s)</span>`;
+        } else if (isStandby) {
+          statusBadge = '<span style="background:#f1f5f9;color:#64748b;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700"><i class="fas fa-pause-circle me-1"></i>Standby</span>';
+        } else {
+          statusBadge = `<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">${acc.status}</span>`;
+        }
+
+        const priorityLabel = acc.priority === 1 ? '1 (Primary)' : acc.priority === 2 ? '2 (Secondary)' : acc.priority === 3 ? '3 (Tertiary)' : `${acc.priority} (Standby)`;
+        const configuredLimit = (acc.configured_limit || acc.daily_limit || 1500).toLocaleString();
+        const failovers = acc.failover_count || 0;
+        const quota429s = acc.quota_429_count || 0;
+        const lastErr = acc.last_error ? `<div style="font-size:10px;color:#b91c1c;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${acc.last_error}">Last Error: ${acc.last_error}</div>` : '';
+        const lastFailover = acc.last_failover_reason ? `<div style="font-size:10px;color:#c2410c;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${acc.last_failover_reason}">Last Failover: ${acc.last_failover_reason}</div>` : '';
+
+        return `
+          <div style="background:#fff;border:1px solid ${isActive ? '#c7d2fe' : isCooldown ? '#fed7aa' : '#e2e8f0'};border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05);display:flex;flex-direction:column;justify-content:space-between">
+            <div>
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#1e1b4b;display:flex;align-items:center;gap:6px">
+                    ${acc.name}
+                    ${acc.is_env_default ? '<span style="background:#ede9fe;color:#6d28d9;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:700"><i class="fas fa-server me-1"></i>Environment Credential</span>' : '<span style="background:#e0f2fe;color:#0369a1;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600">Project Account</span>'}
+                  </div>
+                  <div style="font-size:11px;color:#6b7280;margin-top:2px">
+                    Priority: <span style="font-weight:600;color:#4338ca">${priorityLabel}</span>
+                  </div>
+                </div>
+                ${statusBadge}
+              </div>
+
+              <!-- Masked Credential -->
+              <div style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:6px;padding:6px 10px;margin-bottom:10px;font-family:monospace;font-size:11px;color:#475569;display:flex;align-items:center;justify-content:space-between">
+                <span><i class="fas fa-key me-1 text-muted"></i>${acc.api_key_masked}</span>
+                <span style="font-size:10px;color:#059669;font-weight:600"><i class="fas fa-shield-alt me-1"></i>Encrypted at Rest</span>
+              </div>
+
+              <!-- 3-Tier Quota Breakdown -->
+              <div style="background:#f9fafb;border:1px solid #f3f4f6;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px">
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                  <span style="color:#4b5563;font-weight:600">1. MyntOS-Configured Limit:</span>
+                  <span style="color:#1e1b4b;font-weight:700">${configuredLimit} req/day</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                  <span style="color:#4b5563;font-weight:600">2. Google-Reported Quota:</span>
+                  <a href="${acc.google_console_url || 'https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/quotas'}" target="_blank" style="color:#4f46e5;font-weight:600;text-decoration:none">
+                    External Quota <i class="fas fa-external-link-alt" style="font-size:9px"></i>
+                  </a>
+                </div>
+                <div style="display:flex;justify-content:space-between;border-top:1px dashed #e5e7eb;padding-top:6px;margin-top:4px">
+                  <span style="color:#4b5563;font-weight:600">3. MyntOS-Measured Usage:</span>
+                  <span style="color:#111827;font-weight:600">Req: ${acc.total_requests || 0} | 429s: ${quota429s} | Failovers: ${failovers}</span>
+                </div>
+                ${lastErr}
+                ${lastFailover}
+              </div>
+
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-bottom:12px">
+                <span>Errors: <strong style="color:${(acc.total_errors || 0) > 0 ? '#ef4444' : '#1e1b4b'}">${acc.total_errors || 0}</strong></span>
+                <span>Used: <strong style="color:#6b7280">${acc.last_used_at ? new Date(acc.last_used_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Never'}</strong></span>
+              </div>
+            </div>
+
+            <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap">
+              <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="testProjectKey('${acc.id}', this)" title="Validate API key with live Google GenAI ping">
+                <i class="fas fa-vial me-1"></i> Test Key
+              </button>
+              <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="toggleProjectAccount('${acc.id}')" title="Toggle active or standby status">
+                <i class="fas fa-power-off me-1"></i> ${acc.status === 'active' ? 'Deactivate' : 'Activate'}
+              </button>
+              ${!acc.is_env_default ? `
+                <button class="btn-ai btn-ai-ghost btn-ai-sm text-danger" onclick="deleteProjectAccount('${acc.id}', '${(acc.name || '').replace(/'/g, "\\'")}')">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  } catch (err) {
+    if (loadingEl) loadingEl.style.display = 'none';
+    console.error('Failed to load Gemini pool:', err);
+    if (listEl) {
+      listEl.innerHTML = `<div style="grid-column:1/-1;color:#ef4444;font-size:12px;padding:12px">Could not load Gemini pool accounts: ${err.message}</div>`;
+    }
+  }
+}
+
+function openAddGeminiProjectModal() {
+  document.getElementById('geminiAccName').value = '';
+  document.getElementById('geminiAccKey').value = '';
+  document.getElementById('geminiAccPriority').value = '2';
+  document.getElementById('geminiAccLimit').value = '1500';
+  const testRes = document.getElementById('testNewKeyResult');
+  if (testRes) testRes.style.display = 'none';
+  showModal('modalAddGeminiProject');
+}
+
+function toggleGeminiKeyVis() {
+  const inp = document.getElementById('geminiAccKey');
+  const eye = document.getElementById('geminiAccKeyEye');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    eye.className = 'fas fa-eye-slash';
+  } else {
+    inp.type = 'password';
+    eye.className = 'fas fa-eye';
+  }
+}
+
+async function testNewGeminiKey() {
+  const key = (document.getElementById('geminiAccKey').value || '').trim();
+  const resDiv = document.getElementById('testNewKeyResult');
+  const btn = document.getElementById('btnTestNewKey');
+  if (!key) {
+    if (resDiv) {
+      resDiv.style.display = 'block';
+      resDiv.style.background = '#fef2f2';
+      resDiv.style.color = '#b91c1c';
+      resDiv.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i> Please paste a Gemini API key first.';
+    }
+    return;
+  }
+
+  const origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner ai-spin me-1"></i> Testing...';
+
+  try {
+    const res = await staffFetchJson(`${API}/gemini-pool/test-key`, {
+      method: 'POST',
+      body: JSON.stringify({ api_key: key }),
+    });
+    if (res.success) {
+      resDiv.style.display = 'block';
+      resDiv.style.background = '#f0fdf4';
+      resDiv.style.color = '#15803d';
+      resDiv.innerHTML = `<i class="fas fa-check-circle me-1"></i> ${res.message || 'Key is valid and active!'}`;
+    } else {
+      resDiv.style.display = 'block';
+      resDiv.style.background = '#fef2f2';
+      resDiv.style.color = '#b91c1c';
+      resDiv.innerHTML = `<i class="fas fa-times-circle me-1"></i> ${res.error || 'Validation failed.'}`;
+    }
+  } catch (err) {
+    resDiv.style.display = 'block';
+    resDiv.style.background = '#fef2f2';
+    resDiv.style.color = '#b91c1c';
+    resDiv.innerHTML = `<i class="fas fa-times-circle me-1"></i> Error: ${err.message}`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+  }
+}
+
+async function saveGeminiProjectAccount() {
+  const name = (document.getElementById('geminiAccName').value || '').trim();
+  const key = (document.getElementById('geminiAccKey').value || '').trim();
+  const priority = parseInt(document.getElementById('geminiAccPriority').value, 10) || 2;
+  const daily_limit = parseInt(document.getElementById('geminiAccLimit').value, 10) || 5000;
+  const btn = document.getElementById('btnSaveGeminiAccount');
+
+  if (!name) {
+    alert('Please provide an Account / Project Label.');
+    document.getElementById('geminiAccName').focus();
+    return;
+  }
+  if (!key) {
+    alert('Please enter a Gemini API Key.');
+    document.getElementById('geminiAccKey').focus();
+    return;
+  }
+
+  const origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner ai-spin me-1"></i> Saving...';
+
+  try {
+    await staffFetchJson(`${API}/gemini-pool/account`, {
+      method: 'POST',
+      body: JSON.stringify({ name, api_key: key, priority, daily_limit }),
+    });
+    closeModal('modalAddGeminiProject');
+    showToast('Gemini project account added to pool!');
+    await loadGeminiPool();
+  } catch (err) {
+    alert(`Could not save account: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origHtml;
+  }
+}
+
+async function testProjectKey(accountId, btnEl) {
+  if (!accountId) return;
+  const origHtml = btnEl ? btnEl.innerHTML : '';
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<i class="fas fa-spinner ai-spin"></i>';
+  }
+
+  try {
+    const res = await staffFetchJson(`${API}/gemini-pool/test-key`, {
+      method: 'POST',
+      body: JSON.stringify({ account_id: accountId }),
+    });
+    if (res.success) {
+      showToast(res.message || 'Key is valid and active!');
+    } else {
+      alert(`API Key Test Failed:\n${res.error || 'Unknown error'}`);
+    }
+    await loadGeminiPool();
+  } catch (err) {
+    alert(`Key validation error: ${err.message}`);
+  } finally {
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = origHtml;
+    }
+  }
+}
+
+async function toggleProjectAccount(accountId) {
+  if (!accountId) return;
+  try {
+    const res = await staffFetchJson(`${API}/gemini-pool/account/${accountId}/toggle`, {
+      method: 'POST',
+    });
+    showToast(`Account status set to ${res.status}`);
+    await loadGeminiPool();
+  } catch (err) {
+    alert(`Could not toggle status: ${err.message}`);
+  }
+}
+
+async function deleteProjectAccount(accountId, accountName) {
+  if (!accountId) return;
+  if (!confirm(`Are you sure you want to remove "${accountName}" from the Gemini project pool?`)) {
+    return;
+  }
+  try {
+    await staffFetchJson(`${API}/gemini-pool/account/${accountId}`, {
+      method: 'DELETE',
+    });
+    showToast('Account removed from pool');
+    await loadGeminiPool();
+  } catch (err) {
+    alert(`Could not remove account: ${err.message}`);
   }
 }
 
@@ -4287,6 +5175,342 @@ function toggleVoiceAnswer(uqId, inputId, lang) {
   recognition.start();
 }
 
+// ═══════════════════════════════════════════════════════════
+// MISSING INFORMATION TAB
+// ═══════════════════════════════════════════════════════════
+
+let _missingInfoItems = [];
+let _miCurrentStatusFilter = 'pending';
+let _activeMiModalItem = null;
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+async function loadMissingInfo() {
+  const tbody = document.getElementById('missingInfoTbody');
+  if (tbody && _currentTab === 'missing-info') {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner ai-spin me-2"></i>Loading questions…</td></tr>';
+  }
+  try {
+    const searchVal = (document.getElementById('miSearchInput')?.value || '').trim();
+    const url = `${API}/missing-info?status=${encodeURIComponent(_miCurrentStatusFilter)}&search=${encodeURIComponent(searchVal)}`;
+    const d = await staffFetchJson(url);
+    if (!d.success) throw new Error(d.detail || 'Failed to load missing questions');
+
+    _missingInfoItems = d.items || [];
+    const counts = d.counts || { total: 0, pending: 0, answered: 0, cancelled: 0 };
+
+    // Update stat numbers
+    const elTot = document.getElementById('miStatTotal');
+    const elPen = document.getElementById('miStatPending');
+    const elAns = document.getElementById('miStatAnswered');
+    const elCan = document.getElementById('miStatCancelled');
+    if (elTot) elTot.textContent = counts.total;
+    if (elPen) elPen.textContent = counts.pending;
+    if (elAns) elAns.textContent = counts.answered;
+    if (elCan) elCan.textContent = counts.cancelled;
+
+    // Update pill counts
+    const pPen = document.getElementById('miPillPendingCount');
+    const pTot = document.getElementById('miPillTotalCount');
+    const pAns = document.getElementById('miPillAnsweredCount');
+    const pCan = document.getElementById('miPillCancelledCount');
+    if (pPen) pPen.textContent = counts.pending;
+    if (pTot) pTot.textContent = counts.total;
+    if (pAns) pAns.textContent = counts.answered;
+    if (pCan) pCan.textContent = counts.cancelled;
+
+    // Update main header tab badge
+    const tabBadge = document.getElementById('missingInfoPendingBadge');
+    if (tabBadge) {
+      tabBadge.textContent = counts.pending;
+      tabBadge.style.display = counts.pending > 0 ? 'inline-block' : 'none';
+    }
+
+    if (tbody && _currentTab === 'missing-info') {
+      renderMissingInfoTable();
+    }
+  } catch (err) {
+    console.error('Error in loadMissingInfo:', err);
+    if (tbody && _currentTab === 'missing-info') {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:#ef4444"><i class="fas fa-exclamation-triangle me-2"></i>Error: ${err.message}</td></tr>`;
+    }
+  }
+}
+
+function filterMissingInfoStatus(status) {
+  _miCurrentStatusFilter = status;
+  ['pending', 'all', 'answered', 'cancelled'].forEach(s => {
+    const btn = document.getElementById(`miFilter${s.charAt(0).toUpperCase() + s.slice(1)}`);
+    if (!btn) return;
+    if (s === status) {
+      btn.style.background = s === 'pending' ? '#fef3c7' : (s === 'answered' ? '#dcfce7' : '#e0e7ff');
+      btn.style.color = s === 'pending' ? '#92400e' : (s === 'answered' ? '#166534' : '#3730a3');
+      btn.style.fontWeight = '700';
+    } else {
+      btn.style.background = '#f3f4f6';
+      btn.style.color = '#374151';
+      btn.style.fontWeight = '400';
+    }
+  });
+  loadMissingInfo();
+}
+
+let _miSearchTimer = null;
+function onMissingInfoSearchInput() {
+  clearTimeout(_miSearchTimer);
+  _miSearchTimer = setTimeout(() => {
+    loadMissingInfo();
+  }, 350);
+}
+
+function renderMissingInfoTable() {
+  const tbody = document.getElementById('missingInfoTbody');
+  if (!tbody) return;
+
+  if (!_missingInfoItems.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:#9ca3af">
+      <i class="fas fa-check-circle" style="font-size:32px;color:#22c55e;display:block;margin-bottom:10px"></i>
+      <div style="font-weight:600;font-size:14px;color:#374151">No questions found</div>
+      <div style="font-size:12px">No customer questions match the current filter.</div>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = _missingInfoItems.map(item => {
+    const isPending = item.status === 'pending';
+    const isAnswered = item.status === 'answered';
+    const isCancelled = item.status === 'cancelled';
+
+    let statusBadge = '';
+    if (isPending) {
+      statusBadge = '<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;font-size:11px"><i class="fas fa-clock me-1"></i>Pending</span>';
+    } else if (isAnswered) {
+      statusBadge = '<span class="badge" style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;font-size:11px"><i class="fas fa-check-circle me-1"></i>Answered</span>';
+    } else {
+      statusBadge = '<span class="badge" style="background:#f3f4f6;color:#4b5563;border:1px solid #e5e7eb;font-size:11px"><i class="fas fa-ban me-1"></i>Cancelled</span>';
+    }
+
+    const dt = item.created_at ? new Date(item.created_at).toLocaleString('en-IN', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', timeZone:'Asia/Kolkata'}) + ' IST' : '—';
+    const leadDisplay = item.lead_name || 'Unknown Lead';
+    const phoneDisplay = item.lead_phone || '—';
+    const leadLink = item.lead_id ? `<a href="/staff/crm/leads?lead_id=${item.lead_id}" target="_blank" style="color:var(--ai-primary);text-decoration:none;font-weight:600">${escapeHtml(leadDisplay)}</a>` : `<strong>${escapeHtml(leadDisplay)}</strong>`;
+
+    let actionsHtml = '';
+    if (isPending) {
+      actionsHtml = `
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn-ai btn-ai-primary btn-ai-sm" onclick="openAnswerMissingInfoModal(${item.id})">
+            <i class="fas fa-comment-dots"></i> Answer
+          </button>
+          <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="cancelMissingInfoItem(${item.id})" title="Cancel/Dismiss" style="color:#ef4444;border-color:#fca5a5">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+      `;
+    } else if (isAnswered) {
+      actionsHtml = `
+        <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center">
+          <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="openAnswerMissingInfoModal(${item.id})" title="View / Edit Answer">
+            <i class="fas fa-eye"></i> View
+          </button>
+          ${item.saved_to_kb ? '<span title="Saved to Knowledge Base" style="color:#16a34a;font-size:14px"><i class="fas fa-brain"></i></span>' : ''}
+        </div>
+      `;
+    } else {
+      actionsHtml = `
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="reopenMissingInfoItem(${item.id})" title="Reopen to Pending">
+            <i class="fas fa-undo"></i> Reopen
+          </button>
+        </div>
+      `;
+    }
+
+    return `
+      <tr id="miRow_${item.id}" style="border-bottom:1px solid #f0f1fe">
+        <td style="padding:12px 14px;vertical-align:top">
+          ${leadLink}
+          <div style="font-size:11px;color:#6b7280;margin-top:2px"><i class="fas fa-phone-alt me-1"></i>${escapeHtml(phoneDisplay)}</div>
+        </td>
+        <td style="padding:12px 14px;vertical-align:top">
+          <div style="font-size:12px;font-weight:600;color:#374151">${escapeHtml(item.campaign_name || 'Direct Call')}</div>
+          <div style="font-size:11px;color:#9ca3af;margin-top:2px">Call Log #${item.log_id || '—'}</div>
+        </td>
+        <td style="padding:12px 14px;vertical-align:top">
+          <div style="font-size:13px;font-weight:600;color:#1e1b4b;line-height:1.4">${escapeHtml(item.question)}</div>
+          ${item.answer ? `<div style="margin-top:6px;background:#f0fdf4;border-left:3px solid #22c55e;padding:6px 8px;border-radius:4px;font-size:12px;color:#166534"><strong>Answer:</strong> ${escapeHtml(item.answer)}</div>` : ''}
+        </td>
+        <td style="padding:12px 14px;vertical-align:top">
+          <div style="font-size:12px;color:#4b5563;font-style:italic;line-height:1.4;background:#f8f9ff;padding:6px 10px;border-radius:6px;border:1px solid #e0e7ff">
+            "${escapeHtml((item.ai_reply || 'The executive will confirm with the team and get back to you.').slice(0, 160))}${item.ai_reply && item.ai_reply.length > 160 ? '…' : ''}"
+          </div>
+        </td>
+        <td style="padding:12px 14px;vertical-align:top;font-size:11px;color:#6b7280;white-space:nowrap">
+          ${dt}
+        </td>
+        <td style="padding:12px 14px;vertical-align:top">
+          ${statusBadge}
+        </td>
+        <td style="padding:12px 14px;vertical-align:top;text-align:right">
+          ${actionsHtml}
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function openAnswerMissingInfoModal(id) {
+  const item = _missingInfoItems.find(x => x.id === id);
+  if (!item) return;
+  _activeMiModalItem = item;
+
+  document.getElementById('miModalLeadName').textContent = item.lead_name || 'Unknown Lead';
+  document.getElementById('miModalLeadPhone').textContent = item.lead_phone || '—';
+  document.getElementById('miModalCampName').textContent = item.campaign_name || 'Direct Call';
+  document.getElementById('miModalQuestion').textContent = item.question;
+  document.getElementById('miAnswerText').value = item.answer || '';
+  document.getElementById('miKbTitle').value = item.question.slice(0, 80);
+  document.getElementById('miKbSegment').value = item.campaign_name && item.campaign_name !== 'Direct Call' ? item.campaign_name : 'General';
+  document.getElementById('miSaveToKbCheck').checked = true;
+  toggleMiKbOptions();
+
+  const matchBox = document.getElementById('miExistingKbMatches');
+  if (matchBox) {
+    matchBox.style.display = 'none';
+    matchBox.innerHTML = '';
+  }
+
+  showModal('modalMissingInfoAnswer');
+  setTimeout(() => { document.getElementById('miAnswerText')?.focus(); }, 150);
+}
+
+function toggleMiKbOptions() {
+  const chk = document.getElementById('miSaveToKbCheck');
+  const sec = document.getElementById('miKbOptionsSection');
+  if (sec) sec.style.display = chk?.checked ? 'block' : 'none';
+}
+
+async function miCheckExistingCatalogue() {
+  if (!_activeMiModalItem) return;
+  const matchBox = document.getElementById('miExistingKbMatches');
+  if (!matchBox) return;
+
+  matchBox.style.display = 'block';
+  matchBox.innerHTML = '<i class="fas fa-spinner ai-spin me-2"></i>Searching catalogue for similar questions…';
+
+  try {
+    const q = _activeMiModalItem.question;
+    const d = await staffFetchJson(`${API}/missing-info/check-existing-catalogue?query=${encodeURIComponent(q)}`);
+    if (d.matches && d.matches.length) {
+      matchBox.innerHTML = `
+        <div style="font-weight:700;color:#92400e;margin-bottom:6px"><i class="fas fa-info-circle me-1"></i>Found ${d.matches.length} similar catalogue entries:</div>
+        ${d.matches.map(m => `
+          <div style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px dashed #fef08a">
+            <strong>[${escapeHtml(m.segment)}] ${escapeHtml(m.title)}</strong>
+            <div style="color:#4b5563;font-size:11px">${escapeHtml(m.content)}</div>
+          </div>
+        `).join('')}
+      `;
+    } else {
+      matchBox.innerHTML = '<span style="color:#16a34a"><i class="fas fa-check-circle me-1"></i>No similar questions found in catalogue. Safe to add as new entry.</span>';
+    }
+  } catch (err) {
+    matchBox.innerHTML = `<span style="color:#ef4444">Search error: ${err.message}</span>`;
+  }
+}
+
+async function submitMissingInfoAction() {
+  if (!_activeMiModalItem) return;
+  const answer = (document.getElementById('miAnswerText')?.value || '').trim();
+  if (!answer) {
+    showToast('Please enter an answer.', 'error');
+    document.getElementById('miAnswerText')?.focus();
+    return;
+  }
+
+  const saveToKb = document.getElementById('miSaveToKbCheck')?.checked || false;
+  const segment = (document.getElementById('miKbSegment')?.value || '').trim();
+  const category = (document.getElementById('miKbCategory')?.value || 'FAQs').trim();
+  const title = (document.getElementById('miKbTitle')?.value || '').trim();
+
+  const btn = document.getElementById('btnSubmitMiAnswer');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner ai-spin me-1"></i> Saving…';
+  }
+
+  try {
+    const res = await staffFetchJson(`${API}/missing-info/${_activeMiModalItem.id}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'answer',
+        answer: answer,
+        save_to_kb: saveToKb,
+        segment: segment,
+        category: category,
+        title: title,
+      })
+    });
+
+    if (res.success) {
+      showToast('Answer saved successfully!' + (saveToKb ? ' Added to Knowledge Base.' : ''));
+      closeModal('modalMissingInfoAnswer');
+      loadMissingInfo();
+      if (saveToKb) loadCatalogue();
+    } else {
+      throw new Error(res.detail || 'Failed to save answer');
+    }
+  } catch (err) {
+    showToast(`Error: ${err.message}`, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-check me-1"></i> Save Answer';
+    }
+  }
+}
+
+async function cancelMissingInfoItem(id) {
+  if (!confirm('Mark this question as cancelled / dismissed?')) return;
+  try {
+    const res = await staffFetchJson(`${API}/missing-info/${id}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'cancel' })
+    });
+    if (res.success) {
+      showToast('Question cancelled.');
+      loadMissingInfo();
+    } else {
+      throw new Error(res.detail || 'Failed to cancel');
+    }
+  } catch (err) {
+    showToast(`Error: ${err.message}`, 'error');
+  }
+}
+
+async function reopenMissingInfoItem(id) {
+  try {
+    const res = await staffFetchJson(`${API}/missing-info/${id}/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'reopen' })
+    });
+    if (res.success) {
+      showToast('Question reopened to pending.');
+      loadMissingInfo();
+    } else {
+      throw new Error(res.detail || 'Failed to reopen');
+    }
+  } catch (err) {
+    showToast(`Error: ${err.message}`, 'error');
+  }
+}
+
 // ─── Init ───
 document.addEventListener('DOMContentLoaded', async function() {
   if (typeof StaffSidebar !== 'undefined') await StaffSidebar.init();
@@ -4294,7 +5518,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   if (typeof StaffHeader !== 'undefined') StaffHeader.init();
   if (typeof StaffBackButton !== 'undefined') StaffBackButton.init();
   try {
-    await Promise.all([loadStats(), loadCampaigns()]);
+    await Promise.all([loadStats(), loadCampaigns(), loadMissingInfo()]);
     _startPolling();
   } catch (_) {}
   // Show Usage & Cost tab only to authorised users (VGK Mentor / Accounts)

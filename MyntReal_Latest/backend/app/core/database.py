@@ -179,7 +179,7 @@ def run_pending_migrations():
     # management — Neon receives the migrations on every production startup.
     is_neon = "neon.tech" in db_url
     is_local_pg = any(h in db_url for h in ["localhost", "127.0.0.1", "@helium", "@helium/", "heliumdb"])
-    if not is_neon and is_local_pg:
+    if not is_neon and is_local_pg and os.getenv("FORCE_MIGRATIONS") != "1":
         print("   ⏭️  Skipping migrations (Replit local postgres — Neon receives migrations in production)")
         return
     
@@ -557,6 +557,17 @@ def run_pending_migrations():
             "name": "staff_attendance.custom_minutes",
             "check": "SELECT column_name FROM information_schema.columns WHERE table_name='staff_attendance' AND column_name='custom_minutes'",
             "migrate": "ALTER TABLE staff_attendance ADD COLUMN custom_minutes INTEGER NOT NULL DEFAULT 0"
+        },
+        # DC Protocol (Active Engagement Tracking): Screen & active on-screen minutes
+        {
+            "name": "staff_attendance.active_minutes",
+            "check": "SELECT column_name FROM information_schema.columns WHERE table_name='staff_attendance' AND column_name='active_minutes'",
+            "migrate": "ALTER TABLE staff_attendance ADD COLUMN active_minutes INTEGER NOT NULL DEFAULT 0"
+        },
+        {
+            "name": "staff_attendance.screen_minutes",
+            "check": "SELECT column_name FROM information_schema.columns WHERE table_name='staff_attendance' AND column_name='screen_minutes'",
+            "migrate": "ALTER TABLE staff_attendance ADD COLUMN screen_minutes INTEGER NOT NULL DEFAULT 0"
         },
         # DC Protocol (Feb 24, 2026): DayPlanItem time tracking
         {

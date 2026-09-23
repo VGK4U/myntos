@@ -51,7 +51,12 @@ class CRMLeadEditor {
                 <div class="modal-content">
                     <div class="modal-header bg-success text-white">
                         <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Edit Lead</h5>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-light text-success fw-bold" onclick="window.crmLeadEditor && window.crmLeadEditor.openUniversalHistory()">
+                                <i class="fas fa-history me-1"></i>History
+                            </button>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
                     </div>
                     <div class="modal-body">
                         <input type="hidden" id="ule_leadId">
@@ -526,6 +531,9 @@ class CRMLeadEditor {
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-outline-primary" id="ule_historyBtn" onclick="window.crmLeadEditor && window.crmLeadEditor.openUniversalHistory()">
+                            <i class="fas fa-history me-1"></i>History
+                        </button>
                         <button type="button" class="btn btn-info text-white" id="ule_shareBtn" onclick="window.openUniversalShareLeadModal &amp;&amp; window.openUniversalShareLeadModal(window.crmLeadEditor ? window.crmLeadEditor.currentLead : null)">
                             <i class="fas fa-share-alt me-1"></i>Share Details
                         </button>
@@ -2310,6 +2318,37 @@ class CRMLeadEditor {
                 method: 'POST', ...this.authOptions
             });
         } catch(e) {}
+    }
+
+    openUniversalHistory() {
+        if (!this.currentLead || !this.currentLead.id) return;
+        const l = this.currentLead;
+        if (!window.openUniversalHistory && typeof document !== 'undefined') {
+            const s = document.createElement('script');
+            s.src = '/public/js/universal-history-modal.js';
+            s.onload = () => {
+                if (typeof window.openUniversalHistory === 'function') {
+                    window.openUniversalHistory({
+                        entityType: 'crm_lead',
+                        entityId: l.id,
+                        name: l.name || `Lead #${l.id}`,
+                        phone: l.phone || l.alternate_phone || '',
+                        category: l.category || 'CRM Lead'
+                    });
+                }
+            };
+            document.head.appendChild(s);
+            return;
+        }
+        if (typeof window.openUniversalHistory === 'function') {
+            window.openUniversalHistory({
+                entityType: 'crm_lead',
+                entityId: l.id,
+                name: l.name || `Lead #${l.id}`,
+                phone: l.phone || l.alternate_phone || '',
+                category: l.category || 'CRM Lead'
+            });
+        }
     }
 
     _esc(str) {

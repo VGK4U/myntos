@@ -2223,7 +2223,7 @@
                                 </div>
                             </div>
 
-                            <!-- GOOGLE MAPS / LOCATION PICKER (LEAFLET INTEGRATED) -->
+                            <!-- GOOGLE MAPS / LOCATION PICKER (LEAFLET INTEGRATED & LINK PASTE SUPPORT) -->
                             <div class="guc-section-block" style="margin-bottom:16px; border:1px solid #fed7aa; border-radius:10px; overflow:hidden;">
                                 <div style="background:#ffedd5; padding:8px 14px; font-weight:800; font-size:13px; color:#9a3412; border-bottom:1px solid #fed7aa; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
                                     <span style="display:flex; align-items:center; gap:8px;"><i class="fas fa-location-dot"></i>మండపం లొకేషన్ ఎంపిక (Google Maps Location) <span style="color:#dc2626;">*</span></span>
@@ -2234,17 +2234,35 @@
                                         <button type="button" onclick="openLocationPicker('google_location')" style="background:#0d9488; color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:11.5px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px;">
                                             <i class="fas fa-map-marked-alt"></i>మ్యాప్‌లో ఎంచుకోండి (Choose on Map)
                                         </button>
+                                        <button type="button" onclick="pasteLocationFromClipboard()" style="background:#2563eb; color:#fff; border:none; border-radius:6px; padding:6px 12px; font-size:11.5px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 2px 6px rgba(37,99,235,0.3);">
+                                            <i class="fas fa-paste"></i>లింక్ పేస్ట్ చేయండి (Paste Link)
+                                        </button>
                                     </div>
                                 </div>
                                 <div style="padding:12px; background:#fff;">
-                                    <div class="input-wrapper" style="margin-bottom:8px;">
-                                        <i class="fas fa-link"></i>
-                                        <input type="text" name="google_location" id="google_location" placeholder="Click 'Choose Location on Map' to lock exact mandap coordinates" required readonly style="background:#f8fafc; font-size:12.5px;">
+                                    <div class="input-wrapper" style="margin-bottom:8px; position:relative;">
+                                        <i class="fas fa-link" style="color:#f59e0b;"></i>
+                                        <input type="text" name="google_location" id="google_location" 
+                                               placeholder="గూగుల్ మ్యాప్స్ లింక్ ఇక్కడ పేస్ట్ చేయండి (Paste Google Maps link, e.g. https://maps.app.goo.gl/...)" 
+                                               required 
+                                               oninput="handleLocationInput(this.value)" 
+                                               onpaste="handleLocationPaste(event)"
+                                               style="background:#fff; font-size:12.5px; padding-right:85px;">
+                                        <button type="button" onclick="pasteLocationFromClipboard()" title="Paste from Clipboard" style="position:absolute; right:36px; top:50%; transform:translateY(-50%); background:#eff6ff; border:1px solid #bfdbfe; color:#2563eb; border-radius:4px; padding:4px 8px; font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:4px;" id="btnPasteClipboard">
+                                            <i class="fas fa-paste"></i> Paste
+                                        </button>
+                                        <button type="button" onclick="clearLocationInput()" title="Clear location" style="position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer; padding:4px; font-size:14px; display:none;" id="btnClearLocation">
+                                            <i class="fas fa-times-circle"></i>
+                                        </button>
+                                    </div>
+                                    <div style="font-size:11px; color:#64748b; margin-top:-2px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                                        <i class="fas fa-circle-info" style="color:#3b82f6;"></i>
+                                        <span>గూగుల్ మ్యాప్స్ యాప్‌లో 'Share' క్లిక్ చేసి కాపీ చేసిన లింక్ (maps.app.goo.gl) లేదా కోఆర్డినేట్స్ ఇక్కడ నేరుగా పేస్ట్ చేయవచ్చు.</span>
                                     </div>
                                     <!-- On-Page Location Preview Badge -->
                                     <div id="mandapLocationBadge" style="display:none; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:10px 14px; margin-top:6px;">
                                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                                            <span style="font-size:11px; font-weight:800; color:#166534; text-transform:uppercase;">✓ Mandap GPS Coordinates Locked</span>
+                                            <span id="mandapBadgeTitle" style="font-size:11px; font-weight:800; color:#166534; text-transform:uppercase;">✓ Mandap GPS Coordinates Locked</span>
                                             <a id="mandapMapsLink" href="#" target="_blank" rel="noopener noreferrer" style="font-size:11px; font-weight:700; color:#0284c7; text-decoration:none;">Open in Google Maps ↗</a>
                                         </div>
                                         <div id="mandapBadgeAddress" style="font-size:12px; color:#14532d; font-weight:600;"></div>
@@ -4351,14 +4369,165 @@
 
             // Show location badge
             const badge = document.getElementById('mandapLocationBadge');
+            const badgeTitle = document.getElementById('mandapBadgeTitle');
             if (badge) {
                 badge.style.display = 'block';
+                if (badgeTitle) badgeTitle.textContent = '✓ Mandap GPS Coordinates Locked';
                 document.getElementById('mandapBadgeAddress').textContent = formattedAddress;
                 document.getElementById('mandapBadgeCoords').textContent = `Lat: ${mapCoords.lat}, Lng: ${mapCoords.lng}`;
                 document.getElementById('mandapMapsLink').href = mapsUrl;
             }
+            const clearBtn = document.getElementById('btnClearLocation');
+            if (clearBtn) clearBtn.style.display = 'inline-block';
 
             closeLocationPicker();
+        }
+
+        // ── Direct Google Maps Link Paste & Parsing Functions ──────────────
+        async function pasteLocationFromClipboard() {
+            const locInput = document.getElementById('google_location');
+            if (!locInput) return;
+            try {
+                if (navigator.clipboard && navigator.clipboard.readText) {
+                    const text = await navigator.clipboard.readText();
+                    if (text && text.trim()) {
+                        locInput.value = text.trim();
+                        handleLocationInput(text.trim());
+                        locInput.focus();
+                        return;
+                    }
+                }
+            } catch(err) {
+                console.warn('Clipboard read error:', err);
+            }
+            // Fallback prompt for browsers blocking clipboard read
+            locInput.focus();
+            const currentVal = locInput.value && !locInput.value.includes('Choose Location') ? locInput.value : '';
+            const pasted = prompt('గూగుల్ మ్యాప్స్ లొకేషన్ లింక్ ఇక్కడ పేస్ట్ చేయండి (Paste Google Maps Location Link):', currentVal);
+            if (pasted && pasted.trim()) {
+                locInput.value = pasted.trim();
+                handleLocationInput(pasted.trim());
+            }
+        }
+
+        function clearLocationInput() {
+            const locInput = document.getElementById('google_location');
+            if (locInput) locInput.value = '';
+            const badge = document.getElementById('mandapLocationBadge');
+            if (badge) badge.style.display = 'none';
+            const clearBtn = document.getElementById('btnClearLocation');
+            if (clearBtn) clearBtn.style.display = 'none';
+            const latIn = document.getElementById('guc_latitude');
+            const lngIn = document.getElementById('guc_longitude');
+            if (latIn) latIn.value = '';
+            if (lngIn) lngIn.value = '';
+        }
+
+        function parseGoogleMapsCoordinates(text) {
+            if (!text) return null;
+            const str = text.trim();
+
+            // Pattern 1: Direct coordinates like "17.8300, 83.2000" or "17.8300,83.2000"
+            const plainCoordsMatch = str.match(/^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?)\s*,\s*[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$/);
+            if (plainCoordsMatch) {
+                const parts = str.split(',');
+                return { lat: parseFloat(parts[0].trim()), lng: parseFloat(parts[1].trim()) };
+            }
+
+            // Pattern 2: @17.8300,83.2000 in URL
+            const atMatch = str.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+            if (atMatch) {
+                return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) };
+            }
+
+            // Pattern 3: query=17.8300,83.2000 or q=17.8300,83.2000 or ll=17.8300,83.2000
+            const queryMatch = str.match(/[?&](?:query|q|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+            if (queryMatch) {
+                return { lat: parseFloat(queryMatch[1]), lng: parseFloat(queryMatch[2]) };
+            }
+
+            // Pattern 4: destination=17.8300,83.2000 or daddr=17.8300,83.2000
+            const destMatch = str.match(/[?&](?:destination|daddr)=(-?\d+\.\d+),(-?\d+\.\d+)/);
+            if (destMatch) {
+                return { lat: parseFloat(destMatch[1]), lng: parseFloat(destMatch[2]) };
+            }
+
+            // Pattern 5: /place/lat,lng or /maps/search/lat,lng
+            const pathMatch = str.match(/(?:search|place)\/(-?\d+\.\d+),\+?(-?\d+\.\d+)/);
+            if (pathMatch) {
+                return { lat: parseFloat(pathMatch[1]), lng: parseFloat(pathMatch[2]) };
+            }
+
+            return null;
+        }
+
+        async function handleLocationInput(val) {
+            const clearBtn = document.getElementById('btnClearLocation');
+            const badge = document.getElementById('mandapLocationBadge');
+            const badgeTitle = document.getElementById('mandapBadgeTitle');
+            const badgeAddress = document.getElementById('mandapBadgeAddress');
+            const badgeCoords = document.getElementById('mandapBadgeCoords');
+            const mapsLink = document.getElementById('mandapMapsLink');
+
+            if (!val || !val.trim()) {
+                if (clearBtn) clearBtn.style.display = 'none';
+                if (badge) badge.style.display = 'none';
+                return;
+            }
+
+            if (clearBtn) clearBtn.style.display = 'inline-block';
+
+            const trimmed = val.trim();
+            const coords = parseGoogleMapsCoordinates(trimmed);
+
+            if (coords) {
+                mapCoords = { lat: parseFloat(coords.lat.toFixed(6)), lng: parseFloat(coords.lng.toFixed(6)) };
+                const latIn = document.getElementById('guc_latitude');
+                const lngIn = document.getElementById('guc_longitude');
+                if (latIn) latIn.value = mapCoords.lat;
+                if (lngIn) lngIn.value = mapCoords.lng;
+
+                if (badge) {
+                    badge.style.display = 'block';
+                    if (badgeTitle) badgeTitle.textContent = '✓ Mandap GPS Coordinates Locked';
+                    if (badgeCoords) badgeCoords.textContent = `Lat: ${mapCoords.lat}, Lng: ${mapCoords.lng}`;
+                    if (mapsLink) mapsLink.href = trimmed.startsWith('http') ? trimmed : `https://www.google.com/maps/search/?api=1&query=${mapCoords.lat},${mapCoords.lng}`;
+                }
+
+                // Reverse geocode address in background
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${mapCoords.lat}&lon=${mapCoords.lng}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data && data.display_name) {
+                            formattedAddress = data.display_name;
+                            const addrIn = document.getElementById('guc_formatted_address');
+                            if (addrIn) addrIn.value = formattedAddress;
+                            if (badgeAddress) badgeAddress.textContent = formattedAddress;
+                        }
+                    }
+                } catch(e) {
+                    console.warn('Reverse geocode error:', e);
+                }
+            } else {
+                // Shortened link like maps.app.goo.gl or custom Google Maps link
+                if (badge) {
+                    badge.style.display = 'block';
+                    if (badgeTitle) badgeTitle.textContent = '✓ Mandap Google Maps Link Attached';
+                    if (badgeCoords) badgeCoords.textContent = trimmed.length > 55 ? trimmed.substring(0, 52) + '...' : trimmed;
+                    if (badgeAddress) badgeAddress.textContent = 'Google Maps Location Link Attached';
+                    if (mapsLink) mapsLink.href = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
+                }
+            }
+        }
+
+        function handleLocationPaste(e) {
+            setTimeout(() => {
+                const input = e.target;
+                if (input) {
+                    handleLocationInput(input.value);
+                }
+            }, 60);
         }
 
         // ── Load Registration for VIEW or EDIT Mode ────────────────────────
@@ -4472,8 +4641,10 @@
 
                 // Google Map & Location
                 const mapLoc = document.getElementById('google_location');
-                if (mapLoc) mapLoc.value = d.google_location || '';
-                if (d.latitude && d.longitude) {
+                if (mapLoc && d.google_location) {
+                    mapLoc.value = d.google_location;
+                    handleLocationInput(d.google_location);
+                } else if (d.latitude && d.longitude) {
                     mapCoords = { lat: parseFloat(d.latitude), lng: parseFloat(d.longitude) };
                     formattedAddress = d.formatted_address || d.area || 'Pendurthi, Visakhapatnam';
                     const badge = document.getElementById('mandapLocationBadge');

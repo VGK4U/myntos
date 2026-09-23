@@ -2207,7 +2207,7 @@ def get_member_executive_summary(
             b_over30['cnt'] += 1; b_over30['deal_val'] += val; b_over30['potential'] += pot
             
         # Solar Pipeline Stage Classification based on actual workflow stage
-        if pipe_st in ('loan_rejected', 'bank_loan_rejected', 'rejected', 'cancelled', 'different_vendor', 'opted_out') or st in ('lost', 'cancelled', 'rejected', 'loan_rejected', 'bank_loan_rejected'):
+        if pipe_st in ('loan_rejected', 'bank_loan_rejected', 'rejected', 'cancelled', 'different_vendor', 'opted_out', 'not_interested', 'bank_not_interested') or st in ('lost', 'cancelled', 'rejected', 'loan_rejected', 'bank_loan_rejected'):
             stg_rst['cnt'] += 1; stg_rst['deal_val'] += val; stg_rst['potential'] += pot
             lost_count += 1
         elif pipe_st in ('completed', 'installed', 'subsidy_pending', 'subsidy_claimed', 'commissioned', 'work_completed') or st == 'completed':
@@ -2229,7 +2229,7 @@ def get_member_executive_summary(
         FROM crm_leads c
         JOIN vgk_cash_income_entries v ON v.source_lead_id = c.id
         WHERE (c.associated_partner_id = :pid OR c.primary_owner_id = :pid OR v.partner_id = :pid)
-          AND (c.status IN ('lost', 'cancelled', 'rejected') OR c.solar_pipeline_status IN ('loan_rejected', 'bank_loan_rejected', 'rejected', 'cancelled', 'different_vendor', 'opted_out'))
+          AND (c.status IN ('lost', 'cancelled', 'rejected') OR c.solar_pipeline_status IN ('loan_rejected', 'bank_loan_rejected', 'rejected', 'cancelled', 'different_vendor', 'opted_out', 'not_interested', 'bank_not_interested'))
           AND v.kind IN ('ADVANCE', 'DVR_ADVANCE', 'STAGE1_ADVANCE', 'STAGE2_ADVANCE', 'COMMISSION')
           AND (v.status IS NULL OR v.status NOT IN ('CANCELLED', 'REJECTED'))
         GROUP BY c.id, c.name, c.phone, c.status, c.solar_pipeline_status, c.created_at, c.submit_date
@@ -2243,6 +2243,8 @@ def get_member_executive_summary(
             reason_label = (l.solar_pipeline_status or l.status or "Rejected / Lost").replace("_", " ").title()
             if "loan_rejected" in pipe_st_str:
                 reason_label = "Loan Rejected by Bank"
+            elif "bank_not_interested" in pipe_st_str:
+                reason_label = "Bank File - Customer Not Interested"
             elif "different_vendor" in pipe_st_str:
                 reason_label = "Selected Different Vendor"
 

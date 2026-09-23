@@ -633,9 +633,44 @@ async def register_community(
             except Exception:
                 parsed_cultural = [line.strip() for line in cultural_programs.splitlines() if line.strip()]
 
-    # 6. Map Link
+    # 6. Map Link & Coordinate Extraction Fallback
     if not google_location and latitude and longitude:
         google_location = f"https://www.google.com/maps/search/?api=1&query={latitude},{longitude}"
+    elif google_location and (latitude is None or longitude is None):
+        import re
+        loc_str = str(google_location).strip()
+        plain_m = re.match(r'^[-+]?([1-8]?\d(?:\.\d+)?|90(?:\.0+)?)\s*,\s*[-+]?(180(?:\.0+)?|(?:(?:1[0-7]\d)|(?:[1-9]?\d))(?:\.\d+)?)$', loc_str)
+        if plain_m:
+            try:
+                parts = loc_str.split(',')
+                latitude = float(parts[0].strip())
+                longitude = float(parts[1].strip())
+            except Exception:
+                pass
+        if latitude is None or longitude is None:
+            at_m = re.search(r'@(-?\d+\.\d+),(-?\d+\.\d+)', loc_str)
+            if at_m:
+                try:
+                    latitude = float(at_m.group(1))
+                    longitude = float(at_m.group(2))
+                except Exception:
+                    pass
+        if latitude is None or longitude is None:
+            q_m = re.search(r'[?&](?:query|q|ll|destination|daddr)=(-?\d+\.\d+),(-?\d+\.\d+)', loc_str)
+            if q_m:
+                try:
+                    latitude = float(q_m.group(1))
+                    longitude = float(q_m.group(2))
+                except Exception:
+                    pass
+        if latitude is None or longitude is None:
+            path_m = re.search(r'(?:search|place)/(-?\d+\.\d+),\+?(-?\d+\.\d+)', loc_str)
+            if path_m:
+                try:
+                    latitude = float(path_m.group(1))
+                    longitude = float(path_m.group(2))
+                except Exception:
+                    pass
 
     # 7. Check if EDIT mode (registration_id passed)
     reg = None

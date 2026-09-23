@@ -2440,7 +2440,12 @@ async def log_dialer_attempt(
     lead_id = body.get('lead_id')
     call_outcome = body.get('call_outcome')          # answered / no_answer / busy / callback / skip / wrong_number
     call_method = body.get('call_method', 'normal')  # 'myoperator' | 'normal'
-    duration_seconds = body.get('duration_seconds', 0)
+    try:
+        duration_seconds = int(body.get('duration_seconds', 0) or 0)
+        if duration_seconds < 0 or duration_seconds > 14400:
+            duration_seconds = 0
+    except (ValueError, TypeError):
+        duration_seconds = 0
     note = body.get('note', '')
     next_followup_date = body.get('next_followup_date')   # ISO string or None
     new_status = body.get('new_status')                    # Lead status to update to
@@ -2662,8 +2667,6 @@ async def log_dialer_attempt(
                 prev_handler_id = lead.handler_id
 
                 lead.telecaller_id = current_user.id
-                if not lead.assigned_to:
-                    lead.assigned_to = current_user.id
                 if not lead.handler_id or lead.handler_type in (None, 'unassigned') or is_inactive_owner:
                     lead.handler_type = 'staff'
                     lead.handler_id = str(getattr(current_user, 'emp_code', None) or current_user.id)

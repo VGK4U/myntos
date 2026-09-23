@@ -828,13 +828,14 @@
                                             <th>Clock In</th>
                                             <th>Clock Out</th>
                                             <th>Work Hours</th>
+                                            <th>Active Time (%)</th>
                                             <th>Break Time</th>
                                             <th>Status</th>
                                         </tr>
                                     </thead>
                                     <tbody id="historyTableBody">
                                         <tr>
-                                            <td colspan="7" class="text-center py-4">
+                                            <td colspan="8" class="text-center py-4">
                                                 <i class="fas fa-spinner fa-spin"></i> Loading...
                                             </td>
                                         </tr>
@@ -1719,7 +1720,7 @@
                 if (error.message === 'AUTH_EXPIRED' || error.message === 'NO_TOKEN') return;
                 console.error('[DC_ERROR] Error loading history:', error);
                 document.getElementById('historyTableBody').innerHTML = `
-                    <tr><td colspan="7" class="text-center py-4 text-danger">Error loading history</td></tr>`;
+                    <tr><td colspan="8" class="text-center py-4 text-danger">Error loading history</td></tr>`;
             }
         }
         // ==================== END DC_ATTENDANCE_HISTORY_RANGE_001 ====================
@@ -1729,24 +1730,31 @@
             
             if (!records || records.length === 0) {
                 tbody.innerHTML = `
-                    <tr><td colspan="7" class="empty-state">
+                    <tr><td colspan="8" class="empty-state">
                         <i class="fas fa-calendar-times"></i>
                         <p>No attendance records found</p>
                     </td></tr>`;
                 return;
             }
             
-            tbody.innerHTML = records.map(record => `
-                <tr>
+            tbody.innerHTML = records.map(record => {
+                const workedMin = record.worked_minutes || (record.work_hours ? Math.round(record.work_hours * 60) : 0);
+                const activeMin = record.active_minutes || 0;
+                const activePct = record.active_percentage || (workedMin > 0 ? Math.min(100, Math.round((activeMin / workedMin) * 100)) : 0);
+                const pctClass = activePct >= 70 ? 'badge-office' : activePct >= 40 ? 'badge-field' : 'badge-wfh';
+                const activeDisplay = activeMin > 0 ? `<strong>${formatHoursMinutes(activeMin)}</strong> <span class="badge ${pctClass}" style="font-size:10px; margin-left:4px;">${activePct}%</span>` : (workedMin > 0 ? `<span class="text-muted">0m</span> <span class="badge badge-wfh" style="font-size:10px; margin-left:4px;">0%</span>` : '-');
+
+                return `<tr>
                     <td>${formatDate(record.date)}</td>
                     <td><span class="badge badge-${record.work_mode}">${capitalize(record.work_mode)}</span></td>
                     <td>${record.clock_in ? formatTime(record.clock_in) : '-'}</td>
                     <td>${record.clock_out ? formatTime(record.clock_out) : '-'}</td>
-                    <td>${formatHoursMinutes(record.work_hours || 0)}</td>
+                    <td>${formatHoursMinutes(workedMin)}</td>
+                    <td>${activeDisplay}</td>
                     <td>${formatHoursMinutes(record.break_minutes || 0)}</td>
                     <td><span class="badge badge-${record.status}">${capitalize(record.status)}</span></td>
-                </tr>
-            `).join('');
+                </tr>`;
+            }).join('');
         }
         
         function formatTime(dateStr) {
@@ -3523,5 +3531,6 @@
         timeline.innerHTML = html;
     }
     </script>
+    <script src="/shared/staff_engagement_tracker.js"></script>
 </body>
 </html>

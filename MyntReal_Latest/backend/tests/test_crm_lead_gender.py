@@ -213,9 +213,9 @@ def test_sheets_leads_service_row_to_crm_lead():
 # ─── 5. AI CALLING PERSONA MAPPING ───────────────────────────────────────────
 
 def test_resolve_persona_from_lead_gender():
-    """Verify confirmed AI Persona Mapping:
-    - male -> ('Teja', 'onyx')
-    - female -> ('Vidya', 'nova')
+    """Verify confirmed AI Persona Mapping (Male: Teja, Female: Vidya):
+    - male -> ('Teja', 'onyx') (Male AI voice for male leads)
+    - female -> ('Vidya', 'nova') (Female AI voice for female leads)
     - unknown / None / other -> ('Vidya', 'nova') (deterministic fallback)
     """
     assert resolve_persona_from_lead_gender("male") == ("Teja", "onyx")

@@ -116,6 +116,11 @@ class Settings(BaseSettings):
     PLIVO_APP_ID: Optional[str] = os.getenv("PLIVO_APP_ID", "10583407997011554")
     PLIVO_DEFAULT_CALLER_ID: str = os.getenv("PLIVO_DEFAULT_CALLER_ID", "+918031728899")
 
+    # ── AI Calling & AI Provider Configuration ──
+    OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
+    GOOGLE_API_KEY: Optional[str] = os.getenv("GOOGLE_API_KEY")
+    GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY")
+
     # ── Mobile VoIP Push Signaling (Screen-Off Calling Phase 2) ──
     ENABLE_MOBILE_VOIP_PUSH: bool = os.getenv("ENABLE_MOBILE_VOIP_PUSH", "true").lower() == "true"
     FCM_PROJECT_ID: Optional[str] = os.getenv("FCM_PROJECT_ID", "myntrealosg")

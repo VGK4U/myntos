@@ -11,6 +11,7 @@
 <script src="/public/js/staff-fetch.js"></script>
   <script src="/public/js/nda-enforcement.js"></script>
 <script src="/public/js/crm-handler-confirm.js"></script>
+<script src="/public/js/universal-history-modal.js"></script>
 <script src="/public/js/mnr-map-modal.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -102,7 +103,7 @@ table.ml-table tr.lead-row:hover td{background:#f9fafb}
 .pipeline-badge{display:inline-block;padding:2px 6px;border-radius:9px;font-size:9.5px;font-weight:700}
 .ps-documents_pending{background:#fef3c7;color:#92400e}.ps-application_submitted{background:#dbeafe;color:#1e40af}.ps-pending_with_bank{background:#bfdbfe;color:#1d4ed8}
 .ps-loan_rejected{background:#fee2e2;color:#991b1b}.ps-documents_issue{background:#fed7aa;color:#c2410c}.ps-load_extension{background:#ede9fe;color:#5b21b6}
-.ps-subsidy_pending{background:#ccfbf1;color:#0f766e}.ps-completed{background:#bbf7d0;color:#065f46;border:1px solid #6ee7b7}.ps-not_interested{background:#f3f4f6;color:#374151}.ps-cancelled{background:#fce7f3;color:#9d174d}.ps-different_vendor{background:#f3e8ff;color:#7e22ce}.ps-installed{background:#dcfce7;color:#15803d;border:1px solid #86efac;font-weight:800}.ps-first_payment_received{background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;font-weight:800}
+.ps-subsidy_pending{background:#ccfbf1;color:#0f766e}.ps-completed{background:#bbf7d0;color:#065f46;border:1px solid #6ee7b7}.ps-not_interested{background:#f3f4f6;color:#374151}.ps-cancelled{background:#fce7f3;color:#9d174d}.ps-different_vendor{background:#f3e8ff;color:#7e22ce}.ps-bank_not_interested{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-weight:700}.ps-installed{background:#dcfce7;color:#15803d;border:1px solid #86efac;font-weight:800}.ps-first_payment_received{background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;font-weight:800}
 .b2b-stage-badge{display:inline-block;padding:2px 6px;border-radius:9px;font-size:9.5px;font-weight:700}
 .bs-application_pending{background:#fef3c7;color:#92400e}.bs-agreement_pending{background:#dbeafe;color:#1e40af}.bs-gst_pending{background:#ede9fe;color:#5b21b6}
 .bs-training_pending{background:#fed7aa;color:#c2410c}.bs-branding_pending{background:#e0e7ff;color:#3730a3}.bs-payment_pending{background:#fee2e2;color:#991b1b}
@@ -501,6 +502,7 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
       <div class="stat-card" id="pscard_not_interested" onclick="filterByPipeline('not_interested')" title="Filter: Not Interested"><div class="stat-icon" style="background:#f3f4f6;color:#6b7280"><i class="fas fa-ban"></i></div><div><div class="stat-label">Not Interested</div><div class="stat-value" id="ps_not_interested">—</div></div></div>
       <div class="stat-card" id="pscard_cancelled" onclick="filterByPipeline('cancelled')" title="Filter: Cancelled"><div class="stat-icon" style="background:#fce7f3;color:#9d174d"><i class="fas fa-times-circle"></i></div><div><div class="stat-label">Cancelled</div><div class="stat-value" id="ps_cancelled">—</div></div></div>
       <div class="stat-card" id="pscard_different_vendor" onclick="filterByPipeline('different_vendor')" title="Filter: Different Vendor"><div class="stat-icon" style="background:#f3e8ff;color:#7e22ce"><i class="fas fa-exchange-alt"></i></div><div><div class="stat-label">Diff. Vendor</div><div class="stat-value" id="ps_different_vendor">—</div></div></div>
+      <div class="stat-card" id="pscard_bank_not_interested" onclick="filterByPipeline('bank_not_interested')" title="Filter: Bank Not Interested"><div class="stat-icon" style="background:#fee2e2;color:#dc2626"><i class="fas fa-user-times"></i></div><div><div class="stat-label">Bank Not Int.</div><div class="stat-value" id="ps_bank_not_interested">—</div></div></div>
       <span id="ps_waiting_for_bank_loan" style="display:none">—</span>
       <span id="ps_bank_loan_rejected" style="display:none">—</span>
     </div>
@@ -654,6 +656,7 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
             <option value="not_interested">Not Interested</option>
             <option value="cancelled">Cancelled</option>
             <option value="different_vendor">Different Vendor</option>
+            <option value="bank_not_interested">Bank Not Interested</option>
           </select>
         </div>
         <div class="fgroup">
@@ -1016,7 +1019,10 @@ td.ic-handler{cursor:pointer}td.ic-handler:hover{background:#eff6ff!important;ou
   <div class="modal-box">
     <div class="modal-header">
       <h3 id="editModalTitle">Edit Lead</h3>
-      <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button type="button" class="btn btn-sm" id="btnEditModalHistory" style="display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:4px 10px;border-radius:6px;background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;cursor:pointer;font-weight:600;" onclick="openHistoryFromEditModal()"><i class="fas fa-history"></i> History</button>
+        <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      </div>
     </div>
     <div class="modal-body">
       <div class="save-error" id="saveError"></div>
@@ -1713,7 +1719,7 @@ const PIPELINE_LABELS = {
   installed:'Installed',
   net_meter_pending:'Net Meter Pending', balance_pending:'Balance Pending', balance_received:'Balance Received', subsidy_pending:'Subsidy Pending',
   completed:'Completed', not_interested:'Not Interested', cancelled:'Cancelled',
-  different_vendor:'Different Vendor'
+  different_vendor:'Different Vendor', bank_not_interested:'Bank Not Interested'
 };
 const B2B_STAGE_LABELS = {
   application_pending:'Application Pending', agreement_pending:'Agreement Pending',
@@ -2460,7 +2466,7 @@ function renderLeadsTable(leads) {
         <td style="font-size:11px">${l.deal_value_received>0?`<span class="value-chip" style="background:#d1fae5;color:#065f46">₹${fmtVal(l.deal_value_received)}</span>`:'—'}</td>
         <td class="ic" data-lid="${l.id}" data-field="next_followup_date" data-type="date" data-val="${l.next_followup_date?l.next_followup_date.slice(0,10):''}" style="font-size:10.5px${isOverdue?';color:#dc2626;font-weight:700':''}">${nf}</td>
         <td style="text-align:center;min-width:100px">${typeof _vgkCell==='function'?_vgkCell(l, l.company_id, _sdName):'—'}</td>
-        <td><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button></td>
+        <td><div style="display:flex;gap:4px;align-items:center"><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button><button class="btn-edit" style="background:#e0e7ff;color:#3730a3;border-color:#c7d2fe" onclick="openLeadHistory(${l.id})" title="Universal History"><i class="fas fa-history"></i> History</button></div></td>
       </tr>`;
     } else if (isB2B) {
       const bStage = l.ev_b2b_stage||'';
@@ -2499,7 +2505,7 @@ function renderLeadsTable(leads) {
         <td style="font-size:11px">${l.confirmed_final_value!=null?`<span class="value-chip" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d" title="Payout base locked at completion">&#128274; ₹${fmtVal(l.confirmed_final_value)}</span>`:'—'}</td>
         <td class="ic" data-lid="${l.id}" data-field="next_followup_date" data-type="date" data-val="${l.next_followup_date?l.next_followup_date.slice(0,10):''}" style="font-size:10.5px${isOverdue?';color:#dc2626;font-weight:700':''}">${nf}</td>
         <td style="font-size:10.5px">${cr}</td>
-        <td><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button></td>
+        <td><div style="display:flex;gap:4px;align-items:center"><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button><button class="btn-edit" style="background:#e0e7ff;color:#3730a3;border-color:#c7d2fe" onclick="openLeadHistory(${l.id})" title="Universal History"><i class="fas fa-history"></i> History</button></div></td>
       </tr>`;
     } else {
       const src = l.source ? `<span class="source-tag">${esc(l.source)}</span>` : '—';
@@ -2536,7 +2542,7 @@ function renderLeadsTable(leads) {
         <td style="font-size:11px">${l.confirmed_final_value!=null?`<span class="value-chip" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d" title="Payout base locked at completion">&#128274; ₹${fmtVal(l.confirmed_final_value)}</span>`:'—'}</td>
         <td class="ic" data-lid="${l.id}" data-field="next_followup_date" data-type="date" data-val="${l.next_followup_date?l.next_followup_date.slice(0,10):''}" style="font-size:10.5px${isOverdue?';color:#dc2626;font-weight:700':''}">${nf}</td>
         <td style="font-size:10.5px">${cr}</td>
-        <td><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button></td>
+        <td><div style="display:flex;gap:4px;align-items:center"><button class="btn-edit" onclick="openEdit(${l.id})"><i class="fas fa-edit"></i> Edit</button><button class="btn-edit" style="background:#e0e7ff;color:#3730a3;border-color:#c7d2fe" onclick="openLeadHistory(${l.id})" title="Universal History"><i class="fas fa-history"></i> History</button></div></td>
       </tr>`;
     }
   }).join('');
@@ -2832,7 +2838,7 @@ function computeStats(leads, total, pg) {
 }
 
 function resetStats() {
-  ['statTotal','statWon','statProgress','statLost','statValue','statCollected','statPending','statLoanRejected','ps_first_payment_received','ps_documents_pending','ps_application_submitted','ps_pending_with_bank','ps_loan_rejected','ps_documents_issue','ps_load_extension','ps_electricity_bill_change','ps_installation_pending','ps_installed','ps_net_meter_pending','ps_balance_pending','ps_balance_received','ps_subsidy_pending','ps_total_won','ps_completed','ps_not_interested','ps_cancelled','ps_different_vendor','ps_waiting_for_bank_loan','ps_bank_loan_rejected'].forEach(id=>{
+  ['statTotal','statWon','statProgress','statLost','statValue','statCollected','statPending','statLoanRejected','ps_first_payment_received','ps_documents_pending','ps_application_submitted','ps_pending_with_bank','ps_loan_rejected','ps_documents_issue','ps_load_extension','ps_electricity_bill_change','ps_installation_pending','ps_installed','ps_net_meter_pending','ps_balance_pending','ps_balance_received','ps_subsidy_pending','ps_total_won','ps_completed','ps_not_interested','ps_cancelled','ps_different_vendor','ps_bank_not_interested','ps_waiting_for_bank_loan','ps_bank_loan_rejected'].forEach(id=>{
     const e=document.getElementById(id); if(e) e.textContent='—';
   });
 }
@@ -2903,7 +2909,7 @@ async function loadStats() {
     // Pipeline breakdown (solar tab only)
     if (activeTab === 'solar') {
       const pl = data.pipeline_breakdown || {};
-      ['first_payment_received','documents_pending','application_submitted','pending_with_bank','loan_rejected','documents_issue','load_extension','electricity_bill_change','installation_pending','installed','net_meter_pending','balance_pending','balance_received','subsidy_pending','completed','not_interested','cancelled','different_vendor','waiting_for_bank_loan','bank_loan_rejected'].forEach(k => {
+      ['first_payment_received','documents_pending','application_submitted','pending_with_bank','loan_rejected','documents_issue','load_extension','electricity_bill_change','installation_pending','installed','net_meter_pending','balance_pending','balance_received','subsidy_pending','completed','not_interested','cancelled','different_vendor','bank_not_interested','waiting_for_bank_loan','bank_loan_rejected'].forEach(k => {
         const e = el('ps_' + k); if (e) e.textContent = fmtNum(pl[k] || 0);
       });
       /* Merged card: loan_rejected pipeline + bank_loan_rejected status */
@@ -3791,6 +3797,24 @@ function openEdit(leadId){
 
 function closeEditModal(){document.getElementById('editModal').classList.remove('open');document.body.style.overflow='';editingLead=null;}
 
+function openLeadHistory(leadId) {
+  const l = (_leadsCache || []).find(x => x.id == leadId) || (editingLead && editingLead.id == leadId ? editingLead : { id: leadId });
+  if (window.openUniversalHistory) {
+    window.openUniversalHistory({
+      entityType: 'crm_lead',
+      entityId: leadId,
+      name: l.name || `Lead #${leadId}`,
+      phone: l.phone || l.mobile_number || '',
+      category: l.category || 'CRM Lead'
+    });
+  }
+}
+
+function openHistoryFromEditModal() {
+  if (!editingLead) return;
+  openLeadHistory(editingLead.id);
+}
+
 function renderStaffVisitsSection(lead) {
   const container = document.getElementById('ef_staff_visits_container');
   const badge = document.getElementById('ef_visit_count_badge');
@@ -4578,7 +4602,7 @@ function inlineCellEdit(td) {
     [['','Not Set'],['not_applied','Not Applied'],['applied','Applied'],['under_review','Under Review'],['bank_applied','At Bank'],['approved','Approved'],['pending_installation','Waiting Install'],['installed','Installed ✓'],['rejected','Rejected'],['bank_loan_rejected','Bank Loan Rejected'],['received','Subsidy Received ✓']].forEach(([v,lb]) => { const o=new Option(lb,v); if(v===curVal)o.selected=true; el.appendChild(o); });
   } else if (type === 'pipeline') {
     el = document.createElement('select');
-    [['','Not Set'],['documents_pending','Documents Pending'],['application_submitted','Application Submitted'],['pending_with_bank','Pending with Bank'],['loan_rejected','Loan Rejected'],['documents_issue','Documents Issue'],['load_extension','Load Extension'],['electricity_bill_change','Electricity Bill Change'],['installation_pending','Installation Pending'],['net_meter_pending','Net Meter Pending'],['balance_pending','Balance Pending'],['balance_received','Balance Received'],['subsidy_pending','Subsidy Pending'],['completed','Completed'],['not_interested','Not Interested'],['cancelled','Cancelled'],['different_vendor','Different Vendor']].forEach(([v,lb]) => { const o=new Option(lb,v); if(v===curVal)o.selected=true; el.appendChild(o); });
+    [['','Not Set'],['documents_pending','Documents Pending'],['application_submitted','Application Submitted'],['pending_with_bank','Pending with Bank'],['loan_rejected','Loan Rejected'],['documents_issue','Documents Issue'],['load_extension','Load Extension'],['electricity_bill_change','Electricity Bill Change'],['installation_pending','Installation Pending'],['net_meter_pending','Net Meter Pending'],['balance_pending','Balance Pending'],['balance_received','Balance Received'],['subsidy_pending','Subsidy Pending'],['completed','Completed'],['not_interested','Not Interested'],['cancelled','Cancelled'],['different_vendor','Different Vendor'],['bank_not_interested','Bank Not Interested']].forEach(([v,lb]) => { const o=new Option(lb,v); if(v===curVal)o.selected=true; el.appendChild(o); });
   } else if (type === 'b2b_stage') {
     el = document.createElement('select');
     [['','Not Set'],['application_pending','Application Pending'],['agreement_pending','Agreement Pending'],['gst_pending','GST Pending'],['training_pending','Training Pending'],['branding_pending','Branding Pending'],['payment_pending','Payment Pending'],['dispatch_pending','Dispatch Pending'],['confirmation_pending','Confirmation Pending'],['completed','Completed']].forEach(([v,lb]) => { const o=new Option(lb,v); if(v===curVal)o.selected=true; el.appendChild(o); });
@@ -4970,7 +4994,7 @@ function inlineHandlerEdit(td) {
 
 // [DC-SOLAR-VENDOR-001] Vendor status helpers
 function _computeVendorStatus(status, sps) {
-  const _CANCELLED = new Set(['loan_rejected','diff_vendor_loan_rejected','not_interested','cancelled','different_vendor']);
+  const _CANCELLED = new Set(['loan_rejected','diff_vendor_loan_rejected','not_interested','cancelled','different_vendor','bank_not_interested']);
   const _FINAL     = new Set(['subsidy_cleared','bank_loan_completed']);
   const _COMPLETED = new Set(['installed','net_meter_pending','completed']);
   const s = (sps||'').toLowerCase(), st = (status||'').toLowerCase();

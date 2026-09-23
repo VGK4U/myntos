@@ -585,6 +585,124 @@ def get_review(
     return result
 
 
+# ── Open or Create Review Dynamically ─────────────────────────────────────────
+
+@router.post('/call-quality/reviews/open-or-create')
+def open_or_create_review(
+    body: dict,
+    company_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_staff_user),
+):
+    """
+    Dynamically open an existing review or create a new pending review for any call.
+    Accepts call_log_id or call_session_id.
+    Returns enriched review object ready for rendering in the Quality Review modal.
+    """
+    import re
+    from app.models.voip_call_session import VoIPCallSession
+
+    role_code = _get_role_code(db, current_user.id)
+    full_access = _is_full_access(role_code)
+    effective_cid = _resolve_company_optional(company_id, full_access, current_user)
+
+    call_log_id = body.get('call_log_id')
+    call_session_id = body.get('call_session_id')
+    phone = body.get('phone')
+    lead_id = body.get('lead_id')
+
+    # 1. Resolve StaffCallLog if call_log_id provided
+    log = None
+    if call_log_id:
+        try:
+            log = db.query(StaffCallLog).filter(StaffCallLog.id == int(call_log_id)).first()
+        except Exception:
+            pass
+
+    # 2. If no log found yet, try searching by device_call_id or call_session_id
+    if not log and call_session_id:
+        log = db.query(StaffCallLog).filter(
+            StaffCallLog.device_call_id == str(call_session_id)
+        ).first()
+
+    # 2b. If still no log, search by phone
+    if not log and phone:
+        clean_p = re.sub(r'\D', '', str(phone))[-10:]
+        if clean_p:
+            q_log = db.query(StaffCallLog).filter(StaffCallLog.phone_number.ilike(f"%{clean_p}%"))
+            if lead_id:
+                try:
+                    q_log = q_log.filter(StaffCallLog.matched_lead_id == int(lead_id))
+                except Exception:
+                    pass
+            log = q_log.order_by(StaffCallLog.call_datetime.desc()).first()
+
+    # 3. Check VoIPCallSession if available
+    voip = None
+    if call_session_id:
+        voip = db.query(VoIPCallSession).filter(
+            or_(
+                VoIPCallSession.call_session_id == str(call_session_id),
+                VoIPCallSession.provider_call_id == str(call_session_id)
+            )
+        ).first()
+
+    # Check existing CallQualityReview
+    rev = None
+    if log:
+        rev = db.query(CallQualityReview).filter(CallQualityReview.call_log_id == log.id).first()
+    
+    if not rev and voip:
+        rev = db.query(CallQualityReview).filter(
+            CallQualityReview.overall_remarks.ilike(f"%{voip.call_session_id}%")
+        ).first()
+
+    # If review exists, check access and return
+    if rev:
+        if not full_access:
+            downline = _get_downline_ids(db, current_user.id, effective_cid)
+            downline.append(current_user.id)
+            if rev.staff_id not in downline:
+                raise HTTPException(403, 'Unauthorized to view this review.')
+        return get_review(review_id=rev.id, company_id=rev.company_id, db=db, current_user=current_user)
+
+    # If review does NOT exist, initialize one dynamically!
+    target_staff_id = (log.staff_id if log else None) or (voip.operator_id if voip else None) or current_user.id
+    target_cid = (log.company_id if log and log.company_id else None) or effective_cid or (current_user.base_company_id or 1)
+    
+    # Resolve lead_id
+    target_lead_id = (log.matched_lead_id if log else None) or (voip.lead_id if voip else None) or lead_id
+    if not target_lead_id and phone:
+        clean_p = re.sub(r'\D', '', str(phone))[-10:]
+        if clean_p:
+            matched_lead = db.query(CRMLead.id).filter(CRMLead.phone.ilike(f"%{clean_p}%")).order_by(CRMLead.id.desc()).first()
+            if matched_lead:
+                target_lead_id = matched_lead.id
+
+    # Resolve sample date
+    target_date = _today_ist()
+    if log and log.call_date:
+        target_date = log.call_date
+    elif voip and voip.started_at:
+        target_date = voip.started_at.strftime('%Y-%m-%d')
+
+    rev = CallQualityReview(
+        company_id=target_cid,
+        staff_id=target_staff_id,
+        call_log_id=log.id if log else None,
+        lead_id=target_lead_id,
+        sample_date=target_date,
+        sampled_by='manual',
+        status='pending',
+        overall_remarks=f"Created on-demand for session {call_session_id}" if (not log and call_session_id) else None
+    )
+    db.add(rev)
+    db.commit()
+    db.refresh(rev)
+
+    return get_review(review_id=rev.id, company_id=rev.company_id, db=db, current_user=current_user)
+
+
 # ── Submit Review ─────────────────────────────────────────────────────────────
 
 @router.post('/call-quality/reviews/{review_id}/submit')

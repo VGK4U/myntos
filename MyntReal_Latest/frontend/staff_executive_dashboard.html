@@ -336,6 +336,7 @@ th[data-sk]:hover{background:#eef2f7!important}
           <option value="not_interested">Not Interested</option>
           <option value="cancelled">Cancelled</option>
           <option value="different_vendor">Diff Vendor</option>
+          <option value="bank_not_interested">Bank Not Int.</option>
         </select>
       </div>
       <div style="display:flex;gap:5px;align-items:flex-end">
@@ -1616,7 +1617,7 @@ function _updateKPIsFromHandlerRows(rows){
    Won ≈ total minus dropped stages (not_interested + cancelled + different_vendor). */
 function _updateKPIsFromStagewiseRows(rows){
   const total   = rows.reduce((s,r)=>s+(r.total||0),0);
-  const dropped = rows.reduce((s,r)=>s+(r.sp_not_interested||0)+(r.sp_cancelled||0)+(r.sp_different_vendor||0),0);
+  const dropped = rows.reduce((s,r)=>s+(r.sp_not_interested||0)+(r.sp_cancelled||0)+(r.sp_different_vendor||0)+(r.sp_bank_not_interested||0),0);
   const won     = Math.max(0, total - dropped);
   const comp    = rows.reduce((s,r)=>s+(r.sp_completed||0),0);
   const inProg  = Math.max(0, won - comp);
@@ -2035,6 +2036,7 @@ const SOLAR_SW_COLS = [
   {key:'sp_not_interested',         label:'Not Interested',       color:'#6b7280'},
   {key:'sp_cancelled',              label:'Cancelled',            color:'#9ca3af'},
   {key:'sp_different_vendor',       label:'Diff Vendor',          color:'#a78bfa'},
+  {key:'sp_bank_not_interested',     label:'Bank Not Int.',        color:'#be123c'},
 ];
 
 // DC-STAGE-COLS: Stage column definitions for the leaderboard.
@@ -2245,6 +2247,7 @@ function _buildSwRows(){
     sp_not_interested:r.sp_not_interested||0,                dv_sp_not_interested:r.dv_sp_not_interested||0,
     sp_cancelled:r.sp_cancelled||0,                          dv_sp_cancelled:r.dv_sp_cancelled||0,
     sp_different_vendor:r.sp_different_vendor||0,             dv_sp_different_vendor:r.dv_sp_different_vendor||0,
+    sp_bank_not_interested:r.sp_bank_not_interested||0,       dv_sp_bank_not_interested:r.dv_sp_bank_not_interested||0,
   });
   let rows=[],labelCol='Name',showCode=false;
   if(t==='ground'){

@@ -276,17 +276,14 @@ def test_xml_generation_twilio_mode():
 
 
 def test_xml_bcp47_languages():
-    """Verify correct BCP-47 codes are injected for Telugu, Hindi, and English."""
-    for lang, bcp, expected_voice in [
-        ("te", "te-IN", "Polly.Kavya"),
-        ("hi", "hi-IN", "Polly.Aditi"),
-        ("en", "en-IN", "Polly.Aditi"),
-    ]:
+    """Verify correct XML and speechModel are injected for Telugu, Hindi, and English."""
+    # Hindi and English support Polly.Aditi on Plivo and use phone_call speechModel
+    for lang, bcp in [("hi", "hi-IN"), ("en", "en-IN")]:
         prompt_block = _build_speak_or_say(
             is_plivo=True,
             text="Test prompt",
             lang_code=bcp,
-            voice=expected_voice,
+            voice="Polly.Aditi",
         )
         resp = _build_speech_gather_xml(
             is_plivo=True,
@@ -296,8 +293,33 @@ def test_xml_bcp47_languages():
         )
         xml = resp.body.decode("utf-8")
         assert f'language="{bcp}"' in xml
-        assert f'voice="{expected_voice}"' in xml
+        assert 'voice="Polly.Aditi"' in xml
+        assert 'speechModel="phone_call"' in xml
         ET.fromstring(xml)  # Must be valid XML
+
+    # Telugu (te / te-IN) on Plivo: Polly has NO Telugu voice model.
+    # Under NO circumstance may Telugu generate <Speak voice="Polly.Aditi" language="te-IN">.
+    # It must generate <Play> with fallback audio and speechModel="default".
+    te_prompt = _build_speak_or_say(
+        is_plivo=True,
+        text="Namaskaram",
+        lang_code="te-IN",
+        base_url="https://www.myntreal.com",
+        context="greeting",
+    )
+    te_resp = _build_speech_gather_xml(
+        is_plivo=True,
+        action_url="https://example.com/resp",
+        lang_code="te-IN",
+        content_block=te_prompt,
+    )
+    te_xml = te_resp.body.decode("utf-8")
+    assert 'language="te-IN"' in te_xml
+    assert 'speechModel="default"' in te_xml
+    assert "<Play>https://www.myntreal.com/api/v1/staff/ai-calling/audio/te_fallback_greeting.wav</Play>" in te_xml
+    assert "<Speak" not in te_xml
+    assert "Polly.Aditi" not in te_xml
+    ET.fromstring(te_xml)
 
 
 # ─── 3. DUAL-WEBHOOK PARAMETER EXTRACTION ─────────────────────────────────────
@@ -353,7 +375,7 @@ def test_status_code_mappings():
 # ─── 4. GENDER PERSONA MAPPING & CONSISTENCY ──────────────────────────────────
 
 def test_persona_resolver_complete_coverage():
-    """Verify persona mapping invariant:
+    """Verify persona mapping invariant per user correction:
     - male -> ('Teja', 'onyx')
     - female -> ('Vidya', 'nova')
     - unknown / None -> ('Vidya', 'nova')
@@ -637,7 +659,7 @@ def test_concurrent_webhooks_same_call_sid():
 
 
 def test_webhook_voice_select_plivo_xml_response():
-    """Verify webhook_voice_select produces valid Plivo XML with <GetInput> and <Speak>."""
+    """Verify webhook_voice_select produces valid Plivo XML with <GetInput> and <Play> (Telugu safety)."""
     import asyncio
     from starlette.datastructures import FormData
 
@@ -673,7 +695,9 @@ def test_webhook_voice_select_plivo_xml_response():
             assert resp.media_type == "application/xml"
             xml_str = resp.body.decode("utf-8")
             assert "<GetInput" in xml_str
-            assert "<Speak" in xml_str
+            assert "<Play" in xml_str
+            assert "<Speak" not in xml_str
+            assert 'speechModel="default"' in xml_str
             assert 'language="te-IN"' in xml_str
 
             root = ET.fromstring(xml_str)
@@ -690,7 +714,7 @@ def test_webhook_voice_select_plivo_xml_response():
 
 
 def test_webhook_database_failure_fallback_xml():
-    """Verify unexpected database failures return graceful Plivo XML instead of HTTP 500 JSON."""
+    """Verify unexpected database failures return graceful Plivo XML with <Play> instead of HTTP 500 JSON."""
     import asyncio
     from starlette.datastructures import FormData
 
@@ -718,13 +742,15 @@ def test_webhook_database_failure_fallback_xml():
         assert resp.media_type == "application/xml"
         xml_str = resp.body.decode("utf-8")
         assert "<Response>" in xml_str
-        assert "<Speak" in xml_str
+        assert "<Play" in xml_str
+        assert "te_fallback_error.wav" in xml_str
         assert "<Hangup" in xml_str
+        assert "<Speak" not in xml_str
         assert "{" not in xml_str  # Must NOT be JSON error!
 
         root = ET.fromstring(xml_str)
         assert root.tag == "Response"
-        assert root.find("Speak") is not None
+        assert root.find("Play") is not None
         assert root.find("Hangup") is not None
 
     asyncio.run(_async_test())
@@ -819,7 +845,8 @@ def test_complete_voice_flow_step_1_2_3():
             xml3 = resp3.body.decode("utf-8")
             root3 = ET.fromstring(xml3)
             assert root3.find("GetInput") is not None
-            assert "Meeru adigina details ivi..." in xml3
+            assert "<Play" in xml3
+            assert "<Speak" not in xml3
         finally:
             db.execute(text("DELETE FROM ai_call_sessions WHERE call_sid = :sid"), {"sid": test_sid})
             if log_id:
@@ -837,11 +864,16 @@ def test_webhook_status_followup_and_lead_update():
 
     async def _async_status():
         db = SessionLocal()
-        test_sid = "test_status_callback_sid_606"
+        import uuid
+        test_sid = f"test_status_callback_sid_606_{uuid.uuid4().hex[:8]}"
         test_phone = "+919999888771"
         log_id = None
         lead_id = None
         try:
+            # Clean up any leftover records
+            db.execute(text("DELETE FROM ai_call_sessions WHERE call_sid LIKE 'test_status_callback_sid_606%'"))
+            db.commit()
+
             # 1. Create a test lead with required priority and handler_type
             lead_id = db.execute(text("""
                 INSERT INTO crm_leads (
@@ -943,11 +975,16 @@ def test_webhook_status_autocreates_lead_when_unlinked():
 
     async def _async_unlinked():
         db = SessionLocal()
-        test_sid = "test_status_callback_sid_707"
+        import uuid
+        test_sid = f"test_status_callback_sid_707_{uuid.uuid4().hex[:8]}"
         test_phone = "+919999888772"
         log_id = None
         new_lead_id = None
         try:
+            # Clean up any leftover records
+            db.execute(text("DELETE FROM ai_call_sessions WHERE call_sid LIKE 'test_status_callback_sid_707%'"))
+            db.commit()
+
             # 1. Create test call log WITHOUT lead_id
             log_id = db.execute(text("""
                 INSERT INTO ai_call_logs (
@@ -1029,7 +1066,6 @@ def test_webhook_status_autocreates_lead_when_unlinked():
                     db.execute(text("DELETE FROM ai_call_logs WHERE id = :id"), {"id": log_id})
                 if new_lead_id:
                     db.execute(text("DELETE FROM crm_lead_notes WHERE lead_id = :id"), {"id": new_lead_id})
-                    db.execute(text("DELETE FROM crm_lead_identities WHERE lead_id = :id"), {"id": new_lead_id})
                     db.execute(text("DELETE FROM crm_leads WHERE id = :id"), {"id": new_lead_id})
                 db.commit()
             except Exception:
@@ -1037,6 +1073,142 @@ def test_webhook_status_autocreates_lead_when_unlinked():
             db.close()
 
     asyncio.run(_async_unlinked())
+
+
+# ─── 8. TELUGU PLIVO SAFETY & OPENAI CONFIG TESTS ─────────────────────────────
+
+def test_telugu_greeting_generates_play_not_speak_when_tts_unavailable():
+    """Verify that when OpenAI TTS is unavailable, Telugu greeting generates <Play> with fallback audio and NEVER <Speak>."""
+    greeting_block = _format_greeting_block(
+        is_plivo=True,
+        audio_serve_url=None,
+        fallback_text="Namaskaram, welcome to Mynt Real.",
+        lang_code="te-IN",
+        base_url="https://www.myntreal.com",
+    )
+    assert "<Play>" in greeting_block
+    assert "https://www.myntreal.com/api/v1/staff/ai-calling/audio/te_fallback_greeting.wav" in greeting_block
+    assert "<Speak" not in greeting_block
+    assert "Polly.Aditi" not in greeting_block
+
+
+def test_no_polly_aditi_with_telugu_in_any_context():
+    """Under no circumstance may Telugu (te / te-IN) generate <Speak voice='Polly.Aditi' language='te-IN'>."""
+    for context, expected_file in [
+        ("greeting", "te_fallback_greeting.wav"),
+        ("silence", "te_fallback_silence.wav"),
+        ("filler", "te_fallback_filler.wav"),
+        ("error", "te_fallback_error.wav"),
+        ("closing", "te_fallback_closing.wav"),
+    ]:
+        xml = _build_speak_or_say(
+            is_plivo=True,
+            text="Telugu test message",
+            lang_code="te-IN",
+            voice="Polly.Aditi",
+            base_url="https://www.myntreal.com",
+            context=context,
+        )
+        assert f"<Play>https://www.myntreal.com/api/v1/staff/ai-calling/audio/{expected_file}</Play>" in xml
+        assert "<Speak" not in xml
+        assert "Polly.Aditi" not in xml
+
+
+def test_telugu_asr_uses_speechmodel_default():
+    """Plivo ASR speechModel='phone_call' is unsupported for Indic regional languages; te-IN requires speechModel='default'."""
+    prompt = "<Play>https://example.com/audio.wav</Play>"
+    resp = _build_speech_gather_xml(
+        is_plivo=True,
+        action_url="https://example.com/respond",
+        lang_code="te-IN",
+        content_block=prompt,
+    )
+    xml = resp.body.decode("utf-8")
+    assert 'language="te-IN"' in xml
+    assert 'speechModel="default"' in xml
+    assert 'speechModel="phone_call"' not in xml
+
+    # Menu gather also uses default for te-IN
+    menu_resp = _build_menu_gather_xml(
+        is_plivo=True,
+        action_url="https://example.com/menu",
+        lang_code="te-IN",
+        prompt_text="Language choice",
+        base_url="https://example.com",
+        context="greeting",
+    )
+    menu_xml = menu_resp.body.decode("utf-8")
+    assert 'language="te-IN"' in menu_xml
+    assert 'speechModel="default"' in menu_xml
+    assert 'speechModel="phone_call"' not in menu_xml
+
+
+def test_english_uses_speechmodel_phone_call_and_speak_aditi():
+    """English greeting uses speechModel='phone_call' and <Speak voice='Polly.Aditi' language='en-IN'>."""
+    prompt = _build_speak_or_say(
+        is_plivo=True,
+        text="Welcome to Mynt Real",
+        lang_code="en-IN",
+        voice="Polly.Aditi",
+        base_url="https://example.com",
+        context="greeting",
+    )
+    assert '<Speak voice="Polly.Aditi" language="en-IN">Welcome to Mynt Real</Speak>' in prompt
+    assert "<Play>" not in prompt
+
+    resp = _build_speech_gather_xml(
+        is_plivo=True,
+        action_url="https://example.com/respond",
+        lang_code="en-IN",
+        content_block=prompt,
+    )
+    xml = resp.body.decode("utf-8")
+    assert 'language="en-IN"' in xml
+    assert 'speechModel="phone_call"' in xml
+    assert '<Speak voice="Polly.Aditi" language="en-IN">' in xml
+
+
+def test_openai_tts_success_path_generates_play_with_uuid():
+    """When OpenAI TTS succeeds, _format_greeting_block produces <Play> with the audio URL."""
+    audio_url = "https://www.myntreal.com/api/v1/staff/ai-calling/audio/a1b2c3d4-test.wav"
+    block = _format_greeting_block(
+        is_plivo=True,
+        audio_serve_url=audio_url,
+        fallback_text="Fallback text",
+        lang_code="te-IN",
+        base_url="https://www.myntreal.com",
+    )
+    assert block == f"<Play>{audio_url}</Play>"
+    assert "<Speak" not in block
+
+
+def test_webhook_error_fallback_generates_play_for_telugu():
+    """_twiml_error_hangup for Telugu generates <Play> with te_fallback_error.wav and hangs up."""
+    resp = _twiml_error_hangup(lang="te", is_plivo=True, base_url="https://www.myntreal.com")
+    xml = resp.body.decode("utf-8")
+    assert "<Play>https://www.myntreal.com/api/v1/staff/ai-calling/audio/te_fallback_error.wav</Play>" in xml
+    assert "<Hangup/>" in xml
+    assert "<Speak" not in xml
+    assert "Polly.Aditi" not in xml
+
+
+def test_openai_api_key_declared_in_settings():
+    """Verify OPENAI_API_KEY is declared in application Settings class."""
+    from app.core.config import settings, Settings
+    fields = getattr(Settings, "model_fields", None) or getattr(Settings, "__fields__", {})
+    assert "OPENAI_API_KEY" in fields, "Settings Pydantic model must declare OPENAI_API_KEY field"
+
+
+def test_crm_dialer_unassigned_lead_no_attribute_error():
+    """Verify CRMLead has no assigned_to attribute, and crm_dialer correctly uses primary_owner_id/telecaller_id."""
+    from app.models.crm import CRMLead
+    lead = CRMLead(id=1, name="Test Lead", phone="9876543210", handler_type="unassigned")
+    assert not hasattr(lead, "assigned_to"), "CRMLead should NOT have assigned_to attribute"
+    assert hasattr(lead, "primary_owner_id"), "CRMLead has primary_owner_id"
+    assert hasattr(lead, "telecaller_id"), "CRMLead has telecaller_id"
+    assert hasattr(lead, "handler_id"), "CRMLead has handler_id"
+    assert hasattr(lead, "handler_type"), "CRMLead has handler_type"
+
 
 
 

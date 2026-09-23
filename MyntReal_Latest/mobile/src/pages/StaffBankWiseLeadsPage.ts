@@ -10,6 +10,7 @@ import { authService } from '../services/auth.service';
 import { PageHeader } from '../components/PageHeader';
 import { routerService } from '../services/router.service';
 import { unifiedWAModal } from '../components/UnifiedWAModal';
+import { UniversalLeadHistoryModal } from '../components/UniversalLeadHistoryModal';
 
 interface BankLead {
   id: number;
@@ -51,10 +52,11 @@ interface BankLead {
   days_active?: number;
   ground_source_name?: string;
   ground_source_phone?: string;
-  ground_source_id?: string;
+  ground_source_id?: number | string;
   ground_source_upliner?: string;
   upliner_name?: string;
   upliner_phone?: string;
+  upliner_id?: number | string;
   telecaller_name?: string;
   telecaller_phone?: string;
   co_applicant_name?: string;
@@ -155,7 +157,7 @@ export class StaffBankWiseLeadsPage {
 
   private isBankLead(l: BankLead): boolean {
     const stage = (l.solar_pipeline_stage || l.solar_pipeline_status || l.stage || l.status || '').toLowerCase();
-    return stage === 'pending_with_bank' || stage === 'at bank' || stage === 'at_bank' || stage.includes('bank');
+    return (stage === 'pending_with_bank' || stage === 'at bank' || stage === 'at_bank' || stage.includes('bank')) && !stage.includes('not_interested') && !stage.includes('not interested');
   }
 
   private isBalancePendingLead(l: BankLead): boolean {
@@ -173,6 +175,11 @@ export class StaffBankWiseLeadsPage {
     return stage === 'electricity_bill_change' || stage === 'electricity_bill' || stage === 'eb_name_change' || stage.includes('electricity') || stage.includes('eb_name') || stage.includes('bill_change');
   }
 
+  private isBankNotInterestedLead(l: BankLead): boolean {
+    const stage = (l.solar_pipeline_stage || l.solar_pipeline_status || l.stage || l.status || '').toLowerCase();
+    return stage === 'bank_not_interested' || stage === 'bank not interested' || stage.includes('bank_not_interested') || (stage.includes('bank') && (stage.includes('not_interested') || stage.includes('not interested')));
+  }
+
   private getActiveLeads(): BankLead[] {
     if (this.currentTab === 'balance-pending') {
       return this.leads.filter(l => this.isBalancePendingLead(l));
@@ -180,6 +187,8 @@ export class StaffBankWiseLeadsPage {
       return this.leads.filter(l => this.isNetMeterPendingLead(l));
     } else if (this.currentTab === 'electricity-bill-change') {
       return this.leads.filter(l => this.isElectricityBillChangeLead(l));
+    } else if (this.currentTab === 'bank-not-interested') {
+      return this.leads.filter(l => this.isBankNotInterestedLead(l));
     } else if (this.currentTab === 'branch-summary' || this.currentTab === 'ground-source-summary') {
       return this.leads;
     }
@@ -285,6 +294,7 @@ export class StaffBankWiseLeadsPage {
     const balanceCount = this.leads.filter(l => this.isBalancePendingLead(l)).length;
     const netMeterCount = this.leads.filter(l => this.isNetMeterPendingLead(l)).length;
     const ebCount = this.leads.filter(l => this.isElectricityBillChangeLead(l)).length;
+    const notInterestedCount = this.leads.filter(l => this.isBankNotInterestedLead(l)).length;
 
     // Aggregate metrics for active leads
     let totalDealValue = 0;
@@ -339,6 +349,9 @@ export class StaffBankWiseLeadsPage {
             <button class="bl-tab-btn info ${this.currentTab === 'electricity-bill-change' ? 'active' : ''}" data-tab="electricity-bill-change">
               <i class="fas fa-file-invoice me-1"></i> EB Change <span class="bl-tab-badge">${ebCount}</span>
             </button>
+            <button class="bl-tab-btn danger ${this.currentTab === 'bank-not-interested' ? 'active' : ''}" data-tab="bank-not-interested">
+              <i class="fas fa-user-slash me-1"></i> Not Interested <span class="bl-tab-badge">${notInterestedCount}</span>
+            </button>
             <button class="bl-tab-btn teal ${this.currentTab === 'branch-summary' ? 'active' : ''}" data-tab="branch-summary">
               <i class="fas fa-building me-1"></i> Branch Summary
             </button>
@@ -355,7 +368,7 @@ export class StaffBankWiseLeadsPage {
             <span class="bl-metric-val">${activeLeads.length}</span>
           </div>
           <div class="bl-metric-card highlight">
-            <span class="bl-metric-label">${this.currentTab === 'balance-pending' ? 'Total Pending Bal' : 'Total Portfolio'}</span>
+            <span class="bl-metric-label">${this.currentTab === 'balance-pending' ? 'Total Pending Bal' : (this.currentTab === 'bank-not-interested' ? 'Total Lost/Not Interested' : 'Total Portfolio')}</span>
             <span class="bl-metric-val" style="color:#38bdf8;">${this.formatCurrency(totalDealValue)}</span>
           </div>
           <div class="bl-metric-card">
@@ -526,7 +539,7 @@ export class StaffBankWiseLeadsPage {
           </div>
           <div class="bl-card-badge-wrap">
             <span class="bl-days-badge ${daysBadgeClass}">${days}d active</span>
-            <span class="bl-stage-pill">${this.escapeHtml(stageName)}</span>
+            <span class="bl-stage-pill ${stageName.includes('NOT INTERESTED') ? 'danger' : ''}">${this.escapeHtml(stageName)}</span>
           </div>
         </div>
 
@@ -551,6 +564,9 @@ export class StaffBankWiseLeadsPage {
               </a>
               <button class="bl-btn-wa open-wa-modal" data-phone="${cleanCustomerPhone}" data-name="${this.escapeHtml(customerName)}" data-lead-id="${lead.id}" data-context="${this.escapeHtml(bankName)} (${this.escapeHtml(stageName)})" title="Send WhatsApp Message">
                 <i class="fab fa-whatsapp"></i>
+              </button>
+              <button class="bl-btn-wa open-lead-history-btn" data-lead-id="${lead.id}" data-name="${this.escapeHtml(customerName)}" data-phone="${cleanCustomerPhone}" data-bank="${this.escapeHtml(bankName)}" title="Universal History" style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;">
+                <i class="fas fa-history"></i>
               </button>
             </div>
           ` : ''}
@@ -611,6 +627,7 @@ export class StaffBankWiseLeadsPage {
                   <div style="display:flex; gap:6px;">
                     ${gsPhone ? `<a href="tel:${cleanGsPhone}" class="bl-mini-call-btn source"><i class="fas fa-phone-alt me-1"></i>Call</a>` : ''}
                     ${gsPhone ? `<button class="bl-mini-call-btn source open-wa-modal" data-phone="${cleanGsPhone}" data-name="${this.escapeHtml(gsName)}" data-lead-id="${lead.id}" data-context="Ground Source: ${this.escapeHtml(customerName)}" style="background:#16a34a; border-color:#16a34a;"><i class="fab fa-whatsapp"></i></button>` : ''}
+                    ${gsPhone || gsName ? `<button class="bl-mini-call-btn source open-universal-history-member" data-member-name="${this.escapeHtml(gsName)}" data-member-phone="${cleanGsPhone}" data-member-id="${lead.ground_source_id || 0}" style="background:#4f46e5; border-color:#4f46e5; color:#fff;" title="Ground Source History"><i class="fas fa-history"></i></button>` : ''}
                   </div>
                 </div>
 
@@ -626,6 +643,7 @@ export class StaffBankWiseLeadsPage {
                     <div style="display:flex; gap:6px;">
                       ${uplinerPhone ? `<a href="tel:${cleanUplinerPhone}" class="bl-mini-call-btn upliner"><i class="fas fa-phone-alt me-1"></i>Call</a>` : ''}
                       ${uplinerPhone ? `<button class="bl-mini-call-btn upliner open-wa-modal" data-phone="${cleanUplinerPhone}" data-name="${this.escapeHtml(uplinerName)}" data-lead-id="${lead.id}" data-context="Upliner: ${this.escapeHtml(customerName)}" style="background:#16a34a; border-color:#16a34a;"><i class="fab fa-whatsapp"></i></button>` : ''}
+                      <button class="bl-mini-call-btn upliner open-universal-history-member" data-member-name="${this.escapeHtml(uplinerName)}" data-member-phone="${cleanUplinerPhone}" data-member-id="${lead.upliner_id || 0}" style="background:#4f46e5; border-color:#4f46e5; color:#fff;" title="Upliner History"><i class="fas fa-history"></i></button>
                     </div>
                   </div>
                 ` : ''}
@@ -680,6 +698,9 @@ export class StaffBankWiseLeadsPage {
             <button class="bl-expand-btn toggle-lead-expand" data-lead-id="${lead.id}">
               <span>${isExpanded ? 'Less' : 'More Details'}</span>
               <i class="fas fa-chevron-${isExpanded ? 'up' : 'down'} ms-1"></i>
+            </button>
+            <button class="bl-action-btn open-lead-history-btn" data-lead-id="${lead.id}" data-name="${this.escapeHtml(customerName)}" data-phone="${cleanCustomerPhone}" data-bank="${this.escapeHtml(bankName)}" title="Universal History" style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;">
+              <i class="fas fa-history"></i>
             </button>
             <button class="bl-action-btn view-crm-lead" data-lead-id="${lead.id}" title="Open Lead in CRM">
               <i class="fas fa-external-link-alt"></i>
@@ -820,6 +841,7 @@ export class StaffBankWiseLeadsPage {
                   <span class="bl-sum-badge count">${g.leads.length} files</span>
                   <span class="bl-sum-badge amount">${this.formatCurrency(g.totalLoan)}</span>
                   ${g.phone ? `<a href="tel:${cleanPhone}" class="bl-quick-btn call" onclick="event.stopPropagation()" title="Call Member"><i class="fas fa-phone"></i></a>` : ''}
+                  <button type="button" class="bl-quick-btn open-universal-history-member" data-member-name="${this.escapeHtml(g.memberName)}" data-member-phone="${cleanPhone}" onclick="event.stopPropagation()" title="Universal History" style="background:#4f46e5;color:#fff;border:none;"><i class="fas fa-history"></i></button>
                   <i class="fas fa-chevron-${isExp ? 'up' : 'down'} ms-2" style="color:#9ca3af; font-size:12px;"></i>
                 </div>
               </div>
@@ -842,6 +864,7 @@ export class StaffBankWiseLeadsPage {
                             <div style="font-size:11px; color:#fbbf24;">${l.stage_days || 0}d active</div>
                           </div>
                           ${custPhone ? `<a href="tel:${cleanCustPhone}" class="bl-quick-btn call" title="Call"><i class="fas fa-phone"></i></a>` : ''}
+                          <button type="button" class="bl-quick-btn open-lead-history-btn" data-lead-id="${l.id}" data-name="${this.escapeHtml(l.customer_name || l.name || 'Client')}" data-phone="${cleanCustPhone}" data-bank="${this.escapeHtml(l.bank_name || 'Bank')}" onclick="event.stopPropagation()" title="Lead History" style="background:#4f46e5;color:#fff;border:none;"><i class="fas fa-history"></i></button>
                         </div>
                       </div>
                     `;
@@ -1618,6 +1641,47 @@ export class StaffBankWiseLeadsPage {
       });
     });
 
+    // Universal Lead History
+    this.container.querySelectorAll('.open-lead-history-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const el = btn as HTMLElement;
+        const leadId = parseInt(el.dataset.leadId || '0');
+        const name = el.dataset.name || 'Customer';
+        const phone = el.dataset.phone || '';
+        const bank = el.dataset.bank || 'Bank Wise Lead';
+        if (leadId) {
+          UniversalLeadHistoryModal.open({
+            entityType: 'crm_lead',
+            entityId: leadId,
+            name,
+            phone,
+            category: bank
+          });
+        }
+      });
+    });
+
+    // Universal VGK Member / Ground Source History
+    this.container.querySelectorAll('.open-universal-history-member').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const el = btn as HTMLElement;
+        const memberId = parseInt(el.dataset.memberId || '0', 10) || 0;
+        const name = el.dataset.memberName || 'VGK Member';
+        const phone = el.dataset.memberPhone || '';
+        UniversalLeadHistoryModal.open({
+          entityType: 'vgk_member',
+          entityId: memberId,
+          name,
+          phone,
+          category: 'VGK Member / Ground Source'
+        });
+      });
+    });
+
     // Unified WhatsApp Send Modal (Scanned Bot Default + Signature Tracking)
     this.container.querySelectorAll('.open-wa-modal').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -1744,6 +1808,11 @@ export class StaffBankWiseLeadsPage {
         .bl-tab-btn.emerald.active {
           background: #059669;
           border-color: #10b981;
+        }
+        .bl-tab-btn.danger.active {
+          background: #dc2626;
+          border-color: #ef4444;
+          box-shadow: 0 2px 8px rgba(220,38,38,0.4);
         }
         .bl-tab-badge {
           background: rgba(0,0,0,0.25);
@@ -1935,6 +2004,11 @@ export class StaffBankWiseLeadsPage {
           padding: 2px 6px;
           border-radius: 6px;
           text-transform: uppercase;
+        }
+        .bl-stage-pill.danger {
+          background: rgba(239, 68, 68, 0.2);
+          color: #f87171;
+          border: 1px solid rgba(239, 68, 68, 0.4);
         }
 
         /* Phone & Direct Call Box */

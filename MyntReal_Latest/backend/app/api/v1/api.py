@@ -56,6 +56,7 @@ from app.api.v1.endpoints import (
     crm_settings,
     digital_catalogs,
     mobile_telephony_api,
+    crm_universal_history,
 )
 
 # Scaffold routers are mounted in main.py at ROOT level to match Flask routing
@@ -202,6 +203,7 @@ api_router.include_router(partner_auth.router, tags=["Partner Authentication"])
 
 # Universal CRM/Lead Management System (DC Protocol - Dec 08, 2025)
 api_router.include_router(crm.router, prefix="/crm", tags=["Universal CRM - Lead Management"])
+api_router.include_router(crm_universal_history.router, prefix="/crm/universal-history", tags=["CRM - Universal History"])
 api_router.include_router(bank_contacts.router, prefix="/crm", tags=["CRM - Bank Branch Contacts"])
 api_router.include_router(crm_settings.router, prefix="/crm/settings", tags=["CRM Settings & Handler Routing"])
 

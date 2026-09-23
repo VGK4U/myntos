@@ -102,6 +102,8 @@ class StaffAttendance(Base):
     auto_closed_at = Column(DateTime, nullable=True)
     
     activity_minutes_total = Column(Integer, default=0, nullable=False)
+    active_minutes = Column(Integer, default=0, nullable=False)
+    screen_minutes = Column(Integer, default=0, nullable=False)
     kra_minutes = Column(Integer, default=0, nullable=False)
     task_minutes = Column(Integer, default=0, nullable=False)
     dayplan_minutes = Column(Integer, default=0, nullable=False)
@@ -223,6 +225,8 @@ class StaffAttendance(Base):
             "clock_out_photo_time": self.clock_out_photo_uploaded_at.isoformat() if self.clock_out_photo_uploaded_at else None,
             "has_photos": bool(self.clock_in_photo_path or self.clock_out_photo_path),
             "activity_minutes_total": self.activity_minutes_total or 0,
+            "active_minutes": self.active_minutes or 0,
+            "screen_minutes": self.screen_minutes or 0,
             "kra_minutes": self.kra_minutes or 0,
             "task_minutes": self.task_minutes or 0,
             "dayplan_minutes": self.dayplan_minutes or 0,
@@ -230,7 +234,9 @@ class StaffAttendance(Base):
             "ticket_minutes": self.ticket_minutes or 0,
             "journey_minutes": self.journey_minutes or 0,
             "custom_minutes": self.custom_minutes or 0,
-            "activity_hours": round((self.activity_minutes_total or 0) / 60, 2)
+            "activity_hours": round((self.activity_minutes_total or 0) / 60, 2),
+            "active_hours": round((max(self.active_minutes or 0, self.activity_minutes_total or 0)) / 60, 2),
+            "active_percentage": min(100, round((max(self.active_minutes or 0, self.activity_minutes_total or 0) / max(self.worked_minutes or 1, 1)) * 100)) if (self.worked_minutes or 0) > 0 else 0
         }
         
         if include_breaks and self.breaks:

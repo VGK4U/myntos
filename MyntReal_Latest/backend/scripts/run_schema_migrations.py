@@ -352,21 +352,35 @@ def run_migrations():
                     """))
 
                 # 4.10 official_partners Points System V2 columns
-                conn.execute(text("""
-                    ALTER TABLE official_partners 
-                    ADD COLUMN IF NOT EXISTS cumulative_self_business_dvr NUMERIC(14, 2) DEFAULT 0 NOT NULL,
-                    ADD COLUMN IF NOT EXISTS points_recovery_liability NUMERIC(12, 2) DEFAULT 0 NOT NULL,
-                    ADD COLUMN IF NOT EXISTS is_business_activated BOOLEAN DEFAULT FALSE NOT NULL
-                """))
+                _op_points_exists = conn.execute(text("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name='official_partners' AND column_name='cumulative_self_business_dvr'
+                    )
+                """)).scalar()
+                if not _op_points_exists:
+                    conn.execute(text("""
+                        ALTER TABLE official_partners 
+                        ADD COLUMN IF NOT EXISTS cumulative_self_business_dvr NUMERIC(14, 2) DEFAULT 0 NOT NULL,
+                        ADD COLUMN IF NOT EXISTS points_recovery_liability NUMERIC(12, 2) DEFAULT 0 NOT NULL,
+                        ADD COLUMN IF NOT EXISTS is_business_activated BOOLEAN DEFAULT FALSE NOT NULL
+                    """))
 
                 # 4.11 crm_leads Points System V2 & Direct Team Lead columns
-                conn.execute(text("""
-                    ALTER TABLE crm_leads 
-                    ADD COLUMN IF NOT EXISTS points_evaluated_dvr NUMERIC(12, 2) DEFAULT 0.0 NOT NULL,
-                    ADD COLUMN IF NOT EXISTS direct_team_lead_sponsor_id INTEGER,
-                    ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded BOOLEAN DEFAULT FALSE NOT NULL,
-                    ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded_at TIMESTAMP WITHOUT TIME ZONE
-                """))
+                _cl_points_exists = conn.execute(text("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name='crm_leads' AND column_name='points_evaluated_dvr'
+                    )
+                """)).scalar()
+                if not _cl_points_exists:
+                    conn.execute(text("""
+                        ALTER TABLE crm_leads 
+                        ADD COLUMN IF NOT EXISTS points_evaluated_dvr NUMERIC(12, 2) DEFAULT 0.0 NOT NULL,
+                        ADD COLUMN IF NOT EXISTS direct_team_lead_sponsor_id INTEGER,
+                        ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded BOOLEAN DEFAULT FALSE NOT NULL,
+                        ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded_at TIMESTAMP WITHOUT TIME ZONE
+                    """))
 
                 # 4.12 vgk_self_business_points_accrual_ledger table
                 conn.execute(text("""
@@ -399,31 +413,45 @@ def run_migrations():
                 """))
 
                 # 4.13 ev & purchase missing columns (safe synchronization)
-                conn.execute(text("""
-                    ALTER TABLE ev 
-                    ADD COLUMN IF NOT EXISTS manufacturer VARCHAR(100),
-                    ADD COLUMN IF NOT EXISTS specifications TEXT,
-                    ADD COLUMN IF NOT EXISTS category VARCHAR(50),
-                    ADD COLUMN IF NOT EXISTS image_url VARCHAR(500),
-                    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
-                    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
-                """))
+                _ev_col_exists = conn.execute(text("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name='ev' AND column_name='manufacturer'
+                    )
+                """)).scalar()
+                if not _ev_col_exists:
+                    conn.execute(text("""
+                        ALTER TABLE ev 
+                        ADD COLUMN IF NOT EXISTS manufacturer VARCHAR(100),
+                        ADD COLUMN IF NOT EXISTS specifications TEXT,
+                        ADD COLUMN IF NOT EXISTS category VARCHAR(50),
+                        ADD COLUMN IF NOT EXISTS image_url VARCHAR(500),
+                        ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW(),
+                        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
+                    """))
 
-                conn.execute(text("""
-                    ALTER TABLE purchase 
-                    ADD COLUMN IF NOT EXISTS delivery_address TEXT,
-                    ADD COLUMN IF NOT EXISTS admin_notes TEXT,
-                    ADD COLUMN IF NOT EXISTS enhanced_coupon_id INTEGER,
-                    ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(30),
-                    ADD COLUMN IF NOT EXISTS original_price INTEGER DEFAULT 0,
-                    ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(50),
-                    ADD COLUMN IF NOT EXISTS verified_by_admin_id VARCHAR(20),
-                    ADD COLUMN IF NOT EXISTS rejection_reason TEXT,
-                    ADD COLUMN IF NOT EXISTS delivery_date TIMESTAMP WITHOUT TIME ZONE,
-                    ADD COLUMN IF NOT EXISTS verification_date TIMESTAMP WITHOUT TIME ZONE,
-                    ADD COLUMN IF NOT EXISTS discount_amount INTEGER DEFAULT 0,
-                    ADD COLUMN IF NOT EXISTS final_price INTEGER DEFAULT 0
-                """))
+                _purch_col_exists = conn.execute(text("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name='purchase' AND column_name='delivery_address'
+                    )
+                """)).scalar()
+                if not _purch_col_exists:
+                    conn.execute(text("""
+                        ALTER TABLE purchase 
+                        ADD COLUMN IF NOT EXISTS delivery_address TEXT,
+                        ADD COLUMN IF NOT EXISTS admin_notes TEXT,
+                        ADD COLUMN IF NOT EXISTS enhanced_coupon_id INTEGER,
+                        ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(30),
+                        ADD COLUMN IF NOT EXISTS original_price INTEGER DEFAULT 0,
+                        ADD COLUMN IF NOT EXISTS coupon_code VARCHAR(50),
+                        ADD COLUMN IF NOT EXISTS verified_by_admin_id VARCHAR(20),
+                        ADD COLUMN IF NOT EXISTS rejection_reason TEXT,
+                        ADD COLUMN IF NOT EXISTS delivery_date TIMESTAMP WITHOUT TIME ZONE,
+                        ADD COLUMN IF NOT EXISTS verification_date TIMESTAMP WITHOUT TIME ZONE,
+                        ADD COLUMN IF NOT EXISTS discount_amount INTEGER DEFAULT 0,
+                        ADD COLUMN IF NOT EXISTS final_price INTEGER DEFAULT 0
+                    """))
 
                 # 4.14 SaaS Phase 1 Foundation Migration (Authoritative Integration)
                 saas_sql_file = _backend_dir / "migrations" / "add_saas_phase1_foundation_20260914.sql"
@@ -940,10 +968,17 @@ def run_migrations():
                 logger.info("✅ mobile_device_push_tokens table ensured")
 
                 # 4.26 Direct team lead referral points schema & vgk_points_ledger constraint
-                conn.execute(text("ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded BOOLEAN NOT NULL DEFAULT FALSE;"))
-                conn.execute(text("ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded_at TIMESTAMP NULL;"))
-                conn.execute(text("ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS direct_team_lead_sponsor_id INTEGER REFERENCES official_partners(id) ON DELETE SET NULL;"))
-                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_crm_leads_dtl_points ON crm_leads(direct_team_lead_points_awarded);"))
+                _dtl_col_exists = conn.execute(text("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM information_schema.columns 
+                        WHERE table_name='crm_leads' AND column_name='direct_team_lead_points_awarded'
+                    )
+                """)).scalar()
+                if not _dtl_col_exists:
+                    conn.execute(text("ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded BOOLEAN NOT NULL DEFAULT FALSE;"))
+                    conn.execute(text("ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS direct_team_lead_points_awarded_at TIMESTAMP NULL;"))
+                    conn.execute(text("ALTER TABLE crm_leads ADD COLUMN IF NOT EXISTS direct_team_lead_sponsor_id INTEGER REFERENCES official_partners(id) ON DELETE SET NULL;"))
+                    conn.execute(text("CREATE INDEX IF NOT EXISTS idx_crm_leads_dtl_points ON crm_leads(direct_team_lead_points_awarded);"))
                 conn.execute(text("ALTER TABLE vgk_points_ledger DROP CONSTRAINT IF EXISTS vgk_points_reason_check;"))
                 conn.execute(text("""
                     ALTER TABLE vgk_points_ledger ADD CONSTRAINT vgk_points_reason_check CHECK (

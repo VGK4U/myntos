@@ -20,7 +20,7 @@ APP_NAME = 'vgk4u'
 ENV_NAME = 'Vgk4u-env'
 S3_BUCKET = 'elasticbeanstalk-ap-south-2-251714435676'
 TIMESTAMP = int(time.time() * 1000)
-VERSION_LABEL = f'v2.4.28-ai-calling-resilience-plivo-session-parity-{TIMESTAMP}'
+VERSION_LABEL = f'v2.4.29-universal-history-quality-review-call-tracking-parity-{TIMESTAMP}'
 S3_KEY = f'deployments/{VERSION_LABEL}.zip'
 ZIP_PATH = os.path.join(os.path.dirname(__file__), '..', 'deployment.zip')
 
@@ -67,7 +67,7 @@ eb.create_application_version(
         'S3Bucket': S3_BUCKET,
         'S3Key': S3_KEY
     },
-    Description='MyntOS v2.4.28: AI calling Plivo webhook resilience, unique call_sid constraint, CRM follow-up parsing, unlinked lead auto-creation'[:190],
+    Description='MyntOS v2.4.29: Universal lead history, dynamic quality review rubric, call tracking KRA/solar parity, schema lock guard'[:190],
     AutoCreateApplication=False
 )
 print("Application version created.")

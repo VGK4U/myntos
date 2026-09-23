@@ -20,6 +20,9 @@ interface TeamMember {
   clock_out: string | null;
   hours_worked: number;
   break_minutes?: number;
+  active_minutes?: number;
+  active_hours?: number;
+  active_percentage?: number;
   is_active_journey: boolean;
   late_by_minutes?: number;
   early_leaving_minutes?: number;
@@ -328,6 +331,11 @@ export class TeamAttendancePage {
     const workedHrs = Math.floor(workedMinutes / 60);
     const workedMins = workedMinutes % 60;
 
+    const activeMin = member.active_minutes || 0;
+    const activeHrs = Math.floor(activeMin / 60);
+    const activeMins = activeMin % 60;
+    const activePct = member.active_percentage || (workedMinutes > 0 ? Math.min(100, Math.round((activeMin / workedMinutes) * 100)) : 0);
+
     const hasPhotos = member.clock_in_photo_url || member.clock_out_photo_url;
     
     // Build location strings with Office/Out of Office designation
@@ -389,6 +397,10 @@ export class TeamAttendancePage {
               <div class="hours-item worked">
                 <span class="hours-label">Worked</span>
                 <span class="hours-value">${workedHrs}:${workedMins.toString().padStart(2, '0')}</span>
+              </div>
+              <div class="hours-item" style="color:#059669;">
+                <span class="hours-label">Active</span>
+                <span class="hours-value">${activeHrs}:${activeMins.toString().padStart(2, '0')} <small style="font-size:9.5px; opacity:0.85;">(${activePct}%)</small></span>
               </div>
             </div>
             

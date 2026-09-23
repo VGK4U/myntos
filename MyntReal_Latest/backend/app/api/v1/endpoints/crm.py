@@ -4508,7 +4508,7 @@ def get_bank_wise_leads(
     # 2. Base Query for Bank Files, Balance Pending, Net Meter Pending & Electricity Bill Change Leads
     query = db.query(CRMLead).filter(
         or_(
-            CRMLead.solar_pipeline_status.in_(['pending_with_bank', 'at_bank', 'at bank', 'balance_pending', 'bal_pending', 'net_meter_pending', 'net_meter', 'net_metering_pending', 'electricity_bill_change', 'electricity_bill', 'eb_name_change', 'eb_change_pending', 'bill_change_pending']),
+            CRMLead.solar_pipeline_status.in_(['pending_with_bank', 'at_bank', 'at bank', 'bank_not_interested', 'balance_pending', 'bal_pending', 'net_meter_pending', 'net_meter', 'net_metering_pending', 'electricity_bill_change', 'electricity_bill', 'eb_name_change', 'eb_change_pending', 'bill_change_pending']),
             CRMLead.status.in_(['pending_with_bank', 'balance_pending', 'net_meter_pending', 'electricity_bill_change', 'eb_name_change'])
         )
     )
@@ -4784,8 +4784,10 @@ def get_bank_wise_leads(
             upliner_name = ''
 
         upliner_phone = ''
+        upliner_id = None
         if gs_partner and getattr(gs_partner, 'parent_partner_id', None) and gs_partner.parent_partner_id in partner_map:
             parent_partner = partner_map[gs_partner.parent_partner_id]
+            upliner_id = parent_partner.id
             if not upliner_name:
                 upliner_name = parent_partner.partner_name
             if parent_partner.phone:
@@ -4802,6 +4804,14 @@ def get_bank_wise_leads(
                 upliner_phone = user_phone_map[up_clean]
             elif up_clean in staff_phone_map:
                 upliner_phone = staff_phone_map[up_clean]
+
+        if not upliner_id and upliner_name:
+            up_clean = upliner_name.lower().strip()
+            up_norm = _norm_person_name(upliner_name)
+            if up_clean in partner_name_map:
+                upliner_id = partner_name_map[up_clean].id
+            elif up_norm in partner_norm_map:
+                upliner_id = partner_norm_map[up_norm].id
 
         if upliner_name and upliner_name not in ('—', 'Direct / None'):
             upliner_set.add(upliner_name)
@@ -4862,7 +4872,7 @@ def get_bank_wise_leads(
             'id': lead.id,
             'customer_name': lead.name or 'N/A',
             'phone_number': lead.phone or '',
-            'stage': 'Bal Pending' if getattr(lead, 'solar_pipeline_status', None) in ['balance_pending', 'bal_pending'] else 'At Bank',
+            'stage': 'Bal Pending' if getattr(lead, 'solar_pipeline_status', None) in ['balance_pending', 'bal_pending'] else ('Bank Not Interested' if getattr(lead, 'solar_pipeline_status', None) == 'bank_not_interested' else 'At Bank'),
             'bank_name': b_name,
             'bank_branch': br_name,
             'stage_days': stage_days,
@@ -4871,8 +4881,10 @@ def get_bank_wise_leads(
             'stage_updated_at': s_date_dt.isoformat() if s_date_dt else None,
             'ground_source_name': g_source,
             'ground_source_phone': gs_phone,
+            'ground_source_id': gs_partner.id if gs_partner else None,
             'upliner_name': upliner_name,
             'upliner_phone': upliner_phone,
+            'upliner_id': upliner_id,
             'telecaller_name': tc_name,
             'telecaller_phone': tc_phone,
             'co_applicant_name': getattr(lead, 'co_applicant_name', None) or '',
@@ -7253,7 +7265,7 @@ def master_leads(
         # Vendor status — computed from status + solar_pipeline_status (Apr 2026)
         _sps = (d.get('solar_pipeline_status') or '').lower()
         _st  = (d.get('status') or '').lower()
-        _CANCELLED_SPS = {'loan_rejected', 'diff_vendor_loan_rejected', 'not_interested', 'cancelled'}
+        _CANCELLED_SPS = {'loan_rejected', 'diff_vendor_loan_rejected', 'not_interested', 'cancelled', 'bank_not_interested'}
         _FINAL_SPS     = {'subsidy_cleared', 'bank_loan_completed'}
         _COMPLETED_SPS = {'installed', 'net_meter_pending', 'balance_received', 'completed'}
         if _st in ('lost', 'cancelled') or _sps in _CANCELLED_SPS:
@@ -7912,7 +7924,7 @@ def lead_analytics(
     POST_WON = ['won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed']
     # DC Protocol (May 2026): Solar pipeline stages that disqualify a lead from Won counts/values.
     # A lead status='won' with one of these solar stages means the deal fell through post-win.
-    _EXCL_WON_PS = ['loan_rejected', 'documents_issue', 'not_interested', 'cancelled', 'different_vendor']
+    _EXCL_WON_PS = ['loan_rejected', 'documents_issue', 'not_interested', 'cancelled', 'different_vendor', 'bank_not_interested']
 
     # DC-STAGE-COLS: Reusable per-stage COUNT expressions for the leaderboard.
     # Used by every handler-type query so the frontend can show pipeline-stage breakdown.
@@ -7969,7 +7981,7 @@ def lead_analytics(
         'completed', 'installation_pending', 'pending_with_bank', 'documents_pending',
         'application_submitted', 'loan_rejected', 'documents_issue', 'load_extension',
         'electricity_bill_change', 'net_meter_pending', 'balance_pending', 'balance_received', 'subsidy_pending',
-        'not_interested', 'cancelled', 'different_vendor',
+        'not_interested', 'cancelled', 'different_vendor', 'bank_not_interested',
     ]
     def _sp_key(ps): return 'sp_at_bank' if ps == 'pending_with_bank' else ('sp_' + ps)
 
@@ -8314,7 +8326,7 @@ def lead_analytics(
     IN_PROGRESS_STATUSES = ['new', 'contacted', 'interested', 'qualified', 'proposal', 'on_hold']
     # Stage-based active condition: exclude completed/cancelled/not_interested (solar),
     # completed (b2b), and lost/on_hold (all categories)
-    _EXCL_SOLAR_PS = ['completed', 'cancelled', 'not_interested']
+    _EXCL_SOLAR_PS = ['completed', 'cancelled', 'not_interested', 'bank_not_interested']
     _active_cond = _and_(
         ~CRMLead.status.in_(['lost', 'on_hold']),
         _or_(CRMLead.solar_pipeline_status.is_(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_SOLAR_PS)),
@@ -8343,7 +8355,7 @@ def lead_analytics(
             'completed_received': float(getattr(r, 'comp_received', 0) or 0),
         }
 
-    _EXCL_PIPE_PS = ['cancelled', 'not_interested', 'completed', 'loan_rejected', 'different_vendor', 'documents_issue']
+    _EXCL_PIPE_PS = ['cancelled', 'not_interested', 'completed', 'loan_rejected', 'different_vendor', 'documents_issue', 'bank_not_interested']
     _pipe_cond = _and_(_won_ok, _or_(CRMLead.solar_pipeline_status.is_(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_PIPE_PS)))
     _sr = base.with_entities(
         _f.count(CRMLead.id).label('total'),
@@ -8862,7 +8874,7 @@ def lead_analytics(
                 _mo_tot[mkey] = [0, 0, 0.0, 0, 0.0, 0, 0, 0, 0.0, 0, 0]
             rec = _mo_tot[mkey]
             rec[0] += 1
-            if ps is not None and ps not in {'cancelled', 'not_interested'}:
+            if ps is not None and ps not in {'cancelled', 'not_interested', 'bank_not_interested'}:
                 rec[1] += 1
                 rec[2] += dv
             if ps is not None and ps not in _EXCL_PIPE_PS:
@@ -8924,7 +8936,7 @@ def lead_analytics(
                 _wk_tot[wkey] = [0, 0, 0.0, 0, 0.0, 0, 0, 0, 0.0, 0, 0]
             rec = _wk_tot[wkey]
             rec[0] += 1
-            if ps is not None and ps not in {'cancelled', 'not_interested'}:
+            if ps is not None and ps not in {'cancelled', 'not_interested', 'bank_not_interested'}:
                 rec[1] += 1
                 rec[2] += dv
             if ps is not None and ps not in _EXCL_PIPE_PS:
@@ -9060,7 +9072,8 @@ def lead_analytics(
         'documents_pending', 'application_submitted', 'pending_with_bank', 'loan_rejected',
         'documents_issue', 'load_extension', 'electricity_bill_change', 'installation_pending',
         'installed', 'first_payment_received', 'net_meter_pending', 'balance_pending',
-        'balance_received', 'subsidy_pending', 'completed', 'not_interested', 'cancelled', 'different_vendor'
+        'balance_received', 'subsidy_pending', 'completed', 'not_interested', 'cancelled', 'different_vendor',
+        'bank_not_interested'
     ]
     if _dt_from_an and _dt_to_an:
         pipeline_breakdown = {}
@@ -9759,8 +9772,8 @@ def exec_trend_leads(
     company_id_filter = _cl(company_id_filter)
 
     POST_WON = ['won', 'order_placed', 'dispatched', 'delivered', 'installed', 'completed']
-    _EXCL_WON_PS = ['loan_rejected', 'documents_issue', 'not_interested', 'cancelled', 'different_vendor']
-    _EXCL_PIPE_PS = ['cancelled', 'not_interested', 'completed', 'loan_rejected', 'different_vendor', 'documents_issue']
+    _EXCL_WON_PS = ['loan_rejected', 'documents_issue', 'not_interested', 'cancelled', 'different_vendor', 'bank_not_interested']
+    _EXCL_PIPE_PS = ['cancelled', 'not_interested', 'completed', 'loan_rejected', 'different_vendor', 'documents_issue', 'bank_not_interested']
 
     ctx, tenant_id, effective_co_ids, has_view_all, authorized_downline_ids = resolve_crm_list_security_scope(
         db, current_employee, company_id=company_id_filter
@@ -9926,11 +9939,13 @@ def exec_trend_leads(
         if start_dt and end_dt:
             base = base.filter(_trend_date_expr >= start_dt, _trend_date_expr <= end_dt)
         if metric == 'submitted':
-            base = base.filter(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(['cancelled', 'not_interested']))
+            base = base.filter(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(['cancelled', 'not_interested', 'bank_not_interested']))
         elif metric == 'pipeline':
             base = base.filter(CRMLead.solar_pipeline_status.isnot(None), ~CRMLead.solar_pipeline_status.in_(_EXCL_PIPE_PS))
         elif metric == 'at_bank':
             base = base.filter(CRMLead.solar_pipeline_status == 'pending_with_bank')
+        elif metric == 'bank_not_interested':
+            base = base.filter(CRMLead.solar_pipeline_status == 'bank_not_interested')
         elif metric == 'eb_change':
             base = base.filter(CRMLead.solar_pipeline_status == 'electricity_bill_change')
         elif metric == 'in_progress':

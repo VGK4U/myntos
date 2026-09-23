@@ -164,6 +164,7 @@ const SOLAR_SW_COLS = [
   { key: 'sp_not_interested', label: 'Not Interested', color: '#6b7280' },
   { key: 'sp_cancelled', label: 'Cancelled', color: '#9ca3af' },
   { key: 'sp_different_vendor', label: 'Diff Vendor', color: '#a78bfa' },
+  { key: 'sp_bank_not_interested', label: 'Bank Not Int.', color: '#be123c' },
 ];
 
 export class ExecutiveDashboardPage {
@@ -411,6 +412,7 @@ export class ExecutiveDashboardPage {
       sp_not_interested: r.sp_not_interested || 0, dv_sp_not_interested: r.dv_sp_not_interested || 0,
       sp_cancelled: r.sp_cancelled || 0, dv_sp_cancelled: r.dv_sp_cancelled || 0,
       sp_different_vendor: r.sp_different_vendor || 0, dv_sp_different_vendor: r.dv_sp_different_vendor || 0,
+      sp_bank_not_interested: r.sp_bank_not_interested || 0, dv_sp_bank_not_interested: r.dv_sp_bank_not_interested || 0,
     });
 
     let rows: BreakdownItem[] = [];

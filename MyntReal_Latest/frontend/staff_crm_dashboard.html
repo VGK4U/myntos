@@ -10,6 +10,8 @@
     <script src="/public/js/staff-fetch.js"></script>
     <script src="/public/js/nda-enforcement.js"></script>
     <script src="/public/js/plivo-softphone.js?v=20260906_fix"></script>
+    <script src="/public/js/universal-history-modal.js"></script>
+    <script src="/public/js/universal-quality-review-modal.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f3f4f6; min-height: 100vh; }
@@ -424,6 +426,10 @@
                                 <tr>
                                     <th class="text-start" style="width:40px;">S.No</th>
                                     <th class="text-start">Employee</th>
+                                    <th>Active Time</th>
+                                    <th>Auto Dialer Used</th>
+                                    <th>Softphone Used</th>
+                                    <th>Others</th>
                                     <th>Total Calls</th>
                                     <th>Outgoing</th>
                                     <th>Incoming</th>
@@ -480,7 +486,7 @@
                                     <th>Type</th>
                                     <th>Duration</th>
                                     <th>Lead Name</th>
-                                    <th>Recording</th>
+                                    <th style="text-align:center; min-width:170px;">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="ctDrilldownTbody"></tbody>
@@ -1230,16 +1236,17 @@
         function buildEmpSelectPanel() {
             const panel = document.getElementById('empSelectPanel');
             const tp = dashData && dashData.team_performance;
-            if (!tp || !tp.employees || tp.employees.length === 0) {
+            const validEmps = (tp && tp.employees) ? tp.employees.filter(e => e.emp_code !== 'MR10001') : [];
+            if (!validEmps.length) {
                 panel.innerHTML = '<span class="text-muted" style="font-size:12px;">No team members</span>';
                 return;
             }
             const allSelected = !teamSelectedEmpIds;
             let html = `<label class="emp-chip ${allSelected ? 'selected' : ''}" onclick="toggleAllEmps(event)">
                 <input type="checkbox" ${allSelected ? 'checked' : ''}>
-                <i class="fas fa-users" style="font-size:10px;"></i> All (${tp.employees.length})
+                <i class="fas fa-users" style="font-size:10px;"></i> All (${validEmps.length})
             </label>`;
-            tp.employees.forEach(emp => {
+            validEmps.forEach(emp => {
                 const isSelected = allSelected || (teamSelectedEmpIds && teamSelectedEmpIds.has(emp.emp_id));
                 html += `<label class="emp-chip ${isSelected ? 'selected' : ''}" onclick="toggleEmpSelection(event, ${emp.emp_id})">
                     <input type="checkbox" ${isSelected ? 'checked' : ''}>
@@ -1259,11 +1266,12 @@
         function toggleEmpSelection(e, empId) {
             e.preventDefault();
             const tp = dashData && dashData.team_performance;
-            if (!tp || !tp.employees) return;
-            if (!teamSelectedEmpIds) teamSelectedEmpIds = new Set(tp.employees.map(emp => emp.emp_id));
+            const validEmps = (tp && tp.employees) ? tp.employees.filter(e => e.emp_code !== 'MR10001') : [];
+            if (!validEmps.length) return;
+            if (!teamSelectedEmpIds) teamSelectedEmpIds = new Set(validEmps.map(emp => emp.emp_id));
             if (teamSelectedEmpIds.has(empId)) teamSelectedEmpIds.delete(empId);
             else teamSelectedEmpIds.add(empId);
-            if (teamSelectedEmpIds.size === tp.employees.length) teamSelectedEmpIds = null;
+            if (teamSelectedEmpIds.size === validEmps.length) teamSelectedEmpIds = null;
             buildEmpSelectPanel();
             renderTeamPerformance();
         }
@@ -1271,8 +1279,9 @@
         function getFilteredTeamEmployees() {
             const tp = dashData && dashData.team_performance;
             if (!tp || !tp.employees) return [];
-            if (!teamSelectedEmpIds) return tp.employees;
-            return tp.employees.filter(emp => teamSelectedEmpIds.has(emp.emp_id));
+            const validEmps = tp.employees.filter(emp => emp.emp_code !== 'MR10001');
+            if (!teamSelectedEmpIds) return validEmps;
+            return validEmps.filter(emp => teamSelectedEmpIds.has(emp.emp_id));
         }
 
         function getDailyDates() { return (dashData && dashData.daily_dates) ? dashData.daily_dates : []; }
@@ -1518,7 +1527,7 @@
         function renderCompanyWise() { renderGenericGroupTable('compTable', dashData.company_wise, 'company_name'); }
 
         function renderGenericEmpTable(tableId, data, countId) {
-            const emps = (data && data.employees) || [];
+            const emps = ((data && data.employees) || []).filter(e => e.emp_code !== 'MR10001');
             const specialRows = (data && data.special_rows) || [];
             const prefix = tableId.replace('Table','');
             const headEl = document.getElementById(prefix + 'Head');
@@ -1621,6 +1630,21 @@
             return h > 0 ? `${h}h ${m}m` : `${m}m`;
         }
 
+        function fmtCallDuration(secs) {
+            const s = parseInt(secs, 10) || 0;
+            if (s <= 0) return '<span class="text-muted">0s</span>';
+            const h = Math.floor(s / 3600);
+            const m = Math.floor((s % 3600) / 60);
+            const remSec = s % 60;
+            if (h > 0) {
+                return `${h}h ${m > 0 ? m + 'm ' : ''}${remSec > 0 ? remSec + 's' : ''}`.trim();
+            }
+            if (m > 0) {
+                return `${m}m ${remSec > 0 ? remSec + 's' : ''}`.trim();
+            }
+            return `${remSec}s`;
+        }
+
         function renderCtSummary(o) {
             const connectedCalls = Math.max((o.outgoing || 0) + (o.incoming || 0) - (o.missed || 0), 0);
             const ansRate = o.total_calls > 0 ? (connectedCalls / o.total_calls * 100).toFixed(1) + '%' : '0%';
@@ -1656,15 +1680,22 @@
 
         function renderCtStaffTable(staffList) {
             const tbody = document.getElementById('ctStaffTbody');
-            document.getElementById('ctStaffCount').textContent = `${staffList.length} staff members`;
-            if (!staffList.length) {
-                tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted">No call records found</td></tr>';
+            const filteredStaff = (staffList || []).filter(s => s.emp_code !== 'MR10001');
+            document.getElementById('ctStaffCount').textContent = `${filteredStaff.length} staff members`;
+            if (!filteredStaff.length) {
+                tbody.innerHTML = '<tr><td colspan="15" class="text-center py-4 text-muted">No call records found</td></tr>';
                 return;
             }
-            tbody.innerHTML = staffList.map((s, idx) => {
+            tbody.innerHTML = filteredStaff.map((s, idx) => {
                 const sName = s.name || s.staff_name || 'Staff';
                 const sDept = s.department || '';
                 const safeName = sName.replace(/'/g, "\\'");
+                const activeHrs = s.active_time_hours || (s.active_time_minutes ? (s.active_time_minutes / 60).toFixed(2) + ' hrs' : '0.00 hrs');
+                const autodialerHrs = s.autodialer_hours || (s.autodialer_duration_seconds ? (s.autodialer_duration_seconds / 3600).toFixed(2) + ' hrs' : '0.00 hrs');
+                const softphoneHrs = s.softphone_hours || (s.softphone_duration_seconds ? (s.softphone_duration_seconds / 3600).toFixed(2) + ' hrs' : '0.00 hrs');
+                const otherHrs = s.other_hours || (s.other_duration_seconds ? (s.other_duration_seconds / 3600).toFixed(2) + ' hrs' : '0.00 hrs');
+                const activePct = s.active_percentage || 0;
+                const pctBadgeClass = activePct >= 70 ? 'bg-success' : activePct >= 40 ? 'bg-warning text-dark' : 'bg-secondary';
                 return `<tr>
                 <td class="text-start">${idx + 1}</td>
                 <td class="text-start">
@@ -1676,6 +1707,13 @@
                         </div>
                     </div>
                 </td>
+                <td>
+                    <div style="font-weight:700; color:#1e293b;">${activeHrs}</div>
+                    <span class="badge ${pctBadgeClass}" style="font-size:10px;">${activePct}%</span>
+                </td>
+                <td class="font-semibold text-primary">${autodialerHrs}</td>
+                <td class="font-semibold" style="color:#0284c7;">${softphoneHrs}</td>
+                <td class="font-semibold text-muted" title="${escapeHtml(s.other_breakdown || '')}">${otherHrs}</td>
                 <td><strong>${fmtNum(s.total_calls)}</strong></td>
                 <td class="text-success font-semibold">${fmtNum(s.outgoing)}</td>
                 <td class="text-primary font-semibold">${fmtNum(s.incoming)}</td>
@@ -1695,23 +1733,56 @@
 
         function renderCtSlotsTable(d) {
             const labels = d.slot_labels || {};
-            const perStaff = d.per_staff || [];
+            const perStaff = (d.per_staff || []).filter(s => s.emp_code !== 'MR10001');
             const orgTotals = d.org_totals || {};
             const orgSlots = orgTotals.slots || {};
             const CA_SLOT_KEYS = ['slot_1', 'slot_2', 'slot_3', 'slot_4', 'slot_5', 'other'];
 
             document.getElementById('ctSlotsHead').innerHTML = `<tr>
-                <th class="text-start">Staff</th><th>Dept</th>
+                <th class="text-start">Staff</th>
+                <th>Dept</th>
+                <th>Active Time</th>
+                <th>Auto Dialer Used</th>
+                <th>Softphone Used</th>
+                <th>Others</th>
                 ${CA_SLOT_KEYS.map(sk => `<th>${labels[sk]||sk}</th>`).join('')}
                 <th>Total</th>
             </tr>`;
 
-            document.getElementById('ctSlotsBody').innerHTML = perStaff.map(row => `<tr>
-                <td class="text-start font-semibold">${escapeHtml(row.name || '-')} <small class="text-muted">(${escapeHtml(row.emp_code||'')})</small></td>
-                <td>${escapeHtml(row.department || '-')}</td>
-                ${CA_SLOT_KEYS.map(sk => `<td>${(row.slots && row.slots[sk] && row.slots[sk].calls) || 0}</td>`).join('')}
-                <td><strong>${(row.total && row.total.calls) || 0}</strong></td>
-            </tr>`).join('');
+            const renderSlotCell = (slotObj) => {
+                if (!slotObj || (!slotObj.calls && !slotObj.duration_hours)) {
+                    return `<span class="text-muted" style="font-size:11px;">0.00 hrs / 0</span>`;
+                }
+                const dur = slotObj.duration_hours || '0.00 hrs';
+                const calls = slotObj.calls || 0;
+                return `<div>
+                    <span style="font-weight:600; color:#0f172a; font-size:12px;">${dur}</span>
+                    <span class="text-muted" style="font-size:11px;"> / ${calls}</span>
+                </div>`;
+            };
+
+            document.getElementById('ctSlotsBody').innerHTML = perStaff.map(row => {
+                const activeHrs = row.active_time_hours || (row.active_time_minutes ? (row.active_time_minutes / 60).toFixed(2) + ' hrs' : '0.00 hrs');
+                const autodialerHrs = row.autodialer_hours || (row.autodialer_duration_seconds ? (row.autodialer_duration_seconds / 3600).toFixed(2) + ' hrs' : '0.00 hrs');
+                const softphoneHrs = row.softphone_hours || (row.softphone_duration_seconds ? (row.softphone_duration_seconds / 3600).toFixed(2) + ' hrs' : '0.00 hrs');
+                const otherHrs = row.other_hours || (row.other_duration_seconds ? (row.other_duration_seconds / 3600).toFixed(2) + ' hrs' : '0.00 hrs');
+                const activePct = row.active_percentage || 0;
+                const pctBadgeClass = activePct >= 70 ? 'bg-success' : activePct >= 40 ? 'bg-warning text-dark' : 'bg-secondary';
+
+                return `<tr>
+                    <td class="text-start font-semibold">${escapeHtml(row.name || '-')} <small class="text-muted">(${escapeHtml(row.emp_code||'')})</small></td>
+                    <td>${escapeHtml(row.department || '-')}</td>
+                    <td>
+                        <div style="font-weight:700; color:#1e293b;">${activeHrs}</div>
+                        <span class="badge ${pctBadgeClass}" style="font-size:10px;">${activePct}%</span>
+                    </td>
+                    <td class="font-semibold text-primary">${autodialerHrs}</td>
+                    <td class="font-semibold" style="color:#0284c7;">${softphoneHrs}</td>
+                    <td class="font-semibold text-muted" title="${escapeHtml(row.other_breakdown || '')}">${otherHrs}</td>
+                    ${CA_SLOT_KEYS.map(sk => `<td>${renderSlotCell(row.slots && row.slots[sk])}</td>`).join('')}
+                    <td><strong style="color:#2563eb;">${renderSlotCell(row.total)}</strong></td>
+                </tr>`;
+            }).join('');
         }
 
         async function openStaffCallDrilldown(staffId, staffName) {
@@ -1782,20 +1853,63 @@
             tbody.innerHTML = calls.map((c, i) => {
                 const hasRec = Boolean((c.has_recording || c.recording_id) && c.recording_id);
                 const leadDisplay = c.matched_lead_name || c.contact_name_crm || c.contact_name || '-';
+                const leadId = c.matched_lead_id || c.contact_lead_id || 0;
+                const safePhone = (c.phone_number || '').replace(/'/g, "\\'");
+                const safeLeadName = (leadDisplay || '').replace(/'/g, "\\'");
+                const safeSessionId = (c.call_session_id || '').replace(/'/g, "\\'");
+
+                const playBtn = hasRec
+                    ? `<button class="btn btn-sm btn-outline-info py-0 px-2" title="Play Recording" onclick="playAudioStream(${c.recording_id})"><i class="fas fa-play me-1"></i>Play</button>`
+                    : '';
+
+                const histBtn = `<button class="btn btn-sm btn-outline-primary py-0 px-2" title="Universal History" onclick="openCallUniversalHistory('${safePhone}', ${leadId}, '${safeLeadName}')"><i class="fas fa-history me-1"></i>History</button>`;
+
+                const reviewBtn = hasRec
+                    ? `<button class="btn btn-sm btn-outline-warning py-0 px-2" title="Quality Review" onclick="openCallQualityReview(${c.id || 0}, '${safeSessionId}', '${safePhone}', ${leadId})"><i class="fas fa-star me-1"></i>Review</button>`
+                    : '';
+
                 return `<tr>
                 <td class="text-start">${i + 1}</td>
                 <td>${c.call_datetime ? new Date(c.call_datetime).toLocaleString('en-IN') : '-'}</td>
                 <td><strong>${escapeHtml(c.phone_number || '-')}</strong></td>
                 <td>${formatCallTypeBadge(c)}</td>
-                <td>${fmtDurationSec(c.duration_seconds)}</td>
+                <td>${fmtCallDuration(c.duration_seconds)}</td>
                 <td>${escapeHtml(leadDisplay)}</td>
-                <td>
-                    ${hasRec
-                        ? `<button class="btn btn-sm btn-outline-info py-0 px-2" onclick="playAudioStream(${c.recording_id})"><i class="fas fa-play me-1"></i>Play</button>`
-                        : '<span class="text-muted" title="No recording file uploaded for this call">-</span>'}
+                <td style="text-align:center;">
+                    <div class="d-inline-flex align-items-center gap-1 justify-content-center">
+                        ${playBtn}
+                        ${histBtn}
+                        ${reviewBtn}
+                    </div>
                 </td>
             </tr>`;
             }).join('');
+        }
+
+        function openCallUniversalHistory(phone, leadId, leadName) {
+            if (typeof window.openUniversalHistory === 'function') {
+                window.openUniversalHistory({
+                    entityType: 'crm_lead',
+                    entityId: leadId || 0,
+                    phone: phone || '',
+                    name: (leadName && leadName !== '-') ? leadName : ''
+                });
+            } else {
+                alert('Universal History modal is loading or unavailable.');
+            }
+        }
+
+        function openCallQualityReview(callLogId, callSessionId, phone, leadId) {
+            if (typeof window.openUniversalQualityReview === 'function') {
+                window.openUniversalQualityReview({
+                    callLogId: callLogId || 0,
+                    callSessionId: callSessionId || '',
+                    phone: phone || '',
+                    leadId: leadId || 0
+                });
+            } else {
+                alert('Quality Review modal is loading or unavailable.');
+            }
         }
 
         let currentAudioBlobUrl = null;
@@ -1943,8 +2057,9 @@
             `;
         }
 
-        function renderQaExecutiveTable(execs) {
+        function renderQaExecutiveTable(rawExecs) {
             const tbody = document.getElementById('qaTableWrap').querySelector('tbody') || document.getElementById('qaTableWrap');
+            const execs = (rawExecs || []).filter(e => e.emp_code !== 'MR10001');
             if (!execs.length) {
                 tbody.innerHTML = '<tr><td colspan="11" class="text-center py-4 text-muted">No QA audit records found for this period</td></tr>';
                 return;
@@ -2523,5 +2638,6 @@
             }
         }
     </script>
+    <script src="/shared/staff_engagement_tracker.js"></script>
 </body>
 </html>

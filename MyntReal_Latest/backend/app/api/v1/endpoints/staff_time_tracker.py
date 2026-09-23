@@ -961,6 +961,10 @@ async def get_team_attendance(
         hours_worked = 0
         break_minutes = 0
         is_late = False
+        active_minutes = 0
+        screen_minutes = 0
+        active_hours = 0.0
+        active_percentage = 0
         
         if attendance:
             attendance_status = attendance.status or 'present'
@@ -969,6 +973,14 @@ async def get_team_attendance(
             clock_out = attendance.clock_out.isoformat() if attendance.clock_out else None
             hours_worked = attendance.worked_minutes or 0
             break_minutes = attendance.break_minutes or 0
+            active_minutes = max(getattr(attendance, 'active_minutes', 0) or 0, getattr(attendance, 'activity_minutes_total', 0) or 0)
+            screen_minutes = getattr(attendance, 'screen_minutes', 0) or 0
+            active_hours = round(active_minutes / 60, 2)
+            if hours_worked > 0:
+                active_percentage = min(100, round((active_minutes / hours_worked) * 100))
+            elif attendance.clock_in and not attendance.clock_out:
+                elapsed_min = max(1, int((get_indian_time() - attendance.clock_in).total_seconds() / 60) - break_minutes)
+                active_percentage = min(100, round((active_minutes / elapsed_min) * 100))
             
             if attendance.clock_in:
                 clock_in_time = attendance.clock_in.time()
@@ -1081,6 +1093,10 @@ async def get_team_attendance(
             "hours_worked": hours_worked,
             "worked_minutes": hours_worked,
             "break_minutes": break_minutes,
+            "active_minutes": active_minutes,
+            "screen_minutes": screen_minutes,
+            "active_hours": active_hours,
+            "active_percentage": active_percentage,
             "is_late": is_late,
             "is_clocked_in": attendance is not None and attendance.clock_in is not None and attendance.clock_out is None,
             "can_clockout": attendance is not None and attendance.clock_in is not None and attendance.clock_out is None,
@@ -2246,6 +2262,68 @@ async def update_gps_status(
         "message": f"GPS status updated to {status}",
         "gps_status": status,
         "gps_status_at": now.isoformat()
+    }
+
+
+@router.post("/heartbeat-activity", summary="Report on-screen and actively engaged time heartbeat")
+async def report_heartbeat_activity(
+    data: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user)
+):
+    """
+    DC Protocol: Heartbeat on-screen active engagement tracking
+    Flushes accumulated active & on-screen seconds passively from client.
+    Incrementally updates active_minutes and screen_minutes on today's attendance.
+    """
+    active_seconds = int(data.get("active_seconds") or 0)
+    screen_seconds = int(data.get("screen_seconds") or 0)
+    total_active_seconds = int(data.get("total_active_seconds") or 0)
+    total_screen_seconds = int(data.get("total_screen_seconds") or 0)
+    
+    if active_seconds <= 0 and screen_seconds <= 0 and total_active_seconds <= 0 and total_screen_seconds <= 0:
+        return {"success": True, "message": "No duration to record"}
+    
+    today = get_indian_date()
+    target_date_str = data.get("date")
+    if target_date_str:
+        try:
+            today = date.fromisoformat(target_date_str)
+        except Exception:
+            pass
+            
+    attendance = db.query(StaffAttendance).filter(
+        StaffAttendance.employee_id == current_user.id,
+        StaffAttendance.date == today
+    ).first()
+    
+    if not attendance:
+        return {"success": True, "message": "No attendance record for date", "recorded": False}
+        
+    curr_active = getattr(attendance, 'active_minutes', 0) or 0
+    curr_screen = getattr(attendance, 'screen_minutes', 0) or 0
+    
+    if total_active_seconds > 0:
+        attendance.active_minutes = min(1440, max(curr_active, round(total_active_seconds / 60)))
+    elif active_seconds > 0:
+        attendance.active_minutes = min(1440, curr_active + max(1, round(active_seconds / 60)))
+        
+    if total_screen_seconds > 0:
+        attendance.screen_minutes = min(1440, max(curr_screen, round(total_screen_seconds / 60)))
+    elif screen_seconds > 0:
+        attendance.screen_minutes = min(1440, curr_screen + max(1, round(screen_seconds / 60)))
+    
+    db.commit()
+    
+    effective_active = max(attendance.active_minutes or 0, getattr(attendance, 'activity_minutes_total', 0) or 0)
+    active_pct = min(100, round((effective_active / max(attendance.worked_minutes or 1, 1)) * 100)) if (attendance.worked_minutes or 0) > 0 else 0
+    
+    return {
+        "success": True,
+        "active_minutes": attendance.active_minutes,
+        "screen_minutes": attendance.screen_minutes,
+        "active_hours": round(effective_active / 60, 2),
+        "active_percentage": active_pct
     }
 
 

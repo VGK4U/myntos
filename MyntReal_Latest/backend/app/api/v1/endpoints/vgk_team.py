@@ -7068,8 +7068,8 @@ def vgk_top_partners_leaderboard_table(
                ), 0) AS received_val,
                COUNT(*) FILTER (WHERE cl.status = 'won' OR cl.solar_pipeline_status IN ('balance_received', 'subsidy_pending', 'completed')) AS won_count,
                COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status = 'won' OR cl.solar_pipeline_status IN ('balance_received', 'subsidy_pending', 'completed')), 0) AS won_val,
-               COUNT(*) FILTER (WHERE cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled')) AS lost_count,
-               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled')), 0) AS lost_val,
+               COUNT(*) FILTER (WHERE cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled', 'bank_not_interested')) AS lost_count,
+               COALESCE(SUM(cl.deal_value_total) FILTER (WHERE cl.status IN ('lost', 'cancelled', 'rejected') OR cl.solar_pipeline_status IN ('loan_rejected', 'not_interested', 'cancelled', 'bank_not_interested')), 0) AS lost_val,
                (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id){tcl_date_filter}) AS team_leads,
                (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id)
                                                      AND (tcl.solar_pipeline_status IN ('application_submitted', 'pending_with_bank', 'documents_issue', 'load_extension', 'electricity_bill_change', 'documents_pending') OR tcl.status IN ('submitted', 'application_submitted'))
@@ -7078,7 +7078,7 @@ def vgk_top_partners_leaderboard_table(
                (SELECT COUNT(*) FROM crm_leads tcl WHERE tcl.associated_partner_id IN (SELECT id FROM official_partners sub WHERE sub.parent_partner_id = op.id)
                                                      AND (
                                                          tcl.solar_pipeline_status IN ('pending_with_bank', 'with_bank', 'waiting_for_bank_loan')
-                                                         OR tcl.solar_pipeline_status IN ('balance_pending', 'installation_pending', 'net_meter_pending', 'subsidy_pending', 'completed', 'completed_paid', 'installed', 'net_meter_done', 'subsidy_received', 'loan_rejected', 'bank_loan_rejected')
+                                                         OR tcl.solar_pipeline_status IN ('balance_pending', 'installation_pending', 'net_meter_pending', 'subsidy_pending', 'completed', 'completed_paid', 'installed', 'net_meter_done', 'subsidy_received', 'loan_rejected', 'bank_loan_rejected', 'bank_not_interested')
                                                          OR tcl.first_payment_received_date IS NOT NULL
                                                          OR EXISTS (SELECT 1 FROM crm_lead_audit_log al WHERE al.lead_id = tcl.id AND al.new_value IN ('pending_with_bank', 'with_bank', 'waiting_for_bank_loan'))
                                                      ){tcl_date_filter}) AS team_with_bank_count,

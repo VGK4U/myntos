@@ -20,6 +20,8 @@ from app.core.security import get_current_user_hybrid
 from app.models.call_tracking import StaffCallLog, StaffCallSyncLog, StaffCallRecording
 from app.models.crm import CRMLead, CRMLeadNote
 from app.models.staff import StaffEmployee, StaffDepartment
+from app.models.staff_attendance import StaffAttendance, StaffActivityTimeLog
+from app.models.staff_kra import StaffKRADailyInstance
 from app.utils.staff_hierarchy import get_team_member_ids
 
 # CT Protocol: Roles with full org visibility in call tracking (not limited to their downline)
@@ -44,7 +46,8 @@ def is_ct_full_access(user) -> bool:
     if ct_role in CT_FULL_ACCESS:
         return True
     return False
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
+from typing import Optional
 import pytz
 import re
 import os
@@ -157,8 +160,9 @@ async def sync_call_logs(
 
         for entry in call_logs:
             phone = entry.get('number') or entry.get('phone_number', '')
-            call_type = (entry.get('type') or entry.get('call_type', 'UNKNOWN')).upper()
             duration = int(entry.get('duration') or entry.get('duration_seconds', 0))
+            if duration < 0 or duration > 14400:
+                duration = 0
             call_ts = entry.get('date') or entry.get('call_datetime')
             device_id = entry.get('device_call_id') or entry.get('id', '')
 
@@ -337,9 +341,14 @@ async def get_lead_call_history(
         ).all()
         staff_names = {s.id: s.full_name for s in staff_rows}
 
+    safe_dur = case(
+        (and_(StaffCallLog.duration_seconds >= 0, StaffCallLog.duration_seconds <= 14400), StaffCallLog.duration_seconds),
+        else_=0
+    )
+
     summary_query = db.query(
         func.count(StaffCallLog.id).label('total_calls'),
-        func.sum(StaffCallLog.duration_seconds).label('total_duration'),
+        func.sum(safe_dur).label('total_duration'),
         func.sum(case((StaffCallLog.call_type == 'INCOMING', 1), else_=0)).label('incoming'),
         func.sum(case((StaffCallLog.call_type == 'OUTGOING', 1), else_=0)).label('outgoing'),
         func.sum(case((StaffCallLog.call_type == 'MISSED', 1), else_=0)).label('missed'),
@@ -349,7 +358,7 @@ async def get_lead_call_history(
     per_staff_stats = db.query(
         StaffCallLog.staff_id,
         func.count(StaffCallLog.id).label('total_calls'),
-        func.sum(StaffCallLog.duration_seconds).label('total_duration'),
+        func.sum(safe_dur).label('total_duration'),
         func.sum(case((StaffCallLog.call_type == 'INCOMING', 1), else_=0)).label('incoming'),
         func.sum(case((StaffCallLog.call_type == 'OUTGOING', 1), else_=0)).label('outgoing'),
         func.sum(case((StaffCallLog.call_type == 'MISSED', 1), else_=0)).label('missed'),
@@ -543,9 +552,14 @@ async def get_my_call_stats(
         StaffCallLog.call_date <= date_to
     )
 
+    safe_dur = case(
+        (and_(StaffCallLog.duration_seconds >= 0, StaffCallLog.duration_seconds <= 14400), StaffCallLog.duration_seconds),
+        else_=0
+    )
+
     stats = base.with_entities(
         func.count(StaffCallLog.id).label('total_calls'),
-        func.sum(StaffCallLog.duration_seconds).label('total_duration'),
+        func.sum(safe_dur).label('total_duration'),
         func.sum(case((StaffCallLog.call_type == 'INCOMING', 1), else_=0)).label('incoming'),
         func.sum(case((StaffCallLog.call_type == 'OUTGOING', 1), else_=0)).label('outgoing'),
         func.sum(case((StaffCallLog.call_type == 'MISSED', 1), else_=0)).label('missed'),
@@ -557,7 +571,7 @@ async def get_my_call_stats(
     daily = base.with_entities(
         StaffCallLog.call_date,
         func.count(StaffCallLog.id).label('calls'),
-        func.sum(StaffCallLog.duration_seconds).label('duration'),
+        func.sum(safe_dur).label('duration'),
         func.sum(case((StaffCallLog.call_type == 'MISSED', 1), else_=0)).label('missed'),
     ).group_by(StaffCallLog.call_date).order_by(StaffCallLog.call_date.desc()).limit(30).all()
 
@@ -615,15 +629,15 @@ async def get_my_call_stats(
 
 @router.get("/management/overview")
 async def get_call_management_overview(
-    company_id: int = Query(None),
-    date_from: str = Query(None),
-    date_to: str = Query(None),
-    staff_id: int = Query(None),
-    department_id: int = Query(None, description="Filter by department"),
-    reporting_manager_id: int = Query(None, description="Filter by reporting manager"),
-    call_type: str = Query(None, description="Filter by call type: INCOMING, OUTGOING, MISSED"),
-    phone_number: str = Query(None, description="Filter by phone number (partial match)"),
-    quick_range: str = Query(None, description="Quick range: today, yesterday, this_week, last_week, this_month, last_month, last_7, last_30"),
+    company_id: Optional[int] = Query(None),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    staff_id: Optional[int] = Query(None),
+    department_id: Optional[int] = Query(None, description="Filter by department"),
+    reporting_manager_id: Optional[int] = Query(None, description="Filter by reporting manager"),
+    call_type: Optional[str] = Query(None, description="Filter by call type: INCOMING, OUTGOING, MISSED"),
+    phone_number: Optional[str] = Query(None, description="Filter by phone number (partial match)"),
+    quick_range: Optional[str] = Query(None, description="Quick range: today, yesterday, this_week, last_week, this_month, last_month, last_7, last_30"),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user_hybrid)
 ):
@@ -634,6 +648,32 @@ async def get_call_management_overview(
     staff = db.query(StaffEmployee).filter(StaffEmployee.id == current_user.id).first()
     if not staff:
         raise HTTPException(status_code=404, detail="Staff not found")
+
+    # Sanitize filter parameters to prevent Query object leakage or non-integer values
+    if not isinstance(department_id, int):
+        try:
+            department_id = int(department_id) if department_id and str(department_id).isdigit() else None
+        except Exception:
+            department_id = None
+    if not isinstance(reporting_manager_id, int):
+        try:
+            reporting_manager_id = int(reporting_manager_id) if reporting_manager_id and str(reporting_manager_id).isdigit() else None
+        except Exception:
+            reporting_manager_id = None
+    if not isinstance(staff_id, int):
+        try:
+            staff_id = int(staff_id) if staff_id and str(staff_id).isdigit() else None
+        except Exception:
+            staff_id = None
+    if not isinstance(company_id, int):
+        try:
+            company_id = int(company_id) if company_id and str(company_id).isdigit() else None
+        except Exception:
+            company_id = None
+    if not isinstance(call_type, str):
+        call_type = None
+    if not isinstance(phone_number, str):
+        phone_number = None
 
     # CT Protocol: company_id removed from call log filtering — employee-based scoping only
     now = get_indian_time()
@@ -736,9 +776,14 @@ async def get_call_management_overview(
         if clean_phone:
             base = base.filter(StaffCallLog.phone_number.like(f'%{clean_phone}%'))
 
+    safe_dur = case(
+        (and_(StaffCallLog.duration_seconds >= 0, StaffCallLog.duration_seconds <= 14400), StaffCallLog.duration_seconds),
+        else_=0
+    )
+
     overall = base.with_entities(
         func.count(StaffCallLog.id).label('total_calls'),
-        func.sum(StaffCallLog.duration_seconds).label('total_duration'),
+        func.sum(safe_dur).label('total_duration'),
         func.sum(case((StaffCallLog.call_type == 'INCOMING', 1), else_=0)).label('incoming'),
         func.sum(case((StaffCallLog.call_type == 'OUTGOING', 1), else_=0)).label('outgoing'),
         func.sum(case((StaffCallLog.call_type == 'MISSED', 1), else_=0)).label('missed'),
@@ -746,6 +791,9 @@ async def get_call_management_overview(
         func.sum(case((StaffCallLog.matched_lead_id.isnot(None), 1), else_=0)).label('crm_matched'),
         func.count(distinct(StaffCallLog.staff_id)).label('active_staff'),
         func.count(distinct(StaffCallLog.call_date)).label('active_days'),
+        func.sum(case((StaffCallLog.source.in_(['dialer', 'autodialer', 'auto_dialer']), safe_dur), else_=0)).label('autodialer_duration'),
+        func.sum(case((StaffCallLog.source.in_(['softphone', 'plivo', 'webrtc', 'voip']), safe_dur), else_=0)).label('softphone_duration'),
+        func.sum(case((~StaffCallLog.source.in_(['dialer', 'autodialer', 'auto_dialer', 'softphone', 'plivo', 'webrtc', 'voip']), safe_dur), else_=0)).label('other_duration'),
     ).first()
 
     total_dur = int(overall.total_duration or 0)
@@ -755,13 +803,16 @@ async def get_call_management_overview(
     per_staff = base.with_entities(
         StaffCallLog.staff_id,
         func.count(StaffCallLog.id).label('total_calls'),
-        func.sum(StaffCallLog.duration_seconds).label('total_duration'),
+        func.sum(safe_dur).label('total_duration'),
         func.sum(case((StaffCallLog.call_type == 'OUTGOING', 1), else_=0)).label('outgoing'),
         func.sum(case((StaffCallLog.call_type == 'INCOMING', 1), else_=0)).label('incoming'),
         func.sum(case((StaffCallLog.call_type == 'MISSED', 1), else_=0)).label('missed'),
         func.count(distinct(StaffCallLog.phone_number)).label('unique_numbers'),
         func.sum(case((StaffCallLog.matched_lead_id.isnot(None), 1), else_=0)).label('crm_matched'),
         func.count(distinct(StaffCallLog.call_date)).label('active_days'),
+        func.sum(case((StaffCallLog.source.in_(['dialer', 'autodialer', 'auto_dialer']), safe_dur), else_=0)).label('autodialer_duration'),
+        func.sum(case((StaffCallLog.source.in_(['softphone', 'plivo', 'webrtc', 'voip']), safe_dur), else_=0)).label('softphone_duration'),
+        func.sum(case((~StaffCallLog.source.in_(['dialer', 'autodialer', 'auto_dialer', 'softphone', 'plivo', 'webrtc', 'voip']), safe_dur), else_=0)).label('other_duration'),
     ).group_by(StaffCallLog.staff_id).order_by(func.count(StaffCallLog.id).desc()).all()
 
     staff_ids = [s.staff_id for s in per_staff]
@@ -777,6 +828,7 @@ async def get_call_management_overview(
             StaffEmployee.id.in_(staff_ids),
             StaffEmployee.status == 'active',
             StaffEmployee.is_deleted == False,
+            StaffEmployee.emp_code != 'MR10001',
             ~StaffEmployee.emp_code.like('EMP_TEST_%'),
             or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN']))
         ).all()
@@ -803,6 +855,74 @@ async def get_call_management_overview(
             StaffCallSyncLog.status == 'completed'
         ).group_by(StaffCallSyncLog.staff_id).all()
         sync_map = {r.staff_id: r.last_synced_at for r in sync_rows}
+
+        # DC Protocol: Fetch active time, worked time, KRA time, and Task/Solar time from StaffAttendance & StaffActivityTimeLog
+        attendance_map = {}
+        activity_time_map = {}
+        kra_inst_map = {}
+        try:
+            d_from = date.fromisoformat(date_from) if isinstance(date_from, str) else date_from
+            d_to = date.fromisoformat(date_to) if isinstance(date_to, str) else date_to
+            att_rows = db.query(
+                StaffAttendance.employee_id,
+                func.coalesce(func.sum(StaffAttendance.active_minutes), 0).label('active_min'),
+                func.coalesce(func.sum(StaffAttendance.activity_minutes_total), 0).label('activity_min'),
+                func.coalesce(func.sum(StaffAttendance.worked_minutes), 0).label('worked_min'),
+                func.coalesce(func.sum(StaffAttendance.kra_minutes), 0).label('kra_min'),
+                func.coalesce(func.sum(StaffAttendance.task_minutes), 0).label('task_min'),
+                func.coalesce(func.sum(StaffAttendance.dayplan_minutes), 0).label('dayplan_min'),
+                func.coalesce(func.sum(StaffAttendance.journey_minutes), 0).label('journey_min'),
+                func.coalesce(func.sum(StaffAttendance.custom_minutes), 0).label('custom_min'),
+            ).filter(
+                StaffAttendance.employee_id.in_(staff_ids),
+                StaffAttendance.date >= d_from,
+                StaffAttendance.date <= d_to
+            ).group_by(StaffAttendance.employee_id).all()
+            
+            for r in att_rows:
+                attendance_map[r.employee_id] = {
+                    'active_minutes': max(int(r.active_min or 0), int(r.activity_min or 0)),
+                    'worked_minutes': int(r.worked_min or 0),
+                    'kra_minutes': int(r.kra_min or 0),
+                    'task_minutes': int(r.task_min or 0) + int(r.dayplan_min or 0) + int(r.journey_min or 0) + int(r.custom_min or 0),
+                    'activity_total': int(r.activity_min or 0),
+                }
+
+            # Query staff_activity_time_log for detailed KRA and Solar/tasks
+            act_rows = db.query(
+                StaffActivityTimeLog.employee_id,
+                func.coalesce(func.sum(StaffActivityTimeLog.completed_minutes), 0).label('total_min'),
+                func.coalesce(func.sum(case((StaffActivityTimeLog.source_type == 'kra', StaffActivityTimeLog.completed_minutes), else_=0)), 0).label('kra_min'),
+                func.coalesce(func.sum(case((StaffActivityTimeLog.source_type != 'kra', StaffActivityTimeLog.completed_minutes), else_=0)), 0).label('task_min'),
+            ).filter(
+                StaffActivityTimeLog.employee_id.in_(staff_ids),
+                StaffActivityTimeLog.date >= d_from,
+                StaffActivityTimeLog.date <= d_to
+            ).group_by(StaffActivityTimeLog.employee_id).all()
+
+            for ar in act_rows:
+                activity_time_map[ar.employee_id] = {
+                    'total_min': int(ar.total_min or 0),
+                    'kra_min': int(ar.kra_min or 0),
+                    'task_min': int(ar.task_min or 0),
+                }
+
+            # Query daily KRA instances if any
+            kra_inst_rows = db.query(
+                StaffKRADailyInstance.employee_id,
+                func.coalesce(func.sum(StaffKRADailyInstance.time_spent_minutes), 0).label('kra_inst_min')
+            ).filter(
+                StaffKRADailyInstance.employee_id.in_(staff_ids),
+                StaffKRADailyInstance.instance_date >= d_from,
+                StaffKRADailyInstance.instance_date <= d_to
+            ).group_by(StaffKRADailyInstance.employee_id).all()
+            kra_inst_map = {kr.employee_id: int(kr.kra_inst_min or 0) for kr in kra_inst_rows}
+        except Exception as att_err:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            print(f"[CT_OVERVIEW] Error fetching attendance active time: {att_err}")
 
     # Fix A — DC Protocol: Sync status for zero-data scenarios
     # When per_staff is empty, return sync context so frontend can show a meaningful banner
@@ -845,7 +965,7 @@ async def get_call_management_overview(
     daily = base.with_entities(
         StaffCallLog.call_date,
         func.count(StaffCallLog.id).label('calls'),
-        func.sum(StaffCallLog.duration_seconds).label('duration'),
+        func.sum(safe_dur).label('duration'),
         func.sum(case((StaffCallLog.call_type == 'MISSED', 1), else_=0)).label('missed'),
         func.sum(case((StaffCallLog.call_type == 'OUTGOING', 1), else_=0)).label('outgoing'),
         func.sum(case((StaffCallLog.call_type == 'INCOMING', 1), else_=0)).label('incoming'),
@@ -856,6 +976,7 @@ async def get_call_management_overview(
     ).filter(
         StaffEmployee.status == 'active',
         StaffEmployee.is_deleted == False,
+        StaffEmployee.emp_code != 'MR10001',
         ~StaffEmployee.emp_code.like('EMP_TEST_%'),
         or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN']))
     )
@@ -870,6 +991,7 @@ async def get_call_management_overview(
     managers = db.query(StaffEmployee.id, StaffEmployee.full_name, StaffEmployee.emp_code).filter(
         StaffEmployee.status == 'active',
         StaffEmployee.is_deleted == False,
+        StaffEmployee.emp_code != 'MR10001',
         ~StaffEmployee.emp_code.like('EMP_TEST_%'),
         or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN'])),
         StaffEmployee.id.in_(
@@ -901,6 +1023,66 @@ async def get_call_management_overview(
     except Exception:
         pass
 
+    # DC Protocol: Batch-fetch Auto Dialer durations per staff from crm_dialer_attempts
+    dialer_map_ct: dict = {}
+    try:
+        if staff_ids:
+            ct_df = f"{date_from} 00:00:00" if date_from else "2000-01-01 00:00:00"
+            ct_dt = f"{date_to} 23:59:59" if date_to else "2099-12-31 23:59:59"
+            str_staff_ids = [str(sid) for sid in staff_ids]
+            dialer_rows = db.execute(text(
+                "SELECT user_ref, COALESCE(SUM(duration_seconds), 0) "
+                "FROM crm_dialer_attempts "
+                "WHERE user_ref = ANY(:ids) AND created_at BETWEEN :df AND :dt "
+                "AND duration_seconds BETWEEN 0 AND 14400 GROUP BY user_ref"
+            ), {"ids": str_staff_ids, "df": ct_df, "dt": ct_dt}).fetchall()
+            dialer_map_ct = {int(r[0]): int(r[1]) for r in dialer_rows if str(r[0]).isdigit()}
+    except Exception as d_err:
+        print(f"[CT_OVERVIEW] Error fetching dialer attempts: {d_err}")
+
+    # Calculate channel durations for each staff member
+    staff_channel_durations = {}
+    for s in per_staff:
+        tot_staff_dur = int(s.total_duration or 0)
+        direct_dialer = int(getattr(s, 'autodialer_duration', 0) or 0)
+        att_dialer = dialer_map_ct.get(s.staff_id, 0)
+        autodialer_sec = min(tot_staff_dur, max(direct_dialer, att_dialer))
+
+        raw_softphone = int(getattr(s, 'softphone_duration', 0) or 0)
+        raw_other = int(getattr(s, 'other_duration', 0) or 0)
+
+        if raw_softphone >= autodialer_sec:
+            softphone_sec = raw_softphone - autodialer_sec
+            other_call_sec = raw_other
+        else:
+            softphone_sec = max(0, tot_staff_dur - autodialer_sec - raw_other)
+            other_call_sec = raw_other
+
+        att_item = attendance_map.get(s.staff_id, {})
+        act_item = activity_time_map.get(s.staff_id, {})
+        k_inst_min = kra_inst_map.get(s.staff_id, 0)
+
+        emp_kra_min = max(att_item.get('kra_minutes', 0), act_item.get('kra_min', 0), k_inst_min)
+        emp_task_min = max(att_item.get('task_minutes', 0), act_item.get('task_min', 0))
+        emp_other_act_min = max(att_item.get('activity_total', 0), emp_kra_min + emp_task_min, act_item.get('total_min', 0))
+        emp_other_act_sec = emp_other_act_min * 60
+
+        other_sec = other_call_sec + emp_other_act_sec
+        breakdown_str = f"KRA: {round(emp_kra_min / 60, 2):.2f} hrs | Tasks & Solar: {round(emp_task_min / 60, 2):.2f} hrs" if (emp_kra_min or emp_task_min) else "0.00 hrs"
+
+        staff_channel_durations[s.staff_id] = {
+            'autodialer_sec': autodialer_sec,
+            'softphone_sec': softphone_sec,
+            'other_sec': other_sec,
+            'kra_min': emp_kra_min,
+            'task_min': emp_task_min,
+            'other_breakdown': breakdown_str
+        }
+
+    ov_autodialer_sec = sum(ch['autodialer_sec'] for ch in staff_channel_durations.values())
+    ov_softphone_sec = sum(ch['softphone_sec'] for ch in staff_channel_durations.values())
+    ov_other_sec = sum(ch['other_sec'] for ch in staff_channel_durations.values())
+
     return {
         "success": True,
         "overview": {
@@ -913,6 +1095,12 @@ async def get_call_management_overview(
             "crm_matched": overall.crm_matched or 0,
             "active_staff": overall.active_staff or 0,
             "avg_daily_talk_time": avg_daily,
+            "autodialer_duration_seconds": ov_autodialer_sec,
+            "autodialer_hours": f"{round(ov_autodialer_sec / 3600, 2):.2f} hrs",
+            "softphone_duration_seconds": ov_softphone_sec,
+            "softphone_hours": f"{round(ov_softphone_sec / 3600, 2):.2f} hrs",
+            "other_duration_seconds": ov_other_sec,
+            "other_hours": f"{round(ov_other_sec / 3600, 2):.2f} hrs",
         },
         "per_staff": [{
             'staff_id': s.staff_id,
@@ -932,10 +1120,23 @@ async def get_call_management_overview(
             'unique_numbers': s.unique_numbers or 0,
             'crm_matched': s.crm_matched or 0,
             'avg_daily_talk_time': int(s.total_duration or 0) // max(s.active_days or 1, 1),
+            'autodialer_duration_seconds': staff_channel_durations.get(s.staff_id, {}).get('autodialer_sec', 0),
+            'autodialer_hours': f"{round(staff_channel_durations.get(s.staff_id, {}).get('autodialer_sec', 0) / 3600, 2):.2f} hrs",
+            'softphone_duration_seconds': staff_channel_durations.get(s.staff_id, {}).get('softphone_sec', 0),
+            'softphone_hours': f"{round(staff_channel_durations.get(s.staff_id, {}).get('softphone_sec', 0) / 3600, 2):.2f} hrs",
+            'other_duration_seconds': staff_channel_durations.get(s.staff_id, {}).get('other_sec', 0),
+            'other_hours': f"{round(staff_channel_durations.get(s.staff_id, {}).get('other_sec', 0) / 3600, 2):.2f} hrs",
+            'other_kra_minutes': staff_channel_durations.get(s.staff_id, {}).get('kra_min', 0),
+            'other_task_minutes': staff_channel_durations.get(s.staff_id, {}).get('task_min', 0),
+            'other_breakdown': staff_channel_durations.get(s.staff_id, {}).get('other_breakdown', '0.00 hrs'),
+            'active_time_minutes': attendance_map.get(s.staff_id, {}).get('active_minutes', 0),
+            'active_time_hours': f"{round(attendance_map.get(s.staff_id, {}).get('active_minutes', 0) / 60, 2):.2f} hrs",
+            'worked_hours': f"{round(attendance_map.get(s.staff_id, {}).get('worked_minutes', 0) / 60, 2):.2f} hrs",
+            'active_percentage': min(100, round((attendance_map.get(s.staff_id, {}).get('active_minutes', 0) / max(attendance_map.get(s.staff_id, {}).get('worked_minutes', 1), 1)) * 100)) if attendance_map.get(s.staff_id, {}).get('worked_minutes', 0) > 0 else 0,
             'last_synced_at': sync_map[s.staff_id].isoformat() if sync_map.get(s.staff_id) else None,
             'vgk_created': vgk_map_ct.get(s.staff_id, 0),
             'wa_shares': wa_map_ct.get(s.staff_id, 0),
-        } for s in per_staff if s.staff_id in staff_map],
+        } for s in per_staff if s.staff_id in staff_map and staff_map[s.staff_id].get('emp_code') != 'MR10001'],
         "daily_trend": [{
             'date': d.call_date,
             'calls': d.calls,
@@ -944,7 +1145,7 @@ async def get_call_management_overview(
             'outgoing': d.outgoing or 0,
             'incoming': d.incoming or 0,
         } for d in daily],
-        "staff_list": [{'id': s.id, 'name': s.full_name, 'emp_code': s.emp_code, 'call_tracking_enabled': s.call_tracking_enabled} for s in staff_list],
+        "staff_list": [{'id': s.id, 'name': s.full_name, 'emp_code': s.emp_code, 'call_tracking_enabled': s.call_tracking_enabled} for s in staff_list if s.emp_code != 'MR10001'],
         "departments": [{'id': d.id, 'name': d.name} for d in departments],
         "managers": [{'id': m.id, 'name': m.full_name, 'emp_code': m.emp_code} for m in managers],
         "date_range": {"from": date_from, "to": date_to},
@@ -1083,8 +1284,11 @@ async def get_call_slot_breakdown(
             staff_data[sid] = {k: _empty() for k in ALL_SLOT_KEYS}
         sk = _slot_key(log.call_datetime)
         s = staff_data[sid][sk]
+        safe_dur = log.duration_seconds or 0
+        if safe_dur < 0 or safe_dur > 14400:
+            safe_dur = 0
         s['calls'] += 1
-        s['duration_seconds'] += log.duration_seconds or 0
+        s['duration_seconds'] += safe_dur
         ctype = (log.call_type or '').upper()
         if ctype == 'OUTGOING':
             s['outgoing'] += 1
@@ -1092,7 +1296,7 @@ async def get_call_slot_breakdown(
             s['incoming'] += 1
         elif ctype == 'MISSED':
             s['missed'] += 1
-        if (log.duration_seconds or 0) > 0:
+        if safe_dur > 0:
             s['answered'] += 1
         if log.matched_lead_id:
             s['crm_matched'] += 1
@@ -1106,6 +1310,8 @@ async def get_call_slot_breakdown(
 
     staff_ids = list(staff_data.keys())
     staff_info_map = {}
+    attendance_map = {}
+    dialer_map_ct = {}
     if staff_ids:
         dept_cache = {}
         rows = db.query(
@@ -1115,6 +1321,7 @@ async def get_call_slot_breakdown(
             StaffEmployee.id.in_(staff_ids),
             StaffEmployee.status == 'active',
             StaffEmployee.is_deleted == False,
+            StaffEmployee.emp_code != 'MR10001',
             ~StaffEmployee.emp_code.like('EMP_TEST_%'),
             or_(StaffEmployee.staff_type.is_(None), ~StaffEmployee.staff_type.in_(['SAAS_CLIENT', 'TENANT_ADMIN', 'SAAS_SEGMENT_ADMIN']))
         ).all()
@@ -1130,6 +1337,85 @@ async def get_call_slot_breakdown(
                 'call_tracking_enabled': bool(r.call_tracking_enabled),
             }
 
+        # DC Protocol: Fetch active time, worked time, KRA time, and Task/Solar time from StaffAttendance & StaffActivityTimeLog
+        activity_time_map = {}
+        kra_inst_map = {}
+        try:
+            att_rows = db.query(
+                StaffAttendance.employee_id,
+                func.coalesce(func.sum(StaffAttendance.active_minutes), 0).label('active_min'),
+                func.coalesce(func.sum(StaffAttendance.activity_minutes_total), 0).label('activity_min'),
+                func.coalesce(func.sum(StaffAttendance.worked_minutes), 0).label('worked_min'),
+                func.coalesce(func.sum(StaffAttendance.kra_minutes), 0).label('kra_min'),
+                func.coalesce(func.sum(StaffAttendance.task_minutes), 0).label('task_min'),
+                func.coalesce(func.sum(StaffAttendance.dayplan_minutes), 0).label('dayplan_min'),
+                func.coalesce(func.sum(StaffAttendance.journey_minutes), 0).label('journey_min'),
+                func.coalesce(func.sum(StaffAttendance.custom_minutes), 0).label('custom_min'),
+            ).filter(
+                StaffAttendance.employee_id.in_(staff_ids),
+                StaffAttendance.date >= d_from,
+                StaffAttendance.date <= d_to
+            ).group_by(StaffAttendance.employee_id).all()
+            for r in att_rows:
+                attendance_map[r.employee_id] = {
+                    'active_minutes': max(int(r.active_min or 0), int(r.activity_min or 0)),
+                    'worked_minutes': int(r.worked_min or 0),
+                    'kra_minutes': int(r.kra_min or 0),
+                    'task_minutes': int(r.task_min or 0) + int(r.dayplan_min or 0) + int(r.journey_min or 0) + int(r.custom_min or 0),
+                    'activity_total': int(r.activity_min or 0),
+                }
+
+            # Query staff_activity_time_log for detailed KRA and Solar/tasks
+            act_rows = db.query(
+                StaffActivityTimeLog.employee_id,
+                func.coalesce(func.sum(StaffActivityTimeLog.completed_minutes), 0).label('total_min'),
+                func.coalesce(func.sum(case((StaffActivityTimeLog.source_type == 'kra', StaffActivityTimeLog.completed_minutes), else_=0)), 0).label('kra_min'),
+                func.coalesce(func.sum(case((StaffActivityTimeLog.source_type != 'kra', StaffActivityTimeLog.completed_minutes), else_=0)), 0).label('task_min'),
+            ).filter(
+                StaffActivityTimeLog.employee_id.in_(staff_ids),
+                StaffActivityTimeLog.date >= d_from,
+                StaffActivityTimeLog.date <= d_to
+            ).group_by(StaffActivityTimeLog.employee_id).all()
+
+            for ar in act_rows:
+                activity_time_map[ar.employee_id] = {
+                    'total_min': int(ar.total_min or 0),
+                    'kra_min': int(ar.kra_min or 0),
+                    'task_min': int(ar.task_min or 0),
+                }
+
+            # Query daily KRA instances if any
+            kra_inst_rows = db.query(
+                StaffKRADailyInstance.employee_id,
+                func.coalesce(func.sum(StaffKRADailyInstance.time_spent_minutes), 0).label('kra_inst_min')
+            ).filter(
+                StaffKRADailyInstance.employee_id.in_(staff_ids),
+                StaffKRADailyInstance.instance_date >= d_from,
+                StaffKRADailyInstance.instance_date <= d_to
+            ).group_by(StaffKRADailyInstance.employee_id).all()
+            kra_inst_map = {kr.employee_id: int(kr.kra_inst_min or 0) for kr in kra_inst_rows}
+        except Exception as att_err:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+            print(f"[CT_SLOTS] Attendance fetch error: {att_err}")
+
+        # DC Protocol: Fetch Auto Dialer duration from crm_dialer_attempts
+        try:
+            ct_df = f"{date_from} 00:00:00" if date_from else "2000-01-01 00:00:00"
+            ct_dt = f"{date_to} 23:59:59" if date_to else "2099-12-31 23:59:59"
+            str_staff_ids = [str(sid) for sid in staff_ids]
+            dialer_rows = db.execute(text(
+                "SELECT user_ref, COALESCE(SUM(duration_seconds), 0) "
+                "FROM crm_dialer_attempts "
+                "WHERE user_ref = ANY(:ids) AND created_at BETWEEN :df AND :dt "
+                "AND duration_seconds BETWEEN 0 AND 14400 GROUP BY user_ref"
+            ), {"ids": str_staff_ids, "df": ct_df, "dt": ct_dt}).fetchall()
+            dialer_map_ct = {int(r[0]): int(r[1]) for r in dialer_rows if str(r[0]).isdigit()}
+        except Exception as d_err:
+            print(f"[CT_SLOTS] Dialer fetch error: {d_err}")
+
     org_slots = {k: _empty() for k in ALL_SLOT_KEYS}
     per_staff_result = []
     for sid, slots in sorted(staff_data.items(), key=lambda x: -_total(x[1])['calls']):
@@ -1140,17 +1426,77 @@ async def get_call_slot_breakdown(
         for sk in ALL_SLOT_KEYS:
             for metric in org_slots[sk]:
                 org_slots[sk][metric] += slots[sk][metric]
+            s_item = slots[sk]
+            s_dur = s_item['duration_seconds']
+            s_calls = s_item['calls']
+            s_hrs_num = round(s_dur / 3600, 2)
+            s_item['duration_hours'] = f"{s_hrs_num:.2f} hrs"
+            s_item['formatted'] = f"{s_hrs_num:.2f} hrs / {s_calls}"
+
+        tot_dur = total['duration_seconds']
+        tot_calls = total['calls']
+        tot_hrs_num = round(tot_dur / 3600, 2)
+        total['duration_hours'] = f"{tot_hrs_num:.2f} hrs"
+        total['formatted'] = f"{tot_hrs_num:.2f} hrs / {tot_calls}"
+
+        autodialer_sec = min(tot_dur, dialer_map_ct.get(sid, 0))
+        softphone_sec = max(0, tot_dur - autodialer_sec)
+
+        att_info = attendance_map.get(sid, {})
+        act_info = activity_time_map.get(sid, {})
+        k_inst_min = kra_inst_map.get(sid, 0)
+
+        emp_kra_min = max(att_info.get('kra_minutes', 0), act_info.get('kra_min', 0), k_inst_min)
+        emp_task_min = max(att_info.get('task_minutes', 0), act_info.get('task_min', 0))
+        emp_other_act_min = max(att_info.get('activity_total', 0), emp_kra_min + emp_task_min, act_info.get('total_min', 0))
+        emp_other_act_sec = emp_other_act_min * 60
+
+        other_sec = emp_other_act_sec
+        breakdown_str = f"KRA: {round(emp_kra_min / 60, 2):.2f} hrs | Tasks & Solar: {round(emp_task_min / 60, 2):.2f} hrs" if (emp_kra_min or emp_task_min) else "0.00 hrs"
+
+        act_min = att_info.get('active_minutes', 0)
+        wrk_min = att_info.get('worked_minutes', 0)
+        act_pct = min(100, round((act_min / max(wrk_min, 1)) * 100)) if wrk_min > 0 else 0
+
         per_staff_result.append({
             'staff_id': sid,
             'name': info['name'],
             'emp_code': info['emp_code'],
             'department': info['department'],
             'call_tracking_enabled': info['call_tracking_enabled'],
+            'active_time_minutes': act_min,
+            'active_time_hours': f"{round(act_min / 60, 2):.2f} hrs",
+            'worked_hours': f"{round(wrk_min / 60, 2):.2f} hrs",
+            'active_percentage': act_pct,
+            'autodialer_duration_seconds': autodialer_sec,
+            'autodialer_hours': f"{round(autodialer_sec / 3600, 2):.2f} hrs",
+            'softphone_duration_seconds': softphone_sec,
+            'softphone_hours': f"{round(softphone_sec / 3600, 2):.2f} hrs",
+            'other_duration_seconds': other_sec,
+            'other_hours': f"{round(other_sec / 3600, 2):.2f} hrs",
+            'other_kra_minutes': emp_kra_min,
+            'other_task_minutes': emp_task_min,
+            'other_breakdown': breakdown_str,
             'slots': slots,
             'total': total,
         })
 
     org_total = _total(org_slots)
+    for sk in ALL_SLOT_KEYS:
+        os_item = org_slots[sk]
+        os_hrs = round(os_item['duration_seconds'] / 3600, 2)
+        os_item['duration_hours'] = f"{os_hrs:.2f} hrs"
+        os_item['formatted'] = f"{os_hrs:.2f} hrs / {os_item['calls']}"
+
+    ot_hrs = round(org_total['duration_seconds'] / 3600, 2)
+    org_total['duration_hours'] = f"{ot_hrs:.2f} hrs"
+    org_total['formatted'] = f"{ot_hrs:.2f} hrs / {org_total['calls']}"
+    org_total['autodialer_duration_seconds'] = sum(r.get('autodialer_duration_seconds', 0) for r in per_staff_result)
+    org_total['autodialer_hours'] = f"{round(org_total['autodialer_duration_seconds'] / 3600, 2):.2f} hrs"
+    org_total['softphone_duration_seconds'] = sum(r.get('softphone_duration_seconds', 0) for r in per_staff_result)
+    org_total['softphone_hours'] = f"{round(org_total['softphone_duration_seconds'] / 3600, 2):.2f} hrs"
+    org_total['other_duration_seconds'] = sum(r.get('other_duration_seconds', 0) for r in per_staff_result)
+    org_total['other_hours'] = f"{round(org_total['other_duration_seconds'] / 3600, 2):.2f} hrs"
 
     return {
         "success": True,

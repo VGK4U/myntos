@@ -612,6 +612,7 @@
                         <div class="lead-contact" style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
                             <span>${lead.phone || ''}</span>
                             ${lead.phone ? `<button onclick="event.stopPropagation();openLeadWAModal(${lead.id},'${lead.phone.replace(/\D/g,'').slice(-10)}','${escapeHtml(lead.name)}',null)" title="Send WhatsApp" style="background:#25D366;color:white;border:none;border-radius:5px;padding:2px 6px;font-size:10px;cursor:pointer;display:inline-flex;align-items:center;gap:3px"><i class="fab fa-whatsapp"></i> WA</button>` : ''}
+                            <button onclick="event.stopPropagation();openLeadHistory(${lead.id}, '${escapeHtml(lead.name)}', '${lead.phone || ''}', '${escapeHtml(lead.category_name || '')}')" title="Universal History" style="background:#e0e7ff;color:#3730a3;border:1px solid #c7d2fe;border-radius:5px;padding:2px 6px;font-size:10px;cursor:pointer;display:inline-flex;align-items:center;gap:3px;font-weight:600"><i class="fas fa-history"></i> History</button>
                             ${lead.email ? `<span style="color:#9ca3af">| ${lead.email}</span>` : ''}
                         </div>
                     </td>
@@ -700,7 +701,20 @@
             return div.innerHTML;
         }
 
+        function openLeadHistory(leadId, name, phone, category) {
+            if (window.openUniversalHistory) {
+                window.openUniversalHistory({
+                    entityType: 'crm_lead',
+                    entityId: leadId,
+                    name: name || `Lead #${leadId}`,
+                    phone: phone || '',
+                    category: category || 'CRM Lead'
+                });
+            }
+        }
+
     </script>
+    <script src="/public/js/universal-history-modal.js"></script>
     <script src="/public/js/wa-lead-modal.js"></script>
     <script src="/public/js/share-lead-modal.js?v=20260916"></script>
 </body>

@@ -15,6 +15,7 @@ import { PageHeader } from '../components/PageHeader';
 import { routerService } from '../services/router.service';
 import { callController } from '../services/call-controller';
 import { unifiedWAModal } from '../components/UnifiedWAModal';
+import { UniversalLeadHistoryModal } from '../components/UniversalLeadHistoryModal';
 
 interface LeadItem {
   id: number;
@@ -332,13 +333,16 @@ export class CategoryLeadsMasterPage {
           ` : ''}
         </div>
 
-        <!-- Action Buttons: Softphone Call & WhatsApp -->
-        <div style="display:flex; gap:8px; border-top:1px solid #334155; padding-top:10px;">
-          <button class="action-call-btn" data-phone="${cleanPhone}" data-name="${name.replace(/"/g, '&quot;')}" data-id="${lead.id}" style="flex:1; background:#0284c7; color:white; border:none; border-radius:8px; padding:8px 10px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
-            <i class="fas fa-headset"></i> Call Softphone
+        <!-- Action Buttons: Softphone Call, WhatsApp, Universal History -->
+        <div style="display:flex; gap:6px; border-top:1px solid #334155; padding-top:10px;">
+          <button class="action-call-btn" data-phone="${cleanPhone}" data-name="${name.replace(/"/g, '&quot;')}" data-id="${lead.id}" style="flex:1; background:#0284c7; color:white; border:none; border-radius:8px; padding:8px 8px; font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;">
+            <i class="fas fa-headset"></i> Call
           </button>
-          <button class="action-wa-btn" data-phone="${cleanPhone}" data-name="${name.replace(/"/g, '&quot;')}" data-id="${lead.id}" data-cat="${cat}" style="flex:1; background:#059669; color:white; border:none; border-radius:8px; padding:8px 10px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
-            <i class="fab fa-whatsapp"></i> WhatsApp
+          <button class="action-wa-btn" data-phone="${cleanPhone}" data-name="${name.replace(/"/g, '&quot;')}" data-id="${lead.id}" data-cat="${cat}" style="flex:1; background:#059669; color:white; border:none; border-radius:8px; padding:8px 8px; font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;">
+            <i class="fab fa-whatsapp"></i> WA
+          </button>
+          <button class="action-history-btn" data-phone="${cleanPhone}" data-name="${name.replace(/"/g, '&quot;')}" data-id="${lead.id}" data-cat="${cat}" style="background:#4f46e5; color:white; border:none; border-radius:8px; padding:8px 10px; font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px;" title="Universal History">
+            <i class="fas fa-history"></i> History
           </button>
         </div>
       </div>
@@ -469,6 +473,28 @@ export class CategoryLeadsMasterPage {
             name,
             leadId,
             context
+          });
+        }
+      });
+    });
+
+    // Universal Lead History Trigger
+    this.container.querySelectorAll('.action-history-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = e.currentTarget as HTMLElement;
+        const phone = target.dataset.phone || '';
+        const name = target.dataset.name || 'Lead';
+        const leadId = parseInt(target.dataset.id || '0');
+        const cat = target.dataset.cat || 'Category Lead';
+
+        if (leadId) {
+          UniversalLeadHistoryModal.open({
+            entityType: 'crm_lead',
+            entityId: leadId,
+            name,
+            phone,
+            category: cat
           });
         }
       });

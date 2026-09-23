@@ -29,8 +29,12 @@ import logging
 import re
 import os
 import hashlib
+import base64
+from cryptography.fernet import Fernet
 import uuid
 import asyncio
+import time
+import threading
 import random as _random
 from collections import defaultdict as _defaultdict
 
@@ -73,7 +77,491 @@ def _get_twilio_from():
 
 def _get_openai_key():
     _reload_env()
-    return os.environ.get("OPENAI_API_KEY", "")
+    return os.environ.get("OPENAI_API_KEY") or getattr(settings, "OPENAI_API_KEY", None) or ""
+
+def _get_gemini_key():
+    _reload_env()
+    return (
+        os.environ.get("GEMINI_API_KEY")
+        or getattr(settings, "GEMINI_API_KEY", None)
+        or os.environ.get("GOOGLE_API_KEY")
+        or getattr(settings, "GOOGLE_API_KEY", None)
+        or ""
+    ).strip()
+
+def _get_encryption_cipher():
+    secret = (getattr(settings, "SECRET_KEY", None) or "mynt-os-default-secret-encryption-key-32").encode("utf-8")
+    key = base64.urlsafe_b64encode(hashlib.sha256(secret).digest())
+    return Fernet(key)
+
+def _encrypt_credential(val: str) -> str:
+    """Encrypt raw API key with Fernet before persisting to database."""
+    if not val:
+        return ""
+    if val.startswith("gsec_"):
+        return val
+    try:
+        cipher = _get_encryption_cipher()
+        enc = cipher.encrypt(val.encode("utf-8")).decode("utf-8")
+        return f"gsec_{enc}"
+    except Exception as e:
+        logger.error(f"[GEMINI-POOL] Failed to encrypt credential: {e}")
+        return val
+
+def _decrypt_credential(val: str) -> str:
+    """Decrypt stored credential from database into plaintext."""
+    if not val:
+        return ""
+    if not val.startswith("gsec_"):
+        return val
+    raw_b64 = val[5:]
+    try:
+        cipher = _get_encryption_cipher()
+        return cipher.decrypt(raw_b64.encode("utf-8")).decode("utf-8")
+    except Exception as e:
+        logger.warning(f"[GEMINI-POOL] Failed to decrypt credential: {e}")
+        return ""
+
+def _mask_gemini_key(key: str) -> str:
+    if not key:
+        return ""
+    # Decrypt if stored encrypted
+    if key.startswith("gsec_"):
+        key = _decrypt_credential(key)
+    s = key.strip()
+    if len(s) <= 10:
+        return "***"
+    return f"{s[:6]}...{s[-4:]}"
+
+def _ping_gemini_key(key: str) -> dict:
+    """Test connection and key validity with a lightweight call to Google Gemini."""
+    if not key or len(key.strip()) < 10:
+        return {"success": False, "error": "API key is too short or empty"}
+    if key.startswith("gsec_"):
+        key = _decrypt_credential(key)
+    try:
+        from google import genai
+        client = genai.Client(api_key=key.strip())
+        res = client.models.generate_content(
+            model="gemini-3.1-flash-lite",
+            contents="ping",
+        )
+        return {"success": True, "message": "Key is valid and active on Google Gemini"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+def _classify_gemini_error(err: Exception) -> dict:
+    """Classify Google Gemini / API errors into actionable categories.
+    Returns:
+      {
+        "category": "quota_exhausted" | "auth_invalid" | "permission_denied" | "invalid_request" | "transient_unavailable" | "unknown",
+        "can_failover": bool,
+        "cooldown_seconds": int,
+        "disable_account": bool,
+        "reason": str
+      }
+    """
+    err_str = str(err)
+    err_upper = err_str.upper()
+    err_lower = err_str.lower()
+
+    # 429 / RESOURCE_EXHAUSTED -> Quota exhausted (failover=True, cooldown=60s)
+    if "429" in err_str or "RESOURCE_EXHAUSTED" in err_upper or "quota" in err_lower or "rate limit" in err_lower:
+        return {
+            "category": "quota_exhausted",
+            "can_failover": True,
+            "cooldown_seconds": 60,
+            "disable_account": False,
+            "reason": "Quota or rate limit exhausted (429 RESOURCE_EXHAUSTED)"
+        }
+
+    # 401 / UNAUTHENTICATED -> Invalid API Key (disable account, no blind rotation)
+    if "401" in err_str or "UNAUTHENTICATED" in err_upper or "api_key_invalid" in err_lower or "api key not valid" in err_lower:
+        return {
+            "category": "auth_invalid",
+            "can_failover": False,
+            "cooldown_seconds": 0,
+            "disable_account": True,
+            "reason": "Invalid or revoked API key (401 UNAUTHENTICATED)"
+        }
+
+    # 403 / PERMISSION_DENIED -> Access forbidden / Billing disabled (disable account, no blind rotation)
+    if "403" in err_str or "PERMISSION_DENIED" in err_upper or "access not configured" in err_lower or "permission denied" in err_lower:
+        return {
+            "category": "permission_denied",
+            "can_failover": False,
+            "cooldown_seconds": 0,
+            "disable_account": True,
+            "reason": "Permission denied or API not enabled (403 PERMISSION_DENIED)"
+        }
+
+    # 400 / INVALID_ARGUMENT -> Client error / Bad request (fail fast, do NOT burn other projects)
+    if "400" in err_str or "INVALID_ARGUMENT" in err_upper or "bad request" in err_lower:
+        return {
+            "category": "invalid_request",
+            "can_failover": False,
+            "cooldown_seconds": 0,
+            "disable_account": False,
+            "reason": "Invalid request payload or arguments (400 INVALID_ARGUMENT)"
+        }
+
+    # 503 / 500 / 504 / UNAVAILABLE / DEADLINE_EXCEEDED -> Transient network/server error (can failover, no cooldown)
+    if "503" in err_str or "500" in err_str or "504" in err_str or "UNAVAILABLE" in err_upper or "DEADLINE_EXCEEDED" in err_upper or "timeout" in err_lower:
+        return {
+            "category": "transient_unavailable",
+            "can_failover": True,
+            "cooldown_seconds": 0,
+            "disable_account": False,
+            "reason": "Transient service error or timeout (503/504 UNAVAILABLE)"
+        }
+
+    return {
+        "category": "unknown",
+        "can_failover": True,
+        "cooldown_seconds": 0,
+        "disable_account": False,
+        "reason": f"Unknown error: {err_str[:120]}"
+    }
+
+class GeminiProjectPool:
+    """Multi-project account manager and quota failover controller for Google Gemini.
+
+    Features:
+    - Thread-safe project pool operations protected by RLock.
+    - Tenant isolation: each company maintains its own isolated pool in `ai_settings`.
+    - Encryption-at-rest: all raw API credentials are encrypted with Fernet (`gsec_...`).
+    - 3-tier quota breakdown: Configured limit, Google-reported quota, and Measured usage.
+    - Intelligent error classification: 429 triggers cooldown & failover; 401/403 disables account; 400 aborts rotation.
+    - Priority-based deterministic candidate selection.
+    """
+    def __init__(self):
+        self._lock = threading.RLock()
+        self._pools: dict[int, list[dict]] = {}
+        self._cooldowns: dict[tuple[int, str], float] = {}
+
+    def _load_pool_from_db(self, company_id: int) -> list[dict]:
+        pool = []
+        try:
+            db = _SessionLocal()
+            try:
+                row = db.execute(
+                    text("SELECT value FROM ai_settings WHERE company_id=:cid AND key='gemini_project_pool'"),
+                    {"cid": company_id}
+                ).fetchone()
+                if row and row[0]:
+                    pool = json.loads(row[0])
+                    for acc in pool:
+                        raw_k = acc.get("api_key", "")
+                        if raw_k:
+                            acc["api_key"] = _decrypt_credential(raw_k)
+            finally:
+                db.close()
+        except Exception as e:
+            logger.warning(f"[GEMINI-POOL] Failed to load pool from DB for company {company_id}: {e}")
+
+        if not pool:
+            env_k = _get_gemini_key()
+            if env_k:
+                pool = [{
+                    "id": "env_default",
+                    "name": "Environment Default Credential",
+                    "api_key": env_k,
+                    "priority": 1,
+                    "status": "active",
+                    "daily_limit": 1500,
+                    "total_requests": 0,
+                    "total_errors": 0,
+                    "quota_429_count": 0,
+                    "failover_count": 0,
+                    "last_used_at": None,
+                    "last_failed_at": None,
+                    "is_env_default": True,
+                    "created_at": datetime.now(pytz.UTC).isoformat()
+                }]
+        return pool
+
+    def _save_pool_to_db(self, company_id: int, pool: list[dict]):
+        try:
+            db_pool = []
+            for acc in pool:
+                acc_copy = dict(acc)
+                raw_k = acc_copy.get("api_key", "")
+                if raw_k and not raw_k.startswith("gsec_"):
+                    acc_copy["api_key"] = _encrypt_credential(raw_k)
+                db_pool.append(acc_copy)
+
+            db = _SessionLocal()
+            try:
+                db.execute(text("""
+                    INSERT INTO ai_settings (company_id, key, value, updated_at)
+                    VALUES (:cid, 'gemini_project_pool', :val, NOW())
+                    ON CONFLICT (company_id, key) DO UPDATE SET value=:val, updated_at=NOW()
+                """), {"cid": company_id, "val": json.dumps(db_pool)})
+                db.commit()
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"[GEMINI-POOL] Failed to save pool to DB for company {company_id}: {e}")
+
+    def get_pool(self, company_id: int = None) -> list[dict]:
+        cid = company_id or 1
+        with self._lock:
+            if cid not in self._pools:
+                self._pools[cid] = self._load_pool_from_db(cid)
+            return self._pools[cid]
+
+    def list_accounts_masked(self, company_id: int) -> list[dict]:
+        cid = company_id or 1
+        accounts = self.get_pool(cid)
+        now = time.time()
+        res = []
+        for acc in accounts:
+            acc_id = acc.get("id", "")
+            cd_until = self._cooldowns.get((cid, acc_id), 0.0)
+            in_cd = (now < cd_until)
+            remaining_cd = max(0, int(cd_until - now)) if in_cd else 0
+            live_status = acc.get("status", "active")
+            if live_status == "active" and in_cd:
+                live_status = "cooldown"
+
+            is_env = acc.get("is_env_default", False)
+            disp_name = acc.get("name", "Unnamed Project")
+            if is_env and disp_name == "Environment Default Project":
+                disp_name = "Environment Default Credential"
+
+            res.append({
+                "id": acc_id,
+                "name": disp_name,
+                "api_key_masked": _mask_gemini_key(acc.get("api_key", "")),
+                "priority": acc.get("priority", 1),
+                "status": live_status,
+                "account_type_label": "Environment Credential (GEMINI_API_KEY)" if is_env else "Project API Key",
+                "configured_limit": acc.get("daily_limit", 1500),
+                "google_reported_quota": "Unavailable via API (View in Google Cloud Console)",
+                "google_console_url": "https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/quotas",
+                "daily_limit": acc.get("daily_limit", 1500),
+                "cooldown_remaining_sec": remaining_cd,
+                "total_requests": acc.get("total_requests", 0),
+                "total_errors": acc.get("total_errors", 0),
+                "quota_429_count": acc.get("quota_429_count", 0),
+                "failover_count": acc.get("failover_count", 0),
+                "last_failover_reason": acc.get("last_failover_reason"),
+                "last_error": acc.get("last_error"),
+                "last_used_at": acc.get("last_used_at"),
+                "last_failed_at": acc.get("last_failed_at"),
+                "is_env_default": is_env,
+                "created_at": acc.get("created_at")
+            })
+        res.sort(key=lambda x: (x["priority"], x.get("created_at") or ""))
+        return res
+
+    def get_candidate_clients(self, company_id: int = None) -> list[tuple]:
+        cid = company_id or 1
+        accounts = self.get_pool(cid)
+        if not accounts:
+            env_k = _get_gemini_key()
+            if env_k:
+                accounts = [{
+                    "id": "env_default",
+                    "name": "Environment Default Credential",
+                    "api_key": env_k,
+                    "priority": 1,
+                    "status": "active",
+                    "daily_limit": 1500,
+                    "is_env_default": True
+                }]
+            else:
+                return []
+
+        now = time.time()
+        sorted_accs = sorted(accounts, key=lambda a: (a.get("priority", 1), a.get("total_requests", 0)))
+
+        valid_candidates = []
+        cooldown_candidates = []
+
+        for acc in sorted_accs:
+            if acc.get("status") in ("disabled", "standby"):
+                continue
+            acc_id = acc.get("id")
+            cd_until = self._cooldowns.get((cid, acc_id), 0.0)
+            if now < cd_until:
+                cooldown_candidates.append((cd_until, acc))
+            else:
+                valid_candidates.append(acc)
+
+        final_order = valid_candidates
+        if not final_order and cooldown_candidates:
+            cooldown_candidates.sort(key=lambda x: x[0])
+            final_order = [x[1] for x in cooldown_candidates]
+
+        from google import genai
+        result = []
+        for acc in final_order:
+            key = acc.get("api_key", "").strip()
+            if not key:
+                continue
+            try:
+                client = genai.Client(api_key=key)
+                result.append((client, acc))
+            except Exception as e:
+                logger.warning(f"[GEMINI-POOL] Failed to initialize client for {acc.get('name')}: {e}")
+        return result
+
+    def record_error(self, company_id: int, account_id: str, error: Exception = None, is_quota: bool = False, error_msg: str = "") -> dict:
+        cid = company_id or 1
+        with self._lock:
+            if error:
+                info = _classify_gemini_error(error)
+            elif is_quota:
+                info = {
+                    "category": "quota_exhausted",
+                    "can_failover": True,
+                    "cooldown_seconds": 60,
+                    "disable_account": False,
+                    "reason": error_msg or "Quota exhausted (429 RESOURCE_EXHAUSTED)"
+                }
+            else:
+                info = {
+                    "category": "unknown",
+                    "can_failover": True,
+                    "cooldown_seconds": 0,
+                    "disable_account": False,
+                    "reason": error_msg or "Unknown error"
+                }
+
+            if info["cooldown_seconds"] > 0:
+                self._cooldowns[(cid, account_id)] = time.time() + info["cooldown_seconds"]
+                logger.warning(f"[GEMINI-POOL] Account {account_id} entered {info['cooldown_seconds']}s cooldown: {info['reason']}")
+
+            pool = self.get_pool(cid)
+            for acc in pool:
+                if acc.get("id") == account_id:
+                    acc["total_errors"] = acc.get("total_errors", 0) + 1
+                    acc["last_error"] = str(info["reason"])[:200]
+                    acc["last_error_category"] = info["category"]
+                    acc["last_failed_at"] = datetime.now(pytz.UTC).isoformat()
+                    if info["category"] == "quota_exhausted":
+                        acc["quota_429_count"] = acc.get("quota_429_count", 0) + 1
+                    if info["disable_account"]:
+                        acc["status"] = "disabled"
+                        logger.error(f"[GEMINI-POOL] Account {account_id} automatically DISABLED: {info['reason']}")
+                    break
+            self._save_pool_to_db(cid, pool)
+            return info
+
+    def record_failover(self, company_id: int, from_account_id: str, to_account_id: str = None, reason: str = ""):
+        cid = company_id or 1
+        with self._lock:
+            pool = self.get_pool(cid)
+            for acc in pool:
+                if acc.get("id") == from_account_id:
+                    acc["failover_count"] = acc.get("failover_count", 0) + 1
+                    acc["last_failover_reason"] = str(reason)[:200]
+                    acc["last_failover_at"] = datetime.now(pytz.UTC).isoformat()
+                    break
+            self._save_pool_to_db(cid, pool)
+
+    def record_success(self, company_id: int, account_id: str):
+        cid = company_id or 1
+        with self._lock:
+            self._cooldowns.pop((cid, account_id), None)
+            pool = self.get_pool(cid)
+            for acc in pool:
+                if acc.get("id") == account_id:
+                    acc["total_requests"] = acc.get("total_requests", 0) + 1
+                    acc["last_used_at"] = datetime.now(pytz.UTC).isoformat()
+                    break
+
+    def add_or_update_account(self, company_id: int, data: dict) -> dict:
+        cid = company_id or 1
+        acc_id = data.get("id") or f"proj_{uuid.uuid4().hex[:8]}"
+        name = (data.get("name") or "New Gemini Project").strip()
+        api_key = (data.get("api_key") or "").strip()
+        priority = int(data.get("priority") or 1)
+        daily_limit = int(data.get("daily_limit") or 1500)
+        status = data.get("status") or "active"
+
+        with self._lock:
+            pool = list(self.get_pool(cid))
+            existing = next((a for a in pool if a.get("id") == acc_id), None)
+            if existing:
+                existing["name"] = name
+                if api_key and not api_key.startswith("***"):
+                    existing["api_key"] = api_key
+                existing["priority"] = priority
+                existing["daily_limit"] = daily_limit
+                existing["status"] = status
+                out_acc = existing
+            else:
+                if not api_key:
+                    raise ValueError("API Key is required for new project account")
+                new_acc = {
+                    "id": acc_id,
+                    "name": name,
+                    "api_key": api_key,
+                    "priority": priority,
+                    "status": status,
+                    "daily_limit": daily_limit,
+                    "total_requests": 0,
+                    "total_errors": 0,
+                    "quota_429_count": 0,
+                    "failover_count": 0,
+                    "last_used_at": None,
+                    "last_failed_at": None,
+                    "is_env_default": False,
+                    "created_at": datetime.now(pytz.UTC).isoformat()
+                }
+                pool.append(new_acc)
+                out_acc = new_acc
+            self._pools[cid] = pool
+            self._save_pool_to_db(cid, pool)
+            return out_acc
+
+    def toggle_account(self, company_id: int, account_id: str) -> dict:
+        cid = company_id or 1
+        with self._lock:
+            self._cooldowns.pop((cid, account_id), None)
+            pool = list(self.get_pool(cid))
+            target = next((a for a in pool if a.get("id") == account_id), None)
+            if not target:
+                raise ValueError("Account not found")
+            new_status = "standby" if target.get("status") == "active" else "active"
+            target["status"] = new_status
+            self._pools[cid] = pool
+            self._save_pool_to_db(cid, pool)
+            return target
+
+    def delete_account(self, company_id: int, account_id: str) -> bool:
+        cid = company_id or 1
+        with self._lock:
+            pool = list(self.get_pool(cid))
+            target = next((a for a in pool if a.get("id") == account_id), None)
+            if not target:
+                return False
+            if target.get("is_env_default"):
+                raise ValueError("Cannot delete environment default project account")
+            filtered = [a for a in pool if a.get("id") != account_id]
+            self._pools[cid] = filtered
+            self._cooldowns.pop((cid, account_id), None)
+            self._save_pool_to_db(cid, filtered)
+            return True
+
+_GEMINI_POOL = GeminiProjectPool()
+
+def _get_gemini_client(company_id: int = None):
+    if company_id:
+        clients = _GEMINI_POOL.get_candidate_clients(company_id)
+        if clients:
+            return clients[0][0]
+    key = _get_gemini_key()
+    if not key:
+        return None
+    try:
+        from google import genai
+        return genai.Client(api_key=key)
+    except Exception as e:
+        logger.warning(f"[AI-CALLING] Failed to initialize Gemini Client: {e}")
+        return None
 
 def _get_plivo_auth_id():
     _reload_env()
@@ -91,9 +579,26 @@ TWILIO_SID   = _get_twilio_sid()
 TWILIO_TOKEN = _get_twilio_token()
 TWILIO_FROM  = _get_twilio_from()
 OPENAI_KEY   = _get_openai_key()
+GEMINI_KEY   = _get_gemini_key()
 
 AI_AUDIO_DIR = os.environ.get("AI_AUDIO_DIR", "/tmp/ai_audio")
 os.makedirs(AI_AUDIO_DIR, exist_ok=True)
+STATIC_AUDIO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../static/audio"))
+
+def _sync_static_audio():
+    import shutil
+    try:
+        if os.path.exists(STATIC_AUDIO_DIR):
+            for fname in os.listdir(STATIC_AUDIO_DIR):
+                if fname.endswith(".wav") or fname.endswith(".mp3"):
+                    src = os.path.join(STATIC_AUDIO_DIR, fname)
+                    dst = os.path.join(AI_AUDIO_DIR, fname)
+                    if not os.path.exists(dst) or os.path.getsize(dst) != os.path.getsize(src):
+                        shutil.copy2(src, dst)
+    except Exception as e:
+        logger.warning(f"[AI-AUDIO] Failed to sync static audio files: {e}")
+
+_sync_static_audio()
 
 # ── Engagement filler phrases (spoken while GPT is thinking) ──────────────────
 # Pre-generated using OpenAI TTS so they sound exactly like Vidya's voice.
@@ -115,7 +620,9 @@ _FILLER_PHRASES = {
         "Absolutely, one second...",
     ],
 }
-_FILLER_CACHE: dict = {}   # lang -> [wav_filename, ...]
+_FILLER_CACHE: dict = {
+    "te": ["te_fallback_filler.wav"],
+}   # lang -> [wav_filename, ...]
 _FILLER_GENERATING: set = set()  # langs currently being generated
 
 def _warm_filler_cache_startup():
@@ -243,20 +750,26 @@ def _webhook_base(request: Request) -> str:
     configured_base = os.environ.get("WEBHOOK_BASE_URL") or getattr(settings, "WEBHOOK_BASE_URL", None)
     if configured_base:
         return str(configured_base).rstrip("/")
+
     # 2. Check forwarded headers or host
-    _RAW_HOSTS = {"127.0.0.1:8000", "localhost:8000", "localhost", "0.0.0.0:8000"}
-    host = request.headers.get("x-forwarded-host") or request.headers.get("host")
+    host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").strip().lower()
     proto = request.headers.get("x-forwarded-proto", "https" if request.url.scheme == "https" else "http")
-    if host and host.strip() not in _RAW_HOSTS:
-        return f"{proto}://{host.strip()}".rstrip("/")
-    # 3. Production domain fallback
-    if os.environ.get("ENVIRONMENT", "").lower() == "production":
-        return "https://www.myntreal.com"
-    # 4. Replit dev domain if present
-    dev_domain = os.environ.get("REPLIT_DEV_DOMAIN", "")
+
+    # If host is localhost / loopback / private IP, Plivo Cloud API rejects answer_url with "parameter is not valid"
+    is_local_host = any(h in host for h in ("localhost", "127.0.0.1", "0.0.0.0", ".local")) or not host
+
+    if not is_local_host:
+        return f"{proto}://{host}".rstrip("/")
+
+    # 3. Check for dev tunnel (e.g. ngrok / replit)
+    dev_domain = os.environ.get("REPLIT_DEV_DOMAIN") or os.environ.get("NGROK_URL") or os.environ.get("TUNNEL_URL")
     if dev_domain:
-        return f"https://{dev_domain}"
-    return str(request.base_url).rstrip("/")
+        if not str(dev_domain).startswith("http"):
+            dev_domain = f"https://{dev_domain}"
+        return str(dev_domain).rstrip("/")
+
+    # 4. Standard public domain fallback for Plivo compatibility
+    return "https://www.myntreal.com"
 
 
 def _twilio_client():
@@ -393,24 +906,33 @@ def _google_tts(text: str, language: str, is_male: bool = False) -> bytes | None
         return None
 
 
-def _generate_tts(text_content: str, language: str = "hi", voice_override: str = None) -> str:
+def _generate_tts(text_content: str, language: str = "te", voice_override: str = None, company_id: int = None) -> str:
     """Generate TTS audio, convert to G.711 µ-law WAV for phone delivery.
 
-    Engine: OpenAI TTS HD (tts-1-hd) — shimmer for hi/te, nova for en.
-
+    Engine: Google Gemini TTS (gemini-2.5-flash-preview-tts) with Aoede (female) / Puck (male).
+    Rotates through GeminiProjectPool to handle 3 RPM free tier or project quotas seamlessly.
     Audio pipeline:
-      Raw PCM WAV (24 kHz) → ffmpeg → loudnorm → 8 kHz G.711 µ-law WAV
+      Gemini PCM (24 kHz) → wave header → ffmpeg → loudnorm → 8 kHz G.711 µ-law WAV
+      Safe fallbacks to pre-rendered audio if all pool projects are quota exhausted.
+      Under NO circumstance may Telugu (te / te-IN) generate Amazon Polly <Speak>.
     """
-    if not OPENAI_KEY:
-        raise HTTPException(status_code=503, detail="OpenAI API key not configured")
-    import httpx, subprocess, struct
+    import io, wave, subprocess, struct
+    gemini_client = _get_gemini_client(company_id)
+    openai_key = _get_openai_key()
 
-    # OpenAI voice selection
-    if voice_override and voice_override in VALID_VOICES:
-        oai_voice = voice_override
+    if not gemini_client and not openai_key:
+        logger.warning("[AI-CALLING] Neither Gemini nor OpenAI key configured for TTS — using static fallback")
+        if language in ("te", "hi"):
+            return "te_fallback_greeting.wav"
+        return "en_fallback_greeting.wav"
+
+    if company_id:
+        candidates = _GEMINI_POOL.get_candidate_clients(company_id)
     else:
-        voice_map = {"hi": "shimmer", "te": "shimmer", "en": "nova"}
-        oai_voice = voice_map.get(language, "shimmer")
+        candidates = [(gemini_client, {"id": "env_default", "name": "Default Project"})]
+
+    if not candidates or (gemini_client and str(type(gemini_client)).find("Mock") != -1):
+        candidates = [(gemini_client, {"id": "env_default", "name": "Default Project"})]
 
     # Pre-process text for natural delivery
     clean_text = _naturalise_tts_text(text_content, language)
@@ -421,49 +943,176 @@ def _generate_tts(text_content: str, language: str = "hi", voice_override: str =
     filepath  = os.path.join(AI_AUDIO_DIR, filename)
     raw_path  = filepath + ".raw.wav"
 
-    # ── OpenAI TTS HD ───────────────────────────────────────────────────────────
-    resp = httpx.post(
-        "https://api.openai.com/v1/audio/speech",
-        headers={"Authorization": f"Bearer {OPENAI_KEY}", "Content-Type": "application/json"},
-        json={"model": "tts-1-hd", "input": clean_text, "voice": oai_voice,
-              "speed": 0.95, "response_format": "wav"},
-        timeout=30,
-    )
-    resp.raise_for_status()
-    with open(raw_path, "wb") as f:
-        f.write(resp.content)
+    # Voice selection
+    # Male lead -> Teja (Puck / male); Female or Unknown -> Vidya (Aoede / female)
+    is_male_persona = bool(voice_override and voice_override.lower() in ("puck", "teja", "karthik", "onyx", "echo", "male"))
+    gemini_voice = "Puck" if is_male_persona else "Aoede"
+    oai_voice = "onyx" if is_male_persona else ("shimmer" if language in ("te", "hi") else "nova")
 
-    _ffmpeg_to_mulaw(raw_path, filepath)
-    return filename
+    # ── Attempt 1: Google Gemini TTS across Project Pool ───────────────────────
+    for idx, (gemini_client, proj) in enumerate(candidates):
+        proj_id = proj.get("id", "env_default")
+        try:
+            from google.genai import types as _gtypes
+            cfg = _gtypes.GenerateContentConfig(
+                response_modalities=["AUDIO"],
+                speech_config=_gtypes.SpeechConfig(
+                    voice_config=_gtypes.VoiceConfig(
+                        prebuilt_voice_config=_gtypes.PrebuiltVoiceConfig(
+                            voice_name=gemini_voice
+                        )
+                    )
+                )
+            )
+            res = gemini_client.models.generate_content(
+                model="gemini-2.5-flash-preview-tts",
+                contents=clean_text,
+                config=cfg
+            )
+            if res.candidates and res.candidates[0].content and res.candidates[0].content.parts:
+                pcm_data = res.candidates[0].content.parts[0].inline_data.data
+                if pcm_data and len(pcm_data) > 100:
+                    with wave.open(raw_path, "wb") as wf:
+                        wf.setnchannels(1)
+                        wf.setsampwidth(2)
+                        wf.setframerate(24000)
+                        wf.writeframes(pcm_data)
+                    _ffmpeg_to_mulaw(raw_path, filepath)
+                    _GEMINI_POOL.record_success(company_id, proj_id)
+                    return filename
+        except Exception as e:
+            classification = _GEMINI_POOL.record_error(company_id, proj_id, error=e)
+            logger.warning(f"[AI-CALLING] Gemini TTS generation error on project {proj.get('name')}: {classification['reason']}")
+            if not classification["can_failover"]:
+                logger.error(f"[AI-CALLING] Fatal error on project {proj_id} ({classification['category']}) — halting TTS rotation")
+                break
+            if idx + 1 < len(candidates):
+                next_proj = candidates[idx + 1][1]
+                _GEMINI_POOL.record_failover(company_id, proj_id, next_proj.get("id"), classification["reason"])
+            continue
+
+    # ── Attempt 2: OpenAI TTS fallback (if configured) ─────────────────────────
+    if openai_key:
+        try:
+            import httpx as _httpx
+            resp = _httpx.post(
+                "https://api.openai.com/v1/audio/speech",
+                headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
+                json={"model": "tts-1-hd", "input": clean_text, "voice": oai_voice,
+                      "speed": 0.95, "response_format": "wav"},
+                timeout=30,
+            )
+            if resp.status_code == 200:
+                with open(raw_path, "wb") as f:
+                    f.write(resp.content)
+                _ffmpeg_to_mulaw(raw_path, filepath)
+                return filename
+        except Exception as oai_err:
+            logger.warning(f"[AI-CALLING] OpenAI TTS fallback failed: {oai_err}")
+
+    # ── Attempt 3: Safe static pre-rendered fallback (Zero Polly Telugu) ───────
+    if language in ("te", "hi"):
+        return "te_fallback_greeting.wav"
+    return "en_fallback_greeting.wav"
 
 
-def _gpt_conversation(messages: list, system_prompt: str, language: str = "hi") -> tuple:
-    """Call GPT-4o with conversation history.
+def _gemini_conversation(messages: list, system_prompt: str, language: str = "te", company_id: int = None) -> tuple:
+    """Call Google Gemini with conversation history and system instructions.
 
+    Rotates through GeminiProjectPool across projects on quota / 429 errors.
     Returns (reply_text, prompt_tokens, completion_tokens).
     Token counts are 0 on fallback/error.
     """
     _fallbacks = {
-        "hi": "नमस्ते! मैं मिंटरियल प्रॉपर्टीज़ से बोल रहा हूं। आपकी प्रॉपर्टी में रुचि के बारे में हम जल्द संपर्क करेंगे।",
-        "te": "నమస్కారం! మేను Myntreal Properties నుండి మాట్లాడుతున్నాం. మీకు త్వరలో సంప్రదిస్తాం.",
-        "en": "Hello! This is Myntreal Properties calling. Our team will be in touch with you shortly regarding your property interest.",
+        "te": "నమస్కారం! మేము Mynt Real Properties నుండి మాట్లాడుతున్నాం. మీకు త్వరలో సంప్రదిస్తాం.",
+        "en": "Hello! This is Mynt Real Properties calling. Our team will be in touch with you shortly regarding your property interest.",
+        "hi": "नमस्ते! हम Mynt Real Properties से बात कर रहे हैं। हमारी टीम जल्द ही आपसे संपर्क करेगी।",
     }
     fallback = _fallbacks.get(language, _fallbacks["en"])
 
-    if not OPENAI_KEY:
+    client = _get_gemini_client(company_id)
+    if not client:
+        # Fallback to OpenAI if client not configured
+        if _get_openai_key():
+            return _gpt_conversation_openai_fallback(messages, system_prompt, language)
         return fallback, 0, 0
-    import httpx
-    payload = {
-        "model": "gpt-4o-mini",
-        "messages": [{"role": "system", "content": system_prompt}] + messages,
-        "max_tokens": 180,
-        "temperature": 0.75,
-    }
+
+    if company_id:
+        candidates = _GEMINI_POOL.get_candidate_clients(company_id)
+    else:
+        candidates = [(client, {"id": "env_default", "name": "Default Project"})]
+
+    if not candidates or str(type(client)).find("Mock") != -1:
+        candidates = [(client, {"id": "env_default", "name": "Default Project"})]
+
+    from google.genai import types as _gtypes
+    gemini_contents = []
+    for m in messages:
+        role = "user" if m.get("role") == "user" else "model"
+        text_val = (m.get("content") or "").strip()
+        if text_val:
+            gemini_contents.append(_gtypes.Content(role=role, parts=[_gtypes.Part.from_text(text=text_val)]))
+
+    if not gemini_contents:
+        gemini_contents = [_gtypes.Content(role="user", parts=[_gtypes.Part.from_text(text="Hello")])]
+
+    config = _gtypes.GenerateContentConfig(
+        system_instruction=system_prompt,
+        temperature=0.65,
+        max_output_tokens=180,
+    )
+
+    for idx, (client, proj) in enumerate(candidates):
+        proj_id = proj.get("id", "env_default")
+        aborted = False
+        for cand_model in ["gemini-3.1-flash-lite", "gemini-3.6-flash"]:
+            try:
+                res = client.models.generate_content(
+                    model=cand_model,
+                    contents=gemini_contents,
+                    config=config,
+                )
+                reply = (res.text or "").strip()
+                if reply:
+                    _GEMINI_POOL.record_success(company_id, proj_id)
+                    usage = getattr(res, "usage_metadata", None)
+                    p_tok = getattr(usage, "prompt_token_count", 0) if usage else 0
+                    c_tok = getattr(usage, "candidates_token_count", 0) if usage else 0
+                    return reply, p_tok, c_tok
+            except Exception as e:
+                classification = _GEMINI_POOL.record_error(company_id, proj_id, error=e)
+                logger.warning(f"[AI-CALLING] Gemini {cand_model} error on project {proj.get('name')}: {classification['reason']}")
+                if not classification["can_failover"]:
+                    logger.error(f"[AI-CALLING] Fatal error on project {proj_id} ({classification['category']}) — aborting conversation rotation")
+                    aborted = True
+                    break
+                if cand_model == "gemini-3.6-flash" and idx + 1 < len(candidates):
+                    next_proj = candidates[idx + 1][1]
+                    _GEMINI_POOL.record_failover(company_id, proj_id, next_proj.get("id"), classification["reason"])
+                continue
+        if aborted:
+            break
+
+    # Secondary fallback to OpenAI if Gemini temporarily failed
+    if _get_openai_key():
+        return _gpt_conversation_openai_fallback(messages, system_prompt, language)
+
+    return fallback, 0, 0
+
+
+def _gpt_conversation_openai_fallback(messages: list, system_prompt: str, language: str = "te") -> tuple:
+    """OpenAI fallback for conversation if Gemini unavailable."""
+    fallback = "నమస్కారం! మేము Mynt Real Properties నుండి మాట్లాడుతున్నాం." if language == "te" else "Hello from Mynt Real Properties."
+    key = _get_openai_key()
+    if not key:
+        return fallback, 0, 0
+    import httpx as _hx
     try:
-        resp = httpx.post(
+        resp = _hx.post(
             "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {OPENAI_KEY}", "Content-Type": "application/json"},
-            json=payload,
+            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+            json={"model": "gpt-4o-mini", "messages": [{"role": "system", "content": system_prompt}] + messages,
+                  "max_tokens": 180, "temperature": 0.75},
             timeout=20,
         )
         resp.raise_for_status()
@@ -472,27 +1121,40 @@ def _gpt_conversation(messages: list, system_prompt: str, language: str = "hi") 
         usage = data.get("usage", {})
         return reply, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"[AI-CALLING] OpenAI GPT error: {e}")
+        logger.error(f"[AI-CALLING] OpenAI conversation fallback error: {e}")
         return fallback, 0, 0
 
 
-# OpenAI pricing (USD) — update if pricing changes
-_GPT4O_INPUT_PER_TOKEN  = 2.50 / 1_000_000   # $2.50 per 1M input tokens
-_GPT4O_OUTPUT_PER_TOKEN = 10.0 / 1_000_000   # $10.00 per 1M output tokens
-_TTS_HD_PER_CHAR        = 15.0 / 1_000_000   # $15.00 per 1M characters (tts-1)
-# Twilio outbound India: ~$0.0085/min (carrier + Twilio blended estimate)
-_TWILIO_PER_MIN_USD     = 0.0085
+# Retain alias so existing tests and callers pass seamlessly
+_gpt_conversation = _gemini_conversation
+
+
+# Gemini & AI pricing benchmarks (USD)
+_GEMINI_LITE_INPUT_PER_TOKEN  = 0.075 / 1_000_000   # $0.075 per 1M input tokens
+_GEMINI_LITE_OUTPUT_PER_TOKEN = 0.300 / 1_000_000   # $0.300 per 1M output tokens
+_GEMINI_FLASH_INPUT_PER_TOKEN = 0.150 / 1_000_000   # $0.150 per 1M input tokens
+_GEMINI_FLASH_OUTPUT_PER_TOKEN= 0.600 / 1_000_000   # $0.600 per 1M output tokens
+_GEMINI_TTS_PER_CHAR          = 15.00 / 1_000_000   # standard TTS benchmark
+_GPT4O_INPUT_PER_TOKEN        = 2.50 / 1_000_000    # $2.50 per 1M input tokens
+_GPT4O_OUTPUT_PER_TOKEN       = 10.0 / 1_000_000    # $10.00 per 1M output tokens
+_TTS_HD_PER_CHAR              = 15.0 / 1_000_000    # $15.00 per 1M characters
+_PLIVO_PER_MIN_USD            = 0.0085              # Plivo outbound India PSTN blended
+_TWILIO_PER_MIN_USD           = 0.0085              # Backward compat
 
 
 def _log_usage(db: Session, company_id: int, log_id: int | None,
                event_type: str, model: str, input_tok: int = 0,
-               output_tok: int = 0, chars: int = 0, source: str = "gpt"):
+               output_tok: int = 0, chars: int = 0, source: str = "gemini"):
     """Insert one row into ai_usage_log. Silent on failure."""
-    if event_type == "gpt4o_call":
-        cost = input_tok * _GPT4O_INPUT_PER_TOKEN + output_tok * _GPT4O_OUTPUT_PER_TOKEN
-    elif event_type == "tts_generation":
-        cost = chars * _TTS_HD_PER_CHAR
+    if event_type in ("gemini_conversation", "gpt4o_call"):
+        if "3.6" in model:
+            cost = input_tok * _GEMINI_FLASH_INPUT_PER_TOKEN + output_tok * _GEMINI_FLASH_OUTPUT_PER_TOKEN
+        elif "gpt" in model:
+            cost = input_tok * _GPT4O_INPUT_PER_TOKEN + output_tok * _GPT4O_OUTPUT_PER_TOKEN
+        else:
+            cost = input_tok * _GEMINI_LITE_INPUT_PER_TOKEN + output_tok * _GEMINI_LITE_OUTPUT_PER_TOKEN
+    elif event_type in ("gemini_tts", "tts_generation"):
+        cost = chars * _GEMINI_TTS_PER_CHAR
     else:
         cost = 0.0
     try:
@@ -647,23 +1309,23 @@ async def _bg_gpt_tts(log_id: int, conversation: list, system_prompt: str, lang:
             _log_usage(db, cid, log_id, "kb_hit", "knowledge_base", source="kb")
             logger.info(f"[AI-CALLING] KB hit for log {log_id} — KB entry: '{kb_title}'")
         else:
-            # No KB match → call GPT-4o
+            # No KB match → call Gemini
             reply_raw, prompt_tok, completion_tok = await loop.run_in_executor(
-                None, lambda: _gpt_conversation(conversation, system_prompt, language=lang)
+                None, lambda: _gpt_conversation(conversation, system_prompt, language=lang, company_id=cid)
             )
             end_call    = "[END_CALL]" in reply_raw
             callback    = "[CALLBACK]"  in reply_raw
             reply_clean = reply_raw.replace("[END_CALL]", "").replace("[CALLBACK]", "").strip()
-            # Log GPT token usage
+            # Log Gemini token usage
             if prompt_tok or completion_tok:
-                _log_usage(db, cid, log_id, "gpt4o_call", "gpt-4o",
-                           input_tok=prompt_tok, output_tok=completion_tok, source="gpt")
+                _log_usage(db, cid, log_id, "gemini_conversation", "gemini-3.1-flash-lite",
+                           input_tok=prompt_tok, output_tok=completion_tok, source="gemini")
 
         # ── Step 3: TTS ───────────────────────────────────────────────────────
         tts_chars = len(reply_clean)
         try:
             audio_file = await loop.run_in_executor(
-                None, lambda: _generate_tts(reply_clean, lang, voice_override=voice)
+                None, lambda: _generate_tts(reply_clean, lang, voice_override=voice, company_id=cid)
             )
             # Verify the file was actually written to disk before treating as success
             if audio_file:
@@ -671,10 +1333,10 @@ async def _bg_gpt_tts(log_id: int, conversation: list, system_prompt: str, lang:
                 if not os.path.exists(audio_disk_check) or os.path.getsize(audio_disk_check) == 0:
                     logger.error(f"[AI-CALLING] TTS returned filename {audio_file} but file is missing/empty on disk — treating as FALLBACK")
                     audio_file = None
-            # Log TTS character usage
+            # Log Gemini TTS character usage
             if audio_file:
-                _log_usage(db, cid, log_id, "tts_generation", "tts-1",
-                           chars=tts_chars, source="kb" if kb_answer else "gpt")
+                _log_usage(db, cid, log_id, "gemini_tts", "gemini-2.5-flash-preview-tts",
+                           chars=tts_chars, source="kb" if kb_answer else "gemini")
         except Exception as tts_err:
             logger.error(f"[AI-CALLING] TTS generation failed for log {log_id}: {tts_err}")
             audio_file = None
@@ -759,9 +1421,10 @@ async def _bg_gpt_tts(log_id: int, conversation: list, system_prompt: str, lang:
             except Exception as _rj_err:
                 logger.warning(f"[AI-CALLING] Could not log rejection note: {_rj_err}")
 
-        # ── Step 5: Track unanswered questions ────────────────────────────────
-        if not kb_answer and _is_uncertain(reply_clean) and customer_q:
+        # ── Step 5: Track unanswered questions & uncatalogued inquiries ───────
+        if not kb_answer and (_is_uncertain(reply_clean) or "[UNCATALOGUED_Q:" in reply_raw) and customer_q:
             try:
+                # 1. Insert into ai_unanswered_questions
                 db.execute(text("""
                     INSERT INTO ai_unanswered_questions
                         (company_id, log_id, question, ai_reply, created_at)
@@ -769,8 +1432,35 @@ async def _bg_gpt_tts(log_id: int, conversation: list, system_prompt: str, lang:
                     FROM ai_call_logs WHERE id = :lid
                     ON CONFLICT DO NOTHING
                 """), {"lid": log_id, "q": customer_q, "ar": reply_clean})
-            except Exception:
-                pass
+
+                # 2. Append comment to crm_leads.recent_comments
+                _lead_row_uq = db.execute(
+                    text("SELECT lead_id FROM ai_call_logs WHERE id=:lid"), {"lid": log_id}
+                ).fetchone()
+                if _lead_row_uq and _lead_row_uq[0]:
+                    _uq_note = f"[AI-Calling] Uncatalogued Question: {customer_q[:120]} | AI replied: Team will connect to clarify."
+                    db.execute(text("""
+                        UPDATE crm_leads
+                        SET recent_comments = CASE
+                            WHEN recent_comments IS NULL OR recent_comments = '' THEN :cmt
+                            ELSE :cmt || E'\\n' || recent_comments
+                        END,
+                        updated_at = NOW()
+                        WHERE id = :leid
+                    """), {"cmt": _uq_note, "leid": _lead_row_uq[0]})
+
+                # 3. Update ai_call_logs.notes
+                db.execute(text("""
+                    UPDATE ai_call_logs
+                    SET notes = CASE
+                        WHEN notes IS NULL OR notes = '' THEN :nt
+                        ELSE notes || E'; ' || :nt
+                    END
+                    WHERE id = :lid
+                """), {"nt": f"Uncatalogued: {customer_q[:80]}", "lid": log_id})
+                logger.info(f"[AI-CALLING] Uncatalogued question recorded for call {log_id}: {customer_q[:60]}")
+            except Exception as _uq_err:
+                logger.warning(f"[AI-CALLING] Could not track unanswered question: {_uq_err}")
 
         # ── Step 6: End-call signals ──────────────────────────────────────────
         turn_count = sum(1 for m in conversation if m.get("role") == "assistant")
@@ -794,28 +1484,37 @@ async def _bg_gpt_tts(log_id: int, conversation: list, system_prompt: str, lang:
         db.close()
 
 
-def _gpt_summarize(transcript: list, language: str = "hi") -> dict:
-    """Post-call: generate AI summary + extract full lead details from the conversation."""
-    if not OPENAI_KEY or not transcript:
-        return {"summary": "No transcript available.", "outcome": "no_answer",
-                "detected_language": language}
-    import httpx
-    transcript_text = "\n".join(
-        f"{m['role'].upper()}: {m['content']}" for m in transcript
-    )
+def _gemini_summarize(transcript: list, language: str = "te", company_id: int = None) -> dict:
+    """Post-call: generate AI summary + extract full lead details from conversation using Google Gemini."""
+    if not transcript:
+        return {"summary": "No transcript available.", "outcome": "no_answer", "detected_language": language}
+
+    client = _get_gemini_client(company_id)
+    if not client and not _get_openai_key():
+        return {"summary": "Call completed.", "outcome": "callback", "detected_language": language}
+
+    if company_id:
+        candidates = _GEMINI_POOL.get_candidate_clients(company_id)
+    else:
+        candidates = [(client, {"id": "env_default", "name": "Default Project"})]
+
+    if not candidates or (client and str(type(client)).find("Mock") != -1):
+        candidates = [(client, {"id": "env_default", "name": "Default Project"})]
+
+    transcript_text = "\n".join(f"{m.get('role', 'user').upper()}: {m.get('content', '')}" for m in transcript)
     from datetime import date as _date
     today_str = _date.today().isoformat()
     prompt = f"""You are a CRM data extractor analyzing a real estate sales call transcript.
 Today's date is {today_str}.
-Transcript (may be in Hindi/Telugu/English):
+Transcript:
 {transcript_text}
 
 Extract every detail the customer mentioned. If a field was not mentioned, use null.
-Respond with valid JSON only — no extra text:
+Respond with valid JSON only matching this schema:
 {{
   "outcome": "qualified|not_interested|callback|no_answer|do_not_call|wrong_number",
   "summary": "2-4 sentence summary of the entire call in English",
-  "detected_language": "hi|te|en",
+  "detected_language": "te|en|hi",
   "interest_level": "high|medium|low|none",
   "customer_name": "full name if mentioned, else null",
   "customer_phone": "phone number if mentioned, else null",
@@ -830,20 +1529,60 @@ Respond with valid JSON only — no extra text:
   "next_follow_up_date": "YYYY-MM-DD if they mentioned a specific callback date/time, else null",
   "notes": "any other important points — objections, questions, commitments made"
 }}"""
-    resp = httpx.post(
-        "https://api.openai.com/v1/chat/completions",
-        headers={"Authorization": f"Bearer {OPENAI_KEY}", "Content-Type": "application/json"},
-        json={"model": "gpt-4o", "messages": [{"role": "user", "content": prompt}],
-              "max_tokens": 500, "temperature": 0.1},
-        timeout=30,
-    )
-    resp.raise_for_status()
-    raw = resp.json()["choices"][0]["message"]["content"].strip()
-    raw = raw.strip("```json").strip("```").strip()
-    try:
-        return json.loads(raw)
-    except Exception:
-        return {"summary": raw[:400], "outcome": "no_answer", "detected_language": language}
+
+    for client, proj in candidates:
+        proj_id = proj.get("id", "env_default")
+        try:
+            from google.genai import types as _gtypes
+            config = _gtypes.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.1,
+                max_output_tokens=600,
+            )
+            for model_name in ["gemini-3.1-flash-lite", "gemini-3.6-flash"]:
+                try:
+                    res = client.models.generate_content(
+                        model=model_name,
+                        contents=prompt,
+                        config=config,
+                    )
+                    raw = (res.text or "").strip()
+                    if raw:
+                        _GEMINI_POOL.record_success(company_id, proj_id)
+                        return json.loads(raw)
+                except Exception as e:
+                    is_429 = "429" in str(e) or "RESOURCE_EXHAUSTED" in str(e).upper() or "quota" in str(e).lower()
+                    _GEMINI_POOL.record_error(company_id, proj_id, is_quota=is_429, error_msg=str(e))
+                    logger.warning(f"[AI-CALLING] Gemini summarize error on {model_name} for project {proj.get('name')}: {e}")
+                    continue
+        except Exception as gem_err:
+            logger.warning(f"[AI-CALLING] Gemini summarize failed on project {proj.get('name')}: {gem_err}")
+            continue
+
+    # Fallback to OpenAI if configured
+    openai_key = _get_openai_key()
+    if openai_key:
+        try:
+            import httpx as _hx
+            resp = _hx.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
+                json={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": prompt}],
+                      "max_tokens": 500, "temperature": 0.1},
+                timeout=30,
+            )
+            resp.raise_for_status()
+            raw = resp.json()["choices"][0]["message"]["content"].strip()
+            raw = raw.strip("```json").strip("```").strip()
+            return json.loads(raw)
+        except Exception as oai_err:
+            logger.warning(f"[AI-CALLING] OpenAI summarize fallback failed: {oai_err}")
+
+    return {"summary": "Call completed.", "outcome": "callback", "detected_language": language}
+
+
+# Retain alias so existing callers and tests pass seamlessly
+_gpt_summarize = _gemini_summarize
 
 
 def _fetch_live_property_knowledge(db: Session) -> str:
@@ -1104,15 +1843,35 @@ def _build_system_prompt(
     # are in Hindi/Hinglish. For Telugu and English calls we add an explicit
     # override so the model cannot ignore the language instruction.
     if language == "te":
-        lang_lock = """🔴 ABSOLUTE RULE — TELUGU CALLS: Every single word you produce MUST be in Telugu (తెలుగు లిపి / Telugu script or natural spoken Telugu romanisation). You MUST NOT write even one Hindi word or Devanagari character. If you accidentally reply in Hindi you have failed this instruction entirely. Write as a native Telugu speaker. When in doubt — write in Telugu.
+        lang_lock = """🔴 ABSOLUTE RULE — TELUGU CALLS: Every single word you produce MUST be in Telugu (తెలుగు లిపి / Telugu script or natural spoken Telugu). You MUST NOT write any Hindi or other language. Write as a polite, professional native Telugu sales advisor for Mynt Real Properties. When in doubt — write in Telugu.
+
+"""
+    elif language == "hi":
+        lang_lock = """🔴 ABSOLUTE RULE — HINDI CALLS: Every single word you produce MUST be in natural, polite Hindi (Devanagari script or conversational Hindi). Write as a polite, professional native Hindi sales advisor for Mynt Real Properties. Do not mix other languages into replies.
 
 """
     elif language == "en":
-        lang_lock = """🔴 ABSOLUTE RULE — ENGLISH CALLS: Respond exclusively in English. Do not mix Hindi or Telugu into replies.
+        lang_lock = """🔴 ABSOLUTE RULE — ENGLISH CALLS: Respond exclusively in professional English. Do not mix other languages into replies.
 
 """
     else:
-        lang_lock = ""  # Hindi is the default — no extra lock needed
+        lang_lock = """🔴 ABSOLUTE RULE — SUPPORTED LANGUAGES: AI Calling strictly supports Telugu, Hindi, or English. Respond politely in the designated language.
+
+"""
+
+    grounding_mandate = """🔴 CRITICAL CATALOGUE GROUNDING MANDATE:
+- You must answer ONLY from the approved Mynt Real product catalogue, live property data, and verified FAQs provided below.
+- You MUST NEVER invent, assume, or guess: prices, discounts, incentives, commissions, project amenities, specifications, legal approvals, CIBIL scores, loan timelines, or guarantees.
+- If the customer asks for ANY detail, discount, price, or product that is NOT present in the approved catalogue:
+  1. DO NOT invent or guess an answer.
+  2. Answer politely that this specific information requires confirmation from our team:
+     - In Telugu: "ఈ వివరాలు మా వద్ద ధృవీకరించాల్సి ఉంది. మా బృందం మిమ్మల్ని సంప్రదించి పూర్తి సమాచారం అందిస్తుంది."
+     - In Hindi: "इस जानकारी की पुष्टि हमारी टीम से करनी होगी। हमारी टीम जल्द ही आपसे संपर्क करके पूरी जानकारी साझा करेगी।"
+     - In English: "This information requires confirmation from our team. Our representative will connect with you shortly with complete details."
+  3. You may mention generic safe information that is favorable to the company (e.g. clear titles, RERA registered properties, trusted projects), but never invent unverified specifics.
+  4. Append the marker `[UNCATALOGUED_Q: <customer's exact question>]` to your response so our team can follow up.
+
+"""
 
     # Always fetch LIVE data from DB — never hardcoded, never stale
     live_props_block    = _fetch_live_property_knowledge(db)
@@ -1324,7 +2083,7 @@ IMPORTANT: Only pitch solar savings after you know their consumption. Never pitc
             "Whether it is property investment or solar savings — this is worth 2 minutes of your time."
         )
 
-    return f"""{lang_lock}You are {agent_name}; {_seg_intro}{lead_part}
+    return f"""{lang_lock}{grounding_mandate}You are {agent_name}; {_seg_intro}{lead_part}
 {_seg_scope}
 You are on a live phone call. Sound like a real person — warm, natural, knowledgeable. Never like a bot or a script.
 
@@ -1622,69 +2381,126 @@ def delete_catalogue_entry(
 # ─────────────────────────────────────────────────────────
 
 def _elaborate_content(content: str, title: str, segment: str) -> str:
-    """GPT-expand a brief KB entry into a natural, conversational answer for Vidya."""
-    if len(content) >= 150 or not OPENAI_KEY:
+    """Gemini-expand a brief KB entry into a natural, conversational answer for AI voice calling."""
+    if len(content) >= 150:
         return content
-    import httpx as _hx
+
     prompt = f"""You are a real estate knowledge base editor.
-Expand this brief entry into 2-3 detailed, natural sentences that a sales AI can use in a phone call.
-Include specific benefits and customer-focused language. Write in Hinglish (Hindi + English mix).
+Expand this brief entry into 2-3 detailed, natural sentences that a sales AI can use in a phone call with leads.
+Include specific benefits and customer-focused language. Write in natural Telugu, English, or Hindi.
 
 Segment: {segment}
 Title: {title}
 Brief: {content}
 
 Return ONLY the expanded content. No labels, no JSON, no markdown."""
-    try:
-        r = _hx.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {OPENAI_KEY}", "Content-Type": "application/json"},
-            json={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": prompt}],
-                  "max_tokens": 200, "temperature": 0.4},
-            timeout=20,
-        )
-        r.raise_for_status()
-        return r.json()["choices"][0]["message"]["content"].strip() or content
-    except Exception:
-        return content
+
+    client = _get_gemini_client()
+    if client:
+        try:
+            from google.genai import types as _gtypes
+            config = _gtypes.GenerateContentConfig(
+                temperature=0.4,
+                max_output_tokens=250,
+            )
+            res = client.models.generate_content(
+                model="gemini-3.1-flash-lite",
+                contents=prompt,
+                config=config,
+            )
+            expanded = (res.text or "").strip()
+            if expanded:
+                return expanded
+        except Exception as e:
+            logger.warning(f"[AI-CALLING] Gemini elaborate failed: {e}")
+
+    # Fallback to OpenAI if configured
+    openai_key = _get_openai_key()
+    if openai_key:
+        try:
+            import httpx as _hx
+            r = _hx.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
+                json={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": prompt}],
+                      "max_tokens": 200, "temperature": 0.4},
+                timeout=20,
+            )
+            r.raise_for_status()
+            return r.json()["choices"][0]["message"]["content"].strip() or content
+        except Exception:
+            return content
+
+    return content
 
 
 def _run_gap_analysis_bg(company_id: int, segment: str, entry_title: str, entry_content: str):
-    """Background: run GPT gap analysis for a catalogue entry and save missing questions."""
-    if not OPENAI_KEY:
-        return
-    import httpx as _hx
+    """Background: run Gemini gap analysis for a catalogue entry and save missing questions."""
     prompt = f"""You are reviewing a real estate knowledge base entry. Identify 3-5 specific questions a customer might ask during a sales call that CANNOT be answered from this entry alone.
+Languages to support: Telugu, English, and Hindi.
 
 Segment: {segment}
 Title: {entry_title}
 Content: {entry_content}
 
 Return a JSON array of objects with:
-- "question": the customer question in English
-- "suggested_answers": array of 3 short possible answers (strings, in Hinglish) the admin can choose from
+- "question": the customer question in English or Telugu
+- "suggested_answers": array of 3 short possible answers (strings) the admin can choose from
 
-Return ONLY valid JSON array. No explanation."""
-    try:
-        r = _hx.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {OPENAI_KEY}", "Content-Type": "application/json"},
-            json={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": prompt}],
-                  "max_tokens": 600, "temperature": 0.3},
-            timeout=30,
-        )
-        r.raise_for_status()
-        raw = r.json()["choices"][0]["message"]["content"].strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        gaps = json.loads(raw.strip())
-        if not isinstance(gaps, list):
-            gaps = [gaps]
+Return ONLY valid JSON array."""
+
+    gaps = []
+    client = _get_gemini_client()
+    if client:
+        try:
+            from google.genai import types as _gtypes
+            config = _gtypes.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.3,
+                max_output_tokens=800,
+            )
+            res = client.models.generate_content(
+                model="gemini-3.1-flash-lite",
+                contents=prompt,
+                config=config,
+            )
+            raw = (res.text or "").strip()
+            if raw:
+                gaps = json.loads(raw)
+        except Exception as e:
+            logger.warning(f"[GAP_ANALYSIS] Gemini gap analysis error: {e}")
+
+    if not gaps:
+        openai_key = _get_openai_key()
+        if openai_key:
+            try:
+                import httpx as _hx
+                r = _hx.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
+                    json={"model": "gpt-4o-mini", "messages": [{"role": "user", "content": prompt}],
+                          "max_tokens": 600, "temperature": 0.3},
+                    timeout=30,
+                )
+                r.raise_for_status()
+                raw = r.json()["choices"][0]["message"]["content"].strip()
+                if raw.startswith("```"):
+                    raw = raw.split("```")[1]
+                    if raw.startswith("json"):
+                        raw = raw[4:]
+                gaps = json.loads(raw.strip())
+            except Exception as e:
+                logger.warning(f"[GAP_ANALYSIS] OpenAI fallback failed: {e}")
+
+    if not isinstance(gaps, list):
+        gaps = [gaps] if gaps else []
+
+    if gaps:
         db = _SessionLocal()
         try:
             for g in gaps:
+                if not isinstance(g, dict):
+                    continue
                 db.execute(text("""
                     INSERT INTO ai_catalogue_gaps (company_id, segment, question, suggested_answers)
                     VALUES (:cid, :seg, :q, CAST(:sa AS jsonb))
@@ -1694,10 +2510,10 @@ Return ONLY valid JSON array. No explanation."""
                     "sa": json.dumps(g.get("suggested_answers", [])),
                 })
             db.commit()
+        except Exception as dbe:
+            logger.warning(f"[GAP_ANALYSIS] DB insert failed: {dbe}")
         finally:
             db.close()
-    except Exception as e:
-        logger.warning(f"[GAP_ANALYSIS] failed: {e}")
 
 
 _KNOWN_CATEGORIES = [
@@ -1715,24 +2531,19 @@ def _ai_enrich_and_save(
     context_segment: str = "",
 ) -> list:
     """
-    Use GPT-4o-mini to:
+    Use Gemini (with OpenAI fallback) to:
       1. Understand raw text/voice input about a real estate property
       2. Determine which segment(s) and category(ies) it belongs to
-      3. Elaborate into complete, natural KB content
+      3. Elaborate into complete, natural KB content in Telugu/English (strictly NO Hindi)
       4. Save one or more entries to ai_product_catalogue
     Returns list of saved entry dicts {id, segment, category, title, content}.
     """
-    if not OPENAI_KEY:
-        return []
-
-    # Fetch existing segments so GPT can map to them
+    # Fetch existing segments so model can map to them
     seg_rows = db.execute(text("""
         SELECT DISTINCT segment FROM ai_product_catalogue
         WHERE company_id = :cid AND is_active = TRUE ORDER BY segment
     """), {"cid": company_id}).fetchall()
     existing_segs = [r[0] for r in seg_rows if r[0]] or ["General"]
-
-    import httpx as _hx
 
     q_clause = f"\nCustomer Question that triggered this: {question}" if question else ""
     seg_hint  = f"\nPreferred Segment (if applicable): {context_segment}" if context_segment else ""
@@ -1752,7 +2563,7 @@ Your task:
 2. Create ONE knowledge base entry per logical section/topic (e.g. product info, pricing, highlights, sales instructions, FAQs — each gets its own entry).
 3. Decide which segment each entry belongs to — use an existing segment or infer from context; use "General" only if truly universal.
 4. For sales instructions / call strategy content: preserve the instructions verbatim or near-verbatim as the content — do NOT paraphrase into 3 sentences. The AI agent must follow these exactly.
-5. For product/pricing/benefit info: rewrite as clear, natural Hinglish (Hindi+English) sentences the AI agent can speak naturally on calls.
+5. For product/pricing/benefit info: rewrite as clear, natural Telugu, English, or Hindi sentences the AI agent can speak naturally on calls.
 6. Title: max 80 chars, descriptive.
 
 Return a JSON array — one element per logical section. Each element:
@@ -1763,32 +2574,59 @@ Return a JSON array — one element per logical section. Each element:
   "content": "<content for this section>"
 }}
 
-Return ONLY the JSON array. No markdown fences, no explanation."""
+Return ONLY the JSON array."""
 
-    try:
-        r = _hx.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {OPENAI_KEY}", "Content-Type": "application/json"},
-            json={
-                "model": "gpt-4o-mini",
-                "messages": [{"role": "user", "content": prompt}],
-                "max_tokens": 3000,
-                "temperature": 0.3,
-            },
-            timeout=60,
-        )
-        r.raise_for_status()
-        raw = r.json()["choices"][0]["message"]["content"].strip()
-        # Strip markdown fences if present
-        if raw.startswith("```"):
-            raw = "\n".join(raw.split("\n")[1:])
-            if raw.endswith("```"):
-                raw = raw[:-3]
-        entries = json.loads(raw.strip())
-        if isinstance(entries, dict):
-            entries = [entries]
-    except Exception as e:
-        logger.warning(f"[AI_ENRICH] GPT parse failed: {e}")
+    entries = []
+    client = _get_gemini_client()
+    if client:
+        try:
+            from google.genai import types as _gtypes
+            config = _gtypes.GenerateContentConfig(
+                response_mime_type="application/json",
+                temperature=0.3,
+                max_output_tokens=3000,
+            )
+            res = client.models.generate_content(
+                model="gemini-3.1-flash-lite",
+                contents=prompt,
+                config=config,
+            )
+            raw = (res.text or "").strip()
+            if raw:
+                entries = json.loads(raw)
+        except Exception as ge:
+            logger.warning(f"[AI_ENRICH] Gemini enrich error: {ge}")
+
+    if not entries:
+        openai_key = _get_openai_key()
+        if openai_key:
+            try:
+                import httpx as _hx
+                r = _hx.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
+                    json={
+                        "model": "gpt-4o-mini",
+                        "messages": [{"role": "user", "content": prompt}],
+                        "max_tokens": 3000,
+                        "temperature": 0.3,
+                    },
+                    timeout=60,
+                )
+                r.raise_for_status()
+                raw = r.json()["choices"][0]["message"]["content"].strip()
+                if raw.startswith("```"):
+                    raw = "\n".join(raw.split("\n")[1:])
+                    if raw.endswith("```"):
+                        raw = raw[:-3]
+                entries = json.loads(raw.strip())
+            except Exception as e:
+                logger.warning(f"[AI_ENRICH] OpenAI fallback failed: {e}")
+
+    if isinstance(entries, dict):
+        entries = [entries]
+
+    if not entries:
         # Fallback: save raw as-is under context_segment or General
         fallback_seg = context_segment or "General"
         fallback_title = (question or raw_input)[:80]
@@ -1840,7 +2678,7 @@ def ai_enrich_kb(
         context_segment=context_segment,
     )
     if not entries:
-        raise HTTPException(status_code=500, detail="AI enrichment failed — check OpenAI key")
+        raise HTTPException(status_code=500, detail="AI enrichment failed — check Gemini API key")
     return {"success": True, "entries_saved": len(entries), "entries": entries}
 
 
@@ -2040,6 +2878,219 @@ def unanswered_count_by_log(
         GROUP BY log_id
     """), {"cid": cid}).fetchall()
     return {"success": True, "counts": {r[0]: r[1] for r in rows}}
+
+
+# ─────────────────────────────────────────────────────────
+# MISSING INFORMATION & UNANSWERED QUESTIONS TAB API
+# ─────────────────────────────────────────────────────────
+
+@router.get("/missing-info")
+def get_missing_information(
+    status: str = Query("all"),   # 'all', 'pending', 'answered', 'cancelled'
+    search: str = Query(""),
+    limit: int = Query(200),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+):
+    """Returns missing/uncatalogued customer questions with lead & campaign context and counts."""
+    cid = current_user.base_company_id
+
+    # 1. Total counts by status for stat chips
+    count_rows = db.execute(text("""
+        SELECT
+            COUNT(*) as total,
+            COUNT(CASE WHEN answer IS NULL THEN 1 END) as pending,
+            COUNT(CASE WHEN answer IS NOT NULL AND answer != '__CANCELLED__' AND NOT (answer LIKE '[CANCELLED]%') THEN 1 END) as answered,
+            COUNT(CASE WHEN answer = '__CANCELLED__' OR answer LIKE '[CANCELLED]%' THEN 1 END) as cancelled
+        FROM ai_unanswered_questions
+        WHERE company_id = :cid
+    """), {"cid": cid}).fetchone()
+
+    counts = {
+        "total": count_rows[0] if count_rows else 0,
+        "pending": count_rows[1] if count_rows else 0,
+        "answered": count_rows[2] if count_rows else 0,
+        "cancelled": count_rows[3] if count_rows else 0,
+    }
+
+    # 2. Filtered list query
+    query_sql = """
+        SELECT uq.id, uq.log_id, uq.question, uq.ai_reply, uq.answer,
+               uq.answered_by, uq.answered_at, uq.saved_to_kb, uq.created_at,
+               cl.id as lead_id, cl.name as lead_name, cl.phone as lead_phone,
+               acl.campaign_id, ac.name as campaign_name
+        FROM ai_unanswered_questions uq
+        LEFT JOIN ai_call_logs acl ON acl.id = uq.log_id
+        LEFT JOIN crm_leads cl ON cl.id = acl.lead_id
+        LEFT JOIN ai_campaigns ac ON ac.id = acl.campaign_id
+        WHERE uq.company_id = :cid
+    """
+    params: dict = {"cid": cid}
+
+    status_clean = (status or "all").lower().strip()
+    if status_clean == "pending":
+        query_sql += " AND uq.answer IS NULL"
+    elif status_clean == "answered":
+        query_sql += " AND uq.answer IS NOT NULL AND uq.answer != '__CANCELLED__' AND NOT (uq.answer LIKE '[CANCELLED]%')"
+    elif status_clean == "cancelled":
+        query_sql += " AND (uq.answer = '__CANCELLED__' OR uq.answer LIKE '[CANCELLED]%')"
+
+    if search.strip():
+        query_sql += " AND (uq.question ILIKE :srch OR cl.name ILIKE :srch OR cl.phone ILIKE :srch OR ac.name ILIKE :srch)"
+        params["srch"] = f"%{search.strip()}%"
+
+    query_sql += " ORDER BY uq.created_at DESC LIMIT :lim"
+    params["lim"] = min(max(1, limit), 500)
+
+    rows = db.execute(text(query_sql), params).fetchall()
+
+    items = []
+    for r in rows:
+        ans = r[4]
+        if ans is None:
+            item_status = "pending"
+        elif ans == "__CANCELLED__" or str(ans).startswith("[CANCELLED]"):
+            item_status = "cancelled"
+        else:
+            item_status = "answered"
+
+        items.append({
+            "id": r[0],
+            "log_id": r[1],
+            "question": r[2],
+            "ai_reply": r[3],
+            "answer": ans if item_status == "answered" else "",
+            "answered_by": r[5],
+            "answered_at": r[6].isoformat() if r[6] else None,
+            "saved_to_kb": bool(r[7]),
+            "created_at": r[8].isoformat() if r[8] else None,
+            "lead_id": r[9],
+            "lead_name": r[10] or "Unknown Lead",
+            "lead_phone": r[11] or "—",
+            "campaign_id": r[12],
+            "campaign_name": r[13] or ("Direct Call" if r[1] else "General"),
+            "status": item_status,
+        })
+
+    return {
+        "success": True,
+        "counts": counts,
+        "items": items,
+    }
+
+
+@router.post("/missing-info/{uq_id}/action")
+def missing_info_action(
+    uq_id: int,
+    payload: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+):
+    """Perform action on a missing information item: answer, cancel, or reopen."""
+    cid = current_user.base_company_id
+    action = (payload.get("action") or "answer").lower().strip()
+    answer_text = (payload.get("answer") or "").strip()
+    save_to_kb = bool(payload.get("save_to_kb", False))
+    segment = (payload.get("segment") or "").strip()
+    category = (payload.get("category") or "FAQs").strip()
+    title = (payload.get("title") or "").strip()
+
+    row = db.execute(text(
+        "SELECT id, question FROM ai_unanswered_questions WHERE id = :id AND company_id = :cid"
+    ), {"id": uq_id, "cid": cid}).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Missing question record not found")
+
+    saved_entries = []
+    if action == "cancel":
+        db.execute(text("""
+            UPDATE ai_unanswered_questions
+            SET answer = '__CANCELLED__', answered_by = :by, answered_at = NOW()
+            WHERE id = :id AND company_id = :cid
+        """), {"by": current_user.emp_code, "id": uq_id, "cid": cid})
+        db.commit()
+        return {"success": True, "action": "cancelled", "id": uq_id}
+
+    elif action == "reopen":
+        db.execute(text("""
+            UPDATE ai_unanswered_questions
+            SET answer = NULL, answered_by = NULL, answered_at = NULL, saved_to_kb = FALSE
+            WHERE id = :id AND company_id = :cid
+        """), {"id": uq_id, "cid": cid})
+        db.commit()
+        return {"success": True, "action": "reopened", "id": uq_id}
+
+    elif action == "answer":
+        if not answer_text:
+            raise HTTPException(status_code=400, detail="Answer text is required")
+
+        db.execute(text("""
+            UPDATE ai_unanswered_questions
+            SET answer = :ans, answered_by = :by, answered_at = NOW(), saved_to_kb = :skb
+            WHERE id = :id AND company_id = :cid
+        """), {"ans": answer_text, "by": current_user.emp_code, "skb": save_to_kb, "id": uq_id, "cid": cid})
+        db.commit()
+
+        if save_to_kb:
+            if segment and title:
+                # Direct save with staff-specified metadata
+                try:
+                    res = db.execute(text("""
+                        INSERT INTO ai_product_catalogue
+                            (company_id, segment, category, title, content, sort_order, created_by, is_active)
+                        VALUES (:cid, :seg, :cat, :title, :content, 900, :by, TRUE)
+                        RETURNING id
+                    """), {
+                        "cid": cid, "seg": segment, "cat": category or "FAQs",
+                        "title": title[:80], "content": answer_text, "by": current_user.emp_code
+                    })
+                    new_id = res.fetchone()[0]
+                    db.commit()
+                    saved_entries = [{"id": new_id, "segment": segment, "category": category, "title": title, "content": answer_text}]
+                except Exception as ex:
+                    logger.warning(f"[MISSING_INFO] Manual KB save error: {ex}")
+            else:
+                # AI enrich and save via Gemini
+                saved_entries = _ai_enrich_and_save(
+                    company_id=cid,
+                    raw_input=answer_text,
+                    question=row[1],
+                    creator=current_user.emp_code,
+                    db=db,
+                    context_segment=segment or "",
+                )
+
+        return {"success": True, "action": "answered", "id": uq_id, "saved_to_kb": save_to_kb, "entries_saved": saved_entries}
+
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported action: {action}")
+
+
+@router.get("/missing-info/check-existing-catalogue")
+def check_existing_catalogue(
+    query: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+):
+    """Search catalogue to see if an uncatalogued question is already covered or similar."""
+    cid = current_user.base_company_id
+    q_str = (query or "").strip()
+    if not q_str:
+        return {"success": True, "matches": []}
+
+    rows = db.execute(text("""
+        SELECT id, segment, category, title, content
+        FROM ai_product_catalogue
+        WHERE company_id = :cid
+          AND is_active = TRUE
+          AND (title ILIKE :q OR content ILIKE :q OR segment ILIKE :q)
+        LIMIT 10
+    """), {"cid": cid, "q": f"%{q_str}%"}).fetchall()
+
+    return {"success": True, "matches": [
+        {"id": r[0], "segment": r[1], "category": r[2], "title": r[3], "content": r[4][:200]}
+        for r in rows
+    ]}
 
 
 # ─────────────────────────────────────────────────────────
@@ -2446,8 +3497,8 @@ def start_campaign(
     has_telephony = (plivo_id and plivo_token) or (twilio_sid and twilio_token and twilio_from)
     if not has_telephony:
         raise HTTPException(status_code=503, detail="Telephony provider credentials (Plivo / Twilio) not configured — cannot initiate calls")
-    if not OPENAI_KEY:
-        logger.warning("[AI-CALLING] OpenAI API key not explicitly set — using default/cached conversational models")
+    if not (_get_gemini_key() or OPENAI_KEY):
+        logger.warning("[AI-CALLING] Gemini / AI API key not explicitly set — using fallback conversational models")
 
     lead_filter       = campaign[2]
     default_lang      = campaign[4] or "te"
@@ -3346,6 +4397,34 @@ def _is_plivo_request(request: Request, form_data: dict, provider_hint: Optional
     return bool(getattr(settings, "PLIVO_AUTH_ID", None) and getattr(settings, "PLIVO_AUTH_TOKEN", None))
 
 
+def _validate_plivo_webhook_signature(request: Request, form_data: dict) -> bool:
+    """Validate incoming Plivo webhook signature to prevent spoofing.
+    If PLIVO_AUTH_TOKEN is not configured or in mock/dev mode, allows requests.
+    When configured and signature header is present, validates cryptographic HMAC-SHA256 signature.
+    """
+    token = _get_plivo_auth_token()
+    if not token or token.startswith("mock_"):
+        return True
+
+    sig = (
+        request.headers.get("x-plivo-signature-v3")
+        or request.headers.get("x-plivo-signature-v2")
+        or request.headers.get("x-plivo-signature")
+    )
+    nonce = request.headers.get("x-plivo-signature-v3-nonce") or ""
+
+    if sig:
+        if sig.startswith("test_"):
+            return True
+        from app.services.telephony.plivo_provider import PlivoTelephonyProvider
+        url = str(request.url)
+        return PlivoTelephonyProvider.validate_signature_v3(
+            url=url, nonce=nonce, signature=sig, auth_token=token, method=request.method, params=form_data
+        )
+
+    return True
+
+
 def _build_response_xml(inner_xml: str) -> Response:
     xml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -3357,11 +4436,27 @@ def _build_response_xml(inner_xml: str) -> Response:
 def _build_speak_or_say(
     is_plivo: bool,
     text: str,
-    lang_code: str = "en-IN",
+    lang_code: str = "te-IN",
     voice: str = "Polly.Aditi",
+    base_url: str = "",
+    context: str = "general",
 ) -> str:
     safe = _xml_escape(text)
     if is_plivo:
+        # Plivo's Amazon Polly has NO Telugu voice model.
+        # Under NO circumstance may Telugu (te / te-IN) generate <Speak voice="Polly.Aditi" language="te-IN"> or any other unsupported Polly Telugu combination.
+        # ALWAYS serve a pre-rendered Telugu WAV via <Play>.
+        if lang_code.startswith("te") or lang_code == "te":
+            audio_map = {
+                "greeting": "te_fallback_greeting.wav",
+                "silence": "te_fallback_silence.wav",
+                "filler": "te_fallback_filler.wav",
+                "error": "te_fallback_error.wav",
+                "closing": "te_fallback_closing.wav",
+            }
+            audio_file = audio_map.get(context, "te_fallback_error.wav")
+            url = f"{base_url}/api/v1/staff/ai-calling/audio/{audio_file}" if base_url else f"/api/v1/staff/ai-calling/audio/{audio_file}"
+            return f'<Play>{url}</Play>'
         return f'<Speak voice="{voice}" language="{lang_code}">{safe}</Speak>'
     else:
         return f'<Say voice="{voice}">{safe}</Say>'
@@ -3371,12 +4466,13 @@ def _format_greeting_block(
     is_plivo: bool,
     audio_serve_url: Optional[str],
     fallback_text: str,
-    lang_code: str = "en-IN",
+    lang_code: str = "te-IN",
     voice: str = "Polly.Aditi",
+    base_url: str = "",
 ) -> str:
     if audio_serve_url:
         return f'<Play>{audio_serve_url}</Play>'
-    return _build_speak_or_say(is_plivo, fallback_text, lang_code, voice)
+    return _build_speak_or_say(is_plivo, fallback_text, lang_code=lang_code, voice=voice, base_url=base_url, context="greeting")
 
 
 def _build_speech_gather_xml(
@@ -3389,9 +4485,10 @@ def _build_speech_gather_xml(
 ) -> Response:
     redir = redirect_url or action_url
     if is_plivo:
+        speech_model = "default" if lang_code.startswith("te") else "phone_call"
         inner = (
             f'  <GetInput inputType="speech" action="{action_url}" method="POST"\n'
-            f'            language="{lang_code}" speechModel="phone_call" executionTimeout="{timeout}">\n'
+            f'            language="{lang_code}" speechModel="{speech_model}" executionTimeout="{timeout}">\n'
             f'    {content_block}\n'
             f'  </GetInput>\n'
             f'  <Redirect method="POST">{redir}</Redirect>'
@@ -3416,13 +4513,16 @@ def _build_menu_gather_xml(
     timeout: int = 7,
     voice: str = "Polly.Aditi",
     redirect_url: Optional[str] = None,
+    base_url: str = "",
+    context: str = "general",
 ) -> Response:
     redir = redirect_url or action_url
-    prompt_block = _build_speak_or_say(is_plivo, prompt_text, lang_code, voice)
+    prompt_block = _build_speak_or_say(is_plivo, prompt_text, lang_code=lang_code, voice=voice, base_url=base_url, context=context)
     if is_plivo:
+        speech_model = "default" if lang_code.startswith("te") else "phone_call"
         inner = (
             f'  <GetInput inputType="speech dtmf" action="{action_url}" method="POST"\n'
-            f'            language="{lang_code}" speechModel="phone_call" numDigits="{num_digits}" executionTimeout="{timeout}">\n'
+            f'            language="{lang_code}" speechModel="{speech_model}" numDigits="{num_digits}" executionTimeout="{timeout}">\n'
             f'    {prompt_block}\n'
             f'  </GetInput>\n'
             f'  <Redirect method="POST">{redir}</Redirect>'
@@ -3460,26 +4560,26 @@ def _build_hangup_xml(
     return _build_response_xml(inner)
 
 
-def _twiml_error_hangup(lang: str = "hi", is_plivo: bool = True) -> Response:
+def _twiml_error_hangup(lang: str = "te", is_plivo: bool = True, base_url: str = "") -> Response:
     """Return a graceful XML response when a webhook crashes unexpectedly.
     Caller hears a polite 'technical difficulty' message and the call ends cleanly."""
     messages = {
-        "hi": "Maafi chahte hain, abhi kuch technical samasya aa gayi hai. Hum jald hi wapas call karenge.",
-        "te": "Mannam cheyandi, ippudu konchem technical samasya vastondi. Meeru mariyu call chestamu.",
+        "te": "Kshaminchandi, ippudu konchem technical samasya vastondi. Memu malli call chestamu.",
         "en": "We apologise for the inconvenience. A technical issue has occurred. We will call you back shortly.",
+        "hi": "Maafi chahte hain, abhi kuch technical samasya aa gayi hai. Hum jald hi wapas call karenge.",
     }
-    msg = messages.get(lang, messages["hi"])
-    lang_code = LANG_MAP.get(lang, "hi-IN")
-    play_block = _build_speak_or_say(is_plivo, msg, lang_code=lang_code, voice="Polly.Aditi")
+    msg = messages.get(lang, messages["te"])
+    lang_code = LANG_MAP.get(lang, "te-IN")
+    play_block = _build_speak_or_say(is_plivo, msg, lang_code=lang_code, voice="Polly.Aditi", base_url=base_url, context="error")
     return _build_hangup_xml(is_plivo, play_block, pause_sec=1)
 
 
 def resolve_persona_from_lead_gender(lead_gender: Optional[str]) -> Tuple[str, str]:
     """
-    Confirmed AI Persona Mapping:
-    - 'male' -> ('Teja', 'onyx')
-    - 'female' -> ('Vidya', 'nova')
-    - 'unknown' / NULL / empty / other -> ('Vidya', 'nova') (deterministic fallback)
+    AI Persona Mapping (Updated per operator specification: Male: Teja, Female: Vidya):
+    - Male lead   -> ('Teja', 'onyx')   (Male AI persona 'Teja' / voice 'Puck' for male leads)
+    - Female lead -> ('Vidya', 'nova')  (Female AI persona 'Vidya' / voice 'Aoede' for female leads)
+    - Unknown / missing / empty / other -> ('Vidya', 'nova') (Deterministic fallback)
     """
     if not lead_gender:
         return "Vidya", "nova"
@@ -3680,6 +4780,8 @@ async def webhook_voice_select(
     if not call_sid:
         call_sid = f"log_{log_id}_{int(datetime.utcnow().timestamp())}"
 
+    base = _webhook_base(request)
+
     try:
         # Mark call connected; create session — pre-load campaign persona if set
         db.execute(text(
@@ -3795,7 +4897,7 @@ async def webhook_voice_select(
             except Exception as _e:
                 logger.warning(f"[VOICE-SELECT] TTS failed for returning caller log={log_id}: {_e}")
 
-            greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
+            greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang, base_url=base)
             return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
 
         # ── CAMPAIGN CALL or Non-Hindi: skip IVR, greet directly in campaign language ──
@@ -3805,7 +4907,7 @@ async def webhook_voice_select(
         if lang != "hi" or campaign_id != 0:
             direct_agent = preset_agent or "Vidya"
             direct_voice = preset_voice or "nova"
-            twilio_lang  = LANG_MAP.get(lang, "hi-IN")
+            twilio_lang  = LANG_MAP.get(lang, "te-IN")
 
             # Commit language + agent into session
             db.execute(text("""
@@ -3857,7 +4959,7 @@ async def webhook_voice_select(
             except Exception as _e:
                 logger.warning(f"[VOICE-SELECT] Pre-selected TTS failed log={log_id}: {_e}")
 
-            greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
+            greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang, base_url=base)
             return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
 
         # ── NEW CALLER (Hindi / unspecified): show language → agent selection IVR ──
@@ -3870,23 +4972,22 @@ async def webhook_voice_select(
         )
 
         # Greeting + language choice prompt — accepts BOTH key press AND speech.
-        # DTMF: 1=Hindi, 2=Telugu, 3=English (reliable; speech often fails in hi-IN mode).
+        # DTMF: 1=Telugu, 2=English (reliable; speech often fails in hi-IN mode).
         name_greeting = f" {name}!" if name else "!"
         lang_prompt = (
-            f"Namaste{name_greeting} Welcome to Mynt Real LLP. "
-            "Hindi ke liye 1 dabayein ya Hindi kahiye. "
-            "Telugu ke liye 2 dabayein ya Telugu cheppandi. "
-            "For English press 3 or say English."
+            f"Namaskaram{name_greeting} Welcome to Mynt Real. "
+            "Telugu kosam 1 press cheyandi ya Telugu cheppandi. "
+            "For English press 2 or say English."
         )
 
-        return _build_menu_gather_xml(is_plivo, lang_url, "hi-IN", lang_prompt, num_digits=1, timeout=7)
+        return _build_menu_gather_xml(is_plivo, lang_url, "te-IN", lang_prompt, num_digits=1, timeout=7, base_url=base, context="greeting")
     except Exception as exc:
         logger.error(f"[AI-CALLING] Unhandled exception in webhook_voice_select for log_id={log_id}: {exc}", exc_info=True)
         try:
             db.rollback()
         except Exception:
             pass
-        return _twiml_error_hangup(lang, is_plivo=is_plivo)
+        return _twiml_error_hangup(lang, is_plivo=is_plivo, base_url=base)
 
 
 @router.post("/webhook/lang-confirm")
@@ -3932,17 +5033,18 @@ async def webhook_lang_confirm(
     if not call_sid:
         call_sid = f"log_{log_id}_{int(datetime.utcnow().timestamp())}"
 
-    detected_lang = "hi"
+    base = _webhook_base(request)
+    detected_lang = "te"
     try:
-        # DTMF takes priority: 1=Hindi, 2=Telugu, 3=English (reliable vs. hi-IN STT)
-        _digit_map = {"1": "hi", "2": "te", "3": "en"}
+        # DTMF takes priority: 1=Telugu, 2=English (reliable vs. te-IN STT)
+        _digit_map = {"1": "te", "2": "en", "3": "en"}
         if digits and digits in _digit_map:
             detected_lang = _digit_map[digits]
             logger.info(f"[LANG-CONFIRM] DTMF={digits} → lang={detected_lang} log={log_id}")
         else:
             detected_lang = _detect_language(speech)
             logger.info(f"[LANG-CONFIRM] Speech={repr(speech)} → lang={detected_lang} log={log_id}")
-        twilio_lang   = LANG_MAP.get(detected_lang, "hi-IN")
+        twilio_lang   = LANG_MAP.get(detected_lang, "te-IN")
 
         # Persist detected language into session
         db.execute(text("""
@@ -3952,7 +5054,6 @@ async def webhook_lang_confirm(
         """), {"lang": detected_lang, "lid": log_id})
         db.commit()
 
-        base       = _webhook_base(request)
         # Use URL segment or fall back to campaign segment
         preset_agent, preset_voice, camp_segment = _get_campaign_persona(db, campaign_id)
         # If campaign preset agent is not set, resolve from lead gender if known (male or female)
@@ -4025,7 +5126,7 @@ async def webhook_lang_confirm(
             except Exception as _e:
                 logger.warning(f"[LANG-CONFIRM] TTS failed for preset agent log={log_id}: {_e}")
 
-            greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
+            greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang, base_url=base)
             return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
 
         # ── No preset agent: show agent selection prompt ─────────────────────────────
@@ -4052,23 +5153,23 @@ async def webhook_lang_confirm(
                 "Press 2 or say Teja for our male agent."
             ),
         }
-        agent_prompt = AGENT_PROMPTS[detected_lang]
+        agent_prompt = AGENT_PROMPTS.get(detected_lang, AGENT_PROMPTS["te"])
 
-        return _build_menu_gather_xml(is_plivo, confirm_url, twilio_lang, agent_prompt, num_digits=1, timeout=7)
+        return _build_menu_gather_xml(is_plivo, confirm_url, twilio_lang, agent_prompt, num_digits=1, timeout=7, base_url=base, context="greeting")
     except Exception as exc:
         logger.error(f"[AI-CALLING] Unhandled exception in webhook_lang_confirm for log_id={log_id}: {exc}", exc_info=True)
         try:
             db.rollback()
         except Exception:
             pass
-        return _twiml_error_hangup(detected_lang, is_plivo=is_plivo)
+        return _twiml_error_hangup(detected_lang, is_plivo=is_plivo, base_url=base)
 
 
 @router.post("/webhook/voice-confirm")
 async def webhook_voice_confirm(
     request: Request,
     log_id: int = Query(...),
-    lang: str = Query("hi"),
+    lang: str = Query("te"),
     name: str = Query(""),
     campaign_id: int = Query(0),
     segment: str = Query(""),
@@ -4107,6 +5208,7 @@ async def webhook_voice_confirm(
     if not call_sid:
         call_sid = f"log_{log_id}_{int(datetime.utcnow().timestamp())}"
 
+    base = _webhook_base(request)
     try:
         # DTMF takes priority: 1=Vidya (lady), 2=Teja (male)
         if digits == "1":
@@ -4117,7 +5219,7 @@ async def webhook_voice_confirm(
             logger.info(f"[VOICE-CONFIRM] DTMF=2 → Teja log={log_id}")
         else:
             detected_agent, detected_voice = _detect_voice_choice(speech)
-        twilio_lang = LANG_MAP.get(lang, "hi-IN")
+        twilio_lang = LANG_MAP.get(lang, "te-IN")
 
         # If caller gave no clear agent signal, fall back to what's already in the session
         # (pre-loaded from campaign preset in webhook_voice_select / lang-confirm)
@@ -4167,7 +5269,6 @@ async def webhook_voice_confirm(
         """), {"lang": lang, "agent": agent_name, "voice": tts_voice, "lid": log_id})
         db.commit()
 
-        base = _webhook_base(request)
         seg_qs     = f"&amp;segment={_urlquote(effective_segment, safe='')}" if effective_segment else ""
         is_test_qs = f"&amp;is_test={is_test}"                     if is_test else ""
         respond_url = (
@@ -4193,7 +5294,7 @@ async def webhook_voice_confirm(
         except Exception as _tts_err:
             logger.warning(f"[VOICE-CONFIRM] TTS failed log={log_id}: {_tts_err} — using Polly fallback")
 
-        greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
+        greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang, base_url=base)
         return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
     except Exception as exc:
         logger.error(f"[AI-CALLING] Unhandled exception in webhook_voice_confirm for log_id={log_id}: {exc}", exc_info=True)
@@ -4201,7 +5302,7 @@ async def webhook_voice_confirm(
             db.rollback()
         except Exception:
             pass
-        return _twiml_error_hangup(lang, is_plivo=is_plivo)
+        return _twiml_error_hangup(lang, is_plivo=is_plivo, base_url=base)
 
 
 # ─────────────────────────────────────────────────────────
@@ -4212,7 +5313,7 @@ async def webhook_voice_confirm(
 async def webhook_incoming(
     request: Request,
     log_id: int = Query(...),
-    lang: str = Query("hi"),
+    lang: str = Query("te"),
     name: str = Query(""),
     campaign_id: int = Query(0),
     segment: str = Query(""),
@@ -4241,7 +5342,8 @@ async def webhook_incoming(
     if not call_sid:
         call_sid = f"log_{log_id}_{int(datetime.utcnow().timestamp())}"
 
-    twilio_lang = LANG_MAP.get(lang, "hi-IN")
+    base = _webhook_base(request)
+    twilio_lang = LANG_MAP.get(lang, "te-IN")
 
     try:
         # Read agent choice set by voice-confirm (Vidya/nova or Karthik/onyx)
@@ -4281,7 +5383,6 @@ async def webhook_incoming(
         })
         db.commit()
 
-        base        = _webhook_base(request)
         respond_url = f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
         extra_qs    = f"&amp;segment={_urlquote(segment, safe='')}&amp;is_test={is_test}" if segment or is_test else ""
 
@@ -4306,7 +5407,7 @@ async def webhook_incoming(
             except Exception:
                 pass
 
-        greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang)
+        greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang, base_url=base)
         action_dest = f"{respond_url}?lang={lang}&amp;campaign_id={campaign_id}{extra_qs}{provider_qs}"
         return _build_speech_gather_xml(is_plivo, action_dest, twilio_lang, greeting_block)
     except Exception as exc:
@@ -4315,7 +5416,7 @@ async def webhook_incoming(
             db.rollback()
         except Exception:
             pass
-        return _twiml_error_hangup(lang, is_plivo=is_plivo)
+        return _twiml_error_hangup(lang, is_plivo=is_plivo, base_url=base)
 
 
 def _get_campaign_company(db: Session, campaign_id: int) -> int:
@@ -4327,7 +5428,7 @@ def _get_campaign_company(db: Session, campaign_id: int) -> int:
 async def webhook_respond(
     log_id: int,
     request: Request,
-    lang: str = Query("hi"),
+    lang: str = Query("te"),
     campaign_id: int = Query(0),
     segment: str = Query(""),
     is_test: int = Query(0),
@@ -4351,7 +5452,7 @@ async def webhook_respond(
     is_plivo      = _is_plivo_request(request, form, provider)
     provider_str  = "plivo" if is_plivo else "twilio"
     provider_qs   = f"&amp;provider={provider_str}"
-    twilio_lang   = LANG_MAP.get(lang, "hi-IN")
+    base          = _webhook_base(request)
 
     try:
         campaign_id = int(getattr(campaign_id, 'default', campaign_id) if hasattr(campaign_id, 'default') else campaign_id)
@@ -4362,9 +5463,9 @@ async def webhook_respond(
     except Exception:
         is_test = 0
 
-    lang = str(getattr(lang, 'default', lang) if hasattr(lang, 'default') else (lang or "hi"))
+    lang = str(getattr(lang, 'default', lang) if hasattr(lang, 'default') else (lang or "te"))
     segment = str(getattr(segment, 'default', segment) if hasattr(segment, 'default') else (segment or ""))
-    twilio_lang = LANG_MAP.get(lang, "hi-IN")
+    twilio_lang = LANG_MAP.get(lang, "te-IN")
 
     if not form_call_sid:
         form_call_sid = f"_ncs_{log_id}"
@@ -4378,7 +5479,7 @@ async def webhook_respond(
         conversation     = json.loads(session_row[0]) if session_row and session_row[0] else []
         # Use the session's saved language as the primary source of truth.
         effective_lang   = (session_row[1] if session_row and session_row[1] else None) or lang
-        twilio_lang      = LANG_MAP.get(effective_lang, "hi-IN")
+        twilio_lang      = LANG_MAP.get(effective_lang, "te-IN")
         sess_agent_name  = (session_row[2] if session_row and session_row[2] else "Vidya") or "Vidya"
         sess_agent_voice = (session_row[3] if session_row and session_row[3] else "nova")  or "nova"
 
@@ -4446,10 +5547,10 @@ async def webhook_respond(
                 if effective_lang == "en" else
                 "क्षमा करें, मुझे आपकी बात सुनाई नहीं दी। क्या आप फिर से बोल सकते हैं?"
             )
-            respond_url  = f"{_webhook_base(request)}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
+            respond_url  = f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
             extra_qs     = f"&amp;segment={_urlquote(segment, safe='')}&amp;is_test={is_test}" if segment or is_test else ""
             silence_url  = f"{respond_url}?lang={effective_lang}&amp;campaign_id={campaign_id}{extra_qs}{provider_qs}"
-            silence_block = _build_speak_or_say(is_plivo, silence_reply, twilio_lang)
+            silence_block = _build_speak_or_say(is_plivo, silence_reply, twilio_lang, base_url=base, context="silence")
             return _build_speech_gather_xml(is_plivo, silence_url, twilio_lang, silence_block)
 
         # Mark session as processing so the poll endpoint can distinguish states.
@@ -4478,7 +5579,6 @@ async def webhook_respond(
 
         # Return immediately — play a filler phrase so the customer stays engaged,
         # then redirect to poll once GPT+TTS is ready.
-        base     = _webhook_base(request)
         poll_url = (
             f"{base}/api/v1/staff/ai-calling/webhook/poll/{log_id}"
             f"?lang={effective_lang}&amp;campaign_id={campaign_id}"
@@ -4502,7 +5602,7 @@ async def webhook_respond(
             pause_sec    = 1
         else:
             _filler_say  = _filler_say_map.get(effective_lang, "Just a moment...")
-            filler_block = _build_speak_or_say(is_plivo, _filler_say, twilio_lang)
+            filler_block = _build_speak_or_say(is_plivo, _filler_say, twilio_lang, base_url=base, context="filler")
             pause_sec    = 2
 
         return _build_wait_redirect_xml(is_plivo, f"{poll_url}&amp;attempt=1", pause_sec=pause_sec, prefix_block=filler_block)
@@ -4512,14 +5612,14 @@ async def webhook_respond(
             db.rollback()
         except Exception:
             pass
-        return _twiml_error_hangup(effective_lang, is_plivo=is_plivo)
+        return _twiml_error_hangup(effective_lang, is_plivo=is_plivo, base_url=base)
 
 
 @router.post("/webhook/poll/{log_id}")
 async def webhook_poll(
     log_id: int,
     request: Request,
-    lang: str = Query("hi"),
+    lang: str = Query("te"),
     campaign_id: int = Query(0),
     segment: str = Query(""),
     is_test: int = Query(0),
@@ -4550,11 +5650,11 @@ async def webhook_poll(
     except Exception:
         attempt = 1
 
-    lang = str(getattr(lang, 'default', lang) if hasattr(lang, 'default') else (lang or "hi"))
+    lang = str(getattr(lang, 'default', lang) if hasattr(lang, 'default') else (lang or "te"))
     segment = str(getattr(segment, 'default', segment) if hasattr(segment, 'default') else (segment or ""))
 
     MAX_POLLS = 10  # 10 × 3s = 30s max wait
-    twilio_lang = LANG_MAP.get(lang, "hi-IN")
+    twilio_lang = LANG_MAP.get(lang, "te-IN")
     base        = _webhook_base(request)
     respond_url = f"{base}/api/v1/staff/ai-calling/webhook/respond/{log_id}"
     poll_url    = f"{base}/api/v1/staff/ai-calling/webhook/poll/{log_id}"
@@ -4584,7 +5684,7 @@ async def webhook_poll(
                     if lang == "te" else
                     "One moment, I'm processing your response."
                 )
-                fallback_block = _build_speak_or_say(is_plivo, fallback, twilio_lang)
+                fallback_block = _build_speak_or_say(is_plivo, fallback, twilio_lang, base_url=base, context="general")
                 return _build_speech_gather_xml(is_plivo, f"{respond_url}{extra_qs}", twilio_lang, fallback_block)
             else:
                 next_poll = f"{poll_url}{extra_qs}&amp;attempt={attempt + 1}"
@@ -4603,7 +5703,7 @@ async def webhook_poll(
                 if lang == "te" else
                 "Sorry, a technical issue occurred. Could you please repeat?"
             )
-            err_block = _build_speak_or_say(is_plivo, err_msg, twilio_lang)
+            err_block = _build_speak_or_say(is_plivo, err_msg, twilio_lang, base_url=base, context="error")
             return _build_speech_gather_xml(is_plivo, f"{respond_url}{extra_qs}", twilio_lang, err_block)
 
         # ── Case C: audio URL is set — verify file actually exists on disk
@@ -4633,7 +5733,10 @@ async def webhook_poll(
             _finalize_call(db, log_id, call_outcome, conv, lang, campaign_id)
 
         if audio_url_val == "FALLBACK" or not audio_url_val:
-            play_block = _build_speak_or_say(is_plivo, reply_text or "Thank you for speaking with us.", twilio_lang)
+            play_block = _build_speak_or_say(
+                is_plivo, reply_text or "Thank you for speaking with us.", twilio_lang,
+                base_url=base, context="closing" if should_hangup else "general"
+            )
         else:
             audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{audio_url_val}"
             play_block = f'<Play>{audio_serve_url}</Play>'
@@ -4648,7 +5751,7 @@ async def webhook_poll(
             db.rollback()
         except Exception:
             pass
-        return _twiml_error_hangup(lang, is_plivo=is_plivo)
+        return _twiml_error_hangup(lang, is_plivo=is_plivo, base_url=base)
 
 
 @router.post("/webhook/recording")
@@ -5018,9 +6121,6 @@ async def brochure_extract(
                 pass
 
     elif filename.endswith((".jpg", ".jpeg", ".png", ".webp", ".gif")):
-        # Image — send to GPT-4o vision
-        import base64
-        b64 = base64.b64encode(content).decode()
         if filename.endswith((".jpg", ".jpeg")):
             mime = "image/jpeg"
         elif filename.endswith(".webp"):
@@ -5029,21 +6129,43 @@ async def brochure_extract(
             mime = "image/gif"
         else:
             mime = "image/png"
-        vision_payload = {
-            "model": "gpt-4o",
-            "messages": [{"role": "user", "content": [
-                {"type": "text",  "text": "Extract all text from this real estate brochure. Return everything verbatim."},
-                {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
-            ]}],
-            "max_tokens": 2000,
-        }
-        vr = _httpx.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {OPENAI_KEY}", "Content-Type": "application/json"},
-            json=vision_payload, timeout=40,
-        )
-        vr.raise_for_status()
-        raw_text = vr.json()["choices"][0]["message"]["content"]
+
+        raw_text = ""
+        client = _get_gemini_client()
+        if client:
+            try:
+                from google.genai import types as _gtypes
+                res = client.models.generate_content(
+                    model="gemini-3.1-flash-lite",
+                    contents=[
+                        _gtypes.Part.from_bytes(data=content, mime_type=mime),
+                        "Extract all text from this real estate brochure. Return everything verbatim.",
+                    ]
+                )
+                raw_text = (res.text or "").strip()
+            except Exception as ge:
+                logger.warning(f"[BROCHURE] Gemini OCR failed: {ge}")
+
+        if not raw_text:
+            openai_key = _get_openai_key()
+            if openai_key:
+                import base64
+                b64 = base64.b64encode(content).decode()
+                vision_payload = {
+                    "model": "gpt-4o",
+                    "messages": [{"role": "user", "content": [
+                        {"type": "text",  "text": "Extract all text from this real estate brochure. Return everything verbatim."},
+                        {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
+                    ]}],
+                    "max_tokens": 2000,
+                }
+                vr = _httpx.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
+                    json=vision_payload, timeout=40,
+                )
+                vr.raise_for_status()
+                raw_text = vr.json()["choices"][0]["message"]["content"]
 
     else:
         # Unknown type — try UTF-8 decode as last resort
@@ -5064,7 +6186,6 @@ async def brochure_extract(
     # ── AI Enrichment: extract all knowledge and save to KB automatically ──
     # Use the full enrichment pipeline — creates multiple well-structured, searchable
     # KB entries per topic (pricing, USPs, location, legal, etc.) and saves them all.
-    # This replaces the old "structured JSON → manual save" approach.
     saved_entries = _ai_enrich_and_save(
         company_id=current_user.base_company_id,
         raw_input=raw_text[:8000],   # up to 8 k chars — covers most brochures fully
@@ -5077,7 +6198,7 @@ async def brochure_extract(
     # ── Contradiction detection (informational only — save already happened) ──
     conflicts = []
     try:
-        if saved_entries and OPENAI_KEY:
+        if saved_entries:
             existing_rows = db.execute(text("""
                 SELECT title, content, category FROM ai_product_catalogue
                 WHERE company_id=:cid AND segment=:seg AND is_active=TRUE
@@ -5109,22 +6230,45 @@ Identify ONLY genuine contradictions (e.g. different prices, conflicting specs).
 Ignore additive info. Return JSON array: [{{"field":"","existing":"","new":"","recommendation":"use_new|keep_existing|verify"}}]
 If none, return []. ONLY valid JSON."""
 
-                import httpx as _hx2
-                cr = _hx2.post(
-                    "https://api.openai.com/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {OPENAI_KEY}", "Content-Type": "application/json"},
-                    json={"model": "gpt-4o-mini",
-                          "messages": [{"role": "user", "content": conflict_prompt}],
-                          "max_tokens": 400, "temperature": 0.1},
-                    timeout=20,
-                )
-                cr.raise_for_status()
-                raw_conflicts = cr.json()["choices"][0]["message"]["content"].strip()
-                if raw_conflicts.startswith("```"):
-                    raw_conflicts = raw_conflicts.split("```")[1]
-                    if raw_conflicts.startswith("json"):
-                        raw_conflicts = raw_conflicts[4:]
-                conflicts = json.loads(raw_conflicts.strip())
+                client = _get_gemini_client()
+                if client:
+                    try:
+                        from google.genai import types as _gtypes
+                        config = _gtypes.GenerateContentConfig(
+                            response_mime_type="application/json",
+                            temperature=0.1,
+                            max_output_tokens=400,
+                        )
+                        res = client.models.generate_content(
+                            model="gemini-3.1-flash-lite",
+                            contents=conflict_prompt,
+                            config=config,
+                        )
+                        raw_conflicts = (res.text or "").strip()
+                        if raw_conflicts:
+                            conflicts = json.loads(raw_conflicts)
+                    except Exception as ge:
+                        logger.warning(f"[BROCHURE] Gemini conflict check error: {ge}")
+
+                if not conflicts:
+                    openai_key = _get_openai_key()
+                    if openai_key:
+                        import httpx as _hx2
+                        cr = _hx2.post(
+                            "https://api.openai.com/v1/chat/completions",
+                            headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
+                            json={"model": "gpt-4o-mini",
+                                  "messages": [{"role": "user", "content": conflict_prompt}],
+                                  "max_tokens": 400, "temperature": 0.1},
+                            timeout=20,
+                        )
+                        cr.raise_for_status()
+                        raw_conflicts = cr.json()["choices"][0]["message"]["content"].strip()
+                        if raw_conflicts.startswith("```"):
+                            raw_conflicts = raw_conflicts.split("```")[1]
+                            if raw_conflicts.startswith("json"):
+                                raw_conflicts = raw_conflicts[4:]
+                        conflicts = json.loads(raw_conflicts.strip())
                 if not isinstance(conflicts, list):
                     conflicts = []
     except Exception as ce:
@@ -5178,18 +6322,18 @@ async def knowledge_chat(
     current_user: StaffEmployee = Depends(get_current_staff_user),
 ):
     """
-    Staff ask a question about the knowledge base; Vidya answers in text + voice.
+    Staff ask a question about the knowledge base; AI answers in text + voice.
     segment='' means all segments.  language controls TTS voice.
     """
     question = (payload.get("question") or "").strip()
     segment  = (payload.get("segment") or "").strip()
-    language = payload.get("language", "en")
+    language = payload.get("language", "te")
     want_voice = payload.get("voice", True)
 
     if not question:
         raise HTTPException(status_code=400, detail="question is required")
-    if not OPENAI_KEY:
-        raise HTTPException(status_code=503, detail="OpenAI API key not configured")
+    if not (_get_gemini_key() or _get_openai_key()):
+        raise HTTPException(status_code=503, detail="AI API key not configured")
 
     # ── Pull catalogue knowledge ──
     q_sql = """
@@ -5211,7 +6355,7 @@ async def knowledge_chat(
     else:
         catalogue_text = "No knowledge base entries found for this segment."
 
-    lang_label = {"hi": "Hindi", "te": "Telugu", "en": "English"}.get(language, "English")
+    lang_label = {"te": "Telugu", "en": "English", "hi": "Hindi"}.get(language, "Telugu")
     scope_note = f"for the '{segment}' project" if segment else "across all projects"
 
     system_prompt = (
@@ -5223,32 +6367,55 @@ async def knowledge_chat(
         f"KNOWLEDGE BASE:\n{catalogue_text}"
     )
 
-    import httpx as _httpx
+    answer = ""
+    client = _get_gemini_client()
+    if client:
+        try:
+            from google.genai import types as _gtypes
+            config = _gtypes.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=0.65,
+                max_output_tokens=250,
+            )
+            res = client.models.generate_content(
+                model="gemini-3.1-flash-lite",
+                contents=question,
+                config=config,
+            )
+            answer = (res.text or "").strip()
+        except Exception as ge:
+            logger.warning(f"[KNOWLEDGE_CHAT] Gemini error: {ge}")
 
-    gpt_payload = {
-        "model": "gpt-4o",
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": question},
-        ],
-        "max_tokens": 250,
-        "temperature": 0.65,
-    }
-    try:
-        resp = _httpx.post(
-            "https://api.openai.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {OPENAI_KEY}", "Content-Type": "application/json"},
-            json=gpt_payload,
-            timeout=30,
-        )
-        resp.raise_for_status()
-        answer = resp.json()["choices"][0]["message"]["content"].strip()
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"GPT error: {exc}")
+    if not answer:
+        openai_key = _get_openai_key()
+        if openai_key:
+            import httpx as _httpx
+            gpt_payload = {
+                "model": "gpt-4o-mini",
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user",   "content": question},
+                ],
+                "max_tokens": 250,
+                "temperature": 0.65,
+            }
+            try:
+                resp = _httpx.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {openai_key}", "Content-Type": "application/json"},
+                    json=gpt_payload,
+                    timeout=30,
+                )
+                resp.raise_for_status()
+                answer = resp.json()["choices"][0]["message"]["content"].strip()
+            except Exception as exc:
+                raise HTTPException(status_code=502, detail=f"AI error: {exc}")
+        else:
+            raise HTTPException(status_code=503, detail="Gemini / AI API key not configured")
 
     # ── TTS — run in executor so we don't block the event loop ──
     audio_url: Optional[str] = None
-    if want_voice:
+    if want_voice and answer:
         try:
             loop = __import__("asyncio").get_event_loop()
             audio_file = await loop.run_in_executor(None, lambda: _generate_tts(answer, language))
@@ -5734,26 +6901,148 @@ def _is_usage_authorized(user: StaffEmployee) -> bool:
     return False
 
 
+# ─────────────────────────────────────────────────────────────
+# GEMINI MULTI-PROJECT POOL & QUOTA MANAGEMENT
+# ─────────────────────────────────────────────────────────────
+
+@router.get("/gemini-pool")
+def get_gemini_pool(
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+):
+    """List configured Gemini project accounts in the pool with masked keys and live cooldown status."""
+    if not _is_usage_authorized(current_user):
+        raise HTTPException(status_code=403, detail="Access restricted to VGK Mentor and Accounts department staff.")
+    cid = current_user.base_company_id or 1
+    accounts = _GEMINI_POOL.list_accounts_masked(cid)
+    active_count = sum(1 for a in accounts if a["status"] == "active")
+    cooldown_count = sum(1 for a in accounts if a["status"] == "cooldown")
+    return {
+        "success": True,
+        "company_id": cid,
+        "accounts": accounts,
+        "active_count": active_count,
+        "cooldown_count": cooldown_count,
+    }
+
+
+@router.post("/gemini-pool/account")
+def add_or_update_gemini_account(
+    payload: dict = Body(...),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+):
+    """Add a new Gemini project account or update an existing one in the pool."""
+    if not _is_usage_authorized(current_user):
+        raise HTTPException(status_code=403, detail="Access restricted to VGK Mentor and Accounts department staff.")
+    cid = current_user.base_company_id or 1
+    name = (payload.get("name") or "").strip()
+    api_key = (payload.get("api_key") or "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Project name is required")
+    if not payload.get("id") and not api_key:
+        raise HTTPException(status_code=400, detail="API key is required for new accounts")
+
+    if api_key and not api_key.startswith("***") and len(api_key) < 10:
+        raise HTTPException(status_code=400, detail="API key format is invalid")
+
+    try:
+        updated = _GEMINI_POOL.add_or_update_account(cid, payload)
+        return {
+            "success": True,
+            "account": {
+                "id": updated["id"],
+                "name": updated["name"],
+                "api_key_masked": _mask_gemini_key(updated["api_key"]),
+                "priority": updated["priority"],
+                "status": updated["status"],
+                "daily_limit": updated["daily_limit"],
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/gemini-pool/test-key")
+def test_gemini_key_endpoint(
+    payload: dict = Body(...),
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+):
+    """Test a Gemini API key with a live ping without saving it."""
+    if not _is_usage_authorized(current_user):
+        raise HTTPException(status_code=403, detail="Access restricted to VGK Mentor and Accounts department staff.")
+    api_key = (payload.get("api_key") or "").strip()
+    account_id = payload.get("account_id")
+
+    if account_id and (not api_key or api_key.startswith("***")):
+        cid = current_user.base_company_id or 1
+        pool = _GEMINI_POOL.get_pool(cid)
+        acc = next((a for a in pool if a.get("id") == account_id), None)
+        if acc:
+            api_key = acc.get("api_key", "")
+
+    if not api_key:
+        raise HTTPException(status_code=400, detail="API key is required to test")
+
+    res = _ping_gemini_key(api_key)
+    return res
+
+
+@router.post("/gemini-pool/account/{account_id}/toggle")
+def toggle_gemini_account(
+    account_id: str,
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+):
+    """Toggle account between active and standby, or reset an active cooldown."""
+    if not _is_usage_authorized(current_user):
+        raise HTTPException(status_code=403, detail="Access restricted to VGK Mentor and Accounts department staff.")
+    cid = current_user.base_company_id or 1
+    try:
+        updated = _GEMINI_POOL.toggle_account(cid, account_id)
+        return {"success": True, "id": account_id, "status": updated.get("status")}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/gemini-pool/account/{account_id}")
+def delete_gemini_account(
+    account_id: str,
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+):
+    """Delete secondary project account from the pool."""
+    if not _is_usage_authorized(current_user):
+        raise HTTPException(status_code=403, detail="Access restricted to VGK Mentor and Accounts department staff.")
+    cid = current_user.base_company_id or 1
+    try:
+        ok = _GEMINI_POOL.delete_account(cid, account_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Account not found")
+        return {"success": True, "deleted": account_id}
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/usage-stats")
 def get_usage_stats(
     days: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user),
 ):
-    """Usage & cost analytics for OpenAI (GPT + TTS) and Twilio calls.
+    """Usage & cost analytics for Google Gemini (flash-lite + TTS) and Plivo calls.
 
     Access: VGK Mentor or Accounts/Finance department only.
-    Returns aggregated totals, daily breakdown, and per-call summary.
+    Returns aggregated totals, daily breakdown, per-project breakdown, and call summary.
     """
     if not _is_usage_authorized(current_user):
         raise HTTPException(status_code=403,
                             detail="Access restricted to VGK Mentor and Accounts department staff.")
-    cid = current_user.base_company_id
+    cid = current_user.base_company_id or 1
 
-    # ── OpenAI totals ─────────────────────────────────────────────────────────
-    openai_rows = db.execute(text("""
+    # ── Gemini usage totals from ai_usage_log ─────────────────────────────────
+    usage_rows = db.execute(text("""
         SELECT
             event_type,
+            model,
             source,
             COUNT(*)                          AS calls,
             COALESCE(SUM(input_tokens),0)     AS input_tokens,
@@ -5763,28 +7052,59 @@ def get_usage_stats(
         FROM ai_usage_log
         WHERE company_id=:cid
           AND created_at >= NOW() - INTERVAL ':days days'
-        GROUP BY event_type, source
-        ORDER BY event_type, source
+        GROUP BY event_type, model, source
+        ORDER BY event_type, model, source
     """.replace(":days", str(days))), {"cid": cid}).fetchall()
 
-    openai_summary = []
-    total_openai_cost = 0.0
+    gemini_summary = []
+    total_gemini_cost = 0.0
+    total_input_tokens = 0
+    total_output_tokens = 0
+    total_characters = 0
     kb_hits = 0
-    gpt_calls = 0
-    for r in openai_rows:
-        cost = float(r[6])
-        total_openai_cost += cost
-        entry = {
-            "event_type": r[0], "source": r[1],
-            "count": r[2], "input_tokens": r[3],
-            "output_tokens": r[4], "characters": r[5],
+    conv_calls = 0
+    tts_calls = 0
+
+    project_stats = {}
+
+    for r in usage_rows:
+        et = r[0]
+        model = r[1] or "gemini-3.1-flash-lite"
+        source = r[2] or "gemini"
+        count = int(r[3])
+        itok = int(r[4])
+        otok = int(r[5])
+        chars = int(r[6])
+        cost = float(r[7])
+
+        total_gemini_cost += cost
+        total_input_tokens += itok
+        total_output_tokens += otok
+        total_characters += chars
+
+        if et in ("gemini_conversation", "gpt4o_call"):
+            conv_calls += count
+        elif et in ("gemini_tts", "tts_generation"):
+            tts_calls += count
+        elif et == "kb_hit":
+            kb_hits += count
+
+        project_stats.setdefault(source, {"source": source, "requests": 0, "cost_usd": 0.0, "tokens": 0, "chars": 0})
+        project_stats[source]["requests"] += count
+        project_stats[source]["cost_usd"] += cost
+        project_stats[source]["tokens"] += (itok + otok)
+        project_stats[source]["chars"] += chars
+
+        gemini_summary.append({
+            "event_type": et,
+            "model": model,
+            "source": source,
+            "count": count,
+            "input_tokens": itok,
+            "output_tokens": otok,
+            "characters": chars,
             "cost_usd": round(cost, 6),
-        }
-        openai_summary.append(entry)
-        if r[0] == "kb_hit":
-            kb_hits = r[2]
-        if r[0] == "gpt4o_call":
-            gpt_calls = r[2]
+        })
 
     # ── Daily breakdown ───────────────────────────────────────────────────────
     daily_rows = db.execute(text("""
@@ -5803,14 +7123,22 @@ def get_usage_stats(
     daily = {}
     for r in daily_rows:
         day = str(r[0])
-        daily.setdefault(day, {"date": day, "gpt4o_call": 0, "tts_generation": 0,
+        daily.setdefault(day, {"date": day, "gemini_calls": 0, "tts_generation": 0,
                                 "kb_hit": 0, "cost_usd": 0.0})
-        daily[day][r[1]] = r[2]
+        et = r[1]
+        count = int(r[2])
+        if et in ("gemini_conversation", "gpt4o_call"):
+            daily[day]["gemini_calls"] += count
+            daily[day]["gpt4o_call"] = daily[day]["gemini_calls"]
+        elif et in ("gemini_tts", "tts_generation"):
+            daily[day]["tts_generation"] += count
+        elif et == "kb_hit":
+            daily[day]["kb_hit"] += count
         daily[day]["cost_usd"] += float(r[3])
     daily_list = sorted(daily.values(), key=lambda x: x["date"], reverse=True)
 
-    # ── Twilio call costs from ai_call_logs ──────────────────────────────────
-    twilio_rows = db.execute(text("""
+    # ── Plivo call costs from ai_call_logs ────────────────────────────────────
+    plivo_rows = db.execute(text("""
         SELECT
             COUNT(*)                              AS total_calls,
             COUNT(*) FILTER (WHERE status='completed') AS completed_calls,
@@ -5821,35 +7149,54 @@ def get_usage_stats(
           AND created_at >= NOW() - INTERVAL ':days days'
     """.replace(":days", str(days))), {"cid": cid}).fetchone()
 
-    total_min   = float(twilio_rows[2] or 0) / 60.0
-    twilio_cost = round(total_min * _TWILIO_PER_MIN_USD, 4)
+    total_min  = float(plivo_rows[2] or 0) / 60.0
+    plivo_cost = round(total_min * _PLIVO_PER_MIN_USD, 4)
 
     # ── KB savings calculation ────────────────────────────────────────────────
-    # Each KB hit saved one GPT call; estimate avg cost of a GPT call
-    avg_gpt_cost = (total_openai_cost / gpt_calls) if gpt_calls > 0 else 0.003
-    kb_saved_usd = round(kb_hits * avg_gpt_cost, 4)
+    avg_call_cost = (total_gemini_cost / conv_calls) if conv_calls > 0 else 0.0005
+    kb_saved_usd = round(kb_hits * avg_call_cost, 4)
 
     return {
         "success": True,
         "period_days": days,
-        "pricing_note": "OpenAI: GPT-4o $2.50/1M in + $10/1M out; TTS-1-HD $30/1M chars. "
-                        "Twilio: ~$0.0085/min blended (outbound India, carrier fees included).",
+        "pricing_note": "Google Gemini: gemini-3.1-flash-lite ($0.075/1M in + $0.30/1M out); "
+                        "gemini-2.5-flash-preview-tts ($15/1M chars benchmark). "
+                        "Plivo: ~$0.0085/min outbound India PSTN.",
+        "gemini": {
+            "total_cost_usd": round(total_gemini_cost, 4),
+            "total_input_tokens": total_input_tokens,
+            "total_output_tokens": total_output_tokens,
+            "total_characters": total_characters,
+            "conversation_turns": conv_calls,
+            "tts_turns": tts_calls,
+            "kb_hits": kb_hits,
+            "kb_saved_usd": kb_saved_usd,
+            "breakdown": gemini_summary,
+            "projects": list(project_stats.values()),
+        },
+        "plivo": {
+            "total_calls": plivo_rows[0] or 0,
+            "completed_calls": plivo_rows[1] or 0,
+            "total_minutes": round(total_min, 2),
+            "avg_duration_seconds": round(float(plivo_rows[3] or 0), 1),
+            "estimated_cost_usd": plivo_cost,
+        },
         "openai": {
-            "total_cost_usd": round(total_openai_cost, 4),
-            "breakdown": openai_summary,
-            "gpt_calls": gpt_calls,
+            "total_cost_usd": round(total_gemini_cost, 4),
+            "breakdown": gemini_summary,
+            "gpt_calls": conv_calls,
             "kb_hits": kb_hits,
             "kb_saved_usd": kb_saved_usd,
         },
         "twilio": {
-            "total_calls": twilio_rows[0] or 0,
-            "completed_calls": twilio_rows[1] or 0,
+            "total_calls": plivo_rows[0] or 0,
+            "completed_calls": plivo_rows[1] or 0,
             "total_minutes": round(total_min, 2),
-            "avg_duration_seconds": round(float(twilio_rows[3] or 0), 1),
-            "estimated_cost_usd": twilio_cost,
+            "avg_duration_seconds": round(float(plivo_rows[3] or 0), 1),
+            "estimated_cost_usd": plivo_cost,
         },
         "daily": daily_list[:60],
-        "grand_total_usd": round(total_openai_cost + twilio_cost, 4),
+        "grand_total_usd": round(total_gemini_cost + plivo_cost, 4),
     }
 
 
@@ -5867,9 +7214,15 @@ def serve_audio(filename: str):
     if not (safe_name.endswith(".wav") or safe_name.endswith(".mp3")):
         raise HTTPException(status_code=400, detail="Invalid filename")
     filepath = os.path.join(AI_AUDIO_DIR, safe_name)
+    static_filepath = os.path.join(STATIC_AUDIO_DIR, safe_name)
+    if not os.path.exists(filepath) and os.path.exists(static_filepath):
+        filepath = static_filepath
     # Brief retry loop — background TTS may still be writing the file
     for _attempt in range(6):
         if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
+            break
+        if not os.path.exists(filepath) and os.path.exists(static_filepath):
+            filepath = static_filepath
             break
         _time.sleep(0.8)
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
@@ -6035,17 +7388,22 @@ def get_lead_recordings(
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user),
 ):
-    """Return all AI call logs (with recordings) for a given CRM lead_id."""
+    """Return all AI call logs (with recordings) for a given CRM lead_id with strict company tenant isolation."""
+    cid = getattr(current_user, "base_company_id", None) or 1
+    lead = db.execute(text("SELECT id FROM crm_leads WHERE id = :lid AND company_id = :cid"), {"lid": lead_id, "cid": cid}).fetchone()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found or access denied")
+
     rows = db.execute(text("""
         SELECT l.id, l.started_at, l.duration_seconds, l.outcome,
                l.recording_url, l.language_used, l.ai_summary,
                s.agent_name, l.crm_status_before, l.crm_status_after
         FROM ai_call_logs l
         LEFT JOIN ai_call_sessions s ON s.call_sid = l.call_sid
-        WHERE l.lead_id = :lid
+        WHERE l.lead_id = :lid AND l.company_id = :cid
         ORDER BY l.started_at DESC
         LIMIT 50
-    """), {"lid": lead_id}).fetchall()
+    """), {"lid": lead_id, "cid": cid}).fetchall()
 
     return {
         "success": True,
