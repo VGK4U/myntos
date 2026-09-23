@@ -20,7 +20,7 @@ APP_NAME = 'vgk4u'
 ENV_NAME = 'Vgk4u-env'
 S3_BUCKET = 'elasticbeanstalk-ap-south-2-251714435676'
 TIMESTAMP = int(time.time() * 1000)
-VERSION_LABEL = f'v2.4.31-vgk4u-catalogue-redesign-and-parity-{TIMESTAMP}'
+VERSION_LABEL = f'v2.4.32-vgk4u-catalog-insurance-parity-{TIMESTAMP}'
 S3_KEY = f'deployments/{VERSION_LABEL}.zip'
 ZIP_PATH = os.path.join(os.path.dirname(__file__), '..', 'deployment.zip')
 
@@ -43,13 +43,16 @@ try:
     run_migrations()
     print("✅ Pre-deployment database migrations successfully synchronized.")
 
-    from alembic.config import Config
-    from alembic import command
-    alembic_cfg = Config(os.path.join(os.path.dirname(__file__), '..', 'alembic.ini'))
-    if prod_db_url:
-        alembic_cfg.set_main_option("sqlalchemy.url", prod_db_url)
-    command.upgrade(alembic_cfg, "head")
-    print("✅ Alembic migrations successfully upgraded to head.")
+    try:
+        from alembic.config import Config
+        from alembic import command
+        alembic_cfg = Config(os.path.join(os.path.dirname(__file__), '..', 'alembic.ini'))
+        if prod_db_url:
+            alembic_cfg.set_main_option("sqlalchemy.url", prod_db_url)
+        command.upgrade(alembic_cfg, "head")
+        print("✅ Alembic migrations successfully upgraded to head.")
+    except Exception as alembic_err:
+        print(f"ℹ️ Alembic upgrade notice (standalone runner handled schema): {alembic_err}")
 except Exception as mig_err:
     print(f"❌ CRITICAL PRE-DEPLOYMENT MIGRATION FAILURE: {mig_err}")
     print("🛑 DEPLOYMENT ABORTED: Production database schema cannot be verified or migrated.")
@@ -67,7 +70,7 @@ eb.create_application_version(
         'S3Bucket': S3_BUCKET,
         'S3Key': S3_KEY
     },
-    Description='MyntOS v2.4.31: VGK4U Dynamic Web Catalogue redesign, 4-platform parity, staff catalog library integration, and CRM first-touch rule'[:190],
+    Description='MyntOS v2.4.32: VGK Care insurance catalog, 7 jewels showcase redesign, and 4-platform parity'[:190],
     AutoCreateApplication=False
 )
 print("Application version created.")

@@ -71,6 +71,38 @@
             --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.7);
         }
 
+        [data-theme="dark"] .text-dark {
+            color: var(--text-heading) !important;
+        }
+        [data-theme="dark"] .text-dark.text-opacity-75 {
+            color: var(--text-body) !important;
+            opacity: 0.85 !important;
+        }
+        [data-theme="dark"] .text-muted {
+            color: var(--text-muted) !important;
+        }
+        [data-theme="dark"] .bg-white:not([class*="bg-opacity"]) {
+            background-color: var(--bg-surface) !important;
+            color: var(--text-body) !important;
+        }
+        [data-theme="dark"] .bg-light {
+            background-color: var(--bg-surface-alt) !important;
+            color: var(--text-body) !important;
+        }
+        [data-theme="dark"] .border {
+            border-color: var(--border-subtle) !important;
+        }
+        [data-theme="dark"] .card,
+        [data-theme="dark"] .modal-content {
+            background-color: var(--bg-surface);
+            color: var(--text-body);
+            border-color: var(--border-subtle);
+        }
+        [data-theme="dark"] .modal-header,
+        [data-theme="dark"] .modal-footer {
+            border-color: var(--border-subtle);
+        }
+
         * { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
         body {
@@ -250,6 +282,7 @@
         .chapter-section {
             padding: 80px 0;
             position: relative;
+            scroll-margin-top: 75px;
         }
         .chapter-tag {
             font-size: 0.76rem;
@@ -312,31 +345,156 @@
             -webkit-text-fill-color: transparent;
         }
 
-        /* 30,000 Points Showcase Box in Hero */
-        .hero-points-card {
-            background: linear-gradient(145deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.05) 100%);
-            border: 2px solid rgba(245, 158, 11, 0.5);
-            box-shadow: 0 12px 36px rgba(245, 158, 11, 0.2);
-            border-radius: var(--radius-lg);
-            padding: 24px 28px;
-            backdrop-filter: blur(12px);
-            margin-bottom: 28px;
+        /* ── HERO STAT DISPLAY CARDS (Matching Production) ── */
+        .hero-display-stat {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: var(--radius-lg, 18px);
+            padding: 16px 14px;
+            transition: all 0.3s ease;
         }
-        .points-huge {
-            font-size: clamp(2.2rem, 4.2vw, 3.2rem);
-            font-weight: 900;
-            color: #fbbf24;
-            line-height: 1;
-            letter-spacing: -0.02em;
+        .hero-display-stat:hover {
+            border-color: #f59e0b;
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-3px);
         }
 
-        /* Hero Image Collage with Zoom Indicator */
-        .hero-image-grid {
+        /* ── HERO SINGLE VERTICAL ROTATING FEATURE CARD (3-SECOND INTERVAL) ── */
+        .img-hero-frame {
+            border-radius: var(--radius-lg, 20px);
+            overflow: hidden;
+            box-shadow: 0 16px 45px rgba(0, 0, 0, 0.65);
             position: relative;
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 14px;
+            background: #090d16;
+            cursor: pointer;
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
         }
+        .img-hero-frame:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 22px 55px rgba(0, 0, 0, 0.8), 0 0 25px rgba(245, 158, 11, 0.3);
+            border-color: rgba(245, 158, 11, 0.8) !important;
+        }
+        .img-hero-frame img {
+            width: 100%;
+            height: 480px;
+            object-fit: cover;
+            transition: opacity 0.35s ease, transform 0.6s ease;
+        }
+        @media (min-width: 1400px) {
+            .img-hero-frame img {
+                height: 510px;
+            }
+        }
+        .img-hero-frame:hover img {
+            transform: scale(1.03);
+        }
+        .img-hero-frame img.fade-out {
+            opacity: 0.15;
+        }
+        .hero-progress-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 4px;
+            width: 0%;
+            background: linear-gradient(90deg, #f59e0b, #10b981);
+            z-index: 10;
+            transition: width 0.1s linear;
+        }
+        .hero-pause-indicator {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(9, 13, 22, 0.85);
+            border: 1px solid rgba(245, 158, 11, 0.45);
+            color: #f59e0b;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            z-index: 10;
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            opacity: 0.85;
+            transition: all 0.25s ease;
+        }
+        .img-hero-frame:hover .hero-pause-indicator {
+            opacity: 1;
+            background: rgba(245, 158, 11, 0.25);
+            color: #ffffff;
+            border-color: #f59e0b;
+        }
+
+        /* ── HERO VERTICALS QUICK-JUMP TEASER STRIP ── */
+        .hero-verticals-strip {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 10px;
+            margin-top: 36px;
+        }
+        .hero-vert-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-md, 14px);
+            padding: 10px 8px;
+            text-decoration: none;
+            color: #ffffff;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+            min-width: 0;
+        }
+        .hero-vert-card:hover {
+            background: rgba(245, 158, 11, 0.14);
+            border-color: #f59e0b;
+            color: #ffffff;
+            transform: translateY(-2px);
+        }
+        .hero-vert-card.active-vert {
+            background: rgba(245, 158, 11, 0.18);
+            border-color: #f59e0b;
+            box-shadow: 0 0 16px rgba(245, 158, 11, 0.35);
+        }
+        .hero-vert-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            flex-shrink: 0;
+        }
+        .hero-vert-text {
+            min-width: 0;
+            flex: 1;
+        }
+        .hero-vert-name {
+            font-size: 0.8rem;
+            font-weight: 700;
+            line-height: 1.25;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .hero-vert-meta {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.55);
+            line-height: 1.2;
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         .zoomable-img {
             position: relative;
             cursor: pointer;
@@ -369,97 +527,160 @@
             opacity: 1;
             transform: scale(1);
         }
-        .hero-img-tile {
+
+        /* ── SECTION 2: 7 JEWELS FOR SUCCESS (CENTERED CAROUSEL WITH DEDICATED IMAGE & HIGH-CONTRAST TEXT) ── */
+        .jewels-carousel-wrapper {
             position: relative;
-            border-radius: var(--radius-md);
-            overflow: hidden;
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            height: 190px;
-        }
-        .hero-img-tile img {
             width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.5s ease;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+            padding: 24px 0 34px;
+            user-select: none;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
         }
-        .hero-img-tile:hover img {
-            transform: scale(1.06);
+        .jewels-carousel-wrapper::-webkit-scrollbar {
+            display: none;
         }
-        .hero-tile-label {
-            position: absolute;
-            bottom: 8px;
-            left: 8px;
-            right: 8px;
-            background: rgba(9, 13, 22, 0.84);
-            backdrop-filter: blur(8px);
-            color: #ffffff;
-            font-size: 0.75rem;
-            font-weight: 800;
-            padding: 4px 10px;
+        .jewels-marquee-track {
+            display: flex;
+            gap: 22px;
+            width: max-content;
+            padding: 10px 24px;
+            margin: 0 auto;
+            align-items: stretch;
+        }
+        .jewel-pill-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #f1f5f9;
+            font-size: 0.82rem;
+            font-weight: 700;
+            padding: 6px 15px;
             border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .jewel-pill-btn span {
+            color: #f59e0b;
+            font-weight: 800;
+        }
+        .jewel-pill-btn:hover {
+            background: rgba(245, 158, 11, 0.2);
+            border-color: #f59e0b;
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+        .jewel-pill-btn.active {
+            background: rgba(245, 158, 11, 0.3);
+            border-color: #f59e0b;
+            color: #ffffff;
+            box-shadow: 0 0 14px rgba(245, 158, 11, 0.45);
+        }
+
+        /* ── JEWEL CARD: CENTERED IMAGE, TITLES OUTSIDE & HIGH-CONTRAST TYPOGRAPHY ── */
+        .jewel-showcase-card {
+            width: 305px;
+            min-width: 305px;
+            height: auto;
+            min-height: 410px;
+            background: #0f1626;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: var(--radius-lg, 18px);
+            padding: 18px 16px;
+            display: flex;
+            flex-direction: column;
+            text-decoration: none;
+            color: #ffffff;
+            cursor: pointer;
+            box-shadow: 0 14px 35px rgba(0, 0, 0, 0.45);
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            flex-shrink: 0;
+            position: relative;
+        }
+        .jewel-showcase-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(245, 158, 11, 0.6);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65), 0 0 22px rgba(245, 158, 11, 0.25);
+            color: #ffffff;
+        }
+        .jewel-showcase-card.active-jewel {
+            border-color: #f59e0b !important;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 25px rgba(245, 158, 11, 0.45) !important;
+            transform: translateY(-6px) scale(1.02);
+        }
+        .jewel-card-top {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            margin-bottom: 12px;
         }
-
-        /* ── SECTION 2: 5 VERTICALS PANELS ── */
-        .vertical-panel-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 16px;
-        }
-        .vertical-panel-card {
-            position: relative;
-            height: 420px;
-            border-radius: var(--radius-lg);
-            overflow: hidden;
-            cursor: pointer;
-            box-shadow: var(--shadow-md);
-            transition: all 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
-            border: 1px solid var(--border-subtle);
-            text-decoration: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-            padding: 24px 20px;
-        }
-        .vertical-panel-card:hover {
-            transform: translateY(-8px);
-            box-shadow: var(--shadow-xl);
-        }
-        .vertical-panel-bg {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            transition: transform 0.6s ease;
-            z-index: 1;
-        }
-        .vertical-panel-card:hover .vertical-panel-bg {
-            transform: scale(1.08);
-        }
-        .vertical-panel-overlay {
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(180deg, rgba(9, 13, 22, 0.1) 0%, rgba(9, 13, 22, 0.6) 45%, rgba(9, 13, 22, 0.94) 100%);
-            z-index: 2;
-        }
-        .vertical-panel-content {
-            position: relative;
-            z-index: 3;
-            color: #ffffff;
+        .jewel-number-badge {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            color: #f59e0b;
+            font-size: 0.74rem;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            letter-spacing: 0.03em;
         }
         .vertical-badge-tag {
-            font-size: 0.7rem;
+            font-size: 0.68rem;
             font-weight: 800;
             padding: 3px 9px;
             border-radius: 9999px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            display: inline-block;
-            margin-bottom: 8px;
+        }
+        .jewel-card-media {
+            width: 100%;
+            height: 185px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #070b13;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            margin-bottom: 14px;
+            position: relative;
+        }
+        .jewel-card-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        .jewel-showcase-card:hover .jewel-card-media img {
+            transform: scale(1.06);
+        }
+        .jewel-card-body {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            justify-content: space-between;
+        }
+        .jewel-card-title {
+            color: #ffffff;
+            font-size: 1.15rem;
+            font-weight: 800;
+            line-height: 1.25;
+            margin-bottom: 6px;
+        }
+        .jewel-card-desc {
+            color: #cbd5e1;
+            font-size: 0.83rem;
+            line-height: 1.45;
+            margin-bottom: 14px;
+        }
+        .jewel-card-link {
+            font-size: 0.82rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: auto;
         }
 
         /* ── SECTION 3: 4 PILLARS (V-G-K-4U) ── */
@@ -936,27 +1157,105 @@
             display: none;
             gap: 10px;
         }
+
+        /* ── SCROLL TO TOP OVERLAY BUTTON ── */
+        .btn-scroll-to-top {
+            position: fixed;
+            bottom: 28px;
+            right: 28px;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #0f172a;
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 19px;
+            cursor: pointer;
+            z-index: 1045;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(16px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .btn-scroll-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        .btn-scroll-to-top:hover {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            box-shadow: 0 8px 26px rgba(245, 158, 11, 0.7);
+            transform: translateY(-3px);
+            color: #0f172a;
+        }
+        .btn-scroll-to-top:active {
+            transform: translateY(0) scale(0.94);
+        }
+
         @media (max-width: 991px) {
             .mobile-quick-actions { display: flex; }
+            .btn-scroll-to-top {
+                bottom: 76px;
+                right: 18px;
+                width: 44px;
+                height: 44px;
+                font-size: 17px;
+            }
             body { padding-bottom: 70px; }
-            .vertical-panel-grid {
-                grid-template-columns: repeat(2, 1fr);
+            .vertical-panel-card,
+            .jewel-showcase-card {
+                width: 285px;
+                min-width: 285px;
+                height: auto;
+                min-height: 390px;
             }
-            .vertical-panel-card:last-child {
-                grid-column: span 2;
+            .img-hero-frame {
+                margin-top: 24px;
             }
-            .hero-image-grid {
-                margin-top: 32px;
+            .img-hero-frame img {
+                height: 320px;
+            }
+            .hero-verticals-strip {
+                display: flex;
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                gap: 10px;
+                margin-top: 24px;
+                padding-bottom: 8px;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+            }
+            .hero-verticals-strip::-webkit-scrollbar {
+                display: none;
+            }
+            .hero-vert-card {
+                flex: 0 0 165px;
+                min-width: 165px;
+                padding: 10px 12px;
             }
             .vgk-lightbox-prev { left: 10px; }
             .vgk-lightbox-next { right: 10px; }
         }
         @media (max-width: 576px) {
-            .vertical-panel-grid {
-                grid-template-columns: 1fr;
+            .vertical-panel-card,
+            .jewel-showcase-card {
+                width: 260px;
+                min-width: 260px;
+                height: auto;
+                min-height: 370px;
+                padding: 14px 12px;
             }
-            .vertical-panel-card:last-child {
-                grid-column: span 1;
+            .img-hero-frame img {
+                height: 250px;
+            }
+            .hero-vert-card {
+                flex: 0 0 150px;
+                min-width: 150px;
+                padding: 9px 10px;
             }
         }
     </style>
@@ -1007,15 +1306,15 @@
 
             <!-- Desktop Nav Links -->
             <div class="d-none d-xl-flex align-items-center gap-1">
-                <a href="#verticals" class="nav-link-pill" data-i18n="nav_verticals">5 Verticals</a>
+                <a href="#verticals" class="nav-link-pill" data-i18n="nav_verticals">💎 7 Jewels</a>
                 <a href="#solar" class="nav-link-pill" data-i18n="nav_solar">Solar</a>
                 <a href="#insurance" class="nav-link-pill" data-i18n="nav_insurance">Insurance</a>
                 <a href="#ev" class="nav-link-pill" data-i18n="nav_ev">Manthra EV</a>
                 <a href="#realestate" class="nav-link-pill" data-i18n="nav_re">Real Estate</a>
                 <a href="#training" class="nav-link-pill" data-i18n="nav_training">EV Training</a>
+                <a href="#hub-career" class="nav-link-pill" data-i18n="nav_career">Hub &amp; Career</a>
                 <a href="#earnings" class="nav-link-pill" data-i18n="nav_earnings">Earnings</a>
                 <a href="#simulator" class="nav-link-pill" data-i18n="nav_calc">Calculator</a>
-                <a href="#hub-career" class="nav-link-pill" data-i18n="nav_career">Hub &amp; Career</a>
                 <a href="#join" class="nav-link-pill" data-i18n="nav_kit">Kit &amp; Join</a>
             </div>
 
@@ -1037,51 +1336,52 @@
     <section id="hero" class="hero-banner">
         <div class="hero-ambient-glow"></div>
         <div class="catalog-container position-relative">
-            <div class="row align-items-center g-5">
-                <div class="col-lg-7">
-                    <span class="glowing-pill mb-3">
-                        <i class="fas fa-bolt"></i> <span data-i18n="hero_pill">INDIA'S MULTI-VERTICAL OPPORTUNITY PLATFORM</span>
-                    </span>
-
-                    <h1 class="hero-title">
-                        One Unified Platform.<br>
-                        <span>Five High-Growth</span> Businesses.
-                    </h1>
-
-                    <p class="lead text-white-50 mb-4" style="max-width: 620px; font-size: 1.12rem;" data-i18n="hero_lead">
-                        Monetize India's green and digital revolution across Rooftop Solar, Electric 2-Wheelers, Comprehensive Insurance, Real Estate, and Certified EV Training. Zero upfront investment, verified corporate supply, and multi-tier lifetime commissions.
-                    </p>
-
-                    <!-- ₹30,000 Welcome Points Spotlight Box -->
-                    <div class="hero-points-card">
-                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                            <div>
-                                <span class="badge bg-warning text-dark fw-black px-2 py-1" data-i18n="pts_badge">FREE WELCOME ALLOCATION</span>
-                                <div class="points-huge mt-1">30,000 POINTS</div>
-                            </div>
-                            <div class="text-end font-mono">
-                                <div class="text-warning fw-bold fs-5">1 Point = ₹1 Value</div>
-                                <div class="small text-white-50" data-i18n="pts_redemption_note">Vouchers, Subsidies &amp; Discounts</div>
-                            </div>
-                        </div>
-                        <div class="d-flex flex-wrap gap-3 small text-white-50 border-top border-warning border-opacity-25 pt-2">
-                            <div><i class="fas fa-check-circle text-success me-1"></i> <strong class="text-white">20,000</strong> <span data-i18n="pts_reg_bonus">Registration Bonus</span></div>
-                            <div><i class="fas fa-check-circle text-success me-1"></i> <strong class="text-white">10,000</strong> <span data-i18n="pts_ref_bonus">Referral Code Bonus</span></div>
-                            <div><i class="fas fa-shield-alt text-warning me-1"></i> <span data-i18n="pts_non_cash">Benefit Usage Only (Non-Cash)</span></div>
-                        </div>
+            <div class="row align-items-center g-4 g-lg-5">
+                <div class="col-lg-6">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="glowing-pill"><i class="fas fa-bolt"></i> 100% FREE REGISTRATION</span>
+                        <span class="badge bg-warning bg-opacity-25 text-warning font-mono px-3 py-1 rounded-pill" data-i18n="pts_badge">₹30,000 WELCOME POINTS</span>
                     </div>
 
-                    <!-- Dual CTAs -->
-                    <div class="d-flex flex-wrap gap-3 align-items-center">
-                        <a href="/vgk/login?tab=signup" class="btn-gold-glow btn-lg px-4 py-3 fs-5">
-                            <i class="fas fa-rocket"></i> <span data-i18n="cta_start_free">Join VGK4U Free</span>
+                    <h1 class="display-4 fw-black text-white mb-3" style="letter-spacing: -0.02em; line-height: 1.15;">
+                        One Unified Platform.<br>
+                        <span style="color: #f59e0b; text-shadow: 0 0 30px rgba(245, 158, 11, 0.4);">Seven High-Growth Verticals.</span><br>
+                        Compounding Lifetime Income.
+                    </h1>
+
+                    <p class="lead text-white-50 mb-4" style="max-width: 650px;" data-i18n="hero_lead">
+                        Monetize India's green transition in <strong>Solar Energy, Electric Mobility, Insurance Advisory, Verified Real Estate, EV Skill Training, Physical Hubs &amp; EV Spares</strong> with zero upfront investment and full back-office fulfillment.
+                    </p>
+
+                    <div class="d-flex flex-wrap gap-3 mb-4">
+                        <a href="/vgk/login?tab=signup" class="btn-gold-glow">
+                            <i class="fas fa-rocket"></i> <span data-i18n="cta_start_free">Become a Partner Free</span>
                         </a>
-                        <a href="#verticals" class="btn-outline-gold btn-lg px-4 py-3 fs-5">
-                            <i class="fas fa-layer-group"></i> <span data-i18n="cta_explore_opps">Explore 5 Verticals</span>
-                        </a>
-                        <button class="btn-wa-glow btn-lg px-4 py-3 fs-5" onclick="shareOnWhatsApp()">
-                            <i class="fab fa-whatsapp"></i> <span data-i18n="cta_share_wa">WhatsApp</span>
+                        <button class="btn-wa-glow" onclick="shareOnWhatsApp()">
+                            <i class="fab fa-whatsapp"></i> <span data-i18n="cta_share_wa">Share on WhatsApp</span>
                         </button>
+                    </div>
+
+                    <!-- 3 Hero Live Indicators (Matching Production) -->
+                    <div class="row g-3 pt-3 border-top border-secondary border-opacity-25">
+                        <div class="col-4">
+                            <div class="hero-display-stat text-center">
+                                <div class="fs-4 fw-black text-warning font-mono">₹30,000</div>
+                                <div class="small text-white-50" data-i18n="pts_reg_bonus">Points on Joining</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="hero-display-stat text-center">
+                                <div class="fs-4 fw-black text-success font-mono">1 Pt = ₹1</div>
+                                <div class="small text-white-50" data-i18n="pts_redemption_note">Direct Cash Value</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="hero-display-stat text-center">
+                                <div class="fs-4 fw-black text-info font-mono">3 Gens</div>
+                                <div class="small text-white-50" data-i18n="p_gen_t">Nominee Transfer</div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Referral Persistence Callout -->
@@ -1091,37 +1391,80 @@
                     </div>
                 </div>
 
-                <!-- Right Side: Real Photography Collage with Zoom -->
-                <div class="col-lg-5">
-                    <div class="hero-image-grid">
-                        <div class="hero-img-tile zoomable-img" onclick="openGallery('solar', 0)">
-                            <img src="/public/images/solar_installations/krishnadevipeta_solar_customer.jpg" alt="Rooftop Solar Customer Installation">
-                            <div class="hero-tile-label">
-                                <span><i class="fas fa-sun text-warning me-1"></i> Har Ghar Solar</span>
-                                <span class="badge bg-warning text-dark">₹78k Subsidy</span>
+                <!-- Right Side: Single Vertical Auto-Rotating Feature Card (3s Interval with Pause on Hover) -->
+                <div class="col-lg-6">
+                    <div class="img-hero-frame border border-warning border-opacity-50" id="heroRotatingCard" onclick="openCurrentHeroGallery()" title="Click to view full photo gallery • Hover to pause">
+                        <div class="hero-progress-line" id="heroProgressLine"></div>
+                        <div class="hero-pause-indicator" id="heroPauseBadge">
+                            <i class="fas fa-hand-pointer"></i> <span>Hover to Pause (3s)</span>
+                        </div>
+                        <img id="heroRotImg" src="/public/images/solar_installations/krishnadevipeta_solar_customer.jpg" alt="Rooftop Solar Customer Installation" style="object-position: center 25%;">
+                        <div class="p-3 bg-dark bg-opacity-90 position-absolute bottom-0 start-0 end-0 border-top border-secondary">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div style="min-width: 0; padding-right: 10px;">
+                                    <div class="fw-bold text-white text-truncate" id="heroRotTitle">
+                                        <i class="fas fa-check-circle text-success me-1"></i> Real Customer Installations
+                                    </div>
+                                    <div class="small text-white-50 text-truncate" id="heroRotSub">
+                                        Krishnadevipeta, Andhra Pradesh • 5 kW System
+                                    </div>
+                                </div>
+                                <span class="badge bg-success font-mono flex-shrink-0" id="heroRotBadge">₹78k Subsidy</span>
                             </div>
                         </div>
-                        <div class="hero-img-tile zoomable-img" onclick="openGallery('ev', 0)">
-                            <img src="/public/hub/Assets/manthra-fleet-lineup.webp" alt="Manthra EV Smart Electric Fleet">
-                            <div class="hero-tile-label">
-                                <span><i class="fas fa-bolt text-success me-1"></i> Manthra EV</span>
-                                <span class="badge bg-success">₹0.20/km</span>
-                            </div>
-                        </div>
-                        <div class="hero-img-tile zoomable-img" onclick="openGallery('training', 0)">
-                            <img src="/public/images/etc_training/ev_practical_scooter_lab.jpg" alt="EVolution Training Practical Lab">
-                            <div class="hero-tile-label">
-                                <span><i class="fas fa-graduation-cap text-info me-1"></i> EV Training</span>
-                                <span class="badge bg-info">95% Placement</span>
-                            </div>
-                        </div>
-                        <div class="hero-img-tile zoomable-img" onclick="openGallery('realestate', 0)">
-                            <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=70" alt="Luxury Real Estate Villa">
-                            <div class="hero-tile-label">
-                                <span><i class="fas fa-building text-warning me-1"></i> Real Dreams</span>
-                                <span class="badge bg-light text-dark">₹1L Payout</span>
-                            </div>
-                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick-Jump Vertical Teasers (Active item syncs with 3-second rotation & pauses on hover) -->
+            <div class="hero-verticals-strip" id="heroVerticalsStrip">
+                <div class="hero-vert-card active-vert" onclick="selectHeroVertical(0)">
+                    <div class="hero-vert-icon" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;"><i class="fas fa-solar-panel"></i></div>
+                    <div class="hero-vert-text">
+                        <div class="hero-vert-name">Har Ghar Solar</div>
+                        <div class="hero-vert-meta">5.0% - 6.0% Payout</div>
+                    </div>
+                </div>
+                <div class="hero-vert-card" onclick="selectHeroVertical(1)">
+                    <div class="hero-vert-icon" style="background: rgba(2, 132, 199, 0.2); color: #0284c7;"><i class="fas fa-shield-heart"></i></div>
+                    <div class="hero-vert-text">
+                        <div class="hero-vert-name">VGK Care Insurance</div>
+                        <div class="hero-vert-meta">₹15k - ₹30k / ₹1L</div>
+                    </div>
+                </div>
+                <div class="hero-vert-card" onclick="selectHeroVertical(2)">
+                    <div class="hero-vert-icon" style="background: rgba(16, 185, 129, 0.2); color: #10b981;"><i class="fas fa-motorcycle"></i></div>
+                    <div class="hero-vert-text">
+                        <div class="hero-vert-name">Manthra EV 2W</div>
+                        <div class="hero-vert-meta">₹4,875 / Vehicle</div>
+                    </div>
+                </div>
+                <div class="hero-vert-card" onclick="selectHeroVertical(3)">
+                    <div class="hero-vert-icon" style="background: rgba(139, 92, 246, 0.2); color: #8b5cf6;"><i class="fas fa-building"></i></div>
+                    <div class="hero-vert-text">
+                        <div class="hero-vert-name">VGK Real Dreams</div>
+                        <div class="hero-vert-meta">₹1,00,000 / Deal</div>
+                    </div>
+                </div>
+                <div class="hero-vert-card" onclick="selectHeroVertical(4)">
+                    <div class="hero-vert-icon" style="background: rgba(244, 63, 94, 0.2); color: #f43f5e;"><i class="fas fa-graduation-cap"></i></div>
+                    <div class="hero-vert-text">
+                        <div class="hero-vert-name">EV Training (ETC)</div>
+                        <div class="hero-vert-meta">500+ Trained Alumni</div>
+                    </div>
+                </div>
+                <div class="hero-vert-card" onclick="selectHeroVertical(5)">
+                    <div class="hero-vert-icon" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;"><i class="fas fa-store"></i></div>
+                    <div class="hero-vert-text">
+                        <div class="hero-vert-name">MyntReal Hub</div>
+                        <div class="hero-vert-meta">Franchise Overrides</div>
+                    </div>
+                </div>
+                <div class="hero-vert-card" onclick="selectHeroVertical(6)">
+                    <div class="hero-vert-icon" style="background: rgba(6, 182, 212, 0.2); color: #06b6d4;"><i class="fas fa-plug"></i></div>
+                    <div class="hero-vert-text">
+                        <div class="hero-vert-name">EV Spares &amp; Tech</div>
+                        <div class="hero-vert-meta">Wholesale Margins</div>
                     </div>
                 </div>
             </div>
@@ -1129,79 +1472,156 @@
     </section>
 
     <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <!-- CHAPTER 2: ONE PLATFORM. FIVE OPPORTUNITIES. (Slide 2)              -->
+    <!-- CHAPTER 2: 7 JEWELS FOR SUCCESS (Slide 2)                           -->
     <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <section id="verticals" class="chapter-section bg-surface">
+    <section id="verticals" class="chapter-section bg-surface position-relative overflow-hidden">
         <div class="catalog-container">
-            <div class="text-center mb-5">
-                <span class="chapter-tag bg-warning bg-opacity-10 text-warning" data-i18n="tag_core_verticals">
-                    <i class="fas fa-layer-group"></i> 5 GROWTH VERTICALS
+            <div class="text-center mb-4">
+                <span class="chapter-tag bg-warning bg-opacity-10 text-warning border border-warning border-opacity-25" data-i18n="tag_core_verticals">
+                    <i class="fas fa-gem text-warning me-1"></i> 7 JEWELS FOR SUCCESS
                 </span>
-                <h2 class="chapter-headline" data-i18n="h_five_opps">One Platform. Five High-Demand Opportunities.</h2>
+                <h2 class="chapter-headline" data-i18n="h_five_opps">7 Jewels for Success: Multi-Vertical Wealth Engine</h2>
                 <p class="chapter-desc mx-auto" data-i18n="desc_five_opps">
-                    Choose one or excel across all five. Every vertical provides complete backend procurement, institutional engineering, client financing, and automated commission settlements.
+                    Seven integrated, high-demand business verticals engineered to generate upfront commissions, recurring royalties, and generational wealth on one unified platform.
                 </p>
+                <!-- Interactive Controls Bar: Prev/Next & Play/Pause -->
+                <div class="d-flex align-items-center justify-content-center gap-2 mt-3 flex-wrap">
+                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 fw-bold" onclick="prevJewelCard()" title="Previous Jewel">
+                        <i class="fas fa-chevron-left me-1"></i> Prev
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 d-inline-flex align-items-center gap-1" id="jewelsPauseToggleBtn" onclick="toggleJewelsAutoPlay()" title="Toggle Auto-Rotation">
+                        <i class="fas fa-pause" id="jewelsPauseIcon"></i> <span id="jewelsPauseText">Pause (3.5s)</span>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-warning rounded-pill px-3 py-1 fw-bold" onclick="nextJewelCard()" title="Next Jewel">
+                        Next <i class="fas fa-chevron-right ms-1"></i>
+                    </button>
+                </div>
+
+                <!-- 7 Jewel Fast-Jump Indicator Tabs (Clickable & Synchronized) -->
+                <div class="jewels-nav-pills d-flex justify-content-center flex-wrap gap-2 mt-3" id="jewelsNavPills">
+                    <button type="button" class="jewel-pill-btn active" onclick="goToJewel(0)"><span>💎 01</span> Solar</button>
+                    <button type="button" class="jewel-pill-btn" onclick="goToJewel(1)"><span>💎 02</span> Insurance</button>
+                    <button type="button" class="jewel-pill-btn" onclick="goToJewel(2)"><span>💎 03</span> EV 2W</button>
+                    <button type="button" class="jewel-pill-btn" onclick="goToJewel(3)"><span>💎 04</span> Real Estate</button>
+                    <button type="button" class="jewel-pill-btn" onclick="goToJewel(4)"><span>💎 05</span> Training</button>
+                    <button type="button" class="jewel-pill-btn" onclick="goToJewel(5)"><span>💎 06</span> Hub</button>
+                    <button type="button" class="jewel-pill-btn" onclick="goToJewel(6)"><span>💎 07</span> Spares</button>
+                </div>
             </div>
+        </div>
 
-            <!-- 5 Distinct Visual Panels -->
-            <div class="vertical-panel-grid">
-                <!-- Panel 1: Solar -->
-                <a href="#solar" class="vertical-panel-card">
-                    <img src="/public/images/solar_installations/krishnadevipeta_solar_customer.jpg" alt="Solar Energy" class="vertical-panel-bg">
-                    <div class="vertical-panel-overlay"></div>
-                    <div class="vertical-panel-content">
+        <!-- Horizontal Auto-Rotating Carousel (Jewels 01 to 07 in order with Pause on Hover) -->
+        <div class="jewels-carousel-wrapper" id="jewelsWrapper">
+            <div class="jewels-marquee-track" id="jewelsTrack">
+                <!-- Jewel 01: Solar EPC -->
+                <a href="#solar" class="jewel-showcase-card vertical-panel-card jewel-card active-jewel">
+                    <div class="jewel-card-top">
+                        <span class="jewel-number-badge"><i class="fas fa-gem text-warning"></i> Jewel 01</span>
                         <span class="vertical-badge-tag bg-warning text-dark">SOLAR EPC</span>
-                        <h4 class="fw-black mb-1">Har Ghar Solar</h4>
-                        <p class="small text-white-50 mb-2">PM Surya Ghar subsidy, ₹1 loan scheme, 25-yr warranty.</p>
-                        <div class="text-warning small fw-bold">Up to 6% Earning →</div>
+                    </div>
+                    <div class="jewel-card-media">
+                        <img src="/public/images/solar_installations/krishnadevipeta_solar_customer.jpg" alt="Har Ghar Solar EPC" style="object-position: center 25%;">
+                    </div>
+                    <div class="jewel-card-body">
+                        <h4 class="jewel-card-title">Har Ghar Solar</h4>
+                        <p class="jewel-card-desc">PM Surya Ghar subsidy, ₹1 loan scheme &amp; 25-yr performance warranty.</p>
+                        <div class="jewel-card-link text-warning">Up to 6% Earning →</div>
                     </div>
                 </a>
 
-                <!-- Panel 2: Insurance -->
-                <a href="#insurance" class="vertical-panel-card">
-                    <img src="/public/hub/Assets/insurance-concept-protection-against-a-possible-eventuality-hand-holding-umbrella-icon-for-security-symbol-and-house-car-health-care-and-travel-icon-on-wooden-circle-for-assurance-life-concept-photo.jpg" alt="Insurance" class="vertical-panel-bg">
-                    <div class="vertical-panel-overlay"></div>
-                    <div class="vertical-panel-content">
+                <!-- Jewel 02: Insurance (VGK Care) -->
+                <a href="#insurance" class="jewel-showcase-card vertical-panel-card jewel-card">
+                    <div class="jewel-card-top">
+                        <span class="jewel-number-badge"><i class="fas fa-gem text-info"></i> Jewel 02</span>
                         <span class="vertical-badge-tag bg-info text-dark">INSURANCE</span>
-                        <h4 class="fw-black mb-1">VGK Care</h4>
-                        <p class="small text-white-50 mb-2">Health, Life, Motor &amp; Commercial risk advisory.</p>
-                        <div class="text-info small fw-bold">10+ Top Insurers →</div>
+                    </div>
+                    <div class="jewel-card-media">
+                        <img src="/public/images/vgk4u/vgk_care_sector_cover.jpg" alt="VGK Care Insurance — In Partnership with Bajaj Capital">
+                    </div>
+                    <div class="jewel-card-body">
+                        <h4 class="jewel-card-title">VGK Care Insurance</h4>
+                        <p class="jewel-card-desc">Health, Life, Motor &amp; Commercial risk advisory backed by Bajaj Capital.</p>
+                        <div class="jewel-card-link text-info">10+ Top Insurers →</div>
                     </div>
                 </a>
 
-                <!-- Panel 3: Manthra EV -->
-                <a href="#ev" class="vertical-panel-card">
-                    <img src="/public/hub/Assets/manthra-pro-gt-real.webp" alt="Manthra EV" class="vertical-panel-bg">
-                    <div class="vertical-panel-overlay"></div>
-                    <div class="vertical-panel-content">
+                <!-- Jewel 03: Manthra EV -->
+                <a href="#ev" class="jewel-showcase-card vertical-panel-card jewel-card">
+                    <div class="jewel-card-top">
+                        <span class="jewel-number-badge"><i class="fas fa-gem text-success"></i> Jewel 03</span>
                         <span class="vertical-badge-tag bg-success text-dark">ELECTRIC 2W</span>
-                        <h4 class="fw-black mb-1">Manthra EV</h4>
-                        <p class="small text-white-50 mb-2">Smart electric scooters, ₹0.20/km running cost.</p>
-                        <div class="text-success small fw-bold">Up to ₹5,000/Unit →</div>
+                    </div>
+                    <div class="jewel-card-media">
+                        <img src="/public/hub/Assets/manthra-pro-gt-real.webp" alt="Manthra EV Smart Mobility">
+                    </div>
+                    <div class="jewel-card-body">
+                        <h4 class="jewel-card-title">Manthra EV</h4>
+                        <p class="jewel-card-desc">Smart electric scooters, Non-RTO models &amp; ₹0.20/km running cost.</p>
+                        <div class="jewel-card-link text-success">Up to ₹5,500/Unit →</div>
                     </div>
                 </a>
 
-                <!-- Panel 4: Real Estate -->
-                <a href="#realestate" class="vertical-panel-card">
-                    <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=70" alt="Real Estate" class="vertical-panel-bg">
-                    <div class="vertical-panel-overlay"></div>
-                    <div class="vertical-panel-content">
+                <!-- Jewel 04: Real Dreams -->
+                <a href="#realestate" class="jewel-showcase-card vertical-panel-card jewel-card">
+                    <div class="jewel-card-top">
+                        <span class="jewel-number-badge"><i class="fas fa-gem text-warning"></i> Jewel 04</span>
                         <span class="vertical-badge-tag bg-warning text-dark">REAL ESTATE</span>
-                        <h4 class="fw-black mb-1">VGK Real Dreams</h4>
-                        <p class="small text-white-50 mb-2">Verified plots, luxury gated villas, agri farmlands.</p>
-                        <div class="text-warning small fw-bold">₹1,00,000+ Payouts →</div>
+                    </div>
+                    <div class="jewel-card-media">
+                        <img src="/public/images/real_dreams/7084e3d7cad7.jpeg" alt="VGK Real Dreams Luxury Residences">
+                    </div>
+                    <div class="jewel-card-body">
+                        <h4 class="jewel-card-title">VGK Real Dreams</h4>
+                        <p class="jewel-card-desc">Luxury residential townships, prime VMRDA/RERA plots &amp; designer villas.</p>
+                        <div class="jewel-card-link text-warning">₹1,00,000+ Payouts →</div>
                     </div>
                 </a>
 
-                <!-- Panel 5: EV Training -->
-                <a href="#training" class="vertical-panel-card">
-                    <img src="/public/images/etc_training/ev_practical_scooter_lab.jpg" alt="EV Training" class="vertical-panel-bg">
-                    <div class="vertical-panel-overlay"></div>
-                    <div class="vertical-panel-content">
-                        <span class="vertical-badge-tag bg-purple text-white" style="background: #8b5cf6;">EV TRAINING</span>
-                        <h4 class="fw-black mb-1">EVolution (ETC)</h4>
-                        <p class="small text-white-50 mb-2">Hands-on technician and battery certification labs.</p>
-                        <div class="small fw-bold" style="color: #c4b5fd;">95% Placement →</div>
+                <!-- Jewel 05: EV Training -->
+                <a href="#training" class="jewel-showcase-card vertical-panel-card jewel-card">
+                    <div class="jewel-card-top">
+                        <span class="jewel-number-badge"><i class="fas fa-gem" style="color: #c4b5fd;"></i> Jewel 05</span>
+                        <span class="vertical-badge-tag text-white" style="background: #8b5cf6;">EV TRAINING</span>
+                    </div>
+                    <div class="jewel-card-media">
+                        <img src="/public/images/etc_training/ev_practical_scooter_lab.jpg" alt="EVolution Training Centre" style="object-position: center 30%;">
+                    </div>
+                    <div class="jewel-card-body">
+                        <h4 class="jewel-card-title">EVolution (ETC) Labs</h4>
+                        <p class="jewel-card-desc">Hands-on technician, battery BMS assembly &amp; solar installation labs.</p>
+                        <div class="jewel-card-link" style="color: #c4b5fd;">95% Placement Record →</div>
+                    </div>
+                </a>
+
+                <!-- Jewel 06: MyntReal Hub -->
+                <a href="#hub-career" class="jewel-showcase-card vertical-panel-card jewel-card">
+                    <div class="jewel-card-top">
+                        <span class="jewel-number-badge"><i class="fas fa-gem text-danger"></i> Jewel 06</span>
+                        <span class="vertical-badge-tag bg-danger text-white">5-IN-1 FRANCHISE</span>
+                    </div>
+                    <div class="jewel-card-media">
+                        <img src="/public/hub/Assets/myntreal-hub-exterior-storefront.jpg" alt="MyntReal Physical Hub Experience Center">
+                    </div>
+                    <div class="jewel-card-body">
+                        <h4 class="jewel-card-title">MyntReal Physical Hub</h4>
+                        <p class="jewel-card-desc">Physical experience center uniting showroom, sales, service &amp; community.</p>
+                        <div class="jewel-card-link text-danger">4 Continuous Overrides →</div>
+                    </div>
+                </a>
+
+                <!-- Jewel 07: EV Spares & Fast Chargers -->
+                <a href="/catalog/ev-spares/ev-spares-and-chargers" class="jewel-showcase-card vertical-panel-card jewel-card">
+                    <div class="jewel-card-top">
+                        <span class="jewel-number-badge"><i class="fas fa-gem text-light"></i> Jewel 07</span>
+                        <span class="vertical-badge-tag bg-light text-dark">SPARES &amp; TECH</span>
+                    </div>
+                    <div class="jewel-card-media">
+                        <img src="/public/hub/Assets/Battery.png" alt="EV Spares, Fast Chargers &amp; LFP Batteries">
+                    </div>
+                    <div class="jewel-card-body">
+                        <h4 class="jewel-card-title">EV Spares &amp; Tech</h4>
+                        <p class="jewel-card-desc">Genuine EV parts, fast chargers, LFP battery packs &amp; accessories.</p>
+                        <div class="jewel-card-link text-info">Wholesale Margins →</div>
                     </div>
                 </a>
             </div>
@@ -1668,33 +2088,33 @@
         <div class="catalog-container">
             <div class="row align-items-center g-5">
                 <div class="col-lg-6 order-lg-2">
-                    <span class="chapter-tag bg-primary text-white"><i class="fas fa-shield-alt"></i> VERTICAL 02 • INSURANCE</span>
+                    <span class="chapter-tag bg-primary text-white"><i class="fas fa-shield-alt"></i> VERTICAL 02 • INSURANCE &amp; WEALTH</span>
                     <h2 class="chapter-headline text-dark">
-                        Protect People. Build Relationships. Create Income.
+                        Protect People. Build Wealth. In Partnership with Bajaj Capital.
                     </h2>
                     <p class="chapter-desc text-dark text-opacity-75">
-                        Comprehensive insurance advisory backed by India's top Tier-1 insurance companies. Offer Health, Term Life, Motor, and Commercial asset protection with lifetime renewal overrides.
+                        Comprehensive insurance advisory backed by Bajaj Capital and 10+ Tier-1 insurance companies. Offer Health, Term Life, Motor, and Commercial asset protection with a transparent 5-level project earning engine.
                     </p>
 
-                    <!-- Earning Example Card -->
+                    <!-- Earning Example Card (Matching Official Infographic) -->
                     <div class="p-4 bg-white rounded-4 border shadow-sm mb-4">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="fw-bold text-primary"><i class="fas fa-heartbeat me-1"></i> ₹10 Lakhs Family Health Policy</span>
-                            <span class="badge bg-success">Instant Payout</span>
+                            <span class="fw-bold text-primary"><i class="fas fa-wallet me-1"></i> Typical Insurance Payout</span>
+                            <span class="badge bg-success">₹15,000 – ₹30,000</span>
                         </div>
                         <div class="d-flex justify-content-between text-muted small font-mono">
-                            <span>Annual Premium: ₹24,000</span>
-                            <span class="text-success fw-bold">Earn Up To: ₹3,600 / policy</span>
+                            <span>Payout for a ₹1,00,000 Policy</span>
+                            <span class="text-success fw-bold">5 Levels: L1 5% to L5 1.5%</span>
                         </div>
                     </div>
 
                     <!-- Insurer Partners Strip -->
                     <div class="mb-4">
-                        <div class="small fw-bold text-dark text-opacity-75 mb-2">POWERED BY TIER-1 INSURERS:</div>
+                        <div class="small fw-bold text-dark text-opacity-75 mb-2">POWERED BY TIER-1 INSURERS (VIA BAJAJ CAPITAL):</div>
                         <div class="d-flex flex-wrap gap-2">
-                            <span class="partner-logo-pill"><img src="/public/hub/Assets/Bajaj 1.png" alt="Bajaj Capital" onerror="this.outerHTML='<span class=\'fw-bold\'>Bajaj</span>'"></span>
+                            <span class="partner-logo-pill"><img src="/public/hub/Assets/BajajCapital.webp" alt="Bajaj Capital" onerror="this.outerHTML='<span class=\'fw-bold\'>Bajaj Capital</span>'"></span>
                             <span class="partner-logo-pill"><img src="/public/hub/Assets/HDFC.png" alt="HDFC Ergo" onerror="this.outerHTML='<span class=\'fw-bold\'>HDFC</span>'"></span>
-                            <span class="partner-logo-pill"><img src="/public/hub/Assets/ICICI 1.jpg" alt="ICICI Lombard" onerror="this.outerHTML='<span class=\'fw-bold\'>ICICI</span>'"></span>
+                            <span class="partner-logo-pill"><img src="/public/hub/Assets/ICICI.png" alt="ICICI Lombard" onerror="this.outerHTML='<span class=\'fw-bold\'>ICICI</span>'"></span>
                             <span class="partner-logo-pill"><img src="/public/hub/Assets/TATA.jpg" alt="TATA AIG" onerror="this.outerHTML='<span class=\'fw-bold\'>TATA</span>'"></span>
                             <span class="partner-logo-pill"><img src="/public/hub/Assets/Care.png" alt="Care Health" onerror="this.outerHTML='<span class=\'fw-bold\'>Care</span>'"></span>
                             <span class="partner-logo-pill"><img src="/public/hub/Assets/Star.png" alt="Star Health" onerror="this.outerHTML='<span class=\'fw-bold\'>Star</span>'"></span>
@@ -1702,13 +2122,13 @@
                     </div>
 
                     <a href="/catalog/insurance" class="btn-gold-glow">
-                        <i class="fas fa-external-link-alt"></i> Explore Insurance Advisory Catalogue →
+                        <i class="fas fa-external-link-alt"></i> Explore Insurance Advisory &amp; Earning Matrix →
                     </a>
                 </div>
 
                 <div class="col-lg-6 order-lg-1">
                     <div class="position-relative zoomable-img" onclick="openGallery('insurance', 0)">
-                        <img src="/public/hub/Assets/insurance-concept-protection-against-a-possible-eventuality-hand-holding-umbrella-icon-for-security-symbol-and-house-car-health-care-and-travel-icon-on-wooden-circle-for-assurance-life-concept-photo.jpg" alt="Insurance & Protection" class="img-fluid rounded-4 shadow-lg border">
+                        <img src="/public/images/vgk4u/insurance_earning_opportunity.jpg" alt="VGK Care Insurance Earning Opportunity &amp; Partner Structure with Bajaj Capital" class="img-fluid rounded-4 shadow-lg border">
                     </div>
                 </div>
             </div>
@@ -2048,8 +2468,22 @@
                 </div>
 
                 <div class="col-lg-6 order-lg-1">
-                    <div class="zoomable-img" onclick="openGallery('realestate', 0)">
-                        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1400&q=70" alt="Luxury Villa Architecture" class="img-fluid rounded-4 shadow-lg border">
+                    <div class="zoomable-img mb-3" onclick="openGallery('realestate', 0)">
+                        <img src="/public/images/real_dreams/7084e3d7cad7.jpeg" alt="VGK Real Dreams — Luxury Residences &amp; Townships" class="img-fluid rounded-4 shadow-lg border">
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-3 zoomable-img" onclick="openGallery('realestate', 1)">
+                            <img src="/public/images/real_dreams/anandas_royal_imperia_villa.png" alt="Anandas Royal Villa" class="img-fluid rounded-3 border" style="height: 72px; width: 100%; object-fit: cover;">
+                        </div>
+                        <div class="col-3 zoomable-img" onclick="openGallery('realestate', 2)">
+                            <img src="/public/images/real_dreams/aec12d1ef45b.png" alt="Anandas Royal Elevation" class="img-fluid rounded-3 border" style="height: 72px; width: 100%; object-fit: cover;">
+                        </div>
+                        <div class="col-3 zoomable-img" onclick="openGallery('realestate', 3)">
+                            <img src="/public/images/real_dreams/d1f9aea4f3f5.png" alt="Clubhouse Amenities" class="img-fluid rounded-3 border" style="height: 72px; width: 100%; object-fit: cover;">
+                        </div>
+                        <div class="col-3 zoomable-img" onclick="openGallery('realestate', 4)">
+                            <img src="/public/images/real_dreams/c6eb66441665.png" alt="Master Layout" class="img-fluid rounded-3 border" style="height: 72px; width: 100%; object-fit: cover;">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2404,6 +2838,11 @@
         </a>
     </div>
 
+    <!-- ── SCROLL TO TOP FLOATING BUTTON ── -->
+    <button type="button" class="btn-scroll-to-top" id="btnScrollToTop" onclick="scrollToTop()" aria-label="Scroll to top of page" title="Scroll to Top">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+
     <!-- ═══════════════════════════════════════════════════════════════════ -->
     <!-- LIGHTBOX IMAGE GALLERY MODAL (WITH ZOOM, SHIFT, CLOSE)              -->
     <!-- ═══════════════════════════════════════════════════════════════════ -->
@@ -2528,14 +2967,18 @@
                 { src: "/public/hub/Assets/manthra-beast-real.webp", title: "Manthra Beast Pro — High-Speed Dual Front & Rear Hydraulic Disc Scooter" }
             ],
             insurance: [
-                { src: "/public/hub/Assets/insurance-concept-protection-against-a-possible-eventuality-hand-holding-umbrella-icon-for-security-symbol-and-house-car-health-care-and-travel-icon-on-wooden-circle-for-assurance-life-concept-photo.jpg", title: "VGK Care Comprehensive Protection — Family Health, Life & Asset Security" },
-                { src: "/public/hub/Assets/ISO-Certificate.png", title: "Institutional Accreditation — ISO Certified Quality & Advisory Standards" }
+                { src: "/public/images/vgk4u/insurance_earning_opportunity.jpg", title: "VGK Care Insurance Earning Opportunity — Partner with Bajaj Capital" },
+                { src: "/public/images/vgk4u/vgk_care_sector_cover.jpg", title: "VGK Care 360° Asset, Health & Risk Protection Advisory" },
+                { src: "/public/images/vgk4u/slide_08_insurance.png", title: "VGK Care Multi-Level Project Earning Matrix & 10+ Tier-1 Insurers" },
+                { src: "/public/hub/Assets/BajajCapital.webp", title: "Bajaj Capital Strategic Wealth & Insurance Advisory Tie-Up" }
             ],
             realestate: [
-                { src: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1400&q=70", title: "VGK Real Dreams — Luxury Gated Community Villa Architecture" },
-                { src: "https://images.unsplash.com/photo-1501183638710-841dd1904471?w=1400&q=70", title: "VMRDA & RERA Approved Residential Layout & Commercial Plots" },
-                { src: "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=1400&q=70", title: "Integrated Townships & Contemporary Gated Living" },
-                { src: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1400&q=70", title: "Agricultural Farmlands & High-Yield Agro Estates" }
+                { src: "/public/images/real_dreams/7084e3d7cad7.jpeg", title: "VGK Homes Luxury Residences — Modern Multi-Storey Residential Architecture" },
+                { src: "/public/images/real_dreams/anandas_royal_imperia_villa.png", title: "Anandas Royal Imperia — Smart Luxury Residences & Villas" },
+                { src: "/public/images/real_dreams/aec12d1ef45b.png", title: "Anandas Royal Imperia — Modern Gated Community Elevation & Facade" },
+                { src: "/public/images/real_dreams/d1f9aea4f3f5.png", title: "World-Class Amenities — Clubhouse, Gymnasium, Indoor Games & Banquet Hall" },
+                { src: "/public/images/real_dreams/c6eb66441665.png", title: "Aerial Master Layout — Abundant Natural Lighting, Ventilation & Greenery" },
+                { src: "/public/images/vgk4u/slide_10_real_estate.png", title: "VGK Real Dreams — Official Real Estate Referral & Project Matrix" }
             ],
             training: [
                 { src: "/public/images/etc_training/ev_practical_scooter_lab.jpg", title: "EVolution Training Centre — Hands-On Scooter Diagnostics & Battery Lab" },
@@ -2546,6 +2989,10 @@
                 { src: "/public/hub/Assets/myntreal-hub-exterior-storefront.jpg", title: "MYNTREAL Hub — Physical Storefront & Commercial Business Center" },
                 { src: "/public/hub/Assets/myntreal-hub-interior-5offerings.jpg", title: "5-in-1 Showroom Interior — Solar, EV, Insurance, Real Estate & Training" },
                 { src: "/public/hub/Assets/myntreal-hub-interior-experience.jpg", title: "Client Consultation & VIP Partner Experience Lounge" }
+            ],
+            spares: [
+                { src: "/public/hub/Assets/Battery.png", title: "Manthra EV Smart LFP / LTM Lithium Battery Technology & Cell Packs" },
+                { src: "/public/hub/Assets/EV Tech1.png", title: "EV Powertrain Diagnostics, BLDC Motors & Smart Controllers" }
             ],
             kit: [
                 { src: "/public/images/vgk4u/slide_16_welcome_kit.png", title: "Executive Channel Partner Credentials — QR Digital ID, Visiting Cards & Welcome Kit" }
@@ -2776,7 +3223,7 @@
         const TRANSLATIONS = {
             en: {
                 top_strip_sub: "Official Channel Partner & Loyalty Digital Ecosystem",
-                nav_verticals: "5 Verticals",
+                nav_verticals: "💎 7 Jewels",
                 nav_solar: "Solar",
                 nav_insurance: "Insurance",
                 nav_ev: "Manthra EV",
@@ -2789,18 +3236,18 @@
                 btn_share: "Share",
                 btn_join_free: "Join Free",
                 hero_pill: "INDIA'S MULTI-VERTICAL OPPORTUNITY PLATFORM",
-                hero_lead: "Monetize India's green and digital revolution across Rooftop Solar, Electric 2-Wheelers, Comprehensive Insurance, Real Estate, and Certified EV Training. Zero upfront investment, verified corporate supply, and multi-tier lifetime commissions.",
+                hero_lead: "Monetize India's green and digital revolution across Rooftop Solar, Electric 2-Wheelers, Comprehensive Insurance, Real Estate, Certified EV Training, Physical MyntReal Hubs, and EV Spares. Zero upfront investment, verified corporate supply, and multi-tier lifetime commissions.",
                 pts_badge: "FREE WELCOME ALLOCATION",
                 pts_redemption_note: "Vouchers, Subsidies & Discounts",
                 pts_reg_bonus: "Registration Bonus",
                 pts_ref_bonus: "Referral Code Bonus",
                 pts_non_cash: "Benefit Usage Only (Non-Cash)",
                 cta_start_free: "Join VGK4U Free",
-                cta_explore_opps: "Explore 5 Verticals",
+                cta_explore_opps: "Explore 7 Jewels",
                 cta_share_wa: "WhatsApp",
-                tag_core_verticals: "5 GROWTH VERTICALS",
-                h_five_opps: "One Platform. Five High-Demand Opportunities.",
-                desc_five_opps: "Choose one or excel across all five. Every vertical provides complete backend procurement, institutional engineering, client financing, and automated commission settlements.",
+                tag_core_verticals: "💎 7 JEWELS FOR SUCCESS",
+                h_five_opps: "7 Jewels for Success: Multi-Vertical Wealth Engine",
+                desc_five_opps: "Seven integrated, high-demand business verticals engineered to generate upfront commissions, recurring royalties, and generational wealth on one unified platform.",
                 tag_philosophy: "OUR PHILOSOPHY",
                 h_philosophy: "The Meaning Behind VGK4U",
                 desc_philosophy: "VGK4U stands on four uncompromising pillars designed to create lasting wealth, generational security, and kinetic speed for every partner.",
@@ -2816,7 +3263,7 @@
                 h_how_works: "How VGK4U Works",
                 desc_how_works: "A seamless 5-step operational pipeline that converts everyday connections into high-earning completed business transactions.",
                 step1_t: "Explore",
-                step1_d: "Browse high-demand products across Solar, EV, Insurance, Real Estate & Training.",
+                step1_d: "Browse high-demand products across Solar, EV, Insurance, Real Estate, Training, Hubs & Spares.",
                 step2_t: "Learn & Enable",
                 step2_d: "Access product training, digital catalogues, customer pitch decks, and webinar guides.",
                 step3_t: "Share & Connect",
@@ -2851,7 +3298,7 @@
             },
             te: {
                 top_strip_sub: "అధికారిక ఛానల్ పార్టనర్ & లాయల్టీ డిజిటల్ వ్యవస్థ",
-                nav_verticals: "5 రంగాలు",
+                nav_verticals: "💎 7 రత్నాలు",
                 nav_solar: "సోలార్",
                 nav_insurance: "ఇన్సూరెన్స్",
                 nav_ev: "మంత్రా EV",
@@ -2864,18 +3311,18 @@
                 btn_share: "షేర్ చేయండి",
                 btn_join_free: "ఉచితంగా చేరండి",
                 hero_pill: "భారతదేశపు బహుళ వ్యాపార అవకాశాల వేదిక",
-                hero_lead: "రూఫ్‌టాప్ సోలార్, ఎలక్ట్రిక్ 2-వీలర్స్, ఇన్సూరెన్స్, రియల్ ఎస్టేట్ మరియు సర్టిఫైడ్ EV ట్రైనింగ్ రంగాలలో భారతదేశ హరిత విప్లవాన్ని ఆదాయంగా మార్చుకోండి. సున్నా పెట్టుబడి, లైఫ్‌టైమ్ మల్టీ-లెవల్ కమిషన్లు.",
+                hero_lead: "రూఫ్‌టాప్ సోలార్, ఎలక్ట్రిక్ 2-వీలర్స్, ఇన్సూరెన్స్, రియల్ ఎస్టేట్, సర్టిఫైడ్ EV ట్రైనింగ్, మైంట్‌రియల్ హబ్ మరియు స్పేర్స్ రంగాలలో భారతదేశ హరిత విప్లవాన్ని ఆదాయంగా మార్చుకోండి. సున్నా పెట్టుబడి, లైఫ్‌టైమ్ మల్టీ-లెవల్ కమిషన్లు.",
                 pts_badge: "ఉచిత వెల్కమ్ పాయింట్లు",
                 pts_redemption_note: "వోచర్లు, సబ్సిడీలు & తగ్గింపులు",
                 pts_reg_bonus: "రిజిస్ట్రేషన్ బోనస్",
                 pts_ref_bonus: "రెఫరల్ కోడ్ బోనస్",
                 pts_non_cash: "ప్రయోజనాల కొరకు మాత్రమే (నగదు కాదు)",
                 cta_start_free: "ఉచితంగా చేరండి",
-                cta_explore_opps: "5 రంగాలను చూడండి",
+                cta_explore_opps: "7 రత్నాలను చూడండి",
                 cta_share_wa: "వాట్సాప్",
-                tag_core_verticals: "5 ప్రధాన వ్యాపార రంగాలు",
-                h_five_opps: "ఒకే వేదిక. ఐదు గొప్ప అవకాశాలు.",
-                desc_five_opps: "ఏదైనా ఒక రంగం ఎంచుకోండి లేదా ఐదింటిలోనూ రాణించండి. కొనుగోళ్లు, బ్యాంక్ రుణాలు మరియు కమిషన్లను మైంట్‌ఓఎస్ వ్యవస్థ నిర్వహిస్తుంది.",
+                tag_core_verticals: "💎 విజయానికి 7 రత్నాలు (7 Jewels)",
+                h_five_opps: "విజయానికి 7 రత్నాలు: బహుళ రంగాల సంపద మార్గాలు",
+                desc_five_opps: "ఏడు శక్తివంతమైన, అత్యధిక డిమాండ్ ఉన్న వ్యాపార రంగాలు. ముందస్తు కమీషన్లు, నిరంతర రాయల్టీలు మరియు తరతరాల సంపదను అందించే ఏకీకృత వేదిక.",
                 tag_philosophy: "మా సిద్ధాంతం",
                 h_philosophy: "VGK4U అంతరార్థం",
                 desc_philosophy: "ప్రతి భాగస్వామికి శాశ్వత సంపద, తరతరాల భద్రత మరియు వేగవంతమైన వృద్ధిని అందించే నాలుగు బలమైన స్తంభాలు.",
@@ -2891,7 +3338,7 @@
                 h_how_works: "VGK4U ఎలా పనిచేస్తుంది?",
                 desc_how_works: "మీ రోజువారీ పరిచయాలను ఉన్నత ఆదాయ వ్యాపారంగా మార్చే సులభమైన 5-దశల విధానం.",
                 step1_t: "అన్వేషించండి",
-                step1_d: "సోలార్, EV, ఇన్సూరెన్స్, రియల్ ఎస్టేట్ మరియు ట్రైనింగ్ ఉత్పత్తులను చూడండి.",
+                step1_d: "సోలార్, EV, ఇన్సూరెన్స్, రియల్ ఎస్టేట్, ట్రైనింగ్ మరియు హబ్ ఉత్పత్తులను చూడండి.",
                 step2_t: "నేర్చుకోండి",
                 step2_d: "డిజిటల్ కేటలాగ్‌లు, వీడియో గైడ్‌లు మరియు శిక్షణను పొందండి.",
                 step3_t: "షేర్ చేయండి",
@@ -2926,7 +3373,7 @@
             },
             hi: {
                 top_strip_sub: "आधिकारिक चैनल पार्टनर और लॉयल्टी डिजिटल इकोसिस्टम",
-                nav_verticals: "5 वर्टिकल्स",
+                nav_verticals: "💎 7 रत्न",
                 nav_solar: "सोलर",
                 nav_insurance: "इंश्योरेंस",
                 nav_ev: "मंत्रा EV",
@@ -2939,18 +3386,18 @@
                 btn_share: "शेयर करें",
                 btn_join_free: "फ्री जॉइन करें",
                 hero_pill: "भारत का बहु-क्षेत्रीय व्यापार अवसर मंच",
-                hero_lead: "रूफटॉप सोलर, इलेक्ट्रिक 2-व्हीलर, व्यापक बीमा, रियल एस्टेट और प्रमाणित EV कौशल प्रशिक्षण में भारत की हरित क्रांति से कमाई करें। शून्य निवेश, सुरक्षित आपूर्ति और आजीवन मल्टी-लेवल कमीशन।",
+                hero_lead: "रूफटॉप सोलर, इलेक्ट्रिक 2-व्हीलर, व्यापक बीमा, रियल एस्टेट, प्रमाणित EV कौशल प्रशिक्षण, भौतिक हब और स्पेयर पार्ट्स में भारत की हरित क्रांति से कमाई करें। शून्य निवेश, सुरक्षित आपूर्ति और आजीवन मल्टी-लेवल कमीशन।",
                 pts_badge: "मुफ्त वेलकम पॉइंट्स",
                 pts_redemption_note: "वाउचर, सब्सिडी और छूट के लिए",
                 pts_reg_bonus: "पंजीकरण बोनस",
                 pts_ref_bonus: "रेफरल कोड बोनस",
                 pts_non_cash: "केवल लाभ हेतु (नकद नहीं)",
                 cta_start_free: "फ्री में जुड़ें",
-                cta_explore_opps: "5 वर्टिकल्स देखें",
+                cta_explore_opps: "7 रत्न देखें",
                 cta_share_wa: "व्हाट्सएप",
-                tag_core_verticals: "5 विकास क्षेत्र",
-                h_five_opps: "एक मंच। पांच बड़े अवसर।",
-                desc_five_opps: "एक चुनें या पांचों में महारत हासिल करें। आपूर्ति, तकनीकी सहायता और भुगतान की जिम्मेदारी हमारी।",
+                tag_core_verticals: "💎 सफलता के 7 रत्न (7 Jewels)",
+                h_five_opps: "सफलता के 7 रत्न: मल्टी-वर्टिकल वेल्थ इंजन",
+                desc_five_opps: "एक ही एकीकृत मंच पर 7 उच्च-मांग वाले व्यावसायिक रत्न, जो आपको तत्काल कमीशन, स्थायी रॉयल्टी और पीढ़ियों तक चलने वाली संपत्ति प्रदान करते हैं।",
                 tag_philosophy: "हमारा सिद्धांत",
                 h_philosophy: "VGK4U का गहरा अर्थ",
                 desc_philosophy: "चार मजबूत स्तंभ जो हर पार्टनर के लिए दीर्घकालिक संपत्ति और तीव्र गति सुनिश्चित करते हैं।",
@@ -2966,7 +3413,7 @@
                 h_how_works: "VGK4U कैसे काम करता है?",
                 desc_how_works: "अपने संपर्कों को लाभदायक व्यावसायिक सौदों में बदलने की सरल 5-चरणीय प्रक्रिया।",
                 step1_t: "खोजें",
-                step1_d: "सोलर, EV, बीमा, रियल एस्टेट और प्रशिक्षण उत्पादों की जानकारी लें।",
+                step1_d: "सोलर, EV, बीमा, रियल एस्टेट, प्रशिक्षण और हब उत्पादों की जानकारी लें।",
                 step2_t: "सीखें",
                 step2_d: "डिजिटल कैटलॉग और प्रशिक्षण सामग्री से उत्पाद समझें।",
                 step3_t: "साझा करें",
@@ -3001,7 +3448,7 @@
             },
             ta: {
                 top_strip_sub: "அதிகாரப்பூர்வ சேனல் பார்ட்னர் & லாயல்டி டிஜிட்டல் தளம்",
-                nav_verticals: "5 துறைகள்",
+                nav_verticals: "💎 7 ரத்தினங்கள்",
                 nav_solar: "சோலார்",
                 nav_insurance: "இன்சூரன்ஸ்",
                 nav_ev: "மந்த்ரா EV",
@@ -3014,18 +3461,18 @@
                 btn_share: "பகிரவும்",
                 btn_join_free: "இலவசமாக சேருங்கள்",
                 hero_pill: "இந்தியாவின் பல்துறை வணிக வாய்ப்பு தளம்",
-                hero_lead: "ரூஃப்டாப் சோலார், எலக்ட்ரிக் ஸ்கூட்டர்கள், காப்பீடு, ரியல் எஸ்டேட் மற்றும் பயிற்சி மூலம் இந்தியாவின் பசுமைப் புரட்சியில் வருமானம் ஈட்டுங்கள். பூஜ்ஜிய முதலீடு, வாழ்நாள் கமிஷன்.",
+                hero_lead: "ரூஃப்டாப் சோலார், எலக்ட்ரிக் ஸ்கூட்டர்கள், காப்பீடு, ரியல் எஸ்டேட், பயிற்சி, ஹப் மற்றும் உதிரிபாகங்கள் மூலம் இந்தியாவின் பசுமைப் புரட்சியில் வருமானம் ஈட்டுங்கள். பூஜ்ஜிய முதலீடு, வாழ்நாள் கமிஷன்.",
                 pts_badge: "இலவச வரவேற்பு புள்ளிகள்",
                 pts_redemption_note: "கூப்பன்கள், தள்ளுபடிகள் மற்றும் பலன்கள்",
                 pts_reg_bonus: "பதிவு போனஸ்",
                 pts_ref_bonus: "ரெஃபரல் குறியீடு போனஸ்",
                 pts_non_cash: "பயன்பாட்டிற்கு மட்டுமே (ரொக்கம் அல்ல)",
                 cta_start_free: "இலவசமாக இணையுங்கள்",
-                cta_explore_opps: "5 துறைகளை காண்க",
+                cta_explore_opps: "7 ரத்தினங்களை காண்க",
                 cta_share_wa: "வாட்ஸ்அப்",
-                tag_core_verticals: "5 முதன்மை துறைகள்",
-                h_five_opps: "ஒரே தளம். ஐந்து பெரும் வாய்ப்புகள்.",
-                desc_five_opps: "ஒன்றைத் தேர்ந்தெடுங்கள் அல்லது ஐந்திலும் வெற்றி பெறுங்கள். வங்கி கடன் மற்றும் விநியோகத்தை மைண்ட்ரியல் நிறுவனம் கையாளும்.",
+                tag_core_verticals: "💎 வெற்றிக்கான 7 ரத்தினங்கள் (7 Jewels)",
+                h_five_opps: "வெற்றிக்கான 7 ரத்தினங்கள்: வருமான வாய்ப்புகள்",
+                desc_five_opps: "ஒரே தளத்தில் 7 உயர் வளர்ச்சி வணிகத் துறைகள். உடனடி கமிஷன், தொடர் வருமானம் மற்றும் தலைமுறை செல்வத்தை உருவாக்கும் முழுமையான தளம்.",
                 tag_philosophy: "எங்கள் கொள்கை",
                 h_philosophy: "VGK4U-ன் தத்துவம்",
                 desc_philosophy: "ஒவ்வொரு கூட்டாளருக்கும் நிலையான செல்வம், தலைமுறை பாதுகாப்பு மற்றும் வேகமான வளர்ச்சியை வழங்கும் நான்கு தூண்கள்.",
@@ -3041,7 +3488,7 @@
                 h_how_works: "VGK4U எவ்வாறு இயங்குகிறது?",
                 desc_how_works: "உங்கள் அன்றாட தொடர்புகளை அதிக வருமானம் தரும் வணிகமாக மாற்றும் 5 எளிய படிகள்.",
                 step1_t: "ஆராயுங்கள்",
-                step1_d: "சோலார், EV, இன்சூரன்స్, ரியல் எஸ்டேட் தயாரிப்புகளைப் பாருங்கள்.",
+                step1_d: "சோலார், EV, இன்சூரன்ஸ், ரியல் எஸ்டேட், பயிற்சி மற்றும் ஹப் தயாரிப்புகளைப் பாருங்கள்.",
                 step2_t: "கற்றுக்கொள்ளுங்கள்",
                 step2_d: "டிஜிட்டல் வழிகாட்டிகள் மூலம் தயாரிப்புகளை அறிந்து கொள்ளுங்கள்.",
                 step3_t: "பகிரவும்",
@@ -3131,12 +3578,14 @@
         function shareOnWhatsApp() {
             const catalogUrl = window.location.origin + '/catalog/vgk4u' + (refCode ? ('?ref=' + encodeURIComponent(refCode)) : '');
             const msg = "Namaste! 🙏\n\nI invite you to explore the *VGK4U Official Digital Business Catalogue*:\n\n" +
-                "🌟 *5 High-Growth Verticals:*\n" +
+                "🌟 *High-Growth Business Verticals:*\n" +
                 "1. Har Ghar Solar (Up to ₹78,000 Govt Subsidy)\n" +
-                "2. VGK Care Insurance (Health, Life & Asset Risk)\n" +
+                "2. VGK Care Insurance (Advisory with Bajaj Capital)\n" +
                 "3. Manthra EV Smart 2-Wheelers (₹0.20/km Non-RTO)\n" +
-                "4. VGK Real Dreams Properties (Verified Plots & Villas)\n" +
-                "5. EVolution Skill Training (95% Placement Lab)\n\n" +
+                "4. VGK Real Dreams (Anandas Royal Imperia & Approved Plots)\n" +
+                "5. EVolution Skill Training (95% Placement Lab)\n" +
+                "6. MyntReal Hub (5-in-1 Physical Experience Stores)\n" +
+                "7. EV Spares & Fast Charging Infrastructure\n\n" +
                 "✅ Free Joining + ₹30,000 Welcome Points!\n" +
                 "✅ 1 Point = ₹1 Real Value\n" +
                 "✅ 3-Generation Nominee Wealth Transfer\n\n" +
@@ -3163,16 +3612,51 @@
             const html = document.documentElement;
             const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             html.setAttribute('data-theme', next);
+            if (typeof window !== 'undefined' && window.localStorage) {
+                try { localStorage.setItem('vgk4u_theme', next); } catch(e) {}
+            }
             const icon = document.getElementById('themeToggleIcon');
             if (icon) {
                 icon.className = next === 'dark' ? 'fas fa-sun text-warning' : 'fas fa-moon';
             }
         }
 
-        // ── 10. ACTIVE NAV PILL HIGHLIGHTER ON SCROLL ──
+        // Initialize Theme from localStorage if present
+        (function initTheme() {
+            if (typeof window !== 'undefined' && window.localStorage) {
+                try {
+                    const saved = localStorage.getItem('vgk4u_theme');
+                    if (saved) {
+                        document.documentElement.setAttribute('data-theme', saved);
+                        const icon = document.getElementById('themeToggleIcon');
+                        if (icon) {
+                            icon.className = saved === 'dark' ? 'fas fa-sun text-warning' : 'fas fa-moon';
+                        }
+                    }
+                } catch(e) {}
+            }
+        })();
+
+        // ── 10. SCROLL TO TOP & ACTIVE NAV PILL HIGHLIGHTER ON SCROLL ──
+        function scrollToTop() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
+
         window.addEventListener('scroll', () => {
+            const scrollPos = window.scrollY;
+
+            // Toggle floating Scroll-to-Top button (> 280px)
+            const btnTop = document.getElementById('btnScrollToTop');
+            if (btnTop) {
+                btnTop.classList.toggle('visible', scrollPos > 280);
+            }
+
+            // Active nav pill highlight
             const links = document.querySelectorAll('.nav-link-pill');
-            const scrollPos = window.scrollY + 140;
+            const navOffset = scrollPos + 140;
             links.forEach(link => {
                 const targetId = link.getAttribute('href');
                 if (targetId && targetId.startsWith('#')) {
@@ -3180,17 +3664,323 @@
                     if (section) {
                         const top = section.offsetTop;
                         const height = section.offsetHeight;
-                        if (scrollPos >= top && scrollPos < top + height) {
+                        if (navOffset >= top && navOffset < top + height) {
                             links.forEach(l => l.classList.remove('active'));
                             link.classList.add('active');
                         }
                     }
                 }
             });
-        });
+        }, { passive: true });
 
         // Initialize EV calculator default
         updateEVCalc(75000);
+
+        // ── 11. 7 JEWELS CAROUSEL ENGINE (01 TO 07 SEQUENTIAL AUTO-ROTATION) ──
+        let currentJewelIndex = 0;
+        let isJewelsPaused = false;
+        let jewelsAutoTimer = null;
+        const JEWELS_COUNT = 7;
+        const JEWELS_INTERVAL = 3500;
+
+        function goToJewel(index, smooth = true) {
+            currentJewelIndex = (index + JEWELS_COUNT) % JEWELS_COUNT;
+            const wrapper = document.getElementById('jewelsWrapper');
+            const track = document.getElementById('jewelsTrack');
+            const cards = track ? track.querySelectorAll('.jewel-showcase-card, .vertical-panel-card') : [];
+            const pills = document.querySelectorAll('#jewelsNavPills .jewel-pill-btn');
+
+            if (!wrapper || !cards.length) return;
+
+            const targetCard = cards[currentJewelIndex];
+            if (targetCard) {
+                cards.forEach((c, idx) => {
+                    c.classList.toggle('active-jewel', idx === currentJewelIndex);
+                });
+
+                // Scroll smoothly to center the active card inside the wrapper only
+                const cardLeft = targetCard.offsetLeft;
+                const cardWidth = targetCard.offsetWidth;
+                const wrapperWidth = wrapper.clientWidth;
+                const targetScroll = Math.max(0, cardLeft - (wrapperWidth - cardWidth) / 2);
+
+                wrapper.scrollTo({
+                    left: targetScroll,
+                    behavior: smooth ? 'smooth' : 'auto'
+                });
+            }
+
+            // Sync indicator pills
+            pills.forEach((pill, idx) => {
+                pill.classList.toggle('active', idx === currentJewelIndex);
+            });
+        }
+
+        function nextJewelCard() {
+            goToJewel(currentJewelIndex + 1, true);
+        }
+
+        function prevJewelCard() {
+            goToJewel(currentJewelIndex - 1, true);
+        }
+
+        function toggleJewelsAutoPlay() {
+            isJewelsPaused = !isJewelsPaused;
+            const icon = document.getElementById('jewelsPauseIcon');
+            const text = document.getElementById('jewelsPauseText');
+            if (icon && text) {
+                if (isJewelsPaused) {
+                    icon.className = 'fas fa-play';
+                    text.textContent = 'Resume';
+                } else {
+                    icon.className = 'fas fa-pause';
+                    text.textContent = 'Pause (3.5s)';
+                }
+            }
+        }
+
+        (function initJewelsCarousel() {
+            const wrapper = document.getElementById('jewelsWrapper');
+            if (!wrapper) return;
+
+            // Pause on hover, resume on leave
+            wrapper.addEventListener('mouseenter', () => { isJewelsPaused = true; });
+            wrapper.addEventListener('mouseleave', () => {
+                const btn = document.getElementById('jewelsPauseText');
+                if (btn && btn.textContent.includes('Pause')) {
+                    isJewelsPaused = false;
+                }
+            });
+
+            // Touch gestures
+            let touchStartX = 0;
+            wrapper.addEventListener('touchstart', (e) => {
+                isJewelsPaused = true;
+                touchStartX = e.touches[0].clientX;
+            }, { passive: true });
+
+            wrapper.addEventListener('touchend', (e) => {
+                const touchEndX = e.changedTouches[0].clientX;
+                const diff = touchStartX - touchEndX;
+                if (diff > 50) {
+                    nextJewelCard();
+                } else if (diff < -50) {
+                    prevJewelCard();
+                }
+                const btn = document.getElementById('jewelsPauseText');
+                if (btn && btn.textContent.includes('Pause')) {
+                    isJewelsPaused = false;
+                }
+            }, { passive: true });
+
+            // Auto-advance interval
+            if (jewelsAutoTimer) clearInterval(jewelsAutoTimer);
+            jewelsAutoTimer = setInterval(() => {
+                if (!isJewelsPaused) {
+                    nextJewelCard();
+                }
+            }, JEWELS_INTERVAL);
+
+            // Initial highlight on load
+            setTimeout(() => goToJewel(0, false), 150);
+        })();
+
+        // ── 12. HERO ROTATING FEATURE CARD (3-SECOND CYCLE + PAUSE ON HOVER/HOLD) ──
+        const HERO_VERTICALS = [
+            { 
+                id: 'solar', 
+                title: 'Real Customer Installations', 
+                sub: 'Krishnadevipeta, Andhra Pradesh • 5 kW System', 
+                badge: '₹78k Subsidy', 
+                badgeClass: 'bg-success', 
+                img: '/public/images/solar_installations/krishnadevipeta_solar_customer.jpg', 
+                objPos: 'center 25%' 
+            },
+            { 
+                id: 'insurance', 
+                title: 'VGK Care Risk Advisory', 
+                sub: 'Strategic Advisory with Bajaj Capital • 10+ Insurers', 
+                badge: 'Bajaj Capital', 
+                badgeClass: 'bg-info text-dark', 
+                img: '/public/images/vgk4u/insurance_earning_opportunity.jpg', 
+                objPos: 'center center' 
+            },
+            { 
+                id: 'ev', 
+                title: 'Manthra EV Smart Mobility', 
+                sub: 'Non-RTO & High-Speed Electric Scooters • ₹0.20/km', 
+                badge: '₹4,875 / EV', 
+                badgeClass: 'bg-success', 
+                img: '/public/hub/Assets/manthra-fleet-lineup.webp', 
+                objPos: 'center center' 
+            },
+            { 
+                id: 'realestate', 
+                title: 'VGK Real Dreams Properties', 
+                sub: 'Anandas Royal Imperia Luxury Villas & Townships', 
+                badge: '₹1,00,000 / Deal', 
+                badgeClass: 'bg-warning text-dark', 
+                img: '/public/images/real_dreams/7084e3d7cad7.jpeg', 
+                objPos: 'center center' 
+            },
+            { 
+                id: 'training', 
+                title: 'EVolution Skill Training (ETC)', 
+                sub: 'Hands-On EV Diagnostics, Battery BMS & Solar Labs', 
+                badge: '95% Placement', 
+                badgeClass: 'bg-purple text-white', 
+                img: '/public/images/etc_training/ev_practical_scooter_lab.jpg', 
+                objPos: 'center 30%' 
+            },
+            { 
+                id: 'hub', 
+                title: 'MyntReal Physical Hub', 
+                sub: '5-in-1 Physical Experience Center & Franchise', 
+                badge: '4 Overrides', 
+                badgeClass: 'bg-danger text-white', 
+                img: '/public/hub/Assets/myntreal-hub-exterior-storefront.jpg', 
+                objPos: 'center center' 
+            },
+            { 
+                id: 'spares', 
+                title: 'EV Spares & High-Voltage Tech', 
+                sub: 'Genuine Motors, Controllers, LFP Battery Packs & Chargers', 
+                badge: 'Wholesale Margin', 
+                badgeClass: 'bg-info text-dark', 
+                img: '/public/hub/Assets/Battery.png', 
+                objPos: 'center center' 
+            }
+        ];
+
+        let currentHeroIndex = 0;
+        let isHeroPaused = false;
+        let heroProgressMs = 0;
+        const HERO_INTERVAL_MS = 3000;
+        const HERO_TICK_STEP = 100;
+
+        function renderHeroVertical(index, animate = true) {
+            currentHeroIndex = (index + HERO_VERTICALS.length) % HERO_VERTICALS.length;
+            const v = HERO_VERTICALS[currentHeroIndex];
+            const img = document.getElementById('heroRotImg');
+            const title = document.getElementById('heroRotTitle');
+            const sub = document.getElementById('heroRotSub');
+            const badge = document.getElementById('heroRotBadge');
+            const progress = document.getElementById('heroProgressLine');
+
+            if (img && v) {
+                if (animate) {
+                    img.style.opacity = '0.35';
+                    setTimeout(() => {
+                        img.src = v.img;
+                        img.alt = v.title;
+                        img.style.objectPosition = v.objPos || 'center center';
+                        img.style.opacity = '1';
+                    }, 120);
+                } else {
+                    img.src = v.img;
+                    img.alt = v.title;
+                    img.style.objectPosition = v.objPos || 'center center';
+                    img.style.opacity = '1';
+                }
+            }
+            if (title && v) {
+                title.innerHTML = `<i class="fas fa-check-circle text-success me-1"></i> ${v.title}`;
+            }
+            if (sub && v) {
+                sub.textContent = v.sub;
+            }
+            if (badge && v) {
+                badge.className = `badge ${v.badgeClass} font-mono flex-shrink-0`;
+                badge.textContent = v.badge;
+            }
+
+            // Sync bottom strip highlight without hijacking page scroll
+            const stripCards = document.querySelectorAll('#heroVerticalsStrip .hero-vert-card');
+            const heroStrip = document.getElementById('heroVerticalsStrip');
+            stripCards.forEach((card, idx) => {
+                if (idx === currentHeroIndex) {
+                    card.classList.add('active-vert');
+                    if (heroStrip && heroStrip.scrollWidth > heroStrip.clientWidth) {
+                        const targetLeft = card.offsetLeft - (heroStrip.clientWidth - card.offsetWidth) / 2;
+                        heroStrip.scrollTo({ left: targetLeft, behavior: 'smooth' });
+                    }
+                } else {
+                    card.classList.remove('active-vert');
+                }
+            });
+
+            // Reset progress line
+            heroProgressMs = 0;
+            if (progress) progress.style.width = '0%';
+        }
+
+        function nextHeroVertical() {
+            renderHeroVertical(currentHeroIndex + 1, true);
+        }
+
+        function selectHeroVertical(idx) {
+            renderHeroVertical(idx, true);
+        }
+
+        function openCurrentHeroGallery() {
+            const v = HERO_VERTICALS[currentHeroIndex];
+            if (v && typeof openGallery === 'function') {
+                openGallery(v.id, 0);
+            }
+        }
+
+        // Timer Loop for 3-second Auto Rotation with Hover & Touch Pause
+        (function initHeroRotation() {
+            const card = document.getElementById('heroRotatingCard');
+            const strip = document.getElementById('heroVerticalsStrip');
+            const pauseBadge = document.getElementById('heroPauseBadge');
+            const progress = document.getElementById('heroProgressLine');
+
+            function setHeroPause(paused) {
+                isHeroPaused = paused;
+                if (pauseBadge) {
+                    if (paused) {
+                        pauseBadge.innerHTML = '<i class="fas fa-pause text-warning"></i> <span>Paused</span>';
+                        pauseBadge.style.borderColor = '#f59e0b';
+                        pauseBadge.style.color = '#ffffff';
+                        pauseBadge.style.background = 'rgba(245, 158, 11, 0.28)';
+                    } else {
+                        pauseBadge.innerHTML = '<i class="fas fa-hand-pointer"></i> <span>Hover to Pause (3s)</span>';
+                        pauseBadge.style.borderColor = 'rgba(245, 158, 11, 0.45)';
+                        pauseBadge.style.color = '#f59e0b';
+                        pauseBadge.style.background = 'rgba(9, 13, 22, 0.85)';
+                    }
+                }
+            }
+
+            if (card) {
+                card.addEventListener('mouseenter', () => setHeroPause(true));
+                card.addEventListener('mouseleave', () => setHeroPause(false));
+                card.addEventListener('touchstart', () => setHeroPause(true), { passive: true });
+                card.addEventListener('touchend', () => setHeroPause(false), { passive: true });
+                card.addEventListener('touchcancel', () => setHeroPause(false), { passive: true });
+            }
+
+            if (strip) {
+                strip.addEventListener('mouseenter', () => setHeroPause(true));
+                strip.addEventListener('mouseleave', () => setHeroPause(false));
+            }
+
+            setInterval(() => {
+                if (!isHeroPaused) {
+                    heroProgressMs += HERO_TICK_STEP;
+                    const pct = Math.min(100, (heroProgressMs / HERO_INTERVAL_MS) * 100);
+                    if (progress) progress.style.width = pct + '%';
+                    if (heroProgressMs >= HERO_INTERVAL_MS) {
+                        heroProgressMs = 0;
+                        nextHeroVertical();
+                    }
+                }
+            }, HERO_TICK_STEP);
+
+            // Initial render
+            renderHeroVertical(0, false);
+        })();
     </script>
 </body>
 </html>

@@ -1056,7 +1056,23 @@ def run_migrations():
             if missing_tbls:
                 raise RuntimeError(f"Gate Failed: Missing required tables: {missing_tbls}")
 
-            # Check 4: no unexpected NULLs in tenant_id
+            # Check 4: Idempotent backfill and verification: no unexpected NULLs in tenant_id
+            conn.execute(text("""
+                UPDATE crm_leads l
+                SET tenant_id = c.client_id
+                FROM associated_companies c
+                WHERE l.company_id = c.id
+                  AND l.tenant_id IS NULL;
+            """))
+            conn.execute(text("""
+                UPDATE staff_employees s
+                SET tenant_id = c.client_id
+                FROM associated_companies c
+                WHERE s.base_company_id = c.id
+                  AND s.tenant_id IS NULL;
+            """))
+            conn.commit()
+
             null_staff = conn.execute(text("SELECT count(*) FROM staff_employees WHERE tenant_id IS NULL")).scalar()
             if null_staff > 0:
                 raise RuntimeError(f"Gate Failed: Found {null_staff} staff_employees records with NULL tenant_id")
