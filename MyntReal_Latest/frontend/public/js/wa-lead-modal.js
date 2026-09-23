@@ -863,10 +863,23 @@
         var parsed = JSON.parse(raw);
         var u = parsed.user || parsed.employee || parsed;
         var name = u.full_name || u.name || (u.first_name ? u.first_name + ' ' + (u.last_name || '') : '') || 'Staff';
-        var ext = u.extension || u.ext || (typeof window !== 'undefined' ? window.__STAFF_EXTENSION__ : null);
-        if (!ext && u.emp_code) {
-          var m = String(u.emp_code).match(/(\d{2,4})$/);
-          if (m) ext = m[1].replace(/^0+/, '') || m[1];
+        var code = String(u.emp_code || '').trim().toUpperCase();
+        var isSysAdmin = code === 'MR10001' || name.toUpperCase().indexOf('SYSTEM ADMINISTRATOR') !== -1;
+
+        var ext = null;
+        if (!isSysAdmin) {
+          ext = u.extension || u.ext || (typeof window !== 'undefined' ? window.__STAFF_EXTENSION__ : null);
+          if (!ext && code) {
+            var m = code.match(/(\d{1,4})$/);
+            if (m) {
+              var num = parseInt(m[1], 10);
+              var last2 = ('00' + (num % 100)).slice(-2);
+              if (code.indexOf('MR') === 0) ext = '1' + last2;
+              else if (code.indexOf('MN') === 0) ext = '2' + last2;
+              else if (code.indexOf('FL') === 0) ext = '4' + last2;
+              else ext = '8' + last2;
+            }
+          }
         }
         if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
           return '\n\nRegards,\n' + name + '\n📞 +91 85858 52738 | +91 8897797667\nExt: ' + String(ext).trim();

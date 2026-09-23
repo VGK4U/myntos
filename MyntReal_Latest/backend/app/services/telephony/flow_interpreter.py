@@ -665,10 +665,21 @@ class CallFlowInterpreter:
         for opt in options:
             if str(opt.get("dtmf_key", "")).strip() == clean_ext:
                 matched_opt = opt
-                break
-
         if not matched_opt:
-            return {"status": "invalid_extension", "extension": clean_ext}
+            from app.services.universal_history_service import UniversalHistoryService
+            matched_staff = UniversalHistoryService.resolve_staff_by_extension(db, clean_ext)
+            if matched_staff:
+                matched_opt = {
+                    "dtmf_key": clean_ext,
+                    "destination_type": "staff",
+                    "destination_id": matched_staff.id,
+                    "display_name": matched_staff.full_name or matched_staff.emp_code,
+                    "is_active": True,
+                    "ring_timeout": 20,
+                    "fallback_action": "main_ivr"
+                }
+            else:
+                return {"status": "invalid_extension", "extension": clean_ext}
 
         if not matched_opt.get("is_active", True):
             return {"status": "inactive_extension", "extension": clean_ext, "option": matched_opt}
@@ -806,15 +817,13 @@ class CallFlowInterpreter:
             ):
                 return str(opt.get("dtmf_key", "")).strip() or None
 
-        # Fallback: Derive extension from staff employee code when direct routing is unconfigured
+        # Fallback: Authoritative unique 3-digit extension from UniversalHistoryService
         if staff_id and db:
             try:
                 emp = db.query(StaffEmployee).filter(StaffEmployee.id == staff_id).first()
-                if emp and emp.emp_code:
-                    m = re.search(r'(\d{2,4})$', str(emp.emp_code).strip())
-                    if m:
-                        digits = m.group(1).lstrip('0') or m.group(1)
-                        return digits
+                if emp:
+                    from app.services.universal_history_service import UniversalHistoryService
+                    return UniversalHistoryService.get_staff_extension_number(emp)
             except Exception:
                 pass
 

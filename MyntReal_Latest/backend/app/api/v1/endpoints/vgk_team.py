@@ -96,7 +96,8 @@ def _is_vgk_admin(user: StaffEmployee) -> bool:
 def _has_full_vgk_visibility(user: StaffEmployee) -> bool:
     """
     Check if user is permitted to see all VGK members across the platform.
-    Strict access rule: All members should be displayed to Anushka, Nandana, Subash, Yaswanth, Jagannath and Mr10001 only.
+    Strict access rule: All members should be displayed to Anushka, Nandana, Subash, Yaswanth, Jagannath and Mr10001,
+    as well as VGK Admins, Directors, and Key Leadership.
     All other staff are strictly restricted to members registered by them or assigned to them.
     """
     if not user:
@@ -108,6 +109,11 @@ def _has_full_vgk_visibility(user: StaffEmployee) -> bool:
         return True
     full_name = (getattr(user, 'full_name', '') or getattr(user, 'name', '') or '').lower()
     if any(k in full_name for k in ('anushka', 'nandana', 'subhash', 'subash', 'yaswanth', 'jagannath', 'jagannadh')):
+        return True
+    if getattr(user, 'is_supreme', False) or getattr(user, 'is_superuser', False):
+        return True
+    # Leadership, Directors, and VGK Admins
+    if _is_vgk_admin(user):
         return True
     return False
 
@@ -976,7 +982,15 @@ def list_vgk_members(
         d['can_edit_assignment'] = is_admin
         d['can_edit_status'] = is_admin or (as_id == current_user.id)
 
-    return {"success": True, "total": total, "page": page, "page_size": page_size, "data": items, "members": items}
+    return {
+        "success": True,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "has_full_visibility": _has_full_vgk_visibility(current_user),
+        "data": items,
+        "members": items
+    }
 
 
 # ── [DC-VGK-ASSIGN-001] VGK Staff Options & Management Endpoints ─────────────

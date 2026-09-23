@@ -199,7 +199,7 @@ def get_registration_public(reg_id: int, db: Session = Depends(get_db)):
 def format_guc_telugu_confirmation_message(reg_data: dict) -> str:
     """
     Construct official Telugu WhatsApp confirmation message for Pendurthi Ganesh Utsava Committee.
-    Includes committee convenors, official committee contact 8897797667, official WhatsApp group link,
+    Includes committee convenors, official committee contact 8019045667, official WhatsApp group link,
     and Instagram page.
     """
     assoc = (reg_data.get("association_name") or "గణేష్ ఉత్సవ సమితి").strip()
@@ -222,7 +222,7 @@ def format_guc_telugu_confirmation_message(reg_data: dict) -> str:
         f"*సమితి ముఖ్యులు:*\n"
         f"• *కన్వీనర్:* విశ్వనాథ్ కారి (Viswanath Kaari)\n"
         f"• *కో-కన్వీనర్:* అద్దిభట్ల భాస్కరరావు (Addibhatla Bhaskar Rao)\n"
-        f"📞 *పెందుర్తి సమితి సంప్రదింపు నెంబర్:* 8897797667\n\n"
+        f"📞 *పెందుర్తి సమితి సంప్రదింపు నెంబర్:* 8019045667\n\n"
         f"📲 *అధికారిక వాట్సాప్ గ్రూప్ లింక్ (Join Official Group):*\n"
         f"https://chat.whatsapp.com/CaJpflWEiJm6Iutz7EzvPy?s=cl&p=i&mlu=0&ilr=4\n\n"
         f"🎥 *అధికారిక ఇన్‌స్టాగ్రామ్ పేజీ (Follow on Instagram):*\n"
@@ -390,7 +390,7 @@ def dispatch_guc_whatsapp_messages(phones: List[str], message: str, db: Optional
                             message_type="guc_confirmation",
                             mobile_number=c10,
                             message_body=message,
-                            from_number="8897797667",
+                            from_number="8019045667",
                             to_number=f"+{clean_p}",
                             provider="SCANNED_BOT",
                             initial_status="sent",
@@ -433,7 +433,7 @@ def dispatch_guc_whatsapp_messages(phones: List[str], message: str, db: Optional
                             message_type="guc_confirmation",
                             mobile_number=c10,
                             message_body=message,
-                            from_number="8897797667",
+                            from_number="8019045667",
                             to_number=f"+{clean_p}",
                             provider="SCANNED_QUEUE",
                             initial_status="queued",

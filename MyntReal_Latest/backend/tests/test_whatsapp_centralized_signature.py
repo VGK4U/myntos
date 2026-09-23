@@ -109,8 +109,8 @@ class TestWhatsAppCentralizedSignature(unittest.TestCase):
         # STRICT NEGATIVE CHECKS:
         # WhatsApp MUST NEVER contain 80317 28899
         self.assertNotIn("80317", wa_sig)
-        # Ivy MUST NEVER contain 88977 97667
-        self.assertNotIn("88977", ivy_sig)
+        # Ivy MUST NEVER contain 80190 45667
+        self.assertNotIn("80190", ivy_sig)
 
     def test_10_format_staff_message_channel_aware(self):
         msg = "Appointment confirmed."
@@ -121,7 +121,7 @@ class TestWhatsAppCentralizedSignature(unittest.TestCase):
         self.assertNotIn("80317", wa_msg)
 
         self.assertIn("+91 85858 52738 | +91 80317 28899", ivy_msg)
-        self.assertNotIn("88977", ivy_msg)
+        self.assertNotIn("80190", ivy_msg)
 
     def test_11_strip_complex_and_stacked_signatures(self):
         # Case with dash and designation

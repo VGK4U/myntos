@@ -497,6 +497,11 @@
                 </button>
             </li>
             <li class="nav-item">
+                <button class="nav-link" data-tab="extensions" onclick="switchTab('extensions')">
+                    <i class="fas fa-phone-volume text-success"></i> Extensions
+                </button>
+            </li>
+            <li class="nav-item">
                 <button class="nav-link" data-tab="today" onclick="switchTab('today')">
                     <i class="fas fa-calendar-day"></i> Day Update
                 </button>
@@ -661,6 +666,135 @@
 
         </div>
         <!-- /Day Progress Panel -->
+
+        <!-- ── Extensions Directory Panel (2nd tab accessible to all employees) ── -->
+        <div id="extensionsPanel" style="display:none; padding-top:16px;">
+            <!-- Hero Hotline Card -->
+            <div style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);border-radius:14px;padding:20px 24px;color:#fff;margin-bottom:20px;box-shadow:0 10px 25px -5px rgba(15,23,42,0.25);">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge" style="background:rgba(56,189,248,0.2);color:#38bdf8;border:1px solid rgba(56,189,248,0.4);font-weight:700;font-size:11px;letter-spacing:0.5px;">
+                                <i class="fas fa-network-wired me-1"></i> LIVE TELEPHONY &amp; IVR DIRECTORY
+                            </span>
+                            <span class="badge" style="background:rgba(34,197,94,0.2);color:#4ade80;border:1px solid rgba(34,197,94,0.4);font-weight:700;font-size:11px;">
+                                <i class="fas fa-check-circle me-1"></i> DYNAMIC SYNC
+                            </span>
+                        </div>
+                        <h4 style="margin:0;color:#fff;font-weight:800;font-size:22px;letter-spacing:0.5px;">
+                            Central Helpline: <span style="color:#38bdf8;">+91 85858 52738</span> <span style="font-weight:400;color:#94a3b8;font-size:18px;">|</span> <span style="color:#38bdf8;">+91 8897797667</span>
+                        </h4>
+                        <div style="color:#cbd5e1;font-size:12.5px;margin-top:6px;max-width:760px;line-height:1.5;">
+                            Authoritative directory of IVR Department Keypad Extensions (1–9, 0) and Staff Extensions. Automatically synchronizes in real-time with CRM lead handlers, active staff records, and WhatsApp templates.
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <button class="btn btn-sm btn-light fw-bold" onclick="loadExtensionsDirectory(true)" title="Reload latest data from database" style="border-radius:8px;padding:8px 14px;">
+                            <i class="fas fa-sync-alt text-primary me-1" id="extRefreshIcon"></i> Refresh Directory
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3 Pillars Explanation -->
+                <div class="row g-3 mt-2 pt-3" style="border-top:1px solid rgba(255,255,255,0.12);">
+                    <div class="col-md-4">
+                        <div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;font-size:12px;border:1px solid rgba(255,255,255,0.08);height:100%;">
+                            <div style="font-weight:700;color:#38bdf8;margin-bottom:2px;"><i class="fas fa-random me-1"></i> 1. First-Time Call Routing</div>
+                            <div style="color:#cbd5e1;">Inbound callers selecting a Department/Segment trigger simultaneous dialing to all active online agents for that segment in parallel.</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;font-size:12px;border:1px solid rgba(255,255,255,0.08);height:100%;">
+                            <div style="font-weight:700;color:#a78bfa;margin-bottom:2px;"><i class="fas fa-hashtag me-1"></i> 2. Direct Staff Extensions</div>
+                            <div style="color:#cbd5e1;">Callers entering a staff extension (derived from employee code) connect directly to that individual employee's SIP softphone.</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:10px 12px;font-size:12px;border:1px solid rgba(255,255,255,0.08);height:100%;">
+                            <div style="font-weight:700;color:#34d399;margin-bottom:2px;"><i class="fas fa-link me-1"></i> 3. Sticky Returning Attribution</div>
+                            <div style="color:#cbd5e1;">Callers with an existing CRM lead or recent call session bypass IVR menus and connect directly to their dedicated lead owner.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls bar: Search & Filters -->
+            <div class="card mb-3" style="border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                <div class="card-body p-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-5">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                                <input type="text" class="form-control form-control-sm border-start-0" id="extSearchInput" placeholder="Search staff, extension, department, or segment..." oninput="filterExtensionsDirectory()">
+                                <button class="btn btn-outline-secondary btn-sm" type="button" onclick="clearExtSearch()"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select form-select-sm" id="extDeptFilter" onchange="filterExtensionsDirectory()">
+                                <option value="ALL">All Departments</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select form-select-sm" id="extSegmentFilter" onchange="filterExtensionsDirectory()">
+                                <option value="ALL">All Segments</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 1: Department Keypad Extensions -->
+            <div class="card mb-4" style="border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                <div class="card-header bg-white d-flex align-items-center justify-content-between py-3" style="border-bottom:1px solid #e2e8f0;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="width:28px;height:28px;border-radius:6px;background:#eff6ff;color:#2563eb;display:flex;align-items:center;justify-content:center;font-size:13px;">
+                            <i class="fas fa-th"></i>
+                        </span>
+                        <h6 style="margin:0;font-weight:800;color:#0f172a;font-size:15px;">IVR Department Keypad Extensions (1–9, 0)</h6>
+                        <span class="badge bg-light text-muted border ms-1" id="deptExtCountBadge">8 Departments</span>
+                    </div>
+                    <span class="small text-muted">Bilingual Telugu &amp; English IVR Gate</span>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row g-3" id="ivrDeptCardsGrid">
+                        <!-- Rendered dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section 2: Staff Extensions Directory Table -->
+            <div class="card mb-4" style="border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                <div class="card-header bg-white d-flex align-items-center justify-content-between py-3" style="border-bottom:1px solid #e2e8f0;">
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="width:28px;height:28px;border-radius:6px;background:#f0fdf4;color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:13px;">
+                            <i class="fas fa-users"></i>
+                        </span>
+                        <h6 style="margin:0;font-weight:800;color:#0f172a;font-size:15px;">Active Staff Extensions &amp; Assigned Segments</h6>
+                        <span class="badge bg-light text-muted border ms-1" id="staffExtCountBadge">Loading...</span>
+                    </div>
+                    <div class="small text-muted">Click any row to copy standard WhatsApp signature</div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="staffExtTable" style="min-width:760px;">
+                            <thead style="background:#f8fafc;border-bottom:2px solid #e2e8f0;">
+                                <tr style="font-size:11.5px;color:#475569;text-transform:uppercase;letter-spacing:0.5px;">
+                                    <th style="padding:12px 16px;width:120px;">Extension</th>
+                                    <th style="padding:12px 14px;width:110px;">Emp Code</th>
+                                    <th style="padding:12px 14px;">Staff Name</th>
+                                    <th style="padding:12px 14px;">Department</th>
+                                    <th style="padding:12px 14px;">Active Segments</th>
+                                    <th style="padding:12px 16px;text-align:right;width:160px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="staffExtTableBody">
+                                <tr><td colspan="6" class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Loading extensions directory...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- ── Day Update Panel (custom single-day view) ───────────────── -->
         <div id="dayUpdatePanel" class="hidden" style="padding-top:16px;">
@@ -4907,6 +5041,217 @@
 
 
 
+        function escapeHtml(s) {
+            if (s === null || s === undefined) return '';
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        let _extensionsData = null;
+
+        async function loadExtensionsDirectory(forceRefresh = false) {
+            const tableBody = document.getElementById('staffExtTableBody');
+            const deptGrid = document.getElementById('ivrDeptCardsGrid');
+            const refreshIcon = document.getElementById('extRefreshIcon');
+            if (refreshIcon) refreshIcon.classList.add('fa-spin');
+
+            if (_extensionsData && !forceRefresh) {
+                renderExtensionsDirectory(_extensionsData);
+                if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+                return;
+            }
+
+            try {
+                let resp = null;
+                if (typeof staffFetchJson === 'function') {
+                    resp = await staffFetchJson('/api/v1/crm/universal-history/extensions');
+                } else if (typeof staffFetch === 'function') {
+                    const raw = await staffFetch('/api/v1/crm/universal-history/extensions');
+                    resp = (raw && typeof raw.json === 'function') ? await raw.json() : raw;
+                } else {
+                    const raw = await fetch('/api/v1/crm/universal-history/extensions');
+                    resp = await raw.json();
+                }
+
+                if (resp && resp.success) {
+                    _extensionsData = resp;
+                    populateExtensionFilters(resp);
+                    renderExtensionsDirectory(resp);
+                } else {
+                    if (tableBody) tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">Failed to load extensions directory: ${resp?.detail || 'Server error'}</td></tr>`;
+                }
+            } catch (err) {
+                // Defensive fallback to direct public endpoint fetch if token middleware had an issue
+                try {
+                    const raw = await fetch('/api/v1/crm/universal-history/extensions');
+                    const resp = await raw.json();
+                    if (resp && resp.success) {
+                        _extensionsData = resp;
+                        populateExtensionFilters(resp);
+                        renderExtensionsDirectory(resp);
+                        return;
+                    }
+                } catch (fallbackErr) {}
+                console.error('[EXTENSIONS-DIRECTORY] Error loading:', err);
+                if (tableBody) tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-danger">Error loading directory: ${err.message}</td></tr>`;
+            } finally {
+                if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+            }
+        }
+
+        function populateExtensionFilters(data) {
+            const deptSel = document.getElementById('extDeptFilter');
+            const segSel = document.getElementById('extSegmentFilter');
+            if (!deptSel || !segSel) return;
+
+            const currentDept = deptSel.value;
+            const currentSeg = segSel.value;
+
+            const depts = new Set();
+            (data.staff || []).forEach(s => { if (s.department) depts.add(s.department); });
+            deptSel.innerHTML = '<option value="ALL">All Departments</option>' + 
+                Array.from(depts).sort().map(d => `<option value="${escapeHtml(d)}" ${d === currentDept ? 'selected' : ''}>${escapeHtml(d)}</option>`).join('');
+
+            const segments = new Set();
+            (data.departments || []).forEach(d => { if (d.segment) segments.add(d.segment); });
+            (data.staff || []).forEach(s => { (s.segments || []).forEach(seg => segments.add(seg)); });
+            segSel.innerHTML = '<option value="ALL">All Segments</option>' + 
+                Array.from(segments).sort().map(s => `<option value="${escapeHtml(s)}" ${s === currentSeg ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('');
+        }
+
+        function renderExtensionsDirectory(data) {
+            renderDeptKeypadCards(data.departments || []);
+            filterExtensionsDirectory();
+        }
+
+        function renderDeptKeypadCards(departments) {
+            const grid = document.getElementById('ivrDeptCardsGrid');
+            const countBadge = document.getElementById('deptExtCountBadge');
+            if (!grid) return;
+            if (countBadge) countBadge.textContent = `${departments.length} Departments`;
+
+            if (!departments.length) {
+                grid.innerHTML = '<div class="col-12 text-center text-muted py-3">No active department extensions configured.</div>';
+                return;
+            }
+
+            grid.innerHTML = departments.map(d => `
+                <div class="col-md-6 col-lg-3">
+                    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;height:100%;display:flex;flex-direction:column;justify-content:space-between;transition:transform 0.15s, box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.06)';this.style.transform='translateY(-2px)'" onmouseout="this.style.boxShadow='none';this.style.transform='none'">
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span style="width:34px;height:34px;border-radius:8px;background:#eff6ff;color:#2563eb;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;border:1px solid #bfdbfe;">
+                                    ${escapeHtml(d.key)}
+                                </span>
+                                <span class="badge" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-size:10px;font-weight:700;text-transform:uppercase;">
+                                    ${escapeHtml(d.segment || 'MAIN')}
+                                </span>
+                            </div>
+                            <div style="font-weight:700;font-size:13.5px;color:#0f172a;line-height:1.3;">${escapeHtml(d.name)}</div>
+                            <div style="font-size:11.5px;color:#64748b;margin-top:3px;line-height:1.4;">${escapeHtml(d.description || '')}</div>
+                        </div>
+                        <div style="font-size:11px;color:#059669;margin-top:8px;padding-top:6px;border-top:1px dashed #e2e8f0;font-style:italic;">
+                            <i class="fas fa-volume-up me-1"></i> "${escapeHtml(d.announcement_en || '')}"
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterExtensionsDirectory() {
+            if (!_extensionsData) return;
+            const q = (document.getElementById('extSearchInput')?.value || '').toLowerCase().trim();
+            const dept = document.getElementById('extDeptFilter')?.value || 'ALL';
+            const seg = document.getElementById('extSegmentFilter')?.value || 'ALL';
+            const tbody = document.getElementById('staffExtTableBody');
+            const countBadge = document.getElementById('staffExtCountBadge');
+            if (!tbody) return;
+
+            let staff = _extensionsData.staff || [];
+
+            if (dept !== 'ALL') {
+                staff = staff.filter(s => s.department === dept);
+            }
+            if (seg !== 'ALL') {
+                staff = staff.filter(s => (s.segments || []).some(sg => sg.toLowerCase() === seg.toLowerCase()));
+            }
+            if (q) {
+                staff = staff.filter(s => 
+                    (s.name || '').toLowerCase().includes(q) ||
+                    (s.emp_code || '').toLowerCase().includes(q) ||
+                    String(s.extension || '').toLowerCase().includes(q) ||
+                    (s.department || '').toLowerCase().includes(q) ||
+                    (s.segments || []).some(sg => sg.toLowerCase().includes(q))
+                );
+            }
+
+            if (countBadge) countBadge.textContent = `${staff.length} Active Staff`;
+
+            if (!staff.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No staff members match the selected filters.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = staff.map(s => {
+                const segBadges = (s.segments && s.segments.length)
+                    ? s.segments.map(sg => `<span class="badge" style="background:#ede9fe;color:#6d28d9;border:1px solid #ddd6fe;font-size:10px;font-weight:600;margin-right:3px;">${escapeHtml(sg)}</span>`).join('')
+                    : '<span class="text-muted" style="font-size:11px;">—</span>';
+
+                const extBadge = s.extension && s.extension !== 'N/A'
+                    ? `<span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:13px;font-weight:800;padding:4px 8px;">Ext: ${escapeHtml(s.extension)}</span>`
+                    : `<span class="badge bg-light text-muted border" style="font-size:11px;">N/A</span>`;
+
+                return `
+                    <tr>
+                        <td style="padding:10px 16px;">${extBadge}</td>
+                        <td style="padding:10px 14px;font-family:monospace;font-weight:600;color:#64748b;font-size:12px;">${escapeHtml(s.emp_code)}</td>
+                        <td style="padding:10px 14px;font-weight:700;color:#0f172a;font-size:13px;">${escapeHtml(s.name)}</td>
+                        <td style="padding:10px 14px;color:#475569;font-size:12.5px;">${escapeHtml(s.department)}</td>
+                        <td style="padding:10px 14px;">${segBadges}</td>
+                        <td style="padding:10px 16px;text-align:right;">
+                            <div class="d-inline-flex gap-1">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" style="font-size:11px;padding:3px 8px;border-radius:6px;" onclick="copyStaffSignature('${escapeHtml(s.name)}', '${escapeHtml(s.extension)}')" title="Copy standard WhatsApp Signature">
+                                    <i class="fab fa-whatsapp text-success me-1"></i>Copy Sig
+                                </button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" style="font-size:11px;padding:3px 8px;border-radius:6px;" onclick="copyExtOnly('${escapeHtml(s.extension)}')" title="Copy Extension Number">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function clearExtSearch() {
+            const input = document.getElementById('extSearchInput');
+            if (input) input.value = '';
+            filterExtensionsDirectory();
+        }
+
+        function copyStaffSignature(name, ext) {
+            const hasExt = ext && ext !== 'N/A';
+            const sig = `Regards,\n${name}\n📞 +91 85858 52738 | +91 8897797667${hasExt ? '\nExt: ' + ext : ''}`;
+            navigator.clipboard?.writeText(sig).then(() => {
+                alert(`Copied WhatsApp Signature for ${name}:\n\n${sig}`);
+            }).catch(() => {
+                prompt("Copy signature:", sig);
+            });
+        }
+
+        function copyExtOnly(ext) {
+            if (!ext || ext === 'N/A') return;
+            navigator.clipboard?.writeText(ext).then(() => {
+                alert(`Copied Extension: ${ext}`);
+            }).catch(() => {
+                prompt("Copy extension:", ext);
+            });
+        }
+
         function switchTab(tab) {
             currentTab = tab;
 
@@ -4916,12 +5261,15 @@
             });
 
             const dayProgressPanel = document.getElementById('dayProgressPanel');
+            const extPanel = document.getElementById('extensionsPanel');
             const filterBar = document.getElementById('progressFilterBar');
             const loadingSpinner = document.getElementById('loadingSpinner');
             const progressContent = document.getElementById('progressContent');
             const execContent = document.getElementById('executiveDashboardContent');
             const myTeamPanel = document.getElementById('myTeamPanel');
 
+            // Hide extensions panel unless on it
+            if (extPanel) extPanel.style.display = 'none';
             // Hide my team panel unless we're on it
             if (myTeamPanel) myTeamPanel.style.display = 'none';
             // Hide quarterly bonus panel unless we're on it
@@ -4936,6 +5284,20 @@
                 loadingSpinner.classList.add('hidden');
                 progressContent.classList.add('hidden');
                 loadDayProgress();
+                return;
+            }
+
+            if (tab === 'extensions') {
+                dayProgressPanel.style.display = 'none';
+                const dayUpdatePanel = document.getElementById('dayUpdatePanel');
+                if (dayUpdatePanel) dayUpdatePanel.classList.add('hidden');
+                filterBar.style.display = 'none';
+                loadingSpinner.classList.add('hidden');
+                progressContent.classList.add('hidden');
+                const teamOverview = document.getElementById('teamOverviewContent');
+                if (teamOverview) teamOverview.classList.add('hidden');
+                if (extPanel) extPanel.style.display = '';
+                loadExtensionsDirectory();
                 return;
             }
 

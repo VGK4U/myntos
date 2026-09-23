@@ -6,7 +6,7 @@ Strictly read-only with complete tenant/company authorization and phone masking.
 
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -190,3 +190,27 @@ def get_full_history(
         db.rollback()
         logger.exception(f"[UniversalHistory] /full error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to load full history: {str(e)}")
+
+
+@router.get("/extensions")
+def get_extensions_directory(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Authoritative IVR Department & Staff Extension Directory for Universal History Modal."""
+    try:
+        current_user = None
+        try:
+            current_user = get_current_staff_user(request, db)
+        except Exception:
+            pass
+        data = UniversalHistoryService.get_extensions_directory(db, company_id=getattr(current_user, "base_company_id", None))
+        return {
+            "success": True,
+            **data
+        }
+    except Exception as e:
+        db.rollback()
+        logger.exception(f"[UniversalHistory] /extensions error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to load extensions directory: {str(e)}")
+

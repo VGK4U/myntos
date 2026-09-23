@@ -703,7 +703,17 @@ th.mb-sticky-1, th.mb-sticky-2, th.mb-sticky-3 {
         <th style="text-align:center;width:50px">WA</th>
       </tr>
     </thead>
-    <tbody id="membersTable"><tr><td colspan="31" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr></tbody>
+    <tbody id="membersTable">
+      <tr>
+        <td colspan="31" style="padding:0;border:none">
+          <div style="position:sticky;left:0;width:100%;max-width:calc(100vw - 80px);min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
+            <i class="fas fa-spinner fa-spin fa-2x mb-3" style="color:#7c3aed"></i>
+            <div style="font-weight:600;font-size:14px;color:#374151">Loading Channel Partners…</div>
+            <div style="font-size:12px;color:#9ca3af;margin-top:4px">Fetching partner records and performance data</div>
+          </div>
+        </td>
+      </tr>
+    </tbody>
   </table>
   </div>
   <div class="pagination" id="paginationBar"></div>
@@ -4680,32 +4690,72 @@ async function loadMembers(page = 1) {
   if (desigFilter) url += '&rank_level=' + encodeURIComponent(desigFilter) + '&designation_tier=' + encodeURIComponent(desigFilter);
   if (categoryFilter) url += '&category_id=' + encodeURIComponent(categoryFilter);
   if (eligFilter) url += '&eligibility_filter=' + encodeURIComponent(eligFilter);
-  if (window._regPeriod) url += '&reg_period=' + encodeURIComponent(window._regPeriod);
-  if (window._regMonth) {
-    const [yr, mo] = window._regMonth.split('-').map(Number);
+  const curRegPeriod = _regPeriod || window._regPeriod || '';
+  if (curRegPeriod) url += '&reg_period=' + encodeURIComponent(curRegPeriod);
+  const curRegMonth = _regMonth || window._regMonth || '';
+  if (curRegMonth) {
+    const [yr, mo] = curRegMonth.split('-').map(Number);
     const lastDay = new Date(yr, mo, 0).getDate();
     url += `&reg_from=${yr}-${String(mo).padStart(2,'0')}-01&reg_to=${yr}-${String(mo).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
   }
-  if (window._sortBy) url += '&sort_by=' + encodeURIComponent(window._sortBy) + '&sort_dir=' + (window._sortDir || 'desc');
+  const curSortBy = _sortBy || window._sortBy || '';
+  const curSortDir = _sortDir || window._sortDir || 'desc';
+  if (curSortBy) url += '&sort_by=' + encodeURIComponent(curSortBy) + '&sort_dir=' + encodeURIComponent(curSortDir);
   const regByFilter = (document.getElementById('regByFilter')?.value || '').trim().toUpperCase();
   if (regByFilter) url += '&registered_by_emp_code=' + encodeURIComponent(regByFilter);
   const referrerFilter = (document.getElementById('referrerFilter')?.value || '').trim();
   if (referrerFilter) url += '&referred_by=' + encodeURIComponent(referrerFilter);
 
-  tbody.innerHTML = '<tr><td colspan="31" style="text-align:center;padding:30px;color:#9ca3af"><i class="fas fa-spinner fa-spin me-2"></i>Loading…</td></tr>';
+  tbody.innerHTML = `<tr><td colspan="31" style="padding:0;border:none">
+    <div style="position:sticky;left:0;width:100%;max-width:calc(100vw - 80px);min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
+      <i class="fas fa-spinner fa-spin fa-2x mb-3" style="color:#7c3aed"></i>
+      <div style="font-weight:600;font-size:14px;color:#374151">Loading Channel Partners…</div>
+      <div style="font-size:12px;color:#9ca3af;margin-top:4px">Fetching partner records and performance data</div>
+    </div>
+  </td></tr>`;
   try {
     const r = await staffFetch(url);
     const d = await r.json();
     if (!d.success) {
       showToast(d.detail || d.error || 'Failed to load Channel Partners', 'error');
-      tbody.innerHTML = `<tr><td colspan="31" style="text-align:center;padding:30px;color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>Failed to load: ${(d.detail || d.error || 'Unknown error')}<br><button class="btn-filter apply" style="margin-top:12px" onclick="loadMembers(${page})"><i class="fas fa-redo me-1"></i>Retry</button></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="31" style="padding:0;border:none">
+        <div style="position:sticky;left:0;width:100%;max-width:calc(100vw - 80px);min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
+          <div style="width:48px;height:48px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin-bottom:12px">
+            <i class="fas fa-exclamation-triangle" style="font-size:20px;color:#dc2626"></i>
+          </div>
+          <div style="font-weight:700;font-size:15px;color:#dc2626">Failed to load Channel Partners</div>
+          <div style="font-size:12.5px;color:#6b7280;margin-top:5px;max-width:440px">${(d.detail || d.error || 'Server returned an error')}</div>
+          <button class="btn-filter apply" style="margin-top:14px" onclick="loadMembers(${page})"><i class="fas fa-redo me-1"></i>Retry</button>
+        </div>
+      </td></tr>`;
       return;
     }
     const tb = document.getElementById('totalBadge');
     if (tb) tb.textContent = d.total || 0;
     const membersList = d.data || d.members || [];
     if (!membersList.length) {
-      tbody.innerHTML = '<tr><td colspan="31" style="text-align:center;padding:30px;color:#9ca3af">No Channel Partners found</td></tr>';
+      const hasFilter = Boolean(search || status !== '' || assignedStaffFilter || contactedDaysFilter || desigFilter || categoryFilter || eligFilter || regByFilter || referrerFilter || curRegPeriod || curRegMonth);
+      let emptyTitle = 'No Channel Partners found';
+      let emptyDesc = 'No Channel Partners match the selected search or filter criteria. Try adjusting your filters above.';
+      if (!hasFilter) {
+        if (d.has_full_visibility === false || (_staffMe && !_isVgkAdmin() && !_isRoyaltyAdmin())) {
+          emptyTitle = 'No Channel Partners Assigned';
+          emptyDesc = 'You are viewing members assigned to you or registered with your employee code. Partners assigned to you by VGK Leadership or registered by you will appear here.';
+        } else {
+          emptyTitle = 'No Channel Partners enrolled yet';
+          emptyDesc = 'Click "+ Add Channel Partner" above to register new channel partners.';
+        }
+      }
+      tbody.innerHTML = `<tr><td colspan="31" style="padding:0;border:none">
+        <div style="position:sticky;left:0;width:100%;max-width:calc(100vw - 80px);min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
+          <div style="width:52px;height:52px;border-radius:50%;background:#f5f3ff;display:flex;align-items:center;justify-content:center;margin-bottom:12px">
+            <i class="fas fa-users-slash" style="font-size:22px;color:#7c3aed"></i>
+          </div>
+          <div style="font-weight:700;font-size:15px;color:#374151">${emptyTitle}</div>
+          <div style="font-size:12.5px;color:#6b7280;margin-top:5px;max-width:460px;line-height:1.5">${emptyDesc}</div>
+          ${hasFilter ? `<button class="btn-filter" style="margin-top:14px;background:#f3f4f6;color:#374151;border:1px solid #d1d5db" onclick="resetFilters()"><i class="fas fa-undo me-1"></i>Reset Filters</button>` : ''}
+        </div>
+      </td></tr>`;
     } else {
       membersList.forEach(m => { (window._vgkMemberCache = window._vgkMemberCache || {})[m.id] = m; });
       tbody.innerHTML = membersList.map((m, index) => {
@@ -4833,7 +4883,16 @@ async function loadMembers(page = 1) {
   } catch(e) {
     console.error('[ERROR loadMembers]', e);
     showToast('Error loading Channel Partners', 'error');
-    tbody.innerHTML = `<tr><td colspan="31" style="text-align:center;padding:25px;color:#dc2626"><i class="fas fa-exclamation-circle me-2"></i>Error loading data: ${e.message}<br><button class="btn-filter apply" style="margin-top:12px" onclick="loadMembers(${page})"><i class="fas fa-redo me-1"></i>Retry</button></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="31" style="padding:0;border:none">
+      <div style="position:sticky;left:0;width:100%;max-width:calc(100vw - 80px);min-height:220px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:45px 20px;text-align:center">
+        <div style="width:48px;height:48px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin-bottom:12px">
+          <i class="fas fa-exclamation-circle" style="font-size:20px;color:#dc2626"></i>
+        </div>
+        <div style="font-weight:700;font-size:15px;color:#dc2626">Error loading data</div>
+        <div style="font-size:12.5px;color:#6b7280;margin-top:5px;max-width:440px">${e.message}</div>
+        <button class="btn-filter apply" style="margin-top:14px" onclick="loadMembers(${page})"><i class="fas fa-redo me-1"></i>Retry</button>
+      </div>
+    </td></tr>`;
   }
 }
 
@@ -5608,7 +5667,6 @@ async function openMemberHistory(memberId) {
   const modal = document.getElementById('vgkHistoryModal');
   if (modal) modal.style.display = 'flex';
 
-  const m = (window._vgkMemberCache && window._vgkMemberCache[memberId]) || {};
   const isBlocked = Boolean(m.is_blocked || m.member_status === 'BLOCKED');
 
   const infoEl = document.getElementById('vhMemberInfo');

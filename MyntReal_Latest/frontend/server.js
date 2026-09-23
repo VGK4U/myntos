@@ -30709,6 +30709,19 @@ async function processAction(id, action){
       res.end(data);
     });
 
+  } else if (url.startsWith('/catalog/vgk4u') || url === '/vgk4u' || url.startsWith('/vgk4u?') || url.startsWith('/catalog/vgk-4u') || url === '/vgk-catalogue' || url === '/vgk4u-catalog' || url.startsWith('/vgk4u-catalog?')) {
+    // Dedicated VGK4U Dynamic Web Catalogue Page (18-Section Master Journey)
+    const vgkPath = path.join(__dirname, 'vgk4u_catalog.html');
+    fs.readFile(vgkPath, 'utf8', (err, data) => {
+      if (err) { res.writeHead(404); res.end('VGK4U catalog page not found'); return; }
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'X-Frame-Options': 'SAMEORIGIN'
+      });
+      res.end(data);
+    });
+
   } else if (url.startsWith('/c/') || url === '/c') {
     // Short catalog link redirect: /c/{share_ref_code}
     const cleanRef = url.split('?')[0].replace(/^\/c\/?/, '').trim();

@@ -7085,6 +7085,30 @@ def enqueue_bot_message(payload: dict = Body(...), db: Session = Depends(get_db)
         return {"success": False, "error": str(e)}
 
 
+def expire_stale_pending_queue(db: Session, max_age_hours: int = 2) -> int:
+    """
+    Anti-Ban & Stale Backlog Guard:
+    Automatically expires any pending messages older than max_age_hours (default: 2 hours).
+    Prevents delivering stale marketing broadcasts or outdated alerts after prolonged gateway downtime or reconnection.
+    """
+    from sqlalchemy import text
+    try:
+        res = db.execute(text("""
+            UPDATE whatsapp_bot_queue
+            SET status = 'expired',
+                error_message = 'Dispatch expired: Time-sensitive pending message superseded (>2 hours old).',
+                result_payload = COALESCE(result_payload, '{}'::jsonb) || '{"expired_reason": "stale_pending_exceeded_2h"}'::jsonb
+            WHERE status = 'pending'
+              AND (created_at IS NULL OR created_at < NOW() - (:hrs || ' hours')::interval)
+        """), {"hrs": str(max_age_hours)})
+        db.commit()
+        return res.rowcount
+    except Exception as e:
+        db.rollback()
+        logger.warning(f"[WA-STALE-PENDING-GUARD] Error expiring stale pending items: {e}")
+        return 0
+
+
 def recover_stale_queue_claims(db: Session, threshold_seconds: int = 60) -> int:
     """
     Recovers orphaned/stale queue items in 'processing' status from dead workers or terminated EC2 instances.
@@ -7103,6 +7127,12 @@ def recover_stale_queue_claims(db: Session, threshold_seconds: int = 60) -> int:
 
     reconciled_count = 0
     try:
+        # Step 0: Expire any stale unhandled pending queue items (> 2 hours old) first
+        try:
+            expire_stale_pending_queue(db, max_age_hours=2)
+        except Exception as pe:
+            logger.warning(f"[WA-STALE-RECOVERY] Pending expiry note: {pe}")
+
         rows = db.execute(text("""
             SELECT id, target_jid, message, created_at, result_payload
             FROM whatsapp_bot_queue
@@ -7264,8 +7294,9 @@ def poll_bot_queue(
     import json
     from datetime import datetime
 
-    # Heal any stale claims first
+    # Heal any stale claims & expire stale pending queue items (> 2 hours old) first
     try:
+        expire_stale_pending_queue(db, max_age_hours=2)
         recover_stale_queue_claims(db, threshold_seconds=60)
     except Exception as rh_err:
         logger.warning(f"[BOT-QUEUE-POLL] Stale recovery note: {rh_err}")

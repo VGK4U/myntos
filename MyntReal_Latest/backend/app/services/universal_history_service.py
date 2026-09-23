@@ -1288,3 +1288,198 @@ class UniversalHistoryService:
             "has_more": end_idx < total_count,
             "items": paginated_items,
         }
+
+    @classmethod
+    def get_extensions_directory(cls, db: Session, company_id: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Returns authoritative IVR Department keypad extensions, Staff extensions directory,
+        and Segment routing rules for Universal History.
+        """
+        departments = [
+            {
+                "key": "1",
+                "name": "Solar Solutions",
+                "segment": "solar",
+                "description": "Rooftop & Commercial Solar EPC, Net Metering, PM Surya Ghar",
+                "announcement_en": "Connecting your call to our Solar Solutions team. Please hold the line.",
+                "announcement_te": "మా సోలార్ సొల్యూషన్స్ బృందానికి మీ కాల్‌ను కనెక్ట్ చేస్తున్నాము. దయచేసి వేచి ఉండండి."
+            },
+            {
+                "key": "2",
+                "name": "Insurance Advisory",
+                "segment": "insurance",
+                "description": "General, Health, Motor & Commercial Risk Advisory",
+                "announcement_en": "Connecting your call to our Insurance Advisory desk. Please hold the line.",
+                "announcement_te": "మా ఇన్సూరెన్స్ అడ్వైజరీ విభాగానికి మీ కాల్‌ను కనెక్ట్ చేస్తున్నాము. దయచేసి వేచి ఉండండి."
+            },
+            {
+                "key": "3",
+                "name": "Training Desk (EV Training / ETC)",
+                "segment": "etc_training",
+                "description": "EV Technician Training, Skill Development & Certification",
+                "announcement_en": "Connecting your call to our Training desk. Please hold the line.",
+                "announcement_te": "మా ట్రైనింగ్ విభాగానికి మీ కాల్‌ను కనెక్ట్ చేస్తున్నాము. దయచేసి వేచి ఉండండి."
+            },
+            {
+                "key": "4",
+                "name": "Manthra EV",
+                "segment": "ev_b2b / ev_b2c / ev_spares",
+                "description": "Electric Scooters, Spares, Dealerships & Fleet Mobility",
+                "announcement_en": "Connecting your call to our Manthra E V team. Please hold the line.",
+                "announcement_te": "మా మంత్ర ఈవీ బృందానికి మీ కాల్‌ను కనెక్ట్ చేస్తున్నాము. దయచేసి వేచి ఉండండి."
+            },
+            {
+                "key": "5",
+                "name": "VGK 4U / Real Dreams",
+                "segment": "vgk_4u / real_dreams",
+                "description": "Real Estate Advisory, Housing Projects & Community Services",
+                "announcement_en": "Connecting your call to our V G K 4 U desk. Please hold the line.",
+                "announcement_te": "మా వి జీ కే ఫర్ యు విభాగానికి మీ కాల్‌ను కనెక్ట్ చేస్తున్నాము. దయచేసి వేచి ఉండండి."
+            },
+            {
+                "key": "6",
+                "name": "Service Support",
+                "segment": "service / support",
+                "description": "Field Technicians, Warranty Claims, Installations & Repairs",
+                "announcement_en": "Connecting your call to our Service and Support team. Please hold the line.",
+                "announcement_te": "మా సర్వీస్ మరియు సపోర్ట్ బృందానికి మీ కాల్‌ను కనెక్ట్ చేస్తున్నాము. దయచేసి వేచి ఉండండి."
+            },
+            {
+                "key": "9",
+                "name": "Customer Care Executives",
+                "segment": "customer_care",
+                "description": "Direct Customer Care & Inbound Concierge Desk",
+                "announcement_en": "Connecting you to our Customer Care Executives. Please hold the line.",
+                "announcement_te": "మా కస్టమర్ కేర్ ఎగ్జిక్యూటివ్‌లకు మీ కాల్‌ను కనెక్ట్ చేస్తున్నాము. దయచేసి వేచి ఉండండి."
+            },
+            {
+                "key": "0",
+                "name": "Main Menu Replay",
+                "segment": "main_menu",
+                "description": "Replay IVR bilingual options (Telugu / English)",
+                "announcement_en": "Replaying menu options.",
+                "announcement_te": "మెనూని మళ్లీ వినండి."
+            }
+        ]
+
+        from app.models.staff import StaffDepartment
+        from app.models.crm_handler import CRMLeadHandler, CRMLeadHandlerMember
+        from app.models.signup_category import SignupCategory
+
+        staff_employees = db.query(StaffEmployee).filter(
+            StaffEmployee.status.in_(['active', 'ACTIVE']),
+            StaffEmployee.is_deleted == False
+        ).order_by(StaffEmployee.department_id, StaffEmployee.id).all()
+
+        depts_map = {d.id: d.name for d in db.query(StaffDepartment).all()}
+
+        active_handlers = db.query(CRMLeadHandler).filter(CRMLeadHandler.is_active == True).all()
+        staff_segments = {}
+        for h in active_handlers:
+            cat = db.query(SignupCategory).filter(SignupCategory.id == h.category_id).first() if h.category_id else None
+            cat_name = cat.name if cat else 'General'
+            members = db.query(CRMLeadHandlerMember).filter(
+                CRMLeadHandlerMember.handler_id == h.id,
+                CRMLeadHandlerMember.is_active == True
+            ).all()
+            for m in members:
+                staff_segments.setdefault(m.employee_id, set()).add(cat_name)
+
+        staff_list = []
+        used_exts = set()
+
+        for s in staff_employees:
+            ext = cls.get_staff_extension_number(s)
+            if not ext:
+                continue
+
+            # Ensure set-based uniqueness if any future additions collide
+            candidate_ext = ext
+            inc = 1
+            while candidate_ext in used_exts:
+                candidate_ext = str(int(ext) + inc)
+                inc += 1
+            used_exts.add(candidate_ext)
+
+            emp_code = str(s.emp_code or "").strip()
+            full_name = s.full_name or f"{s.first_name or ''} {s.last_name or ''}".strip() or emp_code
+            dept_name = depts_map.get(s.department_id, 'General')
+            segs = sorted(list(staff_segments.get(s.id, [])))
+
+            staff_list.append({
+                "id": s.id,
+                "emp_code": emp_code,
+                "name": full_name,
+                "extension": candidate_ext,
+                "department": dept_name,
+                "segments": segs,
+                "phone": mask_phone_number(getattr(s, "phone", "") or getattr(s, "contact_number", "") or "", can_unmask=True)
+            })
+
+        routing_rules = {
+            "first_time_call": "When a first-time caller selects an IVR Department (Segment), the system resolves active CRM Lead Handlers for that segment and dials all online members simultaneously in parallel.",
+            "direct_extension": "Callers entering a staff extension (e.g. 136, 208, 216) are routed directly to the employee's softphone SIP endpoint.",
+            "sticky_returning_call": "Returning callers with existing CRM leads or recent VoIP call sessions bypass the menu and connect directly to their dedicated lead owner or telecaller.",
+            "ivr_numbers": "+91 85858 52738 | +91 8897797667"
+        }
+
+        return {
+            "departments": departments,
+            "staff": staff_list,
+            "routing_rules": routing_rules
+        }
+
+    @classmethod
+    def get_staff_extension_number(cls, staff_emp: Any) -> Optional[str]:
+        """
+        Authoritative single-source-of-truth extension derivation for staff employees.
+        Guarantees unique 3-digit PBX extensions:
+          - MR (Mynt Real) -> 1XX (e.g. MR10016 -> 116, MR10036 -> 136)
+          - MN (Manthra EV) -> 2XX (e.g. MN10008 -> 208, MN10016 -> 216)
+          - FL (Freelancer) -> 4XX (e.g. FL10004 -> 404)
+        Excludes System Administrator (MR10001) and automated test accounts.
+        """
+        if not staff_emp:
+            return None
+        emp_code = str(getattr(staff_emp, "emp_code", "") or (staff_emp if isinstance(staff_emp, str) else "")).strip().upper()
+        full_name = str(getattr(staff_emp, "full_name", "") or "").strip().upper()
+
+        if emp_code == "MR10001" or "SYSTEM ADMINISTRATOR" in full_name:
+            return None
+        if emp_code.startswith(('EMP_', 'SA_', 'TEST_', 'ZYLOG_', 'AIS_', 'ZMP', 'TECO_')) or 'TEST' in full_name:
+            return None
+
+        m = re.search(r'(\d{1,4})$', emp_code)
+        if not m:
+            return None
+        num = int(m.group(1))
+        last2 = f"{num % 100:02d}"
+
+        if emp_code.startswith('MR'):
+            return f"1{last2}"
+        elif emp_code.startswith('MN'):
+            return f"2{last2}"
+        elif emp_code.startswith('FL'):
+            return f"4{last2}"
+        return f"8{last2}"
+
+    @classmethod
+    def resolve_staff_by_extension(cls, db: Session, extension: str) -> Optional[StaffEmployee]:
+        """
+        Reverse-lookup: finds active staff member corresponding to dialed extension.
+        Matches 3-digit derived extension (e.g. '136', '208', '216').
+        """
+        clean_ext = str(extension or "").strip()
+        if not clean_ext:
+            return None
+
+        staff_employees = db.query(StaffEmployee).filter(
+            StaffEmployee.status.in_(['active', 'ACTIVE']),
+            StaffEmployee.is_deleted == False
+        ).all()
+
+        for s in staff_employees:
+            if cls.get_staff_extension_number(s) == clean_ext:
+                return s
+        return None
+

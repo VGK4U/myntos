@@ -77,6 +77,7 @@ export class DigitalCatalogPage {
   private isUploadingPdf = false;
 
   private readonly verticals = [
+    { code: "VGK4U", label: "VGK4U Master", icon: "👑" },
     { code: "SOLAR", label: "Solar", icon: "☀️" },
     { code: "INDUSTRIAL_HUB", label: "MyntReal Hub", icon: "🏢" },
     { code: "EV_B2C", label: "EV 2W Pricing", icon: "⚡" },
@@ -270,7 +271,9 @@ export class DigitalCatalogPage {
 
     // Extra route shortcuts
     let shortcutBtnHtml = "";
-    if (cat.segment_code === "SOLAR") {
+    if (cat.segment_code === "VGK4U" || cat.slug === "vgk4u") {
+      shortcutBtnHtml = `<button type="button" class="dc-btn-glass highlight-link dc-open-external-btn" data-url="${this.getCanonicalWebUrl("/catalog/vgk4u")}"><i class="fas fa-crown text-warning"></i> 18-Section Master</button>`;
+    } else if (cat.segment_code === "SOLAR") {
       shortcutBtnHtml = `<button type="button" class="dc-btn-glass highlight-link dc-open-external-btn" data-url="${this.getCanonicalWebUrl("/hub/hgs")}"><i class="fas fa-sun text-warning"></i> /hub/hgs</button>`;
     } else if (cat.segment_code === "ETC_TRAINING") {
       shortcutBtnHtml = `<button type="button" class="dc-btn-glass highlight-link dc-open-external-btn" data-url="${this.getCanonicalWebUrl("/hub/etc")}"><i class="fas fa-graduation-cap text-info"></i> /hub/etc</button>`;
@@ -441,7 +444,9 @@ export class DigitalCatalogPage {
 
   private getCanonicalPublicUrl(cat: Catalog): string {
     let path = `/catalog/${cat.segment_code.toLowerCase().replace(/_/g, "-")}/${cat.slug}`;
-    if (cat.segment_code === "HUB_PRICING" || cat.slug === "hub-ev-pricing") {
+    if (cat.segment_code === "VGK4U" || cat.slug === "vgk4u" || cat.slug === "vgk-master") {
+      path = "/catalog/vgk4u";
+    } else if (cat.segment_code === "HUB_PRICING" || cat.slug === "hub-ev-pricing") {
       path = "/catalog/hub-ev-pricing";
     } else if (cat.segment_code === "EV_B2C" || cat.slug === "ev-b2c-pricing") {
       path = "/catalog/ev-b2c-pricing";

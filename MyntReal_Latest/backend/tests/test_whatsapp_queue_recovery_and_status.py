@@ -28,7 +28,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.core.database import SessionLocal
 from sqlalchemy import text
-from app.api.v1.endpoints.whatsapp import recover_stale_queue_claims
+from app.api.v1.endpoints.whatsapp import recover_stale_queue_claims, expire_stale_pending_queue
 
 
 class TestWhatsAppQueueRecoveryAndStatus(unittest.TestCase):
@@ -36,14 +36,16 @@ class TestWhatsAppQueueRecoveryAndStatus(unittest.TestCase):
         self.client = TestClient(app)
         db = SessionLocal()
         # Clean test records
-        db.execute(text("DELETE FROM whatsapp_bot_queue WHERE instance_id LIKE 'test-%' OR target_jid LIKE 'test-%'"))
+        db.execute(text("DELETE FROM whatsapp_bot_queue WHERE instance_id LIKE 'test-%' OR target_jid LIKE 'test-%' OR instance_id = 'leader_worker' OR result_payload->>'job_id' = 'wa_bihourly_sales_perf_report'"))
+        db.execute(text("DELETE FROM automation_execution WHERE job_id = 'wa_bihourly_sales_perf_report'"))
         db.execute(text("DELETE FROM message_log WHERE message_sid LIKE 'test_%' OR mobile_number LIKE 'test_%'"))
         db.commit()
         db.close()
 
     def tearDown(self):
         db = SessionLocal()
-        db.execute(text("DELETE FROM whatsapp_bot_queue WHERE instance_id LIKE 'test-%' OR target_jid LIKE 'test-%'"))
+        db.execute(text("DELETE FROM whatsapp_bot_queue WHERE instance_id LIKE 'test-%' OR target_jid LIKE 'test-%' OR instance_id = 'leader_worker' OR result_payload->>'job_id' = 'wa_bihourly_sales_perf_report'"))
+        db.execute(text("DELETE FROM automation_execution WHERE job_id = 'wa_bihourly_sales_perf_report'"))
         db.execute(text("DELETE FROM message_log WHERE message_sid LIKE 'test_%' OR mobile_number LIKE 'test_%'"))
         db.commit()
         db.close()
@@ -400,6 +402,45 @@ class TestWhatsAppQueueRecoveryAndStatus(unittest.TestCase):
         self.assertEqual(row[0], "dispatch_uncertain")
         self.assertIn("dispatch_uncertain to prevent duplicate send", row[1])
         self.assertEqual(row[2].get("dispatch_stage"), "uncertain_send_boundary")
+
+    def test_m_stale_pending_messages_auto_expire_on_poll(self):
+        """Test M: Backlog pending messages older than 2 hours are automatically marked expired on poll."""
+        db = SessionLocal()
+        # Insert a stale pending message created 3 hours ago
+        res_stale = db.execute(text("""
+            INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, status, created_at, instance_id)
+            VALUES ('group', 'test-group@g.us', 'Stale pending message from 3 hours ago', 'pending', NOW() - INTERVAL '3 hours', 'test-stale-item')
+            RETURNING id
+        """))
+        stale_qid = res_stale.fetchone()[0]
+
+        # Insert a fresh pending message created 5 minutes ago
+        res_fresh = db.execute(text("""
+            INSERT INTO whatsapp_bot_queue (target_type, target_jid, message, status, created_at, instance_id)
+            VALUES ('group', 'test-group@g.us', 'Fresh pending message from 5 mins ago', 'pending', NOW() - INTERVAL '5 minutes', 'test-fresh-item')
+            RETURNING id
+        """))
+        fresh_qid = res_fresh.fetchone()[0]
+        db.commit()
+
+        # Poll the queue
+        poll_res = self.client.get("/api/v1/whatsapp/bot-queue-poll?limit=10&instance_id=test-worker-m")
+        self.assertEqual(poll_res.status_code, 200)
+        items = poll_res.json().get("items", [])
+        claimed_ids = [it["id"] for it in items]
+
+        # Verify: Fresh message was claimed into processing
+        self.assertIn(fresh_qid, claimed_ids)
+        # Verify: Stale message was NOT claimed by worker
+        self.assertNotIn(stale_qid, claimed_ids)
+
+        # Verify DB state of stale item: Must be 'expired'
+        row_stale = db.execute(text("SELECT status, error_message, result_payload FROM whatsapp_bot_queue WHERE id = :qid"), {"qid": stale_qid}).fetchone()
+        db.close()
+
+        self.assertEqual(row_stale[0], "expired")
+        self.assertIn("Time-sensitive pending message superseded", row_stale[1])
+        self.assertEqual(row_stale[2].get("expired_reason"), "stale_pending_exceeded_2h")
 
 
 if __name__ == "__main__":

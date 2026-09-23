@@ -1,0 +1,1777 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>VGK4U — Official Digital Business Catalogue | 5 High-Growth Verticals</title>
+    <meta name="description" content="Official VGK4U Dynamic Web Catalogue. 5 High-Growth Business Verticals: Solar EPC, Insurance Advisory, Manthra EV 2W, Verified Real Estate, and EV Certified Training. Join 100% Free, earn ₹30,000 Welcome Points, multi-tier team overrides, and 3-generation nominee wealth.">
+    <meta name="keywords" content="VGK4U, MyntReal, Channel Partner, Solar EPC, PM Surya Ghar, Har Ghar Solar, VGK Care Insurance, Manthra EV, Real Dreams Properties, EVolution Training Centre, 30000 points, career ladder">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph Metadata -->
+    <meta property="og:title" content="VGK4U — 5 High-Growth Verticals. Endless Earning.">
+    <meta property="og:description" content="Explore India's premier Channel Partner Ecosystem. 100% Free Joining + ₹30,000 Points. Solar, Insurance, EV, Real Estate & EV Training.">
+    <meta property="og:image" content="/public/images/solar_installations/krishnadevipeta_solar_customer.jpg">
+    <meta property="og:type" content="website">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700;800&family=Noto+Sans+Telugu:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome & Bootstrap 5.3 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Brand Master Tokens */
+            --vgk-gold: #f59e0b;
+            --vgk-gold-dark: #d97706;
+            --vgk-gold-glow: rgba(245, 158, 11, 0.35);
+            --vgk-amber: #b45309;
+            --vgk-navy: #090d16;
+            --vgk-navy-dark: #05070c;
+            --vgk-navy-card: #111827;
+            --vgk-navy-card-hover: #172238;
+            --vgk-green: #10b981;
+            --vgk-green-dark: #059669;
+            --vgk-blue: #0284c7;
+            --vgk-cyan: #06b6d4;
+            --vgk-purple: #8b5cf6;
+            --vgk-rose: #f43f5e;
+            
+            --bg-page: #f8fafc;
+            --bg-surface: #ffffff;
+            --bg-surface-alt: #f1f5f9;
+            --border-subtle: #e2e8f0;
+            --text-heading: #0f172a;
+            --text-body: #334155;
+            --text-muted: #64748b;
+
+            --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.05);
+            --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+            --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.12);
+            --shadow-xl: 0 24px 60px rgba(15, 23, 42, 0.16);
+
+            --radius-md: 14px;
+            --radius-lg: 20px;
+            --radius-xl: 28px;
+        }
+
+        [data-theme="dark"] {
+            --bg-page: #070a12;
+            --bg-surface: #0f1523;
+            --bg-surface-alt: #161f33;
+            --border-subtle: #202b42;
+            --text-heading: #f8fafc;
+            --text-body: #cbd5e1;
+            --text-muted: #94a3b8;
+            --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
+            --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.7);
+        }
+
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-body);
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .lang-te { font-family: 'Noto Sans Telugu', 'Plus Jakarta Sans', sans-serif; }
+
+        /* ── TOP UTILITY STRIP ── */
+        .utility-strip {
+            background: #090d16;
+            border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+            color: #ffffff;
+            font-size: 0.82rem;
+            padding: 6px 16px;
+        }
+        .glowing-pill {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #000000;
+            font-weight: 800;
+            padding: 2px 9px;
+            border-radius: 9999px;
+            font-size: 0.72rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* ── COMPACT STICKY NAVBAR ── */
+        .vgk-nav {
+            position: sticky;
+            top: 0;
+            z-index: 1040;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-subtle);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+            transition: background 0.3s ease;
+        }
+        [data-theme="dark"] .vgk-nav {
+            background: rgba(15, 21, 35, 0.92);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .brand-logo-wrap img {
+            height: 38px;
+            width: auto;
+        }
+        .nav-links-scroll {
+            overflow-x: auto;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+            padding: 6px 0;
+        }
+        .nav-links-scroll::-webkit-scrollbar { display: none; }
+        .nav-link-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 12px;
+            margin: 0 3px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-body);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        .nav-link-pill:hover, .nav-link-pill.active {
+            background: var(--vgk-gold);
+            color: #000000;
+            font-weight: 700;
+        }
+
+        /* ── BUTTONS ── */
+        .btn-gold-glow {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: #000000;
+            font-weight: 800;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 9999px;
+            box-shadow: 0 8px 24px var(--vgk-gold-glow);
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .btn-gold-glow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(245, 158, 11, 0.5);
+            color: #000000;
+        }
+        .btn-wa-glow {
+            background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+            color: #ffffff;
+            font-weight: 700;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 9999px;
+            box-shadow: 0 8px 24px rgba(37, 211, 102, 0.35);
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .btn-wa-glow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(37, 211, 102, 0.5);
+            color: #ffffff;
+        }
+
+        /* ── CHAPTER CONTAINER ── */
+        .catalog-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+        .chapter-section {
+            padding: 80px 0;
+            position: relative;
+        }
+        .chapter-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 5px 14px;
+            border-radius: 9999px;
+            margin-bottom: 14px;
+        }
+        .chapter-headline {
+            font-size: 2.6rem;
+            font-weight: 900;
+            color: var(--text-heading);
+            line-height: 1.18;
+            letter-spacing: -0.02em;
+            margin-bottom: 16px;
+        }
+        .chapter-desc {
+            font-size: 1.12rem;
+            color: var(--text-muted);
+            max-width: 760px;
+            line-height: 1.65;
+            margin-bottom: 35px;
+        }
+
+        /* ── CHAPTER 1: GRAND HERO ── */
+        .hero-banner {
+            background: linear-gradient(145deg, #090d16 0%, #111827 50%, #1e1b18 100%);
+            color: #ffffff;
+            border-bottom: 3px solid var(--vgk-gold);
+            padding: 90px 0 80px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-banner::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            right: -10%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(245, 158, 11, 0.18) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .hero-display-stat {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            border-radius: var(--radius-lg);
+            padding: 20px 24px;
+            transition: all 0.3s ease;
+        }
+        .hero-display-stat:hover {
+            border-color: var(--vgk-gold);
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-3px);
+        }
+        .hero-verticals-strip {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+            margin-top: 45px;
+        }
+        .hero-vert-card {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            text-decoration: none;
+            color: #ffffff;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .hero-vert-card:hover {
+            background: rgba(245, 158, 11, 0.18);
+            border-color: var(--vgk-gold);
+            color: #ffffff;
+            transform: translateY(-2px);
+        }
+        .hero-vert-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+
+        /* ── CHAPTER 2: V-G-K-4U LETTERS & 4 PILLARS ── */
+        .vgk-letter-box {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            height: 100%;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .vgk-letter-box:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--vgk-gold);
+        }
+        .letter-watermark {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 4.5rem;
+            font-weight: 900;
+            opacity: 0.06;
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        /* ── CHAPTER 3: JOURNEY & PERSONA SWITCHER ── */
+        .step-timeline-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            position: relative;
+        }
+        .step-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            position: relative;
+            transition: all 0.25s ease;
+        }
+        .step-card:hover {
+            border-color: var(--vgk-gold);
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+        }
+        .step-number-badge {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--vgk-navy);
+            color: var(--vgk-gold);
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            margin-bottom: 14px;
+        }
+        .persona-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            height: 100%;
+            transition: all 0.25s ease;
+        }
+        .persona-card:hover {
+            border-color: var(--vgk-blue);
+            transform: translateY(-2px);
+        }
+
+        /* ── CHAPTER 4: EARNING LADDER & OVERRIDES ── */
+        .ladder-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 14px;
+        }
+        .ladder-tier {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: 24px 20px;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .ladder-tier.highlight {
+            border: 2px solid var(--vgk-gold);
+            background: linear-gradient(180deg, rgba(245, 158, 11, 0.06) 0%, var(--bg-surface) 100%);
+            box-shadow: 0 8px 30px var(--vgk-gold-glow);
+        }
+        .ladder-tier:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+        }
+        .ladder-pct {
+            font-size: 2.2rem;
+            font-weight: 900;
+            line-height: 1;
+            margin: 12px 0 6px 0;
+        }
+
+        /* ── CHAPTER 5: FIVE VERTICAL EXPERIENCES (DISTINCT VISUAL IDENTITIES) ── */
+        
+        /* 5A: SOLAR (Warm Amber & Eco Green) */
+        .vertical-panel-solar {
+            background: linear-gradient(180deg, #fffdf7 0%, #fefcf3 100%);
+            border: 1px solid #fed7aa;
+            border-radius: var(--radius-xl);
+            padding: 50px;
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 50px;
+        }
+        [data-theme="dark"] .vertical-panel-solar {
+            background: linear-gradient(180deg, #18140c 0%, #0d0f14 100%);
+            border-color: #7c440b;
+        }
+
+        /* 5B: INSURANCE (Royal Blue & Teal Shield) */
+        .vertical-panel-ins {
+            background: linear-gradient(180deg, #f8faff 0%, #f0f7ff 100%);
+            border: 1px solid #bfdbfe;
+            border-radius: var(--radius-xl);
+            padding: 50px;
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 50px;
+        }
+        [data-theme="dark"] .vertical-panel-ins {
+            background: linear-gradient(180deg, #091424 0%, #0d0f14 100%);
+            border-color: #1e3a8a;
+        }
+
+        /* 5C: EV MOBILITY (Dark Neon & Clean Tech) */
+        .vertical-panel-ev {
+            background: linear-gradient(180deg, #0a0f1d 0%, #050811 100%);
+            color: #ffffff;
+            border: 1px solid #0284c7;
+            border-radius: var(--radius-xl);
+            padding: 50px;
+            box-shadow: 0 10px 40px rgba(2, 132, 199, 0.2);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 50px;
+        }
+
+        /* 5D: REAL ESTATE (Luxury Gold & Slate) */
+        .vertical-panel-re {
+            background: linear-gradient(180deg, #fbfaff 0%, #f6f3fc 100%);
+            border: 1px solid #ddd6fe;
+            border-radius: var(--radius-xl);
+            padding: 50px;
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 50px;
+        }
+        [data-theme="dark"] .vertical-panel-re {
+            background: linear-gradient(180deg, #161026 0%, #0d0f14 100%);
+            border-color: #5b21b6;
+        }
+
+        /* 5E: EV TRAINING (Technical Workshop Crimson) */
+        .vertical-panel-etc {
+            background: linear-gradient(180deg, #fffafa 0%, #fff1f2 100%);
+            border: 1px solid #fecdd3;
+            border-radius: var(--radius-xl);
+            padding: 50px;
+            box-shadow: var(--shadow-md);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 50px;
+        }
+        [data-theme="dark"] .vertical-panel-etc {
+            background: linear-gradient(180deg, #200d12 0%, #0d0f14 100%);
+            border-color: #881337;
+        }
+
+        /* Image Display Frame with Subtle Parallax Effect */
+        .img-hero-frame {
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            background: #000;
+        }
+        .img-hero-frame img {
+            width: 100%;
+            height: 380px;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+        .img-hero-frame:hover img {
+            transform: scale(1.03);
+        }
+
+        /* Logos Chip Grid */
+        .partner-logo-chip {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: var(--shadow-sm);
+            margin: 4px;
+        }
+
+        /* Interactive Simulator Card */
+        .interactive-sim-box {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 2px solid var(--vgk-gold);
+            border-radius: var(--radius-lg);
+            padding: 26px;
+            box-shadow: var(--shadow-md);
+        }
+        [data-theme="dark"] .interactive-sim-box {
+            background: rgba(17, 24, 39, 0.85);
+        }
+
+        /* ── FLOATING MOBILE BAR ── */
+        .mobile-quick-actions {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1050;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 10px 16px;
+        }
+        @media (max-width: 768px) {
+            .mobile-quick-actions { display: flex; gap: 10px; }
+            body { padding-bottom: 74px; }
+            .chapter-headline { font-size: 2rem; }
+            .vertical-panel-solar, .vertical-panel-ins, .vertical-panel-ev, .vertical-panel-re, .vertical-panel-etc {
+                padding: 28px 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ── UTILITY ANNOUNCEMENT BAR ── -->
+    <div class="utility-strip">
+        <div class="catalog-container d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="glowing-pill"><i class="fas fa-crown"></i> OFFICIAL CATALOGUE</span>
+                <span>Join Free Today &amp; Earn <strong>₹30,000 Welcome Points</strong> • 1 Pt = ₹1 Real Value</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <span class="d-none d-md-inline text-white-50"><i class="fas fa-phone-alt text-success me-1"></i> Helpline: +91 85858 52738</span>
+                <button class="btn btn-sm btn-outline-light py-0 px-2" onclick="toggleTheme()" title="Toggle Dark/Light Mode">
+                    <i class="fas fa-moon" id="themeToggleIcon"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── COMPACT STICKY NAVIGATION ── -->
+    <nav class="vgk-nav">
+        <div class="catalog-container d-flex align-items-center justify-content-between py-2">
+            <a href="/catalog/vgk4u" class="brand-logo-wrap d-flex align-items-center gap-2 text-decoration-none">
+                <img src="/public/vgk4u-logo.png" alt="VGK4U Logo" onerror="this.src='/public/hub/Assets/vgk4u-logo.png'">
+                <div>
+                    <div style="font-weight: 900; font-size: 1.15rem; color: #d97706; line-height: 1;">VGK4U</div>
+                    <div style="font-size: 0.65rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;">5-Vertical Master Catalogue</div>
+                </div>
+            </a>
+
+            <!-- Scrollable Chapter Jump Pills -->
+            <div class="nav-links-scroll d-none d-lg-flex">
+                <a href="#hero" class="nav-link-pill active">Overview</a>
+                <a href="#vision" class="nav-link-pill">Pillars</a>
+                <a href="#journey" class="nav-link-pill">Process</a>
+                <a href="#earnings" class="nav-link-pill">Earnings Ladder</a>
+                <a href="#solar" class="nav-link-pill">Solar</a>
+                <a href="#insurance" class="nav-link-pill">Insurance</a>
+                <a href="#ev" class="nav-link-pill">Manthra EV</a>
+                <a href="#real-estate" class="nav-link-pill">Real Estate</a>
+                <a href="#training" class="nav-link-pill">EV Training</a>
+                <a href="#hub" class="nav-link-pill">Hub Franchise</a>
+                <a href="#points" class="nav-link-pill">30k Points</a>
+                <a href="#kit" class="nav-link-pill">Welcome Kit</a>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn-wa-glow btn-sm py-1 px-3 d-none d-sm-inline-flex" onclick="shareOnWhatsApp()">
+                    <i class="fab fa-whatsapp"></i> Share Catalogue
+                </button>
+                <a href="/vgk/login?tab=signup" class="btn-gold-glow btn-sm py-1 px-3">
+                    <i class="fas fa-user-plus"></i> Join Free
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- CHAPTER 1: GRAND OPENING HERO                                       -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <header id="hero" class="hero-banner">
+        <div class="catalog-container">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-7">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span class="glowing-pill"><i class="fas fa-bolt"></i> 100% FREE REGISTRATION</span>
+                        <span class="badge bg-warning bg-opacity-25 text-warning font-mono px-3 py-1 rounded-pill">₹30,000 WELCOME POINTS</span>
+                    </div>
+
+                    <h1 class="display-4 fw-black text-white mb-3" style="letter-spacing: -0.02em; line-height: 1.15;">
+                        One Unified Platform.<br>
+                        <span style="color: #f59e0b; text-shadow: 0 0 30px rgba(245, 158, 11, 0.4);">Five High-Growth Verticals.</span><br>
+                        Compounding Lifetime Income.
+                    </h1>
+
+                    <p class="lead text-white-50 mb-4" style="max-width: 650px;">
+                        Monetize India's green transition in <strong>Solar Energy, Electric Mobility, Insurance Advisory, Verified Real Estate, and EV Skill Training</strong> with zero upfront investment and full back-office fulfillment.
+                    </p>
+
+                    <div class="d-flex flex-wrap gap-3 mb-4">
+                        <a href="/vgk/login?tab=signup" class="btn-gold-glow">
+                            <i class="fas fa-rocket"></i> Become a Partner Free
+                        </a>
+                        <button class="btn-wa-glow" onclick="shareOnWhatsApp()">
+                            <i class="fab fa-whatsapp"></i> Share on WhatsApp
+                        </button>
+                    </div>
+
+                    <!-- 3 Hero Live Indicators -->
+                    <div class="row g-3 pt-3 border-top border-secondary border-opacity-25">
+                        <div class="col-4">
+                            <div class="hero-display-stat text-center">
+                                <div class="fs-4 fw-black text-warning font-mono">₹30,000</div>
+                                <div class="small text-white-50">Points on Joining</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="hero-display-stat text-center">
+                                <div class="fs-4 fw-black text-success font-mono">1 Pt = ₹1</div>
+                                <div class="small text-white-50">Direct Cash Value</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="hero-display-stat text-center">
+                                <div class="fs-4 fw-black text-info font-mono">3 Gens</div>
+                                <div class="small text-white-50">Nominee Transfer</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Side: Visual Showcase of the 5 Verticals -->
+                <div class="col-lg-5">
+                    <div class="img-hero-frame border border-warning border-opacity-50">
+                        <img src="/public/images/solar_installations/krishnadevipeta_solar_customer.jpg" alt="Rooftop Solar and Green Growth">
+                        <div class="p-3 bg-dark bg-opacity-90 position-absolute bottom-0 start-0 end-0 border-top border-secondary">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <div class="fw-bold text-white"><i class="fas fa-check-circle text-success me-1"></i> Real Customer Installations</div>
+                                    <div class="small text-white-50">Krishnadevipeta, Andhra Pradesh • 5 kW System</div>
+                                </div>
+                                <span class="badge bg-success font-mono">₹78k Subsidy</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5 Quick-Jump Vertical Teasers -->
+            <div class="hero-verticals-strip">
+                <a href="#solar" class="hero-vert-card">
+                    <div class="hero-vert-icon" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;"><i class="fas fa-solar-panel"></i></div>
+                    <div>
+                        <div class="fw-bold">Har Ghar Solar</div>
+                        <div class="small text-white-50">5.0% - 6.0% Payout</div>
+                    </div>
+                </a>
+                <a href="#insurance" class="hero-vert-card">
+                    <div class="hero-vert-icon" style="background: rgba(2, 132, 199, 0.2); color: #0284c7;"><i class="fas fa-shield-heart"></i></div>
+                    <div>
+                        <div class="fw-bold">VGK Care Insurance</div>
+                        <div class="small text-white-50">₹15k - ₹30k / ₹1L</div>
+                    </div>
+                </a>
+                <a href="#ev" class="hero-vert-card">
+                    <div class="hero-vert-icon" style="background: rgba(16, 185, 129, 0.2); color: #10b981;"><i class="fas fa-motorcycle"></i></div>
+                    <div>
+                        <div class="fw-bold">Manthra EV 2W</div>
+                        <div class="small text-white-50">₹4,875 / Vehicle</div>
+                    </div>
+                </a>
+                <a href="#real-estate" class="hero-vert-card">
+                    <div class="hero-vert-icon" style="background: rgba(139, 92, 246, 0.2); color: #8b5cf6;"><i class="fas fa-building"></i></div>
+                    <div>
+                        <div class="fw-bold">VGK Real Dreams</div>
+                        <div class="small text-white-50">₹1,00,000 / Deal</div>
+                    </div>
+                </a>
+                <a href="#training" class="hero-vert-card">
+                    <div class="hero-vert-icon" style="background: rgba(244, 63, 94, 0.2); color: #f43f5e;"><i class="fas fa-graduation-cap"></i></div>
+                    <div>
+                        <div class="fw-bold">EV Training (ETC)</div>
+                        <div class="small text-white-50">500+ Trained Alumni</div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- CHAPTER 2: THE VGK4U PHILOSOPHY & 4 PILLARS (Slides 2 + 3)          -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <section id="vision" class="chapter-section">
+        <div class="catalog-container">
+            <div class="text-center mb-5">
+                <span class="chapter-tag" style="background: #fef3c7; color: #b45309;"><i class="fas fa-gem"></i> THE PHILOSOPHY</span>
+                <h2 class="chapter-headline">The Meaning Behind VGK4U</h2>
+                <p class="chapter-desc mx-auto">
+                    Four foundational pillars engineered to elevate every everyday citizen, student, and entrepreneur into a recognized corporate leader.
+                </p>
+            </div>
+
+            <!-- Large Interactive V-G-K-4U Letter Pillars -->
+            <div class="row g-4 mb-5">
+                <div class="col-lg-3 col-sm-6">
+                    <div class="vgk-letter-box">
+                        <div class="letter-watermark text-warning">V</div>
+                        <div class="badge bg-warning text-dark fs-6 px-3 py-1 mb-3">V • VALUE</div>
+                        <h4 class="fw-black mb-2">Uncompromised Value</h4>
+                        <p class="small text-muted mb-0">Delivering Tier-1 solar engineering, authentic direct DBT subsidies, transparent policy options, and genuine financial savings for every family.</p>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-sm-6">
+                    <div class="vgk-letter-box">
+                        <div class="letter-watermark text-primary">G</div>
+                        <div class="badge bg-primary text-white fs-6 px-3 py-1 mb-3">G • GENERATION</div>
+                        <h4 class="fw-black mb-2">Generational Wealth</h4>
+                        <p class="small text-muted mb-0">Building lasting equity that transcends decades. Your team volume, rank, and override streams legally cascade to your family across 3 generations.</p>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-sm-6">
+                    <div class="vgk-letter-box">
+                        <div class="letter-watermark text-success">K</div>
+                        <div class="badge bg-success text-white fs-6 px-3 py-1 mb-3">K • KINETICS</div>
+                        <h4 class="fw-black mb-2">Career Kinetics</h4>
+                        <p class="small text-muted mb-0">Unstoppable career momentum. Rapid milestone progression from baseline member to district leadership with increasing override percentages.</p>
+                    </div>
+                </div>
+
+                <div class="col-lg-3 col-sm-6">
+                    <div class="vgk-letter-box">
+                        <div class="letter-watermark text-purple">4U</div>
+                        <div class="badge bg-purple text-white fs-6 px-3 py-1 mb-3" style="background: #8b5cf6;">4U • FOR YOU</div>
+                        <h4 class="fw-black mb-2">Tailored For You</h4>
+                        <p class="small text-muted mb-0">Zero entry barriers. No mandatory joining fees. Complete mobile independence with centralized technical execution and bank loan support.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4 Institutional Pillars -->
+            <div class="p-4 rounded-4 border bg-white shadow-sm">
+                <div class="row g-4 text-center">
+                    <div class="col-md-3 col-6">
+                        <div class="fs-1 text-success mb-2"><i class="fas fa-wallet"></i></div>
+                        <div class="fw-black fs-5">1. EARN</div>
+                        <div class="small text-muted">High direct payouts + 5-tier team overrides</div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="fs-1 text-primary mb-2"><i class="fas fa-network-wired"></i></div>
+                        <div class="fw-black fs-5">2. NETWORK</div>
+                        <div class="small text-muted">Build a district-wide partner community</div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="fs-1 text-warning mb-2"><i class="fas fa-chart-line"></i></div>
+                        <div class="fw-black fs-5">3. WEALTH</div>
+                        <div class="small text-muted">Lifelong passive royalties &amp; nominee security</div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="fs-1 text-danger mb-2"><i class="fas fa-leaf"></i></div>
+                        <div class="fw-black fs-5">4. IMPACT</div>
+                        <div class="small text-muted">Power India's clean renewable revolution</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- CHAPTER 3: UNIVERSAL JOURNEY & WHO CAN JOIN (Slides 4 + 5)         -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <section id="journey" class="chapter-section" style="background: var(--bg-surface-alt);">
+        <div class="catalog-container">
+            <div class="text-center mb-5">
+                <span class="chapter-tag" style="background: #e0f2fe; color: #0369a1;"><i class="fas fa-route"></i> 5-STEP JOURNEY</span>
+                <h2 class="chapter-headline">How It Works: Seamless 5-Step Process</h2>
+                <p class="chapter-desc mx-auto">
+                    You share the opportunity — our certified engineers, banking officers, and installation crews fulfill every order.
+                </p>
+            </div>
+
+            <!-- Horizontal Step Timeline -->
+            <div class="step-timeline-grid mb-5">
+                <div class="step-card">
+                    <div class="step-number-badge">01</div>
+                    <h5 class="fw-bold mb-2">Explore</h5>
+                    <p class="small text-muted mb-0">Browse high-demand products across Solar, EV 2W, Insurance, Real Estate &amp; Certified EV Training.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number-badge">02</div>
+                    <h5 class="fw-bold mb-2">Learn</h5>
+                    <p class="small text-muted mb-0">Access free digital training videos, customer brochures, script playbooks, and interactive calculators.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number-badge">03</div>
+                    <h5 class="fw-bold mb-2">Share</h5>
+                    <p class="small text-muted mb-0">Send pre-populated WhatsApp links and personalized digital catalogues to friends and prospects.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number-badge">04</div>
+                    <h5 class="fw-bold mb-2">Enable</h5>
+                    <p class="small text-muted mb-0">Our centralized back-office conducts site visits, completes loan logins, and managesDiscom clearances.</p>
+                </div>
+                <div class="step-card" style="border: 2px solid var(--vgk-green);">
+                    <div class="step-number-badge" style="background: var(--vgk-green); color: #fff;">05</div>
+                    <h5 class="fw-bold text-success mb-2">Earn &amp; Grow</h5>
+                    <p class="small text-muted mb-0">Instant direct bank transfer upon project completion, plus recurring overrides as your team expands.</p>
+                </div>
+            </div>
+
+            <!-- Who Can Join Persona Grid -->
+            <div class="row g-4 align-items-center">
+                <div class="col-lg-4">
+                    <h3 class="fw-black mb-3">Who Can Join VGK4U?</h3>
+                    <p class="text-muted mb-4">
+                        Anyone with ambition and a smartphone. No prior sales experience, corporate degree, or capital required.
+                    </p>
+                    <div class="p-3 bg-white rounded-3 border-start border-4 border-warning shadow-sm">
+                        <strong class="text-dark">Official Platform Motto:</strong>
+                        <div class="fst-italic text-secondary mt-1">"Start with what you have. Grow with what you build."</div>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <div class="persona-card">
+                                <div class="fs-2 text-primary"><i class="fas fa-user-graduate"></i></div>
+                                <div>
+                                    <div class="fw-bold text-dark mb-1">Students &amp; Freshers</div>
+                                    <div class="small text-muted">Earn pocket funding for higher education while gaining corporate clean-tech experience.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <div class="persona-card">
+                                <div class="fs-2 text-success"><i class="fas fa-briefcase"></i></div>
+                                <div>
+                                    <div class="fw-bold text-dark mb-1">Working Professionals</div>
+                                    <div class="small text-muted">Create a scalable second stream of passive income without leaving your daytime career.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <div class="persona-card">
+                                <div class="fs-2 text-warning"><i class="fas fa-store"></i></div>
+                                <div>
+                                    <div class="fw-bold text-dark mb-1">Shop Owners &amp; Retailers</div>
+                                    <div class="small text-muted">Monetize existing customer walk-ins by offering solar rooftop and EV financing options.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <div class="persona-card">
+                                <div class="fs-2 text-danger"><i class="fas fa-home"></i></div>
+                                <div>
+                                    <div class="fw-bold text-dark mb-1">Homemakers &amp; Leaders</div>
+                                    <div class="small text-muted">Attain financial sovereignty working flexibly from home using your phone and social network.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- CHAPTER 4: 5-LEVEL EARNING MATRIX & CAREER LADDER (Slides 6 + 13)   -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <section id="earnings" class="chapter-section">
+        <div class="catalog-container">
+            <div class="text-center mb-5">
+                <span class="chapter-tag" style="background: #dcfce7; color: #15803d;"><i class="fas fa-sitemap"></i> REVENUE &amp; CAREER LADDER</span>
+                <h2 class="chapter-headline">How You Earn: 5-Tier Growth Ladder</h2>
+                <p class="chapter-desc mx-auto">
+                    Direct sourcing pays immediately, while team overrides scale your monthly earnings exponentially across five progressive career ranks.
+                </p>
+            </div>
+
+            <!-- 5-Tier Visual Earnings Ladder -->
+            <div class="ladder-grid mb-5">
+                <div class="ladder-tier highlight">
+                    <span class="badge bg-warning text-dark font-mono">LEVEL 1 • DIRECT</span>
+                    <div class="ladder-pct text-success font-mono">5.00%</div>
+                    <div class="fw-bold text-dark mb-1">Source Partner</div>
+                    <div class="small text-muted mb-3">1 Completed File</div>
+                    <div class="p-2 rounded bg-light font-mono small fw-bold">
+                        ₹10,000 on ₹2L Project
+                    </div>
+                </div>
+
+                <div class="ladder-tier">
+                    <span class="badge bg-secondary font-mono">LEVEL 2 • SENIOR</span>
+                    <div class="ladder-pct text-primary font-mono">+1.50%</div>
+                    <div class="fw-bold text-dark mb-1">Senior Partner</div>
+                    <div class="small text-muted mb-3">4 Files (+3) • 1-4 Legs</div>
+                    <div class="p-2 rounded bg-light font-mono small fw-bold">
+                        ₹3,000 Override
+                    </div>
+                </div>
+
+                <div class="ladder-tier">
+                    <span class="badge bg-secondary font-mono">LEVEL 3 • EXTENDED</span>
+                    <div class="ladder-pct text-dark font-mono">+1.00%</div>
+                    <div class="fw-bold text-dark mb-1">Extended Leader</div>
+                    <div class="small text-muted mb-3">9 Files (+5) • 5-9 Legs</div>
+                    <div class="p-2 rounded bg-light font-mono small fw-bold">
+                        ₹2,000 Override
+                    </div>
+                </div>
+
+                <div class="ladder-tier">
+                    <span class="badge bg-secondary font-mono">LEVEL 4 • CORE</span>
+                    <div class="ladder-pct text-muted font-mono">+0.50%</div>
+                    <div class="fw-bold text-dark mb-1">Core Leader</div>
+                    <div class="small text-muted mb-3">16 Files (+7) • 10+ Legs</div>
+                    <div class="p-2 rounded bg-light font-mono small fw-bold">
+                        ₹1,000 Override
+                    </div>
+                </div>
+
+                <div class="ladder-tier" style="border: 2px dashed #0284c7;">
+                    <span class="badge bg-info text-dark font-mono">SUPPORT ECOSYSTEM</span>
+                    <div class="ladder-pct text-info font-mono">1.50%</div>
+                    <div class="fw-bold text-dark mb-1">Field Support</div>
+                    <div class="small text-muted mb-3">Technical Handover</div>
+                    <div class="p-2 rounded bg-light font-mono small fw-bold">
+                        ₹3,000 Support Fee
+                    </div>
+                </div>
+            </div>
+
+            <!-- Earning Formula Box -->
+            <div class="p-4 rounded-4 text-center mb-5" style="background: linear-gradient(135deg, #090d16 0%, #1e293b 100%); color: #ffffff;">
+                <div class="fs-4 fw-black text-warning mb-2 font-mono">Direct Effort + Network Growth = Scalable Residual Income</div>
+                <p class="text-white-50 mb-0" style="max-width: 800px; margin: 0 auto;">
+                    Solar EPC rate totals <strong>6.00%</strong> (5.00% Direct + 1.00% Brand Development bonus). Plus support earning of <strong>+0.75%</strong> (Assisted) or <strong>+1.50%</strong> (Self Delivery).
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- CHAPTER 5: FIVE HIGH-GROWTH VERTICAL EXPERIENCES                     -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+
+    <!-- ── 5A: HAR GHAR SOLAR GATEWAY ── -->
+    <section id="solar" class="chapter-section pt-0">
+        <div class="catalog-container">
+            <div class="vertical-panel-solar">
+                <div class="row align-items-center g-5">
+                    <div class="col-lg-6">
+                        <span class="chapter-tag" style="background: #fef3c7; color: #b45309;"><i class="fas fa-sun text-warning"></i> VERTICAL 1 • ROOFTOP &amp; COMMERCIAL SOLAR</span>
+                        <h2 class="chapter-headline">Har Ghar Solar Gateway</h2>
+                        <p class="chapter-desc">
+                            India's massive clean energy transition under <strong>PM Surya Ghar Muft Bijli Yojana</strong> (Up to ₹78,000 Direct Govt Subsidy) and our zero-down "Solar for ₹1" national bank loan scheme.
+                        </p>
+
+                        <!-- Workflow Badges -->
+                        <div class="d-flex flex-wrap gap-2 mb-4">
+                            <span class="partner-logo-chip"><i class="fas fa-id-card text-primary"></i> 700+ CIBIL</span>
+                            <span class="partner-logo-chip"><i class="fas fa-university text-warning"></i> SBI &amp; Canara Bank</span>
+                            <span class="partner-logo-chip"><i class="fas fa-check-circle text-success"></i> ₹78k DBT Subsidy</span>
+                            <span class="partner-logo-chip"><i class="fas fa-bolt text-danger"></i> 25-Yr Panel Warranty</span>
+                        </div>
+
+                        <!-- Solar Earning Simulator -->
+                        <div class="interactive-sim-box mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2 font-mono">
+                                <span class="fw-bold text-dark">Solar Project Value:</span>
+                                <span class="fs-4 fw-black text-primary" id="solarValDisplay">₹2,00,000</span>
+                            </div>
+                            <input type="range" class="w-100" id="solarValSlider" min="100000" max="1000000" step="25000" value="200000" oninput="updateSolarCalc(this.value)" style="accent-color: #f59e0b;">
+
+                            <div class="row g-2 text-center mt-3 font-mono">
+                                <div class="col-6 col-sm-3">
+                                    <div class="p-2 rounded bg-white border">
+                                        <div class="small text-muted">L1 Direct (5%)</div>
+                                        <strong class="text-success" id="solarL1">₹10,000</strong>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-sm-3">
+                                    <div class="p-2 rounded bg-white border">
+                                        <div class="small text-muted">L2 Senior (1.5%)</div>
+                                        <strong class="text-dark" id="solarL2">₹3,000</strong>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-sm-3">
+                                    <div class="p-2 rounded bg-white border">
+                                        <div class="small text-muted">L3 Team (1.0%)</div>
+                                        <strong class="text-muted" id="solarL3">₹2,000</strong>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-sm-3">
+                                    <div class="p-2 rounded bg-white border">
+                                        <div class="small text-muted">Support (1.5%)</div>
+                                        <strong class="text-info" id="solarL5">₹3,000</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Brand Ecosystem -->
+                        <div class="small fw-bold text-dark mb-2">Authorized Tier-1 Panel Partners:</div>
+                        <div class="d-flex flex-wrap mb-4">
+                            <span class="partner-logo-chip">Tata Power Solar</span>
+                            <span class="partner-logo-chip">Waaree Energies</span>
+                            <span class="partner-logo-chip">Adani Solar</span>
+                            <span class="partner-logo-chip">Vikram Solar</span>
+                            <span class="partner-logo-chip">Goldi Solar</span>
+                            <span class="partner-logo-chip">ReNew</span>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-3">
+                            <a href="/catalog/solar" class="btn-gold-glow">
+                                <i class="fas fa-solar-panel"></i> View Full Solar Catalog
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Real Rooftop Photo & Advance Milestones -->
+                    <div class="col-lg-6">
+                        <div class="img-hero-frame mb-4">
+                            <img src="/public/images/solar_installations/pothavaram_solar_customer.jpg" alt="Rooftop Solar Installation in Pothavaram">
+                        </div>
+
+                        <div class="p-4 bg-white rounded-4 border shadow-sm">
+                            <h5 class="fw-bold text-dark mb-3"><i class="fas fa-hand-holding-dollar text-success me-2"></i> Advance Milestone Payouts:</h5>
+                            <div class="d-flex flex-column gap-2 small">
+                                <div class="d-flex justify-content-between p-2 rounded bg-light">
+                                    <span><strong>Stage 1:</strong> File Logged &amp; Bank Approved</span>
+                                    <span class="font-mono fw-bold text-success">Source ₹1,000 • Senior ₹500</span>
+                                </div>
+                                <div class="d-flex justify-content-between p-2 rounded bg-light">
+                                    <span><strong>Stage 2:</strong> Material Dispatch to Site</span>
+                                    <span class="font-mono fw-bold text-success">Source ₹1,000 • Senior ₹500</span>
+                                </div>
+                                <div class="d-flex justify-content-between p-2 rounded bg-light">
+                                    <span><strong>Stage 3:</strong> Net-Metering &amp; Commissioning</span>
+                                    <span class="font-mono fw-bold text-primary">Full Remaining Balance NEFT</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 5B: VGK CARE INSURANCE ADVISORY ── -->
+    <section id="insurance" class="chapter-section pt-0">
+        <div class="catalog-container">
+            <div class="vertical-panel-ins">
+                <div class="row align-items-center g-5">
+                    <div class="col-lg-6 order-lg-2">
+                        <span class="chapter-tag" style="background: #dbeafe; color: #1e40af;"><i class="fas fa-shield-alt text-primary"></i> VERTICAL 2 • RISK &amp; ASSET PROTECTION</span>
+                        <h2 class="chapter-headline">VGK Care Insurance Advisory</h2>
+                        <p class="chapter-desc">
+                            In strategic alliance with <strong>Bajaj Capital</strong> and leading IRDAI-regulated national carriers. Comprehensive cashless health, life, EV motor zero-depreciation, and commercial property risk coverage.
+                        </p>
+
+                        <!-- Policy Pillars -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-6">
+                                <div class="p-3 bg-white rounded-3 border">
+                                    <div class="fs-4 text-success mb-1"><i class="fas fa-heartbeat"></i></div>
+                                    <div class="fw-bold text-dark">Health Shield</div>
+                                    <div class="small text-muted">10,000+ Cashless Hospitals</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 bg-white rounded-3 border">
+                                    <div class="fs-4 text-primary mb-1"><i class="fas fa-motorcycle"></i></div>
+                                    <div class="fw-bold text-dark">EV Battery &amp; Motor</div>
+                                    <div class="small text-muted">Zero-Depreciation Riders</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 bg-white rounded-3 border">
+                                    <div class="fs-4 text-warning mb-1"><i class="fas fa-umbrella"></i></div>
+                                    <div class="fw-bold text-dark">Term Life</div>
+                                    <div class="small text-muted">High Sum Assured Protection</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 bg-white rounded-3 border">
+                                    <div class="fs-4 text-danger mb-1"><i class="fas fa-fire"></i></div>
+                                    <div class="fw-bold text-dark">Commercial Property</div>
+                                    <div class="small text-muted">Solar Rooftop All-Risk</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Earning Highlight Box -->
+                        <div class="p-3 rounded-4 mb-4" style="background: #eff6ff; border: 1px solid #bfdbfe;">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <div class="small fw-bold text-primary">Typical Benchmark Earning:</div>
+                                    <div class="fs-4 fw-black text-dark font-mono">₹15,000 – ₹30,000</div>
+                                    <div class="small text-muted">On standard ₹1,00,000 portfolio + lifetime renewals!</div>
+                                </div>
+                                <div class="badge bg-primary fs-6 px-3 py-2 font-mono">5.0% Direct</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-3">
+                            <a href="/catalog/insurance" class="btn-gold-glow" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);">
+                                <i class="fas fa-shield-heart"></i> View Full Insurance Catalog
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Left Column: Partners Grid & Image -->
+                    <div class="col-lg-6 order-lg-1">
+                        <div class="p-4 bg-white rounded-4 border shadow-sm mb-4">
+                            <h5 class="fw-bold text-dark mb-3"><i class="fas fa-handshake text-primary me-2"></i> 10+ National Carrier Partners:</h5>
+                            <div class="d-flex flex-wrap">
+                                <span class="partner-logo-chip">HDFC ERGO</span>
+                                <span class="partner-logo-chip">ICICI Lombard</span>
+                                <span class="partner-logo-chip">TATA AIG</span>
+                                <span class="partner-logo-chip">Star Health</span>
+                                <span class="partner-logo-chip">Care Health</span>
+                                <span class="partner-logo-chip">Niva Bupa</span>
+                                <span class="partner-logo-chip">Aditya Birla Health</span>
+                                <span class="partner-logo-chip">ManipalCigna</span>
+                                <span class="partner-logo-chip">Royal Sundaram</span>
+                                <span class="partner-logo-chip">IndusInd Bank General</span>
+                            </div>
+                        </div>
+
+                        <div class="img-hero-frame">
+                            <img src="/public/images/solar_installations/komaravolu_solar_customer.jpg" alt="Commercial and Asset Protection Advisory">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 5C: ROYAL MANTHRA EV TWO-WHEELERS ── -->
+    <section id="ev" class="chapter-section pt-0">
+        <div class="catalog-container">
+            <div class="vertical-panel-ev">
+                <div class="row align-items-center g-5">
+                    <div class="col-lg-6">
+                        <span class="chapter-tag" style="background: rgba(2, 132, 199, 0.2); color: #38bdf8;"><i class="fas fa-bolt text-info"></i> VERTICAL 3 • GREEN MOBILITY</span>
+                        <h2 class="chapter-headline text-white">Royal Manthra EV 2-Wheelers</h2>
+                        <p class="chapter-desc text-white-50">
+                            High-performance electric scooters built for Indian roads. Save up to ₹4,000 every month compared to petrol with an astonishing operating cost of just <strong>₹0.20 per kilometer</strong>.
+                        </p>
+
+                        <!-- EV Specs Grid -->
+                        <div class="row g-3 mb-4 font-mono">
+                            <div class="col-6 col-sm-3">
+                                <div class="p-3 rounded-3 text-center" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15);">
+                                    <div class="fs-4 fw-black text-cyan">80-120 km</div>
+                                    <div class="small text-white-50">Range / Charge</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <div class="p-3 rounded-3 text-center" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15);">
+                                    <div class="fs-4 fw-black text-success">3-4 Hrs</div>
+                                    <div class="small text-white-50">Home Fast Charge</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <div class="p-3 rounded-3 text-center" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15);">
+                                    <div class="fs-4 fw-black text-warning">LFP</div>
+                                    <div class="small text-white-50">Fire-Safe Battery</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-sm-3">
+                                <div class="p-3 rounded-3 text-center" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15);">
+                                    <div class="fs-4 fw-black text-info">₹0.20/km</div>
+                                    <div class="small text-white-50">Running Cost</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Real Delivery Earning Advantage -->
+                        <div class="p-4 rounded-4 mb-4" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3);">
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <div class="fw-bold text-success"><i class="fas fa-money-bill-wave me-1"></i> Real Delivery Payout (₹75k Vehicle):</div>
+                                    <div class="small text-white-50">L1 Direct (₹3,750) + Support Handover (₹1,125) =</div>
+                                </div>
+                                <div class="fs-3 fw-black text-success font-mono">₹4,875 / EV</div>
+                            </div>
+                            <div class="mt-2 text-white-50 small border-top border-success border-opacity-25 pt-2">
+                                Scale Target: <strong>10 vehicles/month = ₹48,750+ monthly earnings!</strong>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-3">
+                            <a href="/catalog/ev-b2c-pricing" class="btn-gold-glow" style="background: linear-gradient(135deg, #06b6d4 0%, #0284c7 100%);">
+                                <i class="fas fa-motorcycle"></i> View Manthra EV Models &amp; Pricing
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Real Vehicle Photography -->
+                    <div class="col-lg-6">
+                        <div class="img-hero-frame border border-cyan border-opacity-40">
+                            <img src="/public/hub/Assets/manthra-fleet-lineup.webp" alt="Royal Manthra EV Lineup" onerror="this.src='/public/hub/Assets/manthra-pro-gt-real.webp'">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 5D: VGK REAL DREAMS PROPERTIES ── -->
+    <section id="real-estate" class="chapter-section pt-0">
+        <div class="catalog-container">
+            <div class="vertical-panel-re">
+                <div class="row align-items-center g-5">
+                    <div class="col-lg-6 order-lg-2">
+                        <span class="chapter-tag" style="background: #ede9fe; color: #6d28d9;"><i class="fas fa-landmark text-purple"></i> VERTICAL 4 • WEALTH ASSETS</span>
+                        <h2 class="chapter-headline">VGK Real Dreams Properties</h2>
+                        <p class="chapter-desc">
+                            High-ticket verified real estate. VMRDA/DTCP approved residential open plots, luxury apartments, commercial plots, managed farmlands, and premium villas with clear titles and bank loan approvals.
+                        </p>
+
+                        <!-- Asset Categories -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-6">
+                                <div class="p-3 bg-white rounded-3 border">
+                                    <div class="fw-bold text-dark"><i class="fas fa-map-marked-alt text-primary me-2"></i> Approved Plots</div>
+                                    <div class="small text-muted">VMRDA / DTCP Layouts</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 bg-white rounded-3 border">
+                                    <div class="fw-bold text-dark"><i class="fas fa-building text-warning me-2"></i> Apartments</div>
+                                    <div class="small text-muted">Luxury 2BHK &amp; 3BHK Gated</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 bg-white rounded-3 border">
+                                    <div class="fw-bold text-dark"><i class="fas fa-tree text-success me-2"></i> Farmland Estates</div>
+                                    <div class="small text-muted">Managed Agricultural Wealth</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 bg-white rounded-3 border">
+                                    <div class="fw-bold text-dark"><i class="fas fa-gem text-purple me-2"></i> Luxury Villas</div>
+                                    <div class="small text-muted">Premium Lifestyle Homes</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- High Ticket Payout Card -->
+                        <div class="p-4 rounded-4 mb-4" style="background: #faf5ff; border: 1px solid #d8b4fe;">
+                            <div class="small fw-bold text-purple mb-1">High-Ticket Commission Power:</div>
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <div class="fw-bold text-dark">₹20,00,000 Plot Sale:</div>
+                                    <div class="small text-muted">L1 Direct (5%) + L2 Senior (1.5%)</div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="fs-3 fw-black text-success font-mono">₹1,00,000 Direct</div>
+                                    <div class="small text-muted font-mono">+ ₹30,000 Senior Override</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-3">
+                            <a href="/catalog/real-dreams" class="btn-gold-glow" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: #fff;">
+                                <i class="fas fa-home"></i> View Verified Property Projects
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Left Column: Architectural Photo -->
+                    <div class="col-lg-6 order-lg-1">
+                        <div class="img-hero-frame">
+                            <img src="/storage/real_dreams/1/staged/698f7fbb845e.png" alt="Anandas Royal Imperia Elevation" onerror="this.src='/public/hub/Assets/Estate.png'">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── 5E: EVOLUTION TRAINING CENTRE (ETC) ── -->
+    <section id="training" class="chapter-section pt-0">
+        <div class="catalog-container">
+            <div class="vertical-panel-etc">
+                <div class="row align-items-center g-5">
+                    <div class="col-lg-6">
+                        <span class="chapter-tag" style="background: #ffe4e6; color: #be123c;"><i class="fas fa-graduation-cap text-danger"></i> VERTICAL 5 • GREEN SKILLS &amp; CAREERS</span>
+                        <h2 class="chapter-headline">EVolution Training Centre (ETC)</h2>
+                        <p class="chapter-desc">
+                            Bridging India's massive technical skill deficit in electric mobility and solar EPC. Certified practical lab training for budding entrepreneurs, service engineers, and battery diagnosticians.
+                        </p>
+
+                        <!-- Credentials Strip -->
+                        <div class="row g-3 mb-4 text-center font-mono">
+                            <div class="col-4">
+                                <div class="p-3 bg-white rounded-3 border">
+                                    <div class="fs-4 fw-black text-danger">500+</div>
+                                    <div class="small text-muted">Technicians Trained</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-3 bg-white rounded-3 border">
+                                    <div class="fs-4 fw-black text-primary">30+</div>
+                                    <div class="small text-muted">Regional Hubs</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-3 bg-white rounded-3 border">
+                                    <div class="fs-4 fw-black text-success">95%</div>
+                                    <div class="small text-muted">Placement Rate</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Courses List -->
+                        <div class="d-flex flex-column gap-2 mb-4 small">
+                            <div class="d-flex justify-content-between p-2 rounded bg-white border">
+                                <span><strong>EV Entrepreneurship Masterclass</strong> (1 Wk)</span>
+                                <span class="font-mono text-success fw-bold">5% Admission Payout</span>
+                            </div>
+                            <div class="d-flex justify-content-between p-2 rounded bg-white border">
+                                <span><strong>EV Service Technician Hands-On</strong> (15 Days)</span>
+                                <span class="font-mono text-success fw-bold">5% Admission Payout</span>
+                            </div>
+                            <div class="d-flex justify-content-between p-2 rounded bg-white border">
+                                <span><strong>EV Battery &amp; BMS Diagnostics Lab</strong> (15 Days)</span>
+                                <span class="font-mono text-success fw-bold">5% Admission Payout</span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-3">
+                            <a href="/catalog/etc-training" class="btn-gold-glow" style="background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%); color: #fff;">
+                                <i class="fas fa-book-reader"></i> View Full Training Courses
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Real Workshop Lab Photography -->
+                    <div class="col-lg-6">
+                        <div class="img-hero-frame">
+                            <img src="/public/images/etc_training/ev_practical_scooter_lab.jpg" alt="EV Practical Teardown Workshop Lab">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- CHAPTER 6: MYNTREAL HUB FRANCHISE ECOSYSTEM (Slide 12)             -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <section id="hub" class="chapter-section pt-0">
+        <div class="catalog-container">
+            <div class="p-5 rounded-4 text-white" style="background: linear-gradient(135deg, #090d16 0%, #172238 100%); border: 1px solid rgba(245, 158, 11, 0.3);">
+                <div class="row align-items-center g-5">
+                    <div class="col-lg-7">
+                        <span class="chapter-tag" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;"><i class="fas fa-store-alt"></i> PHYSICAL INFRASTRUCTURE</span>
+                        <h2 class="chapter-headline text-white">MyntReal Hub Franchise</h2>
+                        <p class="chapter-desc text-white-50">
+                            District &amp; Mandal multi-brand retail and service hubs providing live vehicle display, genuine spare parts, fast charging stations, and certified solar exhibition galleries.
+                        </p>
+
+                        <div class="row g-3 mb-4 font-mono">
+                            <div class="col-sm-4">
+                                <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1);">
+                                    <div class="fs-4 fw-black text-warning">3.00%</div>
+                                    <div class="small text-white-50">First Billing (Proposer)</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1);">
+                                    <div class="fs-4 fw-black text-primary">2.00%</div>
+                                    <div class="small text-white-50">First Billing (Supporter)</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div class="p-3 rounded-3" style="background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1);">
+                                    <div class="fs-4 fw-black text-success">1.00%</div>
+                                    <div class="small text-white-50">Lifetime Spares Override</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <a href="/catalog/hub-ev-pricing" class="btn-gold-glow">
+                            <i class="fas fa-tags"></i> View Hub Commercial Pricing
+                        </a>
+                    </div>
+
+                    <div class="col-lg-5 text-center">
+                        <img src="/public/hub/Assets/hgs-logo.png" alt="Hub Solar and EV Logistics" class="img-fluid rounded-3" style="max-height: 220px; filter: drop-shadow(0 4px 14px rgba(0,0,0,0.5));" onerror="this.src='/public/hub/Assets/mnr-logo.png'">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- CHAPTER 7: THE 30,000 POINTS LOYALTY SYSTEM (Slide 14)             -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <section id="points" class="chapter-section">
+        <div class="catalog-container">
+            <div class="text-center mb-5">
+                <span class="chapter-tag" style="background: #fef3c7; color: #b45309;"><i class="fas fa-coins text-warning"></i> REWARD CURRENCY</span>
+                <h2 class="chapter-headline">The 30,000 Points System</h2>
+                <p class="chapter-desc mx-auto">
+                    Points are real economic value in MyntOS. <strong>1 Point = ₹1 Real Value</strong>. Earn points on every action from simple signup to network expansion.
+                </p>
+            </div>
+
+            <!-- 5 Core Pathways -->
+            <div class="row g-4 mb-5">
+                <div class="col-md-4 col-sm-6">
+                    <div class="p-4 bg-white rounded-4 border shadow-sm h-100">
+                        <div class="fs-3 fw-black text-warning font-mono mb-2">20,000 Pts</div>
+                        <h5 class="fw-bold mb-1">1. Free Registration</h5>
+                        <p class="small text-muted mb-0">Instant ₹20,000 Points credited immediately upon mobile OTP signup.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-4 col-sm-6">
+                    <div class="p-4 bg-white rounded-4 border border-warning shadow-sm h-100" style="background: #fffdf5;">
+                        <div class="fs-3 fw-black text-success font-mono mb-2">+10,000 Pts</div>
+                        <h5 class="fw-bold mb-1">2. Refer a Partner</h5>
+                        <p class="small text-muted mb-0">Introduce a peer who completes free signup. Unlocks the full <strong>30,000 Welcome Milestone</strong>!</p>
+                    </div>
+                </div>
+
+                <div class="col-md-4 col-sm-6">
+                    <div class="p-4 bg-white rounded-4 border shadow-sm h-100">
+                        <div class="fs-3 fw-black text-primary font-mono mb-2">2,000 Pts</div>
+                        <h5 class="fw-bold mb-1">3. Add Verified Leads</h5>
+                        <p class="small text-muted mb-0">Earn 2,000 points for every qualified customer lead logged into the CRM portal.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-sm-6">
+                    <div class="p-4 bg-white rounded-4 border shadow-sm h-100">
+                        <div class="fs-3 fw-black text-purple font-mono mb-2">50,000 Pts</div>
+                        <h5 class="fw-bold mb-1">4. Self Business Generation</h5>
+                        <p class="small text-muted mb-0">Earn 50,000 points per ₹5,00,000 closed business volume across any vertical.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-sm-12">
+                    <div class="p-4 bg-white rounded-4 border shadow-sm h-100">
+                        <div class="fs-3 fw-black text-info font-mono mb-2">50,000 Pts</div>
+                        <h5 class="fw-bold mb-1">5. Welcome Kit Activation Pin</h5>
+                        <p class="small text-muted mb-0">Instant 50,000 bonus points credited upon purchasing the executive marketing kit (₹4,999).</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- What Points Unlock -->
+            <div class="p-4 rounded-4 border bg-white shadow-sm">
+                <div class="row g-3 align-items-center text-center">
+                    <div class="col-md-4">
+                        <div class="fw-bold text-dark"><i class="fas fa-check-circle text-success me-2"></i> Payout Offsets</div>
+                        <div class="small text-muted">Redeemable against commissions and adjustments</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="fw-bold text-dark"><i class="fas fa-plane-departure text-primary me-2"></i> Travel Contests</div>
+                        <div class="small text-muted">National &amp; International leadership trips</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="fw-bold text-dark"><i class="fas fa-gift text-warning me-2"></i> Monthly Bonanzas</div>
+                        <div class="small text-muted">Smartphones, laptops, and vehicle awards</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- CHAPTER 8: GENERATIONAL WEALTH & NOMINEE SECURITY (Slide 15)       -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <section class="chapter-section pt-0">
+        <div class="catalog-container">
+            <div class="row align-items-center g-5">
+                <div class="col-lg-6">
+                    <span class="chapter-tag" style="background: #ede9fe; color: #6d28d9;"><i class="fas fa-shield-heart"></i> FAMILY HERITAGE</span>
+                    <h2 class="chapter-headline">Build Today. Benefit for Generations.</h2>
+                    <p class="chapter-desc">
+                        Corporate employment ends when you stop working. VGK4U is an institutional network asset that legally transfers your rank, recurring overrides, and network equity across 3 generations of family nominees.
+                    </p>
+
+                    <div class="d-flex flex-column gap-3">
+                        <div class="p-3 bg-white rounded-3 border">
+                            <div class="fw-bold text-dark"><i class="fas fa-user-check text-primary me-2"></i> 1st Generation: YOU</div>
+                            <div class="small text-muted">Build your network, earn active commissions, and attain leadership rank.</div>
+                        </div>
+
+                        <div class="p-3 bg-white rounded-3 border border-warning" style="background: #fffdf5;">
+                            <div class="fw-bold text-warning"><i class="fas fa-user-friends text-warning me-2"></i> 2nd Generation: YOUR NOMINEE</div>
+                            <div class="small text-muted">Designated nominee (spouse/children) seamlessly inherits your rank, team tree, and active payouts.</div>
+                        </div>
+
+                        <div class="p-3 bg-white rounded-3 border">
+                            <div class="fw-bold text-success"><i class="fas fa-baby text-success me-2"></i> 3rd Generation: NOMINEE'S NOMINEE</div>
+                            <div class="small text-muted">Continued legacy royalties from lifetime renewable solar maintenance, insurance renewals, and hub operations.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6 text-center">
+                    <div class="p-5 bg-white rounded-4 border shadow-sm">
+                        <div class="fs-1 text-warning mb-3"><i class="fas fa-award"></i></div>
+                        <h4 class="fw-black text-dark mb-2">Lifetime Rank Security</h4>
+                        <p class="text-muted small mb-0">
+                            Once achieved, your rank and team tree never demote or reset. You retain full permanent ownership of every partnership line you build.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- CHAPTER 9: DIGITAL ID & EXECUTIVE WELCOME KIT (Slide 16)           -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <section id="kit" class="chapter-section pt-0">
+        <div class="catalog-container">
+            <div class="p-5 rounded-4 border bg-white shadow-sm">
+                <div class="row align-items-center g-5">
+                    <div class="col-lg-7">
+                        <span class="chapter-tag" style="background: #f1f5f9; color: #334155;"><i class="fas fa-id-badge text-primary"></i> CREDENTIALS</span>
+                        <h2 class="chapter-headline">Channel Partner Digital ID &amp; Welcome Kit</h2>
+                        <p class="chapter-desc">
+                            Represent VGK4U with institutional authority. Receive certified corporate credentials and a comprehensive physical marketing toolkit.
+                        </p>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-sm-6">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="fas fa-check-circle text-success mt-1"></i>
+                                    <div><strong>Encrypted QR Digital ID Card</strong> with state partner license.</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="fas fa-check-circle text-success mt-1"></i>
+                                    <div><strong>MyntOS Business Visiting Cards</strong> with your link.</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="fas fa-check-circle text-success mt-1"></i>
+                                    <div><strong>Premium Laptop Bag</strong> with reinforced padding.</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="fas fa-check-circle text-success mt-1"></i>
+                                    <div><strong>2 Branded VGK4U T-Shirts</strong> (High-grade cotton).</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2 Pathways to Obtain Kit -->
+                        <div class="row g-3 font-mono">
+                            <div class="col-sm-6">
+                                <div class="p-3 rounded-3 border bg-light">
+                                    <div class="small text-muted">Option 1: Direct Purchase</div>
+                                    <div class="fs-4 fw-black text-primary">₹4,999</div>
+                                    <div class="small text-success">+ 50,000 Bonus Points!</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3 rounded-3 border border-success" style="background: #f0fdf4;">
+                                    <div class="small text-success fw-bold">Option 2: 100% Free</div>
+                                    <div class="fs-4 fw-black text-success">3 Files</div>
+                                    <div class="small text-muted">Complete 3 qualifying files in 60d!</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-5 text-center">
+                        <img src="/public/images/vgk4u/slide_16_welcome_kit.png" alt="Executive Welcome Kit" class="img-fluid rounded-4 shadow-sm border" onerror="this.src='/public/vgk4u-logo.png'">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- CHAPTER 10: COMPLIANCE & FINAL CALL TO ACTION (Slides 17 + 18)     -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <section class="chapter-section pb-0">
+        <div class="catalog-container mb-5">
+            <!-- Compliance Strip -->
+            <div class="p-4 rounded-4 border bg-white shadow-sm">
+                <div class="row g-4 align-items-center text-center">
+                    <div class="col-md-4">
+                        <div class="fs-3 text-primary mb-1"><i class="fas fa-university"></i></div>
+                        <div class="fw-bold text-dark">Direct Bank Payouts</div>
+                        <div class="small text-muted">NEFT/RTGS settlement immediately on file completion</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="fs-3 text-warning mb-1"><i class="fas fa-balance-scale"></i></div>
+                        <div class="fw-bold text-dark">Standard Deductions</div>
+                        <div class="small text-muted">8% Administrative &amp; Platform Fee + 2% TDS (with PAN)</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="fs-3 text-success mb-1"><i class="fas fa-shield-alt"></i></div>
+                        <div class="fw-bold text-dark">100% Legal &amp; Compliant</div>
+                        <div class="small text-muted">Zero joining fee • Backed by real physical products</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grand Final Call To Action Banner -->
+        <div class="py-5" style="background: linear-gradient(145deg, #090d16 0%, #172238 100%); color: #ffffff; border-top: 3px solid #f59e0b;">
+            <div class="catalog-container text-center py-5">
+                <span class="glowing-pill mb-3 d-inline-block">START YOUR JOURNEY TODAY</span>
+                <h2 class="display-4 fw-black text-white mb-3" style="letter-spacing: -0.02em;">
+                    Become a VGK4U Channel Partner Today
+                </h2>
+                <p class="lead text-white-50 mx-auto mb-4" style="max-width: 680px;">
+                    Step into India's clean energy and financial growth revolution. Zero investment, instant ₹30,000 points, free training, and lifelong multi-level earnings.
+                </p>
+
+                <div class="d-flex flex-wrap justify-content-center gap-3 mb-5">
+                    <a href="/vgk/login?tab=signup" class="btn-gold-glow btn-lg px-5 py-3 fs-5">
+                        <i class="fas fa-user-plus"></i> Join Free as Channel Partner
+                    </a>
+                    <button class="btn-wa-glow btn-lg px-5 py-3 fs-5" onclick="shareOnWhatsApp()">
+                        <i class="fab fa-whatsapp"></i> Share Catalogue on WhatsApp
+                    </button>
+                </div>
+
+                <div class="pt-4 border-top border-secondary border-opacity-25 text-white-50 small">
+                    <div class="d-flex justify-content-center flex-wrap gap-4 mb-2">
+                        <span><i class="fas fa-envelope text-warning me-1"></i> support@myntreal.com</span>
+                        <span><i class="fas fa-phone-alt text-success me-1"></i> +91 85858 52738</span>
+                        <span><i class="fas fa-map-marker-alt text-danger me-1"></i> Offices: Visakhapatnam &amp; Hyderabad</span>
+                    </div>
+                    <div>
+                        © 2026 VGK4U • Powered by MyntOS Single-Page Digital Catalog Platform. All Rights Reserved.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── FLOATING MOBILE BAR ── -->
+    <div class="mobile-quick-actions">
+        <button class="btn btn-success flex-fill py-2 fw-bold" onclick="shareOnWhatsApp()">
+            <i class="fab fa-whatsapp me-1"></i> Share Catalogue
+        </button>
+        <a href="/vgk/login?tab=signup" class="btn btn-warning flex-fill py-2 fw-black text-dark">
+            <i class="fas fa-user-plus me-1"></i> Join Free
+        </a>
+    </div>
+
+    <!-- ── SCRIPT LOGIC ── -->
+    <script>
+        // Extract referral code if present
+        function getQueryParam(p) {
+            return new URLSearchParams(window.location.search).get(p);
+        }
+        const refCode = getQueryParam('ref') || getQueryParam('ref_code') || '';
+        if (refCode) {
+            document.querySelectorAll('a[href*="/vgk/login?tab=signup"]').forEach(a => {
+                a.href = '/vgk/login?tab=signup&ref=' + encodeURIComponent(refCode);
+            });
+        }
+
+        // WhatsApp Share
+        function shareOnWhatsApp() {
+            const catalogUrl = window.location.origin + '/catalog/vgk4u' + (refCode ? ('?ref=' + encodeURIComponent(refCode)) : '');
+            const msg = "Namaste! 🙏\n\nI invite you to explore the *VGK4U Official Digital Business Catalogue*:\n\n" +
+                "🌟 *5 High-Growth Verticals:*\n" +
+                "1. Har Ghar Solar (₹78,000 Govt Subsidy)\n" +
+                "2. VGK Care Insurance (Health, Life & EV Risk)\n" +
+                "3. Royal Manthra EV 2-Wheelers\n" +
+                "4. VGK Real Dreams Properties\n" +
+                "5. EVolution Skill Training (ETC)\n\n" +
+                "✅ Free Joining + ₹30,000 Welcome Points!\n" +
+                "✅ 1 Point = ₹1 Real Value\n" +
+                "✅ 3-Generation Nominee Wealth Transfer\n\n" +
+                "📖 *Open the Interactive Web Catalogue here:*\n" + catalogUrl + "\n\n" +
+                "🔗 *Register Free as Channel Partner:* " + window.location.origin + "/vgk/login?tab=signup" + (refCode ? ('&ref=' + encodeURIComponent(refCode)) : '');
+            
+            window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
+        }
+
+        // Solar Interactive Calculator
+        function updateSolarCalc(val) {
+            const num = parseInt(val, 10);
+            document.getElementById('solarValDisplay').textContent = '₹' + num.toLocaleString('en-IN');
+            
+            document.getElementById('solarL1').textContent = '₹' + Math.round(num * 0.05).toLocaleString('en-IN');
+            document.getElementById('solarL2').textContent = '₹' + Math.round(num * 0.015).toLocaleString('en-IN');
+            document.getElementById('solarL3').textContent = '₹' + Math.round(num * 0.01).toLocaleString('en-IN');
+            document.getElementById('solarL5').textContent = '₹' + Math.round(num * 0.015).toLocaleString('en-IN');
+        }
+
+        // Dark / Light Theme Toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', next);
+            const icon = document.getElementById('themeToggleIcon');
+            if (icon) {
+                icon.className = next === 'dark' ? 'fas fa-sun text-warning' : 'fas fa-moon';
+            }
+        }
+
+        // Active nav highlighting on scroll
+        window.addEventListener('scroll', () => {
+            const links = document.querySelectorAll('.nav-link-pill');
+            const scrollPos = window.scrollY + 120;
+            links.forEach(link => {
+                const targetId = link.getAttribute('href');
+                if (targetId && targetId.startsWith('#')) {
+                    const section = document.querySelector(targetId);
+                    if (section) {
+                        const top = section.offsetTop;
+                        const height = section.offsetHeight;
+                        if (scrollPos >= top && scrollPos < top + height) {
+                            links.forEach(l => l.classList.remove('active'));
+                            link.classList.add('active');
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

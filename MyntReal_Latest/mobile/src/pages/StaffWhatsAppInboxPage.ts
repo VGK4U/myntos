@@ -1777,10 +1777,23 @@ export class StaffWhatsAppInboxPage {
 
       const user: any = authService.getAuthState().user || {};
       const staffName = user.full_name || user.name || 'Staff';
-      let ext = user.extension || user.ext || (typeof window !== 'undefined' ? (window as any).__STAFF_EXTENSION__ : null);
-      if (!ext && user.emp_code) {
-        const m = String(user.emp_code).match(/(\d{2,4})$/);
-        if (m) ext = m[1].replace(/^0+/, '') || m[1];
+      const code = String(user.emp_code || '').trim().toUpperCase();
+      const isSysAdmin = code === 'MR10001' || staffName.toUpperCase().includes('SYSTEM ADMINISTRATOR');
+
+      let ext = null;
+      if (!isSysAdmin) {
+        ext = user.extension || user.ext || (typeof window !== 'undefined' ? (window as any).__STAFF_EXTENSION__ : null);
+        if (!ext && code) {
+          const m = code.match(/(\d{1,4})$/);
+          if (m) {
+            const num = parseInt(m[1], 10);
+            const last2 = String(num % 100).padStart(2, '0');
+            if (code.startsWith('MR')) ext = '1' + last2;
+            else if (code.startsWith('MN')) ext = '2' + last2;
+            else if (code.startsWith('FL')) ext = '4' + last2;
+            else ext = '8' + last2;
+          }
+        }
       }
       let signature = `\n\nRegards,\n${staffName}\n📞 +91 85858 52738 | +91 8897797667`;
       if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {
@@ -2129,10 +2142,23 @@ export class StaffWhatsAppInboxPage {
 
     const user: any = authService.getAuthState().user || {};
     const staffName = user.full_name || user.name || 'Staff';
-    let ext = user.extension || user.ext || (typeof window !== 'undefined' ? (window as any).__STAFF_EXTENSION__ : null);
-    if (!ext && user.emp_code) {
-      const m = String(user.emp_code).match(/(\d{2,4})$/);
-      if (m) ext = m[1].replace(/^0+/, '') || m[1];
+    const code = String(user.emp_code || '').trim().toUpperCase();
+    const isSysAdmin = code === 'MR10001' || staffName.toUpperCase().includes('SYSTEM ADMINISTRATOR');
+
+    let ext = null;
+    if (!isSysAdmin) {
+      ext = user.extension || user.ext || (typeof window !== 'undefined' ? (window as any).__STAFF_EXTENSION__ : null);
+      if (!ext && code) {
+        const m = code.match(/(\d{1,4})$/);
+        if (m) {
+          const num = parseInt(m[1], 10);
+          const last2 = String(num % 100).padStart(2, '0');
+          if (code.startsWith('MR')) ext = '1' + last2;
+          else if (code.startsWith('MN')) ext = '2' + last2;
+          else if (code.startsWith('FL')) ext = '4' + last2;
+          else ext = '8' + last2;
+        }
+      }
     }
     let defaultSig = `Regards,\n${staffName}\n📞 +91 85858 52738 | +91 8897797667`;
     if (ext && String(ext).trim() && !['none', 'null', 'undefined', 'n/a'].includes(String(ext).trim().toLowerCase())) {

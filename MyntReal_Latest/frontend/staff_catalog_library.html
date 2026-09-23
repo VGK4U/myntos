@@ -1007,6 +1007,7 @@
                                     <option value="ETC_TRAINING">ETC Training</option>
                                     <option value="REAL_DREAMS">Real Dreams</option>
                                     <option value="INSURANCE">Insurance</option>
+                                    <option value="VGK4U">VGK4U Master</option>
                                 </select>
                             </div>
                             <!-- Engagement Filter -->
@@ -1153,6 +1154,7 @@
         let histSearchDebounceTimer = null;
 
         const VERTICALS = [
+            { code: 'VGK4U', label: 'VGK4U Master', icon: 'fa-crown', defaultSlug: 'vgk4u' },
             { code: 'SOLAR', label: 'Solar Solutions', icon: 'fa-solar-panel', defaultSlug: 'commercial-residential-solar' },
             { code: 'INDUSTRIAL_HUB', label: 'MyntReal Hub', icon: 'fa-building-columns', defaultSlug: 'industrial-hub-franchise' },
             { code: 'EV_B2C', label: 'EV 2W Pricing', icon: 'fa-motorcycle', defaultSlug: 'ev-b2c-pricing' },
@@ -1299,7 +1301,9 @@
 
             const segmentSlug = cat.segment_code.toLowerCase().replace(/_/g, '-');
             let publicUrl = `/catalog/${segmentSlug}/${cat.slug}`;
-            if (cat.segment_code === 'HUB_PRICING' || cat.slug === 'hub-ev-pricing') {
+            if (cat.segment_code === 'VGK4U' || cat.slug === 'vgk4u' || cat.slug === 'vgk-master') {
+                publicUrl = '/catalog/vgk4u';
+            } else if (cat.segment_code === 'HUB_PRICING' || cat.slug === 'hub-ev-pricing') {
                 publicUrl = '/catalog/hub-ev-pricing';
             } else if (cat.segment_code === 'EV_B2C' || cat.slug === 'ev-b2c-pricing') {
                 publicUrl = '/catalog/ev-b2c-pricing';
@@ -1411,6 +1415,10 @@
 
         function updatePreviewFrame(cat) {
             const iframe = document.getElementById('catalogPreviewIframe');
+            if (cat.segment_code === 'VGK4U' || cat.slug === 'vgk4u' || cat.slug === 'vgk-master') {
+                iframe.src = '/catalog/vgk4u?preview=1';
+                return;
+            }
             if (cat.segment_code === 'HUB_PRICING' || cat.slug === 'hub-ev-pricing') {
                 iframe.src = '/catalog/hub-ev-pricing?preview=1';
                 return;
@@ -2081,6 +2089,8 @@
                     catKey = 'real_estate';
                 } else if (seg === 'INSURANCE' || slug.includes('insur')) {
                     catKey = 'insurance';
+                } else if (seg === 'VGK4U' || slug.includes('vgk')) {
+                    catKey = 'vgk4u';
                 }
                 
                 const companyId = activeCatalog.company_id || 4;

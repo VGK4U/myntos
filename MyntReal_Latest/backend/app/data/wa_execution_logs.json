@@ -1,5 +1,116 @@
 [
   {
+    "id": "log_b766c745",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Sep 2026, 02:30:00 PM IST",
+    "iso_timestamp": "2026-09-23T14:30:00.700812",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_7f8d51c6",
+    "job_id": "field_staff_journey_report",
+    "job_name": "Field Journey Performance & Leaderboard Report",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Cron",
+    "timestamp": "23 Sep 2026, 02:30:00 PM IST",
+    "iso_timestamp": "2026-09-23T14:30:00.082330",
+    "target_summary": "Field Updates",
+    "targets": [
+      {
+        "type": "group",
+        "name": "Field Updates",
+        "identifier": "120363428888306723@g.us"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SKIPPED",
+    "error_message": "No active field staff or journeys today",
+    "detail": {
+      "reason": "no_active_journeys"
+    }
+  },
+  {
+    "id": "log_c06e6387",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Sep 2026, 02:00:00 PM IST",
+    "iso_timestamp": "2026-09-23T14:00:00.397847",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
+    "id": "log_738a06c0",
+    "job_id": "missed_call_ack",
+    "job_name": "Instant Missed Call Auto-ACK",
+    "trigger_type": "AUTO_SCHEDULER",
+    "triggered_by": "System Real-time Sync",
+    "timestamp": "23 Sep 2026, 01:00:00 PM IST",
+    "iso_timestamp": "2026-09-23T13:00:00.466243",
+    "target_summary": "Customer Direct WhatsApp ACK",
+    "targets": [
+      {
+        "id": "t5",
+        "type": "direct",
+        "name": "Customer Direct WhatsApp ACK",
+        "identifier": "Direct Customer Mobile"
+      }
+    ],
+    "sent_count": 0,
+    "failed_count": 0,
+    "status": "SUCCESS",
+    "error_message": null,
+    "detail": {
+      "synced": 0,
+      "created": 0,
+      "updated": 0,
+      "skipped": 0,
+      "followups_created": 0
+    }
+  },
+  {
     "id": "log_65d37656",
     "job_id": "missed_call_ack",
     "job_name": "Instant Missed Call Auto-ACK",
@@ -15423,348 +15534,5 @@
       "skipped": 0,
       "followups_created": 0
     }
-  },
-  {
-    "id": "log_3bdd8f63",
-    "job_id": "missed_call_ack",
-    "job_name": "Instant Missed Call Auto-ACK",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Real-time Sync",
-    "timestamp": "03 Sep 2026, 08:00:03 AM IST",
-    "iso_timestamp": "2026-09-03T08:00:03.253999",
-    "target_summary": "Customer Direct WhatsApp ACK",
-    "targets": [
-      {
-        "id": "t5",
-        "type": "direct",
-        "name": "Customer Direct WhatsApp ACK",
-        "identifier": "Direct Customer Mobile"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 0,
-    "status": "SUCCESS",
-    "error_message": null,
-    "detail": {
-      "synced": 0,
-      "created": 0,
-      "updated": 0,
-      "skipped": 0,
-      "followups_created": 0
-    }
-  },
-  {
-    "id": "log_6c381a92",
-    "job_id": "vgk4u_morning_wish",
-    "job_name": "VGK4U Elite Community Morning Wish",
-    "trigger_type": "AUTO_SCHEDULER",
-    "triggered_by": "System Cron",
-    "timestamp": "03 Sep 2026, 08:00:01 AM IST",
-    "iso_timestamp": "2026-09-03T08:00:01.180239",
-    "target_summary": "VGK4u Official Channel, VGK4u Community Group, VGK4U - Vijayawada",
-    "targets": [
-      {
-        "id": "t_vgk_channel",
-        "type": "channel",
-        "name": "VGK4u Official Channel",
-        "identifier": "https://whatsapp.com/channel/0029Vb7Vb5f9cDDXf3zWtf0m"
-      },
-      {
-        "id": "t_vgk_group",
-        "type": "group",
-        "name": "VGK4u Community Group",
-        "identifier": "https://chat.whatsapp.com/HNQQoKXFfCm5PQngGdrlcY?s=cl&p=i&mlu=0"
-      },
-      {
-        "id": "t_vgk_vijayawada",
-        "type": "group",
-        "name": "VGK4U - Vijayawada",
-        "identifier": "VGK4U - Vijayawada"
-      }
-    ],
-    "sent_count": 0,
-    "failed_count": 3,
-    "status": "FAILED",
-    "error_message": "Dispatch failed (3 targets failed)",
-    "detail": {
-      "dispatched_groups": 0,
-      "failed_groups": 3,
-      "results": [
-        {
-          "success": false,
-          "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
-          "data": {
-            "success": false,
-            "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
-            "status": "qr_ready"
-          }
-        },
-        {
-          "success": false,
-          "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
-          "data": {
-            "success": false,
-            "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
-            "status": "qr_ready"
-          }
-        },
-        {
-          "success": false,
-          "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
-          "data": {
-            "success": false,
-            "error": "WhatsApp bot not connected. Scan QR code at http://localhost:5002/qr",
-            "status": "qr_ready"
-          }
-        }
-      ]
-    }
-  },
-  {
-    "id": "log_20260903073040_vgk_member_morning_statement",
-    "job_id": "vgk_member_morning_statement",
-    "job_name": "VGK Members Daily 8 AM Revenue Statement",
-    "timestamp": "2026-09-03T07:30:40.885343",
-    "status": "SUCCESS",
-    "triggered_by": "SYSTEM",
-    "payload": {
-      "qualifying_members_count": 24,
-      "dispatched_count": 22,
-      "failed_count": 1,
-      "detail": [
-        {
-          "member_id": 1,
-          "name": "MNR Mega Natural Resources",
-          "status": "SKIPPED",
-          "reason": "Already sent today"
-        },
-        {
-          "member_id": 25,
-          "name": "Sri Lakshmi EV Solutions",
-          "status": "SUCCESS",
-          "phone": "9032418896"
-        },
-        {
-          "member_id": 31,
-          "name": "VGK Support",
-          "status": "FAILED",
-          "error": "invalid_phone_number"
-        },
-        {
-          "member_id": 32,
-          "name": "Geetharam Enterprises",
-          "status": "SUCCESS",
-          "phone": "9058121456"
-        },
-        {
-          "member_id": 33,
-          "name": "Velagas Enterprises",
-          "status": "SUCCESS",
-          "phone": "9849471128"
-        },
-        {
-          "member_id": 40,
-          "name": "K. V. Naidu",
-          "status": "SUCCESS",
-          "phone": "7702445685"
-        },
-        {
-          "member_id": 73,
-          "name": "MyntReal LLP",
-          "status": "SUCCESS",
-          "phone": "9032574588"
-        },
-        {
-          "member_id": 77,
-          "name": "Kalla Nookunaidu",
-          "status": "SUCCESS",
-          "phone": "8688269969"
-        },
-        {
-          "member_id": 83,
-          "name": "Geetharam Enterprises",
-          "status": "SUCCESS",
-          "phone": "9058121456"
-        },
-        {
-          "member_id": 97,
-          "name": "Velagas Enterprises",
-          "status": "SUCCESS",
-          "phone": "9849471128"
-        },
-        {
-          "member_id": 122,
-          "name": "Mr. Bandi Gangaraju",
-          "status": "SUCCESS",
-          "phone": "9494188948"
-        },
-        {
-          "member_id": 123,
-          "name": "Lochala Simhachalam",
-          "status": "SUCCESS",
-          "phone": "9391144684"
-        },
-        {
-          "member_id": 133,
-          "name": "Mr. Ramanadh Velaga",
-          "status": "SUCCESS",
-          "phone": "9290221042"
-        },
-        {
-          "member_id": 134,
-          "name": "Mr. Rohith Tangi",
-          "status": "SUCCESS",
-          "phone": "8688788680"
-        },
-        {
-          "member_id": 152,
-          "name": "Mr. Pothala Chiranjeevi",
-          "status": "SUCCESS",
-          "phone": "9010827917"
-        },
-        {
-          "member_id": 160,
-          "name": "Mr. Tharakaramarao Allu",
-          "status": "SUCCESS",
-          "phone": "9666679696"
-        },
-        {
-          "member_id": 175,
-          "name": "Mr. Jartha Musallayya",
-          "status": "SUCCESS",
-          "phone": "9676284460"
-        },
-        {
-          "member_id": 176,
-          "name": "Mr. Bhusari Balaraju",
-          "status": "SUCCESS",
-          "phone": "9666386133"
-        },
-        {
-          "member_id": 177,
-          "name": "Mr. Kudumula Suribabu",
-          "status": "SUCCESS",
-          "phone": "7382988020"
-        },
-        {
-          "member_id": 209,
-          "name": "Mr. Kuruju Srinubabu",
-          "status": "SUCCESS",
-          "phone": "9492249439"
-        },
-        {
-          "member_id": 216,
-          "name": "Mr. B Ramalakshmi",
-          "status": "SUCCESS",
-          "phone": "9550297657"
-        },
-        {
-          "member_id": 221,
-          "name": "Mr. Seeram reddy Thammu Naidu",
-          "status": "SUCCESS",
-          "phone": "8500926972"
-        },
-        {
-          "member_id": 230,
-          "name": "Mr. Tarum Nageswara Rao",
-          "status": "SUCCESS",
-          "phone": "9494545848"
-        },
-        {
-          "member_id": 233,
-          "name": "Mr. Jalumuri Trimurthulu",
-          "status": "SUCCESS",
-          "phone": "9490387083"
-        }
-      ]
-    },
-    "error_message": null
-  },
-  {
-    "id": "log_20260903073017_wa_daily_vgk_zero_lead_motivational_730am",
-    "job_id": "wa_daily_vgk_zero_lead_motivational_730am",
-    "job_name": "VGK Members Daily 7:30 AM 0-Lead Motivational Dispatch",
-    "timestamp": "2026-09-03T07:30:17.334210",
-    "status": "PARTIAL_SUCCESS",
-    "triggered_by": "SYSTEM",
-    "payload": {
-      "total_count": 11,
-      "total_eligible": 11,
-      "dispatched_count": 10,
-      "skipped_count": 0,
-      "failed_count": 1,
-      "active_partners_with_leads": 174,
-      "total_gross_earned": 7100864.0,
-      "theme_used": "\ud83d\udd25 *THURSDAY DRIVE \u2014 \u0c2e\u0c40 \u0c06\u0c30\u0c4d\u0c25\u0c3f\u0c15 \u0c38\u0c4d\u0c35\u0c3e\u0c24\u0c02\u0c24\u0c4d\u0c30\u0c02 \u0c35\u0c48\u0c2a\u0c41 \u0c05\u0c21\u0c41\u0c17\u0c41\u0c32\u0c41 \u0c35\u0c47\u0c2f\u0c02\u0c21\u0c3f!*",
-      "results": [
-        {
-          "member_id": 6,
-          "name": "Test Partner (VIEW ONLY)",
-          "status": "FAILED",
-          "error": "invalid_phone_number"
-        },
-        {
-          "member_id": 26,
-          "name": "Rajesh Sharma",
-          "status": "SUCCESS",
-          "phone": "9810012001"
-        },
-        {
-          "member_id": 27,
-          "name": "Priya Patel",
-          "status": "SUCCESS",
-          "phone": "9810012002"
-        },
-        {
-          "member_id": 28,
-          "name": "Amit Singh",
-          "status": "SUCCESS",
-          "phone": "9810012003"
-        },
-        {
-          "member_id": 29,
-          "name": "Sunita Verma",
-          "status": "SUCCESS",
-          "phone": "9810012004"
-        },
-        {
-          "member_id": 30,
-          "name": "Ravi Kumar",
-          "status": "SUCCESS",
-          "phone": "9810012005"
-        },
-        {
-          "member_id": 106,
-          "name": "Nissi Enterprises",
-          "status": "SUCCESS",
-          "phone": "9491114014"
-        },
-        {
-          "member_id": 111,
-          "name": "Visionera Pvt Ltd",
-          "status": "SUCCESS",
-          "phone": "9347475257"
-        },
-        {
-          "member_id": 170,
-          "name": "Sri Vijaya",
-          "status": "SUCCESS",
-          "phone": "8688788680"
-        },
-        {
-          "member_id": 246,
-          "name": "Mr. K Sravan",
-          "status": "SUCCESS",
-          "phone": "9000250716"
-        },
-        {
-          "member_id": 338,
-          "name": "Ganesh Mandal",
-          "status": "SUCCESS",
-          "phone": "9988776655"
-        }
-      ]
-    },
-    "error_message": null
   }
 ]

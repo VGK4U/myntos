@@ -111,12 +111,17 @@ export class ProgressPage {
   private selectedDate: string = new Date().toISOString().split('T')[0];
   private selectedEmployeeId: number | null = null;
   private canViewTeam: boolean = false;
-  private activeTab: 'today' | 'date-range' | 'day-progress' = 'today';
+  private activeTab: 'today' | 'date-range' | 'day-progress' | 'extensions' = 'today';
   private dateRangeFrom: string = '';
   private dateRangeTo: string = '';
   private pendingTimers: ReturnType<typeof setTimeout>[] = [];
   private teamDpSortField: string | null = null;
   private teamDpSortDir: 'asc' | 'desc' = 'asc';
+  private extensionsData: any = null;
+  private extensionsLoading: boolean = false;
+  private extSearchQuery: string = '';
+  private extDeptFilter: string = 'ALL';
+  private extSegmentFilter: string = 'ALL';
 
   private readonly STATUS_ORDER: Record<string, number> = { done: 0, completed: 0, incomplete: 1, na: 2, pending: 3 };
   private statusRank(val: string): number { return this.STATUS_ORDER[val] !== undefined ? this.STATUS_ORDER[val] : 2; }
@@ -233,6 +238,9 @@ export class ProgressPage {
           <button class="progress-tab ${this.activeTab === 'today' ? 'active' : ''}" data-tab="today">
             📋 Progress
           </button>
+          <button class="progress-tab ${this.activeTab === 'extensions' ? 'active' : ''}" data-tab="extensions">
+            📞 Extensions
+          </button>
           <button class="progress-tab ${this.activeTab === 'day-progress' ? 'active' : ''}" data-tab="day-progress">
             👥 Day Progress
           </button>
@@ -273,12 +281,14 @@ export class ProgressPage {
 
     document.querySelectorAll('.progress-tab').forEach(tab => {
       tab.addEventListener('click', () => {
-        const tabId = (tab as HTMLElement).dataset.tab as 'today' | 'date-range' | 'day-progress';
+        const tabId = (tab as HTMLElement).dataset.tab as 'today' | 'date-range' | 'day-progress' | 'extensions';
         this.activeTab = tabId;
         document.querySelectorAll('.progress-tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         if (tabId === 'day-progress' && !this.dayProgressData) {
           this.loadDayProgress();
+        } else if (tabId === 'extensions' && !this.extensionsData) {
+          this.loadExtensionsDirectory();
         } else {
           this.updateContent();
         }
@@ -345,6 +355,12 @@ export class ProgressPage {
         this.downlineOptions.map(emp => 
           `<option value="${emp.id}" ${this.selectedEmployeeId === emp.id ? 'selected' : ''}>${emp.full_name} (${emp.emp_code})</option>`
         ).join('');
+    }
+
+    if (this.activeTab === 'extensions') {
+      content.innerHTML = this.renderExtensionsDirectory();
+      this.attachExtensionsListeners();
+      return;
     }
 
     if (this.activeTab === 'day-progress') {
@@ -1194,6 +1210,253 @@ export class ProgressPage {
   private escapeHtml(str: string): string {
     if (!str) return '';
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  private async loadExtensionsDirectory(force = false): Promise<void> {
+    if (this.extensionsData && !force) {
+      this.updateContent();
+      return;
+    }
+    this.extensionsLoading = true;
+    this.updateContent();
+    try {
+      const res: any = await apiService.get('/api/v1/crm/universal-history/extensions');
+      if (res && res.success) {
+        this.extensionsData = (res.data && (res.data.departments || res.data.staff)) ? res.data : res;
+      }
+    } catch (err: any) {
+      console.error('[MOBILE-EXTENSIONS] Error loading extensions:', err);
+    } finally {
+      this.extensionsLoading = false;
+      this.updateContent();
+    }
+  }
+
+  private renderExtensionsDirectory(): string {
+    if (this.extensionsLoading) {
+      return '<div class="loading-state">Loading IVR &amp; Staff Extensions...</div>';
+    }
+
+    if (!this.extensionsData) {
+      return `
+        <div class="empty-state" style="padding: 30px 16px; text-align: center;">
+          <div style="font-size: 2rem; margin-bottom: 8px;">⚠️</div>
+          <div style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">Failed to load extensions directory</div>
+          <button class="btn btn-primary btn-sm" id="btnRetryExt" style="margin-top: 10px;">Retry</button>
+        </div>
+      `;
+    }
+
+    const depts = this.extensionsData.departments || [];
+    let staff = this.extensionsData.staff || [];
+
+    if (this.extDeptFilter !== 'ALL') {
+      staff = staff.filter((s: any) => s.department === this.extDeptFilter);
+    }
+    if (this.extSegmentFilter !== 'ALL') {
+      staff = staff.filter((s: any) => (s.segments || []).some((sg: string) => sg.toLowerCase() === this.extSegmentFilter.toLowerCase()));
+    }
+    if (this.extSearchQuery) {
+      const q = this.extSearchQuery.toLowerCase();
+      staff = staff.filter((s: any) =>
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.emp_code || '').toLowerCase().includes(q) ||
+        String(s.extension || '').toLowerCase().includes(q) ||
+        (s.department || '').toLowerCase().includes(q) ||
+        (s.segments || []).some((sg: string) => sg.toLowerCase().includes(q))
+      );
+    }
+
+    const uniqueDepts = Array.from(new Set((this.extensionsData.staff || []).map((s: any) => s.department).filter(Boolean))).sort();
+    const uniqueSegs = Array.from(new Set(
+      (this.extensionsData.departments || []).map((d: any) => d.segment).concat(
+        (this.extensionsData.staff || []).flatMap((s: any) => s.segments || [])
+      ).filter(Boolean)
+    )).sort();
+
+    return `
+      <div style="display: flex; flex-direction: column; gap: 14px; padding: 4px 0 24px;">
+        <!-- Hotline Hero Card -->
+        <div style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); border-radius: 14px; padding: 16px; color: #fff; box-shadow: 0 4px 12px rgba(15,23,42,0.15);">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+            <span style="font-size: 10px; font-weight: 800; background: rgba(56,189,248,0.2); color: #38bdf8; border: 1px solid rgba(56,189,248,0.4); padding: 2px 8px; border-radius: 4px; text-transform: uppercase;">
+              IVR &amp; Extensions
+            </span>
+            <button id="btnMobRefreshExt" style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); color: #fff; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 3px 8px; cursor: pointer;">
+              🔄 Refresh
+            </button>
+          </div>
+          <div style="font-size: 17px; font-weight: 800; letter-spacing: 0.3px; color: #ffffff;">
+            +91 85858 52738 | +91 8897797667
+          </div>
+          <div style="font-size: 11.5px; color: #94a3b8; margin-top: 4px; line-height: 1.4;">
+            Active directory synchronized across WhatsApp signatures, softphones, and bilingual IVR routing.
+          </div>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+          <input type="text" id="mobExtSearchInput" value="${this.escapeHtml(this.extSearchQuery)}" placeholder="Search staff, extension, department, segment..." style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 12px; font-size: 13px; outline: none; box-sizing: border-box;" />
+          <div style="display: flex; gap: 8px;">
+            <select id="mobExtDeptFilter" style="flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 8px; font-size: 12px; background: #fff; outline: none;">
+              <option value="ALL">All Depts</option>
+              ${uniqueDepts.map(d => `<option value="${this.escapeHtml(String(d))}" ${d === this.extDeptFilter ? 'selected' : ''}>${this.escapeHtml(String(d))}</option>`).join('')}
+            </select>
+            <select id="mobExtSegmentFilter" style="flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 8px; font-size: 12px; background: #fff; outline: none;">
+              <option value="ALL">All Segments</option>
+              ${uniqueSegs.map(s => `<option value="${this.escapeHtml(String(s))}" ${s === this.extSegmentFilter ? 'selected' : ''}>${this.escapeHtml(String(s))}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <!-- Section 1: Department Keypad Extensions -->
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <div style="font-weight: 800; font-size: 14px; color: #0f172a;">
+              📞 IVR Department Keypad (1–9, 0)
+            </div>
+            <span style="font-size: 11px; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px;">
+              ${depts.length} Options
+            </span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            ${depts.map((d: any) => `
+              <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; display: flex; align-items: flex-start; gap: 10px;">
+                <span style="width: 30px; height: 30px; border-radius: 8px; background: #eff6ff; color: #2563eb; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; border: 1px solid #bfdbfe; flex-shrink: 0;">
+                  ${this.escapeHtml(d.key)}
+                </span>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <span style="font-weight: 700; font-size: 13px; color: #0f172a;">${this.escapeHtml(d.name)}</span>
+                    <span style="font-size: 9.5px; font-weight: 700; padding: 1px 5px; border-radius: 4px; background: #e2e8f0; color: #475569; text-transform: uppercase;">
+                      ${this.escapeHtml(d.segment)}
+                    </span>
+                  </div>
+                  <div style="font-size: 11px; color: #64748b; margin-top: 2px;">${this.escapeHtml(d.description)}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Section 2: Active Staff Extension Roster -->
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <div style="font-weight: 800; font-size: 14px; color: #0f172a;">
+              👥 Active Staff Extensions
+            </div>
+            <span style="font-size: 11px; font-weight: 700; color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 2px 6px; border-radius: 4px;">
+              ${staff.length} Staff
+            </span>
+          </div>
+
+          ${!staff.length ? '<div style="text-align: center; color: #94a3b8; padding: 20px 0; font-size: 13px;">No staff match your search</div>' : `
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              ${staff.map((s: any) => {
+                const segBadges = (s.segments || []).map((sg: string) => 
+                  `<span style="font-size: 9.5px; font-weight: 600; padding: 1px 5px; border-radius: 4px; background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe;">${this.escapeHtml(sg)}</span>`
+                ).join(' ');
+
+                return `
+                  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 12px; font-weight: 800; padding: 3px 8px; border-radius: 6px;">
+                          Ext: ${this.escapeHtml(s.extension)}
+                        </span>
+                        <span style="font-family: monospace; font-size: 11px; color: #64748b;">${this.escapeHtml(s.emp_code)}</span>
+                      </div>
+                      <span style="font-size: 11px; font-weight: 600; color: #475569;">${this.escapeHtml(s.department)}</span>
+                    </div>
+
+                    <div style="font-weight: 700; font-size: 13.5px; color: #0f172a;">
+                      ${this.escapeHtml(s.name)}
+                    </div>
+
+                    ${segBadges ? `<div style="display: flex; gap: 4px; flex-wrap: wrap;">${segBadges}</div>` : ''}
+
+                    <div style="display: flex; gap: 8px; margin-top: 2px;">
+                      <button class="mob-copy-sig-btn" data-name="${this.escapeHtml(s.name)}" data-ext="${this.escapeHtml(s.extension)}" style="flex: 1; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 11px; font-weight: 700; color: #334155; cursor: pointer;">
+                        📋 Copy WhatsApp Sig
+                      </button>
+                      <button class="mob-copy-ext-btn" data-ext="${this.escapeHtml(s.extension)}" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 11px; font-weight: 700; color: #2563eb; cursor: pointer;">
+                        Ext #${this.escapeHtml(s.extension)}
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+  }
+
+  private attachExtensionsListeners(): void {
+    document.getElementById('btnRetryExt')?.addEventListener('click', () => {
+      this.loadExtensionsDirectory(true);
+    });
+
+    document.getElementById('btnMobRefreshExt')?.addEventListener('click', () => {
+      this.loadExtensionsDirectory(true);
+    });
+
+    const searchInp = document.getElementById('mobExtSearchInput') as HTMLInputElement;
+    searchInp?.addEventListener('input', (e) => {
+      this.extSearchQuery = (e.target as HTMLInputElement).value;
+      const content = document.getElementById('pageContent');
+      if (content) {
+        content.innerHTML = this.renderExtensionsDirectory();
+        this.attachExtensionsListeners();
+      }
+    });
+
+    document.getElementById('mobExtDeptFilter')?.addEventListener('change', (e) => {
+      this.extDeptFilter = (e.target as HTMLSelectElement).value;
+      const content = document.getElementById('pageContent');
+      if (content) {
+        content.innerHTML = this.renderExtensionsDirectory();
+        this.attachExtensionsListeners();
+      }
+    });
+
+    document.getElementById('mobExtSegmentFilter')?.addEventListener('change', (e) => {
+      this.extSegmentFilter = (e.target as HTMLSelectElement).value;
+      const content = document.getElementById('pageContent');
+      if (content) {
+        content.innerHTML = this.renderExtensionsDirectory();
+        this.attachExtensionsListeners();
+      }
+    });
+
+    document.querySelectorAll('.mob-copy-sig-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const el = e.currentTarget as HTMLElement;
+        const name = el.dataset.name || 'Staff';
+        const ext = el.dataset.ext || '';
+        const hasExt = ext && ext !== 'N/A';
+        const sig = `Regards,\n${name}\n📞 +91 85858 52738 | +91 8897797667${hasExt ? '\nExt: ' + ext : ''}`;
+        navigator.clipboard?.writeText(sig).then(() => {
+          this.showToast(`Copied WhatsApp Signature for ${name}`);
+        }).catch(() => {
+          prompt('Copy signature:', sig);
+        });
+      });
+    });
+
+    document.querySelectorAll('.mob-copy-ext-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const el = e.currentTarget as HTMLElement;
+        const ext = el.dataset.ext || '';
+        if (!ext || ext === 'N/A') return;
+        navigator.clipboard?.writeText(ext).then(() => {
+          this.showToast(`Copied Extension ${ext}`);
+        }).catch(() => {
+          prompt('Copy extension:', ext);
+        });
+      });
+    });
   }
 
   cleanup(): void {

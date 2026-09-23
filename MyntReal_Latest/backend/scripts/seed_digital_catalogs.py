@@ -39,6 +39,70 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 
 SEED_CATALOGS_DATA = [
     {
+        "segment_code": "VGK4U",
+        "slug": "vgk4u",
+        "title": "VGK4U — Official Dynamic Web Catalogue (5 Verticals)",
+        "subtitle": "One Unified Platform • Five High-Growth Business Verticals • Lifelong Compounding Wealth",
+        "summary": "Official 2026 Master Channel Partner & Loyalty Catalogue for VGK4U. Free joining, ₹30,000 welcome points, 5-level earning overrides across Solar EPC, VGK Care Insurance, Royal Manthra EV 2W, VGK Real Dreams, and EVolution Training (ETC). 3-generation nominee wealth transfer.",
+        "hero_media_url": "/public/images/solar_installations/krishnadevipeta_solar_customer.jpg",
+        "theme_config": {"primary_color": "#f59e0b", "accent_color": "#d97706", "dark_mode": True},
+        "default_language": "en",
+        "active_languages": ["en", "te", "hi", "ta"],
+        "sections": [
+            {
+                "section_type": "hero",
+                "section_key": "hero",
+                "title": "One Platform. Five High-Growth Verticals. Endless Earning.",
+                "subtitle": "Join VGK4U Free Today. Earn ₹30,000 Points instantly (1 Pt = ₹1 Real Value).",
+                "content_variants": {
+                    "en": {
+                        "title": "One Platform. Five High-Growth Verticals. Endless Earning.",
+                        "subtitle": "Join VGK4U Free Today. Earn ₹30,000 Points instantly (1 Pt = ₹1 Real Value).",
+                        "cta_text": "Join Free as Channel Partner",
+                        "cta_phone": "918585852738"
+                    }
+                }
+            }
+        ],
+        "items": [
+            {
+                "item_code": "VGK-SOLAR-01",
+                "title": "Har Ghar Solar EPC Sourcing",
+                "subtitle": "PM Surya Ghar ₹78,000 Direct Subsidy + Solar for ₹1 Scheme",
+                "pricing": {"base_price": 200000, "price_text": "5.0% Direct Commission"},
+                "badges": ["Tier-1 EPC", "₹10,000 / File", "Subsidy Direct"]
+            },
+            {
+                "item_code": "VGK-INS-01",
+                "title": "VGK Care Insurance Advisory",
+                "subtitle": "Health, Life, Motor EV Zero-Dep & Property All-Risk",
+                "pricing": {"base_price": 100000, "price_text": "₹15,000 - ₹30,000 / ₹1L"},
+                "badges": ["Bajaj Capital", "10+ Insurers", "Renewals"]
+            },
+            {
+                "item_code": "VGK-EV-01",
+                "title": "Royal Manthra EV 2-Wheelers",
+                "subtitle": "Smart Electric Scooters with LFP Battery & ₹0.20/km Cost",
+                "pricing": {"base_price": 75000, "price_text": "₹4,875 / Vehicle Handover"},
+                "badges": ["₹0.20 / km", "80-120 km Range", "High Volume"]
+            },
+            {
+                "item_code": "VGK-RE-01",
+                "title": "VGK Real Dreams Properties",
+                "subtitle": "VMRDA/DTCP Approved Plots, Luxury Apartments & Villas",
+                "pricing": {"base_price": 2000000, "price_text": "₹1,00,000 / ₹20L Deal"},
+                "badges": ["VMRDA Approved", "Clear Title", "High Ticket"]
+            },
+            {
+                "item_code": "VGK-ETC-01",
+                "title": "EVolution Training Centre (ETC)",
+                "subtitle": "Certified Hands-on EV Technician & Battery Lab Programs",
+                "pricing": {"base_price": 25000, "price_text": "5% Admission Payout"},
+                "badges": ["500+ Trained", "30+ Hubs", "95% Placement"]
+            }
+        ]
+    },
+    {
         "segment_code": "SOLAR",
         "slug": "commercial-residential-solar",
         "title": "MYNTREAL — Har Ghar Solar (హర్ ఘర్ సోలార్)",

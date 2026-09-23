@@ -62,8 +62,8 @@ def get_channel_business_contacts(channel: str = "whatsapp") -> Dict[str, str]:
     Channels:
     - 'whatsapp' (WhatsApp API & WhatsApp Scan):
         Primary:   +91 85858 52738
-        Secondary: +91 8897797667
-        Display:   📞 +91 85858 52738 | +91 8897797667
+        Secondary: +91 8019045667
+        Display:   📞 +91 85858 52738 | +91 8019045667
     - 'ivy' / 'ivr' / 'telephony':
         Primary:   +91 85858 52738
         Secondary: +91 80317 28899
@@ -153,7 +153,7 @@ def strip_staff_whatsapp_signature(message: str) -> str:
     """
     Removes any existing staff signature block from the message body
     (e.g., when forwarding, replying, or re-formatting to prevent stacked signatures).
-    Handles single number (8585852738, +91 85858 52738), dual numbers (+91 85858 52738 | +91 8897797667 or +91 85858 52738 | +91 80317 28899),
+    Handles single number (8585852738, +91 85858 52738), dual numbers (+91 85858 52738 | +91 8019045667 or +91 85858 52738 | +91 80317 28899),
     extensions, dashes ('—', '--'), employee codes, titles/designations, and multiple stacked signatures.
     """
     if not message:
@@ -212,7 +212,7 @@ def format_staff_whatsapp_message(
 
     Regards,
     <Staff Name>
-    +91 85858 52738 | +91 8897797667  (for WhatsApp)
+    +91 85858 52738 | +91 8019045667  (for WhatsApp)
     Ext: <X>   (ONLY when extension is configured)
 
     Or for Ivy/IVR:
@@ -961,7 +961,7 @@ def dispatch_scanned_lead_fallback(
                 message_type=f"fallback_{event_key}",
                 mobile_number=clean_10,
                 message_body=message,
-                from_number="8897797667",
+                from_number="8019045667",
                 to_number=f"+{clean_p}",
                 provider="SCANNED_FALLBACK",
                 initial_status="sent",
@@ -1018,7 +1018,7 @@ def dispatch_scanned_lead_fallback(
             message_type=f"fallback_{event_key}",
             mobile_number=clean_10,
             message_body=message,
-            from_number="8897797667",
+            from_number="8019045667",
             to_number=f"+{clean_p}",
             provider="SCANNED_QUEUE",
             initial_status="queued",
