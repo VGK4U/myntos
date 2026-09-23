@@ -46,7 +46,7 @@
             --bg-surface-alt: #f1f5f9;
             --border-subtle: #e2e8f0;
             --text-heading: #0f172a;
-            --text-body: #334155;
+            --text-body: #1e293b;
             --text-muted: #64748b;
 
             --shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.05);
@@ -200,6 +200,7 @@
             align-items: center;
             gap: 8px;
             text-decoration: none;
+            cursor: pointer;
         }
         .btn-gold-glow:hover {
             transform: translateY(-2px);
@@ -329,12 +330,44 @@
             letter-spacing: -0.02em;
         }
 
-        /* Hero Image Collage */
+        /* Hero Image Collage with Zoom Indicator */
         .hero-image-grid {
             position: relative;
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 14px;
+        }
+        .zoomable-img {
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+            border-radius: var(--radius-md);
+        }
+        .zoomable-img::after {
+            content: "\f00e";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(9, 13, 22, 0.75);
+            color: #ffffff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.25s ease;
+            z-index: 5;
+            backdrop-filter: blur(4px);
+        }
+        .zoomable-img:hover::after {
+            opacity: 1;
+            transform: scale(1);
         }
         .hero-img-tile {
             position: relative;
@@ -358,7 +391,7 @@
             bottom: 8px;
             left: 8px;
             right: 8px;
-            background: rgba(9, 13, 22, 0.82);
+            background: rgba(9, 13, 22, 0.84);
             backdrop-filter: blur(8px);
             color: #ffffff;
             font-size: 0.75rem;
@@ -641,36 +674,40 @@
         /* Model Slider Strip */
         .model-scroll-strip {
             display: flex;
-            gap: 16px;
+            gap: 20px;
             overflow-x: auto;
-            padding-bottom: 12px;
+            padding-bottom: 16px;
             scrollbar-width: thin;
         }
         .model-card-item {
-            min-width: 260px;
-            max-width: 280px;
-            background: var(--bg-surface);
+            min-width: 290px;
+            max-width: 310px;
+            background: #ffffff;
             border: 1px solid var(--border-subtle);
             border-radius: var(--radius-lg);
             overflow: hidden;
             box-shadow: var(--shadow-sm);
             flex-shrink: 0;
-            transition: transform 0.25s ease;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
         }
         .model-card-item:hover {
             transform: translateY(-6px);
-            box-shadow: var(--shadow-md);
+            box-shadow: var(--shadow-lg);
+            border-color: #10b981;
         }
         .model-card-item img {
             width: 100%;
-            height: 180px;
+            height: 195px;
             object-fit: cover;
             background: #ffffff;
+            cursor: pointer;
         }
 
         /* Partner Logos Ribbon */
         .partner-logo-pill {
-            background: var(--bg-surface);
+            background: #ffffff;
             border: 1px solid var(--border-subtle);
             border-radius: 12px;
             padding: 10px 16px;
@@ -686,20 +723,31 @@
             object-fit: contain;
         }
 
-        /* ── CAREER PROGRESSION LADDER ── */
+        /* ── CAREER PROGRESSION LADDER (HIGH CONTRAST ALL CARDS) ── */
         .career-step-box {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-subtle);
+            background: #ffffff !important;
+            border: 2px solid #e2e8f0;
             border-radius: var(--radius-lg);
-            padding: 24px 20px;
+            padding: 26px 20px;
             position: relative;
             text-align: center;
-            box-shadow: var(--shadow-sm);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
             height: 100%;
+            color: #0f172a !important;
+        }
+        .career-step-box h5 {
+            color: #0f172a !important;
+        }
+        .career-step-box p {
+            color: #475569 !important;
+        }
+        .career-step-box.core-box {
+            border-color: #f59e0b !important;
+            box-shadow: 0 0 24px rgba(245, 158, 11, 0.35);
         }
         .career-step-badge {
-            width: 36px;
-            height: 36px;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
             background: #f59e0b;
             color: #000000;
@@ -708,6 +756,7 @@
             align-items: center;
             justify-content: center;
             margin: 0 auto 12px auto;
+            font-size: 1.1rem;
         }
 
         /* ── 3-GENERATION NOMINEE TREE ── */
@@ -729,6 +778,147 @@
             height: 28px;
             background: #f59e0b;
             margin: 0 auto;
+        }
+
+        /* ── LIGHTBOX GALLERY MODAL ── */
+        .vgk-lightbox-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 2050;
+            background: rgba(5, 7, 12, 0.94);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .vgk-lightbox-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+        .vgk-lightbox-inner {
+            position: relative;
+            max-width: 1050px;
+            width: 100%;
+            text-align: center;
+        }
+        .vgk-lightbox-img-wrap {
+            position: relative;
+            max-height: 75vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+        .vgk-lightbox-img-wrap img {
+            max-width: 100%;
+            max-height: 75vh;
+            object-fit: contain;
+            border-radius: var(--radius-md);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .vgk-lightbox-nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(9, 13, 22, 0.75);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+        .vgk-lightbox-nav-btn:hover {
+            background: #f59e0b;
+            color: #000000;
+            border-color: #f59e0b;
+        }
+        .vgk-lightbox-prev { left: -26px; }
+        .vgk-lightbox-next { right: -26px; }
+        .vgk-lightbox-close {
+            position: absolute;
+            top: -45px;
+            right: 0;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .vgk-lightbox-close:hover {
+            transform: scale(1.15) rotate(90deg);
+            color: #f59e0b;
+        }
+        .vgk-lightbox-caption {
+            color: #ffffff;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+        .vgk-lightbox-counter {
+            color: #f59e0b;
+            font-size: 0.85rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        /* ── MANTHRA EV MODEL DETAILS MODAL ── */
+        .ev-modal-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 2040;
+            background: rgba(9, 13, 22, 0.88);
+            backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .ev-modal-overlay.active {
+            display: flex;
+        }
+        .ev-modal-card {
+            background: #ffffff;
+            color: #0f172a;
+            max-width: 850px;
+            width: 100%;
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-xl);
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .battery-chip-btn {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 10px 14px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+        }
+        .battery-chip-btn:hover {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        .battery-chip-btn.active {
+            border-color: #10b981;
+            background: #ecfdf5;
+            box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
         }
 
         /* ── FLOATING MOBILE ACTIONS BAR ── */
@@ -758,6 +948,8 @@
             .hero-image-grid {
                 margin-top: 32px;
             }
+            .vgk-lightbox-prev { left: 10px; }
+            .vgk-lightbox-next { right: 10px; }
         }
         @media (max-width: 576px) {
             .vertical-panel-grid {
@@ -899,31 +1091,31 @@
                     </div>
                 </div>
 
-                <!-- Right Side: Real Photography Collage -->
+                <!-- Right Side: Real Photography Collage with Zoom -->
                 <div class="col-lg-5">
                     <div class="hero-image-grid">
-                        <div class="hero-img-tile">
+                        <div class="hero-img-tile zoomable-img" onclick="openGallery('solar', 0)">
                             <img src="/public/images/solar_installations/krishnadevipeta_solar_customer.jpg" alt="Rooftop Solar Customer Installation">
                             <div class="hero-tile-label">
                                 <span><i class="fas fa-sun text-warning me-1"></i> Har Ghar Solar</span>
                                 <span class="badge bg-warning text-dark">₹78k Subsidy</span>
                             </div>
                         </div>
-                        <div class="hero-img-tile">
+                        <div class="hero-img-tile zoomable-img" onclick="openGallery('ev', 0)">
                             <img src="/public/hub/Assets/manthra-fleet-lineup.webp" alt="Manthra EV Smart Electric Fleet">
                             <div class="hero-tile-label">
                                 <span><i class="fas fa-bolt text-success me-1"></i> Manthra EV</span>
                                 <span class="badge bg-success">₹0.20/km</span>
                             </div>
                         </div>
-                        <div class="hero-img-tile">
+                        <div class="hero-img-tile zoomable-img" onclick="openGallery('training', 0)">
                             <img src="/public/images/etc_training/ev_practical_scooter_lab.jpg" alt="EVolution Training Practical Lab">
                             <div class="hero-tile-label">
                                 <span><i class="fas fa-graduation-cap text-info me-1"></i> EV Training</span>
                                 <span class="badge bg-info">95% Placement</span>
                             </div>
                         </div>
-                        <div class="hero-img-tile">
+                        <div class="hero-img-tile zoomable-img" onclick="openGallery('realestate', 0)">
                             <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&q=70" alt="Luxury Real Estate Villa">
                             <div class="hero-tile-label">
                                 <span><i class="fas fa-building text-warning me-1"></i> Real Dreams</span>
@@ -1457,7 +1649,7 @@
                 </div>
 
                 <div class="col-lg-6">
-                    <div class="position-relative">
+                    <div class="position-relative zoomable-img" onclick="openGallery('solar', 0)">
                         <img src="/public/images/solar_installations/krishnadevipeta_solar_customer.jpg" alt="Real Customer Solar Installation" class="img-fluid rounded-4 shadow-lg border">
                         <div class="position-absolute bottom-0 start-0 m-3 p-3 bg-dark bg-opacity-80 text-white rounded-3 backdrop-blur" style="backdrop-filter: blur(8px);">
                             <div class="fw-bold"><i class="fas fa-map-marker-alt text-warning me-1"></i> Real Customer Rooftop Site</div>
@@ -1515,7 +1707,7 @@
                 </div>
 
                 <div class="col-lg-6 order-lg-1">
-                    <div class="position-relative">
+                    <div class="position-relative zoomable-img" onclick="openGallery('insurance', 0)">
                         <img src="/public/hub/Assets/insurance-concept-protection-against-a-possible-eventuality-hand-holding-umbrella-icon-for-security-symbol-and-house-car-health-care-and-travel-icon-on-wooden-circle-for-assurance-life-concept-photo.jpg" alt="Insurance & Protection" class="img-fluid rounded-4 shadow-lg border">
                     </div>
                 </div>
@@ -1535,7 +1727,7 @@
                         Electric Mobility: A High-Growth Business
                     </h2>
                     <p class="chapter-desc text-dark text-opacity-75">
-                        India is transitioning rapidly to electric scooters. With Manthra EV, you offer cutting-edge smart electric 2-wheelers running at just <strong>₹0.20 per kilometre</strong> compared to ₹2.50/km for petrol.
+                        India is transitioning rapidly to electric scooters. With Manthra EV, you offer cutting-edge smart electric 2-wheelers running at just <strong>₹0.20 per kilometre</strong> compared to ₹2.50/km for petrol. Certified Non-RTO: Zero driving license and zero registration required!
                     </p>
 
                     <!-- Economics Box -->
@@ -1550,7 +1742,7 @@
                         <div class="col-sm-6">
                             <div class="p-3 bg-white rounded-3 border shadow-sm">
                                 <div class="fs-4 text-primary mb-1"><i class="fas fa-money-bill-wave"></i></div>
-                                <h6 class="fw-bold text-dark mb-1">Up to ₹5,000 / Scooter</h6>
+                                <h6 class="fw-bold text-dark mb-1">Up to ₹5,500 / Scooter</h6>
                                 <p class="small text-muted mb-0">Direct commission + team override</p>
                             </div>
                         </div>
@@ -1562,84 +1754,247 @@
                 </div>
 
                 <div class="col-lg-6">
-                    <img src="/public/hub/Assets/manthra-fleet-lineup.webp" alt="Manthra EV Smart Electric Fleet" class="img-fluid rounded-4 shadow-lg border">
+                    <div class="zoomable-img" onclick="openGallery('ev', 0)">
+                        <img src="/public/hub/Assets/manthra-fleet-lineup.webp" alt="Manthra EV Smart Electric Fleet" class="img-fluid rounded-4 shadow-lg border">
+                    </div>
                 </div>
             </div>
 
-            <!-- Manthra EV Models Showcase Strip -->
-            <div class="pt-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="fw-black text-dark mb-0">Featured Manthra EV Models</h4>
-                    <span class="small text-muted"><i class="fas fa-arrows-left-right me-1"></i> Swipe to explore</span>
+            <!-- Manthra EV Models Showcase Strip with Detailed Battery & Pricing Trigger -->
+            <div class="pt-4 mb-5">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <div>
+                        <h4 class="fw-black text-dark mb-1">Featured Manthra EV Models (B2C Showroom)</h4>
+                        <p class="text-muted small mb-0">Click any model below to view battery-wise on-road prices, specs, and instant booking options.</p>
+                    </div>
+                    <span class="badge bg-dark px-3 py-2 font-mono"><i class="fas fa-hand-pointer text-warning me-1"></i> Click Model for Battery Specs</span>
                 </div>
 
                 <div class="model-scroll-strip">
                     <!-- Pro GT -->
                     <div class="model-card-item">
-                        <img src="/public/hub/Assets/manthra-pro-gt-real.webp" alt="Manthra Pro GT">
-                        <div class="p-3">
-                            <span class="badge bg-success mb-1">POPULAR</span>
-                            <h6 class="fw-bold text-dark mb-1">Manthra Pro GT</h6>
-                            <div class="small text-muted mb-2">Top Speed 70 km/h • 120 km Range</div>
-                            <div class="d-flex justify-content-between font-mono">
-                                <span class="fw-bold text-primary">₹84,999</span>
-                                <span class="text-success small">Commission: ₹4,000</span>
+                        <div class="zoomable-img" onclick="openGallery('ev', 1)">
+                            <img src="/public/hub/Assets/manthra-pro-gt-real.webp" alt="Manthra Pro GT">
+                        </div>
+                        <div class="p-3 d-flex flex-column flex-fill">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge bg-success">POPULAR</span>
+                                <span class="badge bg-dark font-mono" style="color:#84cc16;">Sport Commuter</span>
                             </div>
+                            <h5 class="fw-black text-dark mb-1">Manthra Pro GT</h5>
+                            <div class="small text-muted mb-3">Top Speed &lt;25 km/h • 50-100 km Range</div>
+                            
+                            <div class="bg-light p-2 rounded-3 mb-3 border">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small text-muted">Customer On-Road:</span>
+                                    <strong class="text-primary font-mono fs-6">From ₹49,923</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small text-muted">Direct Partner:</span>
+                                    <strong class="text-success font-mono fs-6">Up to ₹4,000</strong>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-sm btn-outline-success w-100 fw-bold mt-auto py-2" onclick="openEVModelModal('pro-gt')">
+                                <i class="fas fa-battery-three-quarters me-1"></i> View Battery &amp; Pricing →
+                            </button>
                         </div>
                     </div>
 
                     <!-- Power Plus -->
                     <div class="model-card-item">
-                        <img src="/public/hub/Assets/manthra-power-plus-real.webp" alt="Manthra Power Plus">
-                        <div class="p-3">
-                            <span class="badge bg-primary mb-1">HEAVY DUTY</span>
-                            <h6 class="fw-bold text-dark mb-1">Manthra Power Plus</h6>
-                            <div class="small text-muted mb-2">Dual Battery • 150 km Range</div>
-                            <div class="d-flex justify-content-between font-mono">
-                                <span class="fw-bold text-primary">₹94,999</span>
-                                <span class="text-success small">Commission: ₹4,500</span>
+                        <div class="zoomable-img" onclick="openGallery('ev', 2)">
+                            <img src="/public/hub/Assets/manthra-power-plus-real.webp" alt="Manthra Power Plus">
+                        </div>
+                        <div class="p-3 d-flex flex-column flex-fill">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge bg-primary">HEAVY CARGO</span>
+                                <span class="badge bg-warning text-dark font-mono">200kg Load</span>
                             </div>
+                            <h5 class="fw-black text-dark mb-1">Manthra Power Plus</h5>
+                            <div class="small text-muted mb-3">Reinforced Dual Springs • 50-100 km Range</div>
+                            
+                            <div class="bg-light p-2 rounded-3 mb-3 border">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small text-muted">Customer On-Road:</span>
+                                    <strong class="text-primary font-mono fs-6">From ₹51,278</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small text-muted">Direct Partner:</span>
+                                    <strong class="text-success font-mono fs-6">Up to ₹4,500</strong>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-sm btn-outline-success w-100 fw-bold mt-auto py-2" onclick="openEVModelModal('power-plus')">
+                                <i class="fas fa-battery-three-quarters me-1"></i> View Battery &amp; Pricing →
+                            </button>
                         </div>
                     </div>
 
                     <!-- M99 Flagship -->
                     <div class="model-card-item">
-                        <img src="/public/hub/Assets/manthra-m99-real.webp" alt="Manthra M99 Flagship">
-                        <div class="p-3">
-                            <span class="badge bg-warning text-dark mb-1">FLAGSHIP</span>
-                            <h6 class="fw-bold text-dark mb-1">Manthra M99</h6>
-                            <div class="small text-muted mb-2">Smart Dashboard • 160 km Range</div>
-                            <div class="d-flex justify-content-between font-mono">
-                                <span class="fw-bold text-primary">₹1,09,999</span>
-                                <span class="text-success small">Commission: ₹5,000</span>
+                        <div class="zoomable-img" onclick="openGallery('ev', 3)">
+                            <img src="/public/hub/Assets/manthra-m99-real.webp" alt="Manthra M99 Flagship">
+                        </div>
+                        <div class="p-3 d-flex flex-column flex-fill">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge bg-warning text-dark">URBAN FLAGSHIP</span>
+                                <span class="badge bg-info text-white font-mono">TFT Screen</span>
                             </div>
+                            <h5 class="fw-black text-dark mb-1">Manthra M99 Flagship</h5>
+                            <div class="small text-muted mb-3">Reverse Assist • 60-100 km Range</div>
+                            
+                            <div class="bg-light p-2 rounded-3 mb-3 border">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small text-muted">Customer On-Road:</span>
+                                    <strong class="text-primary font-mono fs-6">From ₹80,782</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small text-muted">Direct Partner:</span>
+                                    <strong class="text-success font-mono fs-6">Up to ₹5,000</strong>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-sm btn-outline-success w-100 fw-bold mt-auto py-2" onclick="openEVModelModal('m99')">
+                                <i class="fas fa-battery-three-quarters me-1"></i> View Battery &amp; Pricing →
+                            </button>
                         </div>
                     </div>
 
                     <!-- Royal Sling -->
                     <div class="model-card-item">
-                        <img src="/public/hub/Assets/manthra-royal-real.webp" alt="Manthra Royal Sling">
-                        <div class="p-3">
-                            <span class="badge bg-info text-dark mb-1">ELEGANT</span>
-                            <h6 class="fw-bold text-dark mb-1">Manthra Royal Sling</h6>
-                            <div class="small text-muted mb-2">Retro Styling • 110 km Range</div>
-                            <div class="d-flex justify-content-between font-mono">
-                                <span class="fw-bold text-primary">₹79,999</span>
-                                <span class="text-success small">Commission: ₹3,800</span>
+                        <div class="zoomable-img" onclick="openGallery('ev', 4)">
+                            <img src="/public/hub/Assets/manthra-royal-real.webp" alt="Manthra Royal Sling">
+                        </div>
+                        <div class="p-3 d-flex flex-column flex-fill">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge text-white" style="background:#7c3aed;">RETRO LUXURY</span>
+                                <span class="badge bg-light text-dark font-mono">Chrome Trim</span>
                             </div>
+                            <h5 class="fw-black text-dark mb-1">Manthra Royal Sling</h5>
+                            <div class="small text-muted mb-3">Vintage Styling • 60-100 km Range</div>
+                            
+                            <div class="bg-light p-2 rounded-3 mb-3 border">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small text-muted">Customer On-Road:</span>
+                                    <strong class="text-primary font-mono fs-6">From ₹80,782</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small text-muted">Direct Partner:</span>
+                                    <strong class="text-success font-mono fs-6">Up to ₹4,800</strong>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-sm btn-outline-success w-100 fw-bold mt-auto py-2" onclick="openEVModelModal('royal-sling')">
+                                <i class="fas fa-battery-three-quarters me-1"></i> View Battery &amp; Pricing →
+                            </button>
                         </div>
                     </div>
 
                     <!-- Beast Pro -->
                     <div class="model-card-item">
-                        <img src="/public/hub/Assets/manthra-beast-real.webp" alt="Manthra Beast Pro">
-                        <div class="p-3">
-                            <span class="badge bg-danger mb-1">HIGH SPEED</span>
-                            <h6 class="fw-bold text-dark mb-1">Manthra Beast Pro</h6>
-                            <div class="small text-muted mb-2">Top Speed 85 km/h • 140 km Range</div>
-                            <div class="d-flex justify-content-between font-mono">
-                                <span class="fw-bold text-primary">₹1,18,999</span>
-                                <span class="text-success small">Commission: ₹5,500</span>
+                        <div class="zoomable-img" onclick="openGallery('ev', 5)">
+                            <img src="/public/hub/Assets/manthra-beast-real.webp" alt="Manthra Beast Pro">
+                        </div>
+                        <div class="p-3 d-flex flex-column flex-fill">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge bg-danger">STREET FIGHTER</span>
+                                <span class="badge bg-dark text-warning font-mono">Dual Disc</span>
+                            </div>
+                            <h5 class="fw-black text-dark mb-1">Manthra Beast Pro</h5>
+                            <div class="small text-muted mb-3">CBS Nitrogen Shocks • 60-100 km Range</div>
+                            
+                            <div class="bg-light p-2 rounded-3 mb-3 border">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="small text-muted">Customer On-Road:</span>
+                                    <strong class="text-primary font-mono fs-6">From ₹82,916</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small text-muted">Direct Partner:</span>
+                                    <strong class="text-success font-mono fs-6">Up to ₹5,500</strong>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-sm btn-outline-success w-100 fw-bold mt-auto py-2" onclick="openEVModelModal('beast-pro')">
+                                <i class="fas fa-battery-three-quarters me-1"></i> View Battery &amp; Pricing →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manthra EV Dynamic Commission & Fuel Savings Calculator -->
+            <div class="p-4 p-md-5 rounded-4 border bg-surface-alt shadow-sm" style="border-top: 3px solid #10b981 !important;">
+                <div class="row align-items-center g-5">
+                    <div class="col-lg-6">
+                        <span class="chapter-tag bg-success text-white mb-2"><i class="fas fa-calculator"></i> EV COMMISSION SIMULATOR</span>
+                        <h3 class="fw-black text-dark mb-2">Manthra EV Earning &amp; Fuel Savings Calculator</h3>
+                        <p class="text-muted small mb-4">
+                            Drag the scooter price slider to simulate your direct and team commissions alongside the customer's guaranteed annual petrol savings.
+                        </p>
+
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="fw-bold text-dark">Scooter On-Road Price:</span>
+                                <span class="fs-3 fw-black text-success font-mono" id="evValDisplay">₹75,000</span>
+                            </div>
+                            <input type="range" class="form-range" id="evSlider" min="49000" max="120000" step="1000" value="75000" oninput="updateEVCalc(this.value)">
+                            <div class="d-flex justify-content-between text-muted small font-mono">
+                                <span>₹49,000 (Pro GT)</span>
+                                <span>₹80,000 (M99 / Royal)</span>
+                                <span>₹1,20,000 (Beast Max)</span>
+                            </div>
+                        </div>
+
+                        <!-- Customer Savings Callout -->
+                        <div class="p-3 bg-white rounded-3 border mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong class="text-dark d-block"><i class="fas fa-leaf text-success me-1"></i> Customer Annual Petrol Savings</strong>
+                                    <span class="small text-muted">Running at ₹0.20/km vs ₹2.50/km petrol (12,000 km/yr)</span>
+                                </div>
+                                <span class="fs-4 fw-black text-success font-mono" id="evSavingsDisplay">₹27,600/yr</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- EV Multi-Tier Payout Grid -->
+                    <div class="col-lg-6">
+                        <div class="row g-3">
+                            <div class="col-sm-6">
+                                <div class="p-3 bg-white rounded-3 border shadow-sm text-center">
+                                    <div class="small text-muted">L1 Direct Partner (5%)</div>
+                                    <div class="fs-4 fw-black text-success font-mono mt-1" id="evL1">₹3,750</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3 bg-white rounded-3 border shadow-sm text-center">
+                                    <div class="small text-muted">L2 Direct Sponsor (1.5%)</div>
+                                    <div class="fs-4 fw-black text-primary font-mono mt-1" id="evL2">₹1,125</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3 bg-white rounded-3 border shadow-sm text-center">
+                                    <div class="small text-muted">L3 Senior Partner (1%)</div>
+                                    <div class="fs-4 fw-black text-info font-mono mt-1" id="evL3">₹750</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3 bg-white rounded-3 border shadow-sm text-center">
+                                    <div class="small text-muted">L4 Core Royalty (0.5%)</div>
+                                    <div class="fs-4 fw-black text-purple font-mono mt-1" style="color: #8b5cf6;" id="evL4">₹375</div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="p-3 rounded-3 border text-center" style="background: #f0fdf4; border-color: #86efac !important;">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="text-start">
+                                            <strong class="d-block text-success">Total Team Commission Pool (9.50%)</strong>
+                                            <span class="small text-muted">Includes 1.50% Field Support &amp; Delivery Bonus</span>
+                                        </div>
+                                        <div class="fs-4 fw-black text-success font-mono" id="evTotalTeam">₹7,125</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1693,7 +2048,9 @@
                 </div>
 
                 <div class="col-lg-6 order-lg-1">
-                    <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1400&q=70" alt="Luxury Villa Architecture" class="img-fluid rounded-4 shadow-lg border">
+                    <div class="zoomable-img" onclick="openGallery('realestate', 0)">
+                        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1400&q=70" alt="Luxury Villa Architecture" class="img-fluid rounded-4 shadow-lg border">
+                    </div>
                 </div>
             </div>
         </div>
@@ -1748,10 +2105,10 @@
 
                 <div class="col-lg-6">
                     <div class="row g-3">
-                        <div class="col-12">
+                        <div class="col-12 zoomable-img" onclick="openGallery('training', 0)">
                             <img src="/public/images/etc_training/ev_practical_scooter_lab.jpg" alt="ETC Practical Lab Workshop" class="img-fluid rounded-4 shadow-sm border">
                         </div>
-                        <div class="col-12">
+                        <div class="col-12 zoomable-img" onclick="openGallery('training', 1)">
                             <img src="/public/images/etc_training/etc_student_certificate_award.jpg" alt="Student Certificate Convocation Ceremony" class="img-fluid rounded-4 shadow-sm border">
                         </div>
                     </div>
@@ -1770,33 +2127,33 @@
                 <div class="col-lg-6">
                     <span class="glowing-pill mb-3"><i class="fas fa-store"></i> FRANCHISE ECOSYSTEM</span>
                     <h2 class="display-6 fw-black text-white mb-3">MYNTREAL HUB: One Point. Five Businesses.</h2>
-                    <p class="text-white-50 mb-4">
+                    <p class="text-white-50 mb-4 fs-5" style="line-height: 1.6;">
                         The physical experience center where Solar, EV 2W, Insurance, Real Estate, and EV Training converge under a single roof. Every Hub established by your network generates 4 continuous earning streams.
                     </p>
 
                     <div class="row g-3 mb-4">
                         <div class="col-sm-6">
-                            <div class="p-3 rounded-3 bg-white bg-opacity-10 border border-white border-opacity-10">
-                                <div class="fw-bold text-warning mb-1">1. First Billing Income</div>
-                                <p class="small text-white-50 mb-0">Instant incentive on initial stock activation</p>
+                            <div class="p-3 rounded-3 bg-white bg-opacity-10 border border-white border-opacity-20">
+                                <div class="fw-black text-warning mb-1 fs-6">1. First Billing Income</div>
+                                <p class="small text-white text-opacity-90 mb-0">Instant incentive on initial stock activation</p>
                             </div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="p-3 rounded-3 bg-white bg-opacity-10 border border-white border-opacity-10">
-                                <div class="fw-bold text-info mb-1">2. Proposer Override</div>
-                                <p class="small text-white-50 mb-0">Continuous loyalty commission on hub volume</p>
+                            <div class="p-3 rounded-3 bg-white bg-opacity-10 border border-white border-opacity-20">
+                                <div class="fw-black text-info mb-1 fs-6">2. Proposer Override</div>
+                                <p class="small text-white text-opacity-90 mb-0">Continuous loyalty commission on hub volume</p>
                             </div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="p-3 rounded-3 bg-white bg-opacity-10 border border-white border-opacity-10">
-                                <div class="fw-bold text-success mb-1">3. Supporter Royalty</div>
-                                <p class="small text-white-50 mb-0">Local operational and guidance share</p>
+                            <div class="p-3 rounded-3 bg-white bg-opacity-10 border border-white border-opacity-20">
+                                <div class="fw-black text-success mb-1 fs-6">3. Supporter Royalty</div>
+                                <p class="small text-white text-opacity-90 mb-0">Local operational and guidance share</p>
                             </div>
                         </div>
                         <div class="col-sm-6">
-                            <div class="p-3 rounded-3 bg-white bg-opacity-10 border border-white border-opacity-10">
-                                <div class="fw-bold text-warning mb-1">4. Lifetime Retail Turnover</div>
-                                <p class="small text-white-50 mb-0">Overrides across all 5 product divisions</p>
+                            <div class="p-3 rounded-3 bg-white bg-opacity-10 border border-white border-opacity-20">
+                                <div class="fw-black text-warning mb-1 fs-6">4. Lifetime Retail Turnover</div>
+                                <p class="small text-white text-opacity-90 mb-0">Overrides across all 5 product divisions</p>
                             </div>
                         </div>
                     </div>
@@ -1808,17 +2165,17 @@
 
                 <div class="col-lg-6">
                     <div class="row g-3">
-                        <div class="col-12">
-                            <img src="/public/hub/Assets/myntreal-hub-exterior-storefront.jpg" alt="Hub Exterior Storefront" class="img-fluid rounded-4 border border-white border-opacity-10 shadow-lg">
+                        <div class="col-12 zoomable-img" onclick="openGallery('hub', 0)">
+                            <img src="/public/hub/Assets/myntreal-hub-exterior-storefront.jpg" alt="Hub Exterior Storefront" class="img-fluid rounded-4 border border-white border-opacity-20 shadow-lg">
                         </div>
-                        <div class="col-12">
-                            <img src="/public/hub/Assets/myntreal-hub-interior-5offerings.jpg" alt="Hub Showroom Interior 5 Offerings" class="img-fluid rounded-4 border border-white border-opacity-10 shadow-lg">
+                        <div class="col-12 zoomable-img" onclick="openGallery('hub', 1)">
+                            <img src="/public/hub/Assets/myntreal-hub-interior-5offerings.jpg" alt="Hub Showroom Interior 5 Offerings" class="img-fluid rounded-4 border border-white border-opacity-20 shadow-lg">
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Part B: Career Structure Ladder -->
+            <!-- Part B: Career Structure Ladder (Crystal-Clear White High-Contrast Cards) -->
             <div class="text-center mb-5">
                 <span class="glowing-pill mb-2"><i class="fas fa-trophy"></i> CAREER LADDER</span>
                 <h3 class="display-6 fw-black text-white">Rise Through The VGK4U Leadership Ranks</h3>
@@ -1832,9 +2189,9 @@
                 <div class="col-lg col-md-4 col-sm-6">
                     <div class="career-step-box">
                         <div class="career-step-badge">1</div>
-                        <h5 class="fw-black text-dark mb-1">Member</h5>
+                        <h5 class="fw-black mb-1">Member</h5>
                         <div class="badge bg-light text-dark mb-2">0 Files</div>
-                        <p class="small text-muted mb-0">Instant activation with 30,000 Welcome Points upon registration.</p>
+                        <p class="small mb-0">Instant activation with 30,000 Welcome Points upon registration.</p>
                     </div>
                 </div>
 
@@ -1842,9 +2199,9 @@
                 <div class="col-lg col-md-4 col-sm-6">
                     <div class="career-step-box">
                         <div class="career-step-badge">2</div>
-                        <h5 class="fw-black text-dark mb-1">Channel Partner</h5>
+                        <h5 class="fw-black mb-1">Channel Partner</h5>
                         <div class="badge bg-primary mb-2">1 File</div>
-                        <p class="small text-muted mb-0">Complete 1 qualifying file in any vertical to activate full L1 commissions.</p>
+                        <p class="small mb-0">Complete 1 qualifying file in any vertical to activate full L1 commissions.</p>
                     </div>
                 </div>
 
@@ -1852,9 +2209,9 @@
                 <div class="col-lg col-md-4 col-sm-6">
                     <div class="career-step-box">
                         <div class="career-step-badge">3</div>
-                        <h5 class="fw-black text-dark mb-1">Senior Partner</h5>
+                        <h5 class="fw-black mb-1">Senior Partner</h5>
                         <div class="badge bg-info text-dark mb-2">4 Files</div>
-                        <p class="small text-muted mb-0">Help 4 team members qualify. Unlock Tier 2 (1.5%) team overrides.</p>
+                        <p class="small mb-0">Help 4 team members qualify. Unlock Tier 2 (1.5%) team overrides.</p>
                     </div>
                 </div>
 
@@ -1862,19 +2219,19 @@
                 <div class="col-lg col-md-4 col-sm-6">
                     <div class="career-step-box">
                         <div class="career-step-badge">4</div>
-                        <h5 class="fw-black text-dark mb-1">Extended Partner</h5>
+                        <h5 class="fw-black mb-1">Extended Partner</h5>
                         <div class="badge bg-purple text-white mb-2" style="background:#8b5cf6;">9 Files</div>
-                        <p class="small text-muted mb-0">Foster 9 active lines. Unlock Tier 3 (1.0%) regional royalties.</p>
+                        <p class="small mb-0">Foster 9 active lines. Unlock Tier 3 (1.0%) regional royalties.</p>
                     </div>
                 </div>
 
-                <!-- Core Partner -->
+                <!-- Core Partner (Crystal Clear Readable White Card with Glowing Gold Border) -->
                 <div class="col-lg col-md-4 col-sm-6">
-                    <div class="career-step-box border-warning bg-warning bg-opacity-10">
-                        <div class="career-step-badge bg-dark text-warning">5</div>
-                        <h5 class="fw-black text-dark mb-1">Core Partner</h5>
+                    <div class="career-step-box core-box">
+                        <div class="career-step-badge bg-warning text-dark">5</div>
+                        <h5 class="fw-black mb-1 text-dark">Core Partner</h5>
                         <div class="badge bg-warning text-dark mb-2">16 Files</div>
-                        <p class="small text-muted mb-0">Top executive tier. Unlock Tier 4 (0.5%) depth &amp; lifetime profit sharing.</p>
+                        <p class="small mb-0 text-dark">Top executive tier. Unlock Tier 4 (0.5%) depth &amp; lifetime profit sharing.</p>
                     </div>
                 </div>
             </div>
@@ -1974,7 +2331,9 @@
                     </div>
 
                     <div class="col-lg-5 text-center">
-                        <img src="/public/images/vgk4u/slide_16_welcome_kit.png" alt="Executive Welcome Kit" class="img-fluid rounded-4 shadow-sm border" onerror="this.src='/public/vgk4u-logo.png'">
+                        <div class="zoomable-img" onclick="openGallery('kit', 0)">
+                            <img src="/public/images/vgk4u/slide_16_welcome_kit.png" alt="Executive Welcome Kit" class="img-fluid rounded-4 shadow-sm border" onerror="this.src='/public/vgk4u-logo.png'">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2046,10 +2405,374 @@
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <!-- SCRIPT LOGIC & MULTILINGUAL LOCALIZATION ENGINE                     -->
+    <!-- LIGHTBOX IMAGE GALLERY MODAL (WITH ZOOM, SHIFT, CLOSE)              -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="vgk-lightbox-overlay" id="galleryOverlay" onclick="closeGalleryOnBackdrop(event)">
+        <div class="vgk-lightbox-inner">
+            <button class="vgk-lightbox-close" onclick="closeGallery()"><i class="fas fa-times"></i></button>
+            <button class="vgk-lightbox-nav-btn vgk-lightbox-prev" onclick="navigateGallery(-1)"><i class="fas fa-chevron-left"></i></button>
+            
+            <div class="vgk-lightbox-img-wrap">
+                <img id="galleryImg" src="" alt="Gallery Image">
+            </div>
+            
+            <button class="vgk-lightbox-nav-btn vgk-lightbox-next" onclick="navigateGallery(1)"><i class="fas fa-chevron-right"></i></button>
+            
+            <div class="vgk-lightbox-caption" id="galleryCaption"></div>
+            <div class="vgk-lightbox-counter" id="galleryCounter"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- MANTHRA EV MODEL DETAILS & BATTERY-WISE PRICING MODAL               -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <div class="ev-modal-overlay" id="evModelModal" onclick="closeEVModalOnBackdrop(event)">
+        <div class="ev-modal-card p-4 p-md-5">
+            <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-success" id="evModalBadge">BEST COMMUTER</span>
+                    <h3 class="fw-black mb-0 text-dark" id="evModalTitle">Manthra Pro GT</h3>
+                </div>
+                <button class="btn btn-sm btn-light rounded-circle p-2" onclick="closeEVModal()" style="width: 38px; height: 38px;">
+                    <i class="fas fa-times fs-6"></i>
+                </button>
+            </div>
+
+            <div class="row g-4 align-items-center mb-4">
+                <div class="col-md-5 text-center">
+                    <img id="evModalImg" src="" alt="Model Image" class="img-fluid rounded-4 shadow-sm border mb-2" style="max-height: 240px; object-fit: cover; width: 100%;">
+                    <div class="small text-muted font-mono"><i class="fas fa-shield-alt text-success me-1"></i> Non-RTO: Zero License Required</div>
+                </div>
+
+                <div class="col-md-7">
+                    <p class="text-secondary small mb-3" id="evModalDesc"></p>
+                    
+                    <label class="fw-bold small text-dark mb-2 d-block">SELECT BATTERY &amp; RANGE VARIANT:</label>
+                    <div class="d-flex flex-column gap-2 mb-3" id="evBatteryChipsContainer">
+                        <!-- Injected dynamically -->
+                    </div>
+
+                    <!-- Selected Price Box -->
+                    <div class="p-3 rounded-3 bg-light border d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="small text-muted d-block text-uppercase fw-bold" style="font-size: 11px;">Customer On-Road Price</span>
+                            <div class="fs-3 fw-black text-primary font-mono" id="evModalPriceDisplay">₹49,923</div>
+                            <span class="small text-muted" style="font-size: 10.5px;">Includes 5% GST &amp; turnkey on-road delivery</span>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-success font-mono fs-6 px-3 py-2" id="evModalRangeDisplay">50-60 km</span>
+                            <div class="small text-muted mt-1 font-mono" id="evModalWarrantyDisplay">9 Mo Battery &amp; Charger</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Specs Grid -->
+            <div class="row g-2 mb-4 font-mono small">
+                <div class="col-6 col-md-3">
+                    <div class="p-2 rounded bg-light border text-center">
+                        <span class="text-muted d-block" style="font-size: 10.5px;">Top Speed</span>
+                        <strong class="text-dark">&lt;25 km/h</strong>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-2 rounded bg-light border text-center">
+                        <span class="text-muted d-block" style="font-size: 10.5px;">Driving License</span>
+                        <strong class="text-success">Zero License</strong>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-2 rounded bg-light border text-center">
+                        <span class="text-muted d-block" style="font-size: 10.5px;">Charging Time</span>
+                        <strong class="text-dark">4 – 5 Hours</strong>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="p-2 rounded bg-light border text-center">
+                        <span class="text-muted d-block" style="font-size: 10.5px;">Brakes</span>
+                        <strong class="text-dark" id="evModalBrakesDisplay">Front Disc + Drum</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex flex-wrap gap-2 justify-content-end">
+                <button class="btn btn-light rounded-pill px-4" onclick="closeEVModal()">Close</button>
+                <a id="evModalBookWA" href="" target="_blank" class="btn btn-success rounded-pill px-4 fw-bold">
+                    <i class="fab fa-whatsapp me-1"></i> Book / Inquire via WhatsApp
+                </a>
+                <a href="/vgk/login?tab=signup" class="btn-gold-glow px-4 py-2">
+                    <i class="fas fa-user-plus"></i> Join as EV Partner
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- SCRIPT LOGIC, MULTILINGUAL & INTERACTIVE ENGINES                    -->
     <!-- ═══════════════════════════════════════════════════════════════════ -->
     <script>
-        // ── 1. TRANSLATION DICTIONARY ──
+        // ── 1. LIGHTBOX GALLERY DATA & ENGINE ──
+        const GALLERY_CATEGORIES = {
+            solar: [
+                { src: "/public/images/solar_installations/krishnadevipeta_solar_customer.jpg", title: "Residential Rooftop Solar Installation — Krishnadevipeta (₹78k Subsidy Client)" },
+                { src: "/public/hub/Assets/har-ghar-solar-real-installation.jpg", title: "Commercial Rooftop Solar Array — Turnkey Grid Integration" },
+                { src: "/public/images/solar_installations/komaravolu_solar_customer.jpg", title: "PM Surya Ghar Customer Site — Komaravolu" },
+                { src: "/public/images/solar_installations/pothavaram_solar_customer.jpg", title: "Net Metering & Inverter Synchronization — Pothavaram" }
+            ],
+            ev: [
+                { src: "/public/hub/Assets/manthra-fleet-lineup.webp", title: "Manthra EV Smart Electric Fleet — Commercial & Urban 2W Lineup" },
+                { src: "/public/hub/Assets/manthra-pro-gt-real.webp", title: "Manthra Pro GT — Urban Sport Commuter (<25 km/h Non-RTO)" },
+                { src: "/public/hub/Assets/manthra-power-plus-real.webp", title: "Manthra Power Plus — 200kg Heavy Cargo Delivery Electric Scooter" },
+                { src: "/public/hub/Assets/manthra-m99-real.webp", title: "Manthra M99 Flagship — Color TFT Dashboard & Reverse Push Assist" },
+                { src: "/public/hub/Assets/manthra-royal-real.webp", title: "Manthra Royal Sling — Retro Vintage Classic with Chrome Accents" },
+                { src: "/public/hub/Assets/manthra-beast-real.webp", title: "Manthra Beast Pro — High-Speed Dual Front & Rear Hydraulic Disc Scooter" }
+            ],
+            insurance: [
+                { src: "/public/hub/Assets/insurance-concept-protection-against-a-possible-eventuality-hand-holding-umbrella-icon-for-security-symbol-and-house-car-health-care-and-travel-icon-on-wooden-circle-for-assurance-life-concept-photo.jpg", title: "VGK Care Comprehensive Protection — Family Health, Life & Asset Security" },
+                { src: "/public/hub/Assets/ISO-Certificate.png", title: "Institutional Accreditation — ISO Certified Quality & Advisory Standards" }
+            ],
+            realestate: [
+                { src: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1400&q=70", title: "VGK Real Dreams — Luxury Gated Community Villa Architecture" },
+                { src: "https://images.unsplash.com/photo-1501183638710-841dd1904471?w=1400&q=70", title: "VMRDA & RERA Approved Residential Layout & Commercial Plots" },
+                { src: "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?w=1400&q=70", title: "Integrated Townships & Contemporary Gated Living" },
+                { src: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=1400&q=70", title: "Agricultural Farmlands & High-Yield Agro Estates" }
+            ],
+            training: [
+                { src: "/public/images/etc_training/ev_practical_scooter_lab.jpg", title: "EVolution Training Centre — Hands-On Scooter Diagnostics & Battery Lab" },
+                { src: "/public/images/etc_training/etc_student_certificate_award.jpg", title: "Trainee Certificate Award & Convocation Ceremony (95% Placement Record)" },
+                { src: "/public/images/etc_training/etc_certified_students_group_1.png", title: "Certified Batch of EV Technicians & Solar EPC Specialists" }
+            ],
+            hub: [
+                { src: "/public/hub/Assets/myntreal-hub-exterior-storefront.jpg", title: "MYNTREAL Hub — Physical Storefront & Commercial Business Center" },
+                { src: "/public/hub/Assets/myntreal-hub-interior-5offerings.jpg", title: "5-in-1 Showroom Interior — Solar, EV, Insurance, Real Estate & Training" },
+                { src: "/public/hub/Assets/myntreal-hub-interior-experience.jpg", title: "Client Consultation & VIP Partner Experience Lounge" }
+            ],
+            kit: [
+                { src: "/public/images/vgk4u/slide_16_welcome_kit.png", title: "Executive Channel Partner Credentials — QR Digital ID, Visiting Cards & Welcome Kit" }
+            ]
+        };
+
+        let currentGalleryCategory = 'solar';
+        let currentGalleryIndex = 0;
+
+        function openGallery(cat, index) {
+            if (!GALLERY_CATEGORIES[cat]) cat = 'solar';
+            currentGalleryCategory = cat;
+            currentGalleryIndex = Math.max(0, Math.min(index || 0, GALLERY_CATEGORIES[cat].length - 1));
+            updateGalleryView();
+            document.getElementById('galleryOverlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeGallery() {
+            document.getElementById('galleryOverlay').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function closeGalleryOnBackdrop(e) {
+            if (e.target.id === 'galleryOverlay') {
+                closeGallery();
+            }
+        }
+
+        function navigateGallery(dir) {
+            const list = GALLERY_CATEGORIES[currentGalleryCategory];
+            if (!list || list.length <= 1) return;
+            currentGalleryIndex = (currentGalleryIndex + dir + list.length) % list.length;
+            updateGalleryView();
+        }
+
+        function updateGalleryView() {
+            const list = GALLERY_CATEGORIES[currentGalleryCategory];
+            const item = list[currentGalleryIndex];
+            const img = document.getElementById('galleryImg');
+            img.src = item.src;
+            img.alt = item.title;
+            document.getElementById('galleryCaption').textContent = item.title;
+            document.getElementById('galleryCounter').textContent = `${currentGalleryCategory.toUpperCase()} • ${currentGalleryIndex + 1} of ${list.length}`;
+        }
+
+        // Keyboard handler for gallery
+        window.addEventListener('keydown', (e) => {
+            const overlay = document.getElementById('galleryOverlay');
+            if (overlay && overlay.classList.contains('active')) {
+                if (e.key === 'Escape') closeGallery();
+                if (e.key === 'ArrowLeft') navigateGallery(-1);
+                if (e.key === 'ArrowRight') navigateGallery(1);
+            }
+            const evModal = document.getElementById('evModelModal');
+            if (evModal && evModal.classList.contains('active')) {
+                if (e.key === 'Escape') closeEVModal();
+            }
+        });
+
+        // ── 2. MANTHRA EV MODEL DETAILS & BATTERY DATA ──
+        const EV_MODELS_DATA = {
+            'pro-gt': {
+                name: "Manthra Pro GT",
+                badge: "BEST COMMUTER",
+                img: "/public/hub/Assets/manthra-pro-gt-real.webp",
+                desc: "Aerodynamic urban street commuter with matrix LED headlamp and digital LCD cluster. Low-Speed Non-RTO convenience: No driving license, no registration, and zero road tax.",
+                brakes: "Front Disc + Rear Drum",
+                variants: [
+                    { name: "Graphene 48V 30Ah", price: 49923, range: "50-60 km", warranty: "9 Mo Battery & Charger" },
+                    { name: "LTM/LFP 48V 30Ah", price: 59758, range: "50-60 km", warranty: "3 Yrs Comprehensive" },
+                    { name: "LTM/LFP 48V 45Ah", price: 72956, range: "80-90 km", warranty: "3 Yrs Comprehensive" },
+                    { name: "LTM/LFP 60V 30Ah", price: 65646, range: "60-70 km", warranty: "3 Yrs Comprehensive" },
+                    { name: "LTM/LFP 60V 45Ah", price: 81788, range: "90-100 km", warranty: "3 Yrs Comprehensive" }
+                ]
+            },
+            'power-plus': {
+                name: "Manthra Power Plus",
+                badge: "200KG HEAVY CARGO",
+                img: "/public/hub/Assets/manthra-power-plus-real.webp",
+                desc: "Engineered for last-mile commercial delivery, farm utility, groceries and heavy cargo loads with reinforced high-tensile steel frame and dual rear springs.",
+                brakes: "Front Disc + Heavy Drum Rear",
+                variants: [
+                    { name: "Graphene 48V 30Ah", price: 51278, range: "50-60 km", warranty: "9 Mo Battery & Charger" },
+                    { name: "LTM/LFP 48V 30Ah", price: 61112, range: "50-60 km", warranty: "3 Yrs Comprehensive" },
+                    { name: "LTM/LFP 48V 45Ah", price: 74311, range: "80-90 km", warranty: "3 Yrs Comprehensive" },
+                    { name: "LTM/LFP 60V 30Ah", price: 67000, range: "60-70 km", warranty: "3 Yrs Comprehensive" },
+                    { name: "LTM/LFP 60V 45Ah", price: 83143, range: "90-100 km", warranty: "3 Yrs Comprehensive" }
+                ]
+            },
+            'm99': {
+                name: "Manthra M99 Flagship",
+                badge: "URBAN FLAGSHIP",
+                img: "/public/hub/Assets/manthra-m99-real.webp",
+                desc: "Next-gen urban flagship with 1-Touch Electric Reverse Assist, full-color HD TFT display, smart remote keyless fob, and long-life Smart LTM/LFP battery.",
+                brakes: "Front Hydraulic Disc + Rear Drum CBS",
+                variants: [
+                    { name: "LTM/LFP 60V 30Ah", price: 80782, range: "60-70 km", warranty: "3 Yrs Comprehensive" },
+                    { name: "LTM/LFP 60V 45Ah", price: 96925, range: "90-100 km", warranty: "3 Yrs Comprehensive" }
+                ]
+            },
+            'royal-sling': {
+                name: "Manthra Royal Sling",
+                badge: "RETRO LUXURY",
+                img: "/public/hub/Assets/manthra-royal-real.webp",
+                desc: "Timeless vintage retro luxury styling with polished chrome mirrors, premium ergonomic double-contour seat cushion, flat floorboard & built-in USB fast charging.",
+                brakes: "Front Disc + Rear Hydraulic Ride",
+                variants: [
+                    { name: "LTM/LFP 60V 30Ah", price: 80782, range: "60-70 km", warranty: "3 Yrs Comprehensive" },
+                    { name: "LTM/LFP 48V 45Ah", price: 88093, range: "80-90 km", warranty: "3 Yrs Comprehensive" },
+                    { name: "LTM/LFP 60V 45Ah", price: 96925, range: "90-100 km", warranty: "3 Yrs Comprehensive" }
+                ]
+            },
+            'beast-pro': {
+                name: "Manthra Beast Pro",
+                badge: "DUAL DISC CBS",
+                img: "/public/hub/Assets/manthra-beast-real.webp",
+                desc: "Aggressive muscular street fighter with front & rear hydraulic disc brakes, nitrogen gas reservoir shocks, Combi-Brake System (CBS) and massive hill torque.",
+                brakes: "Dual Front & Rear Hydraulic Disc CBS",
+                variants: [
+                    { name: "LTM/LFP 60V 30Ah", price: 82916, range: "60-70 km", warranty: "3 Yrs Comprehensive" },
+                    { name: "LTM/LFP 60V 45Ah", price: 99058, range: "90-100 km", warranty: "3 Yrs Comprehensive" }
+                ]
+            }
+        };
+
+        let currentActiveModelKey = 'pro-gt';
+        let currentActiveVariantIndex = 0;
+
+        function openEVModelModal(key) {
+            if (!EV_MODELS_DATA[key]) key = 'pro-gt';
+            currentActiveModelKey = key;
+            currentActiveVariantIndex = 0;
+            const data = EV_MODELS_DATA[key];
+
+            document.getElementById('evModalTitle').textContent = data.name;
+            document.getElementById('evModalBadge').textContent = data.badge;
+            document.getElementById('evModalImg').src = data.img;
+            document.getElementById('evModalDesc').textContent = data.desc;
+            document.getElementById('evModalBrakesDisplay').textContent = data.brakes;
+
+            // Render battery selector chips
+            const container = document.getElementById('evBatteryChipsContainer');
+            container.innerHTML = '';
+            data.variants.forEach((v, idx) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = `battery-chip-btn ${idx === 0 ? 'active' : ''}`;
+                btn.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong class="text-dark">${v.name}</strong>
+                        <span class="badge ${v.warranty.includes('3 Yrs') ? 'bg-primary' : 'bg-success'}">${v.warranty}</span>
+                    </div>
+                    <div class="d-flex justify-content-between text-muted small mt-1 font-mono">
+                        <span>Range: ${v.range}</span>
+                        <strong class="text-success">₹${v.price.toLocaleString('en-IN')}</strong>
+                    </div>
+                `;
+                btn.onclick = () => selectEVVariant(key, idx);
+                container.appendChild(btn);
+            });
+
+            selectEVVariant(key, 0);
+            document.getElementById('evModelModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function selectEVVariant(key, idx) {
+            currentActiveVariantIndex = idx;
+            const data = EV_MODELS_DATA[key];
+            const v = data.variants[idx];
+
+            document.getElementById('evModalPriceDisplay').textContent = '₹' + v.price.toLocaleString('en-IN');
+            document.getElementById('evModalRangeDisplay').textContent = v.range;
+            document.getElementById('evModalWarrantyDisplay').textContent = v.warranty;
+
+            // Update chip active style
+            const chips = document.querySelectorAll('.battery-chip-btn');
+            chips.forEach((c, i) => c.classList.toggle('active', i === idx));
+
+            // Wire WhatsApp link with prefilled details
+            const waText = `Hello! I would like to book or inquire about *${data.name}* with *${v.name}* battery (On-Road Price: ₹${v.price.toLocaleString('en-IN')}, Range: ${v.range}). Please share delivery timeline!`;
+            document.getElementById('evModalBookWA').href = 'https://api.whatsapp.com/send?phone=918585852738&text=' + encodeURIComponent(waText);
+
+            // Also update the EV slider to match this price!
+            const evSlider = document.getElementById('evSlider');
+            if (evSlider) {
+                evSlider.value = v.price;
+                updateEVCalc(v.price);
+            }
+        }
+
+        function closeEVModal() {
+            document.getElementById('evModelModal').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function closeEVModalOnBackdrop(e) {
+            if (e.target.id === 'evModelModal') {
+                closeEVModal();
+            }
+        }
+
+        // ── 3. MANTHRA EV COMMISSION & SAVINGS CALCULATOR ──
+        function updateEVCalc(val) {
+            const num = parseInt(val, 10);
+            document.getElementById('evValDisplay').textContent = '₹' + num.toLocaleString('en-IN');
+
+            // 5% Direct, 1.5% L2, 1% L3, 0.5% L4, 1.5% Support (9.5% Total)
+            const l1 = Math.round(num * 0.05);
+            const l2 = Math.round(num * 0.015);
+            const l3 = Math.round(num * 0.01);
+            const l4 = Math.round(num * 0.005);
+            const support = Math.round(num * 0.015);
+            const total = l1 + l2 + l3 + l4 + support;
+
+            document.getElementById('evL1').textContent = '₹' + l1.toLocaleString('en-IN');
+            document.getElementById('evL2').textContent = '₹' + l2.toLocaleString('en-IN');
+            document.getElementById('evL3').textContent = '₹' + l3.toLocaleString('en-IN');
+            document.getElementById('evL4').textContent = '₹' + l4.toLocaleString('en-IN');
+            document.getElementById('evTotalTeam').textContent = '₹' + total.toLocaleString('en-IN');
+
+            // Customer annual savings: 1,000 km/mo = 12,000 km/yr * ₹2.30/km savings = ₹27,600/yr
+            document.getElementById('evSavingsDisplay').textContent = '₹27,600/yr';
+        }
+
+        // ── 4. MULTILINGUAL TRANSLATION DICTIONARY ──
         const TRANSLATIONS = {
             en: {
                 top_strip_sub: "Official Channel Partner & Loyalty Digital Ecosystem",
@@ -2318,7 +3041,7 @@
                 h_how_works: "VGK4U எவ்வாறு இயங்குகிறது?",
                 desc_how_works: "உங்கள் அன்றாட தொடர்புகளை அதிக வருமானம் தரும் வணிகமாக மாற்றும் 5 எளிய படிகள்.",
                 step1_t: "ஆராயுங்கள்",
-                step1_d: "சோலார், EV, இன்சூரன்ஸ், ரியல் எஸ்டேட் தயாரிப்புகளைப் பாருங்கள்.",
+                step1_d: "சோலார், EV, இன்சூரன்స్, ரியல் எஸ்டேட் தயாரிப்புகளைப் பாருங்கள்.",
                 step2_t: "கற்றுக்கொள்ளுங்கள்",
                 step2_d: "டிஜிட்டல் வழிகாட்டிகள் மூலம் தயாரிப்புகளை அறிந்து கொள்ளுங்கள்.",
                 step3_t: "பகிரவும்",
@@ -2353,22 +3076,19 @@
             }
         };
 
-        // ── 2. SWITCH LANGUAGE FUNCTION ──
+        // ── 5. SWITCH LANGUAGE FUNCTION ──
         function switchLanguage(lang) {
             if (!TRANSLATIONS[lang]) lang = 'en';
             
-            // Toggle active button style
             document.querySelectorAll('.lang-btn').forEach(btn => {
                 btn.classList.toggle('active', btn.textContent.toLowerCase().includes(lang) || (lang === 'en' && btn.textContent === 'EN'));
             });
 
-            // Update font class on body
             document.body.classList.remove('lang-te', 'lang-hi', 'lang-ta');
             if (lang !== 'en') {
                 document.body.classList.add('lang-' + lang);
             }
 
-            // Update DOM text
             const dict = TRANSLATIONS[lang];
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
@@ -2377,13 +3097,12 @@
                 }
             });
 
-            // Persist choice in localStorage
             try {
                 localStorage.setItem('vgk_preferred_lang', lang);
             } catch (e) {}
         }
 
-        // Initialize language from localStorage or default
+        // Initialize language
         try {
             const savedLang = localStorage.getItem('vgk_preferred_lang') || 'en';
             if (savedLang && savedLang !== 'en') {
@@ -2391,7 +3110,7 @@
             }
         } catch (e) {}
 
-        // ── 3. REFERRAL CODE EXTRACTOR & PERSISTENCE ──
+        // ── 6. REFERRAL CODE EXTRACTOR & PERSISTENCE ──
         function getQueryParam(p) {
             return new URLSearchParams(window.location.search).get(p);
         }
@@ -2408,14 +3127,14 @@
             }
         }
 
-        // ── 4. WHATSAPP SHARING ENGINE ──
+        // ── 7. WHATSAPP SHARING ENGINE ──
         function shareOnWhatsApp() {
             const catalogUrl = window.location.origin + '/catalog/vgk4u' + (refCode ? ('?ref=' + encodeURIComponent(refCode)) : '');
             const msg = "Namaste! 🙏\n\nI invite you to explore the *VGK4U Official Digital Business Catalogue*:\n\n" +
                 "🌟 *5 High-Growth Verticals:*\n" +
                 "1. Har Ghar Solar (Up to ₹78,000 Govt Subsidy)\n" +
                 "2. VGK Care Insurance (Health, Life & Asset Risk)\n" +
-                "3. Manthra EV Smart 2-Wheelers (₹0.20/km)\n" +
+                "3. Manthra EV Smart 2-Wheelers (₹0.20/km Non-RTO)\n" +
                 "4. VGK Real Dreams Properties (Verified Plots & Villas)\n" +
                 "5. EVolution Skill Training (95% Placement Lab)\n\n" +
                 "✅ Free Joining + ₹30,000 Welcome Points!\n" +
@@ -2427,12 +3146,11 @@
             window.open('https://api.whatsapp.com/send?text=' + encodeURIComponent(msg), '_blank');
         }
 
-        // ── 5. INTERACTIVE EARNING SIMULATOR ──
+        // ── 8. INTERACTIVE SOLAR & TEAM SIMULATOR ──
         function updateSimulator(val) {
             const num = parseInt(val, 10);
             document.getElementById('simValDisplay').textContent = '₹' + num.toLocaleString('en-IN');
             
-            // Formula Invariants: L1 5%, L2 1.5%, L3 1%, L4 0.5%, Support 1.5%
             document.getElementById('simL1').textContent = '₹' + Math.round(num * 0.05).toLocaleString('en-IN');
             document.getElementById('simL2').textContent = '₹' + Math.round(num * 0.015).toLocaleString('en-IN');
             document.getElementById('simL3').textContent = '₹' + Math.round(num * 0.01).toLocaleString('en-IN');
@@ -2440,7 +3158,7 @@
             document.getElementById('simSupport').textContent = '₹' + Math.round(num * 0.015).toLocaleString('en-IN');
         }
 
-        // ── 6. DARK / LIGHT THEME TOGGLE ──
+        // ── 9. DARK / LIGHT THEME TOGGLE ──
         function toggleTheme() {
             const html = document.documentElement;
             const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
@@ -2451,7 +3169,7 @@
             }
         }
 
-        // ── 7. ACTIVE NAV PILL HIGHLIGHTER ON SCROLL ──
+        // ── 10. ACTIVE NAV PILL HIGHLIGHTER ON SCROLL ──
         window.addEventListener('scroll', () => {
             const links = document.querySelectorAll('.nav-link-pill');
             const scrollPos = window.scrollY + 140;
@@ -2470,6 +3188,9 @@
                 }
             });
         });
+
+        // Initialize EV calculator default
+        updateEVCalc(75000);
     </script>
 </body>
 </html>
