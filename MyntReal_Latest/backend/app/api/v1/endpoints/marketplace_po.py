@@ -700,14 +700,11 @@ def create_purchase_order(request: Request, payload: CreatePORequest = Body(...)
                 OfficialPartner.category == 'VGK_TEAM',
             ).first()
             _is_paid_pre = bool(getattr(_vgk_partner_pre, 'is_paid_activation', False)) if _vgk_partner_pre else False
-            if _is_paid_pre:
-                _seg = db.query(MarketplaceSegment).filter(
-                    MarketplaceSegment.company_id == company_id,
-                    MarketplaceSegment.is_active == True,
-                ).order_by(MarketplaceSegment.sort_order).first()
-                _vgk_pct = float(_seg.vgk_pct) if _seg and _seg.vgk_pct is not None else 3.0
-            else:
-                _vgk_pct = 2.0
+            _seg = db.query(MarketplaceSegment).filter(
+                MarketplaceSegment.company_id == company_id,
+                MarketplaceSegment.is_active == True,
+            ).order_by(MarketplaceSegment.sort_order).first()
+            _vgk_pct = float(_seg.vgk_pct) if _seg and _seg.vgk_pct is not None else 5.0
             vgk_discount_pct = Decimal(str(_vgk_pct / 100))
             total_discount = (Decimal(str(total_value)) * vgk_discount_pct).quantize(Decimal('0.01'))
             if total_discount > 0:
@@ -734,11 +731,11 @@ def create_purchase_order(request: Request, payload: CreatePORequest = Body(...)
                     category_id=None,
                     level=0,
                     revenue_amount=Decimal(str(total_value)),
-                    commission_pct=Decimal('3'),
+                    commission_pct=Decimal(str(_vgk_pct)),
                     commission_amount=total_discount,
                     bonus_amount=Decimal('0'),
                     status='CONFIRMED',
-                    notes=f'DEBIT: Marketplace Discount on PO {po_number} (3% level discount)',
+                    notes=f'DEBIT: Marketplace Discount on PO {po_number} ({_vgk_pct}% level discount)',
                     confirmed_at=now,
                     confirmed_by=None,
                     created_at=now,
@@ -750,6 +747,90 @@ def create_purchase_order(request: Request, payload: CreatePORequest = Body(...)
                 logger.info(f'[VGK-MKT-DEBIT] Partner {payload.partner_code}: {total_discount} pts debited for PO {po_number}')
                 from app.api.v1.endpoints.vgk_team import _check_and_apply_auto_refill
                 _check_and_apply_auto_refill(vgk_partner, db, now)
+
+                # ── DC-VGK-MKT-COMM-001: Multi-level earnings cascade for marketplace orders ──
+                # L1: 5%, L2: 1.5%, L3: 1%, L4: 0.5%, Support: 1.5%, Showroom: 3.5% (Total 13%)
+                dec_rev = Decimal(str(total_value))
+                cascade_entries = []
+
+                # L1: Direct referring partner (5%)
+                l1_comm = (dec_rev * Decimal('0.05')).quantize(Decimal('0.01'))
+                cascade_entries.append((vgk_partner, 1, Decimal('5.0'), l1_comm, f'Marketplace Order PO {po_number} (L1 Commission - 5%)'))
+
+                # L2: Upline of L1 (1.5%)
+                l2_partner = None
+                if vgk_partner.parent_partner_id:
+                    l2_partner = db.query(OfficialPartner).filter(OfficialPartner.id == vgk_partner.parent_partner_id).first()
+                    if l2_partner:
+                        l2_comm = (dec_rev * Decimal('0.015')).quantize(Decimal('0.01'))
+                        cascade_entries.append((l2_partner, 2, Decimal('1.5'), l2_comm, f'Marketplace Order PO {po_number} (L2 Commission - 1.5%)'))
+
+                # L3: Upline of L2 (1%)
+                l3_partner = None
+                if l2_partner and l2_partner.parent_partner_id:
+                    l3_partner = db.query(OfficialPartner).filter(OfficialPartner.id == l2_partner.parent_partner_id).first()
+                    if l3_partner:
+                        l3_comm = (dec_rev * Decimal('0.01')).quantize(Decimal('0.01'))
+                        cascade_entries.append((l3_partner, 3, Decimal('1.0'), l3_comm, f'Marketplace Order PO {po_number} (L3 Commission - 1%)'))
+
+                # L4: Upline of L3 (0.5%)
+                if l3_partner and l3_partner.parent_partner_id:
+                    l4_partner = db.query(OfficialPartner).filter(OfficialPartner.id == l3_partner.parent_partner_id).first()
+                    if l4_partner:
+                        l4_comm = (dec_rev * Decimal('0.005')).quantize(Decimal('0.01'))
+                        cascade_entries.append((l4_partner, 4, Decimal('0.5'), l4_comm, f'Marketplace Order PO {po_number} (L4 Commission - 0.5%)'))
+
+                # Support Team (1.5%)
+                support_partner = db.query(OfficialPartner).filter(
+                    OfficialPartner.category == 'VGK_TEAM',
+                    OfficialPartner.is_active == True,
+                    OfficialPartner.partner_name.ilike('%support%')
+                ).first()
+                if not support_partner:
+                    support_partner = db.query(OfficialPartner).filter(
+                        OfficialPartner.company_id == company_id,
+                        OfficialPartner.category == 'VGK_TEAM',
+                        OfficialPartner.is_active == True
+                    ).order_by(OfficialPartner.id.asc()).first()
+                if support_partner:
+                    supp_comm = (dec_rev * Decimal('0.015')).quantize(Decimal('0.01'))
+                    cascade_entries.append((support_partner, 5, Decimal('1.5'), supp_comm, f'Marketplace Order PO {po_number} (Support Team - 1.5%)'))
+
+                # Showroom / Dealer (3.5%)
+                showroom_partner = db.query(OfficialPartner).filter(
+                    OfficialPartner.category.in_(['DEALER', 'DISTRIBUTOR']),
+                    OfficialPartner.is_active == True
+                ).order_by(OfficialPartner.id.asc()).first()
+                if showroom_partner:
+                    show_comm = (dec_rev * Decimal('0.035')).quantize(Decimal('0.01'))
+                    cascade_entries.append((showroom_partner, 6, Decimal('3.5'), show_comm, f'Marketplace Order PO {po_number} (Showroom Share - 3.5%)'))
+
+                for p_rec, lvl, pct, amt, nts in cascade_entries:
+                    if amt > 0 and p_rec:
+                        c_entry_no = _next_vgk_entry_number(db, company_id, prefix='VGKE')
+                        credit = VGKTeamIncomeEntry(
+                            company_id=company_id,
+                            entry_number=c_entry_no,
+                            partner_id=p_rec.id,
+                            source_lead_id=None,
+                            source_transaction_id=None,
+                            category_id=None,
+                            level=lvl,
+                            revenue_amount=dec_rev,
+                            commission_pct=pct,
+                            commission_amount=amt,
+                            bonus_amount=Decimal('0'),
+                            status='CONFIRMED',
+                            notes=nts,
+                            confirmed_at=now,
+                            confirmed_by=None,
+                            created_at=now,
+                            updated_at=now
+                        )
+                        db.add(credit)
+                        p_rec.vgk_points_balance = (p_rec.vgk_points_balance or Decimal('0')) + amt
+                        p_rec.updated_at = now
+                        logger.info(f'[VGK-MKT-CASCADE] L{lvl} for {p_rec.partner_code}: ₹{amt} ({pct}%) credited for PO {po_number}')
 
         # DC_PARTNER_STOCK_AUTOSYNC_001: auto stock-IN for dealer/partner orders
         if payload.discount_mode in ('dealer', 'partner') and payload.partner_code:

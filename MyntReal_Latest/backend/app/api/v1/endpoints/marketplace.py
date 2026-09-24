@@ -554,11 +554,11 @@ def validate_dealer_code(
     Discount rate read from segment config (default 12%).
     URL kept as /validate-dealer for backward compatibility.
     """
-    partner_pct = 12.0
+    partner_pct = 13.0
     if segment_id:
         seg = _get_segment(db, company_id, segment_id=segment_id)
         if seg:
-            partner_pct = float(seg.partner_pct or 12.0)
+            partner_pct = float(seg.partner_pct or 13.0)
     try:
         result = db.execute(text("""
             SELECT p.partner_name, p.partner_code, p.partner_type
@@ -668,13 +668,9 @@ def validate_vgk_member(
         if not allow_vgk:
             return {'valid': False, 'message': 'VGK member discount not enabled for this segment'}
 
-        # DC Protocol Mar 2026: Paid-aware VGK discount (3% paid, 2% non-paid).
-        # Segment vgk_pct is the override for paid/activated members; non-paid always 2%.
         is_paid = bool(getattr(result, 'is_paid_activation', False))
-        if is_paid:
-            vgk_pct = float(seg.vgk_pct) if seg and seg.vgk_pct is not None else 3.0
-        else:
-            vgk_pct = 2.0
+        # VGK L1 Member Discount: 5.0% flat level discount
+        vgk_pct = float(seg.vgk_pct) if seg and seg.vgk_pct is not None else 5.0
 
         return {
             'valid': True,

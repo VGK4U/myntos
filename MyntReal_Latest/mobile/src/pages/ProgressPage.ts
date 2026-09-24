@@ -7,6 +7,7 @@
 import { apiService } from '../services/api.service';
 import { PageHeader } from '../components/PageHeader';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
+import { callController } from '../services/call-controller';
 
 interface DayPlannerData {
   planned: number;
@@ -1376,8 +1377,11 @@ export class ProgressPage {
                     ${segBadges ? `<div style="display: flex; gap: 4px; flex-wrap: wrap;">${segBadges}</div>` : ''}
 
                     <div style="display: flex; gap: 8px; margin-top: 2px;">
+                      <button class="mob-call-staff-btn" data-phone="${this.escapeHtml(s.phone || '')}" data-name="${this.escapeHtml(s.name)}" data-ext="${this.escapeHtml(s.extension)}" style="background: #10b981; border: 1px solid #059669; border-radius: 6px; padding: 6px 12px; font-size: 11px; font-weight: 700; color: #ffffff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+                        📞 Call
+                      </button>
                       <button class="mob-copy-sig-btn" data-name="${this.escapeHtml(s.name)}" data-ext="${this.escapeHtml(s.extension)}" style="flex: 1; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 11px; font-weight: 700; color: #334155; cursor: pointer;">
-                        📋 Copy WhatsApp Sig
+                        📋 WhatsApp Sig
                       </button>
                       <button class="mob-copy-ext-btn" data-ext="${this.escapeHtml(s.extension)}" style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 10px; font-size: 11px; font-weight: 700; color: #2563eb; cursor: pointer;">
                         Ext #${this.escapeHtml(s.extension)}
@@ -1430,6 +1434,17 @@ export class ProgressPage {
       }
     });
 
+    document.querySelectorAll('.mob-call-staff-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const el = e.currentTarget as HTMLElement;
+        const phone = el.dataset.phone || '';
+        const name = el.dataset.name || 'Staff';
+        const ext = el.dataset.ext || '';
+        this.callStaff(phone, name, ext);
+      });
+    });
+
     document.querySelectorAll('.mob-copy-sig-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const el = e.currentTarget as HTMLElement;
@@ -1456,6 +1471,28 @@ export class ProgressPage {
           prompt('Copy extension:', ext);
         });
       });
+    });
+  }
+
+  private callStaff(phone: string, name: string, ext: string): void {
+    const rawDigits = (phone || '').replace(/\D/g, '');
+    let destPhone = rawDigits.length >= 10 ? rawDigits.slice(-10) : '';
+
+    if (!destPhone) {
+      const input = prompt(`Connect Call to Staff: ${name} (Ext: ${ext || 'N/A'})\n\nNo direct phone registered.\nEnter 10-digit phone number to dial:`, '');
+      if (!input) return;
+      const cleaned = input.replace(/\D/g, '');
+      if (cleaned.length < 10) {
+        this.showToast('Please enter a valid 10-digit phone number');
+        return;
+      }
+      destPhone = cleaned.slice(-10);
+    }
+
+    callController.openCallDialer({
+      phoneNumber: `+91${destPhone}`,
+      name: name,
+      entityType: 'staff'
     });
   }
 

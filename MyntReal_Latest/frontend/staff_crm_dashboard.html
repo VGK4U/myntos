@@ -119,6 +119,54 @@
         .data-table .th-daily-leads { background: #ede9fe; color: #5b21b6; }
         .data-table .th-avg-leads { background: #e0f2fe; color: #0369a1; }
 
+        /* ── Call Player Dock & Animated Row Highlighting ─────────────────── */
+        @keyframes callRowPulseGlow {
+            0% {
+                background-color: #fef08a !important;
+                box-shadow: 0 0 0 4px #f59e0b, 0 4px 18px rgba(245, 158, 11, 0.45);
+                transform: scale(1.012);
+            }
+            30% {
+                background-color: #fef9c3 !important;
+                box-shadow: 0 0 0 3px #3b82f6, 0 4px 14px rgba(59, 130, 246, 0.35);
+            }
+            70% {
+                background-color: #eff6ff !important;
+                box-shadow: 0 0 0 2px #38bdf8;
+            }
+            100% {
+                background-color: #f0fdf4 !important;
+                box-shadow: 0 0 0 2px #22c55e;
+                transform: scale(1);
+            }
+        }
+
+        .call-row-active-highlight {
+            animation: callRowPulseGlow 3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            position: relative;
+            z-index: 5;
+        }
+
+        .call-row-playing {
+            background-color: #f0fdf4 !important;
+            border-left: 4px solid #16a34a !important;
+        }
+
+        .call-player-dock {
+            border-top: 2px solid #0284c7;
+            background: #ffffff;
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+            transition: all 0.25s ease-in-out;
+        }
+
+        .call-player-header {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-bottom: 1px solid #bae6fd;
+            padding: 8px 16px;
+        }
+
         .data-table .sticky-col { position: sticky; z-index: 2; background: #fff; }
         .data-table thead .sticky-col { z-index: 4 !important; }
         .data-table tfoot .sticky-col { z-index: 3 !important; background: #f3f4f6 !important; }
@@ -494,11 +542,55 @@
                             <tbody id="ctDrilldownTbody"></tbody>
                         </table>
                     </div>
-                    <div id="audioPlayerContainer" style="display:none;padding:10px 18px;background:#f0f9ff;border-top:1px solid #bfdbfe;">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="fas fa-volume-up text-primary"></i>
-                            <audio controls id="callAudioPlayer" style="flex:1;height:32px;"></audio>
-                            <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="closeAudioPlayer()"><i class="fas fa-times"></i></button>
+                    <!-- Upgraded Interactive Call Recording Player Dock -->
+                    <div id="audioPlayerContainer" class="call-player-dock" style="display:none;">
+                        <!-- Call Metadata Header Strip -->
+                        <div class="call-player-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap" id="playerDetailsStrip">
+                                <span class="badge bg-primary text-white d-inline-flex align-items-center gap-1 px-2.5 py-1" style="font-size:11px;font-weight:700;letter-spacing:0.5px;border-radius:6px;">
+                                    <i class="fas fa-volume-up fa-beat" id="playerPlayingIcon"></i>
+                                    <span id="playerStatusBadge">NOW PLAYING</span>
+                                </span>
+                                <span class="fw-bold text-dark d-inline-flex align-items-center gap-1" style="font-size:13px;" id="playerLeadNameWrap">
+                                    <i class="fas fa-user-circle text-primary"></i>
+                                    <span id="playerLeadName" class="text-truncate" style="max-width:220px;">-</span>
+                                </span>
+                                <span class="badge bg-white text-dark border px-2 py-1 font-monospace fw-semibold" id="playerPhoneWrap" style="font-size:11px;">
+                                    <i class="fas fa-phone-alt text-secondary me-1"></i><span id="playerPhoneNumber">-</span>
+                                </span>
+                                <span id="playerCallFromSlot"></span>
+                                <span id="playerCategorySlot"></span>
+                                <span id="playerTypeSlot"></span>
+                                <span class="text-muted small d-inline-flex align-items-center gap-1" style="font-size:11px;" id="playerTimeWrap">
+                                    <i class="fas fa-clock text-secondary"></i><span id="playerDateTime">-</span>
+                                </span>
+                                <span class="badge bg-light text-secondary border px-2 py-1" style="font-size:11px;" id="playerDurationWrap">
+                                    <i class="fas fa-stopwatch me-1 text-primary"></i><span id="playerDuration">-</span>
+                                </span>
+                            </div>
+                            
+                            <div class="d-flex align-items-center gap-2 ms-auto">
+                                <!-- Go to Call Button -->
+                                <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 px-3 py-1 shadow-sm" id="btnGoToCall" onclick="goToPlayingCall()" title="Highlight and scroll to this call in the table" style="font-weight:600;font-size:12px;border-radius:20px;transition:all 0.2s;">
+                                    <i class="fas fa-crosshairs"></i>
+                                    <span>Go to Call</span>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2" onclick="closeAudioPlayer()" title="Close Player" style="border-radius:20px;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Audio Playback Controls -->
+                        <div class="d-flex align-items-center gap-3 px-3 py-2" style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                            <div class="d-flex align-items-center gap-1 text-primary" style="font-size:12px;font-weight:600;min-width:70px;">
+                                <i class="fas fa-headphones"></i>
+                                <span>Audio:</span>
+                            </div>
+                            <audio controls id="callAudioPlayer" style="flex:1;height:36px;outline:none;border-radius:6px;"></audio>
+                            <button class="btn btn-sm btn-outline-primary py-1 px-2 d-none d-md-inline-flex align-items-center gap-1" onclick="openLeadHistoryFromPlayer()" id="btnPlayerLeadHistory" title="View Lead Universal History" style="font-size:11px;border-radius:6px;">
+                                <i class="fas fa-history"></i><span>History</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -820,13 +912,31 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-3">
-                    <!-- Call Recording Player for Modal -->
-                    <div id="histAudioPlayerContainer" style="display:none;padding:8px 14px;background:#f0f9ff;border:1px solid #bfdbfe;border-radius:8px;margin-bottom:12px;">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="fas fa-volume-up text-primary"></i>
-                            <span class="small fw-semibold text-primary" style="font-size:12px;">Recording:</span>
-                            <audio controls id="histCallAudioPlayer" style="flex:1;height:32px;"></audio>
-                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="closeHistAudioPlayer()"><i class="fas fa-times"></i></button>
+                    <!-- Upgraded Call Recording Player for Modal -->
+                    <div id="histAudioPlayerContainer" class="call-player-dock mb-3" style="display:none;border-radius:8px;border:1px solid #bae6fd;">
+                        <div class="call-player-header d-flex flex-wrap align-items-center justify-content-between gap-2 p-2">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="badge bg-primary text-white d-inline-flex align-items-center gap-1 px-2 py-0.5" style="font-size:10px;font-weight:700;">
+                                    <i class="fas fa-volume-up fa-beat" id="histPlayerPlayingIcon"></i>
+                                    <span id="histPlayerStatusBadge">PLAYING</span>
+                                </span>
+                                <span class="fw-bold text-dark small d-inline-flex align-items-center gap-1" id="histPlayerLeadNameWrap">
+                                    <i class="fas fa-user-circle text-primary"></i>
+                                    <span id="histPlayerLeadName">-</span>
+                                </span>
+                                <span class="badge bg-white text-dark border px-2 py-0.5 font-monospace small" id="histPlayerPhone">-</span>
+                                <span id="histPlayerCallFromSlot"></span>
+                                <span class="badge bg-light text-secondary border px-2 py-0.5 small" id="histPlayerDuration">-</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-1 ms-auto">
+                                <button type="button" class="btn btn-xs btn-primary d-inline-flex align-items-center gap-1 px-2 py-1" id="btnHistGoToCall" onclick="goToHistPlayingCall()" style="font-size:11px;border-radius:14px;font-weight:600;">
+                                    <i class="fas fa-crosshairs"></i><span>Go to Call</span>
+                                </button>
+                                <button type="button" class="btn btn-xs btn-outline-secondary py-0.5 px-2" onclick="closeHistAudioPlayer()" style="border-radius:14px;"><i class="fas fa-times"></i></button>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 px-3 py-1.5" style="background:#f8fafc;">
+                            <audio controls id="histCallAudioPlayer" style="flex:1;height:32px;outline:none;border-radius:6px;"></audio>
                         </div>
                     </div>
 
@@ -1919,6 +2029,10 @@
             return `<span class="badge" style="background:#f8fafc;color:#334155;border:1px solid #cbd5e1;font-size:0.75rem;font-weight:600;"><i class="fas fa-tag me-1 text-secondary"></i>${escapeHtml(cat)}</span>`;
         }
 
+        let currentPlayingCallMeta = null;
+        let currentHistPlayingCallMeta = null;
+        let isAudioPlaying = false;
+
         function renderDrilldownCalls(calls) {
             const tbody = document.getElementById('ctDrilldownTbody');
             if (!calls.length) {
@@ -1932,9 +2046,11 @@
                 const safePhone = (c.phone_number || '').replace(/'/g, "\\'");
                 const safeLeadName = (leadDisplay || '').replace(/'/g, "\\'");
                 const safeSessionId = (c.call_session_id || '').replace(/'/g, "\\'");
+                const callRowId = `drilldown-call-row-${c.id || i}`;
+                const isCurrentlyPlaying = Boolean(currentPlayingCallMeta && currentPlayingCallMeta.recordingId == c.recording_id && isAudioPlaying);
 
                 const playBtn = hasRec
-                    ? `<button class="btn btn-sm btn-outline-info py-0 px-2" title="Play Recording" onclick="playAudioStream(${c.recording_id})"><i class="fas fa-play me-1"></i>Play</button>`
+                    ? `<button class="btn btn-sm ${isCurrentlyPlaying ? 'btn-success text-white' : 'btn-outline-info'} py-0 px-2 btn-play-call" id="play-btn-${c.recording_id}" title="${isCurrentlyPlaying ? 'Pause Recording' : 'Play Recording'}" onclick="togglePlayAudioCall(${c.recording_id}, ${i}, '${callRowId}')"><i class="fas ${isCurrentlyPlaying ? 'fa-pause' : 'fa-play'} me-1"></i>${isCurrentlyPlaying ? 'Playing' : 'Play'}</button>`
                     : '';
 
                 const histBtn = `<button class="btn btn-sm btn-outline-primary py-0 px-2" title="Universal History" onclick="openCallUniversalHistory('${safePhone}', ${leadId}, '${safeLeadName}')"><i class="fas fa-history me-1"></i>History</button>`;
@@ -1943,7 +2059,7 @@
                     ? `<button class="btn btn-sm btn-outline-warning py-0 px-2" title="Quality Review" onclick="openCallQualityReview(${c.id || 0}, '${safeSessionId}', '${safePhone}', ${leadId})"><i class="fas fa-star me-1"></i>Review</button>`
                     : '';
 
-                return `<tr>
+                return `<tr id="${callRowId}" class="call-log-row ${isCurrentlyPlaying ? 'call-row-playing' : ''}" data-recording-id="${c.recording_id || ''}" data-call-id="${c.id || ''}">
                 <td class="text-start">${i + 1}</td>
                 <td>${c.call_datetime ? new Date(c.call_datetime).toLocaleString('en-IN') : '-'}</td>
                 <td><strong>${escapeHtml(c.phone_number || '-')}</strong></td>
@@ -1989,8 +2105,21 @@
             }
         }
 
+        function togglePlayAudioCall(recordingId, index, rowId) {
+            const player = document.getElementById('callAudioPlayer');
+            if (currentPlayingCallMeta && currentPlayingCallMeta.recordingId == recordingId) {
+                if (player && !player.paused) {
+                    player.pause();
+                } else if (player) {
+                    player.play().catch(() => {});
+                }
+                return;
+            }
+            playAudioStream(recordingId, index, rowId);
+        }
+
         let currentAudioBlobUrl = null;
-        async function playAudioStream(recordingId) {
+        async function playAudioStream(recordingId, callIndexOrMeta = null, rowId = null) {
             const histModal = document.getElementById('leadHistoryModal');
             const isHistOpen = histModal && (histModal.classList.contains('show') || histModal.style.display === 'block');
             const player = isHistOpen ? document.getElementById('histCallAudioPlayer') : document.getElementById('callAudioPlayer');
@@ -1998,6 +2127,80 @@
             if (!player || !container) return;
 
             container.style.display = 'block';
+
+            // Resolve call metadata
+            let call = null;
+            if (callIndexOrMeta && typeof callIndexOrMeta === 'object') {
+                call = callIndexOrMeta;
+            } else if (typeof callIndexOrMeta === 'number' && ctCurrentDrilldownCalls && ctCurrentDrilldownCalls[callIndexOrMeta]) {
+                call = ctCurrentDrilldownCalls[callIndexOrMeta];
+            } else if (ctCurrentDrilldownCalls && Array.isArray(ctCurrentDrilldownCalls)) {
+                call = ctCurrentDrilldownCalls.find(c => c.recording_id == recordingId) || null;
+            }
+
+            if (isHistOpen) {
+                const leadName = (call && (call.matched_lead_name || call.contact_name_crm || call.contact_name || call.staff_name)) || '-';
+                const phone = (call && call.phone_number) || document.getElementById('leadHistorySubtitle')?.textContent || '-';
+                const duration = (call && (call.duration_str || fmtCallDuration(call.duration_seconds))) || '-';
+                const nameEl = document.getElementById('histPlayerLeadName');
+                const phoneEl = document.getElementById('histPlayerPhone');
+                const durEl = document.getElementById('histPlayerDuration');
+                const slotEl = document.getElementById('histPlayerCallFromSlot');
+                if (nameEl) nameEl.textContent = leadName;
+                if (phoneEl) phoneEl.textContent = phone;
+                if (durEl) durEl.textContent = duration;
+                if (slotEl && call) slotEl.innerHTML = formatCallFromBadge(call);
+                currentHistPlayingCallMeta = {
+                    ...(call || {}),
+                    recordingId,
+                    rowId: rowId || (call && `hist-call-row-${call.id || 0}`)
+                };
+            } else {
+                const leadDisplay = (call && (call.matched_lead_name || call.contact_name_crm || call.contact_name)) || '-';
+                const phone = (call && call.phone_number) || '-';
+                const duration = (call && fmtCallDuration(call.duration_seconds)) || '-';
+                const dateTime = (call && call.call_datetime) ? new Date(call.call_datetime).toLocaleString('en-IN') : '-';
+
+                const nameEl = document.getElementById('playerLeadName');
+                const phoneEl = document.getElementById('playerPhoneNumber');
+                const dtEl = document.getElementById('playerDateTime');
+                const durEl = document.getElementById('playerDuration');
+                const fromEl = document.getElementById('playerCallFromSlot');
+                const catEl = document.getElementById('playerCategorySlot');
+                const typeEl = document.getElementById('playerTypeSlot');
+
+                if (nameEl) nameEl.textContent = leadDisplay;
+                if (phoneEl) phoneEl.textContent = phone;
+                if (dtEl) dtEl.textContent = dateTime;
+                if (durEl) durEl.textContent = duration;
+                if (fromEl && call) fromEl.innerHTML = formatCallFromBadge(call);
+                if (catEl && call) catEl.innerHTML = formatCategoryBadge(call);
+                if (typeEl && call) typeEl.innerHTML = formatCallTypeBadge(call);
+
+                currentPlayingCallMeta = {
+                    ...(call || {}),
+                    recordingId,
+                    rowId: rowId || (call && `drilldown-call-row-${call.id || 0}`)
+                };
+            }
+
+            // Sync audio events
+            player.onplay = () => {
+                isAudioPlaying = true;
+                updateAudioPlayerUI(true, isHistOpen);
+            };
+            player.onpause = () => {
+                isAudioPlaying = false;
+                updateAudioPlayerUI(false, isHistOpen);
+            };
+            player.onended = () => {
+                isAudioPlaying = false;
+                updateAudioPlayerUI(false, isHistOpen);
+                if (currentAudioBlobUrl) {
+                    try { URL.revokeObjectURL(currentAudioBlobUrl); } catch(e) {}
+                    currentAudioBlobUrl = null;
+                }
+            };
 
             if (currentAudioBlobUrl) {
                 try { URL.revokeObjectURL(currentAudioBlobUrl); } catch(e) {}
@@ -2015,12 +2218,6 @@
                     const blob = await resp.blob();
                     currentAudioBlobUrl = URL.createObjectURL(blob);
                     player.src = currentAudioBlobUrl;
-                    player.onended = () => {
-                        if (currentAudioBlobUrl) {
-                            try { URL.revokeObjectURL(currentAudioBlobUrl); } catch(e) {}
-                            currentAudioBlobUrl = null;
-                        }
-                    };
                     player.play().catch(() => {});
                     return;
                 }
@@ -2031,6 +2228,110 @@
             player.src = streamUrl;
             player.play().catch(() => {});
         }
+
+        function updateAudioPlayerUI(playing, isHistOpen) {
+            if (isHistOpen) {
+                const icon = document.getElementById('histPlayerPlayingIcon');
+                const badge = document.getElementById('histPlayerStatusBadge');
+                if (icon) icon.className = playing ? 'fas fa-volume-up fa-beat' : 'fas fa-pause-circle';
+                if (badge) badge.textContent = playing ? 'PLAYING' : 'PAUSED';
+            } else {
+                const icon = document.getElementById('playerPlayingIcon');
+                const badge = document.getElementById('playerStatusBadge');
+                if (icon) icon.className = playing ? 'fas fa-volume-up fa-beat' : 'fas fa-pause-circle';
+                if (badge) badge.textContent = playing ? 'NOW PLAYING' : 'PAUSED';
+
+                document.querySelectorAll('.btn-play-call').forEach(btn => {
+                    const recId = btn.id.replace('play-btn-', '');
+                    if (currentPlayingCallMeta && recId == currentPlayingCallMeta.recordingId) {
+                        btn.className = playing ? 'btn btn-sm btn-success text-white py-0 px-2 btn-play-call' : 'btn btn-sm btn-outline-info py-0 px-2 btn-play-call';
+                        btn.innerHTML = playing ? '<i class="fas fa-pause me-1"></i>Playing' : '<i class="fas fa-play me-1"></i>Play';
+                    } else {
+                        btn.className = 'btn btn-sm btn-outline-info py-0 px-2 btn-play-call';
+                        btn.innerHTML = '<i class="fas fa-play me-1"></i>Play';
+                    }
+                });
+
+                document.querySelectorAll('.call-log-row').forEach(row => {
+                    if (currentPlayingCallMeta && row.dataset.recordingId == currentPlayingCallMeta.recordingId) {
+                        row.classList.add('call-row-playing');
+                    } else {
+                        row.classList.remove('call-row-playing');
+                    }
+                });
+            }
+        }
+
+        function goToPlayingCall() {
+            if (!currentPlayingCallMeta) return;
+            const { rowId, recordingId, id, phone_number } = currentPlayingCallMeta;
+
+            let targetRow = null;
+            if (rowId) targetRow = document.getElementById(rowId);
+            if (!targetRow && recordingId) targetRow = document.querySelector(`.call-log-row[data-recording-id="${recordingId}"]`);
+            if (!targetRow && id) targetRow = document.querySelector(`.call-log-row[data-call-id="${id}"]`);
+            if (!targetRow && phone_number) {
+                const rows = document.querySelectorAll('#ctDrilldownTbody tr');
+                for (const r of rows) {
+                    if (r.textContent.includes(phone_number)) {
+                        targetRow = r;
+                        break;
+                    }
+                }
+            }
+
+            if (targetRow) {
+                const sec = document.getElementById('ctDrilldownSection');
+                if (sec && sec.style.display === 'none') {
+                    sec.style.display = 'block';
+                }
+
+                targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                document.querySelectorAll('.call-row-active-highlight').forEach(el => {
+                    el.classList.remove('call-row-active-highlight');
+                });
+
+                void targetRow.offsetWidth;
+                targetRow.classList.add('call-row-active-highlight');
+
+                const btn = document.getElementById('btnGoToCall');
+                if (btn) {
+                    const originalHtml = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-check-circle"></i> <span>Located!</span>';
+                    btn.classList.replace('btn-primary', 'btn-success');
+                    setTimeout(() => {
+                        btn.innerHTML = originalHtml;
+                        btn.classList.replace('btn-success', 'btn-primary');
+                    }, 2200);
+                }
+            } else {
+                alert(`Call record for ${phone_number || 'this call'} is not currently visible in the active filter.`);
+            }
+        }
+
+        function goToHistPlayingCall() {
+            if (!currentHistPlayingCallMeta) return;
+            const { rowId, recordingId } = currentHistPlayingCallMeta;
+            let targetRow = null;
+            if (rowId) targetRow = document.getElementById(rowId);
+            if (!targetRow && recordingId) targetRow = document.querySelector(`[data-hist-rec-id="${recordingId}"]`);
+            if (targetRow) {
+                targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                document.querySelectorAll('.call-row-active-highlight').forEach(el => el.classList.remove('call-row-active-highlight'));
+                void targetRow.offsetWidth;
+                targetRow.classList.add('call-row-active-highlight');
+            }
+        }
+
+        function openLeadHistoryFromPlayer() {
+            if (!currentPlayingCallMeta) return;
+            const phone = currentPlayingCallMeta.phone_number || '';
+            const leadId = currentPlayingCallMeta.matched_lead_id || currentPlayingCallMeta.contact_lead_id || 0;
+            const leadDisplay = currentPlayingCallMeta.matched_lead_name || currentPlayingCallMeta.contact_name_crm || currentPlayingCallMeta.contact_name || '';
+            openCallUniversalHistory(phone, leadId, leadDisplay);
+        }
+
         function closeAudioPlayer() {
             const container = document.getElementById('audioPlayerContainer');
             const player = document.getElementById('callAudioPlayer');
@@ -2040,7 +2341,12 @@
                 try { URL.revokeObjectURL(currentAudioBlobUrl); } catch(e) {}
                 currentAudioBlobUrl = null;
             }
+            currentPlayingCallMeta = null;
+            isAudioPlaying = false;
+            updateAudioPlayerUI(false, false);
+            document.querySelectorAll('.call-row-active-highlight').forEach(el => el.classList.remove('call-row-active-highlight'));
         }
+
         function closeHistAudioPlayer() {
             const container = document.getElementById('histAudioPlayerContainer');
             const player = document.getElementById('histCallAudioPlayer');
@@ -2050,7 +2356,9 @@
                 try { URL.revokeObjectURL(currentAudioBlobUrl); } catch(e) {}
                 currentAudioBlobUrl = null;
             }
+            currentHistPlayingCallMeta = null;
         }
+
         function closeCallDrilldown() { document.getElementById('ctDrilldownSection').style.display = 'none'; closeAudioPlayer(); }
 
         /* ══════════════════════ TAB 4: QUALITY QA AUDITS ══════════════════ */
@@ -2629,10 +2937,12 @@
                 if (!logs.length) {
                     callsBody.innerHTML = '<tr><td colspan="5" class="text-center py-3 text-muted">No call records found for this lead.</td></tr>';
                 } else {
-                    callsBody.innerHTML = logs.map(c => {
+                    callsBody.innerHTML = logs.map((c, idx) => {
+                        const callRowId = `hist-call-row-${c.id || idx}`;
                         let audioPlayer = '<span class="text-muted" style="font-size:11px;">No recording</span>';
                         if (c.has_recording && c.recording_id) {
-                            audioPlayer = `<button class="btn btn-sm btn-outline-info py-0 px-2" onclick="playAudioStream(${c.recording_id})" title="Play recording">
+                            const callDataAttr = JSON.stringify(c).replace(/"/g, '&quot;');
+                            audioPlayer = `<button class="btn btn-sm btn-outline-info py-0 px-2" onclick="playAudioStream(${c.recording_id}, ${callDataAttr}, '${callRowId}')" title="Play recording">
                                 <i class="fas fa-play me-1"></i>Play
                             </button>`;
                         } else if (c.stream_url) {
@@ -2641,7 +2951,7 @@
                             </audio>`;
                         }
                         const typeBadge = c.call_type === 'MISSED' ? 'bg-danger' : (c.call_type === 'INCOMING' ? 'bg-info text-dark' : (c.is_milestone ? 'bg-warning text-dark' : 'bg-success'));
-                        return `<tr>
+                        return `<tr id="${callRowId}" data-hist-rec-id="${c.recording_id || ''}">
                             <td><small>${c.call_datetime || '-'}</small></td>
                             <td><span class="badge ${typeBadge}" style="font-size:10px;">${c.call_type}</span></td>
                             <td>${c.duration_str || '-'}</td>

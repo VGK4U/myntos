@@ -1907,7 +1907,7 @@ body {
     <div class="cart-drawer-footer" id="cartFooterSection" style="display: none;">
       <!-- Promo Code Bar -->
       <div class="input-group input-group-sm mb-3">
-        <input type="text" id="promoCodeInput" class="form-control" placeholder="Promo code or MNR ID" uppercase>
+        <input type="text" id="promoCodeInput" class="form-control" placeholder="Promo code or VGK Code" uppercase>
         <button class="btn btn-outline-secondary" onclick="applyPromoCode()">Apply</button>
       </div>
       <div id="promoStatusMessage" class="small mb-2"></div>
@@ -4532,7 +4532,9 @@ body {
       delivery_address: shipAddr,
       notes: `[Mode: ${mode}] [Payment: ${selectedPay}] ${notes}`,
       items: items,
-      company_id: COMPANY_ID
+      company_id: COMPANY_ID,
+      discount_mode: STATE.discountMode || null,
+      partner_code: STATE.partnerCode || null
     };
 
     try {
@@ -5194,20 +5196,128 @@ Please confirm dispatch details.`;
     window.scrollTo({ top: 400, behavior: 'smooth' });
   };
 
-  // ── Promo Code ──────────────────────────────────────────────────────────
-  window.applyPromoCode = function() {
+  // ── Promo Code / VGK Member / Showroom / Student Code ───────────────────
+  window.applyPromoCode = async function() {
     const code = document.getElementById('promoCodeInput').value.trim().toUpperCase();
     const msg = document.getElementById('promoStatusMessage');
     if (!code) return;
 
-    if (code.startsWith('MNR') || code === 'LUCKY10' || code === 'SOLAR10') {
+    msg.innerHTML = '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i> Validating code...</span>';
+
+    // 1. ETC Student Discount (10%)
+    if (code.startsWith('VGK1808')) {
+      try {
+        const res = await fetch(`/api/v1/marketplace/validate-student?student_id=${encodeURIComponent(code)}`);
+        const data = await res.json();
+        if (data.valid) {
+          STATE.discountPct = data.discount_pct || 10;
+          STATE.discountMode = 'student';
+          STATE.partnerCode = code;
+          STATE.promoCode = code;
+          msg.innerHTML = `<span class="text-success"><i class="fas fa-graduation-cap me-1"></i> ETC Student Code applied! ${STATE.discountPct}% discount added.</span>`;
+          updateCartUI();
+          return;
+        }
+      } catch (_) {}
+    }
+
+    // 2. Direct Showroom / Dealer Code (13%)
+    if (code.startsWith('DLAP') || code.startsWith('DST') || code.startsWith('SHOWROOM')) {
+      try {
+        const res = await fetch(`/api/v1/marketplace/validate-dealer?dealer_code=${encodeURIComponent(code)}&company_id=${COMPANY_ID}`);
+        const data = await res.json();
+        if (data.valid) {
+          STATE.discountPct = data.discount_pct || 13;
+          STATE.discountMode = 'partner';
+          STATE.partnerCode = data.dealer_code || code;
+          STATE.promoCode = code;
+          msg.innerHTML = `<span class="text-success"><i class="fas fa-store me-1"></i> Showroom Code applied (${escapeHtml(data.name || code)})! ${STATE.discountPct}% direct discount added.</span>`;
+          updateCartUI();
+          return;
+        }
+      } catch (_) {}
+    }
+
+    // 3. VGK Member Code (5% L1 discount + multi-level earnings cascade)
+    if (code.startsWith('VGK')) {
+      try {
+        const res = await fetch(`/api/v1/marketplace/validate-vgk?vgk_code=${encodeURIComponent(code)}`);
+        const data = await res.json();
+        if (data.valid) {
+          const pct = data.discount_pct || 5;
+          STATE.discountPct = pct;
+          STATE.discountMode = 'vgk';
+          STATE.partnerCode = data.vgk_id || code;
+          STATE.promoCode = code;
+          msg.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i> VGK Member code applied (${escapeHtml(data.name || code)})! ${pct}% discount added. Points balance: ${data.points_balance || 0}</span>`;
+          updateCartUI();
+          return;
+        } else {
+          STATE.discountPct = 0;
+          STATE.discountMode = null;
+          STATE.partnerCode = null;
+          STATE.promoCode = '';
+          msg.innerHTML = `<span class="text-danger"><i class="fas fa-times-circle me-1"></i> ${escapeHtml(data.message || 'Invalid VGK member code')}</span>`;
+          updateCartUI();
+          return;
+        }
+      } catch (err) {
+        STATE.discountPct = 5;
+        STATE.discountMode = 'vgk';
+        STATE.partnerCode = code;
+        STATE.promoCode = code;
+        msg.innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i> VGK Member code applied! 5% discount added.</span>';
+        updateCartUI();
+        return;
+      }
+    }
+
+    // 4. Fallback check for any partner/showroom code not starting with DLAP
+    try {
+      const resD = await fetch(`/api/v1/marketplace/validate-dealer?dealer_code=${encodeURIComponent(code)}&company_id=${COMPANY_ID}`);
+      const dataD = await resD.json();
+      if (dataD.valid) {
+        STATE.discountPct = dataD.discount_pct || 13;
+        STATE.discountMode = 'partner';
+        STATE.partnerCode = dataD.dealer_code || code;
+        STATE.promoCode = code;
+        msg.innerHTML = `<span class="text-success"><i class="fas fa-store me-1"></i> Showroom Code applied (${escapeHtml(dataD.name || code)})! ${STATE.discountPct}% direct discount added.</span>`;
+        updateCartUI();
+        return;
+      }
+    } catch (_) {}
+
+    // 5. Standard Promotional Codes
+    if (code === 'LUCKY10' || code === 'SOLAR10' || code === 'VGK10') {
       STATE.discountPct = 10;
+      STATE.discountMode = 'promo';
+      STATE.partnerCode = null;
       STATE.promoCode = code;
       msg.innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i> Promo code applied! 10% discount added.</span>';
     } else {
-      STATE.discountPct = 0;
-      STATE.promoCode = '';
-      msg.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i> Invalid promo code or expired.</span>';
+      try {
+        const res = await fetch(`/api/v1/marketplace/validate-promo?promo_code=${encodeURIComponent(code)}&company_id=${COMPANY_ID}`);
+        const data = await res.json();
+        if (data.valid) {
+          STATE.discountPct = data.discount_pct || 10;
+          STATE.discountMode = 'promo';
+          STATE.partnerCode = null;
+          STATE.promoCode = code;
+          msg.innerHTML = `<span class="text-success"><i class="fas fa-check-circle me-1"></i> Promo code applied! ${STATE.discountPct}% discount added.</span>`;
+        } else {
+          STATE.discountPct = 0;
+          STATE.discountMode = null;
+          STATE.partnerCode = null;
+          STATE.promoCode = '';
+          msg.innerHTML = `<span class="text-danger"><i class="fas fa-times-circle me-1"></i> ${escapeHtml(data.message || 'Invalid promo code or expired.')}</span>`;
+        }
+      } catch (err) {
+        STATE.discountPct = 0;
+        STATE.discountMode = null;
+        STATE.partnerCode = null;
+        STATE.promoCode = '';
+        msg.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i> Invalid promo code or expired.</span>';
+      }
     }
     updateCartUI();
   };

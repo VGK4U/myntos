@@ -138,6 +138,54 @@
             padding: 16px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px;
         }
         .no-tracking-banner i { color: #d97706; font-size: 20px; }
+
+        /* ── Call Player Dock & Animated Row Highlighting ─────────────────── */
+        @keyframes callRowPulseGlow {
+            0% {
+                background-color: #fef08a !important;
+                box-shadow: 0 0 0 4px #f59e0b, 0 4px 18px rgba(245, 158, 11, 0.45);
+                transform: scale(1.012);
+            }
+            30% {
+                background-color: #fef9c3 !important;
+                box-shadow: 0 0 0 3px #3b82f6, 0 4px 14px rgba(59, 130, 246, 0.35);
+            }
+            70% {
+                background-color: #eff6ff !important;
+                box-shadow: 0 0 0 2px #38bdf8;
+            }
+            100% {
+                background-color: #f0fdf4 !important;
+                box-shadow: 0 0 0 2px #22c55e;
+                transform: scale(1);
+            }
+        }
+
+        .call-row-active-highlight {
+            animation: callRowPulseGlow 3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+            position: relative;
+            z-index: 5;
+        }
+
+        .call-row-playing {
+            background-color: #f0fdf4 !important;
+            border-left: 4px solid #16a34a !important;
+        }
+
+        .call-player-dock {
+            border-top: 2px solid #0284c7;
+            background: #ffffff;
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+            transition: all 0.25s ease-in-out;
+        }
+
+        .call-player-header {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-bottom: 1px solid #bae6fd;
+            padding: 8px 16px;
+        }
         .no-tracking-banner p { margin: 0; color: #92400e; font-size: 13px; }
 
         .sync-info { font-size: 11px; color: #9ca3af; }
@@ -431,11 +479,41 @@
                                 <button class="btn btn-outline-secondary" id="callDetailsNext" onclick="nextCallDetailsPage()"><i class="fas fa-chevron-right"></i></button>
                             </div>
                         </div>
-                        <div id="audioPlayerContainer" style="display:none;padding:8px 16px;background:#f0f9ff;border-top:1px solid #e5e7eb;">
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="fas fa-headphones text-info"></i>
-                                <audio controls id="callAudioPlayer" style="flex:1;height:32px;"></audio>
-                                <button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="closeAudioPlayer()"><i class="fas fa-times"></i></button>
+                        <!-- Upgraded Interactive Call Recording Player Dock -->
+                        <div id="audioPlayerContainer" class="call-player-dock" style="display:none;">
+                            <div class="call-player-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span class="badge bg-primary text-white d-inline-flex align-items-center gap-1 px-2.5 py-1" style="font-size:11px;font-weight:700;letter-spacing:0.5px;border-radius:6px;">
+                                        <i class="fas fa-volume-up fa-beat" id="playerPlayingIcon"></i>
+                                        <span id="playerStatusBadge">NOW PLAYING</span>
+                                    </span>
+                                    <span class="fw-bold text-dark d-inline-flex align-items-center gap-1" style="font-size:13px;" id="playerLeadNameWrap">
+                                        <i class="fas fa-user-circle text-primary"></i>
+                                        <span id="playerLeadName" class="text-truncate" style="max-width:220px;">-</span>
+                                    </span>
+                                    <span class="badge bg-white text-dark border px-2 py-1 font-monospace fw-semibold" id="playerPhoneWrap" style="font-size:11px;">
+                                        <i class="fas fa-phone-alt text-secondary me-1"></i><span id="playerPhoneNumber">-</span>
+                                    </span>
+                                    <span class="text-muted small d-inline-flex align-items-center gap-1" style="font-size:11px;" id="playerTimeWrap">
+                                        <i class="fas fa-clock text-secondary"></i><span id="playerDateTime">-</span>
+                                    </span>
+                                    <span class="badge bg-light text-secondary border px-2 py-1" style="font-size:11px;" id="playerDurationWrap">
+                                        <i class="fas fa-stopwatch me-1 text-primary"></i><span id="playerDuration">-</span>
+                                    </span>
+                                </div>
+                                <div class="d-flex align-items-center gap-2 ms-auto">
+                                    <button type="button" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1 px-3 py-1 shadow-sm" id="btnGoToCall" onclick="goToPlayingCall()" title="Highlight and scroll to this call in the table" style="font-weight:600;font-size:12px;border-radius:20px;">
+                                        <i class="fas fa-crosshairs"></i><span>Go to Call</span>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary py-1 px-2" onclick="closeAudioPlayer()" style="border-radius:20px;"><i class="fas fa-times"></i></button>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-3 px-3 py-2" style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                                <div class="d-flex align-items-center gap-1 text-primary" style="font-size:12px;font-weight:600;min-width:70px;">
+                                    <i class="fas fa-headphones"></i>
+                                    <span>Audio:</span>
+                                </div>
+                                <audio controls id="callAudioPlayer" style="flex:1;height:36px;outline:none;border-radius:6px;"></audio>
                             </div>
                         </div>
                     </div>
@@ -1251,11 +1329,14 @@
                             const leadLink = (call.matched_lead_name || call.contact_name_crm)
                                 ? `<span class="text-info"><i class="fas fa-link me-1"></i>${call.matched_lead_name || call.contact_name_crm}</span>`
                                 : '<span class="text-muted">-</span>';
+                            const callRowId = `call-details-row-${call.id || idx}`;
+                            const isCurrentlyPlaying = Boolean(currentPlayingCallMeta && currentPlayingCallMeta.recordingId == call.recording_id && isAudioPlaying);
                             let recordingCol = '<span class="text-muted">-</span>';
                             if (call.has_recording && call.recording_id) {
-                                recordingCol = `<button class="btn btn-sm btn-outline-info py-0 px-2" onclick="playCallRecording(${call.recording_id})"><i class="fas fa-play me-1"></i>Play</button>`;
+                                const callDataAttr = JSON.stringify(call).replace(/"/g, '&quot;');
+                                recordingCol = `<button class="btn btn-sm ${isCurrentlyPlaying ? 'btn-success text-white' : 'btn-outline-info'} py-0 px-2 btn-play-call" id="play-btn-${call.recording_id}" onclick="playCallRecording(${call.recording_id}, ${callDataAttr}, '${callRowId}')"><i class="fas ${isCurrentlyPlaying ? 'fa-pause' : 'fa-play'} me-1"></i>${isCurrentlyPlaying ? 'Playing' : 'Play'}</button>`;
                             }
-                            return `<tr>
+                            return `<tr id="${callRowId}" class="call-log-row ${isCurrentlyPlaying ? 'call-row-playing' : ''}" data-recording-id="${call.recording_id || ''}" data-call-id="${call.id || ''}">
                                 <td class="text-start">${sno}</td>
                                 <td><small>${dateStr}<br><span class="text-muted">${timeStr}</span></small></td>
                                 <td><strong class="phone-link" onclick="openPhoneDetail('${call.phone_number}',${callDetailsStaffId})" style="font-size:13px;cursor:pointer;color:#3b82f6;text-decoration:underline dotted;">${maskPhone(call.phone_number)}</strong></td>
@@ -1286,12 +1367,104 @@
             loadCallDetails();
         }
 
-        function playCallRecording(recordingId) {
+        let currentPlayingCallMeta = null;
+        let isAudioPlaying = false;
+
+        function playCallRecording(recordingId, callMeta = null, rowId = null) {
             const container = document.getElementById('audioPlayerContainer');
             const player = document.getElementById('callAudioPlayer');
-            player.src = `/api/v1/call-tracking/recordings/${recordingId}/stream`;
+            if (!container || !player) return;
+
+            // Toggle play/pause if clicking same recording
+            if (currentPlayingCallMeta && currentPlayingCallMeta.recordingId == recordingId && !player.paused) {
+                player.pause();
+                return;
+            }
+
             container.style.display = 'block';
+
+            if (callMeta) {
+                const leadName = callMeta.matched_lead_name || callMeta.contact_name_crm || callMeta.contact_name || 'Contact';
+                const phone = callMeta.phone_number || '-';
+                const dt = callMeta.call_datetime ? new Date(callMeta.call_datetime).toLocaleString('en-IN') : '-';
+                const dur = fmtDuration(callMeta.duration_seconds || 0);
+
+                const nameEl = document.getElementById('playerLeadName');
+                const phoneEl = document.getElementById('playerPhoneNumber');
+                const dtEl = document.getElementById('playerDateTime');
+                const durEl = document.getElementById('playerDuration');
+
+                if (nameEl) nameEl.textContent = leadName;
+                if (phoneEl) phoneEl.textContent = phone;
+                if (dtEl) dtEl.textContent = dt;
+                if (durEl) durEl.textContent = dur;
+
+                currentPlayingCallMeta = {
+                    ...callMeta,
+                    recordingId,
+                    rowId: rowId || `call-details-row-${callMeta.id || 0}`
+                };
+            }
+
+            player.onplay = () => {
+                isAudioPlaying = true;
+                const icon = document.getElementById('playerPlayingIcon');
+                const badge = document.getElementById('playerStatusBadge');
+                if (icon) icon.className = 'fas fa-volume-up fa-beat';
+                if (badge) badge.textContent = 'NOW PLAYING';
+                document.querySelectorAll('.call-log-row').forEach(r => {
+                    if (currentPlayingCallMeta && r.dataset.recordingId == currentPlayingCallMeta.recordingId) {
+                        r.classList.add('call-row-playing');
+                    } else {
+                        r.classList.remove('call-row-playing');
+                    }
+                });
+            };
+            player.onpause = () => {
+                isAudioPlaying = false;
+                const icon = document.getElementById('playerPlayingIcon');
+                const badge = document.getElementById('playerStatusBadge');
+                if (icon) icon.className = 'fas fa-pause-circle';
+                if (badge) badge.textContent = 'PAUSED';
+            };
+            player.onended = () => {
+                isAudioPlaying = false;
+                const icon = document.getElementById('playerPlayingIcon');
+                const badge = document.getElementById('playerStatusBadge');
+                if (icon) icon.className = 'fas fa-check-circle';
+                if (badge) badge.textContent = 'COMPLETED';
+                document.querySelectorAll('.call-log-row').forEach(r => r.classList.remove('call-row-playing'));
+            };
+
+            player.src = `/api/v1/call-tracking/recordings/${recordingId}/stream`;
             player.play().catch(() => {});
+        }
+
+        function goToPlayingCall() {
+            if (!currentPlayingCallMeta) return;
+            const { rowId, recordingId, phone_number } = currentPlayingCallMeta;
+            let targetRow = null;
+            if (rowId) targetRow = document.getElementById(rowId);
+            if (!targetRow && recordingId) targetRow = document.querySelector(`.call-log-row[data-recording-id="${recordingId}"]`);
+            if (targetRow) {
+                targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                document.querySelectorAll('.call-row-active-highlight').forEach(el => el.classList.remove('call-row-active-highlight'));
+                void targetRow.offsetWidth;
+                targetRow.classList.add('call-row-active-highlight');
+
+                const btn = document.getElementById('btnGoToCall');
+                if (btn) {
+                    const originalHtml = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-check-circle"></i> <span>Located!</span>';
+                    btn.classList.replace('btn-primary', 'btn-success');
+                    setTimeout(() => {
+                        btn.innerHTML = originalHtml;
+                        btn.classList.replace('btn-success', 'btn-primary');
+                    }, 2200);
+                }
+            } else {
+                alert(`Call for ${phone_number || 'recording'} is on another page or filter.`);
+            }
         }
 
         function closeAudioPlayer() {
@@ -1299,6 +1472,10 @@
             const player = document.getElementById('callAudioPlayer');
             if (player) { player.pause(); player.src = ''; }
             if (container) container.style.display = 'none';
+            currentPlayingCallMeta = null;
+            isAudioPlaying = false;
+            document.querySelectorAll('.call-row-active-highlight').forEach(el => el.classList.remove('call-row-active-highlight'));
+            document.querySelectorAll('.call-row-playing').forEach(el => el.classList.remove('call-row-playing'));
         }
 
         document.getElementById('filterPhone').addEventListener('keypress', function(e) {

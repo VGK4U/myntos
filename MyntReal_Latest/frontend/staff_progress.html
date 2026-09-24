@@ -8,7 +8,8 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script src="/public/js/staff-token-manager.js"></script>
     <script src="/public/js/staff-fetch.js"></script>
-  <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/public/js/nda-enforcement.js"></script>
+    <script src="/public/js/plivo-softphone.js?v=20260915_audiofix"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <style>
@@ -784,7 +785,7 @@
                                     <th style="padding:12px 14px;">Staff Name</th>
                                     <th style="padding:12px 14px;">Department</th>
                                     <th style="padding:12px 14px;">Active Segments</th>
-                                    <th style="padding:12px 16px;text-align:right;width:160px;">Action</th>
+                                    <th style="padding:12px 16px;text-align:right;width:220px;">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="staffExtTableBody">
@@ -5202,7 +5203,7 @@
                     : '<span class="text-muted" style="font-size:11px;">—</span>';
 
                 const extBadge = s.extension && s.extension !== 'N/A'
-                    ? `<span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:13px;font-weight:800;padding:4px 8px;">Ext: ${escapeHtml(s.extension)}</span>`
+                    ? `<span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:13px;font-weight:800;padding:4px 8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all 0.15s ease;" onmouseover="this.style.background='#dbeafe';this.style.transform='scale(1.04)';" onmouseout="this.style.background='#eff6ff';this.style.transform='none';" onclick="callStaffMember('${escapeHtml(s.phone || '')}', '${escapeHtml(s.name)}', '${escapeHtml(s.extension)}', '${escapeHtml(s.emp_code)}')" title="Click to call ${escapeHtml(s.name)} (Ext: ${escapeHtml(s.extension)})"><i class="fas fa-phone-alt" style="font-size:10px;"></i>Ext: ${escapeHtml(s.extension)}</span>`
                     : `<span class="badge bg-light text-muted border" style="font-size:11px;">N/A</span>`;
 
                 return `
@@ -5213,7 +5214,10 @@
                         <td style="padding:10px 14px;color:#475569;font-size:12.5px;">${escapeHtml(s.department)}</td>
                         <td style="padding:10px 14px;">${segBadges}</td>
                         <td style="padding:10px 16px;text-align:right;">
-                            <div class="d-inline-flex gap-1">
+                            <div class="d-inline-flex gap-1 align-items-center">
+                                <button type="button" class="btn btn-success btn-sm" style="font-size:11px;padding:3px 9px;border-radius:6px;font-weight:700;" onclick="callStaffMember('${escapeHtml(s.phone || '')}', '${escapeHtml(s.name)}', '${escapeHtml(s.extension)}', '${escapeHtml(s.emp_code)}')" title="Connect call to ${escapeHtml(s.name)}">
+                                    <i class="fas fa-phone-alt me-1"></i>Call
+                                </button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" style="font-size:11px;padding:3px 8px;border-radius:6px;" onclick="copyStaffSignature('${escapeHtml(s.name)}', '${escapeHtml(s.extension)}')" title="Copy standard WhatsApp Signature">
                                     <i class="fab fa-whatsapp text-success me-1"></i>Copy Sig
                                 </button>
@@ -5225,6 +5229,31 @@
                     </tr>
                 `;
             }).join('');
+        }
+
+        function callStaffMember(phone, name, ext, empCode) {
+            const rawDigits = (phone || '').replace(/\D/g, '');
+            let destPhone = rawDigits.length >= 10 ? rawDigits.slice(-10) : '';
+
+            if (!destPhone) {
+                const input = prompt(`Connect Call to Staff: ${name} (Ext: ${ext || 'N/A'})\n\nNo registered direct phone number found for ${name}.\nEnter a 10-digit phone number to dial:`, '');
+                if (!input) return;
+                const cleaned = input.replace(/\D/g, '');
+                if (cleaned.length < 10) {
+                    alert('Please enter a valid 10-digit phone number.');
+                    return;
+                }
+                destPhone = cleaned.slice(-10);
+            }
+
+            const fullPhone = `+91${destPhone}`;
+            console.log(`[STAFF-CALL] Connecting call to ${name} (${fullPhone}, Ext: ${ext})`);
+
+            if (window.PlivoSoftphone && typeof window.PlivoSoftphone.dial === 'function') {
+                window.PlivoSoftphone.dial(fullPhone, null, name, 'plivo');
+            } else {
+                window.location.href = `tel:${fullPhone}`;
+            }
         }
 
         function clearExtSearch() {

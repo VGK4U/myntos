@@ -1493,7 +1493,10 @@ class UniversalHistoryService:
             candidate_ext = ext
             inc = 1
             while candidate_ext in used_exts:
-                candidate_ext = str(int(ext) + inc)
+                next_val = int(candidate_ext) + 1
+                if next_val > 99:
+                    next_val = 10
+                candidate_ext = f"{next_val:02d}"
                 inc += 1
             used_exts.add(candidate_ext)
 
@@ -1514,7 +1517,7 @@ class UniversalHistoryService:
 
         routing_rules = {
             "first_time_call": "When a first-time caller selects an IVR Department (Segment), the system resolves active CRM Lead Handlers for that segment and dials all online members simultaneously in parallel.",
-            "direct_extension": "Callers entering a staff extension (e.g. 136, 208, 216) are routed directly to the employee's softphone SIP endpoint.",
+            "direct_extension": "Callers entering a staff extension (e.g. 16, 36, 66) are routed directly to the employee's softphone SIP endpoint.",
             "sticky_returning_call": "Returning callers with existing CRM leads or recent VoIP call sessions bypass the menu and connect directly to their dedicated lead owner or telecaller.",
             "ivr_numbers": "+91 85858 52738 | +91 8897797667"
         }
@@ -1528,11 +1531,11 @@ class UniversalHistoryService:
     @classmethod
     def get_staff_extension_number(cls, staff_emp: Any) -> Optional[str]:
         """
-        Authoritative single-source-of-truth extension derivation for staff employees.
-        Guarantees unique 3-digit PBX extensions:
-          - MR (Mynt Real) -> 1XX (e.g. MR10016 -> 116, MR10036 -> 136)
-          - MN (Manthra EV) -> 2XX (e.g. MN10008 -> 208, MN10016 -> 216)
-          - FL (Freelancer) -> 4XX (e.g. FL10004 -> 404)
+        Authoritative single-source-of-truth 2-digit extension derivation for staff employees.
+        Guarantees unique 2-digit PBX extensions (10-99):
+          - MR (Mynt Real) -> e.g. MR10016 -> 16, MR10036 -> 36
+          - MN (Manthra EV) -> e.g. MN10008 -> 58, MN10016 -> 66
+          - FL (Freelancer) -> e.g. FL10004 -> 44
         Excludes System Administrator (MR10001) and automated test accounts.
         """
         if not staff_emp:
@@ -1549,21 +1552,26 @@ class UniversalHistoryService:
         if not m:
             return None
         num = int(m.group(1))
-        last2 = f"{num % 100:02d}"
+        last2 = num % 100
 
         if emp_code.startswith('MR'):
-            return f"1{last2}"
+            val = last2 if last2 >= 10 else last2 + 10
+            return f"{val:02d}"
         elif emp_code.startswith('MN'):
-            return f"2{last2}"
+            val = 50 + (last2 % 50)
+            return f"{val:02d}"
         elif emp_code.startswith('FL'):
-            return f"4{last2}"
-        return f"8{last2}"
+            val = 40 + (last2 % 10)
+            return f"{val:02d}"
+        val = 80 + (last2 % 20)
+        return f"{val:02d}"
 
     @classmethod
     def resolve_staff_by_extension(cls, db: Session, extension: str) -> Optional[StaffEmployee]:
         """
         Reverse-lookup: finds active staff member corresponding to dialed extension.
-        Matches 3-digit derived extension (e.g. '136', '208', '216').
+        Matches 2-digit derived extension (e.g. '16', '36', '66'),
+        and retains backward compatibility for legacy 3-digit dialing (e.g. '116', '136', '216').
         """
         clean_ext = str(extension or "").strip()
         if not clean_ext:
@@ -1574,8 +1582,18 @@ class UniversalHistoryService:
             StaffEmployee.is_deleted == False
         ).all()
 
+        # 1. Exact match with current 2-digit extension
         for s in staff_employees:
             if cls.get_staff_extension_number(s) == clean_ext:
                 return s
+
+        # 2. Backward compatibility: if 3 digits was dialed, match legacy format
+        if len(clean_ext) == 3:
+            legacy_2digit = clean_ext[-2:]
+            for s in staff_employees:
+                cur = cls.get_staff_extension_number(s)
+                if cur == legacy_2digit or (clean_ext.startswith('1') and cur == legacy_2digit):
+                    return s
+
         return None
 

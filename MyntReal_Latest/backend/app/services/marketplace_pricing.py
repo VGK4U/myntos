@@ -93,8 +93,9 @@ def calculate_price_breakdown(
 
     seg = segment_discount_rates if segment_discount_rates is not None else {}
     seg_mnr = seg['mnr_pct'] if 'mnr_pct' in seg else 3.0
-    seg_partner = seg['partner_pct'] if 'partner_pct' in seg else 12.0
+    seg_partner = seg['partner_pct'] if 'partner_pct' in seg else 13.0
     seg_student = seg['student_pct'] if 'student_pct' in seg else 10.0
+    seg_vgk = seg['vgk_pct'] if 'vgk_pct' in seg else 5.0
 
     discount_label = None
     discount_amount = Decimal('0')
@@ -113,8 +114,8 @@ def calculate_price_breakdown(
         discount_pct = _d(seg_student) / 100
         discount_label = f'ETC Student Discount ({seg_student:.4g}%)'
     elif discount_mode == 'vgk':
-        discount_pct = Decimal('0.03')
-        discount_label = 'VGK4U Member Discount (3%)'
+        discount_pct = _d(seg_vgk) / 100
+        discount_label = f'VGK Member Discount ({seg_vgk:.4g}%)'
     else:
         discount_pct = Decimal('0')
 

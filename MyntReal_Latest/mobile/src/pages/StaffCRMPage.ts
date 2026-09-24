@@ -468,21 +468,29 @@ export class StaffCRMPage {
     }
   }
 
-  private async playAudioStream(recordingId: number): Promise<void> {
+  private currentPlayingMeta: { phone?: string; lead?: string; rowId?: string; recordingId?: number } | null = null;
+
+  private async playAudioStream(recordingId: number, meta?: { phone?: string; lead?: string; rowId?: string }): Promise<void> {
     if (this.currentAudioBlobUrl) {
       try { URL.revokeObjectURL(this.currentAudioBlobUrl); } catch (_) {}
       this.currentAudioBlobUrl = null;
     }
 
-    const token = await apiService.getToken();
-    const baseUrl = apiService.getBaseUrl();
-    const streamUrl = `${baseUrl}/call-tracking/recordings/${recordingId}/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
-
+    this.currentPlayingMeta = { ...(meta || {}), recordingId };
     const player = document.getElementById('staffCrmAudioPlayer') as HTMLAudioElement;
     const playerContainer = document.getElementById('staffCrmAudioContainer');
     if (!player || !playerContainer) return;
 
+    const leadEl = document.getElementById('staffCrmPlayerLead');
+    const phoneEl = document.getElementById('staffCrmPlayerPhone');
+    if (leadEl) leadEl.textContent = meta?.lead || 'Call Recording';
+    if (phoneEl) phoneEl.textContent = meta?.phone || '';
+
     playerContainer.style.display = 'block';
+
+    const token = await apiService.getToken();
+    const baseUrl = apiService.getBaseUrl();
+    const streamUrl = `${baseUrl}/call-tracking/recordings/${recordingId}/stream${token ? `?token=${encodeURIComponent(token)}` : ''}`;
 
     try {
       const resp = await fetch(streamUrl, {
@@ -513,6 +521,7 @@ export class StaffCRMPage {
       try { URL.revokeObjectURL(this.currentAudioBlobUrl); } catch (_) {}
       this.currentAudioBlobUrl = null;
     }
+    this.currentPlayingMeta = null;
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════
@@ -1009,11 +1018,25 @@ export class StaffCRMPage {
         </div>
 
         <!-- In-Page Audio Player Floating Bar (for call recording playback) -->
-        <div id="staffCrmAudioContainer" style="display:none; position:fixed; bottom:0; left:0; right:0; background:#0f172a; color:#fff; padding:10px 16px; z-index:1040; border-top:1px solid #334155; box-shadow:0 -4px 12px rgba(0,0,0,0.15);">
+        <div id="staffCrmAudioContainer" style="display:none; position:fixed; bottom:0; left:0; right:0; background:#0f172a; color:#fff; padding:8px 14px; z-index:1040; border-top:2px solid #0284c7; box-shadow:0 -6px 20px rgba(0,0,0,0.35);">
+          <!-- Call Details Header -->
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; max-width:600px; margin-left:auto; margin-right:auto;">
+            <div style="display:flex; align-items:center; gap:6px; overflow:hidden;">
+              <span style="background:#0284c7; color:#fff; font-size:9px; font-weight:700; padding:2px 6px; border-radius:4px; letter-spacing:0.3px;">PLAYING</span>
+              <span id="staffCrmPlayerLead" style="font-size:12px; font-weight:700; color:#f8fafc; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; max-width:140px;">-</span>
+              <span id="staffCrmPlayerPhone" style="font-size:11px; color:#94a3b8; font-family:monospace;">-</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <button id="btnStaffCrmGoToCall" style="background:#2563eb; color:#fff; border:none; border-radius:14px; padding:3px 10px; font-size:11px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                <i class="fas fa-crosshairs"></i><span>Go to Call</span>
+              </button>
+              <button id="closeStaffCrmAudioBtn" style="background:none; border:none; color:#94a3b8; font-size:16px; cursor:pointer; padding:0 4px;"><i class="fas fa-times"></i></button>
+            </div>
+          </div>
+          <!-- Audio Player Bar -->
           <div style="display:flex; align-items:center; gap:10px; max-width:600px; margin:0 auto;">
             <i class="fas fa-headphones" style="color:#38bdf8; font-size:16px;"></i>
             <audio id="staffCrmAudioPlayer" controls style="flex:1; height:32px; outline:none;"></audio>
-            <button id="closeStaffCrmAudioBtn" style="background:none; border:none; color:#94a3b8; font-size:16px; cursor:pointer;"><i class="fas fa-times"></i></button>
           </div>
         </div>
 
@@ -1558,8 +1581,10 @@ export class StaffCRMPage {
                   } else if (page) {
                     fromBg = '#f8fafc'; fromColor = '#475569'; fromIcon = 'fa-file-alt'; fromLabel = page;
                   }
+                  const callRowId = `mobile-staff-call-row-${c.id || i}`;
+                  const leadDisplayName = this.escapeHtml(c.matched_lead_name || c.contact_name_crm || c.contact_name || '-');
                   return `
-                    <tr style="border-bottom:1px solid #f1f5f9;">
+                    <tr id="${callRowId}" style="border-bottom:1px solid #f1f5f9; transition: background 0.3s ease;">
                       <td style="padding:6px 6px; text-align:center; color:#64748b;">${i + 1}</td>
                       <td style="padding:6px 8px; white-space:nowrap;">${c.call_datetime ? new Date(c.call_datetime).toLocaleString('en-IN') : '-'}</td>
                       <td style="padding:6px 8px; font-weight:700;">${this.escapeHtml(c.phone_number || '-')}</td>
@@ -1567,11 +1592,11 @@ export class StaffCRMPage {
                       <td style="padding:6px 8px; text-align:center; white-space:nowrap;"><span style="background:${fromBg}; color:${fromColor}; border:1px solid currentColor; border-radius:4px; padding:2px 6px; font-size:10px; font-weight:600;"><i class="fas ${fromIcon} me-1"></i>${fromLabel}</span></td>
                       <td style="padding:6px 8px; text-align:center;">${this.callTypeBadge(c)}</td>
                       <td style="padding:6px 8px; text-align:center;">${this.fmtCallDuration(c.duration_seconds)}</td>
-                      <td style="padding:6px 8px;">${this.escapeHtml(c.matched_lead_name || c.contact_name_crm || c.contact_name || '-')}</td>
+                      <td style="padding:6px 8px;">${leadDisplayName}</td>
                       <td style="padding:6px 8px; text-align:center; white-space:nowrap;">
                         <div style="display:inline-flex; align-items:center; gap:4px; justify-content:center;">
                           ${hasRec ? `
-                            <button class="play-audio-btn" data-recid="${c.recording_id}" style="background:#0284c7; color:#fff; border:none; border-radius:4px; padding:2px 6px; font-size:10px; font-weight:700; cursor:pointer;" title="Play Recording">
+                            <button class="play-audio-btn" data-recid="${c.recording_id}" data-phone="${this.escapeHtml(c.phone_number || '')}" data-lead="${leadDisplayName}" data-rowid="${callRowId}" style="background:#0284c7; color:#fff; border:none; border-radius:4px; padding:2px 6px; font-size:10px; font-weight:700; cursor:pointer;" title="Play Recording">
                               <i class="fas fa-play me-1"></i>Play
                             </button>
                           ` : ''}
@@ -2234,19 +2259,24 @@ export class StaffCRMPage {
                 <div style="text-align:center; padding:24px; color:#94a3b8;">No call recordings found for this lead.</div>
               ` : `
                 <div style="display:flex; flex-direction:column; gap:8px;">
-                  ${this.historyCalls.map((c: any) => `
-                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center;">
+                  ${this.historyCalls.map((c: any, idx: number) => {
+                    const rowId = `mobile-hist-call-${c.id || idx}`;
+                    const leadText = this.escapeHtml(this.historyLeadName || c.staff_name || 'Lead');
+                    const phoneText = this.escapeHtml(c.phone_number || '');
+                    return `
+                    <div id="${rowId}" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; transition: all 0.3s ease;">
                       <div>
                         <div style="font-size:11.5px; font-weight:700; color:#0f172a;">${this.callTypeBadge(c)} ${c.duration_str ? '· ' + c.duration_str : ''}</div>
                         <div style="font-size:10px; color:#64748b; margin-top:2px;">${c.call_datetime || '-'} · Staff: ${this.escapeHtml(c.staff_name || 'Staff')}</div>
                       </div>
                       ${(c.has_recording && c.recording_id) ? `
-                        <button class="play-audio-btn" data-recid="${c.recording_id}" style="background:#0284c7; color:#fff; border:none; border-radius:4px; padding:4px 10px; font-size:10px; font-weight:700; cursor:pointer;">
+                        <button class="play-audio-btn" data-recid="${c.recording_id}" data-phone="${phoneText}" data-lead="${leadText}" data-rowid="${rowId}" style="background:#0284c7; color:#fff; border:none; border-radius:4px; padding:4px 10px; font-size:10px; font-weight:700; cursor:pointer;">
                           <i class="fas fa-play me-1"></i>Play
                         </button>
                       ` : '<span style="font-size:10px; color:#cbd5e1;">No Audio</span>'}
                     </div>
-                  `).join('')}
+                  `;
+                  }).join('')}
                 </div>
               `}
             ` : this.historyActiveTab === 'wa' ? `
@@ -2451,10 +2481,30 @@ export class StaffCRMPage {
     // Audio Play Buttons
     this.container.querySelectorAll('.play-audio-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const recId = Number((e.currentTarget as HTMLElement).dataset.recid);
-        if (recId) this.playAudioStream(recId);
+        const target = e.currentTarget as HTMLElement;
+        const recId = Number(target.dataset.recid);
+        const phone = target.dataset.phone || '';
+        const lead = target.dataset.lead || '';
+        const rowId = target.dataset.rowid || '';
+        if (recId) this.playAudioStream(recId, { phone, lead, rowId });
       });
     });
+
+    document.getElementById('btnStaffCrmGoToCall')?.addEventListener('click', () => {
+      if (!this.currentPlayingMeta?.rowId) return;
+      const target = document.getElementById(this.currentPlayingMeta.rowId);
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.style.transition = 'all 0.3s ease';
+        target.style.backgroundColor = '#fef08a';
+        target.style.outline = '2px solid #3b82f6';
+        setTimeout(() => {
+          target.style.backgroundColor = '#f0fdf4';
+          target.style.outline = 'none';
+        }, 2500);
+      }
+    });
+
     document.getElementById('closeStaffCrmAudioBtn')?.addEventListener('click', () => {
       this.closeAudioPlayer();
     });

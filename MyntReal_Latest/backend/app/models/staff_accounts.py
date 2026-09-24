@@ -6606,7 +6606,7 @@ class VGKTeamIncomeEntry(BaseModel):
             "status IN ('PENDING', 'CONFIRMED', 'CANCELLED', 'HOLD')",
             name='vgk_income_status_check'
         ),
-        CheckConstraint('level BETWEEN 0 AND 5', name='vgk_income_level_check'),
+        CheckConstraint('level BETWEEN 0 AND 10', name='vgk_income_level_check'),
         Index('idx_vgk_income_partner_status', 'company_id', 'partner_id', 'status'),
         Index('idx_vgk_income_lead', 'company_id', 'source_lead_id'),
     )
