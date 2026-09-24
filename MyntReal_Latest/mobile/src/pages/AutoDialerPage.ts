@@ -16,6 +16,8 @@ import { unifiedShareLeadModal } from '../components/UnifiedShareLeadModal';
 import { callController } from '../services/call-controller';
 import { telephonyService, TelephonyCallSession } from '../services/telephony.service';
 import { UniversalLeadHistoryModal } from '../components/UniversalLeadHistoryModal';
+import { callSyncService } from '../services/call-sync.service';
+import { permissionsRuntime } from '../runtime/permissions';
 
 const LEAD_STATUSES = [
   { value: 'new', label: 'New' },
@@ -102,6 +104,8 @@ export class AutoDialerPage {
   private recentCalls: any[] = [];
   private recentCallsLoading = false;
   private recentCallsLoaded = false;
+  // DC_PRIORITY_FILTER: Active priority filter for sub-queue browsing
+  private activePriorityFilter: string | null = null;
   // DC_MISSED_CB: MyOperator missed callbacks panel
   private missedCallbacks: any[] = [];
   private missedCallbacksLoaded = false;
@@ -113,6 +117,7 @@ export class AutoDialerPage {
   private isDialingInProgress = false;
   private isPrewarmingTelephony = false;
   private unsubscribeTelephony: (() => void) | null = null;
+  private unsubscribeLifecycle: (() => void) | null = null;
   private _callingDurationTimer: ReturnType<typeof setInterval> | null = null;
   private _selectedInCallOutcome: string = '';
 
@@ -127,6 +132,13 @@ export class AutoDialerPage {
     // Subscribe to central telephony service for softphone call lifecycle updates
     this.unsubscribeTelephony = telephonyService.subscribe((session: TelephonyCallSession) => {
       this._handleTelephonyUpdate(session);
+    });
+
+    // Auto-sync native SIM calls on Android app resume
+    this.unsubscribeLifecycle = permissionsRuntime.onLifecycleChange((isActive) => {
+      if (isActive) {
+        void this._checkAndSyncSimCalls();
+      }
     });
 
     // DC_INIT_GUARD: Wrap the entire init body so ANY unexpected error (network, 403, 500, etc.)
@@ -169,6 +181,7 @@ export class AutoDialerPage {
       void this._loadMissedCallbacks().then(() => this._render());
       void this._loadRecentCalls();
       this._prewarmTelephony();
+      void this._checkAndSyncSimCalls();
     }
   }
 
@@ -181,11 +194,28 @@ export class AutoDialerPage {
       this.unsubscribeTelephony();
       this.unsubscribeTelephony = null;
     }
+    if (this.unsubscribeLifecycle) {
+      this.unsubscribeLifecycle();
+      this.unsubscribeLifecycle = null;
+    }
     dialerService.stopCallPoll();
     dialerService.stopAppListener();
     dialerService.stopSyncPoll();
     this._removeCallingScreen();
     document.getElementById('dc-method-modal')?.remove();
+  }
+
+  private async _checkAndSyncSimCalls(): Promise<void> {
+    try {
+      const res = await callSyncService.triggerAutoSyncIfAndroid();
+      if (res && (res.synced > 0 || res.matched > 0)) {
+        console.log(`[AutoDialer] SIM sync complete: ${res.synced} system calls synced, ${res.matched} matched`);
+        void this._loadRecentCalls(true);
+        void this._loadQueue();
+      }
+    } catch (e) {
+      console.warn('[AutoDialer] SIM sync error (safe):', e);
+    }
   }
 
   // ── Data Loading ─────────────────────────────────────────────────────────────
@@ -448,6 +478,10 @@ export class AutoDialerPage {
       this.callStartTime = Date.now();
       this.currentLead = lead;
       this.activeSoftphoneDial = true;
+
+      // Save to local dial history immediately at initiation and update recent calls panel
+      this._saveToLocalDialHistory(phone, lead.name || 'CRM Lead');
+      this._updateRecentPanel();
 
       // Notify backend & desktop web of active call
       await dialerService.notifyCallActive(canonicalId);
@@ -1115,6 +1149,12 @@ export class AutoDialerPage {
       if (res.success && res.data) fullLead = { ...lead, ...res.data };
     } catch (_) { /* use queue data */ }
 
+    // Preserve unmasked canonical phone numbers from queue/session for redial
+    const rawPrimary = lead?.phone || this.currentLead?.phone || fullLead?.raw_phone || fullLead?.phone || '';
+    const rawAlt = lead?.alternate_phone || this.currentLead?.alternate_phone || fullLead?.raw_alt_phone || fullLead?.alternate_phone || '';
+    fullLead.raw_phone = rawPrimary;
+    fullLead.raw_alt_phone = rawAlt;
+
     // DC_SOURCE_CAT_FIX: Fetch categories for the dropdown in Update Lead form
     let categories: Array<{id: number; name: string}> = [];
     try {
@@ -1295,14 +1335,14 @@ export class AutoDialerPage {
             <div class="dc-form-row">
               <label>Primary Phone</label>
               <div class="dc-phone-row">
-                <input type="tel" id="dc-edit-phone" value="${lead?.phone || ''}" placeholder="Primary number">
+                <input type="tel" id="dc-edit-phone" value="${lead?.phone || ''}" data-raw-phone="${this._escapeHtml(lead?.raw_phone || lead?.phone || '')}" placeholder="Primary number">
                 <label class="dc-wa-toggle"><input type="checkbox" id="dc-edit-phone-wa" ${lead?.phone_primary_whatsapp ? 'checked' : ''}><span>WhatsApp</span></label>
               </div>
             </div>
             <div class="dc-form-row">
               <label>Alternate Phone</label>
               <div class="dc-phone-row">
-                <input type="tel" id="dc-edit-alt-phone" value="${lead?.alternate_phone || ''}" placeholder="Alt. number">
+                <input type="tel" id="dc-edit-alt-phone" value="${lead?.alternate_phone || ''}" data-raw-phone="${this._escapeHtml(lead?.raw_alt_phone || lead?.alternate_phone || '')}" placeholder="Alt. number">
                 <label class="dc-wa-toggle"><input type="checkbox" id="dc-edit-alt-phone-wa" ${lead?.phone_secondary_whatsapp ? 'checked' : ''}><span>WhatsApp</span></label>
               </div>
             </div>
@@ -1455,13 +1495,32 @@ export class AutoDialerPage {
     const COUNTDOWN_TOTAL = 60;
 
     // ── Redial from Popup ────────────────────────────────────────────────────
-    const _handlePopupRedial = () => {
+    const _handlePopupRedial = async () => {
       telephonyService.prepareAudioOnUserGesture();
       const phoneInput = overlay.querySelector('#dc-edit-phone') as HTMLInputElement | null;
       const altPhoneInput = overlay.querySelector('#dc-edit-alt-phone') as HTMLInputElement | null;
-      const targetPhone = (phoneInput?.value || this.popupLeadData?.phone || altPhoneInput?.value || this.popupLeadData?.alternate_phone || '').trim();
-      if (!targetPhone) {
-        alert('No phone number available to redial.');
+
+      let targetPhone = '';
+      const inputVal = (phoneInput?.value || '').trim();
+      const rawVal = (phoneInput?.dataset?.rawPhone || this.popupLeadData?.raw_phone || this.popupLeadData?.phone || '').trim();
+
+      if (inputVal && !inputVal.includes('•') && !inputVal.includes('*')) {
+        targetPhone = inputVal;
+      } else if (rawVal && !rawVal.includes('•') && !rawVal.includes('*')) {
+        targetPhone = rawVal;
+      } else {
+        const altInputVal = (altPhoneInput?.value || '').trim();
+        const altRawVal = (altPhoneInput?.dataset?.rawPhone || this.popupLeadData?.raw_alt_phone || this.popupLeadData?.alternate_phone || '').trim();
+        if (altInputVal && !altInputVal.includes('•') && !altInputVal.includes('*')) {
+          targetPhone = altInputVal;
+        } else if (altRawVal && !altRawVal.includes('•') && !altRawVal.includes('*')) {
+          targetPhone = altRawVal;
+        }
+      }
+
+      const digitsOnly = targetPhone.replace(/\D/g, '');
+      if (!digitsOnly || digitsOnly.length < 10) {
+        alert('No valid phone number available to redial.');
         return;
       }
 
@@ -1475,9 +1534,10 @@ export class AutoDialerPage {
       overlay.remove();
       this.popupOpen = false;
 
-      // 3. Clear any lingering telephony state or dial locks
+      // 3. Clear any lingering telephony state or dial locks cleanly
       if (telephonyService.isCallActive()) {
         telephonyService.endCall();
+        await new Promise(r => setTimeout(r, 200));
       }
       this.activeSoftphoneDial = false;
       this.isDialingInProgress = false;
@@ -1492,6 +1552,7 @@ export class AutoDialerPage {
         id: canonicalId,
         lead_id: canonicalId,
         phone: targetPhone,
+        raw_phone: targetPhone,
         name: this.popupLeadData?.name || 'Customer Lead',
         category_id: this.popupLeadData?.category_id,
         category_name: this.popupLeadData?.category_name,
@@ -1753,6 +1814,10 @@ export class AutoDialerPage {
 
     // ── Save & Next ──────────────────────────────────────────────────────────
     document.getElementById('dc-popup-save')?.addEventListener('click', async () => {
+      if (this.activeSoftphoneDial) {
+        alert('A call is currently active. Please hang up before saving.');
+        return;
+      }
       _pauseCountdown();
 
       // DC_SESSION_GUARD: Attempt session recovery if sessionId is missing
@@ -2436,14 +2501,15 @@ export class AutoDialerPage {
       : hasPriority
         ? 'background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe;'
         : 'background:#f3f4f6;color:#6b7280;';
+    const isAct = (p: string) => this.activePriorityFilter === p ? 'active' : '';
     return `
       <div class="dc-queue-badges">
-        <div class="dc-badge red"><span>${s.overdue}</span>Overdue</div>
-        <div class="dc-badge yellow"><span>${s.due_today}</span>Due Today</div>
-        <div class="dc-badge orange"><span>${s.new_leads}</span>New</div>
-        <div class="dc-badge blue"><span>${s.second_contact}</span>2nd Call</div>
-        ${(s.upcoming_today || 0) > 0 ? `<div class="dc-badge purple" style="background:#f3e8ff;color:#7e22ce;"><span>${s.upcoming_today}</span>Upcoming</div>` : ''}
-        <div class="dc-badge grey"><span>${s.total}</span>Total</div>
+        <div class="dc-badge red ${isAct('overdue')}" data-badge-priority="overdue" style="cursor:pointer;" title="Click to view Overdue leads"><span>${s.overdue}</span>Overdue</div>
+        <div class="dc-badge yellow ${isAct('due_today')}" data-badge-priority="due_today" style="cursor:pointer;" title="Click to view Due Today leads"><span>${s.due_today}</span>Due Today</div>
+        <div class="dc-badge orange ${isAct('new')}" data-badge-priority="new" style="cursor:pointer;" title="Click to view New leads"><span>${s.new_leads}</span>New</div>
+        <div class="dc-badge blue ${isAct('second_contact')}" data-badge-priority="second_contact" style="cursor:pointer;" title="Click to view 2nd Call leads"><span>${s.second_contact}</span>2nd Call</div>
+        ${(s.upcoming_today || 0) > 0 ? `<div class="dc-badge purple ${isAct('upcoming')}" data-badge-priority="upcoming" style="cursor:pointer;background:#f3e8ff;color:#7e22ce;" title="Click to view Upcoming leads"><span>${s.upcoming_today}</span>Upcoming</div>` : ''}
+        <div class="dc-badge grey ${isAct('total')}" data-badge-priority="total" style="cursor:pointer;" title="Click to view All leads"><span>${s.total}</span>Total</div>
         <button id="dc-cat-priority-toggle" style="margin-left:auto;border:1px solid #e5e7eb;border-radius:16px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;${btnStyle}">${btnLabel}</button>
       </div>`;
   }
@@ -2996,16 +3062,92 @@ export class AutoDialerPage {
       }
       return `<div class="dc-srch-loading">No results</div>`;
     }
-    // Query is empty — show recent calls panel
+    // Query is empty — show priority filter sub-queue or recent calls panel
+    if (this.activePriorityFilter) {
+      return this._buildPriorityQueueHtml();
+    }
     return this._buildRecentCallsHtml();
+  }
+
+  private _buildPriorityQueueHtml(): string {
+    const queue = dialerService.getQueue();
+    const filter = this.activePriorityFilter;
+    let filtered: QueueItem[] = [];
+
+    const labelMap: Record<string, string> = {
+      overdue: 'Overdue Leads',
+      due_today: 'Due Today Leads',
+      new: 'New Leads',
+      second_contact: '2nd Call Leads',
+      upcoming: 'Upcoming Scheduled Leads',
+      total: 'All Queue Leads',
+    };
+
+    if (filter === 'total') {
+      filtered = [...queue];
+    } else if (filter === 'upcoming') {
+      filtered = queue.filter(q => q.queue_priority === 'upcoming' || (q as any).queue_priority === 'upcoming_today');
+    } else if (filter) {
+      filtered = queue.filter(q => q.queue_priority === filter);
+    }
+
+    const title = labelMap[filter || ''] || 'Filtered Leads';
+    const header = `
+      <div class="dc-recent-header" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+        <span style="font-weight:700;color:#0f172a;font-size:13px;">🎯 ${title} (${filtered.length})</span>
+        <button id="dc-clear-priority-btn" style="background:none;border:none;font-size:12px;font-weight:700;color:#0284c7;cursor:pointer;">✕ Recent Calls</button>
+      </div>`;
+
+    if (filtered.length === 0) {
+      return `${header}<div class="dc-srch-loading" style="padding:24px;text-align:center;color:#64748b;">No leads currently in this priority bucket</div>`;
+    }
+
+    const rows = filtered.map(lead => {
+      const dialPhone = (lead.phone || lead.alternate_phone || '').trim();
+      const cat = lead.category_name || '';
+      const priorityLabel = PRIORITY_LABELS[lead.queue_priority || ''] || lead.queue_priority || '';
+      const lastContact = _fmtLastContact(lead.last_contact_date, lead.last_contact_days, true);
+      const dialAttr = `data-override-phone="${dialPhone}" data-override-id="${lead.lead_id}" data-override-name="${(lead.name || '').replace(/"/g, '&quot;')}"`;
+
+      return `
+        <div class="dc-srch-item" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f1f5f9;">
+          <div class="dc-srch-info" style="flex:1;min-width:0;">
+            <div class="dc-srch-name-row" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+              <span class="dc-srch-name" style="font-weight:700;font-size:14px;color:#1e293b;">${this._maskLeadName(lead.name)}</span>
+              ${cat ? `<span class="dc-srch-src-badge lead" style="font-size:10px;">${this._escapeHtml(cat)}</span>` : ''}
+              ${lead.is_hot_lead ? `<span style="font-size:10px;font-weight:700;padding:1px 6px;background:#fee2e2;color:#dc2626;border-radius:4px;">🔥 HOT</span>` : ''}
+            </div>
+            <div class="dc-srch-meta" style="font-size:12px;color:#64748b;margin-top:2px;">
+              ${this._maskPhone(dialPhone)} ${lead.city ? '· ' + lead.city : ''} · <span style="color:#0284c7;font-weight:600;">${priorityLabel}</span>
+            </div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:1px;">${lastContact}</div>
+          </div>
+          <div class="dc-srch-btns" style="display:flex;gap:6px;align-items:center;margin-left:8px;">
+            <button class="dc-srch-dial" ${dialAttr} style="background:#0284c7;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;" title="Direct Dial / Bypass">📞 Dial</button>
+          </div>
+        </div>`;
+    }).join('');
+
+    return `${header}<div class="dc-priority-list-scroll" style="max-height:360px;overflow-y:auto;">${rows}</div>`;
   }
 
   private _buildRecentCallsHtml(): string {
     const localHistory = this._getLocalDialHistory();
-    const combined: any[] = [...this.recentCalls];
-    const seenPhones = new Set(combined.map(c => c.phone));
-    for (const lh of localHistory) {
-      if (!seenPhones.has(lh.phone)) { combined.push(lh); seenPhones.add(lh.phone); }
+    // Combine local dial history and backend recent calls, prioritizing newest dialed_at
+    const all = [...localHistory, ...this.recentCalls];
+    all.sort((a, b) => {
+      const da = new Date(a.dialed_at || a.created_at || 0).getTime();
+      const db = new Date(b.dialed_at || b.created_at || 0).getTime();
+      return db - da;
+    });
+    const combined: any[] = [];
+    const seenPhones = new Set<string>();
+    for (const item of all) {
+      const p = String(item.phone || '').replace(/\D/g, '').slice(-10);
+      if (p && !seenPhones.has(p)) {
+        seenPhones.add(p);
+        combined.push(item);
+      }
     }
 
     const viewAllBtn = `<button id="dc-view-all-hist" style="background:none;border:none;font-size:11px;font-weight:700;color:#0ea5e9;cursor:pointer;padding:0 14px 0 0;">View All</button>`;
@@ -3333,6 +3475,10 @@ export class AutoDialerPage {
     this.searchQuery = '';
     this.searchResults = [];
     this.callStartTime = Date.now();
+    // Save to local dial history immediately at initiation and update recent calls panel
+    this._saveToLocalDialHistory(phone, name || 'CRM Lead');
+    this._updateRecentPanel();
+
     let lead: any = { lead_id: leadId, name, phone, queue_priority: 'upcoming' };
     try {
       const queueLead = dialerService.getQueue().find(q => q.lead_id === leadId);
@@ -3464,6 +3610,26 @@ export class AutoDialerPage {
           });
         }
       });
+    });
+
+    // Priority badge clicks to toggle filtered sub-queue
+    this.container.querySelectorAll('.dc-badge[data-badge-priority]').forEach(el => {
+      el.addEventListener('click', () => {
+        const priority = el.getAttribute('data-badge-priority');
+        if (!priority) return;
+        if (this.activePriorityFilter === priority) {
+          this.activePriorityFilter = null;
+        } else {
+          this.activePriorityFilter = priority;
+        }
+        this._render();
+      });
+    });
+
+    // Clear priority filter button
+    this.container.querySelector('#dc-clear-priority-btn')?.addEventListener('click', () => {
+      this.activePriorityFilter = null;
+      this._render();
     });
   }
 
@@ -3598,7 +3764,9 @@ export class AutoDialerPage {
 
       /* Badges */
       .dc-queue-badges { display: flex; gap: 8px; padding: 12px 16px; overflow-x: auto; }
-      .dc-badge { display: flex; flex-direction: column; align-items: center; background: white; border-radius: 10px; padding: 8px 12px; min-width: 60px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+      .dc-badge { display: flex; flex-direction: column; align-items: center; background: white; border-radius: 10px; padding: 8px 12px; min-width: 60px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); cursor: pointer; transition: all 0.15s ease; user-select: none; }
+      .dc-badge:active { transform: scale(0.96); }
+      .dc-badge.active { box-shadow: 0 0 0 2px #0284c7, 0 4px 10px rgba(2,132,199,0.25); background: #f0f9ff; }
       .dc-badge span { font-size: 20px; font-weight: 700; }
       .dc-badge { font-size: 10px; color: #6b7280; }
       .dc-badge.red { border-top: 3px solid #ef4444; }
@@ -3609,8 +3777,11 @@ export class AutoDialerPage {
       .dc-badge.orange span { color: #f97316; }
       .dc-badge.blue { border-top: 3px solid #0ea5e9; }
       .dc-badge.blue span { color: #0ea5e9; }
+      .dc-badge.purple { border-top: 3px solid #7e22ce; }
+      .dc-badge.purple span { color: #7e22ce; }
       .dc-badge.grey { border-top: 3px solid #6b7280; }
       .dc-badge.grey span { color: #6b7280; }
+      .dc-priority-list-scroll { max-height: 380px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
       /* DC_CAT_PRIORITY: Category Priority Panel */
       .dc-cppanel { margin: 0 16px 12px; background: white; border-radius: 14px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); border: 1px solid #e5e7eb; }

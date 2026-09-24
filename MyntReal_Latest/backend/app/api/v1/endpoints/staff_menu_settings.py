@@ -3720,7 +3720,7 @@ async def get_my_menus(
 
     # VGK4U Supreme & Key Leadership Access Bypass - Full access to all menus via Registry
     # DC Jan 2026: Accept VGK4U, KEY_LEADERSHIP, KEY LEADERSHIP, EA, RVZ_SUPREME for full access
-    if current_user.staff_type in ['VGK4U', 'VGK4U Supreme', 'VGK4U_SUPREME', 'RVZ_SUPREME', 'KEY_LEADERSHIP', 'KEY LEADERSHIP', 'EA', 'VGK4U_EA'] or (hasattr(current_user, 'emp_code') and current_user.emp_code in ['MR10001', 'MR10018', 'MR10016', 'MR10025']):
+    if current_user.staff_type in ['VGK4U', 'VGK4U Supreme', 'VGK4U_SUPREME', 'RVZ_SUPREME', 'KEY_LEADERSHIP', 'KEY LEADERSHIP', 'EA', 'VGK4U_EA'] or (hasattr(current_user, 'emp_code') and current_user.emp_code in ['MR10001', 'MR10018', 'MR10016', 'MR10025', 'MR10017']) or (current_user.role and current_user.role.role_code in ['key_leadership', 'leadership_role', 'ea', 'vgk4u', 'super_admin']):
         registry_menus = db.query(StaffMenuRegistry).filter(
             StaffMenuRegistry.is_active == True,
             StaffMenuRegistry.audience_scope.in_(['staff', 'shared'])
@@ -3883,20 +3883,21 @@ async def get_my_menus(
                 'VGK_TEAM_MEMBERS'
             ])
 
-        # DC Protocol: Auto-grant VGK_TEAM_MEMBERS, Auto Dialer & Catalog Library to Sales & Tele Sales departments
+        # DC Protocol: Auto-grant VGK_TEAM_MEMBERS, Auto Dialer, Catalog Library & Call Quality Review to Sales & Tele Sales departments
         _dept_name_lower = (getattr(current_user.department, 'name', '') or '').lower()
-        if current_user.department_id in (1, 13, 14) or 'sale' in _dept_name_lower or 'sale' in _role_lower or 'leader' in _role_lower or 'director' in _role_lower or 'manager' in _role_lower:
+        if current_user.department_id in (1, 13, 14, 19) or 'sale' in _dept_name_lower or 'sale' in _role_lower or 'leader' in _role_lower or 'director' in _role_lower or 'manager' in _role_lower:
             _dept_auto_codes.update([
                 'VGK_TEAM_MEMBERS', 'staff_vgk_members', 'vgk_members',
                 'staff_auto_dialer', 'staff_dialer', 'AUTO_DIALER',
-                'STAFF_CATALOG_LIBRARY', 'staff_catalog_library', 'DIGITAL_CATALOG_MANAGEMENT', 'digital_catalog'
+                'STAFF_CATALOG_LIBRARY', 'staff_catalog_library', 'DIGITAL_CATALOG_MANAGEMENT', 'digital_catalog',
+                'call_quality_review'
             ])
 
         # DC Protocol Aug 2026: Explicit menu grants for MN10009 and MN10008
         if _emp_code_upper == 'MN10009':
-            _dept_auto_codes.update(['VGK_TEAM_MEMBERS', 'staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS', 'STAFF_CATALOG_LIBRARY'])
+            _dept_auto_codes.update(['VGK_TEAM_MEMBERS', 'staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS', 'STAFF_CATALOG_LIBRARY', 'call_quality_review'])
         elif _emp_code_upper == 'MN10008':
-            _dept_auto_codes.update(['staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS', 'STAFF_CATALOG_LIBRARY'])
+            _dept_auto_codes.update(['staff_solar_leads', 'mnr_solar_leads', 'MNR_BANK_WISE_LEADS', 'STAFF_CATALOG_LIBRARY', 'call_quality_review'])
         if _dept_auto_codes:
             logger.info(f"[DC-ROLE-AUTO-GRANT] Employee {employee_id} ({current_user.emp_code}) role/emp auto-granted menus: {_dept_auto_codes}")
     except Exception as _re:
@@ -4198,8 +4199,8 @@ async def get_my_menus(
             all_menus = filtered_tenant_menus
             logger.info(f"[DC-SAAS-ENTITLEMENT] Filtered menus for tenant company {tenant_company.id} ({tenant_company.company_code}) to {len(all_menus)} items matching {licensed_mods}")
 
-    # DC Protocol: Remove access to Staff Leads page (/staff/leads) for Anusha, Anushka, Hema, Nandana, Poojitha
-    _restricted_staff_leads_codes = {'MN10009', 'MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'}
+    # DC Protocol: Staff Leads page restriction list (Nandana MN10009 granted full access per request)
+    _restricted_staff_leads_codes = {'MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'}
     _curr_emp_code = (current_user.emp_code or '').upper()
     if _curr_emp_code in _restricted_staff_leads_codes:
         all_menus = [

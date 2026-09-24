@@ -1174,9 +1174,65 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
         document.head.appendChild(softphoneScript);
     }
 
+    window.getCallSourcePageName = function() {
+        if (typeof window === 'undefined') return 'My Leads';
+        if (window.__currentDialedPage) return window.__currentDialedPage;
+        try {
+            const path = (window.location.pathname || '').toLowerCase();
+            if (path.includes('staff_my_leads')) return 'My Leads';
+            if (path.includes('staff_leads')) return 'Staff Leads';
+            if (path.includes('staff_dialer')) return 'Auto Dialer';
+            if (path.includes('staff_crm_dashboard')) return 'CRM Dashboard';
+            if (path.includes('staff_softphone_hub')) return 'Softphone Center';
+            if (path.includes('staff_operator_calls')) return 'Operator Calls';
+            if (path.includes('staff_whatsapp_center')) return 'WhatsApp Center';
+            if (path.includes('staff_day_planner')) return 'Day Planner';
+            if (path.includes('staff_tasks_assigned_to_me') || path.includes('staff_tasks_assigned_by_me')) return 'Tasks';
+            if (path.includes('staff_mnr_leads_master')) return 'Master Leads';
+            if (path.includes('staff_bank_wise_leads')) return 'Bank Wise Leads';
+            if (path.includes('staff_incoming_calls')) return 'Incoming Calls';
+            if (path.includes('staff_executive_dashboard')) return 'Executive Dashboard';
+            if (path.includes('/mobile')) return 'Mobile CRM';
+            if (typeof document !== 'undefined' && document.title) {
+                const rawTitle = document.title.split('|')[0].split('-')[0].trim();
+                if (rawTitle && rawTitle !== 'Mynt' && rawTitle !== 'Mynt Real') return rawTitle;
+            }
+        } catch (_) {}
+        return 'My Leads';
+    };
+
+    if (typeof document !== 'undefined') {
+        document.addEventListener('plivo:call-dialing', function(e) {
+            try {
+                const sessionId = e && e.detail && e.detail.sessionId;
+                if (!sessionId) return;
+                const pageName = (typeof window.getCallSourcePageName === 'function') ? window.getCallSourcePageName() : 'My Leads';
+                const token = (typeof localStorage !== 'undefined') ? (localStorage.getItem('staff_token') || localStorage.getItem('token') || '') : '';
+                if (token) {
+                    fetch('/api/v1/call-tracking/record-dial-page', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify({
+                            call_session_id: sessionId,
+                            dialed_page: pageName,
+                            page_url: (typeof window !== 'undefined') ? window.location.pathname : ''
+                        }),
+                        keepalive: true
+                    }).catch(() => {});
+                }
+            } catch (_) {}
+        });
+    }
+
     // Universal Softphone Trigger — opens centralized softphone dialer modal in-place
     window.openCallDialer = function(intent) {
         if (!intent) return;
+        if (typeof intent === 'object' && !intent.sourcePage) {
+            intent.sourcePage = window.getCallSourcePageName ? window.getCallSourcePageName() : 'My Leads';
+        }
         if (window.PlivoSoftphone && typeof window.PlivoSoftphone.unlockAudioOnUserGesture === 'function') {
             window.PlivoSoftphone.unlockAudioOnUserGesture();
         }
@@ -1213,6 +1269,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
             name: safeName,
             entityId: leadId || null,
             entityType: 'lead',
+            sourcePage: window.getCallSourcePageName ? window.getCallSourcePageName() : 'My Leads',
             autoStart: true
         });
     };

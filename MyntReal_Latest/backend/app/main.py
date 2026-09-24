@@ -311,6 +311,18 @@ def add_service_center_columns():
         logging.warning(f"[DC-SC-MIGRATION] Could not add service center columns: {e}")
 
 
+def add_dialed_page_column():
+    """DC Protocol: Add dialed_page column to staff_call_logs table."""
+    from sqlalchemy import text
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE staff_call_logs ADD COLUMN IF NOT EXISTS dialed_page VARCHAR(100)"))
+            conn.commit()
+            logging.info("[DC-CALL-PAGE] dialed_page column verified on staff_call_logs")
+    except Exception as e:
+        logging.warning(f"[DC-CALL-PAGE] Could not verify dialed_page column: {e}")
+
+
 def add_vgk_team_columns():
     """DC Protocol Mar 2026: Add VGK Team columns to official_partners and crm_leads tables."""
     from sqlalchemy import text
@@ -4857,6 +4869,7 @@ def _startup_worker():
     _safe_run(fix_kra_template_status_constraint)
     _safe_run(fix_partner_category_constraint)
     _safe_run(add_service_center_columns)
+    _safe_run(add_dialed_page_column)
     _safe_run(add_vgk_team_columns)
     _safe_run(add_name_title_gender_columns)
     _safe_run(add_partner_kyc_columns)

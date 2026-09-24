@@ -875,10 +875,10 @@ window.StaffSidebar = window.StaffSidebar || {
                         }
                     }
 
-                    // DC Protocol: Remove access to Staff Leads page (/staff/leads) for Anusha, Anushka, Hema, Nandana, Poojitha
+                    // DC Protocol: Staff Leads page restriction list (Nandana MN10009 granted full access per request)
                     if (item.route === '/staff/leads' || item.menu_code === 'LEADS_MASTER' || item.menu_code === 'staff_leads' || item.menu_code === 'STAFF_LEADS') {
                         const empId = (this.userData?.emp_code || this.userData?.employee_code || '').toUpperCase();
-                        if (['MN10009', 'MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'].includes(empId) || (hasRouteAccess && !allowedPaths.has('/staff/leads'))) {
+                        if (['MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'].includes(empId) || (hasRouteAccess && !allowedPaths.has('/staff/leads'))) {
                             shouldInclude = false;
                         }
                     }

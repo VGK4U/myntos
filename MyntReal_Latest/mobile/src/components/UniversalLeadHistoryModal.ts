@@ -288,6 +288,69 @@ export class UniversalLeadHistoryModal {
     }
   }
 
+  private renderCallFromBadge(c: any): string {
+    const page = (c.dialed_page || c.call_from || c.source || '').trim();
+    const lower = page.toLowerCase();
+    const devId = (c.device_call_id || c.call_session_id || '').toLowerCase();
+    const type = (c.call_type || c.direction || '').toUpperCase();
+
+    // 1. Auto Dialer
+    if (lower.includes('auto') || lower.includes('dialer') || devId.includes('cda_') || type === 'DIALER') {
+      return '<span style="background:#f5f3ff;color:#6b21a8;border:1px solid #ddd6fe;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-robot" style="color:#6b21a8;margin-right:4px;"></i>Auto Dialer</span>';
+    }
+    // 2. My Leads
+    if (lower.includes('my lead') || lower === 'my leads') {
+      return '<span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-user-check" style="color:#1d4ed8;margin-right:4px;"></i>My Leads</span>';
+    }
+    // 3. Staff Leads
+    if (lower.includes('staff lead') || lower === 'staff leads') {
+      return '<span style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-users" style="color:#15803d;margin-right:4px;"></i>Staff Leads</span>';
+    }
+    // 4. CRM Dashboard
+    if (lower.includes('crm dashboard') || lower.includes('dashboard')) {
+      return '<span style="background:#fdf2f8;color:#be185d;border:1px solid #fbcfe8;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-chart-line" style="color:#be185d;margin-right:4px;"></i>CRM Dashboard</span>';
+    }
+    // 5. Softphone Center / Hub
+    if (lower.includes('softphone center') || lower.includes('softphone hub') || lower === 'softphone' || lower === 'plivo webrtc') {
+      return '<span style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-headset" style="color:#0369a1;margin-right:4px;"></i>Softphone Center</span>';
+    }
+    // 6. Operator Calls
+    if (lower.includes('operator')) {
+      return '<span style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-head-side-headphones" style="color:#b45309;margin-right:4px;"></i>Operator Calls</span>';
+    }
+    // 7. WhatsApp Center
+    if (lower.includes('whatsapp')) {
+      return '<span style="background:#f0fdf4;color:#16a34a;border:1px solid #86efac;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fab fa-whatsapp" style="color:#16a34a;margin-right:4px;"></i>WhatsApp Center</span>';
+    }
+    // 8. Day Planner
+    if (lower.includes('planner')) {
+      return '<span style="background:#faf5ff;color:#7e22ce;border:1px solid #e9d5ff;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-calendar-day" style="color:#7e22ce;margin-right:4px;"></i>Day Planner</span>';
+    }
+    // 9. Tasks
+    if (lower.includes('task')) {
+      return '<span style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-tasks" style="color:#334155;margin-right:4px;"></i>Tasks</span>';
+    }
+    // 10. Master Leads
+    if (lower.includes('master')) {
+      return '<span style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-database" style="color:#92400e;margin-right:4px;"></i>Master Leads</span>';
+    }
+    // 11. Bank Wise Leads
+    if (lower.includes('bank')) {
+      return '<span style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-landmark" style="color:#065f46;margin-right:4px;"></i>Bank Wise Leads</span>';
+    }
+    // 12. Inbound DID / Incoming
+    if (lower.includes('inbound') || lower.includes('did') || type === 'INCOMING' || type === 'INBOUND') {
+      return '<span style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-phone-arrow-down-left" style="color:#047857;margin-right:4px;"></i>Inbound DID</span>';
+    }
+    // 13. Mobile App / Native SIM
+    if (lower.includes('mobile') || lower.includes('sim') || lower.includes('native')) {
+      return '<span style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-sim-card" style="color:#047857;margin-right:4px;"></i>Native SIM</span>';
+    }
+
+    // Fallback
+    return `<span style="background:#f8fafc;color:#475569;border:1px solid #cbd5e1;font-size:10.5px;font-weight:600;padding:2px 6px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-file-alt" style="margin-right:4px;color:#94a3b8;"></i>${this.escape(page || 'My Leads')}</span>`;
+  }
+
   private renderCalls(items: any[]): string {
     if (!items || !items.length) {
       return '<div class="muhm-empty">No call records or recordings found.</div>';
@@ -298,6 +361,7 @@ export class UniversalLeadHistoryModal {
       const dirSymbol = isOut ? '↗ Outbound' : '↙ Inbound';
       const durText = this.formatDuration(c.duration_seconds);
 
+      const durSec = Number(c.duration_seconds || 0);
       let recHtml = '';
       if (c.has_recording && c.recording_url) {
         recHtml = `
@@ -307,6 +371,20 @@ export class UniversalLeadHistoryModal {
               <source src="${this.escape(c.recording_url)}" type="audio/wav">
               Audio not supported.
             </audio>
+          </div>
+        `;
+      } else if (durSec === 0) {
+        recHtml = `
+          <div style="margin-top:5px;font-size:10.5px;color:#94a3b8;display:flex;align-items:center;gap:4px;">
+            <i class="fas fa-phone-slash" style="font-size:9.5px;"></i>
+            <span>Unanswered / Missed (0s — no audio captured)</span>
+          </div>
+        `;
+      } else {
+        recHtml = `
+          <div style="margin-top:5px;font-size:10.5px;color:#94a3b8;display:flex;align-items:center;gap:4px;">
+            <i class="fas fa-volume-mute" style="font-size:9.5px;"></i>
+            <span>Audio recording unavailable</span>
           </div>
         `;
       }
@@ -336,10 +414,16 @@ export class UniversalLeadHistoryModal {
           <div style="display:flex;justify-content:space-between;align-items:flex-start">
             <div>
               <div style="font-weight:600;font-size:13px;color:#0f172a">${this.escape(c.details || 'Call')}</div>
-              <div style="font-size:11px;color:#64748b;margin-top:2px">${this.formatDate(c.timestamp)} • ${this.escape(c.staff_name || 'Staff')}</div>
+              <div style="font-size:11px;color:#475569;margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                <span>${this.formatDate(c.timestamp)}</span>
+                <span>•</span>
+                <span style="font-weight:700;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-size:10.5px;">
+                  Handled by: ${this.escape(c.handled_by || c.staff_name || 'Staff')}
+                </span>
+              </div>
             </div>
             <div style="text-align:right">
-              <span class="muhm-tag">${this.escape(c.source || 'Call')}</span>
+              ${this.renderCallFromBadge(c)}
               <div style="font-size:11px;color:#334155;margin-top:2px;font-weight:500">${this.escape(c.status || durText)}</div>
             </div>
           </div>
@@ -469,28 +553,143 @@ export class UniversalLeadHistoryModal {
       return '<div class="muhm-empty">No change history or notes found.</div>';
     }
 
+    // Group changes into a single box per specific date
+    const groups: Array<{ dateKey: string; items: any[] }> = [];
+    const groupMap: Record<string, { dateKey: string; items: any[] }> = {};
+
+    items.forEach(ch => {
+      let dateKey = 'General History';
+      if (ch.timestamp) {
+        try {
+          const d = new Date(ch.timestamp);
+          if (!isNaN(d.getTime())) {
+            dateKey = d.toLocaleDateString('en-IN', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric'
+            });
+          }
+        } catch (_) {}
+      }
+      const key = dateKey;
+
+      if (!groupMap[key]) {
+        groupMap[key] = {
+          dateKey,
+          items: []
+        };
+        groups.push(groupMap[key]);
+      }
+      groupMap[key].items.push(ch);
+    });
+
     return '<div style="padding-left:14px;border-left:2px solid #e2e8f0;display:flex;flex-direction:column;gap:12px">' +
-      items.map(ch => {
-        let oldNewHtml = '';
-        if (ch.old_val || ch.new_val) {
-          oldNewHtml = `
-            <div style="font-size:11px;margin-top:3px">
-              ${ch.old_val ? `<span style="color:#ef4444;text-decoration:line-through;margin-right:4px">${this.escape(ch.old_val)}</span> → ` : ''}
-              <span style="color:#10b981;font-weight:600">${this.escape(ch.new_val || '')}</span>
+      groups.map(grp => {
+        let changesHtml = '';
+        grp.items.forEach(ch => {
+          let oldNewHtml = '';
+          if (ch.old_val || ch.new_val) {
+            oldNewHtml = `
+              <div style="font-size:11px;margin-top:3px;word-break:break-word;">
+                ${ch.old_val ? `<span style="color:#ef4444;text-decoration:line-through;margin-right:4px">${this.escape(ch.old_val)}</span> → ` : ''}
+                <span style="color:#10b981;font-weight:600">${this.escape(ch.new_val || '')}</span>
+              </div>
+            `;
+          }
+
+          const isCall = ch.category === 'call';
+          const isNote = ch.category === 'note';
+          const isAsgn = ch.category === 'assignment';
+          const isFu   = ch.category === 'followup';
+
+          let rowBg = '#f8fafc';
+          let rowBorder = '#e2e8f0';
+          let titleColor = '#0f172a';
+          let icon = '✏️ ';
+
+          if (isCall) {
+            rowBg = '#f0fdf4';
+            rowBorder = '#bbf7d0';
+            titleColor = '#166534';
+            icon = '📞 ';
+          } else if (isNote) {
+            rowBg = '#fffbeb';
+            rowBorder = '#fde68a';
+            titleColor = '#92400e';
+            icon = '📝 ';
+          } else if (isFu) {
+            rowBg = '#f5f3ff';
+            rowBorder = '#ddd6fe';
+            titleColor = '#5b21b6';
+            icon = '📅 ';
+          } else if (isAsgn) {
+            rowBg = '#eff6ff';
+            rowBorder = '#bfdbfe';
+            titleColor = '#1e40af';
+            icon = '👤 ';
+          }
+
+          let recHtml = '';
+          if (isCall && ch.has_recording && ch.recording_url) {
+            recHtml = `
+              <div style="margin-top:6px;padding-top:6px;border-top:1px dashed #cbd5e1;">
+                <audio controls style="width:100%;height:30px" preload="none">
+                  <source src="${this.escape(ch.recording_url)}" type="audio/mpeg">
+                  <source src="${this.escape(ch.recording_url)}" type="audio/wav">
+                  Audio not supported.
+                </audio>
+              </div>
+            `;
+          }
+
+          let handledOrAuthorBadge = '';
+          if (isCall) {
+            handledOrAuthorBadge = `<span style="font-size:10px;font-weight:700;color:#15803d;background:#dcfce7;padding:1px 5px;border-radius:4px;">Handled by: ${this.escape(ch.handled_by || ch.author_name || 'Staff')}</span>`;
+          } else {
+            handledOrAuthorBadge = `<span style="font-size:10px;font-weight:600;color:#475569;background:#e2e8f0;padding:1px 5px;border-radius:4px;">By: ${this.escape(ch.author_name || ch.handled_by || 'Staff')}</span>`;
+          }
+
+          let itemTime = '';
+          if (ch.timestamp) {
+            try {
+              const dt = new Date(ch.timestamp);
+              if (!isNaN(dt.getTime())) {
+                itemTime = dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+              }
+            } catch (_) {}
+          }
+
+          changesHtml += `
+            <div style="background:${rowBg};border:1px solid ${rowBorder};border-radius:6px;padding:8px 10px;margin-bottom:6px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:4px;flex-wrap:wrap;">
+                <span style="font-size:12px;font-weight:600;color:${titleColor}">${icon}${this.escape(ch.title || ch.event_type || 'Change')}</span>
+                <div style="display:flex;align-items:center;gap:4px;">
+                  ${handledOrAuthorBadge}
+                  ${itemTime ? `<span style="font-size:10px;color:#94a3b8">${this.escape(itemTime)}</span>` : ''}
+                </div>
+              </div>
+              ${ch.details ? `<div style="font-size:11px;color:#475569;margin-top:2px;word-break:break-word;">${this.escape(ch.details)}</div>` : ''}
+              ${oldNewHtml}
+              ${recHtml}
             </div>
           `;
-        }
+        });
+
         return `
           <div style="position:relative">
             <div class="muhm-dot"></div>
-            <div class="muhm-card" style="margin:0">
-              <div style="display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;color:#0f172a">
-                <span>${this.escape(ch.title || ch.event_type || 'Change')}</span>
-                <span style="font-size:10.5px;color:#94a3b8;font-weight:normal">${this.formatDate(ch.timestamp)}</span>
+            <div class="muhm-card" style="margin:0;border:1px solid #cbd5e1;background:#ffffff;padding:10px 12px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f1f5f9;padding-bottom:6px;margin-bottom:8px;flex-wrap:wrap;gap:4px;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <span style="font-size:12.5px;font-weight:700;color:#0f172a">📅 ${this.escape(grp.dateKey)}</span>
+                  <span style="font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:8px;background:#e0f2fe;color:#0369a1;">
+                    ${grp.items.length} ${grp.items.length === 1 ? 'change' : 'changes'}
+                  </span>
+                </div>
               </div>
-              ${ch.details ? `<div style="font-size:11.5px;color:#475569;margin-top:3px">${this.escape(ch.details)}</div>` : ''}
-              ${oldNewHtml}
-              <div style="font-size:10.5px;color:#94a3b8;margin-top:4px">By: ${this.escape(ch.author_name || 'Staff')}</div>
+              <div style="display:flex;flex-direction:column;">
+                ${changesHtml}
+              </div>
             </div>
           </div>
         `;
@@ -778,6 +977,7 @@ export class UniversalLeadHistoryModal {
 
         <div id="muhmSubfilterBar" class="muhm-subfilter-bar" style="display:none">
           <button class="muhm-subchip active" data-sub="all">All</button>
+          <button class="muhm-subchip" data-sub="calls">Calls</button>
           <button class="muhm-subchip" data-sub="notes">Notes</button>
           <button class="muhm-subchip" data-sub="followups">Follow-ups</button>
           <button class="muhm-subchip" data-sub="assignments">Assignments</button>

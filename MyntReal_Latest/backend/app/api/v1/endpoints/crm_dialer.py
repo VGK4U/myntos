@@ -3603,41 +3603,71 @@ async def get_recent_calls(
     else:
         user_ref = str(current_user.id)
 
-    results: list = []
-    seen_phones: set = set()
+    all_candidates: list = []
     staff_full_name = (staff.full_name or "").strip() if staff and staff.full_name else ""
 
-    # ── Source 1: CRM dialer attempts ─────────────────────────────────────────
+    # ── Source 1: VoIP Softphone Sessions (immediate real-time calls) ──────────
+    if staff_id or user_ref:
+        voip_rows = db.execute(text("""
+            SELECT
+                v.lead_id,
+                l.name,
+                COALESCE(v.destination_number, v.customer_phone) AS phone,
+                l.status AS lead_status,
+                v.status AS call_outcome,
+                COALESCE(v.started_at, v.created_at) AS dialed_at,
+                COALESCE(v.duration_seconds, 0) AS duration_seconds,
+                v.direction
+            FROM voip_call_sessions v
+            LEFT JOIN crm_leads l ON v.lead_id = l.id
+            WHERE (v.operator_id = :sid OR v.operator_user_ref = :ref)
+              AND COALESCE(v.destination_number, v.customer_phone) IS NOT NULL
+            ORDER BY COALESCE(v.started_at, v.created_at) DESC
+            LIMIT 40
+        """), {"sid": staff_id or -1, "ref": str(user_ref or "")}).fetchall()
+
+        for r in voip_rows:
+            raw_phone = r[2] or ""
+            direction = (r[7] or "outbound").upper()
+            call_type = "INCOMING" if "IN" in direction else "OUTGOING"
+            outcome = r[4] or "completed"
+            all_candidates.append({
+                "id": r[0], "lead_id": r[0], "name": r[1] or "Unknown",
+                "phone": raw_phone, "status": r[3] or "",
+                "call_type": call_type, "call_outcome": outcome,
+                "duration_seconds": r[6] or 0,
+                "dialed_at": _safe_iso(r[5]),
+                "source": "softphone",
+            })
+
+    # ── Source 2: CRM dialer attempts ─────────────────────────────────────────
     if user_ref:
         dial_rows = db.execute(text("""
-            SELECT DISTINCT ON (l.phone)
+            SELECT
                 a.lead_id, l.name, l.phone, l.alternate_phone, l.status,
                 a.call_outcome, a.dialed_at, COALESCE(a.duration_seconds, 0) AS duration_seconds
             FROM crm_dialer_attempts a
             JOIN crm_leads l ON a.lead_id = l.id
             WHERE a.user_ref = :ref
-            ORDER BY l.phone, a.dialed_at DESC
-            LIMIT 30
+            ORDER BY a.dialed_at DESC
+            LIMIT 40
         """), {"ref": user_ref}).fetchall()
 
-        for r in sorted(dial_rows, key=lambda x: str(x[6] or ''), reverse=True):
+        for r in dial_rows:
             raw_phone = r[2] or ""
-            c10 = _canonical_10(raw_phone)
-            if c10 and c10 not in seen_phones:
-                seen_phones.add(c10)
-                results.append({
-                    "id": r[0], "lead_id": r[0], "name": r[1] or "Unknown",
-                    "phone": raw_phone, "status": r[4] or "",
-                    "call_type": "OUTGOING", "call_outcome": r[5] or "dialed",
-                    "duration_seconds": r[7] or 0,
-                    "dialed_at": _safe_iso(r[6]),
-                    "source": "dialer",
-                })
+            all_candidates.append({
+                "id": r[0], "lead_id": r[0], "name": r[1] or "Unknown",
+                "phone": raw_phone, "status": r[4] or "",
+                "call_type": "OUTGOING", "call_outcome": r[5] or "dialed",
+                "duration_seconds": r[7] or 0,
+                "dialed_at": _safe_iso(r[6]),
+                "source": "dialer",
+            })
 
-    # ── Source 2: Native call log (staff_call_logs) ────────────────────────────
+    # ── Source 3: Native call log (staff_call_logs) ────────────────────────────
     if staff_id:
         log_rows = db.execute(text("""
-            SELECT DISTINCT ON (scl.phone_number)
+            SELECT
                 scl.matched_lead_id,
                 COALESCE(NULLIF(TRIM(l.name), ''), scl.contact_name) AS contact_name,
                 scl.phone_number,
@@ -3647,28 +3677,35 @@ async def get_recent_calls(
             FROM staff_call_logs scl
             LEFT JOIN crm_leads l ON scl.matched_lead_id = l.id
             WHERE scl.staff_id = :sid
-            ORDER BY scl.phone_number, scl.call_datetime DESC
+            ORDER BY scl.call_datetime DESC
             LIMIT 40
         """), {"sid": staff_id}).fetchall()
 
-        for r in sorted(log_rows, key=lambda x: str(x[4] or ''), reverse=True):
+        for r in log_rows:
             raw_phone = r[2] or ""
-            c10 = _canonical_10(raw_phone)
             contact_name = (r[1] or "").strip()
             # If contact_name accidentally stored operator's own name, treat as empty
             if staff_full_name and contact_name.lower() == staff_full_name.lower():
                 contact_name = ""
 
-            if c10 and c10 not in seen_phones:
-                seen_phones.add(c10)
-                results.append({
-                    "id": r[0], "lead_id": r[0], "name": contact_name,
-                    "phone": raw_phone, "status": "",
-                    "call_type": r[3] or "OUTGOING", "call_outcome": "",
-                    "duration_seconds": r[5] or 0,
-                    "dialed_at": _safe_iso(r[4]),
-                    "source": "native",
-                })
+            all_candidates.append({
+                "id": r[0], "lead_id": r[0], "name": contact_name,
+                "phone": raw_phone, "status": "",
+                "call_type": r[3] or "OUTGOING", "call_outcome": "",
+                "duration_seconds": r[5] or 0,
+                "dialed_at": _safe_iso(r[4]),
+                "source": "native",
+            })
+
+    # Sort all candidates by dialed_at DESC, then deduplicate by canonical 10-digit phone
+    all_candidates.sort(key=lambda x: str(x.get("dialed_at") or ""), reverse=True)
+    seen_phones: set = set()
+    results: list = []
+    for item in all_candidates:
+        c10 = _canonical_10(item.get("phone") or "")
+        if c10 and c10 not in seen_phones:
+            seen_phones.add(c10)
+            results.append(item)
 
     # ── Backfill missing/Unknown contact names using multi-source batch resolver ─
     def _needs_name_resolution(item: dict) -> bool:

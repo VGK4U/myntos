@@ -464,7 +464,7 @@
                 <!-- Staff Call Logs & Recording Drill-down Section -->
                 <div class="data-table-wrap mt-3" id="ctDrilldownSection" style="display:none;">
                     <div class="data-table-header">
-                        <h5 class="data-table-title"><i class="fas fa-headphones me-2" style="color:#2563eb;"></i>Call Logs: <span id="ctDrilldownStaffName"></span></h5>
+                        <h5 class="data-table-title"><i class="fas fa-headphones me-2" style="color:#2563eb;"></i>Call Logs: <span id="ctDrilldownStaffName"></span> <span id="ctDrilldownCount" class="badge bg-light text-secondary border ms-2" style="font-size:0.75rem;font-weight:600;"></span></h5>
                         <div class="d-flex align-items-center gap-2">
                             <input type="text" id="ctDrilldownPhone" class="form-control form-control-sm" placeholder="Search phone..." style="width:160px;" oninput="filterDrilldownCalls()">
                             <select id="ctDrilldownType" class="form-select form-select-sm" style="width:140px;" onchange="filterDrilldownCalls()">
@@ -483,6 +483,8 @@
                                     <th class="text-start" style="width:30px;">#</th>
                                     <th>Date &amp; Time</th>
                                     <th>Phone Number</th>
+                                    <th>Segment / Category</th>
+                                    <th style="text-align:center;">Call From</th>
                                     <th>Type</th>
                                     <th>Duration</th>
                                     <th>Lead Name</th>
@@ -879,6 +881,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        window.__currentDialedPage = 'CRM Dashboard';
         let companyId = '';
         let dashData = null;
         let activeTab = 'my';
@@ -1788,19 +1791,23 @@
         async function openStaffCallDrilldown(staffId, staffName) {
             const sec = document.getElementById('ctDrilldownSection');
             document.getElementById('ctDrilldownStaffName').textContent = staffName;
+            const countEl = document.getElementById('ctDrilldownCount');
+            if (countEl) countEl.textContent = '';
             sec.style.display = 'block';
             sec.scrollIntoView({ behavior: 'smooth' });
 
             const tbody = document.getElementById('ctDrilldownTbody');
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Loading calls...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-3 text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Loading calls...</td></tr>';
             try {
-                const res = await safeStaffFetch(`/api/v1/call-tracking/staff/${staffId}/calls?quick_range=${ctCurrentRange}&per_page=50`);
+                const res = await safeStaffFetch(`/api/v1/call-tracking/staff/${staffId}/calls?quick_range=${ctCurrentRange}&per_page=500`);
                 if (res && res.success) {
                     ctCurrentDrilldownCalls = (res.data && res.data.calls) || [];
+                    const total = (res.data && res.data.pagination && res.data.pagination.total) || ctCurrentDrilldownCalls.length;
+                    if (countEl) countEl.textContent = `${ctCurrentDrilldownCalls.length} of ${total} calls`;
                     renderDrilldownCalls(ctCurrentDrilldownCalls);
                 }
             } catch(e) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-danger">Failed to load calls</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-3 text-danger">Failed to load calls</td></tr>';
             }
         }
 
@@ -1844,10 +1851,78 @@
             return `<span class="badge bg-secondary">${escapeHtml(type || 'Unknown')}</span>`;
         }
 
+        function formatCallFromBadge(c) {
+            const page = (c.dialed_page || c.call_from || c.source || '').trim();
+            const lower = page.toLowerCase();
+            const devId = (c.device_call_id || '').toLowerCase();
+            const type = (c.call_type || '').toUpperCase();
+
+            // 1. Auto Dialer
+            if (lower.includes('auto') || lower.includes('dialer') || devId.includes('cda_') || type === 'DIALER') {
+                return '<span class="badge" style="background:#f5f3ff;color:#6b21a8;border:1px solid #ddd6fe;font-size:0.75rem;font-weight:600;"><i class="fas fa-robot me-1" style="color:#6b21a8;"></i>Auto Dialer</span>';
+            }
+            // 2. My Leads
+            if (lower.includes('my lead') || lower === 'my leads') {
+                return '<span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:0.75rem;font-weight:600;"><i class="fas fa-user-check me-1" style="color:#1d4ed8;"></i>My Leads</span>';
+            }
+            // 3. Staff Leads
+            if (lower.includes('staff lead') || lower === 'staff leads') {
+                return '<span class="badge" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:0.75rem;font-weight:600;"><i class="fas fa-users me-1" style="color:#15803d;"></i>Staff Leads</span>';
+            }
+            // 4. CRM Dashboard
+            if (lower.includes('crm dashboard') || lower.includes('dashboard')) {
+                return '<span class="badge" style="background:#fdf2f8;color:#be185d;border:1px solid #fbcfe8;font-size:0.75rem;font-weight:600;"><i class="fas fa-chart-line me-1" style="color:#be185d;"></i>CRM Dashboard</span>';
+            }
+            // 5. Softphone Center / Hub
+            if (lower.includes('softphone center') || lower.includes('softphone hub') || lower === 'softphone') {
+                return '<span class="badge" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;font-size:0.75rem;font-weight:600;"><i class="fas fa-headset me-1" style="color:#0369a1;"></i>Softphone Center</span>';
+            }
+            // 6. Operator Calls
+            if (lower.includes('operator')) {
+                return '<span class="badge" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;font-size:0.75rem;font-weight:600;"><i class="fas fa-head-side-headphones me-1" style="color:#b45309;"></i>Operator Calls</span>';
+            }
+            // 7. WhatsApp Center
+            if (lower.includes('whatsapp')) {
+                return '<span class="badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #86efac;font-size:0.75rem;font-weight:600;"><i class="fab fa-whatsapp me-1" style="color:#16a34a;"></i>WhatsApp Center</span>';
+            }
+            // 8. Day Planner
+            if (lower.includes('planner')) {
+                return '<span class="badge" style="background:#faf5ff;color:#7e22ce;border:1px solid #e9d5ff;font-size:0.75rem;font-weight:600;"><i class="fas fa-calendar-day me-1" style="color:#7e22ce;"></i>Day Planner</span>';
+            }
+            // 9. Tasks
+            if (lower.includes('task')) {
+                return '<span class="badge" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:0.75rem;font-weight:600;"><i class="fas fa-tasks me-1" style="color:#334155;"></i>Tasks</span>';
+            }
+            // 10. Master Leads
+            if (lower.includes('master')) {
+                return '<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;font-size:0.75rem;font-weight:600;"><i class="fas fa-database me-1" style="color:#92400e;"></i>Master Leads</span>';
+            }
+            // 11. Bank Wise Leads
+            if (lower.includes('bank')) {
+                return '<span class="badge" style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;font-size:0.75rem;font-weight:600;"><i class="fas fa-landmark me-1" style="color:#065f46;"></i>Bank Wise Leads</span>';
+            }
+            // 12. Inbound DID / Incoming
+            if (lower.includes('inbound') || lower.includes('did') || type === 'INCOMING') {
+                return '<span class="badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-size:0.75rem;font-weight:600;"><i class="fas fa-phone-arrow-down-left me-1" style="color:#047857;"></i>Inbound DID</span>';
+            }
+            // 13. Mobile App / Native SIM
+            if (lower.includes('mobile') || lower.includes('sim') || lower.includes('native')) {
+                return '<span class="badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-size:0.75rem;font-weight:600;"><i class="fas fa-sim-card me-1" style="color:#047857;"></i>Native SIM</span>';
+            }
+
+            // Fallback for any other page name
+            return `<span class="badge" style="background:#f8fafc;color:#475569;border:1px solid #cbd5e1;font-size:0.75rem;font-weight:600;"><i class="fas fa-file-alt me-1 text-secondary"></i>${escapeHtml(page || 'My Leads')}</span>`;
+        }
+
+        function formatCategoryBadge(c) {
+            const cat = c.category_name || 'General';
+            return `<span class="badge" style="background:#f8fafc;color:#334155;border:1px solid #cbd5e1;font-size:0.75rem;font-weight:600;"><i class="fas fa-tag me-1 text-secondary"></i>${escapeHtml(cat)}</span>`;
+        }
+
         function renderDrilldownCalls(calls) {
             const tbody = document.getElementById('ctDrilldownTbody');
             if (!calls.length) {
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-3 text-muted">No call records found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center py-3 text-muted">No call records found</td></tr>';
                 return;
             }
             tbody.innerHTML = calls.map((c, i) => {
@@ -1872,6 +1947,8 @@
                 <td class="text-start">${i + 1}</td>
                 <td>${c.call_datetime ? new Date(c.call_datetime).toLocaleString('en-IN') : '-'}</td>
                 <td><strong>${escapeHtml(c.phone_number || '-')}</strong></td>
+                <td>${formatCategoryBadge(c)}</td>
+                <td style="text-align:center;">${formatCallFromBadge(c)}</td>
                 <td>${formatCallTypeBadge(c)}</td>
                 <td>${fmtCallDuration(c.duration_seconds)}</td>
                 <td>${escapeHtml(leadDisplay)}</td>

@@ -787,7 +787,8 @@ export class SideDrawer {
       ['ACCOUNT', 'ACCOUNTS', 'FINANCE', 'PAYROLL'].some(r => (user.department || user.department_name || '').toString().toUpperCase().includes(r))
     );
     const isAllowedAccounts = isSupreme || isAccountsStaff;
-    const isRestrictedSales = ['MN10009', 'MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'].includes(empCode);
+    // DC Protocol: Staff Leads restriction list (Nandana MN10009 granted full access per request)
+    const isRestrictedSales = ['MR10022', 'MR10036', 'MR10027', 'MN10017', 'MN10016'].includes(empCode);
 
     const internalTypes = ['MYNT_REAL', 'MN_STAFF', 'VGK4U', 'INTERNAL', 'STAFF', 'ADMIN', 'HR', 'MANAGER', 'EXECUTIVE', 'FIELD_EXECUTIVE', 'SUPER_ADMIN', 'FREELANCER'];
     const isInternalType = staffType && internalTypes.includes(staffType);

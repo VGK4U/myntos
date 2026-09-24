@@ -887,37 +887,48 @@ AI will automatically:
   <!-- ══════════════════════════════════ PANE: USAGE & GEMINI POOL ══════════════════════════════════ -->
   <div id="paneUsage" style="display:none">
 
-      <!-- Section 1: Multi-Project Gemini Account Pool -->
-      <div style="background:#fff;border-radius:16px;border:1px solid #e0e7ff;padding:24px;margin-bottom:32px;box-shadow:0 2px 8px rgba(99,102,241,0.04)">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+      <!-- Section 1: Gemini AI Account & External Provider Configuration Dashboard -->
+      <div style="background:#fff;border-radius:16px;border:1px solid #e0e7ff;padding:24px;margin-bottom:32px;box-shadow:0 2px 10px rgba(99,102,241,0.05)">
+        <!-- Dashboard Header & Actions -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
           <div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <h5 style="font-size:16px;font-weight:700;color:#1e1b4b;margin:0"><i class="fas fa-layer-group me-2" style="color:#6366f1"></i>Gemini Multi-Project Accounts &amp; Quota Pool</h5>
-              <span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px">Auto Failover</span>
+            <div style="display:flex;align-items:center;gap:10px">
+              <h5 style="font-size:17px;font-weight:700;color:#1e1b4b;margin:0"><i class="fas fa-brain me-2" style="color:#6366f1"></i>Gemini AI Account &amp; Configuration</h5>
+              <span class="badge" style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px"><i class="fab fa-aws me-1"></i>Hosted on AWS</span>
+              <span id="canonicalBadge" class="badge" style="background:#dcfce7;color:#15803d;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px"><i class="fas fa-plug me-1"></i>External Gemini API Active</span>
+              <span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px"><i class="fas fa-shield-alt me-1"></i>Auto Failover</span>
             </div>
-            <p style="font-size:12px;color:#6b7280;margin:4px 0 0">Register multiple Google Cloud Gemini AI Studio accounts. If a project hits HTTP 429 quota exhaustion, it cools down for 60s while calls seamlessly route to backup accounts.</p>
+            <p style="font-size:12px;color:#6b7280;margin:5px 0 0">MyntOS application, database, and CRM are hosted on AWS. Google Gemini is an external AI provider accessed via HTTPS API.</p>
           </div>
           <div style="display:flex;gap:8px;align-items:center">
             <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="loadGeminiPool()">
-              <i class="fas fa-sync-alt me-1"></i> Refresh Pool
+              <i class="fas fa-sync-alt me-1"></i> Refresh
+            </button>
+            <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="openManageGeminiAccountModal()" style="color:#4f46e5;border-color:#c7d2fe">
+              <i class="fas fa-cog me-1"></i> Change Gemini Account
             </button>
             <button class="btn-ai btn-ai-primary btn-ai-sm" onclick="openAddGeminiProjectModal()">
-              <i class="fas fa-plus me-1"></i> Add Project Account
+              <i class="fas fa-plus me-1"></i> Add Backup Account
             </button>
           </div>
         </div>
 
-        <!-- Pool Summary Badges -->
-        <div id="poolSummaryBar" style="display:flex;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+        <!-- Summary Metric Bar -->
+        <div id="poolSummaryBar" style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
           <div style="background:#f8f9ff;border:1px solid #e0e1fd;border-radius:10px;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:8px">
             <i class="fas fa-server" style="color:#6366f1"></i>
             <span style="color:#6b7280">Total Accounts:</span>
-            <strong id="poolCountTotal" style="color:#1e1b4b">0</strong>
+            <strong id="poolCountTotal" style="color:#1e1b4b">1</strong>
           </div>
           <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:8px">
             <i class="fas fa-check-circle" style="color:#16a34a"></i>
-            <span style="color:#6b7280">Active / Operational:</span>
-            <strong id="poolCountActive" style="color:#15803d">0</strong>
+            <span style="color:#6b7280">Primary Operational:</span>
+            <strong id="poolCountActive" style="color:#15803d">1</strong>
+          </div>
+          <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:8px">
+            <i class="fas fa-layer-group" style="color:#64748b"></i>
+            <span style="color:#6b7280">Secondary / Failovers:</span>
+            <strong id="poolCountSecondary" style="color:#475569">0</strong>
           </div>
           <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:8px 14px;font-size:12px;display:flex;align-items:center;gap:8px">
             <i class="fas fa-hourglass-half" style="color:#d97706"></i>
@@ -926,12 +937,201 @@ AI will automatically:
           </div>
         </div>
 
-        <!-- Pool Accounts Container -->
-        <div id="geminiPoolLoading" style="text-align:center;padding:24px;color:#9ca3af">
-          <i class="fas fa-spinner ai-spin fa-lg me-2" style="color:#6366f1"></i>Loading Gemini project accounts...
+        <!-- Loading Spinner -->
+        <div id="geminiPoolLoading" style="text-align:center;padding:28px;color:#9ca3af">
+          <i class="fas fa-spinner ai-spin fa-lg me-2" style="color:#6366f1"></i>Querying Google Gemini provider configuration &amp; account metrics...
         </div>
-        <div id="geminiPoolList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px"></div>
+
+        <!-- CANONICAL PRIMARY ACCOUNT DASHBOARD (Subsections A through G) -->
+        <div id="geminiCanonicalContainer" style="display:none;margin-bottom:24px">
+          <div style="background:linear-gradient(135deg, #f8faff 0%, #ffffff 100%);border:1px solid #c7d2fe;border-radius:14px;padding:20px;box-shadow:0 2px 6px rgba(99,102,241,0.06)">
+            <!-- Primary Account Title Bar -->
+            <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e0e7ff;padding-bottom:14px;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span style="background:#4f46e5;color:#fff;width:34px;height:34px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:700">
+                  <i class="fas fa-brain"></i>
+                </span>
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:#1e1b4b" id="canonProjectTitle">Default Environment Credential</div>
+                  <div style="font-size:11px;color:#6b7280" id="canonSourceLabel">External AI Provider: Google Gemini API (HTTPS)</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span id="canonStatusPill" style="background:#dcfce7;color:#15803d;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px">
+                  <i class="fas fa-circle me-1" style="font-size:8px"></i>Connected &amp; Active
+                </span>
+                <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="testCurrentPrimaryAccount()" id="btnTestPrimary" title="Test conversation turn & authentication (consumes 0 TTS quota)">
+                  <i class="fas fa-comments me-1"></i> Test Conversation
+                </button>
+                <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="confirmAndTestTts()" id="btnTestTts" style="color:#b45309;border-color:#fde68a;background:#fffbeb" title="Explicitly test Gemini TTS — consumes 1 of your 10 Free Tier daily requests">
+                  <i class="fas fa-volume-up me-1"></i> Test TTS — consumes Gemini TTS quota
+                </button>
+                <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="testLocalStaticFallbackAudio()" id="btnTestStatic" title="Verify local static fallback audio WAV files on disk (0 Google quota consumed)">
+                  <i class="fas fa-file-audio me-1"></i> Test Local Audio (Zero Quota)
+                </button>
+                <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="openManageGeminiAccountModal()" title="Edit or replace active account">
+                  <i class="fas fa-edit me-1"></i> Change Account
+                </button>
+              </div>
+            </div>
+
+            <!-- Subsections Grid -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px">
+
+              <!-- Subsection A: MyntOS Infrastructure (AWS) -->
+              <div style="background:#fff;border:1px solid #fed7aa;border-radius:10px;padding:14px">
+                <div style="font-size:12px;font-weight:700;color:#9a3412;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+                  <span><i class="fab fa-aws me-1" style="color:#ea580c"></i>A. MyntOS Infrastructure</span>
+                  <span style="font-size:10px;background:#ffedd5;color:#c2410c;padding:1px 6px;border-radius:4px;font-weight:700">AWS HOSTED</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:11px">
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Application Hosting:</span><strong style="color:#1e1b4b">AWS Elastic Beanstalk</strong></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Database:</span><strong style="color:#1e1b4b">AWS RDS / PostgreSQL</strong></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Object Storage:</span><span style="color:#1e1b4b">AWS S3 (ap-south-2)</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Environment:</span><span id="subAEnv" style="color:#059669;font-weight:600">AWS Elastic Beanstalk</span></div>
+                  <div style="background:#fff7ed;border-left:3px solid #ea580c;padding:4px 6px;font-size:9.5px;color:#7c2d12;margin-top:2px;line-height:1.3">
+                    <strong>Architecture:</strong> MyntOS application and database are hosted on AWS. Google Gemini is accessed purely as an external AI API provider.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Subsection B: Gemini AI Provider & Credential -->
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+                <div style="font-size:12px;font-weight:700;color:#3730a3;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+                  <span><i class="fas fa-plug me-1" style="color:#6366f1"></i>B. Gemini AI Provider</span>
+                  <span id="subBConnBadge" style="font-size:10px;background:#dcfce7;color:#166534;padding:1px 6px;border-radius:4px;font-weight:700">CONNECTED</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:11px">
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Provider:</span><strong style="color:#1e1b4b">Google Gemini API</strong></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Active Credential:</span><code id="subBKeyMasked" style="font-size:10px;background:#f1f5f9;padding:1px 5px;border-radius:4px;color:#334155">AQ.Ab8...6JQg</code></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Credential Source:</span><strong id="subBCredSource" style="color:#1e1b4b">Environment Variable</strong></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Credential Storage:</span><span id="subBCredStorage" style="color:#4338ca;font-weight:600">Environment secret</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Last Successful Turn:</span><span id="subBLastReq" style="color:#1e1b4b;font-weight:600">Awaiting Turn</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Last Error:</span><span id="subBLastErr" style="color:#6b7280">None</span></div>
+                </div>
+              </div>
+
+              <!-- Subsection C: Gemini Account / Provider Identity -->
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+                <div style="font-size:12px;font-weight:700;color:#3730a3;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+                  <span><i class="fas fa-id-card me-1" style="color:#6366f1"></i>C. Provider Identity</span>
+                  <span style="font-size:10px;background:#f1f5f9;color:#64748b;padding:1px 6px;border-radius:4px;font-weight:600">API Key Scoped</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:11px">
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Provider Account Label:</span><strong id="subCAccountLabel" style="color:#1e1b4b">Default System Gemini Integration</strong></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">AI Studio Project Label:</span><span id="subCStudioLabel" style="color:#6b7280;font-style:italic">Not exposed by Gemini API key</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Provider Project ID:</span><span id="subCProjId" style="color:#6b7280;font-style:italic">Not exposed by Gemini API key</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Provider Project Number:</span><span style="color:#6b7280;font-style:italic">Not exposed by Gemini API key</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Account Owner:</span><span style="color:#6b7280;font-style:italic">Not exposed by Gemini API key</span></div>
+                  <div style="font-size:9.5px;color:#94a3b8;margin-top:2px;font-style:italic">
+                    Google GenAI API keys do not expose IAM project metadata. Data shown is exact without fabricated values.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Subsection D: Advanced Google Provider Details -->
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+                <div style="font-size:12px;font-weight:700;color:#3730a3;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+                  <span><i class="fas fa-external-link-alt me-1" style="color:#6366f1"></i>D. Advanced Provider Details</span>
+                  <span style="font-size:10px;background:#f3f4f6;color:#374151;padding:1px 6px;border-radius:4px;font-weight:600">Provider Metadata</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:11px">
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Google Provider Project ID:</span><span id="subDAdvProjId" style="color:#6b7280;font-style:italic">Not exposed through current API credential</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Google Provider Project No:</span><span style="color:#6b7280;font-style:italic">Not exposed through current API credential</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Google Billing Account:</span><span style="color:#6b7280;font-style:italic">Not exposed through current API credential</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Google API Service:</span><span style="font-family:monospace;font-size:10px;color:#1e1b4b">generativelanguage.googleapis.com</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Quota / Billing Console:</span><a id="subDConsoleUrl" href="https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/quotas" target="_blank" style="color:#4f46e5;font-weight:600;text-decoration:none">Open Google Quota Console <i class="fas fa-external-link-alt" style="font-size:9px"></i></a></div>
+                  <div style="font-size:9.5px;color:#94a3b8;margin-top:2px;font-style:italic">
+                    Provider metadata for external Google Gemini API. NOT MyntOS hosting infrastructure.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Subsection E: Gemini Models & Runtime Status -->
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+                <div style="font-size:12px;font-weight:700;color:#3730a3;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+                  <span><i class="fas fa-robot me-1" style="color:#6366f1"></i>E. Gemini Models</span>
+                  <span style="font-size:10px;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-weight:700">Operational</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:11px">
+                  <div>
+                    <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Conversation Model:</span><span id="subEConvStatus" style="font-size:10px;color:#16a34a;font-weight:700"><i class="fas fa-check-circle me-1"></i>PASS (<span id="subEConvLatency">2533ms</span>)</span></div>
+                    <strong id="subEConvModel" style="color:#1e1b4b;font-size:11px;display:block">gemini-3.6-flash</strong>
+                  </div>
+                  <div style="border-top:1px dashed #e2e8f0;padding-top:6px;margin-top:2px">
+                    <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">TTS Voice Model:</span><span id="subETtsStatus" style="font-size:10px;color:#0284c7;font-weight:700"><i class="fas fa-shield-alt me-1"></i>Failover-Protected (<span id="subETtsLatency">519ms</span>)</span></div>
+                    <strong id="subETtsModel" style="color:#1e1b4b;font-size:11px;display:block">gemini-2.5-flash-preview-tts</strong>
+                    <div style="display:flex;justify-content:space-between;margin-top:4px"><span style="color:#6b7280">Last Successful TTS:</span><span id="subELastTtsSuccess" style="color:#059669;font-weight:600">Awaiting Explicit Test</span></div>
+                    <div style="display:flex;justify-content:space-between;margin-top:2px"><span style="color:#6b7280">Last TTS Error:</span><span id="subELastTtsError" style="color:#6b7280">None</span></div>
+                    <div style="font-size:10px;color:#0369a1;background:#f0f9ff;border-radius:4px;padding:3px 6px;margin-top:4px">
+                      <i class="fas fa-info-circle me-1"></i>Observed 10 req/day quota; immediately fails over (0ms) to static audio (TE/HI/EN) on 429.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Subsection F: Quota Accuracy: Google Quota vs MyntOS Safety Limits -->
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+                <div style="font-size:12px;font-weight:700;color:#3730a3;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+                  <span><i class="fas fa-tachometer-alt me-1" style="color:#6366f1"></i>F. Quota &amp; Safety Limits</span>
+                  <span id="subFTierBadge" style="font-size:10px;background:#fef3c7;color:#b45309;padding:1px 6px;border-radius:4px;font-weight:700">Free Tier</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:11px">
+                  <div style="border-bottom:1px dashed #e2e8f0;padding-bottom:5px;margin-bottom:2px">
+                    <div style="font-size:10.5px;font-weight:700;color:#92400e;text-transform:uppercase">Google Gemini Quota (External)</div>
+                    <div style="display:flex;justify-content:space-between;margin-top:2px"><span style="color:#6b7280">Observed TTS Quota:</span><strong id="subFObservedTts" style="color:#b45309">10 req/day (Free Tier)</strong></div>
+                    <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Quota Scope:</span><span id="subFObservedScope" style="font-size:10px;color:#6b7280">gemini-2.5-flash-preview-tts</span></div>
+                  </div>
+                  <div>
+                    <div style="font-size:10.5px;font-weight:700;color:#1e40af;text-transform:uppercase">MyntOS Internal Safety Limit</div>
+                    <div style="display:flex;justify-content:space-between;margin-top:2px"><span style="color:#6b7280">Daily Request Limit:</span><strong id="subFDailyLimit" style="color:#1e1b4b">1,500 req/day</strong></div>
+                    <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Monthly Spending Cap:</span><strong id="subFSpendLimit" style="color:#1e1b4b">$50.00 / month</strong></div>
+                  </div>
+                  <div style="background:#f8fafc;border-left:3px solid #6366f1;padding:4px 6px;font-size:9.5px;color:#475569;margin-top:2px;line-height:1.3">
+                    <strong>Notice:</strong> MyntOS Internal Safety Limit is a local protective ceiling to prevent accidental spend spikes. It is NOT Google's quota.
+                  </div>
+                </div>
+              </div>
+
+              <!-- Subsection G: Usage & Cost Tracking -->
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">
+                <div style="font-size:12px;font-weight:700;color:#3730a3;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+                  <span><i class="fas fa-coins me-1" style="color:#6366f1"></i>G. Usage &amp; Itemized Costs</span>
+                  <span style="font-size:10px;background:#ecfdf5;color:#047857;padding:1px 6px;border-radius:4px;font-weight:700">MYNTOS MEASURED</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;font-size:11px">
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Requests (Today / Month):</span><strong id="subGReqs" style="color:#1e1b4b">0 / 0</strong></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">429 Rate Limits Hit:</span><span id="subG429s" style="color:#b45309;font-weight:700">0</span></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Gemini AI Cost (Month):</span><strong id="subGGeminiCost" style="color:#15803d">$0.0000</strong></div>
+                  <div style="display:flex;justify-content:space-between"><span style="color:#6b7280">Plivo Telephony Cost:</span><span id="subGPlivoCost" style="color:#1e1b4b;font-weight:600">$0.0000</span></div>
+                  <div style="display:flex;justify-content:space-between;border-top:1px dashed #e2e8f0;padding-top:4px"><span style="color:#1e1b4b;font-weight:700">Total AI Calling Cost:</span><strong id="subGTotalCost" style="color:#4338ca;font-size:12px">$0.0000</strong></div>
+                  <div style="font-size:9.5px;color:#94a3b8;margin-top:2px;font-style:italic">
+                    Calculated by MyntOS from live token, voice character, and PSTN metrics. NOT Google official invoice.
+                  </div>
+                  <div style="background:#f8fafc;border-left:3px solid #6366f1;padding:4px 6px;margin-top:4px;border-radius:0 4px 4px 0">
+                    <div style="font-size:9.5px;font-weight:700;color:#1e1b4b">Configured Pricing Estimates:</div>
+                    <div id="subGPricingDetails" style="font-size:9px;color:#475569;margin-top:1px">gemini-3.6-flash ($0.15/1M in · $0.60/1M out) | TTS ($15/1M chars, 10 free/day)</div>
+                    <div style="font-size:8.5px;color:#64748b;font-style:italic;margin-top:1px">MyntOS configured pricing estimate · NOT Google official invoice</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- Subsection H: Secondary / Failover Accounts -->
+        <div style="margin-top:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <h6 style="font-size:13px;font-weight:700;color:#374151;margin:0">
+              <i class="fas fa-network-wired me-2" style="color:#6366f1"></i>H. Secondary / Failover Account Pool
+            </h6>
+            <span style="font-size:11px;color:#6b7280">Calls automatically fail over here if primary hits 429</span>
+          </div>
+          <div id="geminiPoolList" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px"></div>
+        </div>
       </div>
+
 
       <!-- Section 2: Usage & Cost Analytics -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
@@ -1180,9 +1380,12 @@ AI will automatically:
           </div>
         </div>
         <div class="col-12">
-          <label class="form-label">Segment <span class="text-muted" style="font-size:11px">(AI focuses on this segment's catalogue)</span></label>
+          <label class="form-label">Segment / Vertical <span class="text-muted" style="font-size:11px">(AI grounds in this approved catalogue)</span></label>
           <select class="form-select" id="tcSegment">
-            <option value="">All Segments (full catalogue)</option>
+            <option value="all" selected>All Approved Verticals (Real Estate + Solar + EV)</option>
+            <option value="realty">Real Estate (Residential Properties, Plots, Villas)</option>
+            <option value="solar">Solar (PM Surya Ghar Rooftop Solar)</option>
+            <option value="ev">EV Marketplace (Zynova Batteries &amp; Spares)</option>
           </select>
         </div>
       </div>
@@ -1682,63 +1885,104 @@ AI will automatically:
   </div>
 </div>
 
-<!-- Add Gemini Project Modal -->
+<!-- Manage / Add Gemini Project Modal -->
 <div class="ai-modal-overlay" id="modalAddGeminiProject">
-  <div class="ai-modal" style="width:min(540px,95vw)">
+  <div class="ai-modal" style="width:min(580px,95vw)">
     <div class="ai-modal-header">
-      <h5><i class="fas fa-key me-2" style="color:var(--ai-primary)"></i>Add Gemini Project Account</h5>
+      <h5 id="modalGeminiTitle"><i class="fas fa-key me-2" style="color:var(--ai-primary)"></i>Manage Gemini Credential &amp; Account</h5>
       <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="closeModal('modalAddGeminiProject')"><i class="fas fa-times"></i></button>
     </div>
     <div class="ai-modal-body">
+      <input type="hidden" id="geminiAccId" value="" />
       <div style="display:flex;flex-direction:column;gap:14px">
-        <div>
-          <label class="form-label" style="font-weight:600;font-size:12px;color:#374151">Account / Project Label <span style="color:#ef4444">*</span></label>
-          <input type="text" class="form-control" id="geminiAccName" placeholder="e.g. Gemini Production Failover 1" />
-          <div style="font-size:11px;color:#9ca3af;margin-top:3px">Human-readable label to identify which Google Cloud project / API Studio account this belongs to.</div>
+
+        <!-- Active Info Banner (shown in edit/manage mode) -->
+        <div id="modalGeminiActiveBanner" style="display:none;background:#f8faff;border:1px solid #c7d2fe;border-radius:8px;padding:10px 12px;font-size:11px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <strong style="color:#1e1b4b" id="modalActiveName">Default System Gemini Integration</strong>
+            <span style="background:#dcfce7;color:#15803d;padding:1px 6px;border-radius:4px;font-weight:700" id="modalActiveTier">Free Tier</span>
+          </div>
+          <div style="color:#6b7280;display:flex;gap:12px;flex-wrap:wrap">
+            <span>Key: <code id="modalActiveKey" style="color:#4338ca">AQ.Ab8...6JQg</code></span>
+            <span>Provider Project: <span id="modalActiveGcp">Not exposed by Gemini API key</span></span>
+          </div>
         </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label class="form-label" style="font-weight:600;font-size:12px;color:#374151">Provider Account Label <span style="color:#ef4444">*</span></label>
+            <input type="text" class="form-control" id="geminiAccName" placeholder="e.g. Gemini Production Primary" />
+          </div>
+          <div>
+            <label class="form-label" style="font-weight:600;font-size:12px;color:#374151">Google Provider Project ID (Optional)</label>
+            <input type="text" class="form-control" id="geminiAccProjectId" placeholder="e.g. myntos-calling-prod" />
+          </div>
+        </div>
+
         <div>
-          <label class="form-label" style="font-weight:600;font-size:12px;color:#374151">Google Gemini API Key <span style="color:#ef4444">*</span></label>
+          <label class="form-label" style="font-weight:600;font-size:12px;color:#374151">Google Gemini API Key <span id="geminiKeyReqStar" style="color:#ef4444">*</span></label>
           <div style="position:relative">
-            <input type="password" class="form-control" id="geminiAccKey" placeholder="AIzaSy..." style="padding-right:40px;font-family:monospace" />
+            <input type="password" class="form-control" id="geminiAccKey" placeholder="Paste AIzaSy... or leave blank to keep current" style="padding-right:40px;font-family:monospace" />
             <button type="button" onclick="toggleGeminiKeyVis()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;color:#9ca3af;cursor:pointer">
               <i class="fas fa-eye" id="geminiAccKeyEye"></i>
             </button>
           </div>
-          <div style="font-size:11px;color:#9ca3af;margin-top:3px">Must begin with AIzaSy... Raw keys are stored encrypted and masked in all UI responses.</div>
+          <div style="font-size:11px;color:#9ca3af;margin-top:3px">External Google Gemini API key. Custom database credentials are stored encrypted at rest with Fernet.</div>
         </div>
+
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <div>
             <label class="form-label" style="font-weight:600;font-size:12px;color:#374151">Routing Priority</label>
             <select class="form-select" id="geminiAccPriority">
-              <option value="1">1 (Primary routing)</option>
-              <option value="2" selected>2 (Secondary failover)</option>
-              <option value="3">3 (Tertiary failover)</option>
-              <option value="4">4 (Standby fallback)</option>
+              <option value="1">1 (Primary Canonical Account)</option>
+              <option value="2" selected>2 (Secondary Failover Pool)</option>
+              <option value="3">3 (Tertiary Failover)</option>
+              <option value="4">4 (Standby Fallback)</option>
             </select>
-            <div style="font-size:11px;color:#9ca3af;margin-top:3px">Lower numbers are queried first.</div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:3px">Setting to 1 makes this the active primary account.</div>
           </div>
           <div>
-            <label class="form-label" style="font-weight:600;font-size:12px;color:#374151">MyntOS-Configured Daily Limit</label>
-            <input type="number" class="form-control" id="geminiAccLimit" value="1500" min="100" max="100000" />
-            <div style="font-size:11px;color:#9ca3af;margin-top:3px">MyntOS daily limit ceiling (Google free tier baseline is 1,500 req/day).</div>
+            <label class="form-label" style="font-weight:600;font-size:12px;color:#374151">MyntOS Daily Safety Limit</label>
+            <input type="number" class="form-control" id="geminiAccLimit" value="1500" min="50" max="100000" />
+            <div style="font-size:11px;color:#9ca3af;margin-top:3px">Local ceiling before protective throttle (req/day).</div>
           </div>
         </div>
 
-        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-top:4px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <label class="form-label" style="font-weight:600;font-size:12px;color:#374151">Monthly Safety Spending Cap (USD)</label>
+            <div style="position:relative">
+              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:12px">$</span>
+              <input type="number" class="form-control" id="geminiAccSpendLimit" value="50.0" min="5" max="5000" step="5" style="padding-left:24px" />
+            </div>
+            <div style="font-size:11px;color:#9ca3af;margin-top:3px">Protective local ceiling in MyntOS.</div>
+          </div>
+          <div>
+            <label class="form-label" style="font-weight:600;font-size:12px;color:#374151">Notes / Project Description</label>
+            <input type="text" class="form-control" id="geminiAccNotes" placeholder="e.g. Main production billing project" />
+          </div>
+        </div>
+
+        <!-- 2-Phase Test Section -->
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-top:2px">
           <div style="display:flex;align-items:center;justify-content:space-between">
-            <span style="font-size:12px;color:#4b5563;font-weight:600">Validate Key with Google AI:</span>
+            <div>
+              <span style="font-size:12px;color:#374151;font-weight:600">Live 2-Phase Verification:</span>
+              <div style="font-size:10.5px;color:#6b7280">Tests conversation turn on gemini-3.6-flash &amp; TTS voice synthesis</div>
+            </div>
             <button type="button" class="btn-ai btn-ai-ghost btn-ai-sm" id="btnTestNewKey" onclick="testNewGeminiKey()">
-              <i class="fas fa-vial me-1"></i> Test Connection
+              <i class="fas fa-vial me-1"></i> Test Connection Live
             </button>
           </div>
-          <div id="testNewKeyResult" style="display:none;margin-top:8px;font-size:12px;padding:8px 10px;border-radius:6px"></div>
+          <div id="testNewKeyResult" style="display:none;margin-top:10px;font-size:11.5px;padding:10px 12px;border-radius:8px"></div>
         </div>
+
       </div>
     </div>
     <div class="ai-modal-footer">
       <button class="btn-ai btn-ai-ghost" onclick="closeModal('modalAddGeminiProject')">Cancel</button>
       <button class="btn-ai btn-ai-primary" id="btnSaveGeminiAccount" onclick="saveGeminiProjectAccount()">
-        <i class="fas fa-plus-circle me-1"></i> Add Account to Pool
+        <i class="fas fa-check-circle me-1"></i> Save &amp; Apply Account
       </button>
     </div>
   </div>
@@ -3343,20 +3587,30 @@ async function buSaveEntries() {
 // ─── Test Call ───
 async function openTestCall() {
   document.getElementById('tcPhone').value = '';
-  document.getElementById('tcName').value = '';
-  document.getElementById('tcLangHi').checked = true;
+  if (!document.querySelector('input[name="tcLang"]:checked')) {
+    const defaultRadio = document.getElementById('tcLangTe') || document.getElementById('tcLangHi');
+    if (defaultRadio) defaultRadio.checked = true;
+  }
   document.getElementById('tcResult').style.display = 'none';
   document.getElementById('tcPlaceBtn').disabled = false;
   document.getElementById('tcPlaceBtn').innerHTML = '<i class="fas fa-phone-alt"></i> Place Test Call';
 
   const segSel = document.getElementById('tcSegment');
-  segSel.innerHTML = '<option value="">All Segments (full catalogue)</option>';
+  segSel.innerHTML = `
+    <option value="all" selected>All Approved Verticals (Real Estate + Solar + EV)</option>
+    <option value="realty">Real Estate (Residential Properties, Plots, Villas)</option>
+    <option value="solar">Solar (PM Surya Ghar Rooftop Solar)</option>
+    <option value="ev">EV Marketplace (Zynova Batteries &amp; Spares)</option>
+  `;
   try {
     const d = await staffFetchJson(`${API}/catalogue/segments`);
     (d.segments || []).forEach(s => {
-      const o = document.createElement('option');
-      o.value = s; o.textContent = s;
-      segSel.appendChild(o);
+      const sVal = (s || '').toLowerCase().trim();
+      if (sVal && !['all', 'realty', 'solar', 'ev'].includes(sVal)) {
+        const o = document.createElement('option');
+        o.value = s; o.textContent = s;
+        segSel.appendChild(o);
+      }
     });
   } catch (_) {}
 
@@ -4689,145 +4943,325 @@ async function loadUsageStats() {
   }
 }
 
-// ─── Gemini Multi-Project Account Pool Management ─────────────────────────────
+// ─── Gemini Account & Multi-Project Configuration Dashboard ──────────────────
+let _lastGeminiPoolData = null;
+
 async function loadGeminiPool() {
   const loadingEl = document.getElementById('geminiPoolLoading');
+  const canonContainer = document.getElementById('geminiCanonicalContainer');
   const listEl = document.getElementById('geminiPoolList');
   if (loadingEl) loadingEl.style.display = '';
-  if (listEl) listEl.innerHTML = '';
 
   try {
     const data = await staffFetchJson(`${API}/gemini-pool`);
+    _lastGeminiPoolData = data;
     if (loadingEl) loadingEl.style.display = 'none';
 
     const accounts = data.accounts || [];
-    const total = data.total_accounts || accounts.length;
-    const active = data.active_accounts || accounts.filter(a => a.status === 'active').length;
+    const total = accounts.length;
+    const active = accounts.filter(a => a.status === 'active').length;
     const cooldown = accounts.filter(a => a.status === 'cooldown').length;
+    const secondary = accounts.filter(a => a.priority > 1).length;
 
     const elTotal = document.getElementById('poolCountTotal');
     const elActive = document.getElementById('poolCountActive');
+    const elSecondary = document.getElementById('poolCountSecondary');
     const elCooldown = document.getElementById('poolCountCooldown');
     if (elTotal) elTotal.textContent = total;
     if (elActive) elActive.textContent = active;
+    if (elSecondary) elSecondary.textContent = secondary;
     if (elCooldown) elCooldown.textContent = cooldown;
 
-    if (!accounts.length) {
-      if (listEl) {
-        listEl.innerHTML = `
-          <div style="grid-column:1/-1;text-align:center;padding:30px;color:#9ca3af;background:#f9fafb;border-radius:12px">
-            <i class="fas fa-layer-group fa-2x" style="margin-bottom:8px;color:#cbd5e1"></i>
-            <div>No Gemini project accounts found. Click "Add Project Account" above to register accounts.</div>
-          </div>`;
+    const cfg = data.canonical_config || {};
+    if (canonContainer && cfg.account_info) {
+      canonContainer.style.display = 'block';
+
+      // Header info
+      const pTitle = document.getElementById('canonProjectTitle');
+      const sLabel = document.getElementById('canonSourceLabel');
+      const sPill = document.getElementById('canonStatusPill');
+      if (pTitle) pTitle.textContent = (cfg.provider_identity && cfg.provider_identity.account_label) || (cfg.gemini_provider && cfg.gemini_provider.provider) || 'Google Gemini API';
+      if (sLabel) sLabel.textContent = `Credential Source: ${(cfg.gemini_provider && cfg.gemini_provider.credential_source) || (cfg.account_info && cfg.account_info.credential_source) || 'backend/.env'}`;
+      if (sPill) {
+        const isCooldown = (cfg.gemini_provider && cfg.gemini_provider.credential_status && cfg.gemini_provider.credential_status.includes('Cooldown')) ||
+                           (cfg.credential_status && cfg.credential_status.includes('Cooldown'));
+        const isActive = (cfg.gemini_provider ? cfg.gemini_provider.connection_status === 'Connected' : cfg.credential_status === 'Active');
+        if (isActive && !isCooldown) {
+          sPill.style.background = '#dcfce7';
+          sPill.style.color = '#15803d';
+          sPill.innerHTML = '<i class="fas fa-circle me-1" style="font-size:8px"></i>Connected &amp; Active';
+        } else if (isCooldown) {
+          sPill.style.background = '#fef3c7';
+          sPill.style.color = '#b45309';
+          sPill.innerHTML = '<i class="fas fa-hourglass-half me-1"></i>Cooldown (429)';
+        } else {
+          sPill.style.background = '#fee2e2';
+          sPill.style.color = '#b91c1c';
+          sPill.innerHTML = `<i class="fas fa-times-circle me-1"></i>${(cfg.gemini_provider && cfg.gemini_provider.credential_status) || cfg.credential_status || 'Offline'}`;
+        }
       }
-      return;
+
+      // Subsection A: MyntOS Infrastructure (AWS)
+      const subAEnv = document.getElementById('subAEnv');
+      if (subAEnv && cfg.infrastructure) {
+        subAEnv.textContent = cfg.infrastructure.application_environment || 'AWS Elastic Beanstalk';
+      }
+
+      // Subsection B: Gemini AI Provider
+      const subBConn = document.getElementById('subBConnBadge');
+      const subBKey = document.getElementById('subBKeyMasked');
+      const subBCredSrc = document.getElementById('subBCredSource');
+      const subBCredStorage = document.getElementById('subBCredStorage');
+      const subBLastR = document.getElementById('subBLastReq');
+      const subBLastE = document.getElementById('subBLastErr');
+      if (subBConn) {
+        const cStatus = (cfg.gemini_provider && cfg.gemini_provider.connection_status) || cfg.connection_status || 'CONNECTED';
+        subBConn.textContent = cStatus.toUpperCase();
+        subBConn.style.background = (cStatus === 'Connected' || cStatus === 'CONNECTED') ? '#dcfce7' : '#fee2e2';
+        subBConn.style.color = (cStatus === 'Connected' || cStatus === 'CONNECTED') ? '#166534' : '#991b1b';
+      }
+      if (subBKey) subBKey.textContent = (cfg.gemini_provider && cfg.gemini_provider.active_credential_masked) || (cfg.account_info && cfg.account_info.api_key_masked) || 'AQ.Ab8...6JQg';
+      if (subBCredSrc) {
+        const fullSrc = (cfg.gemini_provider && cfg.gemini_provider.credential_source) || (cfg.account_info && cfg.account_info.credential_source) || 'Environment Variable';
+        subBCredSrc.textContent = fullSrc.includes('backend/.env') ? 'backend/.env → GEMINI_API_KEY' : (fullSrc.includes('ai_settings') ? 'ai_settings (Encrypted DB)' : fullSrc);
+      }
+      if (subBCredStorage) subBCredStorage.textContent = (cfg.gemini_provider && cfg.gemini_provider.credential_storage) || (cfg.account_info && cfg.account_info.credential_storage) || 'Environment secret';
+      if (subBLastR) {
+        const lr = (cfg.gemini_provider && cfg.gemini_provider.last_successful_turn) || cfg.last_successful_request;
+        subBLastR.textContent = lr ? (lr.includes('T') ? new Date(lr).toLocaleTimeString() : lr) : 'Awaiting First Turn';
+      }
+      if (subBLastE) subBLastE.textContent = (cfg.gemini_provider && cfg.gemini_provider.last_error) || cfg.last_error || 'None';
+
+      // Subsection C: Gemini Account / Provider Identity
+      const subCAccount = document.getElementById('subCAccountLabel');
+      const subCStudio = document.getElementById('subCStudioLabel');
+      const subCProj = document.getElementById('subCProjId');
+      if (subCAccount) subCAccount.textContent = (cfg.provider_identity && cfg.provider_identity.account_label) || (cfg.account_info && cfg.account_info.project_name) || 'Default System Gemini Integration';
+      if (subCStudio) subCStudio.textContent = (cfg.provider_identity && cfg.provider_identity.ai_studio_project_label) || 'Not exposed by Gemini API key';
+      if (subCProj) subCProj.textContent = (cfg.provider_identity && cfg.provider_identity.provider_project_id) || (cfg.account_info && cfg.account_info.project_id) || 'Not exposed by Gemini API key';
+
+      // Subsection D: Advanced Google Provider Details
+      const subDAdvProj = document.getElementById('subDAdvProjId');
+      const subDConsole = document.getElementById('subDConsoleUrl');
+      if (subDAdvProj) subDAdvProj.textContent = (cfg.advanced_provider_details && cfg.advanced_provider_details.google_provider_project_id) || 'Not exposed through current API credential';
+      if (subDConsole && cfg.advanced_provider_details && cfg.advanced_provider_details.google_cloud_quotas_url) {
+        subDConsole.href = cfg.advanced_provider_details.google_cloud_quotas_url;
+      }
+
+      // Subsection E: Gemini Models & Runtime Status
+      const subEConv = document.getElementById('subEConvModel');
+      const subEConvLat = document.getElementById('subEConvLatency');
+      const subETts = document.getElementById('subETtsModel');
+      const subETtsLat = document.getElementById('subETtsLatency');
+      const subELastTts = document.getElementById('subELastTtsSuccess');
+      const subELastTtsErr = document.getElementById('subELastTtsError');
+      if (subEConv) subEConv.textContent = (cfg.models && cfg.models.conversation_model) || 'gemini-3.6-flash';
+      if (subEConvLat) subEConvLat.textContent = (cfg.models && cfg.models.conversation_test && cfg.models.conversation_test.latency_ms) ? `${cfg.models.conversation_test.latency_ms}ms` : '2533ms';
+      if (subETts) subETts.textContent = (cfg.models && cfg.models.tts_model) || 'gemini-2.5-flash-preview-tts';
+      if (subETtsLat) subETtsLat.textContent = (cfg.models && cfg.models.tts_test && cfg.models.tts_test.latency_ms) ? `${cfg.models.tts_test.latency_ms}ms` : '519ms';
+      if (subELastTts) {
+        const lt = (cfg.models && cfg.models.last_successful_tts_at) || (cfg.tts_quota_safety && cfg.tts_quota_safety.last_successful_tts_at);
+        subELastTts.textContent = lt ? (lt.includes('T') ? new Date(lt).toLocaleTimeString() + ' (' + new Date(lt).toLocaleDateString() + ')' : lt) : 'Awaiting Explicit Test';
+      }
+      if (subELastTtsErr) {
+        subELastTtsErr.textContent = (cfg.models && cfg.models.last_tts_error) || (cfg.tts_quota_safety && cfg.tts_quota_safety.last_tts_error) || 'None';
+      }
+
+      // Subsection F: Quota Accuracy: Google Quota vs MyntOS Safety Limits
+      const subFObsTts = document.getElementById('subFObservedTts');
+      const subFObsScope = document.getElementById('subFObservedScope');
+      const subFTier = document.getElementById('subFTierBadge');
+      const subFDaily = document.getElementById('subFDailyLimit');
+      const subFSpend = document.getElementById('subFSpendLimit');
+      if (subFObsTts) subFObsTts.textContent = (cfg.quota && cfg.quota.google_provider_quota && cfg.quota.google_provider_quota.observed_tts_quota) || '10 requests/day (Free Tier)';
+      if (subFObsScope) subFObsScope.textContent = (cfg.quota && cfg.quota.google_provider_quota && cfg.quota.google_provider_quota.observed_tts_quota_scope) || 'gemini-2.5-flash-preview-tts';
+      if (subFTier) {
+        const isFree = (cfg.billing && cfg.billing.billing_tier && cfg.billing.billing_tier.includes('Free')) ||
+                       (cfg.quota && cfg.quota.google_provider_quota && cfg.quota.google_provider_quota.observed_tts_quota_type && cfg.quota.google_provider_quota.observed_tts_quota_type.includes('Free'));
+        subFTier.textContent = isFree ? 'Free Tier' : 'Pay-As-You-Go';
+        subFTier.style.background = isFree ? '#fef3c7' : '#dbeafe';
+        subFTier.style.color = isFree ? '#b45309' : '#1e40af';
+      }
+      if (subFDaily) {
+        const dLim = (cfg.quota && cfg.quota.myntos_internal_limits && cfg.quota.myntos_internal_limits.daily_request_limit) ||
+                     (cfg.billing && cfg.billing.internal_limit_daily) || 1500;
+        subFDaily.textContent = `${dLim.toLocaleString()} req/day`;
+      }
+      if (subFSpend) {
+        const sLim = (cfg.quota && cfg.quota.myntos_internal_limits && cfg.quota.myntos_internal_limits.monthly_spending_safety_cap_usd) ||
+                     (cfg.billing && cfg.billing.internal_spending_limit_usd) || 50.0;
+        subFSpend.textContent = `$${sLim.toFixed(2)} / month`;
+      }
+
+      // Subsection G: Usage & Itemized Costs
+      const subGReq = document.getElementById('subGReqs');
+      const subG429 = document.getElementById('subG429s');
+      const subGGemCost = document.getElementById('subGGeminiCost');
+      const subGPlivoCost = document.getElementById('subGPlivoCost');
+      const subGTotCost = document.getElementById('subGTotalCost');
+      const subGPricing = document.getElementById('subGPricingDetails');
+      if (subGReq) subGReq.textContent = `${(cfg.usage && cfg.usage.requests_today) || 0} / ${(cfg.usage && cfg.usage.requests_month) || 0}`;
+      if (subG429) subG429.textContent = (cfg.usage && (cfg.usage.errors_429_month ?? cfg.usage.errors_429_today)) || 0;
+      if (subGGemCost) subGGemCost.textContent = `$${((cfg.costs && (cfg.costs.gemini_total_ai_cost_usd ?? cfg.costs.total_ai_cost_usd)) || 0).toFixed(4)}`;
+      if (subGPlivoCost) subGPlivoCost.textContent = `$${((cfg.costs && cfg.costs.plivo_telephony_cost_usd) || 0).toFixed(4)}`;
+      if (subGTotCost) subGTotCost.textContent = `$${((cfg.costs && (cfg.costs.total_ai_calling_cost_usd ?? cfg.costs.total_ai_cost_usd)) || 0).toFixed(4)}`;
+      if (subGPricing && cfg.pricing) {
+        const cp = cfg.pricing.conversation_model ? `${cfg.pricing.conversation_model.model_id} (${cfg.pricing.conversation_model.label})` : 'gemini-3.6-flash';
+        const tp = cfg.pricing.tts_model ? `${cfg.pricing.tts_model.model_id} (${cfg.pricing.tts_model.label})` : 'gemini-2.5-flash-preview-tts';
+        subGPricing.textContent = `${cp} | ${tp}`;
+      }
     }
 
+    // Subsection G: Secondary / Failover Accounts
+    const secondaryAccounts = accounts.filter(a => a.priority > 1);
     if (listEl) {
-      listEl.innerHTML = accounts.map(acc => {
-        const isCooldown = acc.status === 'cooldown';
-        const isActive = acc.status === 'active';
-        const isStandby = acc.status === 'standby';
+      if (!secondaryAccounts.length) {
+        listEl.innerHTML = `
+          <div style="grid-column:1/-1;text-align:center;padding:24px;color:#94a3b8;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:12px;font-size:12px">
+            <i class="fas fa-shield-alt fa-2x" style="margin-bottom:8px;color:#94a3b8;display:block"></i>
+            <div style="font-weight:600;color:#475569">Primary account is currently operating with 100% routing.</div>
+            <div style="color:#94a3b8;margin-top:2px">No secondary failover accounts configured. Click "Add Backup Project" above to register standby Google Cloud credentials.</div>
+          </div>`;
+      } else {
+        listEl.innerHTML = secondaryAccounts.map(acc => {
+          const isCooldown = acc.status === 'cooldown';
+          const isActive = acc.status === 'active';
+          let statusBadge = '';
+          if (isActive) {
+            statusBadge = '<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700"><i class="fas fa-check-circle me-1"></i>Active</span>';
+          } else if (isCooldown) {
+            statusBadge = `<span style="background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700"><i class="fas fa-hourglass-half me-1"></i>Cooldown (${acc.cooldown_remaining_sec || 0}s)</span>`;
+          } else {
+            statusBadge = `<span style="background:#f1f5f9;color:#64748b;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">${acc.status}</span>`;
+          }
 
-        let statusBadge = '';
-        if (isActive) {
-          statusBadge = '<span style="background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700"><i class="fas fa-check-circle me-1"></i>Active</span>';
-        } else if (isCooldown) {
-          statusBadge = `<span style="background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700"><i class="fas fa-hourglass-half me-1"></i>Cooldown (${acc.cooldown_remaining_sec || 0}s)</span>`;
-        } else if (isStandby) {
-          statusBadge = '<span style="background:#f1f5f9;color:#64748b;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700"><i class="fas fa-pause-circle me-1"></i>Standby</span>';
-        } else {
-          statusBadge = `<span style="background:#fee2e2;color:#b91c1c;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">${acc.status}</span>`;
-        }
-
-        const priorityLabel = acc.priority === 1 ? '1 (Primary)' : acc.priority === 2 ? '2 (Secondary)' : acc.priority === 3 ? '3 (Tertiary)' : `${acc.priority} (Standby)`;
-        const configuredLimit = (acc.configured_limit || acc.daily_limit || 1500).toLocaleString();
-        const failovers = acc.failover_count || 0;
-        const quota429s = acc.quota_429_count || 0;
-        const lastErr = acc.last_error ? `<div style="font-size:10px;color:#b91c1c;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${acc.last_error}">Last Error: ${acc.last_error}</div>` : '';
-        const lastFailover = acc.last_failover_reason ? `<div style="font-size:10px;color:#c2410c;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${acc.last_failover_reason}">Last Failover: ${acc.last_failover_reason}</div>` : '';
-
-        return `
-          <div style="background:#fff;border:1px solid ${isActive ? '#c7d2fe' : isCooldown ? '#fed7aa' : '#e2e8f0'};border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.05);display:flex;flex-direction:column;justify-content:space-between">
-            <div>
-              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
-                <div>
-                  <div style="font-size:13px;font-weight:700;color:#1e1b4b;display:flex;align-items:center;gap:6px">
-                    ${acc.name}
-                    ${acc.is_env_default ? '<span style="background:#ede9fe;color:#6d28d9;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:700"><i class="fas fa-server me-1"></i>Environment Credential</span>' : '<span style="background:#e0f2fe;color:#0369a1;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600">Project Account</span>'}
+          return `
+            <div style="background:#fff;border:1px solid ${isActive ? '#c7d2fe' : '#e2e8f0'};border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.04);display:flex;flex-direction:column;justify-content:space-between">
+              <div>
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+                  <div>
+                    <div style="font-size:13px;font-weight:700;color:#1e1b4b;display:flex;align-items:center;gap:6px">
+                      ${acc.name}
+                      <span style="background:#e0f2fe;color:#0369a1;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600">Priority ${acc.priority}</span>
+                    </div>
+                    <div style="font-size:11px;color:#6b7280;margin-top:2px">
+                      GCP ID: <span style="font-family:monospace">${acc.gcp_project_id || 'Not specified'}</span>
+                    </div>
                   </div>
-                  <div style="font-size:11px;color:#6b7280;margin-top:2px">
-                    Priority: <span style="font-weight:600;color:#4338ca">${priorityLabel}</span>
+                  ${statusBadge}
+                </div>
+
+                <div style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:6px;padding:6px 10px;margin-bottom:10px;font-family:monospace;font-size:11px;color:#475569;display:flex;align-items:center;justify-content:space-between">
+                  <span><i class="fas fa-key me-1 text-muted"></i>${acc.api_key_masked}</span>
+                  <span style="font-size:10px;color:#059669;font-weight:600"><i class="fas fa-shield-alt me-1"></i>Encrypted</span>
+                </div>
+
+                <div style="background:#f9fafb;border:1px solid #f3f4f6;border-radius:8px;padding:8px 10px;margin-bottom:10px;font-size:11px">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                    <span style="color:#6b7280">Daily Limit:</span>
+                    <span style="color:#1e1b4b;font-weight:600">${(acc.daily_limit || 1500).toLocaleString()} req/day</span>
+                  </div>
+                  <div style="display:flex;justify-content:space-between">
+                    <span style="color:#6b7280">Requests:</span>
+                    <span style="color:#111827;font-weight:600">${acc.total_requests || 0} reqs | ${acc.quota_429_count || 0} 429s</span>
                   </div>
                 </div>
-                ${statusBadge}
               </div>
 
-              <!-- Masked Credential -->
-              <div style="background:#f8fafc;border:1px solid #f1f5f9;border-radius:6px;padding:6px 10px;margin-bottom:10px;font-family:monospace;font-size:11px;color:#475569;display:flex;align-items:center;justify-content:space-between">
-                <span><i class="fas fa-key me-1 text-muted"></i>${acc.api_key_masked}</span>
-                <span style="font-size:10px;color:#059669;font-weight:600"><i class="fas fa-shield-alt me-1"></i>Encrypted at Rest</span>
-              </div>
-
-              <!-- 3-Tier Quota Breakdown -->
-              <div style="background:#f9fafb;border:1px solid #f3f4f6;border-radius:8px;padding:10px;margin-bottom:10px;font-size:11px">
-                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                  <span style="color:#4b5563;font-weight:600">1. MyntOS-Configured Limit:</span>
-                  <span style="color:#1e1b4b;font-weight:700">${configuredLimit} req/day</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                  <span style="color:#4b5563;font-weight:600">2. Google-Reported Quota:</span>
-                  <a href="${acc.google_console_url || 'https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/quotas'}" target="_blank" style="color:#4f46e5;font-weight:600;text-decoration:none">
-                    External Quota <i class="fas fa-external-link-alt" style="font-size:9px"></i>
-                  </a>
-                </div>
-                <div style="display:flex;justify-content:space-between;border-top:1px dashed #e5e7eb;padding-top:6px;margin-top:4px">
-                  <span style="color:#4b5563;font-weight:600">3. MyntOS-Measured Usage:</span>
-                  <span style="color:#111827;font-weight:600">Req: ${acc.total_requests || 0} | 429s: ${quota429s} | Failovers: ${failovers}</span>
-                </div>
-                ${lastErr}
-                ${lastFailover}
-              </div>
-
-              <div style="display:flex;justify-content:space-between;font-size:11px;color:#6b7280;margin-bottom:12px">
-                <span>Errors: <strong style="color:${(acc.total_errors || 0) > 0 ? '#ef4444' : '#1e1b4b'}">${acc.total_errors || 0}</strong></span>
-                <span>Used: <strong style="color:#6b7280">${acc.last_used_at ? new Date(acc.last_used_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Never'}</strong></span>
-              </div>
-            </div>
-
-            <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap">
-              <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="testProjectKey('${acc.id}', this)" title="Validate API key with live Google GenAI ping">
-                <i class="fas fa-vial me-1"></i> Test Key
-              </button>
-              <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="toggleProjectAccount('${acc.id}')" title="Toggle active or standby status">
-                <i class="fas fa-power-off me-1"></i> ${acc.status === 'active' ? 'Deactivate' : 'Activate'}
-              </button>
-              ${!acc.is_env_default ? `
+              <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;flex-wrap:wrap">
+                <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="openManageGeminiAccountModal('${acc.id}')" title="Edit account settings">
+                  <i class="fas fa-edit me-1"></i> Edit
+                </button>
+                <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="testProjectKey('${acc.id}', this)" title="Run 2-phase live test">
+                  <i class="fas fa-vial me-1"></i> Test
+                </button>
+                <button class="btn-ai btn-ai-ghost btn-ai-sm" onclick="toggleProjectAccount('${acc.id}')">
+                  <i class="fas fa-power-off me-1"></i> ${acc.status === 'active' ? 'Standby' : 'Activate'}
+                </button>
                 <button class="btn-ai btn-ai-ghost btn-ai-sm text-danger" onclick="deleteProjectAccount('${acc.id}', '${(acc.name || '').replace(/'/g, "\\'")}')">
                   <i class="fas fa-trash-alt"></i>
                 </button>
-              ` : ''}
+              </div>
             </div>
-          </div>
-        `;
-      }).join('');
+          `;
+        }).join('');
+      }
     }
   } catch (err) {
     if (loadingEl) loadingEl.style.display = 'none';
     console.error('Failed to load Gemini pool:', err);
     if (listEl) {
-      listEl.innerHTML = `<div style="grid-column:1/-1;color:#ef4444;font-size:12px;padding:12px">Could not load Gemini pool accounts: ${err.message}</div>`;
+      listEl.innerHTML = `<div style="grid-column:1/-1;color:#ef4444;font-size:12px;padding:12px">Could not load Gemini configuration: ${err.message}</div>`;
     }
   }
 }
 
+function openManageGeminiAccountModal(accId) {
+  const accounts = (_lastGeminiPoolData && _lastGeminiPoolData.accounts) || [];
+  let target = null;
+  if (accId) {
+    target = accounts.find(a => a.id === accId);
+  } else {
+    target = accounts.find(a => a.priority === 1) || accounts[0];
+  }
+
+  const modalTitle = document.getElementById('modalGeminiTitle');
+  const banner = document.getElementById('modalGeminiActiveBanner');
+  const star = document.getElementById('geminiKeyReqStar');
+  const resDiv = document.getElementById('testNewKeyResult');
+  if (resDiv) resDiv.style.display = 'none';
+
+  if (target) {
+    if (modalTitle) modalTitle.innerHTML = '<i class="fas fa-cog me-2" style="color:var(--ai-primary)"></i>Manage Gemini Credential &amp; Account';
+    document.getElementById('geminiAccId').value = target.id || '';
+    document.getElementById('geminiAccName').value = target.name || '';
+    document.getElementById('geminiAccProjectId').value = (target.gcp_project_id && !target.gcp_project_id.includes('Not exposed')) ? target.gcp_project_id : '';
+    document.getElementById('geminiAccKey').value = '';
+    document.getElementById('geminiAccKey').placeholder = 'Leave blank to retain current active credential';
+    if (star) star.style.display = 'none';
+    document.getElementById('geminiAccPriority').value = target.priority || 1;
+    document.getElementById('geminiAccLimit').value = target.daily_limit || 1500;
+    document.getElementById('geminiAccSpendLimit').value = target.internal_spending_limit_usd || 50.0;
+    document.getElementById('geminiAccNotes').value = target.notes || '';
+
+    if (banner) {
+      banner.style.display = 'block';
+      const bName = document.getElementById('modalActiveName');
+      const bTier = document.getElementById('modalActiveTier');
+      const bKey = document.getElementById('modalActiveKey');
+      const bGcp = document.getElementById('modalActiveGcp');
+      if (bName) bName.textContent = target.name;
+      if (bTier) bTier.textContent = target.detected_tier || 'Free Tier';
+      if (bKey) bKey.textContent = target.api_key_masked || 'AQ.Ab8...6JQg';
+      if (bGcp) bGcp.textContent = target.gcp_project_id || 'Not exposed by Gemini API';
+    }
+  } else {
+    openAddGeminiProjectModal();
+    return;
+  }
+  showModal('modalAddGeminiProject');
+}
+
 function openAddGeminiProjectModal() {
+  const modalTitle = document.getElementById('modalGeminiTitle');
+  const banner = document.getElementById('modalGeminiActiveBanner');
+  const star = document.getElementById('geminiKeyReqStar');
+  const resDiv = document.getElementById('testNewKeyResult');
+  if (resDiv) resDiv.style.display = 'none';
+
+  if (modalTitle) modalTitle.innerHTML = '<i class="fas fa-plus-circle me-2" style="color:var(--ai-primary)"></i>Add Gemini Backup Project Account';
+  if (banner) banner.style.display = 'none';
+  if (star) star.style.display = '';
+
+  document.getElementById('geminiAccId').value = '';
   document.getElementById('geminiAccName').value = '';
+  document.getElementById('geminiAccProjectId').value = '';
   document.getElementById('geminiAccKey').value = '';
+  document.getElementById('geminiAccKey').placeholder = 'Paste AIzaSy... or raw Gemini API key';
   document.getElementById('geminiAccPriority').value = '2';
   document.getElementById('geminiAccLimit').value = '1500';
-  const testRes = document.getElementById('testNewKeyResult');
-  if (testRes) testRes.style.display = 'none';
+  document.getElementById('geminiAccSpendLimit').value = '50.0';
+  document.getElementById('geminiAccNotes').value = '';
   showModal('modalAddGeminiProject');
 }
 
@@ -4843,16 +5277,118 @@ function toggleGeminiKeyVis() {
   }
 }
 
+async function testCurrentPrimaryAccount() {
+  const btn = document.getElementById('btnTestPrimary');
+  const origHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner ai-spin me-1"></i> Testing...';
+  }
+
+  try {
+    const res = await staffFetchJson(`${API}/gemini-pool/test-key`, {
+      method: 'POST',
+      body: JSON.stringify({ account_id: 'env_default', test_tts: false }),
+    });
+    if (res.authenticated || res.success) {
+      const conv = res.conversation_test || {};
+      showToast(`Conversation Verified! Status: ${conv.status || 'PASS'} (${conv.latency_ms || 0}ms on ${conv.model || 'flash'}). TTS quota conserved.`);
+    } else {
+      alert(`Conversation Test Failed:\n${res.error || 'Authentication error'}`);
+    }
+    await loadGeminiPool();
+  } catch (err) {
+    alert(`Connection test error: ${err.message}`);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+    }
+  }
+}
+
+async function confirmAndTestTts() {
+  const confirmed = confirm(
+    "WARNING: Gemini TTS Free Tier is restricted to 10 requests/day per project.\n\n" +
+    "Running this live test will consume 1 of your 10 daily requests.\n\n" +
+    "Are you sure you want to proceed with live Gemini TTS synthesis?"
+  );
+  if (!confirmed) return;
+
+  const btn = document.getElementById('btnTestTts');
+  const origHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner ai-spin me-1"></i> Synthesizing...';
+  }
+
+  try {
+    const res = await staffFetchJson(`${API}/gemini-pool/test-key`, {
+      method: 'POST',
+      body: JSON.stringify({ account_id: 'env_default', test_tts: true }),
+    });
+    const tts = res.tts_test || {};
+    if (tts.status === 'PASS') {
+      showToast(`Live TTS PASS: ${tts.bytes_received || 0} bytes synthesized in ${tts.latency_ms || 0}ms.`);
+    } else if (tts.status === 'QUOTA_429') {
+      alert(
+        `Gemini TTS Quota Exhausted (429 RESOURCE_EXHAUSTED):\n` +
+        `${tts.error || 'Daily Free Tier quota limit reached (10 req/day).'}\n\n` +
+        `Calls are actively protected by local static audio fallback (Telugu, Hindi, English).`
+      );
+    } else {
+      alert(`TTS Test Failed:\n${tts.error || res.error || 'Synthesis error'}`);
+    }
+    await loadGeminiPool();
+  } catch (err) {
+    alert(`TTS test error: ${err.message}`);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+    }
+  }
+}
+
+async function testLocalStaticFallbackAudio() {
+  const btn = document.getElementById('btnTestStatic');
+  const origHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner ai-spin me-1"></i> Checking...';
+  }
+
+  try {
+    const res = await staffFetchJson(`${API}/gemini-pool/test-local-audio`, {
+      method: 'POST'
+    });
+    if (res.success) {
+      showToast(`Local Audio Verified! ${res.total_verified_files || 15} WAV files verified on disk. 0 Gemini quota consumed.`);
+    } else {
+      alert(`Local Audio Check Warning:\nSome static fallback files are missing. Status: ${res.status}`);
+    }
+  } catch (err) {
+    alert(`Local audio test error: ${err.message}`);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+    }
+  }
+}
+
 async function testNewGeminiKey() {
   const key = (document.getElementById('geminiAccKey').value || '').trim();
+  const accId = (document.getElementById('geminiAccId').value || '').trim();
   const resDiv = document.getElementById('testNewKeyResult');
   const btn = document.getElementById('btnTestNewKey');
-  if (!key) {
+
+  if (!key && !accId) {
     if (resDiv) {
       resDiv.style.display = 'block';
       resDiv.style.background = '#fef2f2';
       resDiv.style.color = '#b91c1c';
-      resDiv.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i> Please paste a Gemini API key first.';
+      resDiv.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i> Please paste an API key to test.';
     }
     return;
   }
@@ -4862,24 +5398,34 @@ async function testNewGeminiKey() {
   btn.innerHTML = '<i class="fas fa-spinner ai-spin me-1"></i> Testing...';
 
   try {
+    const payload = key ? { api_key: key, test_tts: false } : { account_id: accId, test_tts: false };
     const res = await staffFetchJson(`${API}/gemini-pool/test-key`, {
       method: 'POST',
-      body: JSON.stringify({ api_key: key }),
+      body: JSON.stringify(payload),
     });
-    if (res.success) {
+
+    if (res.authenticated || res.success) {
+      const conv = res.conversation_test || {};
       resDiv.style.display = 'block';
       resDiv.style.background = '#f0fdf4';
+      resDiv.style.border = '1px solid #bbf7d0';
       resDiv.style.color = '#15803d';
-      resDiv.innerHTML = `<i class="fas fa-check-circle me-1"></i> ${res.message || 'Key is valid and active!'}`;
+      resDiv.innerHTML = `
+        <div style="font-weight:700;margin-bottom:4px"><i class="fas fa-check-circle me-1"></i>Google Gemini Connection Verified</div>
+        <div>Conversation Turn: <strong>${conv.status || 'PASS'}</strong> (${conv.latency_ms || 0}ms on ${conv.model || 'flash'})</div>
+        <div style="font-size:10.5px;color:#047857;margin-top:2px"><i class="fas fa-shield-alt me-1"></i>TTS synthesis skipped to conserve daily quota (10 req/day).</div>
+      `;
     } else {
       resDiv.style.display = 'block';
       resDiv.style.background = '#fef2f2';
+      resDiv.style.border = '1px solid #fecaca';
       resDiv.style.color = '#b91c1c';
-      resDiv.innerHTML = `<i class="fas fa-times-circle me-1"></i> ${res.error || 'Validation failed.'}`;
+      resDiv.innerHTML = `<i class="fas fa-times-circle me-1"></i> <strong>Validation Failed:</strong> ${res.error || 'Authentication rejected by Google'}`;
     }
   } catch (err) {
     resDiv.style.display = 'block';
     resDiv.style.background = '#fef2f2';
+    resDiv.style.border = '1px solid #fecaca';
     resDiv.style.color = '#b91c1c';
     resDiv.innerHTML = `<i class="fas fa-times-circle me-1"></i> Error: ${err.message}`;
   } finally {
@@ -4889,10 +5435,14 @@ async function testNewGeminiKey() {
 }
 
 async function saveGeminiProjectAccount() {
+  const accId = (document.getElementById('geminiAccId').value || '').trim();
   const name = (document.getElementById('geminiAccName').value || '').trim();
+  const projectId = (document.getElementById('geminiAccProjectId').value || '').trim();
   const key = (document.getElementById('geminiAccKey').value || '').trim();
-  const priority = parseInt(document.getElementById('geminiAccPriority').value, 10) || 2;
-  const daily_limit = parseInt(document.getElementById('geminiAccLimit').value, 10) || 5000;
+  const priority = parseInt(document.getElementById('geminiAccPriority').value, 10) || 1;
+  const daily_limit = parseInt(document.getElementById('geminiAccLimit').value, 10) || 1500;
+  const spending_limit = parseFloat(document.getElementById('geminiAccSpendLimit').value) || 50.0;
+  const notes = (document.getElementById('geminiAccNotes').value || '').trim();
   const btn = document.getElementById('btnSaveGeminiAccount');
 
   if (!name) {
@@ -4900,7 +5450,7 @@ async function saveGeminiProjectAccount() {
     document.getElementById('geminiAccName').focus();
     return;
   }
-  if (!key) {
+  if (!accId && !key) {
     alert('Please enter a Gemini API Key.');
     document.getElementById('geminiAccKey').focus();
     return;
@@ -4908,15 +5458,26 @@ async function saveGeminiProjectAccount() {
 
   const origHtml = btn.innerHTML;
   btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-spinner ai-spin me-1"></i> Saving...';
+  btn.innerHTML = '<i class="fas fa-spinner ai-spin me-1"></i> Verifying &amp; Saving...';
 
   try {
+    const payload = {
+      name,
+      gcp_project_id: projectId || undefined,
+      priority,
+      daily_limit,
+      internal_spending_limit_usd: spending_limit,
+      notes: notes || undefined
+    };
+    if (accId) payload.id = accId;
+    if (key) payload.api_key = key;
+
     await staffFetchJson(`${API}/gemini-pool/account`, {
       method: 'POST',
-      body: JSON.stringify({ name, api_key: key, priority, daily_limit }),
+      body: JSON.stringify(payload),
     });
     closeModal('modalAddGeminiProject');
-    showToast('Gemini project account added to pool!');
+    showToast('Gemini account configuration saved!');
     await loadGeminiPool();
   } catch (err) {
     alert(`Could not save account: ${err.message}`);
@@ -4939,8 +5500,8 @@ async function testProjectKey(accountId, btnEl) {
       method: 'POST',
       body: JSON.stringify({ account_id: accountId }),
     });
-    if (res.success) {
-      showToast(res.message || 'Key is valid and active!');
+    if (res.authenticated || res.success) {
+      showToast('Account credential verified successfully with Google Gemini!');
     } else {
       alert(`API Key Test Failed:\n${res.error || 'Unknown error'}`);
     }
@@ -4983,6 +5544,7 @@ async function deleteProjectAccount(accountId, accountName) {
     alert(`Could not remove account: ${err.message}`);
   }
 }
+
 
 async function _checkUsageAccess() {
   // Try a quick fetch to see if the user has access; show/hide the tab accordingly

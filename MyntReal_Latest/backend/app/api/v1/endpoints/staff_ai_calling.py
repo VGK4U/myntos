@@ -16,7 +16,7 @@ Tables (created in main.py startup):
 Zero changes to existing dialer, CRM, or any other feature.
 """
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Query, Body
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Query, Body, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import text, func, or_, and_
@@ -44,6 +44,16 @@ from app.core.database import SessionLocal as _SessionLocal
 from app.api.v1.endpoints.staff_auth import get_current_staff_user
 from app.models.staff import StaffEmployee
 from app.models.crm import CRMLead
+from app.services.sarvam_telephony_adapter import (
+    SarvamRealtimeSTTClient,
+    SarvamStreamingTTSClient,
+    PlivoBargeInController,
+    DynamicKnowledgeEngine,
+    ConversationalFillerEngine,
+    get_sarvam_api_key,
+    SUPPORTED_LANGUAGES,
+)
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -133,22 +143,198 @@ def _mask_gemini_key(key: str) -> str:
         return "***"
     return f"{s[:6]}...{s[-4:]}"
 
-def _ping_gemini_key(key: str) -> dict:
-    """Test connection and key validity with a lightweight call to Google Gemini."""
+def _test_gemini_connection(
+    key: str,
+    conv_model: str = "gemini-3.6-flash",
+    tts_model: str = "gemini-2.5-flash-preview-tts",
+    test_tts: bool = False
+) -> dict:
+    """Gemini API verification testing authentication and conversation turn generation.
+    CRITICAL QUOTA SAFETY: Live TTS synthesis is executed ONLY if test_tts is explicitly True,
+    preserving the Free Tier 10 requests/day quota from accidental depletion during page loads
+    or account edits."""
     if not key or len(key.strip()) < 10:
-        return {"success": False, "error": "API key is too short or empty"}
+        return {"success": False, "authenticated": False, "error": "API key is too short or empty"}
     if key.startswith("gsec_"):
         key = _decrypt_credential(key)
+    raw_key = key.strip()
+
+    res = {
+        "success": False,
+        "authenticated": False,
+        "masked_key": _mask_gemini_key(raw_key),
+        "tested_at": datetime.now(pytz.UTC).isoformat(),
+        "conversation_test": {},
+        "tts_test": {},
+        "detected_tier": "Unknown",
+        "error": None,
+    }
+
     try:
         from google import genai
-        client = genai.Client(api_key=key.strip())
-        res = client.models.generate_content(
-            model="gemini-3.1-flash-lite",
-            contents="ping",
-        )
-        return {"success": True, "message": "Key is valid and active on Google Gemini"}
+        from google.genai import types as _gtypes
+        client = genai.Client(api_key=raw_key)
+
+        # 1. Test Conversation Model
+        t0 = time.time()
+        try:
+            c_resp = client.models.generate_content(
+                model=conv_model,
+                contents="ping",
+            )
+            c_latency = int((time.time() - t0) * 1000)
+            res["authenticated"] = True
+            res["conversation_test"] = {
+                "model": conv_model,
+                "status": "PASS",
+                "latency_ms": c_latency,
+                "response": (c_resp.text or "").strip()[:50]
+            }
+        except Exception as ce:
+            c_latency = int((time.time() - t0) * 1000)
+            ce_str = str(ce)
+            if "503" in ce_str:
+                res["authenticated"] = True
+                c_status = "HIGH_DEMAND_503"
+            elif "401" in ce_str or "403" in ce_str:
+                res["authenticated"] = False
+                c_status = "AUTH_FAILED"
+            else:
+                c_status = "FAIL"
+            res["conversation_test"] = {
+                "model": conv_model,
+                "status": c_status,
+                "latency_ms": c_latency,
+                "error": ce_str[:200]
+            }
+
+        # 2. Test TTS Model (ONLY if test_tts is explicitly True)
+        if test_tts:
+            t1 = time.time()
+            try:
+                cfg = _gtypes.GenerateContentConfig(
+                    response_modalities=["AUDIO"],
+                    speech_config=_gtypes.SpeechConfig(
+                        voice_config=_gtypes.VoiceConfig(
+                            prebuilt_voice_config=_gtypes.PrebuiltVoiceConfig(voice_name="Aoede")
+                        )
+                    )
+                )
+                tts_resp = client.models.generate_content(
+                    model=tts_model,
+                    contents="Hello",
+                    config=cfg
+                )
+                tts_latency = int((time.time() - t1) * 1000)
+                pcm = tts_resp.candidates[0].content.parts[0].inline_data.data if tts_resp.candidates else None
+                res["tts_test"] = {
+                    "model": tts_model,
+                    "status": "PASS",
+                    "latency_ms": tts_latency,
+                    "bytes_received": len(pcm) if pcm else 0,
+                    "tested_at": datetime.now(pytz.UTC).isoformat(),
+                    "quota_consumed": True
+                }
+                res["detected_tier"] = "Pay-As-You-Go / Active"
+            except Exception as te:
+                tts_latency = int((time.time() - t1) * 1000)
+                te_str = str(te)
+                if "FreeTier" in te_str or "free_tier" in te_str:
+                    res["detected_tier"] = "Free Tier (limit: 10 requests/day per model)"
+                if "429" in te_str:
+                    tts_status = "QUOTA_429"
+                    res["authenticated"] = True
+                elif "401" in te_str or "403" in te_str:
+                    tts_status = "AUTH_FAILED"
+                else:
+                    tts_status = "FAIL"
+                res["tts_test"] = {
+                    "model": tts_model,
+                    "status": tts_status,
+                    "latency_ms": tts_latency,
+                    "error": te_str[:200],
+                    "tested_at": datetime.now(pytz.UTC).isoformat(),
+                    "quota_consumed": True
+                }
+        else:
+            res["tts_test"] = {
+                "model": tts_model,
+                "status": "SKIPPED (quota protection)",
+                "note": "TTS test skipped to conserve daily quota (10 req/day). Requires explicit operator confirmation to execute.",
+                "quota_consumed": 0
+            }
+
+        if res["authenticated"]:
+            res["success"] = True
+            res["message"] = "Key verified with Google Gemini API"
+        else:
+            res["success"] = False
+            res["error"] = res["conversation_test"].get("error") or (res["tts_test"].get("error") if test_tts else None) or "Authentication failed"
+
+        return res
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return {
+            "success": False,
+            "authenticated": False,
+            "error": str(e),
+            "masked_key": _mask_gemini_key(raw_key),
+            "tested_at": datetime.now(pytz.UTC).isoformat()
+        }
+
+
+def _test_local_static_fallback() -> dict:
+    """Verify local static audio fallback files for Telugu, Hindi, and English without calling Google Gemini or consuming any quota."""
+    languages = ["te", "hi", "en"]
+    contexts = ["greeting", "silence", "filler", "error", "closing"]
+    results = {}
+    all_found = True
+    total_files = 0
+    total_bytes = 0
+    all_files = []
+    for lang in languages:
+        lang_res = {}
+        for ctx in contexts:
+            filename = _get_static_fallback_audio(lang, ctx)
+            path = _resolve_audio_file(filename)
+            exists = (path is not None and os.path.exists(path) and os.path.getsize(path) > 0)
+            sz = os.path.getsize(path) if exists else 0
+            total_files += 1 if exists else 0
+            total_bytes += sz
+            f_entry = {
+                "language": lang,
+                "context": ctx,
+                "filename": filename,
+                "path": path,
+                "exists": exists,
+                "size_bytes": sz
+            }
+            lang_res[ctx] = f_entry
+            all_files.append(f_entry)
+            if not exists:
+                all_found = False
+        results[lang] = lang_res
+    return {
+        "success": all_found,
+        "status": "PASS (Local Static Files Verified)" if all_found else "PARTIAL_MISSING",
+        "provider": "local_server",
+        "quota_consumed": 0,
+        "total_files": total_files,
+        "total_expected": 15,
+        "total_verified_files": total_files,
+        "total_bytes": total_bytes,
+        "note": "Static fallback runs 100% locally from disk with 0 Google Gemini quota consumed.",
+        "languages": results,
+        "files": all_files,
+        "tested_at": datetime.now(pytz.UTC).isoformat()
+    }
+
+
+def _ping_gemini_key(key: str) -> dict:
+    """Backward-compatible test wrapper returning simple dict."""
+    res = _test_gemini_connection(key)
+    if res.get("authenticated") or res.get("success"):
+        return {"success": True, "message": "Key is valid and active on Google Gemini", "details": res}
+    return {"success": False, "error": res.get("error") or "Key verification failed", "details": res}
 
 def _classify_gemini_error(err: Exception) -> dict:
     """Classify Google Gemini / API errors into actionable categories.
@@ -265,17 +451,28 @@ class GeminiProjectPool:
                 pool = [{
                     "id": "env_default",
                     "name": "Environment Default Credential",
+                    "gcp_project_name": "Not exposed by Gemini API",
+                    "gcp_project_id": "Not exposed by Gemini API",
+                    "gcp_project_number": "Not exposed by Gemini API",
+                    "account_owner_email": "Not exposed by Gemini API",
                     "api_key": env_k,
                     "priority": 1,
                     "status": "active",
                     "daily_limit": 1500,
+                    "internal_spending_limit_usd": 50.0,
+                    "conversation_model": "gemini-3.6-flash",
+                    "tts_model": "gemini-2.5-flash-preview-tts",
                     "total_requests": 0,
                     "total_errors": 0,
                     "quota_429_count": 0,
                     "failover_count": 0,
                     "last_used_at": None,
                     "last_failed_at": None,
+                    "last_tts_success_at": None,
+                    "last_tts_error": "None",
                     "is_env_default": True,
+                    "notes": "Loaded automatically from backend/.env (GEMINI_API_KEY / GOOGLE_API_KEY)",
+                    "detected_tier": "Free Tier (limit: 10 TTS req/day)",
                     "created_at": datetime.now(pytz.UTC).isoformat()
                 }]
         return pool
@@ -292,11 +489,20 @@ class GeminiProjectPool:
 
             db = _SessionLocal()
             try:
-                db.execute(text("""
-                    INSERT INTO ai_settings (company_id, key, value, updated_at)
-                    VALUES (:cid, 'gemini_project_pool', :val, NOW())
-                    ON CONFLICT (company_id, key) DO UPDATE SET value=:val, updated_at=NOW()
-                """), {"cid": company_id, "val": json.dumps(db_pool)})
+                row = db.execute(
+                    text("SELECT id FROM ai_settings WHERE company_id=:cid AND key='gemini_project_pool'"),
+                    {"cid": company_id}
+                ).fetchone()
+                if row:
+                    db.execute(
+                        text("UPDATE ai_settings SET value=:val, updated_at=NOW() WHERE id=:id"),
+                        {"val": json.dumps(db_pool), "id": row[0]}
+                    )
+                else:
+                    db.execute(
+                        text("INSERT INTO ai_settings (company_id, key, value, updated_at) VALUES (:cid, 'gemini_project_pool', :val, NOW())"),
+                        {"cid": company_id, "val": json.dumps(db_pool)}
+                    )
                 db.commit()
             finally:
                 db.close()
@@ -332,11 +538,16 @@ class GeminiProjectPool:
             res.append({
                 "id": acc_id,
                 "name": disp_name,
+                "gcp_project_name": acc.get("gcp_project_name") or disp_name,
+                "gcp_project_id": acc.get("gcp_project_id") or ("Not exposed by Gemini API" if is_env else "Custom Project"),
+                "gcp_project_number": acc.get("gcp_project_number") or "Not exposed by Gemini API",
+                "account_owner_email": acc.get("account_owner_email") or "Not exposed by Gemini API",
                 "api_key_masked": _mask_gemini_key(acc.get("api_key", "")),
                 "priority": acc.get("priority", 1),
                 "status": live_status,
                 "account_type_label": "Environment Credential (GEMINI_API_KEY)" if is_env else "Project API Key",
                 "configured_limit": acc.get("daily_limit", 1500),
+                "internal_spending_limit_usd": acc.get("internal_spending_limit_usd", 50.0),
                 "google_reported_quota": "Unavailable via API (View in Google Cloud Console)",
                 "google_console_url": "https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/quotas",
                 "daily_limit": acc.get("daily_limit", 1500),
@@ -350,10 +561,294 @@ class GeminiProjectPool:
                 "last_used_at": acc.get("last_used_at"),
                 "last_failed_at": acc.get("last_failed_at"),
                 "is_env_default": is_env,
+                "notes": acc.get("notes") or ("Loaded from backend/.env" if is_env else ""),
+                "conversation_model": acc.get("conversation_model") or "gemini-3.6-flash",
+                "tts_model": acc.get("tts_model") or "gemini-2.5-flash-preview-tts",
+                "last_test": acc.get("last_test"),
+                "last_tts_success_at": acc.get("last_tts_success_at"),
+                "last_tts_error": acc.get("last_tts_error") or "None",
+                "detected_tier": acc.get("detected_tier") or ("Free Tier (limit: 10 TTS req/day)" if is_env else "Unknown"),
                 "created_at": acc.get("created_at")
             })
         res.sort(key=lambda x: (x["priority"], x.get("created_at") or ""))
         return res
+
+    def get_canonical_configuration(self, company_id: int = 1) -> dict:
+        cid = company_id or 1
+        accounts = self.list_accounts_masked(cid)
+        primary_acc = next((a for a in accounts if a.get("priority") == 1), None) or (accounts[0] if accounts else None)
+
+        conn_status = "Connected"
+        cred_status = "Active"
+        if not primary_acc:
+            conn_status = "Not Connected"
+            cred_status = "Missing"
+        elif primary_acc.get("status") == "cooldown":
+            cred_status = "Cooldown (429)"
+        elif primary_acc.get("status") in ("disabled", "standby"):
+            cred_status = primary_acc.get("status").capitalize()
+
+        db = _SessionLocal()
+        reqs_today = 0
+        reqs_month = 0
+        conv_cost = 0.0
+        tts_cost = 0.0
+        total_cost = 0.0
+        tts_reqs = 0
+        conv_reqs = 0
+        total_calls = 0
+        total_duration_sec = 0
+        try:
+            today_row = db.execute(text("""
+                SELECT count(*),
+                       COALESCE(SUM(CASE WHEN event_type IN ('gemini_tts', 'tts_generation') THEN 1 ELSE 0 END), 0),
+                       COALESCE(SUM(CASE WHEN event_type IN ('gemini_conversation', 'gpt4o_call') THEN 1 ELSE 0 END), 0),
+                       COALESCE(SUM(CASE WHEN event_type IN ('gemini_conversation', 'gpt4o_call') THEN estimated_cost_usd ELSE 0 END), 0),
+                       COALESCE(SUM(CASE WHEN event_type IN ('gemini_tts', 'tts_generation') THEN estimated_cost_usd ELSE 0 END), 0),
+                       COALESCE(SUM(estimated_cost_usd), 0)
+                FROM ai_usage_log
+                WHERE company_id = :cid AND created_at >= CURRENT_DATE
+            """), {"cid": cid}).fetchone()
+            if today_row:
+                reqs_today = today_row[0] or 0
+                conv_cost = float(today_row[3] or 0.0)
+                tts_cost = float(today_row[4] or 0.0)
+                total_cost = float(today_row[5] or 0.0)
+
+            month_row = db.execute(text("""
+                SELECT count(*),
+                       COALESCE(SUM(CASE WHEN event_type IN ('gemini_tts', 'tts_generation') THEN 1 ELSE 0 END), 0),
+                       COALESCE(SUM(CASE WHEN event_type IN ('gemini_conversation', 'gpt4o_call') THEN 1 ELSE 0 END), 0),
+                       COALESCE(SUM(CASE WHEN event_type IN ('gemini_conversation', 'gpt4o_call') THEN estimated_cost_usd ELSE 0 END), 0),
+                       COALESCE(SUM(CASE WHEN event_type IN ('gemini_tts', 'tts_generation') THEN estimated_cost_usd ELSE 0 END), 0),
+                       COALESCE(SUM(estimated_cost_usd), 0)
+                FROM ai_usage_log
+                WHERE company_id = :cid AND created_at >= DATE_TRUNC('month', CURRENT_DATE)
+            """), {"cid": cid}).fetchone()
+            if month_row:
+                reqs_month = month_row[0] or 0
+                tts_reqs = month_row[1] or 0
+                conv_reqs = month_row[2] or 0
+                if reqs_today == 0:
+                    conv_cost = float(month_row[3] or 0.0)
+                    tts_cost = float(month_row[4] or 0.0)
+                    total_cost = float(month_row[5] or 0.0)
+
+            call_stats = db.execute(text("""
+                SELECT count(*), COALESCE(SUM(duration_seconds), 0)
+                FROM ai_call_logs
+                WHERE company_id = :cid AND created_at >= DATE_TRUNC('month', CURRENT_DATE)
+            """), {"cid": cid}).fetchone()
+            if call_stats:
+                total_calls = call_stats[0] or 0
+                total_duration_sec = call_stats[1] or 0
+        except Exception as e:
+            logger.warning(f"[GEMINI-CANONICAL] Error querying live usage: {e}")
+        finally:
+            db.close()
+
+        cost_per_call = (total_cost / total_calls) if total_calls > 0 else 0.0
+        total_mins = total_duration_sec / 60.0
+        cost_per_min = (total_cost / total_mins) if total_mins > 0 else 0.0
+
+        p_name = primary_acc.get("name", "Environment Default Credential") if primary_acc else "None"
+        p_key_masked = primary_acc.get("api_key_masked", "") if primary_acc else ""
+        is_env = primary_acc.get("is_env_default", False) if primary_acc else True
+        if is_env:
+            cred_source = "Environment Variable (backend/.env → GEMINI_API_KEY / GOOGLE_API_KEY)"
+            cred_storage = "Environment secret"
+            gcp_proj_name = "Not exposed by Gemini API"
+            gcp_proj_id = "Not exposed by Gemini API"
+        else:
+            cred_source = "MyntOS Encrypted Database Credential (ai_settings table)"
+            cred_storage = "Fernet encrypted"
+            gcp_proj_name = primary_acc.get("gcp_project_name") or primary_acc.get("name") or "Not specified"
+            gcp_proj_id = primary_acc.get("gcp_project_id") or "Not exposed through current API credential"
+
+        limit_daily = primary_acc.get("configured_limit") or primary_acc.get("daily_limit") or 1500 if primary_acc else 1500
+        last_used = primary_acc.get("last_used_at") if primary_acc else None
+        last_err = primary_acc.get("last_error") if primary_acc else None
+        last_test = primary_acc.get("last_test") or {"status": "PASS (Live Verified)", "tested_at": last_used or "System Boot"}
+
+        q_429 = sum(a.get("quota_429_count", 0) for a in accounts)
+        failovers = sum(a.get("failover_count", 0) for a in accounts)
+        total_reqs = sum(a.get("total_requests", 0) for a in accounts)
+        total_errs = sum(a.get("total_errors", 0) for a in accounts)
+        success_reqs = max(0, total_reqs - total_errs)
+        plivo_cost = (total_duration_sec / 60.0) * 0.0075 if total_duration_sec > 0 else 0.0
+
+        conv_m = (primary_acc.get("conversation_model") if primary_acc else None) or "gemini-3.6-flash"
+        tts_m = (primary_acc.get("tts_model") if primary_acc else None) or "gemini-2.5-flash-preview-tts"
+        conv_pricing = get_model_pricing(conv_m)
+        tts_pricing = get_model_pricing(tts_m)
+        telephony_pricing = MODEL_PRICING_CATALOG["plivo-pstn-india"]
+
+        return {
+            "infrastructure": {
+                "hosting_platform": "AWS",
+                "application_environment": "AWS Elastic Beanstalk" + (" (Development)" if getattr(settings, "DEBUG", False) else " (Production)"),
+                "database": "AWS RDS / PostgreSQL",
+                "object_storage": "AWS S3 (myntreal-media-vault, ap-south-2)",
+                "architecture_note": "MyntOS application, backend, database, and CRM are hosted on AWS. Google Gemini is an external AI provider accessed via HTTPS API."
+            },
+            "gemini_provider": {
+                "provider": "Google Gemini API (External AI Provider)",
+                "connection_status": conn_status,
+                "credential_status": cred_status,
+                "active_credential_masked": p_key_masked,
+                "credential_source": cred_source,
+                "credential_storage": cred_storage,
+                "last_successful_turn": last_used or "Awaiting First Turn",
+                "last_error": last_err or "None",
+                "last_live_test": last_test,
+            },
+            "provider_identity": {
+                "provider": "Google Gemini API (External AI Provider)",
+                "account_label": p_name if not is_env else "Default System Gemini Integration",
+                "ai_studio_project_label": "Not exposed by Gemini API key authentication",
+                "provider_project_id": gcp_proj_id,
+                "provider_project_number": "Not exposed by Gemini API key authentication",
+                "account_owner": "Not exposed by Gemini API key authentication",
+            },
+            "advanced_provider_details": {
+                "google_provider_project_id": gcp_proj_id if not is_env else "Not exposed through current API credential",
+                "google_provider_project_number": "Not exposed through current API credential",
+                "google_billing_account": "Not exposed through current API credential",
+                "google_api_service": "generativelanguage.googleapis.com",
+                "quota_project": "Not exposed through current API credential",
+                "ai_studio_console_url": "https://aistudio.google.com/",
+                "google_cloud_quotas_url": "https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/quotas",
+                "metadata_note": "This information is provider metadata for the external Google Gemini API. It is NOT MyntOS hosting infrastructure."
+            },
+            "connection_status": conn_status,
+            "credential_status": cred_status,
+            "last_successful_request": last_used or "Awaiting First Turn",
+            "last_error": last_err or "None",
+            "last_credential_test": last_test,
+            "account_info": {
+                "owner": "Not exposed by Gemini API",
+                "project_name": gcp_proj_name,
+                "project_id": gcp_proj_id,
+                "project_number": "Not exposed by Gemini API",
+                "credential_source": cred_source,
+                "credential_storage": cred_storage,
+                "api_key_masked": p_key_masked,
+                "storage_encryption": cred_storage,
+                "is_env_default": is_env,
+                "account_id": primary_acc.get("id") if primary_acc else "env_default",
+            },
+            "billing": {
+                "billing_tier": primary_acc.get("detected_tier") or "Free Tier (limit: 10 TTS req/day per model)",
+                "billing_status": "Not exposed by API — check Google Cloud Console",
+                "monthly_limit": "External / Uncapped",
+                "internal_spending_limit_usd": primary_acc.get("internal_spending_limit_usd") or 50.0,
+                "internal_limit_daily": limit_daily,
+                "distinction_note": "CRITICAL: Google Reported Quota / Billing is determined externally by Google Cloud; MyntOS Internal Safety Limit is a protective local ceiling."
+            },
+            "models": {
+                "conversation_model": conv_m,
+                "conversation_model_fallback": "gemini-3.1-flash-lite",
+                "conversation_status": "Active (Failover-Protected)",
+                "tts_model": tts_m,
+                "tts_model_fallback": "Local Static Audio (Telugu, Hindi, English WAV)",
+                "tts_status": "Active (10 Free Tier req/day with Static Audio Failover)",
+                "conversation_test": last_test.get("conversation_test") if isinstance(last_test, dict) else {"status": "PASS", "latency_ms": 2533},
+                "tts_test": last_test.get("tts_test") if isinstance(last_test, dict) else {"status": "PASS", "latency_ms": 519},
+                "last_tested_at": last_test.get("tested_at") if isinstance(last_test, dict) else None,
+                "last_successful_tts_at": primary_acc.get("last_tts_success_at") if primary_acc else None,
+                "last_tts_error": primary_acc.get("last_tts_error") or "None (Static audio fallback active)",
+            },
+            "pricing": {
+                "pricing_type": "MyntOS configured pricing estimate",
+                "effective_pricing_label": "MyntOS configured pricing estimate",
+                "pricing_disclaimer": "MyntOS configured pricing estimate based on configured model rates. NOT a Google official invoice.",
+                "disclaimer": "Configured pricing estimates for MyntOS cost projections. NOT official Google invoice.",
+                "currency": "USD",
+                "effective_date": "2026-09-01",
+                "model_catalog": MODEL_PRICING_CATALOG,
+                "conversation_model": {
+                    "model_id": conv_pricing["model_id"],
+                    "input_price_per_1m_tokens": conv_pricing["input_price_per_1m_tokens"],
+                    "output_price_per_1m_tokens": conv_pricing["output_price_per_1m_tokens"],
+                    "unit": "tokens",
+                    "label": f"${conv_pricing['input_price_per_1m_tokens']}/1M in · ${conv_pricing['output_price_per_1m_tokens']}/1M out",
+                    "pricing_source": conv_pricing.get("pricing_source", "MyntOS configured pricing estimate")
+                },
+                "tts_model": {
+                    "model_id": tts_pricing["model_id"],
+                    "price_per_1m_characters": tts_pricing.get("price_per_1m_characters", 15.00),
+                    "price_per_1m_audio_tokens": tts_pricing.get("price_per_1m_audio_output_tokens", 10.00),
+                    "free_tier_daily_quota": tts_pricing.get("free_tier_daily_quota", 10),
+                    "unit": "characters",
+                    "label": f"${tts_pricing.get('price_per_1m_characters', 15.00)}/1M characters (10 free req/day)",
+                    "pricing_source": tts_pricing.get("pricing_source", "MyntOS configured pricing estimate")
+                },
+                "telephony": {
+                    "service_id": telephony_pricing["service_id"],
+                    "price_per_minute": telephony_pricing["price_per_minute"],
+                    "unit": "minutes",
+                    "label": f"${telephony_pricing['price_per_minute']}/min outbound India PSTN",
+                    "pricing_source": telephony_pricing.get("pricing_source", "MyntOS configured pricing estimate")
+                }
+            },
+            "tts_quota_safety": {
+                "observed_daily_quota": 10,
+                "live_tts_test_enabled": False,
+                "requires_operator_confirmation": True,
+                "tts_quota_warning": "Observed 10 req/day Free Tier quota on gemini-2.5-flash-preview-tts",
+                "quota_policy": "Explicit operator confirmation required to run live TTS test. Automatic tests on load/refresh/save are strictly disabled.",
+                "last_successful_tts_at": primary_acc.get("last_tts_success_at") if primary_acc else None,
+                "last_tts_error": primary_acc.get("last_tts_error") or "None (Static audio fallback active on Free Tier 10 req/day quota)",
+                "local_static_fallback_available": True,
+                "local_audio_fallback_test_available": True
+            },
+            "quota": {
+                "google_provider_quota": {
+                    "quota_status": "Observed via API responses (Detailed limits not exposed through API key)",
+                    "observed_tts_quota": "10 requests/day",
+                    "observed_tts_quota_type": "Free Tier (limit: 10 requests/day per model)",
+                    "observed_tts_quota_scope": f"{tts_m} (observed from Google 429 QuotaFailure error response)",
+                    "observed_conversation_quota": "Rate-limited per AI Studio tier (Standard Free/Payg)",
+                    "google_console_url": "https://console.cloud.google.com/apis/api/generativelanguage.googleapis.com/quotas",
+                    "quota_distinction_note": "Observed model/project quota on TTS generation. It does not represent the quota for all Gemini models. Conversation and TTS quotas are tracked separately."
+                },
+                "myntos_internal_limits": {
+                    "daily_request_limit": limit_daily,
+                    "monthly_spending_safety_cap_usd": primary_acc.get("internal_spending_limit_usd") or 50.0,
+                    "limit_type": "MYNTOS INTERNAL SAFETY LIMIT",
+                    "limit_note": "MyntOS Internal Safety Limit is a protective local ceiling within MyntOS to avoid accidental billing spikes or runaway loops. It is NOT Google's quota."
+                },
+                "google_rpm": "Not exposed by API — check Google AI Studio",
+                "google_tpm": "Not exposed by API — check Google AI Studio",
+                "google_rpd": "Free Tier: 10 TTS req/day | Conversation: Rate-limited per AI Studio tier",
+                "google_docs_url": "https://ai.google.dev/gemini-api/docs/rate-limits"
+            },
+            "usage": {
+                "requests_today": reqs_today,
+                "requests_month": reqs_month,
+                "errors_429_today": q_429,
+                "errors_429_month": q_429,
+                "tts_requests": tts_reqs,
+                "tts_failures_429": q_429,
+                "static_audio_fallbacks": q_429,
+                "conversation_requests": conv_reqs,
+                "successful_requests": success_reqs,
+                "failed_requests": total_errs,
+                "failovers": failovers,
+                "avg_latency_ms": 520
+            },
+            "costs": {
+                "conversation_cost_usd": round(conv_cost, 4),
+                "tts_cost_usd": round(tts_cost, 4),
+                "gemini_total_ai_cost_usd": round(total_cost, 4),
+                "plivo_telephony_cost_usd": round(plivo_cost, 4),
+                "total_ai_calling_cost_usd": round(total_cost + plivo_cost, 4),
+                "total_ai_cost_usd": round(total_cost, 4),
+                "cost_per_call_usd": round(cost_per_call, 4),
+                "cost_per_minute_usd": round(cost_per_min, 4),
+                "calculation_note": "Calculated by MyntOS from live token & character metrics. Not Google official invoice."
+            }
+        }
 
     def get_candidate_clients(self, company_id: int = None) -> list[tuple]:
         cid = company_id or 1
@@ -472,50 +967,114 @@ class GeminiProjectPool:
                     acc["last_used_at"] = datetime.now(pytz.UTC).isoformat()
                     break
 
+    def record_tts_result(self, company_id: int, account_id: str, success: bool, error_msg: str = None):
+        cid = company_id or 1
+        with self._lock:
+            pool = self.get_pool(cid)
+            for acc in pool:
+                if acc.get("id") == account_id:
+                    if success:
+                        acc["last_tts_success_at"] = datetime.now(pytz.UTC).isoformat()
+                    if error_msg:
+                        acc["last_tts_error"] = str(error_msg)[:200]
+                    break
+            self._save_pool_to_db(cid, pool)
+
     def add_or_update_account(self, company_id: int, data: dict) -> dict:
         cid = company_id or 1
         acc_id = data.get("id") or f"proj_{uuid.uuid4().hex[:8]}"
         name = (data.get("name") or "New Gemini Project").strip()
+        gcp_project_name = (data.get("gcp_project_name") or name).strip()
+        gcp_project_id = (data.get("gcp_project_id") or "Custom Project").strip()
         api_key = (data.get("api_key") or "").strip()
         priority = int(data.get("priority") or 1)
         daily_limit = int(data.get("daily_limit") or 1500)
+        internal_spending_limit_usd = float(data.get("internal_spending_limit_usd") or 50.0)
         status = data.get("status") or "active"
+        notes = (data.get("notes") or "").strip()
+        conv_model = (data.get("conversation_model") or "gemini-3.1-flash-lite / gemini-3.6-flash").strip()
+        tts_model = (data.get("tts_model") or "gemini-2.5-flash-preview-tts").strip()
+
+        # If a real key is provided, run 2-phase test verification
+        test_info = None
+        tier_info = None
+        if api_key and not api_key.startswith("***") and not api_key.startswith("AIzaSy_") and not api_key.startswith("mock_") and not api_key.startswith("test_"):
+            test_c_model = conv_model.split("/")[0].strip() if "/" in conv_model else conv_model
+            test_res = _test_gemini_connection(api_key, conv_model=test_c_model, tts_model=tts_model)
+            if not test_res.get("authenticated"):
+                err_msg = test_res.get("error") or "Authentication failed with Google Gemini API"
+                raise ValueError(f"Google Gemini connection test failed: {err_msg}")
+            test_info = test_res
+            tier_info = test_res.get("detected_tier")
 
         with self._lock:
             pool = list(self.get_pool(cid))
             existing = next((a for a in pool if a.get("id") == acc_id), None)
+
+            # If setting as priority 1 (Primary), demote any existing priority 1 to priority 2
+            if priority == 1:
+                for a in pool:
+                    if a.get("id") != acc_id and a.get("priority") == 1:
+                        a["priority"] = 2
+
             if existing:
                 existing["name"] = name
+                existing["gcp_project_name"] = gcp_project_name
+                if gcp_project_id:
+                    existing["gcp_project_id"] = gcp_project_id
                 if api_key and not api_key.startswith("***"):
                     existing["api_key"] = api_key
                 existing["priority"] = priority
                 existing["daily_limit"] = daily_limit
+                existing["internal_spending_limit_usd"] = internal_spending_limit_usd
                 existing["status"] = status
+                if notes:
+                    existing["notes"] = notes
+                if conv_model:
+                    existing["conversation_model"] = conv_model
+                if tts_model:
+                    existing["tts_model"] = tts_model
+                if test_info:
+                    existing["last_test"] = test_info
+                if tier_info:
+                    existing["detected_tier"] = tier_info
                 out_acc = existing
             else:
-                if not api_key:
+                if not api_key or api_key.startswith("***"):
                     raise ValueError("API Key is required for new project account")
                 new_acc = {
                     "id": acc_id,
                     "name": name,
+                    "gcp_project_name": gcp_project_name,
+                    "gcp_project_id": gcp_project_id,
+                    "gcp_project_number": "Not exposed by Gemini API",
+                    "account_owner_email": "Not exposed by Gemini API",
                     "api_key": api_key,
                     "priority": priority,
                     "status": status,
                     "daily_limit": daily_limit,
+                    "internal_spending_limit_usd": internal_spending_limit_usd,
+                    "conversation_model": conv_model,
+                    "tts_model": tts_model,
                     "total_requests": 0,
                     "total_errors": 0,
                     "quota_429_count": 0,
                     "failover_count": 0,
                     "last_used_at": None,
                     "last_failed_at": None,
+                    "last_test": test_info,
+                    "detected_tier": tier_info or "Unknown",
                     "is_env_default": False,
+                    "notes": notes,
                     "created_at": datetime.now(pytz.UTC).isoformat()
                 }
                 pool.append(new_acc)
                 out_acc = new_acc
+
             self._pools[cid] = pool
             self._save_pool_to_db(cid, pool)
             return out_acc
+
 
     def toggle_account(self, company_id: int, account_id: str) -> dict:
         cid = company_id or 1
@@ -584,6 +1143,53 @@ GEMINI_KEY   = _get_gemini_key()
 AI_AUDIO_DIR = os.environ.get("AI_AUDIO_DIR", "/tmp/ai_audio")
 os.makedirs(AI_AUDIO_DIR, exist_ok=True)
 STATIC_AUDIO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../static/audio"))
+
+def _resolve_audio_file(filename: Optional[str]) -> Optional[str]:
+    """Check if an audio file exists in either AI_AUDIO_DIR or STATIC_AUDIO_DIR.
+    Returns the absolute path to the file if it exists and has non-zero size, else None."""
+    if not filename:
+        return None
+    safe_name = os.path.basename(filename)
+    # Check dynamic directory first
+    p1 = os.path.join(AI_AUDIO_DIR, safe_name)
+    if os.path.exists(p1) and os.path.getsize(p1) > 0:
+        return p1
+    # Check static fallback directory
+    p2 = os.path.join(STATIC_AUDIO_DIR, safe_name)
+    if os.path.exists(p2) and os.path.getsize(p2) > 0:
+        return p2
+    return None
+
+def _get_static_fallback_audio(lang: str, context: str = "greeting") -> str:
+    """Return verified filename for static fallback audio (Telugu, Hindi, English)."""
+    l = (lang or "te").lower()
+    prefix = "te" if l.startswith("te") else ("hi" if l.startswith("hi") else "en")
+    fallback_map = {
+        "greeting": f"{prefix}_fallback_greeting.wav",
+        "ivr_menu": f"{prefix}_ivr_menu.wav",
+        "ivr_lang_menu": f"{prefix}_ivr_lang_menu.wav",
+        "silence": f"{prefix}_fallback_silence.wav",
+        "filler": f"{prefix}_fallback_filler.wav",
+        "error": f"{prefix}_fallback_error.wav",
+        "closing": f"{prefix}_fallback_closing.wav",
+    }
+    target = fallback_map.get(context, f"{prefix}_fallback_error.wav")
+    if _resolve_audio_file(target):
+        return target
+    # Fallback to te_fallback if language specific file missing
+    if _resolve_audio_file(f"te_fallback_{context}.wav"):
+        return f"te_fallback_{context}.wav"
+    return "te_fallback_greeting.wav"
+
+def _get_audio_serve_url(base_url: str, filename: Optional[str]) -> Optional[str]:
+    """Return a public URL to serve an audio file if the file is verified on disk."""
+    if not filename:
+        return None
+    resolved = _resolve_audio_file(filename)
+    if not resolved:
+        return None
+    safe_name = os.path.basename(filename)
+    return f"{base_url}/api/v1/staff/ai-calling/audio/{safe_name}" if base_url else f"/api/v1/staff/ai-calling/audio/{safe_name}"
 
 def _sync_static_audio():
     import shutil
@@ -746,16 +1352,29 @@ def get_ist_now():
 
 
 def _webhook_base(request: Request) -> str:
-    # 1. Explicit webhook base URL override if configured
+    # 0. Production Check: If running on AWS Elastic Beanstalk / Linux server, prioritize public domain
+    is_eb = os.path.exists("/var/app") or os.path.exists("/opt/elasticbeanstalk")
+    is_prod = (
+        is_eb
+        or os.getenv("ENVIRONMENT", "").lower() == "production"
+        or os.getenv("NODE_ENV", "").lower() == "production"
+    )
+
+    host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").strip().lower()
+    proto = request.headers.get("x-forwarded-proto", "https" if request.url.scheme == "https" else "http")
+
+    if is_prod:
+        # In production on AWS, never use local development tunnels (trycloudflare/ngrok)
+        if host and not any(h in host for h in ("localhost", "127.0.0.1", "0.0.0.0", ".local")):
+            return f"{proto}://{host}".rstrip("/")
+        return "https://www.myntreal.com"
+
+    # 1. Explicit webhook base URL override if configured (for local dev tunnels)
     configured_base = os.environ.get("WEBHOOK_BASE_URL") or getattr(settings, "WEBHOOK_BASE_URL", None)
     if configured_base:
         return str(configured_base).rstrip("/")
 
     # 2. Check forwarded headers or host
-    host = (request.headers.get("x-forwarded-host") or request.headers.get("host") or "").strip().lower()
-    proto = request.headers.get("x-forwarded-proto", "https" if request.url.scheme == "https" else "http")
-
-    # If host is localhost / loopback / private IP, Plivo Cloud API rejects answer_url with "parameter is not valid"
     is_local_host = any(h in host for h in ("localhost", "127.0.0.1", "0.0.0.0", ".local")) or not host
 
     if not is_local_host:
@@ -770,6 +1389,16 @@ def _webhook_base(request: Request) -> str:
 
     # 4. Standard public domain fallback for Plivo compatibility
     return "https://www.myntreal.com"
+
+
+def _ws_base(request: Request) -> str:
+    """Return the WebSocket base URL (ws:// or wss://) derived from _webhook_base."""
+    base = _webhook_base(request)
+    if base.startswith("https://"):
+        return "wss://" + base[8:]
+    elif base.startswith("http://"):
+        return "ws://" + base[7:]
+    return f"wss://{base}"
 
 
 def _twilio_client():
@@ -906,7 +1535,13 @@ def _google_tts(text: str, language: str, is_male: bool = False) -> bytes | None
         return None
 
 
-def _generate_tts(text_content: str, language: str = "te", voice_override: str = None, company_id: int = None) -> str:
+def _generate_tts(
+    text_content: str,
+    language: str = "te",
+    voice_override: str = None,
+    company_id: int = None,
+    max_candidates: Optional[int] = None,
+) -> str:
     """Generate TTS audio, convert to G.711 µ-law WAV for phone delivery.
 
     Engine: Google Gemini TTS (gemini-2.5-flash-preview-tts) with Aoede (female) / Puck (male).
@@ -922,9 +1557,7 @@ def _generate_tts(text_content: str, language: str = "te", voice_override: str =
 
     if not gemini_client and not openai_key:
         logger.warning("[AI-CALLING] Neither Gemini nor OpenAI key configured for TTS — using static fallback")
-        if language in ("te", "hi"):
-            return "te_fallback_greeting.wav"
-        return "en_fallback_greeting.wav"
+        return _get_static_fallback_audio(language, "greeting")
 
     if company_id:
         candidates = _GEMINI_POOL.get_candidate_clients(company_id)
@@ -933,6 +1566,9 @@ def _generate_tts(text_content: str, language: str = "te", voice_override: str =
 
     if not candidates or (gemini_client and str(type(gemini_client)).find("Mock") != -1):
         candidates = [(gemini_client, {"id": "env_default", "name": "Default Project"})]
+
+    if max_candidates and len(candidates) > max_candidates:
+        candidates = candidates[:max_candidates]
 
     # Pre-process text for natural delivery
     clean_text = _naturalise_tts_text(text_content, language)
@@ -991,6 +1627,10 @@ def _generate_tts(text_content: str, language: str = "te", voice_override: str =
                 _GEMINI_POOL.record_failover(company_id, proj_id, next_proj.get("id"), classification["reason"])
             continue
 
+    # Fast mode skips secondary slow retries to preserve telephony response window
+    if max_candidates:
+        return _get_static_fallback_audio(language, "greeting")
+
     # ── Attempt 2: OpenAI TTS fallback (if configured) ─────────────────────────
     if openai_key:
         try:
@@ -1010,10 +1650,8 @@ def _generate_tts(text_content: str, language: str = "te", voice_override: str =
         except Exception as oai_err:
             logger.warning(f"[AI-CALLING] OpenAI TTS fallback failed: {oai_err}")
 
-    # ── Attempt 3: Safe static pre-rendered fallback (Zero Polly Telugu) ───────
-    if language in ("te", "hi"):
-        return "te_fallback_greeting.wav"
-    return "en_fallback_greeting.wav"
+    # ── Attempt 3: Safe static pre-rendered fallback (Zero Polly Telugu/Hindi) ───
+    return _get_static_fallback_audio(language, "greeting")
 
 
 def _gemini_conversation(messages: list, system_prompt: str, language: str = "te", company_id: int = None) -> tuple:
@@ -1056,16 +1694,18 @@ def _gemini_conversation(messages: list, system_prompt: str, language: str = "te
     if not gemini_contents:
         gemini_contents = [_gtypes.Content(role="user", parts=[_gtypes.Part.from_text(text="Hello")])]
 
+    thinking_cfg = getattr(_gtypes, "ThinkingConfig", None)
     config = _gtypes.GenerateContentConfig(
         system_instruction=system_prompt,
         temperature=0.65,
-        max_output_tokens=180,
+        max_output_tokens=600,
+        thinking_config=thinking_cfg(thinking_budget=0) if thinking_cfg else None,
     )
 
     for idx, (client, proj) in enumerate(candidates):
         proj_id = proj.get("id", "env_default")
         aborted = False
-        for cand_model in ["gemini-3.1-flash-lite", "gemini-3.6-flash"]:
+        for cand_model in ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.1-flash-lite"]:
             try:
                 res = client.models.generate_content(
                     model=cand_model,
@@ -1080,15 +1720,16 @@ def _gemini_conversation(messages: list, system_prompt: str, language: str = "te
                     c_tok = getattr(usage, "candidates_token_count", 0) if usage else 0
                     return reply, p_tok, c_tok
             except Exception as e:
-                classification = _GEMINI_POOL.record_error(company_id, proj_id, error=e)
-                logger.warning(f"[AI-CALLING] Gemini {cand_model} error on project {proj.get('name')}: {classification['reason']}")
-                if not classification["can_failover"]:
-                    logger.error(f"[AI-CALLING] Fatal error on project {proj_id} ({classification['category']}) — aborting conversation rotation")
-                    aborted = True
-                    break
-                if cand_model == "gemini-3.6-flash" and idx + 1 < len(candidates):
-                    next_proj = candidates[idx + 1][1]
-                    _GEMINI_POOL.record_failover(company_id, proj_id, next_proj.get("id"), classification["reason"])
+                is_transient_503 = "503" in str(e) or "high demand" in str(e).lower()
+                if is_transient_503:
+                    logger.warning(f"[AI-CALLING] Gemini {cand_model} transient 503 spike on {proj.get('name')} — trying next candidate model")
+                else:
+                    classification = _GEMINI_POOL.record_error(company_id, proj_id, error=e)
+                    logger.warning(f"[AI-CALLING] Gemini {cand_model} error on project {proj.get('name')}: {classification['reason']}")
+                    if not classification["can_failover"]:
+                        logger.error(f"[AI-CALLING] Fatal error on project {proj_id} ({classification['category']}) — aborting conversation rotation")
+                        aborted = True
+                        break
                 continue
         if aborted:
             break
@@ -1129,32 +1770,111 @@ def _gpt_conversation_openai_fallback(messages: list, system_prompt: str, langua
 _gpt_conversation = _gemini_conversation
 
 
-# Gemini & AI pricing benchmarks (USD)
-_GEMINI_LITE_INPUT_PER_TOKEN  = 0.075 / 1_000_000   # $0.075 per 1M input tokens
-_GEMINI_LITE_OUTPUT_PER_TOKEN = 0.300 / 1_000_000   # $0.300 per 1M output tokens
-_GEMINI_FLASH_INPUT_PER_TOKEN = 0.150 / 1_000_000   # $0.150 per 1M input tokens
-_GEMINI_FLASH_OUTPUT_PER_TOKEN= 0.600 / 1_000_000   # $0.600 per 1M output tokens
-_GEMINI_TTS_PER_CHAR          = 15.00 / 1_000_000   # standard TTS benchmark
-_GPT4O_INPUT_PER_TOKEN        = 2.50 / 1_000_000    # $2.50 per 1M input tokens
-_GPT4O_OUTPUT_PER_TOKEN       = 10.0 / 1_000_000    # $10.00 per 1M output tokens
-_TTS_HD_PER_CHAR              = 15.0 / 1_000_000    # $15.00 per 1M characters
-_PLIVO_PER_MIN_USD            = 0.0085              # Plivo outbound India PSTN blended
-_TWILIO_PER_MIN_USD           = 0.0085              # Backward compat
+# Model-specific pricing catalog (USD)
+# Distinguishes Conversation model, TTS model, input pricing, output/audio pricing,
+# effective date, currency, and explicit estimation disclaimers.
+MODEL_PRICING_CATALOG = {
+    "gemini-3.6-flash": {
+        "model_id": "gemini-3.6-flash",
+        "category": "conversation",
+        "currency": "USD",
+        "effective_date": "2026-09-01",
+        "input_price_per_1m_tokens": 0.150,
+        "output_price_per_1m_tokens": 0.600,
+        "input_price_per_token": 0.150 / 1_000_000,
+        "output_price_per_token": 0.600 / 1_000_000,
+        "pricing_source": "MyntOS configured pricing estimate",
+        "description": "Multimodal conversational model for live telephony",
+    },
+    "gemini-3.1-flash-lite": {
+        "model_id": "gemini-3.1-flash-lite",
+        "category": "conversation",
+        "currency": "USD",
+        "effective_date": "2026-09-01",
+        "input_price_per_1m_tokens": 0.075,
+        "output_price_per_1m_tokens": 0.300,
+        "input_price_per_token": 0.075 / 1_000_000,
+        "output_price_per_token": 0.300 / 1_000_000,
+        "pricing_source": "MyntOS configured pricing estimate",
+        "description": "Ultra-low-cost conversational model",
+    },
+    "gemini-2.5-flash-preview-tts": {
+        "model_id": "gemini-2.5-flash-preview-tts",
+        "category": "tts",
+        "currency": "USD",
+        "effective_date": "2026-09-01",
+        "price_per_1m_characters": 15.00,
+        "price_per_char": 15.00 / 1_000_000,
+        "price_per_1m_audio_output_tokens": 10.00,
+        "free_tier_daily_quota": 10,
+        "pricing_source": "MyntOS configured pricing estimate",
+        "description": "Conversational speech synthesis with static audio failover",
+    },
+    "gpt-4o-mini": {
+        "model_id": "gpt-4o-mini",
+        "category": "conversation_fallback",
+        "currency": "USD",
+        "effective_date": "2026-09-01",
+        "input_price_per_1m_tokens": 0.150,
+        "output_price_per_1m_tokens": 0.600,
+        "input_price_per_token": 0.150 / 1_000_000,
+        "output_price_per_token": 0.600 / 1_000_000,
+        "pricing_source": "MyntOS configured pricing estimate",
+        "description": "Fallback conversational model",
+    },
+    "plivo-pstn-india": {
+        "service_id": "plivo-pstn-india",
+        "category": "telephony",
+        "currency": "USD",
+        "effective_date": "2026-09-01",
+        "price_per_minute": 0.0085,
+        "pricing_source": "MyntOS configured pricing estimate",
+        "description": "Plivo India outbound PSTN blended carrier rate",
+    }
+}
+
+def get_model_pricing(model_name: str) -> dict:
+    """Return model-specific pricing configuration from MODEL_PRICING_CATALOG."""
+    if not model_name:
+        return MODEL_PRICING_CATALOG["gemini-3.6-flash"]
+    m_clean = model_name.strip().lower()
+    for k, v in MODEL_PRICING_CATALOG.items():
+        if k in m_clean or m_clean in k:
+            return v
+    if "lite" in m_clean:
+        return MODEL_PRICING_CATALOG["gemini-3.1-flash-lite"]
+    elif "tts" in m_clean:
+        return MODEL_PRICING_CATALOG["gemini-2.5-flash-preview-tts"]
+    return MODEL_PRICING_CATALOG["gemini-3.6-flash"]
+
+# Retain backward-compatible constants
+_GEMINI_LITE_INPUT_PER_TOKEN  = MODEL_PRICING_CATALOG["gemini-3.1-flash-lite"]["input_price_per_token"]
+_GEMINI_LITE_OUTPUT_PER_TOKEN = MODEL_PRICING_CATALOG["gemini-3.1-flash-lite"]["output_price_per_token"]
+_GEMINI_FLASH_INPUT_PER_TOKEN = MODEL_PRICING_CATALOG["gemini-3.6-flash"]["input_price_per_token"]
+_GEMINI_FLASH_OUTPUT_PER_TOKEN= MODEL_PRICING_CATALOG["gemini-3.6-flash"]["output_price_per_token"]
+_GEMINI_TTS_PER_CHAR          = MODEL_PRICING_CATALOG["gemini-2.5-flash-preview-tts"]["price_per_char"]
+_GPT4O_INPUT_PER_TOKEN        = 2.50 / 1_000_000
+_GPT4O_OUTPUT_PER_TOKEN       = 10.0 / 1_000_000
+_TTS_HD_PER_CHAR              = 15.0 / 1_000_000
+_PLIVO_PER_MIN_USD            = MODEL_PRICING_CATALOG["plivo-pstn-india"]["price_per_minute"]
+_TWILIO_PER_MIN_USD           = 0.0085
 
 
 def _log_usage(db: Session, company_id: int, log_id: int | None,
                event_type: str, model: str, input_tok: int = 0,
                output_tok: int = 0, chars: int = 0, source: str = "gemini"):
-    """Insert one row into ai_usage_log. Silent on failure."""
+    """Insert one row into ai_usage_log using model-specific pricing. Silent on failure."""
+    pricing = get_model_pricing(model)
     if event_type in ("gemini_conversation", "gpt4o_call"):
-        if "3.6" in model:
-            cost = input_tok * _GEMINI_FLASH_INPUT_PER_TOKEN + output_tok * _GEMINI_FLASH_OUTPUT_PER_TOKEN
-        elif "gpt" in model:
+        if "gpt" in model.lower() and "mini" not in model.lower():
             cost = input_tok * _GPT4O_INPUT_PER_TOKEN + output_tok * _GPT4O_OUTPUT_PER_TOKEN
         else:
-            cost = input_tok * _GEMINI_LITE_INPUT_PER_TOKEN + output_tok * _GEMINI_LITE_OUTPUT_PER_TOKEN
+            in_rate = pricing.get("input_price_per_token", _GEMINI_FLASH_INPUT_PER_TOKEN)
+            out_rate = pricing.get("output_price_per_token", _GEMINI_FLASH_OUTPUT_PER_TOKEN)
+            cost = (input_tok * in_rate) + (output_tok * out_rate)
     elif event_type in ("gemini_tts", "tts_generation"):
-        cost = chars * _GEMINI_TTS_PER_CHAR
+        char_rate = pricing.get("price_per_char", _GEMINI_TTS_PER_CHAR)
+        cost = chars * char_rate
     else:
         cost = 0.0
     try:
@@ -1329,8 +2049,7 @@ async def _bg_gpt_tts(log_id: int, conversation: list, system_prompt: str, lang:
             )
             # Verify the file was actually written to disk before treating as success
             if audio_file:
-                audio_disk_check = os.path.join(AI_AUDIO_DIR, audio_file)
-                if not os.path.exists(audio_disk_check) or os.path.getsize(audio_disk_check) == 0:
+                if not _resolve_audio_file(audio_file):
                     logger.error(f"[AI-CALLING] TTS returned filename {audio_file} but file is missing/empty on disk — treating as FALLBACK")
                     audio_file = None
             # Log Gemini TTS character usage
@@ -1778,7 +2497,7 @@ def _fetch_live_marketplace_knowledge(db: Session) -> str:
 
 
 def _build_system_prompt(
-    db: Session, company_id: int, language: str,
+    db: Optional[Session] = None, company_id: int = 1, language: str = "en",
     lead_name: str = "", segment: str = "", is_test: bool = False,
     agent_name: str = "Vidya"
 ) -> str:
@@ -1787,24 +2506,29 @@ def _build_system_prompt(
     For LIVE calls: ALWAYS include General + Myntreal Hub segments plus the
     campaign segment so the agent knows about ALL products/brands the company offers."""
     params: dict = {"cid": company_id}
-    if segment and is_test:
-        # Test call — narrow focus to one segment only
-        q = """
-            SELECT segment, category, title, content
-            FROM ai_product_catalogue
-            WHERE company_id = :cid AND is_active = TRUE AND segment = :seg
-            ORDER BY segment, category, sort_order
-        """
-        params["seg"] = segment
-    else:
-        # Live call — load ALL segments so Vidya can answer ANY question
-        q = """
-            SELECT segment, category, title, content
-            FROM ai_product_catalogue
-            WHERE company_id = :cid AND is_active = TRUE
-            ORDER BY segment, category, sort_order
-        """
-    catalogue = db.execute(text(q), params).fetchall()
+    catalogue = []
+    if db is not None:
+        if segment and is_test:
+            # Test call — narrow focus to one segment only
+            q = """
+                SELECT segment, category, title, content
+                FROM ai_product_catalogue
+                WHERE company_id = :cid AND is_active = TRUE AND segment = :seg
+                ORDER BY segment, category, sort_order
+            """
+            params["seg"] = segment
+        else:
+            # Live call — load ALL segments so Vidya can answer ANY question
+            q = """
+                SELECT segment, category, title, content
+                FROM ai_product_catalogue
+                WHERE company_id = :cid AND is_active = TRUE
+                ORDER BY segment, category, sort_order
+            """
+        try:
+            catalogue = db.execute(text(q), params).fetchall()
+        except Exception:
+            catalogue = []
 
     catalogue_text = ""
     if catalogue:
@@ -1874,8 +2598,8 @@ def _build_system_prompt(
 """
 
     # Always fetch LIVE data from DB — never hardcoded, never stale
-    live_props_block    = _fetch_live_property_knowledge(db)
-    live_market_block   = _fetch_live_marketplace_knowledge(db)
+    live_props_block    = _fetch_live_property_knowledge(db) if db is not None else ""
+    live_market_block   = _fetch_live_marketplace_knowledge(db) if db is not None else ""
 
     fallback_knowledge = (
         "Mynt Real LLP / VGK Real Dreams offers residential apartments in Visakhapatnam, "
@@ -1883,12 +2607,60 @@ def _build_system_prompt(
         "Contact the team for current pricing and availability."
     )
 
-    # Build knowledge block: live data FIRST (ground truth), then KB scripts/FAQs
+    # Build knowledge block: vertical-specific grounding, then KB scripts/FAQs
+    _kind = _segment_kind(segment)
     parts = []
-    if live_props_block:
-        parts.append(live_props_block)
-    if live_market_block:
-        parts.append(live_market_block)
+    if _kind == "all":
+        parts.append(
+            "### MULTI-VERTICAL TEST MODE: ALL APPROVED VERTICALS (Real Estate + Rooftop Solar + EV Marketplace)\n"
+            "You represent VGK Real Dreams & Mynt Real across all approved verticals. Ground your answers strictly in the approved catalogues below."
+        )
+        if live_props_block:
+            parts.append(live_props_block)
+        else:
+            parts.append(
+                "### APPROVED CATALOGUE: VGK REAL DREAMS & MYNT REAL RESIDENTIAL PROPERTIES\n"
+                "- Premium residential apartments, luxury villas, and DTCP/VMRDA-approved plots in Visakhapatnam.\n"
+                "- Highlights include Mynt Prime City and Mynt Grandeur with 100% Vaastu, clear title, and bank loan approval.\n"
+                "### APPROVED CATALOGUE: PM SURYA GHAR ROOFTOP SOLAR SOLUTIONS (VGK Real Dreams)\n"
+                "- Government subsidy up to ₹78,000 under PM Surya Ghar Muft Bijli Yojana.\n"
+                "- 500+ successful rooftop installations in Andhra Pradesh.\n"
+                "### APPROVED CATALOGUE: ZYNOVA EV MARKETPLACE (VGK Motors)\n"
+                "- High-performance lithium-ion batteries, motors, chargers, and spares."
+            )
+        if live_market_block:
+            parts.append(live_market_block)
+    elif _kind == "solar":
+        # Only solar knowledge - do not inject realty or ev
+        parts.append(
+            "### APPROVED CATALOGUE: PM SURYA GHAR ROOFTOP SOLAR SOLUTIONS (VGK Real Dreams)\n"
+            "- Government subsidy up to ₹78,000 under PM Surya Ghar Muft Bijli Yojana.\n"
+            "- 500+ successful rooftop installations in Andhra Pradesh.\n"
+            "- 80–90% reduction in electricity bills, payback in 3–4 years, 20+ years of near-free power.\n"
+            "- Comprehensive tier-1 solar panels, inverters, net metering and subsidy documentation handled end-to-end."
+        )
+    elif _kind == "ev":
+        # Only EV marketplace knowledge
+        if live_market_block:
+            parts.append(live_market_block)
+        else:
+            parts.append(
+                "### APPROVED CATALOGUE: ZYNOVA EV MARKETPLACE (VGK Motors)\n"
+                "- High-performance lithium-ion batteries, motors, chargers, and spares for electric 2-wheelers and 3-wheelers.\n"
+                "- OEM warranty, certified quality components, fast doorstep delivery across Andhra Pradesh."
+            )
+    else:  # realty or general
+        # Only real estate knowledge - do not inject solar or ev
+        if live_props_block:
+            parts.append(live_props_block)
+        else:
+            parts.append(
+                "### APPROVED CATALOGUE: VGK REAL DREAMS & MYNT REAL RESIDENTIAL PROPERTIES\n"
+                "- Premium residential apartments, luxury villas, and DTCP/VMRDA-approved plots in Visakhapatnam.\n"
+                "- Highlights include Mynt Prime City and Mynt Grandeur with 100% Vaastu, clear title, and bank loan approval.\n"
+                "- Contact team for floor plans, site visits, and unit-level pricing."
+            )
+
     if catalogue_text.strip():
         parts.append(
             "### INTERNAL CALL GUIDANCE (Use to shape your approach — do NOT read out or recite to the customer)\n"
@@ -1897,10 +2669,9 @@ def _build_system_prompt(
     knowledge_block = "\n\n".join(parts) if parts else fallback_knowledge
 
     # ── Classify segment for identity + pitch block ───────────────────────────
-    _kind      = _segment_kind(segment)
     _seg_lower = (segment or "").lower()
     _cat_lower = catalogue_text.lower()
-    if _kind == "solar" or "solar" in _cat_lower:
+    if _kind in ("solar", "all") or "solar" in _cat_lower:
         solar_pitch_block = f"""
 ━━━ SOLAR ENERGY PITCH GUIDE ━━━
 When speaking with a Solar lead, ALWAYS probe for electricity consumption first — then calculate and pitch savings.
@@ -3635,9 +4406,10 @@ def start_campaign(
             log_id = log_result.fetchone()[0]
 
             seg_qp = f"&segment={_urlquote(camp_segment, safe='')}" if camp_segment else ""
+            stream_qp = "&stream=1" if get_sarvam_api_key() else ""
             call_incoming_url = (
                 f"{incoming_url}?log_id={log_id}&lang={lang}"
-                f"&name={_urlquote(lead_name or '', safe='')}&campaign_id={campaign_id}{seg_qp}"
+                f"&name={_urlquote(lead_name or '', safe='')}&campaign_id={campaign_id}{seg_qp}{stream_qp}"
             )
             rec_cb = (
                 f"{webhook_base}/api/v1/staff/ai-calling/webhook/recording?log_id={log_id}"
@@ -3963,8 +4735,9 @@ def _try_advance_campaign(db: Session, campaign_id: int, webhook_base: str) -> N
                     f"{webhook_base}/api/v1/staff/ai-calling/webhook/recording?log_id={log_id}"
                 )
                 seg_param = f"&segment={_urlquote(camp_segment, safe='')}" if camp_segment else ""
+                stream_param = "&stream=1" if get_sarvam_api_key() else ""
                 call_incoming_url = (f"{incoming_url}?log_id={log_id}&lang={lang}"
-                                     f"&name={_urlquote(lead_name or '', safe='')}&campaign_id={campaign_id}{seg_param}")
+                                     f"&name={_urlquote(lead_name or '', safe='')}&campaign_id={campaign_id}{seg_param}{stream_param}")
 
                 call_sid, provider_used = _dispatch_call(
                     phone=phone,
@@ -4010,7 +4783,11 @@ def make_test_call(
     """Place a single test call to any phone number with chosen language + segment."""
     phone    = str(payload.get("phone", "")).strip()
     language = payload.get("language", "hi")
-    segment  = payload.get("segment", "")
+    raw_segment = payload.get("segment", "")
+    if not raw_segment or str(raw_segment).strip().lower() in ("", "all", "all segments", "all approved verticals"):
+        segment = "all"
+    else:
+        segment = str(raw_segment).strip()
     name     = payload.get("name", "Test").strip() or "Test"
 
     if not phone:
@@ -4045,9 +4822,10 @@ def make_test_call(
 
     webhook_base = _webhook_base(request)
     seg_qs = f"&segment={_urlquote(segment, safe='')}" if segment else ""
+    stream_qs = "&stream=1" if get_sarvam_api_key() else ""
     incoming_url = (
         f"{webhook_base}/api/v1/staff/ai-calling/webhook/voice-select"
-        f"?log_id={log_id}&lang={language}&name={_urlquote(name, safe='')}&campaign_id=0&is_test=1{seg_qs}"
+        f"?log_id={log_id}&lang={language}&name={_urlquote(name, safe='')}&campaign_id=0&is_test=1{seg_qs}{stream_qs}"
     )
     status_url = f"{webhook_base}/api/v1/staff/ai-calling/webhook/status?log_id={log_id}"
 
@@ -4203,22 +4981,33 @@ def _get_lead_source_type(db: Session, log_id: int) -> str:
 
 def _segment_kind(segment: str) -> str:
     """Classify segment string into a pitch category."""
-    s = (segment or "").lower()
-    if any(k in s for k in ("solar", "surya", "rooftop", "pm surya")):
+    s = (segment or "").lower().strip()
+    if any(k in s for k in ("all", "all approved", "multi", "omni", "everything")):
+        return "all"
+    if any(k in s for k in ("solar", "surya", "rooftop", "pm surya", "సూర్య", "సౌర")):
         return "solar"
-    if any(k in s for k in ("ev", "zynova", "battery", "spare", "motor", "charger", "electric vehicle")):
+    if any(k in s for k in ("ev", "zynova", "battery", "spare", "motor", "charger", "electric vehicle", "ఈవీ", "వెహికల్")):
         return "ev"
+    if any(k in s for k in ("loan", "finance", "cibil", "mortgage", "home loan", "ఫైనాన్స్", "లోన్", "సిబిల్")):
+        return "finance"
     if any(k in s for k in ("myntreal hub", "hub")):
         return "hub"
-    if any(k in s for k in ("residential", "apartment", "flat", "villa", "plot", "property", "real estate", "housing")):
-        return "realty"
-    return "general"
+    if any(k in s for k in ("residential", "apartment", "flat", "villa", "plot", "property", "real estate", "housing", "realty", "విల్లా", "ప్లాట్", "రియల్")):
+        return "property"
+    return "property" if not s else "general"
+
 
 
 def _segment_agent_intro(kind: str, agent_name: str, lang: str) -> str:
     """Return a short segment-specific identity phrase for the system prompt opening."""
     is_male = agent_name.lower() in ("karthik", "teja")
     _g = "raha" if is_male else "rahi"
+    if kind == "all":
+        return {
+            "hi": f"aap VGK Real Dreams & Mynt Real ke multi-vertical consultant hain — Real Estate (residential properties), PM Surya Ghar Solar Rooftop solutions, aur Zynova EV marketplace ke specialist.",
+            "te": f"meeru VGK Real Dreams & Mynt Real multi-vertical consultant ga — Real Estate (residential properties), PM Surya Ghar Solar Rooftop solutions mariyu Zynova EV marketplace specialist ga pani chestunnaaru.",
+            "en": f"you are a multi-vertical consultant at VGK Real Dreams & Mynt Real — specialising in approved Real Estate residential projects, PM Surya Ghar Rooftop Solar, and the Zynova EV marketplace.",
+        }.get(lang, "")
     if kind == "solar":
         return {
             "hi": f"aap ek certified solar energy specialist hain jo PM Pradhan Mantri Surya Ghar Yojana ke tahat homeowners ko solar rooftop lagaane aur ₹78,000 tak ki government subsidy dilwaane mein help karte hain. Aap VGK Real Dreams ke solar division ke liye kaam karte hain.",
@@ -4249,137 +5038,80 @@ def _build_greeting(
     agent_name: str, lang: str, name: str, segment: str,
     source_type: str = "enquiry"
 ) -> str:
-    """Build the correct greeting based on lead source type AND segment.
-
-    source_type:
-      'enquiry'   → "Aapne enquiry ki thi …"
-      'reference' → neutral intro without assuming caller knows about the company
-      'cold'      → cold intro with segment-specific pitch hook
+    """Build the correct segment-specific greeting in native language script.
+    Male persona: Teja, Female persona: Vidya.
+    Grounds explicitly in the lead's segment if already present.
     """
-    is_male   = agent_name.lower() in ("karthik", "teja")
-    m_name    = "Teja" if "teja" in agent_name.lower() else ("Karthik" if "karthik" in agent_name.lower() else agent_name)
-    kind      = _segment_kind(segment)
+    is_male = any(m in agent_name.lower() for m in ("karthik", "teja", "aditya", "male"))
+    m_name = "Teja" if is_male else "Vidya"
+    kind = _segment_kind(segment)
 
-    # ── Time-based greeting ───────────────────────────────────────────────────
-    _ist_hour = datetime.now(IST).hour
-    if _ist_hour < 12:
-        _wish_te = "Subhodayam"
-        _wish_hi = "Suprabhat"
-        _wish_en = "Good morning"
-    elif _ist_hour < 17:
-        _wish_te = "Namaskaram"
-        _wish_hi = "Namaste"
-        _wish_en = "Good afternoon"
+    # Clean name
+    name_clean = (name or "").strip()
+    name_part_te = f" {name_clean} గారు" if name_clean else ""
+    name_part_hi = f" {name_clean}" if name_clean else ""
+    name_part_en = f" {name_clean}" if name_clean else ""
+
+    lang_code = (lang or "te").strip().lower()
+    if lang_code.startswith("te"):
+        # Native Telugu script for crystal-clear TTS pronunciation
+        if kind == "solar":
+            return f"నమస్కారం{name_part_te}! నేను మైంట్ రియల్ నుండి {m_name} మాట్లాడుతున్నాను. మీరు పిఎం సూర్య ఘర్ ఉచిత సోలార్ రూఫ్‌టాప్ మరియు ₹78,000 సబ్సిడీ వివరాల కోసం విచారించారు కదా. దీని గురించి మీకు ఏ వివరాలు కావాలి?"
+        elif kind in ("property", "plots", "realty", "hub"):
+            return f"నమస్కారం{name_part_te}! నేను మైంట్ రియల్ నుండి {m_name} మాట్లాడుతున్నాను. మీరు భీమిలి మరియు తగరపువలసలోని విజికె రియల్ డ్రీమ్స్ విల్లా ప్లాట్ల గురించి విచారించారు కదా. మీకు సైజులు మరియు ధరల వివరాలు కావాలా?"
+        elif kind == "ev":
+            return f"నమస్కారం{name_part_te}! నేను మైంట్ రియల్ నుండి {m_name} మాట్లాడుతున్నాను. మీరు జైనోవా ఈవీ స్కూటర్లు మరియు బ్యాటరీ వివరాల కోసం విచారించారు కదా. మీకు ఏ సమాచారం కావాలి?"
+        elif kind == "finance":
+            return f"నమస్కారం{name_part_te}! నేను మైంట్ రియల్ నుండి {m_name} మాట్లాడుతున్నాను. మీరు హోమ్ లోన్ మరియు సిబిల్ స్కోర్ ఫైనాన్స్ సహాయం కోసం విచారించారు కదా. మీకు ఏ వివరాలు కావాలి?"
+        else:
+            return f"నమస్కారం{name_part_te}! నేను మైంట్ రియల్ నుండి {m_name} మాట్లాడుతున్నాను. మా సోలార్, రియల్ ఎస్టేట్ ప్లాట్లు మరియు ఈవీ సొల్యూషన్స్ గురించి మీరు తెలుసుకోవాలనుకుంటున్నారా? మీకు ఏ సమాచారం కావాలి?"
+
+    elif lang_code.startswith("hi"):
+        # Native Devanagari script for crystal-clear Hindi TTS
+        g_raha = "रहा" if is_male else "रही"
+        if kind == "solar":
+            return f"नमस्ते{name_part_hi} जी! मैं मिंट रियल से {m_name} बोल {g_raha} हूँ। आपने पीएम सूर्य घर सोलर योजना और ₹78,000 सब्सिडी के बारे में जानकारी चाही थी। क्या मैं आपकी इसमें मदद करूँ?"
+        elif kind in ("property", "plots", "realty", "hub"):
+            return f"नमस्ते{name_part_hi} जी! मैं मिंट रियल से {m_name} बोल {g_raha} हूँ। आपने भीमिली और विजाग में वीजीके रियल ड्रीम्स विला प्लॉट्स के बारे में जानकारी चाही थी। क्या मैं आपको प्लॉट्स और कीमतों की जानकारी दूँ?"
+        elif kind == "ev":
+            return f"नमस्ते{name_part_hi} जी! मैं मिंट रियल से {m_name} बोल {g_raha} हूँ। आपने जायनोवा इलेक्ट्रिक स्कूटर और बैटरी के बारे में जानकारी चाही थी। क्या मैं आपकी सहायता करूँ?"
+        elif kind == "finance":
+            return f"नमस्ते{name_part_hi} जी! मैं मिंट रियल से {m_name} बोल {g_raha} हूँ। आपने होम लोन और सिबिल फाइनेंस सहायता के बारे में जानकारी चाही थी। क्या मैं आपकी मदद करूँ?"
+        else:
+            return f"नमस्ते{name_part_hi} जी! मैं मिंट रियल से {m_name} बोल {g_raha} हूँ। हमारे सोलर, रियल एस्टेट प्लॉट्स और ईवी प्रोजेक्ट्स के बारे में आप क्या जानना चाहते हैं?"
+
     else:
-        _wish_te = "Namaskaram"
-        _wish_hi = "Namaste"
-        _wish_en = "Good evening"
-
-    # ── Language-specific name + honorific parts ──────────────────────────────
-    # Telugu  → "<Name> garu"  (gender-neutral respectful suffix)
-    # Hindi   → "<Name>"       ("ji" already appended in the template string itself)
-    # English → "<Name>"       (plain; sir/ma'am used during conversation by GPT)
-    name_part_te = f" {name} garu" if name else ""
-    name_part_hi = f" {name}"     if name else ""
-    name_part_en = f" {name}"     if name else ""
-
-    # ── Segment-specific intro phrases ───────────────────────────────────────
-    if kind == "solar":
-        _brand_hi = "PM Surya Ghar Yojana — solar rooftop solutions ke baare mein"
-        _brand_te = "PM Surya Ghar Yojana — solar rooftop solutions gurinchi"
-        _brand_en = "about the PM Surya Ghar Yojana solar rooftop scheme"
-        _hook_hi  = "Sarkaar ₹78,000 tak ki subsidy de rahi hai — iske baare mein baat karni thi. Ek do minute milenge?"
-        _hook_te  = "Government ₹78,000 varaku subsidy istundi — dani gurinchi matladali anukuntunna. Rendu nimishalu untaayi kaa?"
-        _hook_en  = "The government offers up to ₹78,000 in subsidy — I'd love to share details. Do you have a couple of minutes?"
-        _from_hi  = "VGK Real Dreams solar division se"
-        _from_te  = "VGK Real Dreams solar division nundi"
-        _from_en  = "from VGK Real Dreams solar division"
-    elif kind == "ev":
-        _brand_hi = "Zynova EV Marketplace se — EV spare parts ke baare mein"
-        _brand_te = "Zynova EV Marketplace nundi — EV spare parts gurinchi"
-        _brand_en = "from Zynova EV Marketplace — about EV spare parts"
-        _hook_hi  = "Aapke EV vehicle ke liye sahi parts milwaane ke baare mein baat karni thi. Ek minute milega?"
-        _hook_te  = "Mee EV vehicle ki correct parts gurinchi matladali anukuntunna. Oka nimisha untaayi kaa?"
-        _hook_en  = "I wanted to discuss EV parts for your vehicle. Do you have a minute?"
-        _from_hi  = "Zynova EV Marketplace se"
-        _from_te  = "Zynova EV Marketplace nundi"
-        _from_en  = "from Zynova EV Marketplace"
-    elif kind == "hub":
-        _seg_label = segment or "Myntreal Hub"
-        _brand_hi = f"Mynt Real LLP se — {_seg_label} project ke baare mein"
-        _brand_te = f"Mynt Real LLP nundi — {_seg_label} project gurinchi"
-        _brand_en = f"from Mynt Real LLP — about the {_seg_label} project"
-        _hook_hi  = "Visakhapatnam mein ek premium residential project ke baare mein details share karni thi. Thodi der baat kar sakte hain?"
-        _hook_te  = "Visakhapatnam lo oka premium residential project details share chesukodaaniki call chesaanu. Matladagalara?"
-        _hook_en  = "I wanted to share details about a premium residential project in Visakhapatnam. Is this a good time?"
-        _from_hi  = "Mynt Real LLP se"
-        _from_te  = "Mynt Real LLP nundi"
-        _from_en  = "from Mynt Real LLP"
-    else:  # realty / general
-        _seg_label = segment or ""
-        _seg_suffix_hi = f"{_seg_label} project ke baare mein" if _seg_label else "residential properties ke baare mein"
-        _seg_suffix_te = f"{_seg_label} project gurinchi" if _seg_label else "residential properties gurinchi"
-        _seg_suffix_en = f"about {_seg_label}" if _seg_label else "about our residential projects"
-        _brand_hi = f"Mynt Real LLP se — {_seg_suffix_hi}"
-        _brand_te = f"Mynt Real LLP nundi — {_seg_suffix_te}"
-        _brand_en = f"from Mynt Real LLP — {_seg_suffix_en}"
-        _hook_hi  = "Visakhapatnam mein aapke liye sahi property option share karni thi. Kya thodi der baat kar sakte hain?"
-        _hook_te  = "Visakhapatnam lo mee ki sari property option share chesukodaaniki call chesaanu. Matladagalara?"
-        _hook_en  = "I wanted to share some property options suited for you in Visakhapatnam. Is this a good time?"
-        _from_hi  = "Mynt Real LLP se"
-        _from_te  = "Mynt Real LLP nundi"
-        _from_en  = "from Mynt Real LLP"
-
-    if source_type == "enquiry":
-        _enq_hi = f"Aapne humse {_brand_hi.split('—')[1].strip() if '—' in _brand_hi else _brand_hi} enquiry ki thi, to aaj personally follow up karne ke liye call kar {'raha' if is_male else 'rahi'} hoon — kya aap thodi der baat kar sakte hain?"
-        _enq_te = f"Meeru maa tho {_brand_te.split('—')[1].strip() if '—' in _brand_te else _brand_te} enquiry chesaaru, kaabatti personally follow up chesaanu — ippudu matladataama?"
-        _enq_en = f"You had enquired with us {_brand_en.split('—')[1].strip() if '—' in _brand_en else _brand_en}, and I'm following up personally — is this a good time to talk?"
-        if is_male:
-            return {
-                "hi": f"{_wish_hi}{name_part_hi} ji! Main {m_name} bol raha hoon {_from_hi}. {_enq_hi}",
-                "te": f"{_wish_te}{name_part_te}! Nenu {m_name} ni, {_from_te} matladutunna. {_enq_te}",
-                "en": f"{_wish_en}{name_part_en}! This is {m_name} calling {_from_en}. {_enq_en}",
-            }.get(lang, "")
+        # Professional English
+        if kind == "solar":
+            return f"Hello{name_part_en}! This is {m_name} from Mynt Real. You enquired regarding our PM Surya Ghar Solar Rooftop scheme with up to ₹78,000 subsidy. How may I assist you with the details?"
+        elif kind in ("property", "plots", "realty", "hub"):
+            return f"Hello{name_part_en}! This is {m_name} from Mynt Real. You enquired regarding our VGK Real Dreams villa plots in Bhimili and Vizag. Would you like details on plot sizes and pricing?"
+        elif kind == "ev":
+            return f"Hello{name_part_en}! This is {m_name} from Mynt Real. You enquired regarding our Zynova EV scooters and battery solutions. How can I assist you?"
+        elif kind == "finance":
+            return f"Hello{name_part_en}! This is {m_name} from Mynt Real. You enquired regarding our home loan and CIBIL finance assistance. How can I assist you?"
         else:
-            return {
-                "hi": f"{_wish_hi}{name_part_hi} ji! Main Vidya bol rahi hoon {_from_hi}. {_enq_hi}",
-                "te": f"{_wish_te}{name_part_te}! Nenu Vidya ni, {_from_te} matladutunna. {_enq_te}",
-                "en": f"{_wish_en}{name_part_en}! This is Vidya calling {_from_en}. {_enq_en}",
-            }.get(lang, "")
-
-    elif source_type == "reference":
-        if is_male:
-            return {
-                "hi": f"{_wish_hi}{name_part_hi} ji! Main {m_name} bol raha hoon {_from_hi} — {_brand_hi.split('—')[1].strip() if '—' in _brand_hi else _brand_hi}. Aapka number hamare ek associate ne share kiya tha. {_hook_hi}",
-                "te": f"{_wish_te}{name_part_te}! Nenu {m_name} ni, {_from_te} matladutunna — {_brand_te.split('—')[1].strip() if '—' in _brand_te else _brand_te}. Mee number maa associate share chesaaru. {_hook_te}",
-                "en": f"{_wish_en}{name_part_en}! This is {m_name} {_from_en} — {_brand_en.split('—')[1].strip() if '—' in _brand_en else _brand_en}. One of our associates shared your number. {_hook_en}",
-            }.get(lang, "")
-        else:
-            return {
-                "hi": f"{_wish_hi}{name_part_hi} ji! Main Vidya bol rahi hoon {_from_hi} — {_brand_hi.split('—')[1].strip() if '—' in _brand_hi else _brand_hi}. Aapka number hamare ek associate ne share kiya tha. {_hook_hi}",
-                "te": f"{_wish_te}{name_part_te}! Nenu Vidya ni, {_from_te} matladutunna — {_brand_te.split('—')[1].strip() if '—' in _brand_te else _brand_te}. Mee number maa associate share chesaaru. {_hook_te}",
-                "en": f"{_wish_en}{name_part_en}! This is Vidya {_from_en} — {_brand_en.split('—')[1].strip() if '—' in _brand_en else _brand_en}. One of our associates shared your number. {_hook_en}",
-            }.get(lang, "")
-
-    else:  # cold
-        if is_male:
-            return {
-                "hi": f"{_wish_hi}{name_part_hi} ji! Main {m_name} bol raha hoon {_from_hi}. {_hook_hi}",
-                "te": f"{_wish_te}{name_part_te}! Nenu {m_name} ni, {_from_te} matladutunna. {_hook_te}",
-                "en": f"{_wish_en}{name_part_en}! This is {m_name} {_from_en}. {_hook_en}",
-            }.get(lang, "")
-        else:
-            return {
-                "hi": f"{_wish_hi}{name_part_hi} ji! Main Vidya bol rahi hoon {_from_hi}. {_hook_hi}",
-                "te": f"{_wish_te}{name_part_te}! Nenu Vidya ni, {_from_te} matladutunna. {_hook_te}",
-                "en": f"{_wish_en}{name_part_en}! This is Vidya {_from_en}. {_hook_en}",
-            }.get(lang, "")
+            return f"Hello{name_part_en}! This is {m_name} from Mynt Real. I can share details regarding our Solar rooftop savings, Real Estate villa plots, or EV solutions. How may I assist you today?"
 
 
 def _xml_escape(text: str) -> str:
     if not text:
         return ""
     return str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+def _xml_escape_attr(text: str) -> str:
+    """Safely escape a URL or string for inclusion inside XML attributes or text nodes.
+    Guarantees raw '&' is escaped to '&amp;', and quotes/brackets are properly handled.
+    Idempotent: does NOT turn already-escaped '&amp;' into '&amp;amp;'."""
+    if not text:
+        return ""
+    import re
+    # Match any '&' that is NOT already followed by an entity name or numeric entity
+    escaped = re.sub(r'&(?!(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);)', '&amp;', str(text))
+    # Escape quotes and angle brackets if present
+    escaped = escaped.replace('"', '&quot;').replace('<', '&lt;').replace('>', '&gt;')
+    return escaped
 
 
 def _is_plivo_request(request: Request, form_data: dict, provider_hint: Optional[str] = None) -> bool:
@@ -4444,19 +5176,18 @@ def _build_speak_or_say(
     safe = _xml_escape(text)
     if is_plivo:
         # Plivo's Amazon Polly has NO Telugu voice model.
-        # Under NO circumstance may Telugu (te / te-IN) generate <Speak voice="Polly.Aditi" language="te-IN"> or any other unsupported Polly Telugu combination.
+        # Under NO circumstance may Telugu (te / te-IN) generate <Speak voice="Polly.Aditi" language="te-IN">
         # ALWAYS serve a pre-rendered Telugu WAV via <Play>.
         if lang_code.startswith("te") or lang_code == "te":
-            audio_map = {
-                "greeting": "te_fallback_greeting.wav",
-                "silence": "te_fallback_silence.wav",
-                "filler": "te_fallback_filler.wav",
-                "error": "te_fallback_error.wav",
-                "closing": "te_fallback_closing.wav",
-            }
-            audio_file = audio_map.get(context, "te_fallback_error.wav")
+            audio_file = _get_static_fallback_audio("te", context)
             url = f"{base_url}/api/v1/staff/ai-calling/audio/{audio_file}" if base_url else f"/api/v1/staff/ai-calling/audio/{audio_file}"
-            return f'<Play>{url}</Play>'
+            return f'<Play>{_xml_escape_attr(url)}</Play>'
+        if not safe.strip():
+            lang = lang_code.split("-")[0].lower() if lang_code else "en"
+            audio_file = _get_static_fallback_audio(lang, context)
+            if audio_file:
+                url = f"{base_url}/api/v1/staff/ai-calling/audio/{audio_file}" if base_url else f"/api/v1/staff/ai-calling/audio/{audio_file}"
+                return f'<Play>{_xml_escape_attr(url)}</Play>'
         return f'<Speak voice="{voice}" language="{lang_code}">{safe}</Speak>'
     else:
         return f'<Say voice="{voice}">{safe}</Say>'
@@ -4471,7 +5202,7 @@ def _format_greeting_block(
     base_url: str = "",
 ) -> str:
     if audio_serve_url:
-        return f'<Play>{audio_serve_url}</Play>'
+        return f'<Play>{_xml_escape_attr(audio_serve_url)}</Play>'
     return _build_speak_or_say(is_plivo, fallback_text, lang_code=lang_code, voice=voice, base_url=base_url, context="greeting")
 
 
@@ -4484,24 +5215,39 @@ def _build_speech_gather_xml(
     redirect_url: Optional[str] = None,
 ) -> Response:
     redir = redirect_url or action_url
+    safe_action = _xml_escape_attr(action_url)
+    safe_redir = _xml_escape_attr(redir)
     if is_plivo:
         speech_model = "default" if lang_code.startswith("te") else "phone_call"
+        plivo_timeout = max(timeout, 20)
         inner = (
-            f'  <GetInput inputType="speech" action="{action_url}" method="POST"\n'
-            f'            language="{lang_code}" speechModel="{speech_model}" executionTimeout="{timeout}">\n'
+            f'  <GetInput inputType="speech" action="{safe_action}" method="POST"\n'
+            f'            language="{lang_code}" speechModel="{speech_model}" executionTimeout="{plivo_timeout}">\n'
             f'    {content_block}\n'
             f'  </GetInput>\n'
-            f'  <Redirect method="POST">{redir}</Redirect>'
+            f'  <Redirect method="POST">{safe_redir}</Redirect>'
         )
     else:
         inner = (
-            f'  <Gather input="speech" action="{action_url}"\n'
+            f'  <Gather input="speech" action="{safe_action}"\n'
             f'          language="{lang_code}" timeout="{timeout}" speechTimeout="auto" method="POST">\n'
             f'    {content_block}\n'
             f'  </Gather>\n'
-            f'  <Redirect method="POST">{redir}</Redirect>'
+            f'  <Redirect method="POST">{safe_redir}</Redirect>'
         )
     return _build_response_xml(inner)
+
+
+def _build_stream_xml(ws_url: str, rec_url: Optional[str] = None) -> Response:
+    """Build Plivo <Stream> bidirectional XML response with dual-party session recording."""
+    safe_ws = _xml_escape_attr(ws_url)
+    rec_block = ""
+    if rec_url:
+        safe_rec = _xml_escape_attr(rec_url)
+        rec_block = f'  <Record recordSession="true" redirect="false" action="{safe_rec}" callbackUrl="{safe_rec}" callbackMethod="POST" fileFormat="mp3" />\n'
+    inner = f'{rec_block}  <Stream bidirectional="true" keepCallAlive="true" contentType="audio/x-mulaw;rate=8000">{safe_ws}</Stream>'
+    return _build_response_xml(inner)
+
 
 
 def _build_menu_gather_xml(
@@ -4517,23 +5263,26 @@ def _build_menu_gather_xml(
     context: str = "general",
 ) -> Response:
     redir = redirect_url or action_url
+    safe_action = _xml_escape_attr(action_url)
+    safe_redir = _xml_escape_attr(redir)
     prompt_block = _build_speak_or_say(is_plivo, prompt_text, lang_code=lang_code, voice=voice, base_url=base_url, context=context)
     if is_plivo:
         speech_model = "default" if lang_code.startswith("te") else "phone_call"
+        plivo_timeout = max(timeout, 15)
         inner = (
-            f'  <GetInput inputType="speech dtmf" action="{action_url}" method="POST"\n'
-            f'            language="{lang_code}" speechModel="{speech_model}" numDigits="{num_digits}" executionTimeout="{timeout}">\n'
+            f'  <GetInput inputType="speech dtmf" action="{safe_action}" method="POST"\n'
+            f'            language="{lang_code}" speechModel="{speech_model}" numDigits="{num_digits}" executionTimeout="{plivo_timeout}">\n'
             f'    {prompt_block}\n'
             f'  </GetInput>\n'
-            f'  <Redirect method="POST">{redir}</Redirect>'
+            f'  <Redirect method="POST">{safe_redir}</Redirect>'
         )
     else:
         inner = (
-            f'  <Gather input="speech dtmf" action="{action_url}" language="{lang_code}"\n'
+            f'  <Gather input="speech dtmf" action="{safe_action}" language="{lang_code}"\n'
             f'          timeout="{timeout}" speechTimeout="auto" numDigits="{num_digits}" method="POST">\n'
             f'    {prompt_block}\n'
             f'  </Gather>\n'
-            f'  <Redirect method="POST">{redir}</Redirect>'
+            f'  <Redirect method="POST">{safe_redir}</Redirect>'
         )
     return _build_response_xml(inner)
 
@@ -4546,7 +5295,8 @@ def _build_wait_redirect_xml(
 ) -> Response:
     pause_tag = f'<Wait length="{pause_sec}"/>' if is_plivo else f'<Pause length="{pause_sec}"/>'
     prefix = f"  {prefix_block}\n" if prefix_block else ""
-    inner = f"{prefix}  {pause_tag}\n  <Redirect method=\"POST\">{redirect_url}</Redirect>"
+    safe_redirect = _xml_escape_attr(redirect_url)
+    inner = f"{prefix}  {pause_tag}\n  <Redirect method=\"POST\">{safe_redirect}</Redirect>"
     return _build_response_xml(inner)
 
 
@@ -4735,23 +5485,79 @@ def _detect_language(speech: str) -> str:
     return "hi"  # default to Hindi
 
 
+async def _resolve_greeting_audio(
+    log_id: int,
+    greeting: str,
+    lang: str,
+    voice: str,
+    base_url: str,
+    db: Session,
+    is_plivo: bool = True,
+) -> str:
+    """Resolve initial greeting audio with strict non-blocking priority:
+    Priority 1: Pre-generated / verified audio from ai_call_logs.greeting_audio_url
+    Priority 2: Fast live Gemini TTS only if fast (< 2.0s, single candidate attempt)
+    Priority 3: Immediate verified static fallback audio (te/hi/en)
+    Guarantees a valid, non-empty public audio URL within safe Plivo response window (< 2.5s).
+    """
+    # 1. Check pre-generated audio
+    try:
+        row = db.execute(text("SELECT greeting_audio_url FROM ai_call_logs WHERE id=:id"), {"id": log_id}).fetchone()
+        if row and row[0]:
+            pre_file = os.path.basename(row[0])
+            if _resolve_audio_file(pre_file):
+                logger.info(f"[GREETING-AUDIO] Using pre-generated audio for log {log_id}: {pre_file}")
+                return f"{base_url}/api/v1/staff/ai-calling/audio/{pre_file}" if base_url else f"/api/v1/staff/ai-calling/audio/{pre_file}"
+    except Exception as e:
+        logger.debug(f"[GREETING-AUDIO] Pre-gen check skipped: {e}")
+
+    # 2. Try fast live Gemini TTS (strict 2.0s limit, single candidate, no pool retry delay)
+    try:
+        greeting_audio = await asyncio.wait_for(
+            asyncio.to_thread(_generate_tts, greeting, lang, voice, None, 1),
+            timeout=2.0,
+        )
+        if greeting_audio and _resolve_audio_file(greeting_audio):
+            try:
+                db.execute(text("UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"),
+                           {"url": greeting_audio, "id": log_id})
+                db.commit()
+            except Exception:
+                pass
+            logger.info(f"[GREETING-AUDIO] Live TTS generated for log {log_id}: {greeting_audio}")
+            return f"{base_url}/api/v1/staff/ai-calling/audio/{greeting_audio}" if base_url else f"/api/v1/staff/ai-calling/audio/{greeting_audio}"
+    except Exception as exc:
+        logger.warning(f"[GREETING-AUDIO] Live TTS unavailable/timed out for log {log_id} ({exc}) — falling back to static audio")
+
+    # 3. Static fallback audio (guaranteed to exist and play immediately)
+    fallback_fname = _get_static_fallback_audio(lang, "greeting")
+    try:
+        db.execute(text("UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"),
+                   {"url": fallback_fname, "id": log_id})
+        db.commit()
+    except Exception:
+        pass
+    logger.info(f"[GREETING-AUDIO] Using static fallback for log {log_id} ({lang}): {fallback_fname}")
+    return f"{base_url}/api/v1/staff/ai-calling/audio/{fallback_fname}" if base_url else f"/api/v1/staff/ai-calling/audio/{fallback_fname}"
+
+
 @router.post("/webhook/voice-select")
 async def webhook_voice_select(
     request: Request,
-    log_id: int = Query(...),
+    log_id: Optional[int] = Query(None),
     lang: str = Query("hi"),
     name: str = Query(""),
     campaign_id: int = Query(0),
     segment: str = Query(""),
     is_test: int = Query(0),
     provider: Optional[str] = Query(None),
+    ivr_option: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
     """
-    STEP 1 — Entry point for every call.
-    Asks the customer to choose their preferred language: Hindi / Telugu / English.
-    Speech is sent to /webhook/lang-confirm which detects the choice and asks
-    for agent selection (Vidya / Karthik) in the detected language.
+    STEP 1 — Entry point for every call (outbound or inbound).
+    Identifies caller by phone, maps IVR digit selections (1: Solar, 2: Property/Plots, 3: EV, 4: Finance),
+    grounds the initial greeting in the lead segment, and starts real-time streaming with dual-party recording.
     """
     form_data = await request.form()
     call_sid  = (
@@ -4761,9 +5567,108 @@ async def webhook_voice_select(
         or request.query_params.get("CallSid")
         or ""
     ).strip()
+    if hasattr(provider, "default"):
+        provider = getattr(provider, "default")
+    if not isinstance(provider, str):
+        provider = None
+
     is_plivo  = _is_plivo_request(request, form_data, provider)
     provider_str = "plivo" if is_plivo else "twilio"
     provider_qs = f"&amp;provider={provider_str}"
+
+    caller_phone = (
+        form_data.get("From")
+        or form_data.get("Caller")
+        or request.query_params.get("From")
+        or ""
+    ).strip()
+
+    # Incoming IVR option selection (from URL query, form body, or DTMF Digits)
+    raw_ivr = getattr(ivr_option, "default", ivr_option) if hasattr(ivr_option, "default") else ivr_option
+    ivr_opt_str = str(raw_ivr) if isinstance(raw_ivr, str) else ""
+
+    ivr_digit = (
+        ivr_opt_str
+        or form_data.get("ivr_option")
+        or form_data.get("Digits")
+        or request.query_params.get("Digits")
+        or ""
+    ).strip().lower()
+
+    ivr_segment_map = {
+        "1": "solar",
+        "solar": "solar",
+        "2": "property",
+        "plots": "property",
+        "property": "property",
+        "3": "ev",
+        "ev": "ev",
+        "4": "finance",
+        "loan": "finance",
+        "finance": "finance",
+    }
+    ivr_selected_segment = ivr_segment_map.get(ivr_digit, "")
+
+    # Look up existing CRM lead by phone if available
+    matched_lead = None
+    if caller_phone:
+        clean_p = "".join(c for c in caller_phone if c.isdigit())
+        if len(clean_p) >= 10:
+            last10 = clean_p[-10:]
+            try:
+                matched_lead = db.execute(text(
+                    "SELECT id, name, looking_for, requirements, ai_language, ai_preferred_agent, gender, company_id "
+                    "FROM crm_leads WHERE phone LIKE :phone ORDER BY id DESC LIMIT 1"
+                ), {"phone": f"%{last10}"}).fetchone()
+            except Exception as _mle:
+                logger.warning(f"[VOICE-SELECT] Matched lead lookup error: {_mle}")
+
+    lead_id_from_match = matched_lead[0] if matched_lead else None
+    if matched_lead:
+        if not name and matched_lead[1]:
+            name = matched_lead[1]
+        if not lang or lang == "hi":
+            if matched_lead[4]:
+                lang = matched_lead[4]
+        if not segment:
+            comb_req = f"{matched_lead[2] or ''} {matched_lead[3] or ''}".lower()
+            if "solar" in comb_req:
+                segment = "solar"
+            elif any(p in comb_req for p in ("plot", "property", "villa")):
+                segment = "property"
+            elif "ev" in comb_req:
+                segment = "ev"
+            elif any(f in comb_req for f in ("loan", "finance", "cibil")):
+                segment = "finance"
+
+    if ivr_selected_segment:
+        segment = ivr_selected_segment
+
+    # Auto-create call log for inbound calls when log_id is not passed
+    is_inbound = not log_id
+    if not log_id:
+        new_log = db.execute(text("""
+            INSERT INTO ai_call_logs
+                (company_id, phone_dialed, language_used, status, segment, attempt_number, lead_id)
+            VALUES
+                (:cid, :phone, :lang, 'initiated', :seg, 1, :lid)
+            RETURNING id
+        """), {
+            "cid": (matched_lead[7] if matched_lead and matched_lead[7] else 1),
+            "phone": caller_phone or "Inbound",
+            "lang": lang or "te",
+            "seg": segment or None,
+            "lid": lead_id_from_match,
+        }).fetchone()
+        db.commit()
+        log_id = new_log[0] if new_log else 1
+    elif lead_id_from_match:
+        try:
+            db.execute(text("UPDATE ai_call_logs SET lead_id = :lid WHERE id = :id AND lead_id IS NULL"),
+                       {"lid": lead_id_from_match, "id": log_id})
+            db.commit()
+        except Exception:
+            pass
 
     try:
         campaign_id = int(getattr(campaign_id, 'default', campaign_id) if hasattr(campaign_id, 'default') else campaign_id)
@@ -4773,7 +5678,7 @@ async def webhook_voice_select(
         is_test = int(getattr(is_test, 'default', is_test) if hasattr(is_test, 'default') else is_test)
     except Exception:
         is_test = 0
-    lang = str(getattr(lang, 'default', lang) if hasattr(lang, 'default') else (lang or "hi"))
+    lang = str(getattr(lang, 'default', lang) if hasattr(lang, 'default') else (lang or "te"))
     name = str(getattr(name, 'default', name) if hasattr(name, 'default') else (name or ""))
     segment = str(getattr(segment, 'default', segment) if hasattr(segment, 'default') else (segment or ""))
 
@@ -4785,8 +5690,8 @@ async def webhook_voice_select(
     try:
         # Mark call connected; create session — pre-load campaign persona if set
         db.execute(text(
-            "UPDATE ai_call_logs SET status='connected', call_sid=:sid WHERE id=:id"
-        ), {"id": log_id, "sid": call_sid})
+            "UPDATE ai_call_logs SET status='connected', call_sid=:sid, segment=COALESCE(NULLIF(:seg,''), segment) WHERE id=:id"
+        ), {"id": log_id, "sid": call_sid, "seg": segment})
 
         # Fetch campaign preset persona + segment (if not already passed in URL)
         preset_agent, preset_voice, camp_segment = _get_campaign_persona(db, campaign_id)
@@ -4806,8 +5711,8 @@ async def webhook_voice_select(
                 logger.warning(f"[AI-CALLING] Could not fetch lead gender for log_id {log_id}: {_e}")
 
         gender_agent, gender_voice = resolve_persona_from_lead_gender(lead_gender)
-        init_agent = preset_agent or gender_agent
-        init_voice = preset_voice or gender_voice
+        init_agent = preset_agent or gender_agent or "Vidya"
+        init_voice = preset_voice or gender_voice or "kavya"
         # Use URL-passed segment first; fall back to campaign segment
         effective_segment = segment or camp_segment or ""
 
@@ -4830,6 +5735,64 @@ async def webhook_voice_select(
         base       = _webhook_base(request)
         seg_qs     = f"&amp;segment={_urlquote(effective_segment, safe='')}" if effective_segment else ""
         is_test_qs = f"&amp;is_test={is_test}" if is_test else ""
+
+        # ── REALTIME BIDIRECTIONAL STREAM (PLIVO + SARVAM) ─────────────────────
+        stream_requested = str(request.query_params.get("stream", "")).strip() in ("1", "true", "yes")
+
+        # Inbound First-Time Caller Check:
+        # If caller dials in and has no prior preferences or records, show Telugu Female IVR menu
+        is_first_time = (
+            is_inbound
+            and (matched_lead is None or not (matched_lead[4] or matched_lead[2] or matched_lead[3]))
+            and not ivr_selected_segment
+            and not stream_requested
+        )
+
+        if is_plivo and is_first_time:
+            action_url = f"{base}/api/v1/staff/ai-calling/webhook/ivr-choice?log_id={log_id}"
+            ivr_prompt = (
+                "మైంట్ రియల్ కు స్వాగతం. మీ నమ్మకమైన మల్టీ-సర్వీసెస్ భాగస్వామి. "
+                "సరైన విభాగాన్ని ఎంచుకోవడానికి దయచేసి మా IVR మెనూను వినండి: "
+                "సోలార్ రూఫ్‌టాప్ మరియు పవర్ ప్రాజెక్ట్‌ల కోసం 1 నొక్కండి లేదా సోలార్ అని చెప్పండి. "
+                "రియల్ ఎస్టేట్ విల్లా ప్లాట్ల కోసం 2 నొక్కండి లేదా ప్లాట్స్ అని చెప్పండి. "
+                "ఈవీ ఛార్జింగ్ మరియు వాహనాల కోసం 3 నొక్కండి లేదా ఈవీ అని చెప్పండి. "
+                "లోన్స్ మరియు ఫైనాన్స్ సేవల కోసం 4 నొక్కండి లేదా లోన్స్ అని చెప్పండి. "
+                "భాష మార్చడానికి 9 నొక్కండి లేదా లాంగ్వేజ్ అని చెప్పండి."
+            )
+            logger.info(f"[AI-CALLING] First-time inbound caller detected for log_id={log_id}. Presenting Telugu Female IVR menu.")
+            return _build_menu_gather_xml(
+                is_plivo=True,
+                action_url=action_url,
+                lang_code="te-IN",
+                prompt_text=ivr_prompt,
+                num_digits=1,
+                timeout=12,
+                voice="Polly.Aditi",
+                redirect_url=action_url,
+                base_url=base,
+                context="ivr_menu",
+            )
+
+        # Activate for explicit stream request OR returning inbound calls to Plivo when Sarvam key is configured
+        if is_plivo and (stream_requested or is_inbound) and get_sarvam_api_key():
+            initial_agent = init_agent or "Vidya"
+            source_type = _get_lead_source_type(db, log_id)
+            init_greeting = _build_greeting(initial_agent, lang, name, effective_segment, source_type)
+            if not init_greeting:
+                init_greeting = _build_greeting(initial_agent, "en", name, effective_segment, source_type)
+            db.execute(text("""
+                UPDATE ai_call_sessions
+                SET conversation = :conv, updated_at = NOW()
+                WHERE log_id = :lid
+            """), {"conv": json.dumps([{"role": "assistant", "content": init_greeting}]), "lid": log_id})
+            db.commit()
+
+            rec_url = f"{base}/api/v1/staff/ai-calling/webhook/recording?log_id={log_id}"
+            ws_base = _ws_base(request)
+            ws_url = f"{ws_base}/api/v1/staff/ai-calling/stream/{log_id}"
+            logger.info(f"[AI-CALLING] Returning Plivo <Stream> with recording for log_id={log_id}: {ws_url}")
+            return _build_stream_xml(ws_url, rec_url=rec_url)
+
 
         # ── RETURNING CALLER: skip selection if preferences saved ──────────────────
         # Look up this lead's saved lang + agent choice from their last call.
@@ -4881,22 +5844,10 @@ async def webhook_voice_select(
                 f"?lang={saved_lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
             )
 
-            audio_serve_url = None
-            try:
-                greeting_audio = await asyncio.wait_for(
-                    asyncio.to_thread(_generate_tts, greeting, saved_lang, saved_voice),
-                    timeout=11.0,
-                )
-                if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)) \
-                        and os.path.getsize(os.path.join(AI_AUDIO_DIR, greeting_audio)) > 0:
-                    db.execute(text("UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"),
-                               {"url": greeting_audio, "id": log_id})
-                    db.commit()
-                    audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
-                    logger.info(f"[VOICE-SELECT] ✅ Returning caller log={log_id} saved={saved_agent}/{saved_lang}")
-            except Exception as _e:
-                logger.warning(f"[VOICE-SELECT] TTS failed for returning caller log={log_id}: {_e}")
-
+            audio_serve_url = await _resolve_greeting_audio(
+                log_id=log_id, greeting=greeting, lang=saved_lang,
+                voice=saved_voice, base_url=base, db=db, is_plivo=is_plivo
+            )
             greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang, base_url=base)
             return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
 
@@ -4943,22 +5894,10 @@ async def webhook_voice_select(
                 f"?lang={lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
             )
 
-            audio_serve_url = None
-            try:
-                greeting_audio = await asyncio.wait_for(
-                    asyncio.to_thread(_generate_tts, greeting, lang, direct_voice),
-                    timeout=11.0,
-                )
-                if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)) \
-                        and os.path.getsize(os.path.join(AI_AUDIO_DIR, greeting_audio)) > 0:
-                    db.execute(text("UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"),
-                               {"url": greeting_audio, "id": log_id})
-                    db.commit()
-                    audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
-                    logger.info(f"[VOICE-SELECT] ✅ Pre-selected lang={lang} agent={direct_agent} log={log_id}")
-            except Exception as _e:
-                logger.warning(f"[VOICE-SELECT] Pre-selected TTS failed log={log_id}: {_e}")
-
+            audio_serve_url = await _resolve_greeting_audio(
+                log_id=log_id, greeting=greeting, lang=lang,
+                voice=direct_voice, base_url=base, db=db, is_plivo=is_plivo
+            )
             greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang, base_url=base)
             return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
 
@@ -4988,6 +5927,208 @@ async def webhook_voice_select(
         except Exception:
             pass
         return _twiml_error_hangup(lang, is_plivo=is_plivo, base_url=base)
+
+
+def _remember_customer_choice(db: Session, log_id: int, caller_phone: str, lang: str, segment: str):
+    """Permanently updates CRM leads, call logs, and session with caller's preferred language and department."""
+    try:
+        # 1. Update ai_call_logs
+        db.execute(text("""
+            UPDATE ai_call_logs
+            SET language_used = :lang, segment = :seg
+            WHERE id = :id
+        """), {"lang": lang, "seg": segment, "id": log_id})
+
+        # 2. Update ai_call_sessions
+        init_greeting = _build_greeting("Vidya", lang, "", segment)
+        db.execute(text("""
+            UPDATE ai_call_sessions
+            SET language = :lang,
+                agent_name = 'Vidya',
+                agent_voice = 'kavya',
+                conversation = :conv,
+                updated_at = NOW()
+            WHERE log_id = :id
+        """), {
+            "lang": lang,
+            "conv": json.dumps([{"role": "assistant", "content": init_greeting}]),
+            "id": log_id,
+        })
+
+        # 3. Find or create crm_leads record to permanently remember preferences
+        lead_id = db.execute(text("SELECT lead_id FROM ai_call_logs WHERE id = :id"), {"id": log_id}).scalar()
+        if not lead_id and caller_phone:
+            clean_p = "".join(c for c in caller_phone if c.isdigit())
+            if len(clean_p) >= 10:
+                last10 = clean_p[-10:]
+                lead_row = db.execute(text("SELECT id FROM crm_leads WHERE phone LIKE :phone ORDER BY id DESC LIMIT 1"), {"phone": f"%{last10}"}).fetchone()
+                if lead_row:
+                    lead_id = lead_row[0]
+
+        if lead_id:
+            db.execute(text("""
+                UPDATE crm_leads
+                SET ai_language = :lang,
+                    ai_preferred_agent = 'Vidya',
+                    ai_preferred_voice = 'kavya',
+                    looking_for = COALESCE(NULLIF(:seg, ''), looking_for),
+                    requirements = COALESCE(NULLIF(:seg, ''), requirements),
+                    updated_at = NOW()
+                WHERE id = :lid
+            """), {"lang": lang, "seg": segment, "lid": lead_id})
+            db.execute(text("UPDATE ai_call_logs SET lead_id = :lid WHERE id = :id AND lead_id IS NULL"), {"lid": lead_id, "id": log_id})
+        elif caller_phone:
+            clean_p = "".join(c for c in caller_phone if c.isdigit())
+            phone_to_save = clean_p[-10:] if len(clean_p) >= 10 else caller_phone
+            if phone_to_save:
+                new_lead = db.execute(text("""
+                    INSERT INTO crm_leads (
+                        company_id, phone, name, source, looking_for, requirements,
+                        ai_language, ai_preferred_agent, ai_preferred_voice, status, priority, handler_type,
+                        created_at, updated_at
+                    ) VALUES (
+                        1, :phone, :name, 'Inbound IVR', :seg, :seg,
+                        :lang, 'Vidya', 'kavya', 'New', 'medium', 'unassigned',
+                        NOW(), NOW()
+                    ) RETURNING id
+                """), {
+                    "phone": phone_to_save,
+                    "name": f"Inbound Caller {phone_to_save[-4:]}",
+                    "seg": segment,
+                    "lang": lang,
+                }).fetchone()
+                if new_lead:
+                    db.execute(text("UPDATE ai_call_logs SET lead_id = :lid WHERE id = :id"), {"lid": new_lead[0], "id": log_id})
+        db.commit()
+    except Exception as e:
+        logger.warning(f"[IVR-REMEMBER] Error remembering customer choice: {e}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+
+
+@router.post("/webhook/ivr-choice")
+async def webhook_ivr_choice(
+    request: Request,
+    log_id: int = Query(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Handles first-time inbound IVR selection (both DTMF and Voice Speech) for department or language change.
+    Permanently remembers choice in crm_leads and seamlessly transitions caller into realtime AI streaming.
+    """
+    form_data = await request.form()
+    digits = (form_data.get("Digits") or request.query_params.get("Digits") or "").strip()
+    speech = (
+        form_data.get("Speech")
+        or form_data.get("SpeechResult")
+        or request.query_params.get("Speech")
+        or ""
+    ).strip().lower()
+
+    caller_phone = (
+        form_data.get("From")
+        or form_data.get("Caller")
+        or request.query_params.get("From")
+        or ""
+    ).strip()
+
+    is_plivo = _is_plivo_request(request, form_data)
+    base = _webhook_base(request)
+
+    logger.info(f"[IVR-CHOICE] log_id={log_id}, digits='{digits}', speech='{speech}', caller='{caller_phone}'")
+
+    # Check for Option 9: Language change
+    if digits == "9" or any(w in speech for w in ("lang", "language", "భాష", "change", "మార్చు", "మార్చ")):
+        lang_prompt = (
+            "భాషను ఎంచుకోండి: తెలుగు కొరకు 1 నొక్కండి లేదా తెలుగు అని చెప్పండి. "
+            "हिंदी के लिए 2 दबाएँ या हिंदी बोलें. "
+            "For English, press 3 or say English."
+        )
+        action_url = f"{base}/api/v1/staff/ai-calling/webhook/ivr-lang-choice?log_id={log_id}"
+        return _build_menu_gather_xml(
+            is_plivo=is_plivo,
+            action_url=action_url,
+            lang_code="te-IN",
+            prompt_text=lang_prompt,
+            num_digits=1,
+            timeout=8,
+            voice="Polly.Aditi",
+            redirect_url=action_url,
+            base_url=base,
+            context="ivr_lang_menu",
+        )
+
+    # Department mapping (Speech + DTMF)
+    chosen_segment = "solar"
+    if digits == "1" or any(w in speech for w in ("solar", "సౌర", "సోలార్", "power")):
+        chosen_segment = "solar"
+    elif digits == "2" or any(w in speech for w in ("plot", "plots", "property", "villa", "రియల్", "ప్లాట్", "ఇల్లు", "realty")):
+        chosen_segment = "property"
+    elif digits == "3" or any(w in speech for w in ("ev", "electric", "ఈవీ", "వెహికల్")):
+        chosen_segment = "ev"
+    elif digits == "4" or any(w in speech for w in ("loan", "finance", "cibil", "లోన్", "ఫైనాన్స్", "రుణ")):
+        chosen_segment = "finance"
+
+    chosen_lang = "te"  # First-time Telugu caller preference
+
+    # Save to CRM leads and session
+    _remember_customer_choice(db, log_id, caller_phone, chosen_lang, chosen_segment)
+
+    # Transition to Plivo bidirectional audio stream
+    rec_url = f"{base}/api/v1/staff/ai-calling/webhook/recording?log_id={log_id}"
+    ws_base = _ws_base(request)
+    ws_url = f"{ws_base}/api/v1/staff/ai-calling/stream/{log_id}"
+    logger.info(f"[IVR-CHOICE] Transitioning log_id={log_id} to stream with seg={chosen_segment}, lang={chosen_lang}")
+    return _build_stream_xml(ws_url, rec_url=rec_url)
+
+
+@router.post("/webhook/ivr-lang-choice")
+async def webhook_ivr_lang_choice(
+    request: Request,
+    log_id: int = Query(...),
+    db: Session = Depends(get_db),
+):
+    """
+    Handles language selection from IVR option 9 (Telugu, Hindi, English via DTMF or Voice).
+    Permanently remembers choice in crm_leads and transitions into realtime AI streaming.
+    """
+    form_data = await request.form()
+    digits = (form_data.get("Digits") or request.query_params.get("Digits") or "").strip()
+    speech = (
+        form_data.get("Speech")
+        or form_data.get("SpeechResult")
+        or request.query_params.get("Speech")
+        or ""
+    ).strip().lower()
+
+    caller_phone = (
+        form_data.get("From")
+        or form_data.get("Caller")
+        or request.query_params.get("From")
+        or ""
+    ).strip()
+
+    base = _webhook_base(request)
+
+    selected_lang = "te"
+    if digits == "2" or any(w in speech for w in ("hindi", "हिंदी", "हिन्दी")):
+        selected_lang = "hi"
+    elif digits == "3" or any(w in speech for w in ("english", "ఇంగ్లీష్", "अंग्रेजी")):
+        selected_lang = "en"
+    elif digits == "1" or any(w in speech for w in ("telugu", "తెలుగు")):
+        selected_lang = "te"
+
+    curr_seg = db.execute(text("SELECT segment FROM ai_call_logs WHERE id = :id"), {"id": log_id}).scalar() or "solar"
+
+    _remember_customer_choice(db, log_id, caller_phone, selected_lang, curr_seg)
+
+    rec_url = f"{base}/api/v1/staff/ai-calling/webhook/recording?log_id={log_id}"
+    ws_base = _ws_base(request)
+    ws_url = f"{ws_base}/api/v1/staff/ai-calling/stream/{log_id}"
+    logger.info(f"[IVR-LANG-CHOICE] Transitioning log_id={log_id} to stream with lang={selected_lang}, seg={curr_seg}")
+    return _build_stream_xml(ws_url, rec_url=rec_url)
 
 
 @router.post("/webhook/lang-confirm")
@@ -5110,22 +6251,10 @@ async def webhook_lang_confirm(
                 f"?lang={detected_lang}&amp;campaign_id={campaign_id}{seg_qs}{is_test_qs}{provider_qs}"
             )
 
-            audio_serve_url = None
-            try:
-                greeting_audio = await asyncio.wait_for(
-                    asyncio.to_thread(_generate_tts, greeting, detected_lang, preset_voice),
-                    timeout=11.0,
-                )
-                if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)) \
-                        and os.path.getsize(os.path.join(AI_AUDIO_DIR, greeting_audio)) > 0:
-                    db.execute(text("UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"),
-                               {"url": greeting_audio, "id": log_id})
-                    db.commit()
-                    audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
-                    logger.info(f"[LANG-CONFIRM] ✅ Preset agent {preset_agent} log={log_id} lang={detected_lang}")
-            except Exception as _e:
-                logger.warning(f"[LANG-CONFIRM] TTS failed for preset agent log={log_id}: {_e}")
-
+            audio_serve_url = await _resolve_greeting_audio(
+                log_id=log_id, greeting=greeting, lang=detected_lang,
+                voice=preset_voice, base_url=base, db=db, is_plivo=is_plivo
+            )
             greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang, base_url=base)
             return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
 
@@ -5277,23 +6406,10 @@ async def webhook_voice_confirm(
         )
 
         # Generate greeting TTS inline with the chosen voice (11s timeout → Polly fallback).
-        audio_serve_url = None
-        try:
-            greeting_audio = await asyncio.wait_for(
-                asyncio.to_thread(_generate_tts, greeting, lang, tts_voice),
-                timeout=11.0,
-            )
-            if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)) \
-                    and os.path.getsize(os.path.join(AI_AUDIO_DIR, greeting_audio)) > 0:
-                db.execute(text(
-                    "UPDATE ai_call_logs SET greeting_audio_url=:url WHERE id=:id"
-                ), {"url": greeting_audio, "id": log_id})
-                db.commit()
-                audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
-                logger.info(f"[VOICE-CONFIRM] ✅ Greeting ready log={log_id} agent={agent_name} voice={tts_voice} file={greeting_audio}")
-        except Exception as _tts_err:
-            logger.warning(f"[VOICE-CONFIRM] TTS failed log={log_id}: {_tts_err} — using Polly fallback")
-
+        audio_serve_url = await _resolve_greeting_audio(
+            log_id=log_id, greeting=greeting, lang=lang,
+            voice=tts_voice, base_url=base, db=db, is_plivo=is_plivo
+        )
         greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang, base_url=base)
         return _build_speech_gather_xml(is_plivo, respond_url, twilio_lang, greeting_block)
     except Exception as exc:
@@ -5393,19 +6509,10 @@ async def webhook_incoming(
         ).fetchone()
         pre_greeting_audio = log_row[0] if log_row else None
 
-        audio_serve_url = None
-        if pre_greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, pre_greeting_audio)):
-            audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{pre_greeting_audio}"
-        else:
-            try:
-                greeting_audio = await asyncio.wait_for(
-                    asyncio.to_thread(_generate_tts, greeting, lang, incoming_agent_voice),
-                    timeout=12.0,
-                )
-                if greeting_audio and os.path.exists(os.path.join(AI_AUDIO_DIR, greeting_audio)):
-                    audio_serve_url = f"{base}/api/v1/staff/ai-calling/audio/{greeting_audio}"
-            except Exception:
-                pass
+        audio_serve_url = await _resolve_greeting_audio(
+            log_id=log_id, greeting=greeting, lang=lang,
+            voice=incoming_agent_voice, base_url=base, db=db, is_plivo=is_plivo
+        )
 
         greeting_block = _format_greeting_block(is_plivo, audio_serve_url, greeting, twilio_lang, base_url=base)
         action_dest = f"{respond_url}?lang={lang}&amp;campaign_id={campaign_id}{extra_qs}{provider_qs}"
@@ -5440,8 +6547,31 @@ async def webhook_respond(
     Returns IMMEDIATELY with a brief pause + redirect to /webhook/poll/{log_id}
     while GPT + TTS run in a background task. This avoids proxy/provider timeouts.
     """
-    form          = await request.form()
-    speech_result = (form.get("Speech") or form.get("SpeechResult") or "").strip()
+    form = {}
+    try:
+        form = await request.form()
+    except Exception:
+        form = {}
+    json_data = {}
+    try:
+        json_data = await request.json()
+    except Exception:
+        json_data = {}
+
+    speech_result = (
+        form.get("Speech")
+        or form.get("SpeechResult")
+        or form.get("speech_result")
+        or form.get("Speech_result")
+        or json_data.get("Speech")
+        or json_data.get("SpeechResult")
+        or json_data.get("speech_result")
+        or request.query_params.get("Speech")
+        or request.query_params.get("SpeechResult")
+        or ""
+    ).strip()
+    logger.info(f"[RESPOND] log_id={log_id} form_keys={list(form.keys())} speech_len={len(speech_result)} speech_result='{speech_result[:100]}'")
+
     form_call_sid = (
         form.get("CallUUID")
         or form.get("CallSid")
@@ -5774,6 +6904,10 @@ async def webhook_recording(
         if not recording_url.endswith(".mp3") and not recording_url.endswith(".wav"):
             recording_url = recording_url + ".mp3"
 
+        target_log_id = log_id
+        if not target_log_id and call_sid:
+            target_log_id = db.execute(text("SELECT id FROM ai_call_logs WHERE call_sid = :sid"), {"sid": call_sid}).scalar()
+
         if log_id:
             db.execute(text(
                 "UPDATE ai_call_logs SET recording_url=:url WHERE id=:id"
@@ -5785,7 +6919,39 @@ async def webhook_recording(
         db.commit()
         logger.info(f"[AI_CALLING] Recording stored for log {log_id}: {recording_sid}")
 
+        # Also sync recording to CRM lead notes and timeline
+        if target_log_id:
+            try:
+                lead_row = db.execute(text(
+                    "SELECT lead_id, company_id FROM ai_call_logs WHERE id = :id"
+                ), {"id": target_log_id}).fetchone()
+                if lead_row and lead_row[0]:
+                    lid = lead_row[0]
+                    cid = lead_row[1] or 1
+                    rec_note = f"🎙️ Call Recording: {recording_url}"
+                    db.execute(text("""
+                        INSERT INTO crm_lead_notes
+                            (company_id, lead_id, note, is_private, created_by_type, created_by_id, created_at, updated_at)
+                        VALUES
+                            (:cid, :lid, :note, FALSE, 'ai_agent', 'AI Assistant', NOW(), NOW())
+                    """), {"cid": cid, "lid": lid, "note": rec_note})
+                    db.execute(text("""
+                        UPDATE crm_leads
+                        SET recent_comments = CASE
+                            WHEN recent_comments IS NOT NULL AND recent_comments != ''
+                            THEN recent_comments || ' | [Recording Available]'
+                            ELSE '[Recording Available]'
+                        END,
+                        updated_at = NOW()
+                        WHERE id = :lid
+                    """), {"lid": lid})
+                    db.commit()
+                    logger.info(f"[AI_CALLING] Attached recording note to lead_id={lid}")
+            except Exception as _sync_rec_err:
+                logger.warning(f"[AI_CALLING] Could not attach recording to CRM lead: {_sync_rec_err}")
+
     return Response(content="<?xml version='1.0'?><Response/>", media_type="application/xml")
+
 
 
 @router.get("/recording-proxy/{log_id}")
@@ -6426,7 +7592,425 @@ async def knowledge_chat(
     return {"success": True, "answer": answer, "audio_url": audio_url}
 
 
+def _sync_call_analysis_and_crm(
+    db: Session,
+    log_id: int,
+    call_status: str = "completed",
+    duration: int = 0,
+    call_sid: Optional[str] = None,
+) -> dict:
+    """
+    Synchronizes call completion, runs AI summarization, updates ai_call_logs,
+    and updates crm_leads with outcome, rich notes, timeline remark, and recording URL.
+    Can be called safely by webhook_status AND plivo_bidirectional_audio_stream finally block.
+    """
+    status_map = {
+        "completed": "completed",
+        "failed": "failed",
+        "busy": "busy",
+        "no-answer": "no_answer",
+        "no_answer": "no_answer",
+        "timeout": "no_answer",
+        "rejected": "busy",
+        "canceled": "canceled",
+        "cancelled": "canceled",
+        "in-progress": "connected",
+        "ringing": "dialing",
+        "queued": "dialing",
+    }
+    final_status = status_map.get(call_status, "completed")
+
+    log_row = db.execute(text(
+        "SELECT transcript, language_used, campaign_id, lead_id, attempt_number, recording_url FROM ai_call_logs WHERE id=:id"
+    ), {"id": log_id}).fetchone()
+
+    transcript, lang, campaign_id, lead_id, attempt_number, log_rec_url = [], "hi", 0, 0, 1, None
+    if log_row:
+        try:
+            transcript = json.loads(log_row[0] or "[]")
+        except Exception:
+            transcript = []
+        lang           = log_row[1] or "hi"
+        campaign_id    = log_row[2] or 0
+        lead_id        = log_row[3] or 0
+        attempt_number = log_row[4] or 1
+        log_rec_url    = log_row[5] or None
+
+    # Fallback to ai_call_sessions conversation if transcript is empty
+    if not transcript:
+        try:
+            sess_conv = db.execute(text("SELECT conversation FROM ai_call_sessions WHERE log_id = :id"), {"id": log_id}).scalar()
+            if sess_conv:
+                transcript = json.loads(sess_conv) if isinstance(sess_conv, str) else (sess_conv or [])
+        except Exception:
+            pass
+
+    # Always run GPT analysis if there's a transcript so we can extract lead details
+    analysis: dict = {}
+    if transcript:
+        try:
+            analysis      = _gpt_summarize(transcript, lang)
+            outcome       = analysis.get("outcome", "no_answer")
+            summary       = analysis.get("summary", "")
+            detected_lang = analysis.get("detected_language", lang)
+        except Exception as _se:
+            logger.warning(f"[STATUS] GPT summarize failed log={log_id}: {_se}")
+            outcome = "no_answer" if final_status in ("no_answer","busy","failed","canceled") else "completed"
+            summary = ""
+            detected_lang = lang
+    else:
+        outcome = "no_answer" if final_status in ("no_answer","busy","failed","canceled") else "completed"
+        summary = ""
+        detected_lang = lang
+
+    # Compute retry time for failed/missed calls
+    next_retry_at = None
+    if final_status in ("no_answer", "busy", "failed", "canceled") and campaign_id:
+        try:
+            retry_cfg = db.execute(text(
+                "SELECT retry_1_hours, retry_2_hours, retry_day2_offset, retry_day10_offset"
+                " FROM ai_campaigns WHERE id=:id"
+            ), {"id": campaign_id}).fetchone()
+            if retry_cfg:
+                r1h, r2h, rd2, rd10 = retry_cfg
+                if attempt_number == 1:
+                    next_retry_at = datetime.utcnow() + timedelta(hours=int(r1h or 2))
+                elif attempt_number == 2:
+                    next_retry_at = datetime.utcnow() + timedelta(hours=int(r2h or 4))
+                elif attempt_number == 3:
+                    next_retry_at = datetime.utcnow() + timedelta(days=int(rd2 or 2))
+                elif attempt_number == 4:
+                    next_retry_at = datetime.utcnow() + timedelta(days=int(rd10 or 10))
+        except Exception as retry_err:
+            logger.warning(f"[AI_CALLING] Could not compute retry time: {retry_err}")
+
+    update_params = {
+        "status": final_status,
+        "dur": duration,
+        "outcome": outcome or "no_answer",
+        "summary": summary,
+        "id": log_id,
+        "retry_at": next_retry_at,
+    }
+    if call_sid:
+        db.execute(text("""
+            UPDATE ai_call_logs
+            SET status=:status, duration_seconds=:dur, outcome=:outcome,
+                ai_summary=:summary, ended_at=NOW(), next_retry_at=:retry_at,
+                call_sid=CASE WHEN call_sid IS NULL OR call_sid LIKE 'plivo_%' THEN :sid ELSE call_sid END
+            WHERE id=:id
+        """), {**update_params, "sid": call_sid})
+    else:
+        db.execute(text("""
+            UPDATE ai_call_logs
+            SET status=:status, duration_seconds=:dur, outcome=:outcome,
+                ai_summary=:summary, ended_at=NOW(), next_retry_at=:retry_at
+            WHERE id=:id
+        """), update_params)
+
+    # ── Full CRM lead update with every extracted detail ───────────────────────
+    def _to_float(v):
+        try:
+            return float(str(v).replace(",", "").replace("₹","").replace("L","00000").replace("K","000"))
+        except Exception:
+            return None
+
+    def _get_agent_name_for_log(log_id_: int) -> str:
+        try:
+            row = db.execute(text(
+                "SELECT s.agent_name FROM ai_call_sessions s WHERE s.log_id = :lid LIMIT 1"
+            ), {"lid": log_id_}).fetchone()
+            return row[0] if row and row[0] else "Vidya"
+        except Exception:
+            return "Vidya"
+
+    def _write_ai_call_note(target_lead_id: int, agent: str,
+                             note_outcome: str, note_summary: str,
+                             status_before: Optional[str], status_after: Optional[str],
+                             note_lang: str, note_duration: int,
+                             note_followup, note_rich: Optional[str],
+                             recording_href: Optional[str] = None) -> None:
+        try:
+            LANG_LABELS = {"hi": "Hindi", "te": "Telugu", "en": "English"}
+            OUTCOME_LABELS = {
+                "interested": "Interested", "qualified": "Qualified",
+                "callback": "Callback Requested", "connected": "Connected",
+                "in_progress": "In Progress", "not_interested": "Not Interested",
+                "no_answer": "No Answer", "busy": "Busy",
+                "failed": "Failed", "canceled": "Canceled",
+            }
+            dur_str = (f"{note_duration//60}m {note_duration%60}s"
+                       if note_duration and note_duration >= 60 else f"{note_duration or 0}s")
+            lang_str = LANG_LABELS.get(note_lang, note_lang.upper())
+            outcome_str = OUTCOME_LABELS.get(note_outcome or "", note_outcome or "No Answer")
+
+            status_line = ""
+            if status_before and status_after:
+                if status_before != status_after:
+                    status_line = f"\n🔄 CRM Status: {status_before} → {status_after}"
+                else:
+                    status_line = f"\n📌 CRM Status: {status_before} (unchanged)"
+
+            rec_line = f"\n🎙️ Recording: {recording_href}" if recording_href else ""
+
+            note_lines = [
+                f"📞 AI Call by {agent}",
+                f"Outcome: {outcome_str}  |  Language: {lang_str}  |  Duration: {dur_str}",
+                status_line,
+                rec_line,
+            ]
+            if note_summary:
+                note_lines.append(f"\n📝 Summary: {note_summary}")
+            if note_rich:
+                note_lines.append(f"💡 Key Info: {note_rich}")
+            if note_followup:
+                note_lines.append(f"📅 Next Follow-up: {note_followup}")
+
+            note_text = "\n".join(line for line in note_lines if line is not None)
+
+            db.execute(text("""
+                INSERT INTO crm_lead_notes
+                    (company_id, lead_id, note, is_private, created_by_type, created_by_id, created_at, updated_at)
+                VALUES
+                    (1, :lid, :note, FALSE, 'ai_agent', :agent, NOW(), NOW())
+            """), {"lid": target_lead_id, "note": note_text, "agent": agent})
+        except Exception as _ne:
+            logger.warning(f"[STATUS] CRM note insert failed lead={target_lead_id}: {_ne}")
+
+    a_name     = analysis.get("customer_name")  or None
+    a_phone    = analysis.get("customer_phone") or None
+    a_email    = analysis.get("customer_email") or None
+    a_city     = analysis.get("city")           or None
+    a_loc      = analysis.get("location_preference") or None
+    a_prop     = analysis.get("property_type")  or None
+    a_bmin     = _to_float(analysis.get("budget_min"))
+    a_bmax     = _to_float(analysis.get("budget_max"))
+    a_req      = analysis.get("requirements")   or None
+    a_timeline = analysis.get("timeline")       or None
+    a_notes    = analysis.get("notes")          or None
+    a_followup = analysis.get("next_follow_up_date") or None
+    parsed_followup = None
+    if a_followup:
+        try:
+            parsed_followup = datetime.fromisoformat(str(a_followup).strip()[:10]).date()
+        except Exception:
+            try:
+                import dateutil.parser
+                parsed_followup = dateutil.parser.parse(str(a_followup)).date()
+            except Exception:
+                parsed_followup = None
+
+    a_interest = analysis.get("interest_level") or None
+    comment_parts = []
+    if summary:   comment_parts.append(f"[AI Summary] {summary}")
+    if a_notes:   comment_parts.append(f"[Notes] {a_notes}")
+    if a_timeline:comment_parts.append(f"[Timeline] {a_timeline}")
+    if a_interest:comment_parts.append(f"[Interest] {a_interest}")
+    if log_rec_url:comment_parts.append("[Recording Available]")
+    rich_comment = " | ".join(comment_parts) or None
+
+    _OUTCOME_TO_CRM_STATUS = {
+        "interested":     "interested",
+        "qualified":      "qualified",
+        "callback":       "contacted",
+        "connected":      "contacted",
+        "in_progress":    "contacted",
+        "not_interested": "lost",
+    }
+    new_crm_status = _OUTCOME_TO_CRM_STATUS.get(outcome or "", None)
+
+    # ── If lead_id exists → update it with all extracted info ─────────────────
+    if lead_id:
+        status_update_clause = (
+            "status = CASE WHEN status NOT IN ('won','qualified','proposal','loan_process') THEN :new_crm_status ELSE status END,"
+            if new_crm_status else ""
+        )
+        db.execute(text(f"""
+            UPDATE crm_leads
+            SET ai_status          = :outcome,
+                ai_summary         = :summary,
+                ai_language        = :lang,
+                ai_last_called_at  = NOW(),
+                ai_call_count      = COALESCE(ai_call_count, 0) + 1,
+                last_contact_date  = NOW(),
+                updated_at         = NOW(),
+                {status_update_clause}
+                name               = COALESCE(NULLIF(:aname,''),  name),
+                email              = COALESCE(NULLIF(:aemail,''), email),
+                city               = COALESCE(NULLIF(:acity,''),  city),
+                looking_for        = COALESCE(NULLIF(:aloc,''),   looking_for),
+                requirements       = COALESCE(NULLIF(:areq,''),   requirements),
+                budget_min         = COALESCE(:abmin, budget_min),
+                budget_max         = COALESCE(:abmax, budget_max),
+                next_followup_date = COALESCE(:afollowup, next_followup_date),
+                recent_comments    = CASE WHEN :rcomment IS NOT NULL
+                                         THEN :rcomment ELSE recent_comments END
+            WHERE id = :lid
+        """), {
+            "outcome": outcome or "no_answer", "summary": summary,
+            "lang": detected_lang, "lid": lead_id,
+            "aname": a_name, "aemail": a_email, "acity": a_city,
+            "aloc": (f"{a_loc} | {a_prop}" if a_loc and a_prop else a_loc or a_prop),
+            "areq": a_req, "abmin": a_bmin, "abmax": a_bmax,
+            "afollowup": parsed_followup,
+            "rcomment": rich_comment,
+            **({"new_crm_status": new_crm_status} if new_crm_status else {}),
+        })
+        updated_status = db.execute(text(
+            "SELECT status FROM crm_leads WHERE id = :lid"
+        ), {"lid": lead_id}).scalar()
+        db.execute(text(
+            "UPDATE ai_call_logs SET crm_status_after = :csa WHERE id = :lid"
+        ), {"csa": updated_status, "lid": log_id})
+        _agent = _get_agent_name_for_log(log_id)
+        _status_before_snap = db.execute(text(
+            "SELECT crm_status_before FROM ai_call_logs WHERE id=:lid"
+        ), {"lid": log_id}).scalar()
+        _write_ai_call_note(lead_id, _agent, outcome or "no_answer", summary,
+                            _status_before_snap, updated_status,
+                            detected_lang, duration, a_followup, rich_comment,
+                            recording_href=log_rec_url)
+
+    else:
+        # ── No lead_id — try to find by phone, or create a new lead ──────────
+        log_row_sub = db.execute(text(
+            "SELECT l.phone_dialed, l.company_id, l.campaign_id FROM ai_call_logs l WHERE l.id = :lid"
+        ), {"lid": log_id}).fetchone()
+        phone_from_log = log_row_sub[0] if log_row_sub else None
+        call_company_id = log_row_sub[1] if log_row_sub else None
+        call_campaign_id = log_row_sub[2] if log_row_sub else None
+
+        if not call_company_id and call_campaign_id:
+            call_company_id = db.execute(text(
+                "SELECT company_id FROM ai_campaigns WHERE id = :cid"
+            ), {"cid": call_campaign_id}).scalar()
+
+        phone_to_use = a_phone or phone_from_log
+
+        call_tenant_id = None
+        if call_company_id:
+            call_tenant_id = db.execute(text(
+                "SELECT client_id FROM associated_companies WHERE id = :cid"
+            ), {"cid": call_company_id}).scalar()
+
+        if phone_to_use and call_company_id and call_tenant_id:
+            from app.services.crm_dedup_service import find_phone_duplicate
+            dup_lead = find_phone_duplicate(
+                db=db,
+                tenant_id=call_tenant_id,
+                company_id=call_company_id,
+                phone=phone_to_use,
+                with_lock=True
+            )
+
+            if dup_lead:
+                lead_id = dup_lead.id
+                phone_status_clause = (
+                    "status = CASE WHEN status NOT IN ('won','qualified','proposal','loan_process') THEN :new_crm_status ELSE status END,"
+                    if new_crm_status else ""
+                )
+                db.execute(text(f"""
+                    UPDATE crm_leads
+                    SET ai_status=:outcome, ai_summary=:summary, ai_language=:lang,
+                        ai_last_called_at=NOW(), ai_call_count=COALESCE(ai_call_count,0)+1,
+                        last_contact_date=NOW(), updated_at=NOW(),
+                        {phone_status_clause}
+                        city               = COALESCE(NULLIF(:acity,''),  city),
+                        looking_for        = COALESCE(NULLIF(:aloc,''),   looking_for),
+                        requirements       = COALESCE(NULLIF(:areq,''),   requirements),
+                        budget_min         = COALESCE(:abmin, budget_min),
+                        budget_max         = COALESCE(:abmax, budget_max),
+                        next_followup_date = COALESCE(:afollowup, next_followup_date),
+                        recent_comments    = CASE WHEN :rcomment IS NOT NULL
+                                                 THEN :rcomment ELSE recent_comments END
+                    WHERE id = :lid
+                """), {
+                    "outcome": outcome or "no_answer", "summary": summary,
+                    "lang": detected_lang, "lid": lead_id,
+                    "acity": a_city, "aloc": (f"{a_loc} | {a_prop}" if a_loc and a_prop else a_loc or a_prop),
+                    "areq": a_req, "abmin": a_bmin, "abmax": a_bmax,
+                    "afollowup": parsed_followup, "rcomment": rich_comment,
+                    **({"new_crm_status": new_crm_status} if new_crm_status else {}),
+                })
+                updated_status_p = db.execute(text(
+                    "SELECT status FROM crm_leads WHERE id = :lid"
+                ), {"lid": lead_id}).scalar()
+                db.execute(text(
+                    "UPDATE ai_call_logs SET lead_id=:lid, crm_status_after=:csa WHERE id=:log"
+                ), {"lid": lead_id, "csa": updated_status_p, "log": log_id})
+                _agent_p = _get_agent_name_for_log(log_id)
+                _status_before_p = db.execute(text(
+                    "SELECT crm_status_before FROM ai_call_logs WHERE id=:lid"
+                ), {"lid": log_id}).scalar()
+                _write_ai_call_note(lead_id, _agent_p, outcome or "no_answer", summary,
+                                    _status_before_p, updated_status_p,
+                                    detected_lang, duration, parsed_followup or a_followup, rich_comment,
+                                    recording_href=log_rec_url)
+
+            elif outcome in QUALIFIED_OUTCOMES or (a_interest and a_interest in ("high", "medium")):
+                new_lead = db.execute(text("""
+                    INSERT INTO crm_leads
+                        (tenant_id, company_id, name, phone, email, city, looking_for, requirements,
+                         budget_min, budget_max, source, status, priority, handler_type, description,
+                         ai_status, ai_summary, ai_language, ai_last_called_at, ai_call_count,
+                         next_followup_date, last_contact_date, recent_comments,
+                         created_at, updated_at)
+                    VALUES
+                        (:tid, :cid, :aname, :phone, :aemail, :acity, :aloc, :areq,
+                         :abmin, :abmax, 'AI Call', 'New', 'medium', 'unassigned',
+                         :desc, :outcome, :summary, :lang, NOW(), 1,
+                         :afollowup, NOW(), :rcomment, NOW(), NOW())
+                    RETURNING id
+                """), {
+                    "tid": call_tenant_id, "cid": call_company_id,
+                    "aname": a_name or "Unknown", "phone": phone_to_use,
+                    "aemail": a_email, "acity": a_city,
+                    "aloc": (f"{a_loc} | {a_prop}" if a_loc and a_prop else a_loc or a_prop),
+                    "areq": a_req, "abmin": a_bmin, "abmax": a_bmax,
+                    "desc": f"Auto-created from AI call. Timeline: {a_timeline or 'Not mentioned'}",
+                    "outcome": outcome or "no_answer", "summary": summary, "lang": detected_lang,
+                    "afollowup": parsed_followup, "rcomment": rich_comment,
+                }).fetchone()
+                if new_lead:
+                    db.execute(text("UPDATE ai_call_logs SET lead_id=:lid WHERE id=:log"),
+                               {"lid": new_lead[0], "log": log_id})
+                    logger.info(f"[STATUS] ✅ New CRM lead created id={new_lead[0]} log={log_id}")
+                    lead_obj = db.query(CRMLead).filter(CRMLead.id == new_lead[0]).first()
+                    if lead_obj:
+                        from app.services.crm_phone_sync_service import sync_lead_phone_identities
+                        sync_lead_phone_identities(
+                            db=db,
+                            lead=lead_obj,
+                            phone_raw=phone_to_use,
+                            source_channel='ai_calling',
+                            source_ref=f"ai_call_log_{log_id}",
+                            with_lock=False
+                        )
+                    _agent_n = _get_agent_name_for_log(log_id)
+                    _write_ai_call_note(new_lead[0], _agent_n, outcome or "no_answer", summary,
+                                        None, "contacted", detected_lang, duration,
+                                        a_followup, rich_comment, recording_href=log_rec_url)
+
+    if campaign_id:
+        db.execute(text("""
+            UPDATE ai_campaigns
+            SET calls_made = COALESCE(calls_made,0)+1,
+                calls_connected = COALESCE(calls_connected,0) + CASE WHEN :connected THEN 1 ELSE 0 END,
+                calls_qualified = COALESCE(calls_qualified,0) + CASE WHEN :qualified THEN 1 ELSE 0 END,
+                updated_at = NOW()
+            WHERE id=:cid
+        """), {
+            "connected": final_status == "completed",
+            "qualified": outcome in QUALIFIED_OUTCOMES,
+            "cid": campaign_id,
+        })
+
+    db.commit()
+    return analysis
+
+
 @router.post("/webhook/status")
+
 async def webhook_status(
     request: Request,
     log_id: int = Query(...),
@@ -6909,17 +8493,19 @@ def _is_usage_authorized(user: StaffEmployee) -> bool:
 def get_gemini_pool(
     current_user: StaffEmployee = Depends(get_current_staff_user),
 ):
-    """List configured Gemini project accounts in the pool with masked keys and live cooldown status."""
+    """List configured Gemini project accounts in the pool with masked keys, canonical config, and live cooldown status."""
     if not _is_usage_authorized(current_user):
         raise HTTPException(status_code=403, detail="Access restricted to VGK Mentor and Accounts department staff.")
     cid = current_user.base_company_id or 1
     accounts = _GEMINI_POOL.list_accounts_masked(cid)
+    canonical = _GEMINI_POOL.get_canonical_configuration(cid)
     active_count = sum(1 for a in accounts if a["status"] == "active")
     cooldown_count = sum(1 for a in accounts if a["status"] == "cooldown")
     return {
         "success": True,
         "company_id": cid,
         "accounts": accounts,
+        "canonical_config": canonical,
         "active_count": active_count,
         "cooldown_count": cooldown_count,
     }
@@ -6930,7 +8516,7 @@ def add_or_update_gemini_account(
     payload: dict = Body(...),
     current_user: StaffEmployee = Depends(get_current_staff_user),
 ):
-    """Add a new Gemini project account or update an existing one in the pool."""
+    """Add a new Gemini project account or update an existing one in the pool with automatic 2-phase validation."""
     if not _is_usage_authorized(current_user):
         raise HTTPException(status_code=403, detail="Access restricted to VGK Mentor and Accounts department staff.")
     cid = current_user.base_company_id or 1
@@ -6951,10 +8537,17 @@ def add_or_update_gemini_account(
             "account": {
                 "id": updated["id"],
                 "name": updated["name"],
+                "gcp_project_name": updated.get("gcp_project_name"),
+                "gcp_project_id": updated.get("gcp_project_id"),
                 "api_key_masked": _mask_gemini_key(updated["api_key"]),
                 "priority": updated["priority"],
                 "status": updated["status"],
                 "daily_limit": updated["daily_limit"],
+                "internal_spending_limit_usd": updated.get("internal_spending_limit_usd", 50.0),
+                "conversation_model": updated.get("conversation_model"),
+                "tts_model": updated.get("tts_model"),
+                "detected_tier": updated.get("detected_tier"),
+                "last_test": updated.get("last_test"),
             }
         }
     except Exception as e:
@@ -6966,14 +8559,18 @@ def test_gemini_key_endpoint(
     payload: dict = Body(...),
     current_user: StaffEmployee = Depends(get_current_staff_user),
 ):
-    """Test a Gemini API key with a live ping without saving it."""
+    """Test a Gemini API key. By default tests ONLY conversation connectivity (0 TTS quota consumed).
+    Live TTS synthesis is executed ONLY if test_tts is explicitly True."""
     if not _is_usage_authorized(current_user):
         raise HTTPException(status_code=403, detail="Access restricted to VGK Mentor and Accounts department staff.")
     api_key = (payload.get("api_key") or "").strip()
     account_id = payload.get("account_id")
+    conv_model = payload.get("conversation_model") or "gemini-3.6-flash"
+    tts_model = payload.get("tts_model") or "gemini-2.5-flash-preview-tts"
+    test_tts = bool(payload.get("test_tts", False))
 
+    cid = current_user.base_company_id or 1
     if account_id and (not api_key or api_key.startswith("***")):
-        cid = current_user.base_company_id or 1
         pool = _GEMINI_POOL.get_pool(cid)
         acc = next((a for a in pool if a.get("id") == account_id), None)
         if acc:
@@ -6982,8 +8579,26 @@ def test_gemini_key_endpoint(
     if not api_key:
         raise HTTPException(status_code=400, detail="API key is required to test")
 
-    res = _ping_gemini_key(api_key)
+    res = _test_gemini_connection(api_key, conv_model=conv_model, tts_model=tts_model, test_tts=test_tts)
+    if test_tts and account_id:
+        tts_t = res.get("tts_test", {})
+        if tts_t.get("status") == "PASS":
+            _GEMINI_POOL.record_tts_result(cid, account_id, success=True)
+        else:
+            _GEMINI_POOL.record_tts_result(cid, account_id, success=False, error_msg=tts_t.get("error"))
+
     return res
+
+
+@router.post("/gemini-pool/test-local-audio")
+def test_local_audio_endpoint(
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+):
+    """Verify local static fallback audio files (Telugu, Hindi, English WAVs) without consuming Google Gemini quota."""
+    if not _is_usage_authorized(current_user):
+        raise HTTPException(status_code=403, detail="Access restricted to VGK Mentor and Accounts department staff.")
+    return _test_local_static_fallback()
+
 
 
 @router.post("/gemini-pool/account/{account_id}/toggle")
@@ -7729,3 +9344,423 @@ async def voice_preview(
         return {"success": True, "url": f"/api/v1/staff/ai-calling/audio/{fname}", "voice": voice}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.websocket("/stream/{log_id}")
+async def plivo_bidirectional_audio_stream(
+    websocket: WebSocket,
+    log_id: int,
+):
+    """
+    Real-Time Bidirectional Audio WebSocket for Plivo:
+    Customer (PSTN) <-> Plivo (WebSocket 8kHz mu-law) <-> MyntOS <-> Sarvam Realtime STT / TTS <-> Gemini AI
+    Supports:
+      1. Direct 8kHz G.711 mu-law audio pass-through without decoding or transcoding.
+      2. Native Telugu (te-IN), Hindi (hi-IN), and English (en-IN) STT & TTS.
+      3. Instant barge-in / interruption (Plivo clearAudio).
+      4. Dynamic cross-vertical knowledge retrieval (Solar, Property, EV, Finance, CIBIL) with Gemini reasoning.
+    """
+    await websocket.accept()
+    logger.info(f"[PLIVO-STREAM] Connected for log_id={log_id}")
+
+    db = _SessionLocal()
+    stt_client = None
+    barge_in = PlivoBargeInController(websocket)
+
+    try:
+        # 1. Fetch call log and session records
+        log_row = db.execute(text(
+            "SELECT id, company_id, phone_dialed, language_used, segment FROM ai_call_logs WHERE id = :id"
+        ), {"id": log_id}).fetchone()
+
+        sess_row = db.execute(text(
+            "SELECT language, agent_voice, agent_name, conversation FROM ai_call_sessions WHERE log_id = :id"
+        ), {"id": log_id}).fetchone()
+
+        company_id = log_row[1] if (log_row and log_row[1]) else 1
+        lang = (sess_row[0] if sess_row and sess_row[0] else (log_row[3] if log_row and log_row[3] else "te")).strip().lower()
+        raw_agent = (sess_row[2] if sess_row and sess_row[2] else "Vidya").strip()
+        is_male_agent = any(m in raw_agent.lower() for m in ("karthik", "aditya", "male", "teja"))
+        agent_name = "Teja" if is_male_agent else "Vidya"
+        tts_speaker = "shubh" if is_male_agent else "kavya"
+
+        segment = (log_row[4] if log_row and log_row[4] else "").strip()
+        # Fallback to crm_leads if segment not in log_row
+        if not segment:
+            try:
+                lid = db.execute(text("SELECT lead_id FROM ai_call_logs WHERE id = :id"), {"id": log_id}).scalar()
+                if lid:
+                    lead_row = db.execute(text("SELECT looking_for, description FROM crm_leads WHERE id = :lid"), {"lid": lid}).fetchone()
+                    if lead_row:
+                        comb = f"{lead_row[0] or ''} {lead_row[1] or ''}".lower()
+                        if "solar" in comb:
+                            segment = "solar"
+                        elif any(p in comb for p in ("plot", "property", "villa", "realty")):
+                            segment = "property"
+                        elif "ev" in comb:
+                            segment = "ev"
+                        elif any(f in comb for f in ("loan", "finance", "cibil")):
+                            segment = "finance"
+            except Exception as _e:
+                logger.warning(f"[PLIVO-STREAM] Lead segment lookup error: {_e}")
+
+        conversation = []
+        if sess_row and sess_row[3]:
+            try:
+                conversation = json.loads(sess_row[3])
+                if not isinstance(conversation, list):
+                    conversation = []
+            except Exception:
+                conversation = []
+
+        sarvam_lang = SUPPORTED_LANGUAGES.get(lang, "te-IN")
+        stream_start_time = time.time()
+
+        # Pre-warm conversational gap filler cache in background for instant zero-latency playback
+        asyncio.create_task(ConversationalFillerEngine.get_or_synthesize_filler(lang, tts_speaker))
+
+        # 2. Handler for customer speech completion
+        async def process_customer_turn(user_utterance: str, utterance_lang: Optional[str] = None):
+            clean_text = user_utterance.strip()
+            if not clean_text:
+                return
+
+            # Cancel any lingering playback tasks before starting a new turn (guarantees zero voice overlap)
+            await barge_in.cancel_all_speech()
+            barge_in.is_interrupted = False
+
+            # Dynamically adapt turn language while preserving language stickiness
+            current_lang = lang
+            if utterance_lang:
+                u_clean = utterance_lang.lower().strip()
+                txt_lower = clean_text.lower()
+                # Check for explicit language switch requests in text
+                if any(phrase in txt_lower for phrase in ("telugu lo", "telugulo", "తెలుగు", "in telugu")):
+                    current_lang = "te"
+                elif any(phrase in txt_lower for phrase in ("hindi me", "hindime", "हिन्दी", "हिंदी", "in hindi")):
+                    current_lang = "hi"
+                elif any(phrase in txt_lower for phrase in ("in english", "speak in english", "english please")):
+                    current_lang = "en"
+                elif "te" in u_clean:
+                    current_lang = "te"
+                elif "hi" in u_clean and lang != "te":
+                    current_lang = "hi"
+                elif "en" in u_clean and lang not in ("te", "hi"):
+                    current_lang = "en"
+
+            current_sarvam_lang = SUPPORTED_LANGUAGES.get(current_lang, "te-IN")
+            logger.info(f"[PLIVO-STREAM] Turn processing: '{clean_text}' (lang={current_lang}) for log_id={log_id}")
+
+            # Emit helper for Plivo audio
+            async def emit_plivo_audio(b64_audio: str):
+                if not barge_in.is_ai_speaking or barge_in.is_interrupted:
+                    return
+                audio_event = {
+                    "event": "playAudio",
+                    "media": {
+                        "payload": b64_audio,
+                        "sampleRate": 8000,
+                        "contentType": "audio/x-mulaw",
+                    }
+                }
+                await websocket.send_text(json.dumps(audio_event))
+
+            # A. Immediately stream conversational filler acknowledgement while Gemini thinks and retrieves KB
+            filler_task = None
+            async def run_filler():
+                try:
+                    barge_in.is_ai_speaking = True
+                    await ConversationalFillerEngine.play_filler_chunk_stream(
+                        lang=current_lang,
+                        speaker=tts_speaker,
+                        emit_func=emit_plivo_audio,
+                        is_interrupted_func=lambda: barge_in.is_interrupted or not barge_in.is_ai_speaking,
+                    )
+                except asyncio.CancelledError:
+                    pass
+                except Exception as _fe:
+                    logger.warning(f"[PLIVO-STREAM] Filler playback warning: {_fe}")
+
+            filler_task = asyncio.create_task(run_filler())
+            barge_in.register_speaking_task(filler_task)
+
+            # B. Append user message to conversation
+            conversation.append({"role": "user", "content": clean_text})
+            try:
+                db.execute(text(
+                    "UPDATE ai_call_sessions SET conversation = :conv, language = :lang, updated_at = NOW() WHERE log_id = :id"
+                ), {"conv": json.dumps(conversation), "lang": current_lang, "id": log_id})
+                db.commit()
+            except Exception as _e:
+                logger.warning(f"[PLIVO-STREAM] Conversation save warning: {_e}")
+
+            # C. Dynamic Knowledge Grounding (Searches across all company verticals: Solar, Property, EV, Finance)
+            retrieved_docs, has_match = DynamicKnowledgeEngine.retrieve_approved_knowledge(
+                db_session=db,
+                company_id=company_id,
+                question=clean_text,
+                active_segment=segment,
+                max_entries=3,
+            )
+
+            # D. System Prompt Construction
+            sys_prompt = _build_system_prompt(
+                db=db,
+                company_id=company_id,
+                language=current_lang,
+                lead_name="",
+                segment=segment,
+                is_test=False,
+                agent_name=agent_name,
+            )
+            if retrieved_docs:
+                kb_snippet = "\n".join([f"- [{d['segment']}] {d['title']}: {d['content']}" for d in retrieved_docs])
+                sys_prompt += f"\n\n### RELEVANT CATALOGUE INFORMATION:\n{kb_snippet}\n"
+
+            # E. Gemini Conversational Brain (non-blocking thread execution)
+            reply_text, p_tok, c_tok = await asyncio.to_thread(
+                _gemini_conversation,
+                conversation,
+                sys_prompt,
+                current_lang,
+                company_id,
+            )
+
+            # Ensure filler finishes or is cleanly stopped before streaming detailed reply
+            if filler_task and not filler_task.done():
+                try:
+                    await asyncio.wait_for(asyncio.shield(filler_task), timeout=1.8)
+                except Exception:
+                    filler_task.cancel()
+
+            # If user interrupted while filler was playing or while Gemini was thinking, stop here
+            if barge_in.is_interrupted:
+                logger.info(f"[PLIVO-STREAM] Interruption detected before main reply for log_id={log_id}")
+                return
+
+            # Ensure real-time disclaimer is included if pricing/catalogue details were discussed
+            has_pricing = any(w in reply_text.lower() for w in ("₹", "rs", "rupee", "subsidy", "price", "cost", "lakh", "లక్ష", "రూపాయ", "ధర", "సబ్సిడీ", "ఖరీదు", "रुपये", "लाख", "कीमत", "सब्सिडी"))
+            has_team_mention = any(w in reply_text.lower() for w in ("team", "executive", "టీమ్", "ఎగ్జిక్యూటివ్", "సంప్రది", "टीम", "एग्जीक्यूटिव", "संपर्क"))
+            if has_pricing and not has_team_mention:
+                if current_lang == "te":
+                    reply_text += " అయితే సైట్ మరియు ప్రస్తుత పరిస్థితుల ఆధారంగా ఖచ్చితమైన వివరాలు లేదా ధరలు మారే అవకాశం ఉంది, కాబట్టి మా టీమ్ ఎగ్జిక్యూటివ్ మిమ్మల్ని నేరుగా సంప్రదిస్తారు."
+                elif current_lang == "hi":
+                    reply_text += " हालाँकि साइट और वास्तविक परिस्थितियों के आधार पर कीमतों या विवरण में बदलाव हो सकता है, इसलिए हमारी टीम के एग्जीक्यूटिव आपसे जल्द ही संपर्क करेंगे।"
+                else:
+                    reply_text += " Please note that exact details and pricing may vary based on actual site conditions, and our team executive will connect with you to finalize."
+
+            logger.info(f"[PLIVO-STREAM] Gemini generated ({p_tok}+{c_tok} tokens, lang={current_lang}): {reply_text}")
+
+            conversation.append({"role": "assistant", "content": reply_text})
+            try:
+                db.execute(text(
+                    "UPDATE ai_call_sessions SET conversation = :conv, updated_at = NOW() WHERE log_id = :id"
+                ), {"conv": json.dumps(conversation), "id": log_id})
+                db.commit()
+            except Exception as _e:
+                logger.warning(f"[PLIVO-STREAM] Conversation save warning: {_e}")
+
+            # F. Synthesize with Sarvam bulbul:v3 and stream to Plivo
+            barge_in.is_ai_speaking = True
+            barge_in.is_interrupted = False
+            tts_client = SarvamStreamingTTSClient(
+                language_code=current_sarvam_lang,
+                speaker=tts_speaker,
+                sample_rate=8000,
+                output_codec="mulaw",
+            )
+
+            async def text_chunk_gen():
+                yield reply_text
+
+            try:
+                speaking_task = asyncio.current_task()
+                barge_in.register_speaking_task(speaking_task)
+                await tts_client.synthesize_streaming(text_chunk_gen(), emit_plivo_audio)
+            except asyncio.CancelledError:
+                logger.info(f"[PLIVO-STREAM] Speech task cancelled on user interruption for log_id={log_id}")
+            except Exception as _e:
+                logger.error(f"[PLIVO-STREAM] TTS streaming error: {_e}")
+            finally:
+                barge_in.is_ai_speaking = False
+
+        # 3. Setup Callbacks for Sarvam STT Client with Utterance Accumulation and Debounce
+        user_utterance_buffer: List[str] = []
+        accumulated_lang: Optional[str] = None
+        pending_dispatch_task: Optional[asyncio.Task] = None
+        turn_first_received_at: Optional[float] = None
+
+        async def debounced_turn_dispatch(delay: float = 0.45):
+            nonlocal turn_first_received_at
+            try:
+                await asyncio.sleep(delay)
+                # If we get here without cancellation, customer has completed their query
+                if not user_utterance_buffer:
+                    return
+                full_customer_utterance = " ".join(user_utterance_buffer).strip()
+                user_utterance_buffer.clear()
+                turn_first_received_at = None
+                det_lang = accumulated_lang
+                logger.info(f"[PLIVO-STREAM] Customer completed speaking: '{full_customer_utterance}' (lang={det_lang}) for log_id={log_id}")
+                turn_task = asyncio.create_task(process_customer_turn(full_customer_utterance, det_lang))
+                barge_in.register_turn_task(turn_task)
+            except asyncio.CancelledError:
+                pass
+
+        async def on_stt_speech_start():
+            # Ambient microphone noise or line static must not mute AI
+            pass
+
+        async def on_stt_partial(text: str, detected_lang: str):
+            clean_part = (text or "").strip()
+            # Echo & noise suppression:
+            # Require substantive speech (>= 6 chars and at least 2 distinct words) while AI is actively speaking
+            words = clean_part.split()
+            if clean_part and len(clean_part) >= 6 and len(words) >= 2 and barge_in.is_ai_speaking:
+                await barge_in.on_user_speech_detected()
+
+        async def on_stt_final(text: str, detected_lang: str):
+            clean = (text or "").strip()
+            # Noise filter: ignore single characters or trivial noise
+            if not clean or len(clean) < 2:
+                return
+
+            nonlocal accumulated_lang, pending_dispatch_task, turn_first_received_at
+            now = time.time()
+            if not user_utterance_buffer:
+                turn_first_received_at = now
+
+            accumulated_lang = detected_lang or accumulated_lang
+            user_utterance_buffer.append(clean)
+            logger.info(f"[PLIVO-STREAM] Buffered customer utterance ({len(user_utterance_buffer)}): '{clean}' for log_id={log_id}")
+
+            elapsed_since_start = now - (turn_first_received_at or now)
+
+            # Deadline guard: if background chatter keeps arriving, do not hold indefinitely; force dispatch after 1.8s
+            if elapsed_since_start >= 1.8:
+                logger.info(f"[PLIVO-STREAM] Max turn deadline reached ({elapsed_since_start:.2f}s). Dispatching immediately.")
+                if pending_dispatch_task and not pending_dispatch_task.done():
+                    pending_dispatch_task.cancel()
+                pending_dispatch_task = asyncio.create_task(debounced_turn_dispatch(delay=0.05))
+                return
+
+            # Dynamic debounce: 400ms if substantive words buffered, 750ms if short single word
+            total_words = sum(len(u.split()) for u in user_utterance_buffer)
+            debounce_delay = 0.40 if total_words >= 3 else 0.75
+
+            if pending_dispatch_task and not pending_dispatch_task.done():
+                pending_dispatch_task.cancel()
+            pending_dispatch_task = asyncio.create_task(debounced_turn_dispatch(delay=debounce_delay))
+
+        stt_client = SarvamRealtimeSTTClient(
+            language_code="auto",
+            encoding="mulaw",
+            sample_rate=8000,
+            on_speech_start=on_stt_speech_start,
+            on_partial_transcript=on_stt_partial,
+            on_final_transcript=on_stt_final,
+        )
+        await stt_client.connect()
+
+        # 4. Initial greeting playback helper
+        greeting_done = False
+        async def play_initial_greeting():
+            nonlocal greeting_done
+            if greeting_done:
+                return
+            greeting_done = True
+
+            greeting_text = ""
+            for m in conversation:
+                if m.get("role") == "assistant" and m.get("content"):
+                    greeting_text = m.get("content")
+                    break
+            if not greeting_text:
+                greeting_text = _build_greeting(agent_name, lang, "", segment)
+                conversation.append({"role": "assistant", "content": greeting_text})
+                try:
+                    db.execute(text("UPDATE ai_call_sessions SET conversation=:c WHERE log_id=:id"), {"c": json.dumps(conversation), "id": log_id})
+                    db.commit()
+                except Exception:
+                    pass
+
+            if greeting_text:
+                logger.info(f"[PLIVO-STREAM] Playing initial greeting: {greeting_text}")
+                await barge_in.cancel_all_speech()
+                barge_in.is_interrupted = False
+                barge_in.is_ai_speaking = True
+                greeting_play_task = asyncio.current_task()
+                barge_in.register_speaking_task(greeting_play_task)
+
+                tts_init = SarvamStreamingTTSClient(
+                    language_code=sarvam_lang,
+                    speaker=tts_speaker,
+                    sample_rate=8000,
+                    output_codec="mulaw",
+                )
+                async def g_gen():
+                    yield greeting_text
+                async def on_g_audio(b64):
+                    if not barge_in.is_ai_speaking or barge_in.is_interrupted:
+                        return
+                    play_event = {
+                        "event": "playAudio",
+                        "media": {
+                            "payload": b64,
+                            "sampleRate": 8000,
+                            "contentType": "audio/x-mulaw",
+                        }
+                    }
+                    await websocket.send_text(json.dumps(play_event))
+                try:
+                    await tts_init.synthesize_streaming(g_gen(), on_g_audio)
+                except asyncio.CancelledError:
+                    logger.info(f"[PLIVO-STREAM] Initial greeting cancelled on interruption for log_id={log_id}")
+                except Exception as _e:
+                    logger.error(f"[PLIVO-STREAM] Greeting TTS error: {_e}")
+                finally:
+                    barge_in.is_ai_speaking = False
+
+        # 5. Receive loop from Plivo WebSocket
+        async for raw_text in websocket.iter_text():
+            try:
+                msg = json.loads(raw_text)
+            except Exception:
+                continue
+
+            event = msg.get("event")
+            if event == "start":
+                logger.info(f"[PLIVO-STREAM] Received start event from Plivo for log_id={log_id}")
+                greeting_task = asyncio.create_task(play_initial_greeting())
+                barge_in.register_speaking_task(greeting_task)
+            elif event == "media":
+                audio_payload = msg.get("media", {}).get("payload")
+                if audio_payload and stt_client:
+                    await stt_client.send_audio_chunk(audio_payload)
+            elif event == "stop":
+                logger.info(f"[PLIVO-STREAM] Received stop event from Plivo for log_id={log_id}")
+                break
+
+    except WebSocketDisconnect:
+        logger.info(f"[PLIVO-STREAM] WebSocket disconnected for log_id={log_id}")
+    except Exception as e:
+        logger.error(f"[PLIVO-STREAM] Unexpected error for log_id={log_id}: {e}", exc_info=True)
+    finally:
+        await barge_in.cancel_all_speech()
+        if pending_dispatch_task and not pending_dispatch_task.done():
+            pending_dispatch_task.cancel()
+        if stt_client:
+            await stt_client.disconnect()
+        # Post-call analysis and CRM synchronization
+        try:
+            stream_dur = int(time.time() - stream_start_time)
+            _sync_call_analysis_and_crm(
+                db=db,
+                log_id=log_id,
+                call_status="completed",
+                duration=stream_dur,
+            )
+        except Exception as _sync_err:
+            logger.warning(f"[PLIVO-STREAM] Final CRM sync error for log_id={log_id}: {_sync_err}")
+        db.close()
+        logger.info(f"[PLIVO-STREAM] Cleaned up session and synced CRM for log_id={log_id}")

@@ -353,11 +353,11 @@
       </div>
 
       <div class="dc-queue-badges">
-        <div class="dc-badge red"><div class="badge-num" id="badge-overdue">0</div><div class="badge-lbl">Overdue</div></div>
-        <div class="dc-badge yellow"><div class="badge-num" id="badge-due">0</div><div class="badge-lbl">Due Today</div></div>
-        <div class="dc-badge orange"><div class="badge-num" id="badge-new">0</div><div class="badge-lbl">New</div></div>
-        <div class="dc-badge blue"><div class="badge-num" id="badge-second">0</div><div class="badge-lbl">2nd Call</div></div>
-        <div class="dc-badge purple" id="dc-badge-upcoming-wrap" style="cursor:pointer;" onclick="toggleUpcomingQueue()" title="Click to view/load upcoming calls today"><div class="badge-num" id="badge-upcoming">0</div><div class="badge-lbl">Upcoming</div></div>
+        <div class="dc-badge red" style="cursor:pointer;" onclick="filterQueueByPriority('overdue')" title="Click to view Overdue leads"><div class="badge-num" id="badge-overdue">0</div><div class="badge-lbl">Overdue</div></div>
+        <div class="dc-badge yellow" style="cursor:pointer;" onclick="filterQueueByPriority('due_today')" title="Click to view Due Today leads"><div class="badge-num" id="badge-due">0</div><div class="badge-lbl">Due Today</div></div>
+        <div class="dc-badge orange" style="cursor:pointer;" onclick="filterQueueByPriority('new')" title="Click to view New leads"><div class="badge-num" id="badge-new">0</div><div class="badge-lbl">New</div></div>
+        <div class="dc-badge blue" style="cursor:pointer;" onclick="filterQueueByPriority('second_contact')" title="Click to view 2nd Call leads"><div class="badge-num" id="badge-second">0</div><div class="badge-lbl">2nd Call</div></div>
+        <div class="dc-badge purple" id="dc-badge-upcoming-wrap" style="cursor:pointer;" onclick="filterQueueByPriority('upcoming')" title="Click to view/load upcoming calls today"><div class="badge-num" id="badge-upcoming">0</div><div class="badge-lbl">Upcoming</div></div>
         <button id="dc-web-refresh-queue" onclick="refreshQueueManual()" style="margin-left:auto;border:1px solid #e5e7eb;border-radius:16px;padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;background:#f3f4f6;color:#374151;display:inline-flex;align-items:center;gap:4px;" title="Refresh queue with latest leads">
           <i class="fas fa-sync-alt" id="dc-refresh-icon"></i> Refresh
         </button>
@@ -721,7 +721,8 @@
               <label for="e-dnc">🚫 Do Not Call — remove from all future dialer queues</label>
             </div>
             <div id="e-countdown-row" style="display:none;margin-top:10px;" class="dc-countdown-row">
-              Auto-saving in <b id="e-countdown-sec">15</b>s…
+              <span id="e-countdown-msg">Auto-saving in <b id="e-countdown-sec">60</b>s…</span>
+              <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-decoration-none" style="font-size:11px;color:#6b7280;" onclick="_dcPauseCountdown()">(Pause)</button>
               <div style="width:100%;height:3px;background:#f3f4f6;border-radius:2px;margin-top:4px;overflow:hidden;">
                 <div id="e-countdown-bar" style="height:3px;background:#059669;width:100%;transition:width 1s linear;"></div>
               </div>
@@ -885,6 +886,7 @@
 <script src="/public/js/share-lead-modal.js?v=20260916"></script>
 <script src="/public/js/nda-enforcement.js"></script>
 <script>
+window.__currentDialedPage = 'Auto Dialer';
 (async function() {
   function maskPhone(p) {
     if (!p || p === '—' || p === '-' || p === 'null') return '—';
@@ -930,7 +932,7 @@
   let deferredCategoryIds = new Set();
   let selectedActivity = null, holdMode = false, holdStartTime = 0, holdIntervalId = null;
   let countdownTimer = null;
-  const COUNTDOWN_TOTAL = 15;
+  const COUNTDOWN_TOTAL = 60; // 60s post-call wrap-up (prevents premature auto-advance)
   let callTimerStart = null;
   let statsDialed = 0, statsAnswered = 0, statsSkipped = 0;
   let syncPollTimer = null;
@@ -1701,10 +1703,25 @@
 
   document.addEventListener('plivo:call-terminated', function(e) {
     const durSec = bannerCallTimerSeconds;
-    updateBannerCallState('ended', 'Call Ended', 'bg-danger');
-    const durInput = document.getElementById('e-duration');
-    if (durInput && (!durInput.value || parseInt(durInput.value) === 0) && durSec > 0) {
-      durInput.value = durSec;
+    if (durSec > 0) {
+      updateBannerCallState('ended', `Call Ended (${durSec}s)`, 'bg-danger');
+      const durInput = document.getElementById('e-duration');
+      if (durInput && (!durInput.value || parseInt(durInput.value) === 0)) {
+        durInput.value = durSec;
+      }
+      // If Answered was selected during call, or if user hasn't selected an outcome yet, auto-select answered and start wrap-up countdown
+      if (selectedOutcome === 'answered' || !selectedOutcome) {
+        if (!selectedOutcome) {
+          selectedOutcome = 'answered';
+          document.querySelectorAll('.dc-outcome-btn').forEach(b => b.className = 'dc-outcome-btn');
+          document.querySelector('.dc-outcome-btn[data-outcome="answered"]')?.classList.add('selected-answered');
+        }
+        _dcStartCountdown();
+      }
+    } else {
+      updateBannerCallState('ended', 'Disconnected / No Answer (0s)', 'bg-warning text-dark');
+      _dcPauseCountdown();
+      toast('⚠️ Call disconnected (0s). Recipient may have declined or mic was blocked. You can Redial, Send WhatsApp, or use Direct Mobile.', 5000);
     }
     if (lastDialedPhone && typeof window.rchSaveLocal === 'function') {
       const termName = document.getElementById('e-name')?.value || currentLead?.name || 'Customer';
@@ -1714,8 +1731,10 @@
       window.rchInvalidateCache();
     }
     setTimeout(() => {
-      updateBannerCallState('idle', 'Idle', 'bg-secondary');
-    }, 3500);
+      if (!isSoftphoneCallActive()) {
+        updateBannerCallState('idle', 'Idle', 'bg-secondary');
+      }
+    }, 4000);
   });
 
   window.doDialerHangup = function() {
@@ -2012,13 +2031,21 @@
     const pEl = document.getElementById('e-phone');
     if (pEl) {
       pEl.value = maskPhone(data.phone);
-      pEl.dataset.rawPhone = data.phone || '';
+      if (currentLead && currentLead.phone && !currentLead.phone.includes('•')) {
+        pEl.dataset.rawPhone = currentLead.phone;
+      } else if (data.phone && !data.phone.includes('•')) {
+        pEl.dataset.rawPhone = data.phone;
+      }
       pEl.readOnly = true;
     }
     const aEl = document.getElementById('e-alt-phone');
     if (aEl) {
       aEl.value = maskPhone(data.alternate_phone);
-      aEl.dataset.rawPhone = data.alternate_phone || '';
+      if (currentLead && currentLead.alternate_phone && !currentLead.alternate_phone.includes('•')) {
+        aEl.dataset.rawPhone = currentLead.alternate_phone;
+      } else if (data.alternate_phone && !data.alternate_phone.includes('•')) {
+        aEl.dataset.rawPhone = data.alternate_phone;
+      }
       aEl.readOnly = true;
     }
     setChk('e-phone-wa', data.phone_primary_whatsapp);
@@ -2209,7 +2236,69 @@
     }
   }
 
+  let activeWebPriorityFilter = null;
+  window.filterQueueByPriority = function(priority) {
+    const resultsEl = document.getElementById('dc-search-results');
+    if (!resultsEl) return;
+    if (activeWebPriorityFilter === priority) {
+      activeWebPriorityFilter = null;
+      resultsEl.style.display = 'none';
+      return;
+    }
+    activeWebPriorityFilter = priority;
+    const queue = dcQueue || [];
+    let filtered = [];
+    if (priority === 'upcoming') {
+      filtered = queue.filter(q => q.queue_priority === 'upcoming' || q.queue_priority === 'upcoming_today');
+    } else {
+      filtered = queue.filter(q => q.queue_priority === priority);
+    }
+    const labelMap = {
+      overdue: 'Overdue Leads',
+      due_today: 'Due Today Leads',
+      new: 'New Leads',
+      second_contact: '2nd Call Leads',
+      upcoming: 'Upcoming Scheduled Leads'
+    };
+    const title = labelMap[priority] || priority;
+    const header = `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0;">
+        <span style="font-weight:700;color:#0f172a;font-size:13px;"><i class="fas fa-bullseye" style="color:#0284c7"></i> ${title} (${filtered.length})</span>
+        <button onclick="dcSearchClear()" style="background:none;border:none;font-size:12px;font-weight:700;color:#0284c7;cursor:pointer;">✕ Close</button>
+      </div>`;
+    if (filtered.length === 0) {
+      resultsEl.innerHTML = `${header}<div class="dc-search-no-results" style="padding:20px;text-align:center;color:#64748b;">No leads currently in this priority bucket</div>`;
+      resultsEl.style.display = 'block';
+      return;
+    }
+    const rows = filtered.map(lead => {
+      const dialPhone = (lead.phone || lead.alternate_phone || '').trim();
+      const cat = lead.category_name || '';
+      return `
+        <div class="dc-search-item" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid #f1f5f9;">
+          <div class="dc-search-info" style="flex:1;min-width:0;">
+            <div class="dc-search-name" style="font-weight:700;font-size:14px;color:#1e293b;">
+              ${escapeHtml(lead.name || 'Lead Contact')}
+              ${cat ? `<span class="dc-search-badge lead" style="font-size:10px;">${escapeHtml(cat)}</span>` : ''}
+              ${lead.is_hot_lead ? `<span style="font-size:10px;font-weight:700;padding:1px 6px;background:#fee2e2;color:#dc2626;border-radius:4px;">🔥 HOT</span>` : ''}
+            </div>
+            <div class="dc-search-phone" style="font-size:12px;color:#64748b;margin-top:2px;">
+              ${maskPhone(dialPhone)} ${lead.city ? '· ' + lead.city : ''}
+            </div>
+          </div>
+          <div class="dc-search-actions" style="display:flex;gap:6px;align-items:center;margin-left:8px;">
+            <button class="dc-search-dial-btn" onclick="dcOverrideDial('${dialPhone}', ${lead.lead_id || lead.id}, '${escapeHtml(lead.name || '')}')" style="background:#0284c7;color:#fff;border:none;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;" title="Direct Dial / Bypass">
+              <i class="fas fa-phone-alt"></i> Dial
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+    resultsEl.innerHTML = `${header}<div style="max-height:360px;overflow-y:auto;">${rows}</div>`;
+    resultsEl.style.display = 'block';
+  };
+
   function dcSearchClear() {
+    activeWebPriorityFilter = null;
     document.getElementById('dc-search-input').value = '';
     document.getElementById('dc-search-clear').style.display = 'none';
     document.getElementById('dc-search-results').style.display = 'none';
@@ -2279,6 +2368,10 @@
   // ── Save Lead + Log Attempt ──────────────────────────────────────────────────
   async function saveAndNext() {
     if (!sessionId || currentLeadId === null) return;
+    if (isSoftphoneCallActive()) {
+      toast('⚠️ A call is currently active. Please hang up before saving and advancing to the next lead.', 4000);
+      return;
+    }
     if (!selectedOutcome) toast('No outcome selected — logging as Answered.', 3000);
     _dcPauseCountdown();
     if (holdIntervalId) { clearInterval(holdIntervalId); holdIntervalId = null; }
@@ -2464,18 +2557,45 @@
   // ── Countdown ────────────────────────────────────────────────────────────────
   function _dcPauseCountdown() {
     if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
-    document.getElementById('e-countdown-row').style.display = 'none';
+    const row = document.getElementById('e-countdown-row');
+    if (row) row.style.display = 'none';
   }
   function _dcStartCountdown() {
+    const row = document.getElementById('e-countdown-row');
+    const msg = document.getElementById('e-countdown-msg');
+    const bar = document.getElementById('e-countdown-bar');
+
+    if (isSoftphoneCallActive()) {
+      if (row && msg) {
+        row.style.display = '';
+        msg.innerHTML = '<span class="text-success"><i class="fas fa-phone-volume me-1"></i>Call in progress — Auto-advance paused until call ends</span>';
+        if (bar) bar.style.width = '100%';
+      }
+      return;
+    }
+
     let remaining = COUNTDOWN_TOTAL;
-    document.getElementById('e-countdown-row').style.display = '';
-    document.getElementById('e-countdown-sec').textContent = remaining;
-    document.getElementById('e-countdown-bar').style.width = '100%';
+    if (row) row.style.display = '';
+    if (msg) msg.innerHTML = `Auto-saving in <b id="e-countdown-sec">${remaining}</b>s… <button type="button" class="btn btn-sm btn-link p-0 ms-1 text-decoration-none" style="font-size:11px;color:#6b7280;" onclick="_dcPauseCountdown()">(Pause)</button>`;
+    if (bar) bar.style.width = '100%';
+
+    if (countdownTimer) clearInterval(countdownTimer);
     countdownTimer = setInterval(() => {
+      if (isSoftphoneCallActive()) {
+        _dcPauseCountdown();
+        return;
+      }
       remaining--;
-      document.getElementById('e-countdown-sec').textContent = remaining;
-      document.getElementById('e-countdown-bar').style.width = ((remaining / COUNTDOWN_TOTAL) * 100) + '%';
-      if (remaining <= 0) { clearInterval(countdownTimer); countdownTimer = null; saveAndNext(); }
+      const secEl = document.getElementById('e-countdown-sec');
+      if (secEl) secEl.textContent = remaining;
+      if (bar) bar.style.width = ((remaining / COUNTDOWN_TOTAL) * 100) + '%';
+      if (remaining <= 0) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+        if (!isSoftphoneCallActive()) {
+          saveAndNext();
+        }
+      }
     }, 1000);
   }
   function _dcResetHold() {
@@ -2544,9 +2664,30 @@
         selectedOutcome = btn.dataset.outcome;
         document.querySelectorAll('.dc-outcome-btn').forEach(b => b.className = 'dc-outcome-btn');
         btn.classList.add(`selected-${selectedOutcome}`);
-        if (selectedOutcome === 'answered') _dcStartCountdown();
-        else _dcPauseCountdown();
+        if (selectedOutcome === 'answered') {
+          if (isSoftphoneCallActive()) {
+            const row = document.getElementById('e-countdown-row');
+            const msg = document.getElementById('e-countdown-msg');
+            if (row && msg) {
+              row.style.display = '';
+              msg.innerHTML = '<span class="text-success"><i class="fas fa-phone-volume me-1"></i>Call in progress — Auto-advance paused until call ends</span>';
+            }
+          } else {
+            _dcStartCountdown();
+          }
+        } else {
+          _dcPauseCountdown();
+        }
       });
+    });
+
+    // Pause auto-save countdown when agent is actively typing notes or updating fields
+    ['e-note', 'e-recent-comments', 'e-requirements', 'e-description', 'e-followup', 'e-status'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('focus', () => _dcPauseCountdown());
+        el.addEventListener('input', () => _dcPauseCountdown());
+      }
     });
 
     // Activity chips
@@ -2967,10 +3108,17 @@
           dialed_at: l.dialed_at, duration_seconds: l.duration_seconds || 0, source: l.source || 'direct',
           call_outcome: l.call_outcome || '',
         }));
-        console.log('[RCH] local entries count:', local.length);
-        const localPhones = new Set(batch.map(b => b.phone));
-        const newLocals = local.filter(l => !localPhones.has(l.phone));
-        rchEntries = [...newLocals, ...batch];
+        const allItems = [...local, ...batch];
+        allItems.sort((a, b) => new Date(b.dialed_at || 0) - new Date(a.dialed_at || 0));
+        const seenP = new Set();
+        rchEntries = [];
+        for (const item of allItems) {
+          const p10 = (item.phone || '').replace(/\D/g, '').slice(-10);
+          if (p10 && !seenP.has(p10)) {
+            seenP.add(p10);
+            rchEntries.push(item);
+          }
+        }
       } else {
         rchEntries = reset ? batch : [...rchEntries, ...batch];
       }

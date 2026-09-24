@@ -17,9 +17,16 @@ from starlette.requests import Request
 from sqlalchemy import text
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+import unittest
+import unittest.mock
 
 from app.core.database import SessionLocal
 from app.api.v1.endpoints.staff_ai_calling import (
+    GeminiProjectPool,
+    _test_gemini_connection,
+    _test_local_static_fallback,
+    MODEL_PRICING_CATALOG,
+    get_model_pricing,
     _get_plivo_auth_id,
     _get_plivo_auth_token,
     _get_plivo_caller_id,
@@ -43,6 +50,17 @@ from app.api.v1.endpoints.staff_ai_calling import (
     webhook_respond,
     webhook_poll,
     webhook_status,
+    _resolve_audio_file,
+    _get_static_fallback_audio,
+    _get_audio_serve_url,
+    _xml_escape_attr,
+    _resolve_greeting_audio,
+    _generate_tts,
+    _build_system_prompt,
+    _segment_kind,
+    _segment_agent_intro,
+    STATIC_AUDIO_DIR,
+    AI_AUDIO_DIR,
 )
 
 
@@ -478,7 +496,7 @@ def test_webhook_base_resolution_production_and_override():
         assert _webhook_base(req) == "https://www.myntreal.com"
 
     # 3. Production fallback when host is raw/localhost
-    with patch.dict(os.environ, {"ENVIRONMENT": "production"}):
+    with patch.dict(os.environ, {"ENVIRONMENT": "production", "WEBHOOK_BASE_URL": ""}):
         req = MagicMock(spec=Request)
         req.headers = {"host": "localhost:8000"}
         assert _webhook_base(req) == "https://www.myntreal.com"
@@ -1207,8 +1225,540 @@ def test_crm_dialer_unassigned_lead_no_attribute_error():
     assert hasattr(lead, "primary_owner_id"), "CRMLead has primary_owner_id"
     assert hasattr(lead, "telecaller_id"), "CRMLead has telecaller_id"
     assert hasattr(lead, "handler_id"), "CRMLead has handler_id"
+    assert hasattr(lead, "handler_id"), "CRMLead has handler_id"
     assert hasattr(lead, "handler_type"), "CRMLead has handler_type"
 
 
+# ─── 8. SECTION 8 REQUIRED UNIT & REGRESSION TESTS (A - Q) ────────────────────
+
+def test_8a_telugu_fallback_audio_exists_and_produces_valid_play_xml():
+    """8.a: Telugu fallback audio exists on disk and produces valid Plivo XML with <Play>."""
+    contexts = ["greeting", "silence", "filler", "error", "closing"]
+    for ctx in contexts:
+        fn = _get_static_fallback_audio("te", ctx)
+        assert fn is not None, f"Telugu fallback audio for {ctx} must not be None"
+        full_path = _resolve_audio_file(fn)
+        assert full_path is not None and os.path.exists(full_path), f"Audio file {fn} must exist on disk"
+        assert os.path.getsize(full_path) > 1000, f"Audio file {fn} must be a valid non-empty audio file"
+
+    prompt = _build_speak_or_say(
+        is_plivo=True,
+        text="",
+        lang_code="te-IN",
+        base_url="https://api.myntreal.com",
+        context="greeting",
+    )
+    assert "<Play>" in prompt
+    assert "te_fallback_greeting.wav" in prompt
+    assert "<Speak" not in prompt
+    resp = _build_speech_gather_xml(
+        is_plivo=True,
+        action_url="https://api.myntreal.com/respond",
+        lang_code="te-IN",
+        content_block=prompt,
+    )
+    xml_str = resp.body.decode("utf-8")
+    root = ET.fromstring(xml_str)
+    assert root.tag == "Response"
 
 
+def test_8b_hindi_fallback_audio_exists_and_produces_valid_play_xml():
+    """8.b: Hindi fallback audio exists on disk and produces valid Plivo XML with <Play>."""
+    contexts = ["greeting", "silence", "filler", "error", "closing"]
+    for ctx in contexts:
+        fn = _get_static_fallback_audio("hi", ctx)
+        assert fn is not None, f"Hindi fallback audio for {ctx} must not be None"
+        full_path = _resolve_audio_file(fn)
+        assert full_path is not None and os.path.exists(full_path), f"Audio file {fn} must exist on disk"
+        assert os.path.getsize(full_path) > 1000, f"Audio file {fn} must be a valid non-empty audio file"
+
+    audio_url = _get_audio_serve_url("https://api.myntreal.com", "hi_fallback_greeting.wav")
+    block = _format_greeting_block(
+        is_plivo=True,
+        audio_serve_url=audio_url,
+        fallback_text="नमस्ते",
+        lang_code="hi-IN",
+        base_url="https://api.myntreal.com",
+    )
+    assert f"<Play>{audio_url}</Play>" in block
+    resp = _build_speech_gather_xml(
+        is_plivo=True,
+        action_url="https://api.myntreal.com/respond",
+        lang_code="hi-IN",
+        content_block=block,
+    )
+    xml_str = resp.body.decode("utf-8")
+    root = ET.fromstring(xml_str)
+    assert root.tag == "Response"
+
+
+def test_8c_gemini_tts_429_triggers_immediate_static_fallback():
+    """8.c: Gemini TTS 429 triggers immediate fallback to static audio without call termination."""
+    mock_client = MagicMock()
+    mock_client.models.generate_content.side_effect = Exception("429 RESOURCE_EXHAUSTED")
+    with patch("app.api.v1.endpoints.staff_ai_calling._get_gemini_client", return_value=mock_client), \
+         patch("app.api.v1.endpoints.staff_ai_calling._get_openai_key", return_value=None):
+        audio_file = _generate_tts("నమస్కారం", language="te", voice_override="Vidya", max_candidates=1)
+        assert audio_file == "te_fallback_greeting.wav"
+
+        audio_file_hi = _generate_tts("नमस्ते", language="hi", voice_override="Vidya", max_candidates=1)
+        assert audio_file_hi == "hi_fallback_greeting.wav"
+
+        audio_file_en = _generate_tts("Hello", language="en", voice_override="Vidya", max_candidates=1)
+        assert audio_file_en == "en_fallback_greeting.wav"
+
+
+def test_8d_gemini_tts_timeout_triggers_immediate_static_fallback():
+    """8.d: Gemini TTS timeout triggers immediate fallback to static audio."""
+    import asyncio
+    def timeout_raise(*args, **kwargs):
+        raise TimeoutError("Gemini TTS request exceeded 2.0s timeout")
+
+    with patch("app.api.v1.endpoints.staff_ai_calling._generate_tts", side_effect=timeout_raise):
+        url = asyncio.run(_resolve_greeting_audio(
+            log_id=999,
+            greeting="Namaste",
+            lang="hi",
+            voice="Vidya",
+            base_url="https://api.myntreal.com",
+            db=MagicMock(),
+            is_plivo=True,
+        ))
+        assert url is not None
+        assert "hi_fallback_greeting.wav" in url
+
+
+def test_8e_missing_dynamic_audio_served_by_static_directory():
+    """8.e: When dynamic audio is missing from /tmp/ai_audio, static audio directory serves fallback."""
+    static_file = "te_fallback_silence.wav"
+    resolved_path = _resolve_audio_file(static_file)
+    assert resolved_path is not None
+    assert os.path.exists(resolved_path)
+    assert STATIC_AUDIO_DIR in resolved_path
+
+    url = _get_audio_serve_url("https://api.myntreal.com", static_file)
+    assert url == f"https://api.myntreal.com/api/v1/staff/ai-calling/audio/{static_file}"
+
+
+def test_8f_plivo_xml_escaping_every_action_url():
+    """8.f: Plivo XML generation escapes every action/callback URL; test fails if unescaped '&' is present."""
+    import re
+    raw_action = "https://api.myntreal.com/respond?log_id=123&campaign_id=45&is_test=1&provider=plivo"
+    escaped = _xml_escape_attr(raw_action)
+    assert "&amp;" in escaped
+    unescaped_pattern = re.compile(r'&(?!(?:amp|lt|gt|quot|apos);)')
+    assert unescaped_pattern.search(escaped) is None
+
+    resp1 = _build_speech_gather_xml(True, raw_action, "hi-IN", "<Play>http://x.wav</Play>")
+    xml1 = resp1.body.decode("utf-8")
+    assert 'action="https://api.myntreal.com/respond?log_id=123&amp;campaign_id=45&amp;is_test=1&amp;provider=plivo"' in xml1
+    assert unescaped_pattern.search(xml1) is None
+
+    resp2 = _build_menu_gather_xml(True, raw_action, "hi-IN", "कृपया भाषा चुनें")
+    xml2 = resp2.body.decode("utf-8")
+    assert "&amp;" in xml2
+    assert unescaped_pattern.search(xml2) is None
+
+    resp3 = _build_wait_redirect_xml(True, raw_action, 2)
+    xml3 = resp3.body.decode("utf-8")
+    assert "&amp;" in xml3
+    assert unescaped_pattern.search(xml3) is None
+
+
+def test_8g_generated_xml_parses_cleanly_with_element_tree():
+    """8.g: Generated XML parses cleanly with standard Python xml.etree.ElementTree.fromstring."""
+    complex_action = "https://api.myntreal.com/webhook/respond?session_id=abc&lead_id=10&token=xyz&lang=te"
+    content = "<Play>https://api.myntreal.com/api/v1/staff/ai-calling/audio/te_fallback_greeting.wav</Play>"
+    resp = _build_speech_gather_xml(True, complex_action, "te-IN", content)
+    xml_str = resp.body.decode("utf-8")
+
+    root = ET.fromstring(xml_str)
+    assert root.tag == "Response"
+    assert len(root) >= 1
+
+
+def test_8h_i_j_telugu_hindi_english_initial_greetings_valid_xml():
+    """8.h, 8.i, 8.j: Telugu, Hindi, English test calls produce valid XML for initial greeting."""
+    for lang, bcp in [("te", "te-IN"), ("hi", "hi-IN"), ("en", "en-IN")]:
+        audio_url = f"https://api.myntreal.com/api/v1/staff/ai-calling/audio/{lang}_fallback_greeting.wav"
+        block = _format_greeting_block(
+            is_plivo=True,
+            audio_serve_url=audio_url,
+            fallback_text="Welcome",
+            lang_code=bcp,
+            base_url="https://api.myntreal.com",
+        )
+        action_url = f"https://api.myntreal.com/webhook/respond?lang={lang}&log_id=100&is_test=1"
+        resp = _build_speech_gather_xml(True, action_url, bcp, block)
+        xml_str = resp.body.decode("utf-8")
+
+        root = ET.fromstring(xml_str)
+        assert root.tag == "Response"
+        assert f"<Play>{audio_url}</Play>" in xml_str
+
+
+def test_8k_voice_persona_selection_mapping():
+    """8.k: Voice persona selection:
+       - Male lead/staff -> Teja / Puck
+       - Female lead/staff -> Vidya / Aoede
+       - Unspecified/Default -> Vidya / Aoede
+    """
+    assert resolve_persona_from_lead_gender("male") == ("Teja", "onyx")
+    assert resolve_persona_from_lead_gender("female") == ("Vidya", "nova")
+    assert resolve_persona_from_lead_gender(None) == ("Vidya", "nova")
+    assert resolve_persona_from_lead_gender("") == ("Vidya", "nova")
+    assert resolve_persona_from_lead_gender("unknown") == ("Vidya", "nova")
+
+
+def test_8l_solar_segment_grounds_only_in_solar_catalogue():
+    """8.l: Test call with Solar segment explicitly selected grounds only in Solar catalogue."""
+    prompt = _build_system_prompt(
+        db=None,
+        language="en",
+        lead_name="Ramesh",
+        segment="solar",
+        is_test=True,
+        agent_name="Vidya",
+    )
+    assert "PM Surya Ghar" in prompt
+    assert "rooftop" in prompt.lower()
+    assert "solar" in prompt.lower()
+    assert "Mynt Prime City" not in prompt
+
+
+def test_8m_realty_segment_does_not_claim_solar_knowledge():
+    """8.m: Test call with Realty segment explicitly selected does NOT claim knowledge of Solar schemes."""
+    prompt = _build_system_prompt(
+        db=None,
+        language="en",
+        lead_name="Ramesh",
+        segment="realty",
+        is_test=True,
+        agent_name="Vidya",
+    )
+    assert "Mynt Prime City" in prompt or "Mynt Grandeur" in prompt
+    assert "CRITICAL CATALOGUE GROUNDING MANDATE" in prompt
+    assert "MUST NEVER invent" in prompt or "DO NOT invent" in prompt
+    assert "PM Surya Ghar" not in prompt
+
+
+def test_8n_out_of_catalogue_questions_trigger_confirmation_guardrail():
+    """8.n: Out-of-catalogue questions trigger 'requires confirmation' response across all languages."""
+    prompt_en = _build_system_prompt(db=None, language="en", lead_name="Lead", segment="realty")
+    assert "requires confirmation from our team" in prompt_en
+
+    prompt_te = _build_system_prompt(db=None, language="te", lead_name="Lead", segment="realty")
+    assert "ఈ వివరాలు మా వద్ద ధృవీకరించాల్సి ఉంది" in prompt_te
+
+    prompt_hi = _build_system_prompt(db=None, language="hi", lead_name="Lead", segment="realty")
+    assert "इस जानकारी की पुष्टि हमारी टीम से करनी होगी" in prompt_hi
+
+
+def test_8o_zero_hallucination_guarantee_enforced_in_system_prompt():
+    """8.o: Zero hallucination guarantee: AI refuses to quote unconfirmed pricing or specs."""
+    for seg in ["solar", "realty", "ev", "all"]:
+        prompt = _build_system_prompt(db=None, language="en", lead_name="Customer", segment=seg)
+        assert "DO NOT invent" in prompt
+        assert "MUST NEVER invent" in prompt
+        assert "CRITICAL CATALOGUE GROUNDING MANDATE" in prompt
+
+
+def test_8p_frozen_telephony_files_remain_byte_identical():
+    """8.p: The four frozen telephony files remain byte-identical to their approved state."""
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    frozen_files = [
+        "frontend/public/js/plivo-softphone.js",
+        "mobile/src/services/telephony.service.ts",
+        "backend/app/services/telephony/flow_interpreter.py",
+        "backend/app/api/v1/endpoints/plivo_softphone_api.py",
+    ]
+    import subprocess
+    for f in frozen_files:
+        full_path = os.path.join(repo_root, "MyntReal_Latest", f)
+        assert os.path.exists(full_path), f"Frozen file missing: {full_path}"
+        res = subprocess.run(
+            ["git", "diff", "--exit-code", f"MyntReal_Latest/{f}"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+        )
+        assert res.returncode == 0, f"Frozen telephony file modified: {f}\n{res.stdout}"
+
+
+def test_gemini_canonical_configuration_structure_and_masking():
+    """Verify that get_canonical_configuration provides all required subsections A-F without exposing raw secrets."""
+    pool = GeminiProjectPool()
+    config = pool.get_canonical_configuration(company_id=1)
+
+    # Top-level keys
+    assert "connection_status" in config
+    assert "credential_status" in config
+    assert "account_info" in config
+    assert "billing" in config
+    assert "models" in config
+    assert "quota" in config
+    assert "usage" in config
+    assert "costs" in config
+
+    # Section A: Connection
+    assert config["connection_status"] in ("Connected", "Not Connected")
+    assert config["credential_status"] in ("Active", "Cooldown (429)", "Disabled", "Standby", "Missing")
+
+    # Section B: Account Info
+    acc_info = config["account_info"]
+    assert "project_name" in acc_info
+    assert "project_id" in acc_info
+    assert "project_number" in acc_info
+    assert "owner" in acc_info
+    assert "api_key_masked" in acc_info
+    # Google API Key doesn't expose ID/number/owner - must not mock fake values
+    assert acc_info["project_id"] == "Not exposed by Gemini API" or acc_info["project_id"] == "Custom Project"
+    assert acc_info["project_number"] == "Not exposed by Gemini API"
+    assert acc_info["owner"] == "Not exposed by Gemini API"
+    # Never expose full raw key
+    assert not acc_info["api_key_masked"].startswith("AIza")
+    assert "..." in acc_info["api_key_masked"]
+
+    # Section C: Billing
+    billing = config["billing"]
+    assert "billing_tier" in billing
+    assert "internal_spending_limit_usd" in billing
+    assert "internal_limit_daily" in billing
+    assert "distinction_note" in billing
+    assert "CRITICAL" in billing["distinction_note"]
+
+    # Section D: Models
+    models = config["models"]
+    assert "conversation_model" in models
+    assert "tts_model" in models
+    assert "gemini" in models["conversation_model"]
+    assert "gemini" in models["tts_model"]
+
+    # Section E: Usage
+    usage = config["usage"]
+    assert "requests_today" in usage
+    assert "requests_month" in usage
+    assert "errors_429_month" in usage
+    assert "tts_requests" in usage
+    assert "conversation_requests" in usage
+
+    # Section F: Costs
+    costs = config["costs"]
+    assert "total_ai_cost_usd" in costs
+    assert "conversation_cost_usd" in costs
+    assert "tts_cost_usd" in costs
+    assert "cost_per_call_usd" in costs
+    assert "cost_per_minute_usd" in costs
+    assert "calculation_note" in costs
+    assert "Calculated by MyntOS" in costs["calculation_note"]
+
+
+def test_gemini_pool_priority_demotion_ensures_single_primary():
+    """Verify that adding an account with priority=1 demotes existing priority=1 to priority=2."""
+    pool = GeminiProjectPool()
+    with pool._lock:
+        pool._pools[999] = [
+            {
+                "id": "acc_primary",
+                "name": "Current Primary",
+                "api_key": "dummy_key_1",
+                "priority": 1,
+                "status": "active",
+                "daily_limit": 1500,
+            },
+            {
+                "id": "acc_backup",
+                "name": "Current Backup",
+                "api_key": "dummy_key_2",
+                "priority": 2,
+                "status": "active",
+                "daily_limit": 1500,
+            }
+        ]
+
+    # Update acc_backup to priority 1 (demoting acc_primary)
+    with unittest.mock.patch("app.api.v1.endpoints.staff_ai_calling._test_gemini_connection") as mock_test:
+        mock_test.return_value = {"authenticated": True, "success": True, "detected_tier": "Free Tier"}
+        updated = pool.add_or_update_account(999, {
+            "id": "acc_backup",
+            "name": "Promoted Primary",
+            "priority": 1,
+            "api_key": "***masked***",
+            "daily_limit": 2000,
+            "internal_spending_limit_usd": 100.0,
+            "gcp_project_name": "New GCP Proj",
+            "gcp_project_id": "new-gcp-id-123",
+        })
+
+    assert updated["priority"] == 1
+    assert updated["gcp_project_id"] == "new-gcp-id-123"
+    assert updated["internal_spending_limit_usd"] == 100.0
+
+    # Verify acc_primary got demoted to priority 2
+    accs = pool.get_pool(999)
+    prim = next(a for a in accs if a["id"] == "acc_primary")
+    assert prim["priority"] == 2
+
+
+def test_gemini_2_phase_verification_mock():
+    """Verify _test_gemini_connection handles conversation turn and TTS synthesis in 2 phases when test_tts=True."""
+    with unittest.mock.patch("google.genai.Client") as mock_client_cls:
+        mock_client = mock_client_cls.return_value
+        # Mock conversation response
+        mock_conv_resp = unittest.mock.MagicMock()
+        mock_conv_resp.text = "Hello from Gemini"
+        # Mock TTS response
+        mock_tts_resp = unittest.mock.MagicMock()
+        mock_part = unittest.mock.MagicMock()
+        mock_part.inline_data.data = b"RIFF....WAVE"
+        mock_cand = unittest.mock.MagicMock()
+        mock_cand.content.parts = [mock_part]
+        mock_tts_resp.candidates = [mock_cand]
+
+        mock_client.models.generate_content.side_effect = [mock_conv_resp, mock_tts_resp]
+
+        res = _test_gemini_connection("valid_fake_key_1234567890", test_tts=True)
+        assert res["success"] is True
+        assert res["authenticated"] is True
+        assert res["conversation_test"]["status"] == "PASS"
+        assert res["tts_test"]["status"] == "PASS"
+        assert res["tts_test"]["bytes_received"] > 0
+
+
+def test_test_gemini_connection_defaults_to_zero_tts_quota():
+    """Verify _test_gemini_connection defaults test_tts=False to protect Gemini TTS Free Tier quota."""
+    with unittest.mock.patch("google.genai.Client") as mock_client_cls:
+        mock_client = mock_client_cls.return_value
+        mock_conv_resp = unittest.mock.MagicMock()
+        mock_conv_resp.text = "Hello from Gemini"
+        mock_client.models.generate_content.return_value = mock_conv_resp
+
+        res = _test_gemini_connection("valid_fake_key_1234567890")  # default test_tts=False
+        assert res["success"] is True
+        assert res["conversation_test"]["status"] == "PASS"
+        # TTS was skipped, consuming 0 quota
+        assert res["tts_test"]["status"] == "SKIPPED (quota protection)"
+        assert res["tts_test"]["quota_consumed"] == 0
+        assert "explicit operator confirmation" in res["tts_test"]["note"]
+        # Only 1 API call made (conversation only)
+        assert mock_client.models.generate_content.call_count == 1
+
+
+def test_test_local_static_fallback():
+    """Verify _test_local_static_fallback verifies all pre-recorded fallback audio files with 0 Google quota."""
+    res = _test_local_static_fallback()
+    assert res["success"] is True
+    assert res["quota_consumed"] == 0
+    assert res["provider"] == "local_server"
+    assert res["total_expected"] == 15
+    assert len(res["files"]) == 15
+    for f in res["files"]:
+        assert f["exists"] is True
+        assert f["size_bytes"] > 0
+
+
+def test_model_pricing_catalog_configuration():
+    """Verify model-specific pricing configuration for conversation, TTS, and PSTN telephony."""
+    assert "gemini-3.6-flash" in MODEL_PRICING_CATALOG
+    assert "gemini-3.1-flash-lite" in MODEL_PRICING_CATALOG
+    assert "gemini-2.5-flash-preview-tts" in MODEL_PRICING_CATALOG
+    assert "plivo-pstn-india" in MODEL_PRICING_CATALOG
+
+    p36 = get_model_pricing("gemini-3.6-flash")
+    assert p36["input_price_per_1m_tokens"] == 0.150
+    assert p36["output_price_per_1m_tokens"] == 0.600
+    assert p36["category"] == "conversation"
+
+    p31 = get_model_pricing("gemini-3.1-flash-lite")
+    assert p31["input_price_per_1m_tokens"] == 0.075
+    assert p31["output_price_per_1m_tokens"] == 0.300
+
+    ptts = get_model_pricing("gemini-2.5-flash-preview-tts")
+    assert ptts["price_per_1m_characters"] == 15.00
+    assert ptts["category"] == "tts"
+
+    # Fallback for unknown model
+    pdef = get_model_pricing("unknown-custom-model")
+    assert pdef["model_id"] == "gemini-3.6-flash"
+
+
+def test_canonical_configuration_pricing_and_tts_safety():
+    """Verify canonical configuration includes model catalog, pricing estimate disclaimers, and TTS safety flags."""
+    pool = GeminiProjectPool()
+    config = pool.get_canonical_configuration(company_id=1)
+
+    pricing = config.get("pricing", {})
+    assert pricing.get("effective_pricing_label") == "MyntOS configured pricing estimate"
+    assert "model_catalog" in pricing
+    assert "gemini-3.6-flash" in pricing["model_catalog"]
+    assert pricing.get("disclaimer", "").startswith("Configured pricing estimates for MyntOS cost projections")
+
+    tts_safety = config.get("tts_quota_safety", {})
+    assert tts_safety.get("live_tts_test_enabled") is False
+    assert tts_safety.get("tts_quota_warning") == "Observed 10 req/day Free Tier quota on gemini-2.5-flash-preview-tts"
+    assert tts_safety.get("local_audio_fallback_test_available") is True
+    assert tts_safety.get("requires_operator_confirmation") is True
+
+
+
+def test_canonical_configuration_aws_infrastructure_separation():
+    """Verify get_canonical_configuration strictly reports AWS as hosting platform and Gemini as external AI provider."""
+    pool = GeminiProjectPool()
+    config = pool.get_canonical_configuration(company_id=1)
+
+    # 1. AWS Hosting
+    infra = config.get("infrastructure", {})
+    assert infra.get("hosting_platform") == "AWS"
+    assert "AWS Elastic Beanstalk" in infra.get("application_environment", "")
+    assert "AWS RDS" in infra.get("database", "")
+    assert "AWS S3" in infra.get("object_storage", "")
+    assert "Google Gemini is an external AI provider" in infra.get("architecture_note", "")
+
+    # 2. External Gemini Provider
+    gemini_prov = config.get("gemini_provider", {})
+    assert "Google Gemini API" in gemini_prov.get("provider", "")
+    assert "External AI Provider" in gemini_prov.get("provider", "")
+    assert gemini_prov.get("connection_status") == "Connected"
+
+
+def test_canonical_configuration_credential_storage_truthfulness():
+    """Verify that credentials from .env are truthfully marked as 'Environment secret' (NOT Fernet encrypted)."""
+    pool = GeminiProjectPool()
+    config = pool.get_canonical_configuration(company_id=1)
+
+    gemini_prov = config.get("gemini_provider", {})
+    account_info = config.get("account_info", {})
+    provider_id = config.get("provider_identity", {})
+
+    # Env default must state "Environment secret"
+    if account_info.get("is_env_default", True):
+        assert gemini_prov.get("credential_storage") == "Environment secret"
+        assert account_info.get("credential_storage") == "Environment secret"
+        assert "backend/.env" in gemini_prov.get("credential_source", "")
+        # Provider ID not fabricated
+        assert "Not exposed" in provider_id.get("provider_project_id", "")
+        assert "Not exposed" in provider_id.get("ai_studio_project_label", "")
+
+
+def test_canonical_configuration_quota_and_cost_itemization():
+    """Verify separate tracking of Google provider quota vs MyntOS internal limits, and itemized costs."""
+    pool = GeminiProjectPool()
+    config = pool.get_canonical_configuration(company_id=1)
+
+    quota = config.get("quota", {})
+    google_q = quota.get("google_provider_quota", {})
+    myntos_lim = quota.get("myntos_internal_limits", {})
+
+    # Google Quota vs MyntOS Limits
+    assert google_q.get("observed_tts_quota") == "10 requests/day"
+    assert "gemini-2.5-flash-preview-tts" in google_q.get("observed_tts_quota_scope", "")
+    assert myntos_lim.get("daily_request_limit") == 1500
+    assert myntos_lim.get("monthly_spending_safety_cap_usd") == 50.0
+    assert "MYNTOS INTERNAL SAFETY LIMIT" in myntos_lim.get("limit_type", "")
+
+    # Itemized Costs
+    costs = config.get("costs", {})
+    assert "gemini_total_ai_cost_usd" in costs
+    assert "plivo_telephony_cost_usd" in costs
+    assert "total_ai_calling_cost_usd" in costs
+    assert costs["total_ai_calling_cost_usd"] >= costs["gemini_total_ai_cost_usd"]

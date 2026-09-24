@@ -64,7 +64,7 @@ def get_calls_tab(
     phone: Optional[str] = Query(None),
     name: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
-    limit: int = Query(50, ge=5, le=100),
+    limit: int = Query(100, ge=5, le=500),
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user)
 ):
@@ -127,7 +127,7 @@ def get_changes_tab(
     entity_id: int = Query(0, ge=0),
     phone: Optional[str] = Query(None),
     name: Optional[str] = Query(None),
-    subfilter: str = Query("all", regex="^(all|audit|notes|followups|assignments)$"),
+    subfilter: str = Query("all", regex="^(all|audit|notes|followups|assignments|calls)$"),
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=5, le=100),
     db: Session = Depends(get_db),
@@ -162,7 +162,7 @@ def get_full_history(
     entity_id: int = Query(0, ge=0),
     phone: Optional[str] = Query(None),
     name: Optional[str] = Query(None),
-    limit: int = Query(30, ge=5, le=50),
+    limit: int = Query(50, ge=5, le=500),
     db: Session = Depends(get_db),
     current_user: StaffEmployee = Depends(get_current_staff_user)
 ):

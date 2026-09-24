@@ -1667,7 +1667,11 @@
             }
             
             if (map && coord) {
-                map.panTo(coord, { animate: true, duration: 0.2 });
+                const bounds = map.getBounds();
+                const latLng = L.latLng(coord[0], coord[1]);
+                if (!bounds.pad(-0.15).contains(latLng)) {
+                    map.panTo(latLng, { animate: true, duration: 0.35 });
+                }
             }
         }
         

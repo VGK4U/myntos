@@ -284,7 +284,7 @@ export class StaffCRMPage {
     this.render();
 
     try {
-      const res = await apiService.get<any>(`/call-tracking/staff/${staffId}/calls?quick_range=${this.ctCurrentRange}&per_page=50`);
+      const res = await apiService.get<any>(`/call-tracking/staff/${staffId}/calls?quick_range=${this.ctCurrentRange}&per_page=500`);
       if (res && res.success) {
         this.ctDrilldownCalls = (res.data && res.data.calls) || [];
       }
@@ -1509,6 +1509,8 @@ export class StaffCRMPage {
                   <th style="padding:6px 6px; text-align:center; width:30px;">#</th>
                   <th style="padding:6px 8px; text-align:left;">Date &amp; Time</th>
                   <th style="padding:6px 8px; text-align:left;">Phone</th>
+                  <th style="padding:6px 8px; text-align:left;">Segment / Category</th>
+                  <th style="padding:6px 8px; text-align:center;">Call From</th>
                   <th style="padding:6px 8px; text-align:center;">Type</th>
                   <th style="padding:6px 8px; text-align:center;">Duration</th>
                   <th style="padding:6px 8px; text-align:left;">Lead Name</th>
@@ -1517,14 +1519,52 @@ export class StaffCRMPage {
               </thead>
               <tbody>
                 ${this.ctDrilldownCalls.length === 0 ? `
-                  <tr><td colspan="7" style="text-align:center; padding:16px; color:#94a3b8;">No calls recorded for this staff member</td></tr>
+                  <tr><td colspan="9" style="text-align:center; padding:16px; color:#94a3b8;">No calls recorded for this staff member</td></tr>
                 ` : this.ctDrilldownCalls.map((c: any, i: number) => {
                   const hasRec = Boolean((c.has_recording || c.recording_id) && c.recording_id);
+                  const catName = c.category_name || 'General';
+                  const page = (c.dialed_page || c.call_from || c.source || '').trim();
+                  const lower = page.toLowerCase();
+                  const devId = (c.device_call_id || '').toLowerCase();
+                  const type = (c.call_type || '').toUpperCase();
+                  let fromBg = '#eff6ff', fromColor = '#1d4ed8', fromIcon = 'fa-user-check', fromLabel = 'My Leads';
+
+                  if (lower.includes('auto') || lower.includes('dialer') || devId.includes('cda_') || type === 'DIALER') {
+                    fromBg = '#f5f3ff'; fromColor = '#6b21a8'; fromIcon = 'fa-robot'; fromLabel = 'Auto Dialer';
+                  } else if (lower.includes('staff lead') || lower === 'staff leads') {
+                    fromBg = '#f0fdf4'; fromColor = '#15803d'; fromIcon = 'fa-users'; fromLabel = 'Staff Leads';
+                  } else if (lower.includes('my lead') || lower === 'my leads') {
+                    fromBg = '#eff6ff'; fromColor = '#1d4ed8'; fromIcon = 'fa-user-check'; fromLabel = 'My Leads';
+                  } else if (lower.includes('crm dashboard') || lower.includes('dashboard')) {
+                    fromBg = '#fdf2f8'; fromColor = '#be185d'; fromIcon = 'fa-chart-line'; fromLabel = 'CRM Dashboard';
+                  } else if (lower.includes('softphone center') || lower.includes('softphone hub') || lower === 'softphone') {
+                    fromBg = '#e0f2fe'; fromColor = '#0369a1'; fromIcon = 'fa-headset'; fromLabel = 'Softphone Center';
+                  } else if (lower.includes('operator')) {
+                    fromBg = '#fffbeb'; fromColor = '#b45309'; fromIcon = 'fa-head-side-headphones'; fromLabel = 'Operator Calls';
+                  } else if (lower.includes('whatsapp')) {
+                    fromBg = '#f0fdf4'; fromColor = '#16a34a'; fromIcon = 'fa-whatsapp'; fromLabel = 'WhatsApp Center';
+                  } else if (lower.includes('planner')) {
+                    fromBg = '#faf5ff'; fromColor = '#7e22ce'; fromIcon = 'fa-calendar-day'; fromLabel = 'Day Planner';
+                  } else if (lower.includes('task')) {
+                    fromBg = '#f1f5f9'; fromColor = '#334155'; fromIcon = 'fa-tasks'; fromLabel = 'Tasks';
+                  } else if (lower.includes('master')) {
+                    fromBg = '#fef3c7'; fromColor = '#92400e'; fromIcon = 'fa-database'; fromLabel = 'Master Leads';
+                  } else if (lower.includes('bank')) {
+                    fromBg = '#ecfdf5'; fromColor = '#065f46'; fromIcon = 'fa-landmark'; fromLabel = 'Bank Wise Leads';
+                  } else if (lower.includes('inbound') || lower.includes('did') || type === 'INCOMING') {
+                    fromBg = '#ecfdf5'; fromColor = '#047857'; fromIcon = 'fa-phone-arrow-down-left'; fromLabel = 'Inbound DID';
+                  } else if (lower.includes('mobile') || lower.includes('sim') || lower.includes('native')) {
+                    fromBg = '#ecfdf5'; fromColor = '#047857'; fromIcon = 'fa-sim-card'; fromLabel = 'Native SIM';
+                  } else if (page) {
+                    fromBg = '#f8fafc'; fromColor = '#475569'; fromIcon = 'fa-file-alt'; fromLabel = page;
+                  }
                   return `
                     <tr style="border-bottom:1px solid #f1f5f9;">
                       <td style="padding:6px 6px; text-align:center; color:#64748b;">${i + 1}</td>
                       <td style="padding:6px 8px; white-space:nowrap;">${c.call_datetime ? new Date(c.call_datetime).toLocaleString('en-IN') : '-'}</td>
                       <td style="padding:6px 8px; font-weight:700;">${this.escapeHtml(c.phone_number || '-')}</td>
+                      <td style="padding:6px 8px; white-space:nowrap;"><span style="background:#f8fafc; color:#334155; border:1px solid #cbd5e1; border-radius:4px; padding:2px 6px; font-size:10px; font-weight:600;"><i class="fas fa-tag me-1 text-secondary"></i>${this.escapeHtml(catName)}</span></td>
+                      <td style="padding:6px 8px; text-align:center; white-space:nowrap;"><span style="background:${fromBg}; color:${fromColor}; border:1px solid currentColor; border-radius:4px; padding:2px 6px; font-size:10px; font-weight:600;"><i class="fas ${fromIcon} me-1"></i>${fromLabel}</span></td>
                       <td style="padding:6px 8px; text-align:center;">${this.callTypeBadge(c)}</td>
                       <td style="padding:6px 8px; text-align:center;">${this.fmtCallDuration(c.duration_seconds)}</td>
                       <td style="padding:6px 8px;">${this.escapeHtml(c.matched_lead_name || c.contact_name_crm || c.contact_name || '-')}</td>

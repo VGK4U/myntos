@@ -92,3 +92,43 @@ if (typeof window !== 'undefined') {
     });
   };
 }
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('plivo:call-dialing', (e: any) => {
+    try {
+      const sessionId = e?.detail?.sessionId;
+      if (!sessionId) return;
+      const hash = (typeof window !== 'undefined' ? window.location.hash : '') || '';
+      let pageName = 'Mobile CRM';
+      if (typeof window !== 'undefined' && (window as any).__currentDialedPage) {
+        pageName = (window as any).__currentDialedPage;
+      } else if (hash.includes('leads') || hash.includes('staff-leads')) {
+        pageName = 'Staff Leads';
+      } else if (hash.includes('auto-dialer') || hash.includes('dialer')) {
+        pageName = 'Auto Dialer';
+      } else if (hash.includes('crm')) {
+        pageName = 'CRM Dashboard';
+      } else if (hash.includes('whatsapp')) {
+        pageName = 'WhatsApp Center';
+      } else if (hash.includes('executive')) {
+        pageName = 'Executive Dashboard';
+      }
+      const token = (typeof localStorage !== 'undefined') ? (localStorage.getItem('staff_token') || localStorage.getItem('token') || '') : '';
+      if (token) {
+        fetch('/api/v1/call-tracking/record-dial-page', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+          },
+          body: JSON.stringify({
+            call_session_id: sessionId,
+            dialed_page: pageName,
+            page_url: (typeof window !== 'undefined') ? (window.location.hash || window.location.pathname || '') : ''
+          }),
+          keepalive: true
+        }).catch(() => {});
+      }
+    } catch (_) {}
+  });
+}

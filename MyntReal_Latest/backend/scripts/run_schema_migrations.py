@@ -1001,7 +1001,10 @@ def run_migrations():
                     ON vgk_points_ledger (reference_id)
                     WHERE reference_type = 'CRM_LEAD' AND reason_code = 'DIRECT_TEAM_LEAD_V2';
                 """))
-                logger.info("✅ Direct team lead points schema & vgk_points_ledger constraint ensured")
+                # 4.27 Staff call logs dialed_page column
+                conn.execute(text("ALTER TABLE staff_call_logs ADD COLUMN IF NOT EXISTS dialed_page VARCHAR(100);"))
+                conn.execute(text("CREATE INDEX IF NOT EXISTS idx_staff_call_logs_dialed_page ON staff_call_logs(dialed_page);"))
+                logger.info("✅ Staff call logs dialed_page column verified")
 
         logger.info("✅ Feature-specific schema migrations complete")
         

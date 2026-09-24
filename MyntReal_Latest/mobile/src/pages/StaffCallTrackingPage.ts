@@ -631,6 +631,20 @@ export class StaffCallTrackingPage {
       ? `<span style="font-size:9px;color:#7c3aed;background:#f5f3ff;padding:1px 5px;border-radius:4px;border:1px solid #ddd6fe;display:inline-flex;align-items:center;gap:2px;"><ion-icon name="briefcase" style="font-size:8px;"></ion-icon>Lead${leadStatus ? ' · ' + leadStatus : ''}</span>`
       : (deviceName && !crmName ? `<span style="font-size:9px;color:#6b7280;background:#f3f4f6;padding:1px 5px;border-radius:4px;display:inline-flex;align-items:center;gap:2px;"><ion-icon name="phone-portrait" style="font-size:8px;"></ion-icon>Phone Contact</span>` : '');
 
+    const categoryName = (call as any).category_name || '';
+    const categoryBadge = categoryName
+      ? `<span style="font-size:9px;color:#334155;background:#f1f5f9;padding:1px 5px;border-radius:4px;border:1px solid #cbd5e1;display:inline-flex;align-items:center;gap:2px;"><ion-icon name="pricetag-outline" style="font-size:8px;"></ion-icon>${categoryName}</span>`
+      : '';
+
+    const callFrom = (call as any).call_from || ((call as any).source === 'dialer' ? 'Auto Dialer' : ((call as any).source === 'softphone' ? 'Softphone' : 'Native SIM'));
+    let fromBg = '#ecfdf5', fromColor = '#047857', fromIcon = 'phone-portrait-outline';
+    if (callFrom.toLowerCase().includes('auto') || callFrom.toLowerCase().includes('dialer')) {
+      fromBg = '#f5f3ff'; fromColor = '#6b21a8'; fromIcon = 'hardware-chip-outline';
+    } else if (callFrom.toLowerCase().includes('softphone') || callFrom.toLowerCase().includes('webrtc')) {
+      fromBg = '#e0f2fe'; fromColor = '#0369a1'; fromIcon = 'laptop-outline';
+    }
+    const fromBadge = `<span style="font-size:9px;color:${fromColor};background:${fromBg};padding:1px 5px;border-radius:4px;border:1px solid currentColor;display:inline-flex;align-items:center;gap:2px;"><ion-icon name="${fromIcon}" style="font-size:8px;"></ion-icon>${callFrom}</span>`;
+
     return `<div class="ct-call-row" style="display:flex;align-items:flex-start;padding:10px 12px;border-bottom:1px solid #f3f4f6;gap:10px;">
       <div style="width:38px;height:38px;border-radius:50%;background:${typeBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
         <ion-icon name="${typeIcon}" style="font-size:20px;color:${typeColor};"></ion-icon>
@@ -641,6 +655,8 @@ export class StaffCallTrackingPage {
           <button class="ct-phone-btn" data-phone="${call.phone_number}" style="font-weight:700;font-size:${displayName ? '12' : '14'}px;color:#0ea5e9;background:none;border:none;padding:0;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:2px;">${call.phone_number || '-'}</button>
           <span style="font-size:10px;font-weight:600;padding:1px 7px;border-radius:10px;background:${typeBg};color:${typeColor};">${typeLabel}</span>
           ${leadBadge}
+          ${categoryBadge}
+          ${fromBadge}
         </div>
         <div style="font-size:11px;color:#6b7280;margin-top:3px;display:flex;align-items:center;gap:8px;">
           <span>${dateStr} · ${timeStr}</span>

@@ -27,6 +27,7 @@ from app.models.crm import (
 from app.models.staff import StaffEmployee
 from app.models.staff_accounts import OfficialPartner
 from app.models.call_tracking import CallQualityReview
+from app.api.v1.endpoints.call_tracking import resolve_call_from
 
 logger = logging.getLogger(__name__)
 
@@ -461,10 +462,14 @@ class UniversalHistoryService:
         try:
             sql_voip = """
                 SELECT vcs.id, vcs.call_session_id, vcs.started_at, vcs.duration_seconds,
-                       vcs.direction, vcs.status, vcs.operator_name, vcs.operator_user_ref,
+                       vcs.direction, vcs.status,
+                       COALESCE(NULLIF(TRIM(vcs.operator_name), ''), se.full_name, NULLIF(TRIM(vcs.operator_user_ref), ''), 'Staff') AS operator_name,
+                       COALESCE(vcs.operator_user_ref, se.emp_code, '') AS operator_user_ref,
                        vcs.recording_storage_key, vcs.recording_status, vcs.lead_id,
-                       vcs.customer_phone, vcs.destination_number
+                       vcs.customer_phone, vcs.destination_number,
+                       vcs.metadata_json
                 FROM voip_call_sessions vcs
+                LEFT JOIN staff_employees se ON (vcs.operator_id = se.id OR (vcs.operator_user_ref IS NOT NULL AND vcs.operator_user_ref = se.emp_code))
                 WHERE (
                     vcs.lead_id = :lead_id
                     OR (
@@ -475,7 +480,7 @@ class UniversalHistoryService:
                     )
                 )
                 ORDER BY vcs.started_at DESC
-                LIMIT 150
+                LIMIT 500
             """
             vcs_rows = db.execute(
                 text(sql_voip),
@@ -495,18 +500,41 @@ class UniversalHistoryService:
                 has_rec = bool(rec_key or rec_st in ("AVAILABLE", "SAVED", "COMPLETED"))
                 direction = (r[4] or "outbound").lower()
                 c_status = (r[5] or "completed").capitalize()
+                staff_name_val = r[6] or "Staff"
+
+                meta_raw = r[13] if len(r) > 13 else None
+                dialed_page = None
+                if isinstance(meta_raw, dict):
+                    dialed_page = meta_raw.get("dialed_page")
+                elif isinstance(meta_raw, str) and meta_raw:
+                    try:
+                        dialed_page = json.loads(meta_raw).get("dialed_page")
+                    except Exception:
+                        dialed_page = None
+
+                call_from = resolve_call_from(
+                    source="softphone",
+                    device_call_id=sid,
+                    call_type=direction,
+                    dialed_page=dialed_page,
+                    matched_lead_id=r[10]
+                )
+
                 items.append({
                     "id": f"vcs_{r[0]}",
                     "raw_id": r[0],
                     "call_session_id": sid,
                     "source": "Plivo WebRTC",
+                    "call_from": call_from,
+                    "dialed_page": dialed_page or call_from,
                     "channel": "Web Softphone",
                     "timestamp": dt.isoformat() if dt else None,
                     "datetime_obj": dt,
                     "direction": direction,
                     "duration_seconds": dur,
                     "status": c_status,
-                    "staff_name": r[6] or r[7] or "Staff",
+                    "staff_name": staff_name_val,
+                    "handled_by": staff_name_val,
                     "staff_emp_code": r[7] or "",
                     "has_recording": has_rec,
                     "recording_url": f"/api/v1/telephony/calls/{sid}/recording" if (has_rec and sid) else None,
@@ -521,7 +549,8 @@ class UniversalHistoryService:
             sql_scl = """
                 SELECT scl.id, scl.call_datetime, scl.call_type, scl.duration_seconds,
                        scl.has_recording, scl.recording_id, se.full_name, se.emp_code,
-                       scl.source, scl.device_call_id, scl.matched_lead_id, scl.phone_number
+                       scl.source, scl.device_call_id, scl.matched_lead_id, scl.phone_number,
+                       scl.dialed_page
                 FROM staff_call_logs scl
                 LEFT JOIN staff_employees se ON scl.staff_id = se.id
                 WHERE (
@@ -532,7 +561,7 @@ class UniversalHistoryService:
                     )
                 )
                 ORDER BY scl.call_datetime DESC
-                LIMIT 150
+                LIMIT 500
             """
             scl_rows = db.execute(
                 text(sql_scl),
@@ -557,11 +586,21 @@ class UniversalHistoryService:
                 c_type = (r[2] or "OUTGOING").upper()
                 direction = "inbound" if c_type == "INCOMING" else "outbound"
                 status = "Answered" if dur > 0 else (c_type.capitalize() if c_type != "MISSED" else "Missed")
+                scl_dialed = r[12] if len(r) > 12 else None
+                call_from = resolve_call_from(
+                    source=r[8] or "native",
+                    device_call_id=r[9],
+                    call_type=r[2],
+                    dialed_page=scl_dialed,
+                    matched_lead_id=r[10]
+                )
                 items.append({
                     "id": f"scl_{r[0]}",
                     "raw_id": r[0],
                     "call_session_id": None,
                     "source": "Native SIM",
+                    "call_from": call_from,
+                    "dialed_page": scl_dialed or call_from,
                     "channel": "Mobile SIM Call",
                     "timestamp": dt.isoformat() if dt else None,
                     "datetime_obj": dt,
@@ -569,6 +608,7 @@ class UniversalHistoryService:
                     "duration_seconds": dur,
                     "status": status,
                     "staff_name": r[6] or r[7] or "Staff",
+                    "handled_by": r[6] or r[7] or "Staff",
                     "staff_emp_code": r[7] or "",
                     "has_recording": has_rec,
                     "recording_url": f"/api/v1/call-tracking/recordings/{rec_id}/stream" if has_rec else None,
@@ -578,12 +618,12 @@ class UniversalHistoryService:
             db.rollback()
             logger.warning(f"[UniversalHistory] staff_call_logs query failed: {_e}")
 
-        # 3. MyOperator Calls
+        # 3. Central IVR / Office Trunk Calls (operator_calls)
         try:
             sql_mop = """
                 SELECT oc.id, oc.caller_number, oc.called_number, oc.started_at,
                        oc.duration_seconds, oc.status, oc.recording_url,
-                       oc.handled_by, oc.operator_name
+                       oc.handled_by, oc.operator_name, oc.call_type, oc.call_id
                 FROM operator_calls oc
                 WHERE (
                     oc.crm_lead_id = :lead_id
@@ -610,22 +650,40 @@ class UniversalHistoryService:
                 dt = r[3]
                 dur = int(r[4] or 0)
                 rec_url = r[6]
+                mop_staff = r[7] or r[8] or "IVR / Queue"
+                call_type_raw = (r[9] or "inbound").lower()
+                call_id_raw = str(r[10] or "")
+
+                # Brand as Central IVR or Office Trunk (never display legacy MyOperator)
+                if call_id_raw.startswith("plivo_") or call_id_raw.startswith("webrtc_") or call_id_raw.startswith("vcs_"):
+                    src_label = "Central IVR"
+                else:
+                    src_label = "Office Trunk"
+
+                if call_type_raw in ('inbound', 'incoming'):
+                    call_from = "Inbound DID"
+                else:
+                    call_from = "Operator Calls"
+
                 items.append({
                     "id": f"mop_{r[0]}",
                     "raw_id": r[0],
                     "call_session_id": None,
-                    "source": "MyOperator",
-                    "channel": "Cloud Telephony",
+                    "source": src_label,
+                    "call_from": call_from,
+                    "dialed_page": call_from,
+                    "channel": "Hotline Trunk",
                     "timestamp": dt.isoformat() if dt else None,
                     "datetime_obj": dt,
-                    "direction": "inbound",
+                    "direction": call_type_raw,
                     "duration_seconds": dur,
                     "status": (r[5] or "Completed").capitalize(),
-                    "staff_name": r[7] or r[8] or "IVR / Queue",
+                    "staff_name": mop_staff,
+                    "handled_by": mop_staff,
                     "staff_emp_code": "",
                     "has_recording": bool(rec_url),
                     "recording_url": rec_url,
-                    "details": f"MyOperator call ({dur}s)",
+                    "details": f"{src_label} {call_type_raw} call ({dur}s)",
                 })
         except Exception as _e:
             db.rollback()
@@ -636,29 +694,35 @@ class UniversalHistoryService:
             try:
                 sql_cda = """
                     SELECT cda.id, cda.session_id, cda.dialed_at, cda.duration_seconds,
-                           cda.call_outcome, cda.note, cda.user_ref
+                           cda.call_outcome, cda.note, cda.user_ref,
+                           se.full_name
                     FROM crm_dialer_attempts cda
+                    LEFT JOIN staff_employees se ON (cda.user_ref = se.emp_code OR (CASE WHEN cda.user_ref ~ '^[0-9]+$' THEN cda.user_ref::integer ELSE NULL END) = se.id)
                     WHERE cda.lead_id = :lead_id
                     ORDER BY cda.dialed_at DESC
-                    LIMIT 100
+                    LIMIT 500
                 """
                 cda_rows = db.execute(text(sql_cda), {"lead_id": entity_id}).fetchall()
                 for r in cda_rows:
                     dt = r[2]
                     dur = int(r[3] or 0)
                     disp = r[4] or "Dial Attempt"
+                    cda_staff = r[7] or r[6] or "Auto Dialer Agent"
                     items.append({
                         "id": f"cda_{r[0]}",
                         "raw_id": r[0],
                         "call_session_id": str(r[1]) if r[1] else None,
                         "source": "Auto Dialer",
+                        "call_from": "Auto Dialer",
+                        "dialed_page": "Auto Dialer",
                         "channel": "Campaign Dialer",
                         "timestamp": dt.isoformat() if dt else None,
                         "datetime_obj": dt,
                         "direction": "outbound",
                         "duration_seconds": dur,
                         "status": disp.capitalize(),
-                        "staff_name": r[6] or "Auto Dialer Agent",
+                        "staff_name": cda_staff,
+                        "handled_by": cda_staff,
                         "staff_emp_code": r[6] or "",
                         "has_recording": False,
                         "recording_url": None,
@@ -1262,6 +1326,38 @@ class UniversalHistoryService:
             except Exception as _e:
                 db.rollback()
                 logger.warning(f"[UniversalHistory] CRMLeadAssignment query failed: {_e}")
+
+        # 5. Calls (Included in All Changes and Calls subfilter)
+        if subfilter in ("all", "calls"):
+            try:
+                calls_res = cls.get_calls_history(db=db, entity_info=entity_info, page=1, limit=100, current_user=current_user)
+                for c in (calls_res.get("items") or []):
+                    if not isinstance(c, dict) or not c.get("id"):
+                        continue
+                    handled_by = c.get("handled_by") or c.get("staff_name") or "Staff"
+                    dur = c.get("duration_seconds") or 0
+                    c_status = c.get("status") or "Completed"
+                    c_dir = (c.get("direction") or "Call").capitalize()
+                    c_src = c.get("source") or "Call"
+                    items.append({
+                        "id": f"call_evt_{c['id']}",
+                        "category": "call",
+                        "event_type": f"Call: {c_dir}",
+                        "title": f"Phone Call ({c_src} • {c_dir})",
+                        "author_name": handled_by,
+                        "handled_by": handled_by,
+                        "author_type": "staff",
+                        "timestamp": c.get("timestamp"),
+                        "datetime_obj": c.get("datetime_obj"),
+                        "old_val": None,
+                        "new_val": f"Handled by: {handled_by}",
+                        "details": f"{c.get('details') or f'{c_dir} call'} • Status: {c_status}",
+                        "duration_seconds": dur,
+                        "has_recording": c.get("has_recording", False),
+                        "recording_url": c.get("recording_url"),
+                    })
+            except Exception as _ce:
+                logger.warning(f"[UniversalHistory] calls aggregation for changes failed: {_ce}")
 
         # Sort reverse chronological
         def get_ts_float(item: Dict[str, Any]) -> float:

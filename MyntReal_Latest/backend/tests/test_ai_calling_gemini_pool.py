@@ -34,7 +34,8 @@ def test_pool_defaults_to_env_key():
     """Verify pool loads env default when no DB pool configured."""
     pool = GeminiProjectPool()
     with patch("app.api.v1.endpoints.staff_ai_calling._get_gemini_key", return_value="AIzaSy_ENV_KEY_XYZ12345"):
-        accounts = pool.list_accounts_masked(company_id=999)
+        # Use an unseeded company_id so DB returns no existing pool
+        accounts = pool.list_accounts_masked(company_id=88888)
         assert len(accounts) >= 1
         acc = accounts[0]
         assert acc["is_env_default"] is True
@@ -86,6 +87,7 @@ def test_pool_toggle_and_delete_account():
         assert deleted is True
 
         # Assert cannot delete env default
+        pool._pools[999] = [{"id": "env_default", "is_env_default": True}]
         with pytest.raises(ValueError, match="Cannot delete environment default"):
             pool.delete_account(company_id=999, account_id="env_default")
 

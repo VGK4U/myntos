@@ -6,6 +6,9 @@ Preserves settings compatibility with Flask app
 import os
 from dotenv import load_dotenv
 load_dotenv()
+_backend_env = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
+if os.path.exists(_backend_env):
+    load_dotenv(_backend_env)
 from typing import List, Optional, Any
 from pydantic_settings import BaseSettings
 from pydantic import validator
@@ -120,6 +123,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
     GOOGLE_API_KEY: Optional[str] = os.getenv("GOOGLE_API_KEY")
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY")
+    SARVAM_API_KEY: Optional[str] = os.getenv("SARVAM_API_KEY")
 
     # ── Mobile VoIP Push Signaling (Screen-Off Calling Phase 2) ──
     ENABLE_MOBILE_VOIP_PUSH: bool = os.getenv("ENABLE_MOBILE_VOIP_PUSH", "true").lower() == "true"

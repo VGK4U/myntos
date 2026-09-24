@@ -565,6 +565,7 @@
 
         <div id="uhmSubfilterBar" class="uhm-subfilter-bar" style="display:none">
           <button class="uhm-subchip active" onclick="window.setUniversalHistorySubfilter('all')">All Changes</button>
+          <button class="uhm-subchip" onclick="window.setUniversalHistorySubfilter('calls')">Calls</button>
           <button class="uhm-subchip" onclick="window.setUniversalHistorySubfilter('notes')">Notes</button>
           <button class="uhm-subchip" onclick="window.setUniversalHistorySubfilter('followups')">Follow-ups</button>
           <button class="uhm-subchip" onclick="window.setUniversalHistorySubfilter('assignments')">Assignments</button>
@@ -592,6 +593,69 @@
     document.body.appendChild(root);
   }
 
+  function _renderCallFromBadge(c) {
+    var page = (c.dialed_page || c.call_from || c.source || '').trim();
+    var lower = page.toLowerCase();
+    var devId = (c.device_call_id || c.call_session_id || '').toLowerCase();
+    var type = (c.call_type || c.direction || '').toUpperCase();
+
+    // 1. Auto Dialer
+    if (lower.includes('auto') || lower.includes('dialer') || devId.includes('cda_') || type === 'DIALER') {
+      return '<span class="badge" style="background:#f5f3ff;color:#6b21a8;border:1px solid #ddd6fe;font-size:0.72rem;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-robot me-1" style="color:#6b21a8;"></i>Auto Dialer</span>';
+    }
+    // 2. My Leads
+    if (lower.includes('my lead') || lower === 'my leads') {
+      return '<span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:0.72rem;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-user-check me-1" style="color:#1d4ed8;"></i>My Leads</span>';
+    }
+    // 3. Staff Leads
+    if (lower.includes('staff lead') || lower === 'staff leads') {
+      return '<span class="badge" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:0.72rem;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-users me-1" style="color:#15803d;"></i>Staff Leads</span>';
+    }
+    // 4. CRM Dashboard
+    if (lower.includes('crm dashboard') || lower.includes('dashboard')) {
+      return '<span class="badge" style="background:#fdf2f8;color:#be185d;border:1px solid #fbcfe8;font-size:0.72rem;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-chart-line me-1" style="color:#be185d;"></i>CRM Dashboard</span>';
+    }
+    // 5. Softphone Center / Hub
+    if (lower.includes('softphone center') || lower.includes('softphone hub') || lower === 'softphone' || lower === 'plivo webrtc') {
+      return '<span class="badge" style="background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;font-size:0.72rem;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-headset me-1" style="color:#0369a1;"></i>Softphone Center</span>';
+    }
+    // 6. Operator Calls
+    if (lower.includes('operator')) {
+      return '<span class="badge" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;font-size:0.72rem;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-head-side-headphones me-1" style="color:#b45309;"></i>Operator Calls</span>';
+    }
+    // 7. WhatsApp Center
+    if (lower.includes('whatsapp')) {
+      return '<span class="badge" style="background:#f0fdf4;color:#16a34a;border:1px solid #86efac;font-size:0.72rem;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fab fa-whatsapp me-1" style="color:#16a34a;"></i>WhatsApp Center</span>';
+    }
+    // 8. Day Planner
+    if (lower.includes('planner')) {
+      return '<span class="badge" style="background:#faf5ff;color:#7e22ce;border:1px solid #e9d5ff;font-size:0.72rem;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-calendar-day me-1" style="color:#7e22ce;"></i>Day Planner</span>';
+    }
+    // 9. Tasks
+    if (lower.includes('task')) {
+      return '<span class="badge" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;font-size:0.72rem;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-tasks me-1" style="color:#334155;"></i>Tasks</span>';
+    }
+    // 10. Master Leads
+    if (lower.includes('master')) {
+      return '<span class="badge" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;font-size:0.72rem;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-database me-1" style="color:#92400e;"></i>Master Leads</span>';
+    }
+    // 11. Bank Wise Leads
+    if (lower.includes('bank')) {
+      return '<span class="badge" style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;font-size:0.72rem;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-landmark me-1" style="color:#065f46;"></i>Bank Wise Leads</span>';
+    }
+    // 12. Inbound DID / Incoming
+    if (lower.includes('inbound') || lower.includes('did') || type === 'INCOMING' || type === 'INBOUND') {
+      return '<span class="badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-size:0.72rem;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-phone-arrow-down-left me-1" style="color:#047857;"></i>Inbound DID</span>';
+    }
+    // 13. Mobile App / Native SIM
+    if (lower.includes('mobile') || lower.includes('sim') || lower.includes('native')) {
+      return '<span class="badge" style="background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;font-size:0.72rem;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-sim-card me-1" style="color:#047857;"></i>Native SIM</span>';
+    }
+
+    // Fallback
+    return '<span class="badge" style="background:#f8fafc;color:#475569;border:1px solid #cbd5e1;font-size:0.72rem;font-weight:600;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;"><i class="fas fa-file-alt me-1 text-secondary"></i>' + _esc(page || 'My Leads') + '</span>';
+  }
+
   function _renderCalls(items) {
     if (!items || !items.length) {
       return '<div class="uhm-empty-state"><i class="fas fa-phone-slash me-2"></i>No call records or recordings found.</div>';
@@ -605,6 +669,7 @@
           : '<span class="uhm-direction-icon uhm-dir-in"><i class="fas fa-arrow-down"></i></span>';
 
         var durText = _formatDuration(c.duration_seconds);
+        var durSec = Number(c.duration_seconds || 0);
         var recHtml = '';
         if (c.has_recording && c.recording_url) {
           recHtml = `
@@ -614,6 +679,20 @@
                 <source src="${_esc(c.recording_url)}" type="audio/wav">
                 Audio playback not supported.
               </audio>
+            </div>
+          `;
+        } else if (durSec === 0) {
+          recHtml = `
+            <div style="margin-top:5px;font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:5px;">
+              <i class="fas fa-phone-slash" style="font-size:10px;"></i>
+              <span>Unanswered / Missed (0s — no audio captured)</span>
+            </div>
+          `;
+        } else {
+          recHtml = `
+            <div style="margin-top:5px;font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:5px;">
+              <i class="fas fa-volume-mute" style="font-size:10px;"></i>
+              <span>Audio recording unavailable</span>
             </div>
           `;
         }
@@ -646,11 +725,17 @@
                 ${iconHtml}
                 <div>
                   <span style="font-size:13px;font-weight:600;color:#1e293b">${_esc(c.details || 'Call')}</span>
-                  <div style="font-size:11px;color:#64748b">${_esc(_fmtDate(c.timestamp))} &bull; Staff: ${_esc(c.staff_name || 'Staff')}</div>
+                  <div style="font-size:11px;color:#475569;margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                    <span>${_esc(_fmtDate(c.timestamp))}</span>
+                    <span>&bull;</span>
+                    <span style="font-weight:700;background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-size:11px;">
+                      <i class="fas fa-headset me-1"></i>Handled by: ${_esc(c.handled_by || c.staff_name || 'Staff')}
+                    </span>
+                  </div>
                 </div>
               </div>
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
-                <span class="uhm-call-source-tag">${_esc(c.source || 'Call')}</span>
+                ${_renderCallFromBadge(c)}
                 <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:#f1f5f9;color:#334155">${_esc(c.status || durText)}</span>
                 ${qaScoreBadge}
                 ${reviewBtn}
@@ -784,30 +869,144 @@
       return '<div class="uhm-empty-state"><i class="fas fa-clipboard-list me-2"></i>No change history or notes recorded for this record.</div>';
     }
 
-    var html = '<div style="padding-top:4px">';
+    // Group changes into a single box per specific date
+    var groups = [];
+    var groupMap = {};
+
     items.forEach(function (ch) {
-      var dotClass = 'dot-' + (ch.category || 'audit');
-      var oldNewHtml = '';
-      if (ch.old_val || ch.new_val) {
-        oldNewHtml = `
-          <div style="font-size:11px;margin-top:4px">
-            ${ch.old_val ? '<span style="color:#ef4444;text-decoration:line-through;margin-right:6px">' + _esc(ch.old_val) + '</span> &rarr; ' : ''}
-            <span style="color:#10b981;font-weight:600">${_esc(ch.new_val || '')}</span>
+      var d = ch.timestamp ? new Date(ch.timestamp) : null;
+      var dateKey = 'General History';
+      if (d && !isNaN(d.getTime())) {
+        dateKey = d.toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric'
+        });
+      }
+      var key = dateKey;
+
+      if (!groupMap[key]) {
+        groupMap[key] = {
+          dateKey: dateKey,
+          items: []
+        };
+        groups.push(groupMap[key]);
+      }
+      groupMap[key].items.push(ch);
+    });
+
+    var html = '<div style="padding-top:4px;display:flex;flex-direction:column;gap:12px;">';
+    groups.forEach(function (grp) {
+      var dotClass = 'dot-audit';
+      var changesHtml = '';
+
+      grp.items.forEach(function (ch) {
+        var oldNewHtml = '';
+        if (ch.old_val || ch.new_val) {
+          oldNewHtml = `
+            <div style="font-size:11px;margin-top:3px;word-break:break-word;">
+              ${ch.old_val ? '<span style="color:#ef4444;text-decoration:line-through;margin-right:6px">' + _esc(ch.old_val) + '</span> &rarr; ' : ''}
+              <span style="color:#10b981;font-weight:600">${_esc(ch.new_val || '')}</span>
+            </div>
+          `;
+        }
+
+        var isCall = ch.category === 'call';
+        var isNote = ch.category === 'note';
+        var isAsgn = ch.category === 'assignment';
+        var isFu   = ch.category === 'followup';
+
+        var rowBg = '#f8fafc';
+        var rowBorder = '#e2e8f0';
+        var titleColor = '#1e293b';
+        var iconHtml = '<i class="fas fa-edit text-slate-400 me-1"></i>';
+
+        if (isCall) {
+          rowBg = '#f0fdf4';
+          rowBorder = '#bbf7d0';
+          titleColor = '#166534';
+          iconHtml = '<i class="fas fa-phone-alt text-emerald-600 me-1"></i>';
+        } else if (isNote) {
+          rowBg = '#fffbeb';
+          rowBorder = '#fde68a';
+          titleColor = '#92400e';
+          iconHtml = '<i class="fas fa-sticky-note text-amber-500 me-1"></i>';
+        } else if (isFu) {
+          rowBg = '#f5f3ff';
+          rowBorder = '#ddd6fe';
+          titleColor = '#5b21b6';
+          iconHtml = '<i class="fas fa-calendar-check text-purple-500 me-1"></i>';
+        } else if (isAsgn) {
+          rowBg = '#eff6ff';
+          rowBorder = '#bfdbfe';
+          titleColor = '#1e40af';
+          iconHtml = '<i class="fas fa-user-tag text-blue-500 me-1"></i>';
+        }
+
+        var recHtml = '';
+        if (isCall && ch.has_recording && ch.recording_url) {
+          recHtml = `
+            <div style="margin-top:6px;padding-top:6px;border-top:1px dashed #cbd5e1;">
+              <audio controls style="width:100%;height:30px" preload="none" onplay="window._onAudioPlay(this)">
+                <source src="${_esc(ch.recording_url)}" type="audio/mpeg">
+                <source src="${_esc(ch.recording_url)}" type="audio/wav">
+                Audio playback not supported.
+              </audio>
+            </div>
+          `;
+        }
+
+        var handledOrAuthorInfo = '';
+        if (isCall) {
+          handledOrAuthorInfo = `<span style="font-size:11px;font-weight:700;color:#15803d;background:#dcfce7;padding:1px 6px;border-radius:4px;"><i class="fas fa-headset me-1"></i>Handled by: ${_esc(ch.handled_by || ch.author_name || 'Staff')}</span>`;
+        } else {
+          handledOrAuthorInfo = `<span style="font-size:11px;font-weight:600;color:#475569;background:#e2e8f0;padding:1px 6px;border-radius:4px;"><i class="fas fa-user me-1"></i>By: ${_esc(ch.author_name || ch.handled_by || 'Staff')}</span>`;
+        }
+
+        var itemTime = '';
+        if (ch.timestamp) {
+          try {
+            var itemDate = new Date(ch.timestamp);
+            if (!isNaN(itemDate.getTime())) {
+              itemTime = itemDate.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+            }
+          } catch (_) {}
+        }
+
+        changesHtml += `
+          <div style="background:${rowBg};border:1px solid ${rowBorder};border-radius:6px;padding:8px 10px;margin-bottom:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap;">
+              <span style="font-size:12.5px;font-weight:600;color:${titleColor}">${iconHtml}${_esc(ch.title || ch.event_type || 'Change')}</span>
+              <div style="display:flex;align-items:center;gap:6px;">
+                ${handledOrAuthorInfo}
+                ${itemTime ? '<span style="font-size:11px;color:#94a3b8;font-weight:normal">' + _esc(itemTime) + '</span>' : ''}
+              </div>
+            </div>
+            ${ch.details ? `<div style="font-size:11.5px;color:#475569;margin-top:3px;word-break:break-word;">${_esc(ch.details)}</div>` : ''}
+            ${oldNewHtml}
+            ${recHtml}
           </div>
         `;
-      }
+      });
 
       html += `
         <div class="uhm-timeline-item">
           <div class="uhm-timeline-dot ${dotClass}"></div>
-          <div class="uhm-timeline-card">
-            <div class="uhm-timeline-title">
-              <span>${_esc(ch.title || ch.event_type || 'Change')}</span>
-              <span style="font-size:11px;color:#94a3b8;font-weight:normal">${_esc(_fmtDate(ch.timestamp))}</span>
+          <div class="uhm-timeline-card" style="border:1px solid #cbd5e1;background:#ffffff;box-shadow:0 1px 3px rgba(0,0,0,0.05);padding:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #f1f5f9;padding-bottom:8px;margin-bottom:8px;flex-wrap:wrap;gap:6px;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#e0e7ff;color:#3730a3;font-size:11px;">
+                  <i class="far fa-calendar-alt"></i>
+                </span>
+                <span style="font-size:13px;font-weight:700;color:#0f172a">${_esc(grp.dateKey)}</span>
+                <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;">
+                  ${grp.items.length} ${grp.items.length === 1 ? 'change' : 'changes'}
+                </span>
+              </div>
             </div>
-            ${ch.details ? `<div class="uhm-timeline-body">${_esc(ch.details)}</div>` : ''}
-            ${oldNewHtml}
-            <div style="font-size:11px;color:#94a3b8;margin-top:4px">By: ${_esc(ch.author_name || 'Staff')}</div>
+            <div style="display:flex;flex-direction:column;">
+              ${changesHtml}
+            </div>
           </div>
         </div>
       `;

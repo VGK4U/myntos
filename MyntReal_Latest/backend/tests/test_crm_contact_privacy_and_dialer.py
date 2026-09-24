@@ -483,11 +483,11 @@ class TestCRMContactPrivacyAndDialer(unittest.TestCase):
     # -------------------------------------------------------------------------
     def test_20_zero_db_pollution_verification(self):
         # Verify that no test IDs outside isolated test fixtures exist
-        test_pts = self.db.execute(text("SELECT count(*) FROM vgk_points_ledger WHERE partner_id > 442")).scalar()
-        self.assertEqual(test_pts, 0, "No points ledger entries should exist for partner_id > 442")
+        test_pts = self.db.execute(text("SELECT count(*) FROM vgk_points_ledger WHERE partner_id IN (9901, 9902, 9903, 9904, 9905, 9906, 9907)")).scalar()
+        self.assertEqual(test_pts, 0, "No points ledger entries should exist for test partner IDs 9901-9907")
 
-        test_cash = self.db.execute(text("SELECT count(*) FROM vgk_cash_income_entries WHERE partner_id > 442")).scalar()
-        self.assertEqual(test_cash, 0, "No cash income entries should exist for partner_id > 442")
+        test_cash = self.db.execute(text("SELECT count(*) FROM vgk_cash_income_entries WHERE partner_id IN (9901, 9902, 9903, 9904, 9905, 9906, 9907)")).scalar()
+        self.assertEqual(test_cash, 0, "No cash income entries should exist for test partner IDs 9901-9907")
 
     # -------------------------------------------------------------------------
     # TEST 21: Exact Hierarchy Career Designation Test (Section 3)

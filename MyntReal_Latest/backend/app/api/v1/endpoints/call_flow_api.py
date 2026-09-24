@@ -2808,7 +2808,11 @@ def list_incoming_calls(
         forwarded_from_display = _format_phone(forwarded_from_number) if forwarded_from_number else None
         forwarded_from_masked = _mask_phone(forwarded_from_number, current_user) if forwarded_from_number else None
 
-        if is_dialer:
+        if meta_dict.get("dialed_page"):
+            call_from = str(meta_dict.get("dialed_page"))
+            call_from_badge = "primary"
+            call_from_icon = "fa-window-maximize"
+        elif is_dialer:
             call_from = "Auto Dialer"
             call_from_badge = "primary"
             call_from_icon = "fa-robot"

@@ -40,6 +40,7 @@ class StaffCallLog(BaseModel):
 
     source = Column(String(20), default='native', nullable=False)
     device_call_id = Column(String(100), nullable=True)
+    dialed_page = Column(String(100), nullable=True)
 
     matched_lead_id = Column(Integer, ForeignKey('crm_leads.id', ondelete='SET NULL'), nullable=True)
     matched_at = Column(DateTime, nullable=True)
@@ -62,6 +63,8 @@ class StaffCallLog(BaseModel):
             'call_date': self.call_date,
             'duration_seconds': self.duration_seconds,
             'source': self.source,
+            'device_call_id': self.device_call_id,
+            'dialed_page': self.dialed_page,
             'matched_lead_id': self.matched_lead_id,
             'has_recording': self.has_recording,
             'recording_id': self.recording_id,

@@ -1042,9 +1042,18 @@ async def get_team_journeys(
     if employee_id:
         query = query.filter(StaffJourney.employee_id == employee_id)
     if status:
-        query = query.filter(StaffJourney.status == JourneyStatus(status))
+        st_clean = str(status).lower().strip()
+        if st_clean == 'active':
+            st_clean = 'in_progress'
+        try:
+            query = query.filter(StaffJourney.status == JourneyStatus(st_clean))
+        except ValueError:
+            pass
     if approval_status:
-        query = query.filter(StaffJourney.approval_status == JourneyApprovalStatus(approval_status))
+        try:
+            query = query.filter(StaffJourney.approval_status == JourneyApprovalStatus(approval_status))
+        except ValueError:
+            pass
 
     total = query.count()
     journeys = query.order_by(StaffJourney.start_time.desc()).offset(offset).limit(limit).all()

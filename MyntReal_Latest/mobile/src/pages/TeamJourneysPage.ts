@@ -9,20 +9,26 @@
 import { apiService } from '../services/api.service';
 import { PageHeader } from '../components/PageHeader';
 import { LeafletJourneyMap } from '../components/LeafletJourneyMap';
+import { routerService } from '../services/router.service';
 
 interface TeamJourneyAPI {
   id: number;
   employee_name: string;
-  employee_id_code: string;
+  employee_id_code?: string;
+  employee_code?: string;
   purpose: string;
   purpose_description: string;
-  start_address: string;
-  end_address: string | null;
+  start_address?: string;
+  start_location?: string;
+  end_address?: string | null;
+  end_location?: string | null;
   start_time: string;
   end_time: string | null;
-  total_distance_km: number;
+  total_distance_km?: number;
+  distance_km?: number;
   status: string;
   transport_mode: string;
+  reimbursement_amount?: number;
 }
 
 interface TeamJourney {
@@ -37,6 +43,7 @@ interface TeamJourney {
   distance_km: number;
   status: string;
   transport_mode: string;
+  reimbursement_amount?: number;
 }
 
 interface OfflinePeriod {
@@ -51,23 +58,27 @@ interface OfflinePeriod {
 function mapApiToJourney(api: TeamJourneyAPI): TeamJourney {
   return {
     id: api.id,
-    employee_name: api.employee_name || 'Unknown',
-    emp_code: api.employee_id_code || '',
-    purpose: api.purpose_description || api.purpose || '',
-    start_location: api.start_address || 'Unknown Location',
-    end_location: api.end_address || null,
+    employee_name: api.employee_name || 'Staff Member',
+    emp_code: api.employee_id_code || api.employee_code || '',
+    purpose: api.purpose_description || api.purpose || 'General Field Visit',
+    start_location: api.start_address || api.start_location || 'Start Location',
+    end_location: api.end_address || api.end_location || null,
     start_time: api.start_time,
     end_time: api.end_time,
-    distance_km: api.total_distance_km || 0,
-    status: api.status || 'unknown',
-    transport_mode: api.transport_mode || 'unknown'
+    distance_km: api.total_distance_km ?? api.distance_km ?? 0,
+    status: (api.status || 'unknown').toLowerCase(),
+    transport_mode: api.transport_mode || 'bike',
+    reimbursement_amount: api.reimbursement_amount ?? 0
   };
 }
 
 export class TeamJourneysPage {
   private container: HTMLElement;
-  private journeys: TeamJourney[] = [];
+  private activeJourneys: TeamJourney[] = [];
+  private dateJourneys: TeamJourney[] = [];
   private loading: boolean = true;
+  private activeLoading: boolean = false;
+  private dateLoading: boolean = false;
   private selectedDate: string = '';
   private expandedJourneyId: number | null = null;
   private leafletMap: LeafletJourneyMap | null = null;
@@ -97,16 +108,64 @@ export class TeamJourneysPage {
     this.updateContent();
 
     try {
-      const response = await apiService.get<any>(`/staff/journeys/team?start_date=${this.selectedDate}&end_date=${this.selectedDate}`);
-      if (response.success && response.data) {
-        const apiJourneys: TeamJourneyAPI[] = response.data.journeys || response.data || [];
-        this.journeys = apiJourneys.map(mapApiToJourney);
+      // DC Protocol: Parallel fetch - Active journeys irrespective of date + Date-filtered journeys
+      const [activeRes, dateRes] = await Promise.all([
+        apiService.get<any>('/staff/journeys/team?status=in_progress'),
+        apiService.get<any>(`/staff/journeys/team?start_date=${this.selectedDate}&end_date=${this.selectedDate}`)
+      ]);
+
+      if (activeRes && activeRes.success && activeRes.data) {
+        const activeApis: TeamJourneyAPI[] = activeRes.data.journeys || activeRes.data || [];
+        this.activeJourneys = activeApis.map(mapApiToJourney);
+      } else {
+        this.activeJourneys = [];
+      }
+
+      if (dateRes && dateRes.success && dateRes.data) {
+        const dateApis: TeamJourneyAPI[] = dateRes.data.journeys || dateRes.data || [];
+        this.dateJourneys = dateApis.map(mapApiToJourney);
+      } else {
+        this.dateJourneys = [];
       }
     } catch (error) {
-      console.error('[TeamJourneys] Failed to load:', error);
+      console.error('[TeamJourneys] Failed to load journeys:', error);
     }
 
     this.loading = false;
+    this.updateContent();
+  }
+
+  private async loadActiveJourneysOnly(): Promise<void> {
+    this.activeLoading = true;
+    try {
+      const activeRes = await apiService.get<any>('/staff/journeys/team?status=in_progress');
+      if (activeRes && activeRes.success && activeRes.data) {
+        const activeApis: TeamJourneyAPI[] = activeRes.data.journeys || activeRes.data || [];
+        this.activeJourneys = activeApis.map(mapApiToJourney);
+      } else {
+        this.activeJourneys = [];
+      }
+    } catch (err) {
+      console.error('[TeamJourneys] Failed to refresh active journeys:', err);
+    }
+    this.activeLoading = false;
+    this.updateContent();
+  }
+
+  private async loadDateJourneysOnly(): Promise<void> {
+    this.dateLoading = true;
+    try {
+      const dateRes = await apiService.get<any>(`/staff/journeys/team?start_date=${this.selectedDate}&end_date=${this.selectedDate}`);
+      if (dateRes && dateRes.success && dateRes.data) {
+        const dateApis: TeamJourneyAPI[] = dateRes.data.journeys || dateRes.data || [];
+        this.dateJourneys = dateApis.map(mapApiToJourney);
+      } else {
+        this.dateJourneys = [];
+      }
+    } catch (err) {
+      console.error('[TeamJourneys] Failed to load date journeys:', err);
+    }
+    this.dateLoading = false;
     this.updateContent();
   }
 
@@ -266,122 +325,298 @@ export class TeamJourneysPage {
     if (!content) return;
 
     if (this.loading) {
-      content.innerHTML = '<div class="loading-state">Loading...</div>';
+      content.innerHTML = `
+        <div style="text-align: center; padding: 48px 16px; color: rgba(255,255,255,0.6);">
+          <i class="fas fa-circle-notch fa-spin" style="font-size: 28px; color: #6366f1; margin-bottom: 12px;"></i>
+          <div style="font-size: 14px; font-weight: 500;">Loading Team Journeys...</div>
+        </div>
+      `;
       return;
     }
 
-    const totalKm = this.journeys.reduce((sum, j) => sum + (j.distance_km || 0), 0);
-    const activeJourneys = this.journeys.filter(j => j.status === 'active').length;
-    const completed = this.journeys.filter(j => j.status === 'completed').length;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const yestDate = new Date();
+    yestDate.setDate(yestDate.getDate() - 1);
+    const yestStr = yestDate.toISOString().split('T')[0];
+
+    const isToday = this.selectedDate === todayStr;
+    const isYesterday = this.selectedDate === yestStr;
+
+    const totalKm = this.dateJourneys.reduce((sum, j) => sum + (j.distance_km || 0), 0);
+    const totalAmount = this.dateJourneys.reduce((sum, j) => sum + (j.reimbursement_amount || 0), 0);
+    const activeCount = this.activeJourneys.length;
 
     content.innerHTML = `
-      <div class="date-picker card">
-        <input type="date" id="datePicker" value="${this.selectedDate}" class="form-input">
+      <!-- Segmented Navigation Pill -->
+      <div style="display: flex; background: rgba(30,41,59,0.7); padding: 4px; border-radius: 12px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.08);">
+        <button id="switchMyJourneysBtn" style="flex: 1; padding: 8px 12px; border: none; border-radius: 8px; background: transparent; color: #94a3b8; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <i class="fas fa-user"></i> My Journeys
+        </button>
+        <button id="switchTeamJourneysBtn" style="flex: 1; padding: 8px 12px; border: none; border-radius: 8px; background: #4f46e5; color: #fff; font-size: 13px; font-weight: 600; cursor: default; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 6px rgba(79,70,229,0.4);">
+          <i class="fas fa-users"></i> Team Journeys
+          ${activeCount > 0 ? `<span style="background: #22c55e; color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700;">${activeCount}</span>` : ''}
+        </button>
       </div>
 
-      <div class="journey-summary card">
-        <div class="summary-grid">
-          <div class="summary-item">
-            <span class="summary-value">${this.journeys.length}</span>
-            <span class="summary-label">Total</span>
+      <!-- Modern 4-Card KPI Strip -->
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px;">
+        <div style="background: rgba(30,41,59,0.85); border: 1px solid ${activeCount > 0 ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.08)'}; border-radius: 12px; padding: 12px 6px; text-align: center;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
+            ${activeCount > 0 ? `<span style="width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 6px #22c55e;"></span>` : ''}
+            <span style="font-size: 18px; font-weight: 800; color: ${activeCount > 0 ? '#4ade80' : '#94a3b8'};">${activeCount}</span>
           </div>
-          <div class="summary-item">
-            <span class="summary-value active">${activeJourneys}</span>
-            <span class="summary-label">Active</span>
-          </div>
-          <div class="summary-item">
-            <span class="summary-value">${totalKm.toFixed(1)}</span>
-            <span class="summary-label">km Total</span>
-          </div>
+          <div style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin-top: 2px;">Active Now</div>
+        </div>
+
+        <div style="background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 6px; text-align: center;">
+          <span style="font-size: 18px; font-weight: 800; color: #60a5fa;">${this.dateJourneys.length}</span>
+          <div style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin-top: 2px;">Trips</div>
+        </div>
+
+        <div style="background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 6px; text-align: center;">
+          <span style="font-size: 18px; font-weight: 800; color: #a78bfa;">${totalKm.toFixed(1)}</span>
+          <div style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin-top: 2px;">KM Total</div>
+        </div>
+
+        <div style="background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 6px; text-align: center;">
+          <span style="font-size: 18px; font-weight: 800; color: #34d399;">₹${totalAmount.toFixed(0)}</span>
+          <div style="font-size: 10px; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin-top: 2px;">Claims</div>
         </div>
       </div>
 
-      <h4 class="section-title">Team Journeys</h4>
-      ${this.journeys.length > 0 ? `
-        <div class="journeys-list">
-          ${this.journeys.map(j => this.renderJourney(j)).join('')}
+      <!-- SECTION 1: 🟢 LIVE ACTIVE JOURNEYS (Always Visible Irrespective of Date) -->
+      <div style="margin-bottom: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <h4 style="margin: 0; font-size: 14.5px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px #22c55e;"></span>
+            Live Active Journeys
+            <span style="font-size: 11px; background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); padding: 1px 7px; border-radius: 10px; font-weight: 600;">
+              ${activeCount} Active
+            </span>
+          </h4>
+          <button id="refreshActiveBtn" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: #94a3b8; border-radius: 8px; padding: 4px 10px; font-size: 11px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+            <i class="fas fa-sync-alt ${this.activeLoading ? 'fa-spin' : ''}"></i> Refresh
+          </button>
         </div>
-      ` : `
-        <div class="empty-state card">
-          <div class="empty-icon">🚗</div>
-          <p>No journeys for this date</p>
+
+        ${activeCount > 0 ? `
+          <div class="active-journeys-list" style="display: flex; flex-direction: column; gap: 12px;">
+            ${this.activeJourneys.map(j => this.renderJourneyCard(j, true)).join('')}
+          </div>
+        ` : `
+          <div style="padding: 16px 20px; background: rgba(30,41,59,0.5); border: 1px dashed rgba(255,255,255,0.12); border-radius: 12px; text-align: center;">
+            <div style="font-size: 20px; margin-bottom: 4px;">✨</div>
+            <div style="font-size: 13px; font-weight: 600; color: #e2e8f0;">No team members currently on journey</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 2px;">All team members are off-field or trips have completed.</div>
+          </div>
+        `}
+      </div>
+
+      <!-- SECTION 2: 📅 DATE-WISE JOURNEY HISTORY & CLAIMS -->
+      <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <h4 style="margin: 0; font-size: 14.5px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 7px;">
+            <i class="fas fa-calendar-alt" style="color: #6366f1; font-size: 13px;"></i>
+            Date-Wise Journeys
+          </h4>
+          <div style="display: flex; gap: 6px;">
+            <button id="quickTodayBtn" style="padding: 4px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600; cursor: pointer; border: 1px solid ${isToday ? '#4f46e5' : 'rgba(255,255,255,0.15)'}; background: ${isToday ? '#4f46e5' : 'rgba(255,255,255,0.06)'}; color: ${isToday ? '#fff' : '#94a3b8'};">
+              Today
+            </button>
+            <button id="quickYesterdayBtn" style="padding: 4px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600; cursor: pointer; border: 1px solid ${isYesterday ? '#4f46e5' : 'rgba(255,255,255,0.15)'}; background: ${isYesterday ? '#4f46e5' : 'rgba(255,255,255,0.06)'}; color: ${isYesterday ? '#fff' : '#94a3b8'};">
+              Yesterday
+            </button>
+          </div>
         </div>
-      `}
+
+        <!-- Custom Styled Date Input Bar -->
+        <div style="background: rgba(30,41,59,0.7); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
+          <i class="fas fa-calendar-day" style="color: #818cf8; font-size: 15px;"></i>
+          <div style="flex: 1;">
+            <input type="date" id="datePicker" value="${this.selectedDate}" style="background: transparent; border: none; color: #f8fafc; font-size: 13.5px; font-weight: 600; width: 100%; outline: none; cursor: pointer;">
+          </div>
+          <span style="font-size: 11.5px; color: #94a3b8; font-weight: 500;">${this.formatDate(this.selectedDate)}</span>
+        </div>
+
+        <!-- List for Date-Wise Journeys -->
+        ${this.dateLoading ? `
+          <div style="text-align: center; padding: 24px; color: rgba(255,255,255,0.5);">
+            <i class="fas fa-circle-notch fa-spin me-2"></i>Loading journeys for ${this.formatDate(this.selectedDate)}...
+          </div>
+        ` : this.dateJourneys.length > 0 ? `
+          <div class="date-journeys-list" style="display: flex; flex-direction: column; gap: 12px;">
+            ${this.dateJourneys.map(j => this.renderJourneyCard(j, false)).join('')}
+          </div>
+        ` : `
+          <div style="padding: 24px 16px; background: rgba(30,41,59,0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; text-align: center;">
+            <div style="font-size: 24px; margin-bottom: 6px;">🚗</div>
+            <div style="font-size: 13.5px; font-weight: 600; color: #e2e8f0;">No journeys recorded on this date</div>
+            <div style="font-size: 11px; color: #94a3b8; margin-top: 3px;">Try picking another date using the filter above.</div>
+          </div>
+        `}
+      </div>
     `;
 
-    document.getElementById('datePicker')?.addEventListener('change', (e) => {
-      this.selectedDate = (e.target as HTMLInputElement).value;
-      this.loadTeamJourneys();
-    });
-
-    this.attachJourneyClickHandlers();
+    this.attachEventListeners();
   }
 
-  private renderJourney(journey: TeamJourney): string {
-    const statusClass = journey.status;
-    const time = new Date(journey.start_time).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+  private renderJourneyCard(journey: TeamJourney, isLive: boolean): string {
     const isExpanded = this.expandedJourneyId === journey.id;
-    const isInProgress = journey.status?.toLowerCase() === 'in_progress';
+    const time = this.formatTime(journey.start_time);
+    const purposeText = this.formatPurposeText(journey.purpose);
+    const transportText = this.formatTransportIconText(journey.transport_mode);
+
+    let elapsedText = '';
+    if (isLive && journey.start_time) {
+      const diffMs = Math.max(0, Date.now() - new Date(journey.start_time).getTime());
+      const totalMins = Math.floor(diffMs / 60000);
+      const hours = Math.floor(totalMins / 60);
+      const mins = totalMins % 60;
+      elapsedText = hours > 0 ? `${hours}h ${mins}m elapsed` : `${mins}m elapsed`;
+    }
+
+    const cardBorder = isLive 
+      ? 'border: 1px solid rgba(34,197,94,0.45); background: rgba(22,101,52,0.12);' 
+      : (isExpanded ? 'border: 1px solid #4f46e5; background: rgba(79,70,229,0.15);' : 'border: 1px solid rgba(255,255,255,0.08); background: rgba(30,41,59,0.85);');
 
     return `
-      <div class="journey-card-container" data-journey-id="${journey.id}">
-        <div class="journey-card card ${statusClass}" data-journey-id="${journey.id}" style="cursor: pointer; ${isExpanded ? 'border-radius: 12px 12px 0 0; background: rgba(79,70,229,0.2); border: 1px solid #4f46e5; border-bottom: none;' : ''}">
-          <div class="journey-header">
-            <div class="journey-employee">
-              <h4>${journey.employee_name}</h4>
-              <span class="emp-code">${journey.emp_code}</span>
+      <div class="journey-card-container" data-journey-id="${journey.id}" style="border-radius: 12px; overflow: hidden;">
+        <div class="journey-card" data-journey-id="${journey.id}" style="${cardBorder} border-radius: ${isExpanded ? '12px 12px 0 0' : '12px'}; padding: 14px 16px; cursor: pointer; transition: all 0.2s;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+            <div>
+              <div style="font-size: 14px; font-weight: 700; color: #fff;">${journey.employee_name}</div>
+              <div style="font-size: 11px; color: #94a3b8; font-weight: 500; margin-top: 1px;">
+                ${journey.emp_code ? `<span style="background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 4px;">${journey.emp_code}</span>` : ''}
+                ${isLive ? `<span style="color: #4ade80; margin-left: 6px; font-weight: 600;">● Started ${time}${elapsedText ? ` (${elapsedText})` : ''}</span>` : ''}
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 8px;">
+              ${isLive ? `
+                <span style="background: rgba(34,197,94,0.2); color: #4ade80; border: 1px solid rgba(34,197,94,0.4); font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 12px; display: inline-flex; align-items: center; gap: 4px;">
+                  <span style="width: 5px; height: 5px; border-radius: 50%; background: #22c55e;"></span> In Progress
+                </span>
+              ` : `
+                <span style="background: rgba(148,163,184,0.15); color: #cbd5e1; border: 1px solid rgba(148,163,184,0.3); font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 12px;">
+                  ${journey.status === 'completed' ? '✓ Completed' : journey.status}
+                </span>
+              `}
+              <i class="fas fa-chevron-down" style="color: rgba(255,255,255,0.4); font-size: 12px; transition: transform 0.25s; ${isExpanded ? 'transform: rotate(180deg);' : ''}"></i>
+            </div>
+          </div>
+
+          <!-- Route Points Summary -->
+          <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; font-size: 12.5px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="color: #22c55e; font-size: 11px;">●</span>
+              <span style="color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%;">${journey.start_location}</span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="status-badge ${statusClass}">${journey.status}</span>
-              <i class="fas fa-chevron-down" style="color: rgba(255,255,255,0.5); transition: transform 0.3s; ${isExpanded ? 'transform: rotate(180deg);' : ''}"></i>
+              <span style="color: ${journey.end_location ? '#ef4444' : '#f59e0b'}; font-size: 11px;">●</span>
+              <span style="color: ${journey.end_location ? '#cbd5e1' : '#f59e0b'}; font-style: ${journey.end_location ? 'normal' : 'italic'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90%;">
+                ${journey.end_location || 'Trip In Progress...'}
+              </span>
             </div>
           </div>
-          <div class="journey-route">
-            <div class="route-point">
-              <span class="point-icon start">●</span>
-              <span>${journey.start_location}</span>
+
+          <!-- Metadata Strip -->
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 11.5px; color: #94a3b8;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span><i class="far fa-clock me-1"></i>${time}</span>
+              <span>${transportText}</span>
+              <span style="color: #fff; font-weight: 600;"><i class="fas fa-route me-1 text-primary"></i>${journey.distance_km?.toFixed(1) || '0.0'} km</span>
             </div>
-            ${journey.end_location ? `
-              <div class="route-point">
-                <span class="point-icon end">●</span>
-                <span>${journey.end_location}</span>
-              </div>
-            ` : '<div class="route-point ongoing">In Progress...</div>'}
+            <span style="background: rgba(99,102,241,0.15); color: #818cf8; padding: 1px 7px; border-radius: 4px; font-weight: 600; font-size: 10.5px;">
+              ${purposeText}
+            </span>
           </div>
-          <div class="journey-meta">
-            <span>🕐 ${time}</span>
-            <span>🚗 ${journey.transport_mode}</span>
-            <span>📏 ${journey.distance_km?.toFixed(1) || '0.0'} km</span>
-          </div>
-          <p class="journey-purpose">${journey.purpose}</p>
-          ${isInProgress ? `
-            <div style="margin-top: 10px;">
+
+          <!-- Action Button for Live Journeys -->
+          ${isLive ? `
+            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(220,38,38,0.3);">
               <button
                 class="force-stop-btn"
                 data-journey-id="${journey.id}"
                 data-employee-name="${journey.employee_name}"
                 style="
-                  width: 100%; padding: 9px 16px; background: rgba(220,38,38,0.15);
-                  border: 1px solid rgba(220,38,38,0.5); border-radius: 8px;
-                  color: #fca5a5; font-size: 13px; font-weight: 600; cursor: pointer;
+                  width: 100%; padding: 7px 12px; background: rgba(220,38,38,0.15);
+                  border: 1px solid rgba(220,38,38,0.4); border-radius: 8px;
+                  color: #fca5a5; font-size: 12px; font-weight: 600; cursor: pointer;
                   display: flex; align-items: center; justify-content: center; gap: 6px;
                 "
-              >🛑 Force Stop Journey</button>
+              ><i class="fas fa-hand-paper" style="font-size: 11px;"></i> Force Stop Journey</button>
             </div>
           ` : ''}
         </div>
-        
-        <!-- INLINE DETAIL -->
+
+        <!-- Inline Detail Drawer -->
         <div class="journey-inline-detail" style="display: ${isExpanded ? 'block' : 'none'};" id="journey-detail-${journey.id}">
           <div style="text-align: center; padding: 20px; color: rgba(255,255,255,0.5);">
-            <i class="fas fa-spinner fa-spin"></i> Loading journey details...
+            <i class="fas fa-spinner fa-spin me-2"></i> Loading journey details & route...
           </div>
         </div>
       </div>
     `;
   }
 
-  private attachJourneyClickHandlers(): void {
+  private formatPurposeText(purpose: string): string {
+    if (!purpose) return 'Field Visit';
+    const clean = purpose.replace(/_/g, ' ').trim();
+    return clean.charAt(0).toUpperCase() + clean.slice(1);
+  }
+
+  private formatTransportIconText(mode: string): string {
+    const m = (mode || '').toLowerCase();
+    if (m.includes('bike') || m === 'motorcycle') return '🏍️ Bike';
+    if (m.includes('car')) return '🚗 Car';
+    if (m.includes('electric') || m.includes('ebike')) return '⚡ E-Bike';
+    if (m.includes('company')) return '🏢 Company Vehicle';
+    if (m.includes('cart')) return '🛻 Cart';
+    if (m.includes('bus') || m.includes('transport')) return '🚌 Transport';
+    if (m.includes('walk')) return '🚶 Walking';
+    return '🚗 ' + (mode ? mode.charAt(0).toUpperCase() + mode.slice(1) : 'Vehicle');
+  }
+
+  private attachEventListeners(): void {
+    // Segmented toggle
+    document.getElementById('switchMyJourneysBtn')?.addEventListener('click', () => {
+      routerService.navigate('journeys');
+    });
+
+    // Refresh active button
+    document.getElementById('refreshActiveBtn')?.addEventListener('click', async () => {
+      await this.loadActiveJourneysOnly();
+    });
+
+    // Quick date pills
+    document.getElementById('quickTodayBtn')?.addEventListener('click', async () => {
+      const today = new Date().toISOString().split('T')[0];
+      if (this.selectedDate !== today) {
+        this.selectedDate = today;
+        await this.loadDateJourneysOnly();
+      }
+    });
+
+    document.getElementById('quickYesterdayBtn')?.addEventListener('click', async () => {
+      const yestDate = new Date();
+      yestDate.setDate(yestDate.getDate() - 1);
+      const yest = yestDate.toISOString().split('T')[0];
+      if (this.selectedDate !== yest) {
+        this.selectedDate = yest;
+        await this.loadDateJourneysOnly();
+      }
+    });
+
+    // Date picker input
+    document.getElementById('datePicker')?.addEventListener('change', async (e) => {
+      const val = (e.target as HTMLInputElement).value;
+      if (val && val !== this.selectedDate) {
+        this.selectedDate = val;
+        await this.loadDateJourneysOnly();
+      }
+    });
+
+    // Journey cards expand click
     const journeyCards = this.container.querySelectorAll('.journey-card[data-journey-id]');
     journeyCards.forEach(card => {
       card.addEventListener('click', () => {
@@ -392,6 +627,7 @@ export class TeamJourneysPage {
       });
     });
 
+    // Force stop buttons
     const forceStopBtns = this.container.querySelectorAll('.force-stop-btn');
     forceStopBtns.forEach(btn => {
       btn.addEventListener('click', (e) => {

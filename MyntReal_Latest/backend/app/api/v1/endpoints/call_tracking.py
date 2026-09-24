@@ -19,10 +19,12 @@ from app.core.database import get_db
 from app.core.security import get_current_user_hybrid
 from app.models.call_tracking import StaffCallLog, StaffCallSyncLog, StaffCallRecording
 from app.models.crm import CRMLead, CRMLeadNote
+from app.models.signup_category import SignupCategory
 from app.models.staff import StaffEmployee, StaffDepartment
 from app.models.staff_attendance import StaffAttendance, StaffActivityTimeLog
 from app.models.staff_kra import StaffKRADailyInstance
 from app.utils.staff_hierarchy import get_team_member_ids
+from app.api.v1.endpoints.crm_dialer import _resolve_phones_batch
 
 # CT Protocol: Roles with full org visibility in call tracking (not limited to their downline)
 CT_FULL_ACCESS = {
@@ -69,6 +71,135 @@ def normalize_phone(phone):
     if len(digits) > 10:
         digits = digits[-10:]
     return digits if len(digits) == 10 else None
+
+
+def resolve_call_from(
+    source: Optional[str],
+    device_call_id: Optional[str] = None,
+    call_type: Optional[str] = None,
+    dialed_page: Optional[str] = None,
+    matched_lead_id: Optional[int] = None
+) -> str:
+    if dialed_page and str(dialed_page).strip():
+        page_val = str(dialed_page).strip()
+        low = page_val.lower()
+        if 'my lead' in low:
+            return 'My Leads'
+        elif 'staff lead' in low:
+            return 'Staff Leads'
+        elif 'dialer' in low or 'auto' in low:
+            return 'Auto Dialer'
+        elif 'crm dashboard' in low or 'dashboard' in low:
+            return 'CRM Dashboard'
+        elif 'softphone' in low:
+            return 'Softphone Center'
+        elif 'operator' in low:
+            return 'Operator Calls'
+        elif 'whatsapp' in low:
+            return 'WhatsApp Center'
+        elif 'planner' in low:
+            return 'Day Planner'
+        elif 'task' in low:
+            return 'Tasks'
+        elif 'master' in low:
+            return 'Master Leads'
+        elif 'bank' in low:
+            return 'Bank Wise Leads'
+        elif 'inbound' in low or 'did' in low:
+            return 'Inbound DID'
+        elif 'sim' in low or 'native' in low:
+            return 'Native SIM'
+        return page_val
+
+    src = (source or '').lower().strip()
+    dev_id = (device_call_id or '').lower().strip()
+    call_tp = (call_type or '').upper().strip()
+
+    if src == 'dialer' or call_tp == 'DIALER' or (dev_id and 'cda_' in dev_id):
+        return 'Auto Dialer'
+    elif call_tp in ('INCOMING', 'INBOUND') or (dev_id and 'did_' in dev_id):
+        return 'Inbound DID'
+    elif src in ('native', 'direct_sim', 'normal') and not (dev_id.startswith('vcs_') or dev_id.startswith('plivo_')):
+        return 'Native SIM'
+    elif matched_lead_id:
+        return 'My Leads'
+    elif src == 'softphone' or dev_id.startswith('vcs_') or dev_id.startswith('plivo_'):
+        return 'Softphone Center'
+    return src.capitalize() if src else 'My Leads'
+
+
+@router.post("/record-dial-page")
+async def record_dial_page(
+    payload: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user_hybrid)
+):
+    """
+    DC Protocol: Records the specific frontend page where a call was dialed from.
+    Updates VoIPCallSession metadata and StaffCallLog dialed_page for exact Call From tracking.
+    """
+    session_id = (payload.get("call_session_id") or "").strip()
+    dialed_page = (payload.get("dialed_page") or "").strip()
+    if not session_id or not dialed_page:
+        return {"success": False, "message": "Missing call_session_id or dialed_page"}
+
+    page_clean = dialed_page
+    low = page_clean.lower()
+    if 'my lead' in low:
+        page_clean = 'My Leads'
+    elif 'staff lead' in low:
+        page_clean = 'Staff Leads'
+    elif 'dialer' in low or 'auto' in low:
+        page_clean = 'Auto Dialer'
+    elif 'crm dashboard' in low or 'dashboard' in low:
+        page_clean = 'CRM Dashboard'
+    elif 'softphone' in low:
+        page_clean = 'Softphone Center'
+    elif 'operator' in low:
+        page_clean = 'Operator Calls'
+    elif 'whatsapp' in low:
+        page_clean = 'WhatsApp Center'
+    elif 'planner' in low:
+        page_clean = 'Day Planner'
+    elif 'task' in low:
+        page_clean = 'Tasks'
+    elif 'master' in low:
+        page_clean = 'Master Leads'
+    elif 'bank' in low:
+        page_clean = 'Bank Wise Leads'
+
+    # 1. Update VoIPCallSession metadata_json if exists
+    try:
+        from app.models.voip_call_session import VoIPCallSession
+        vcs = db.query(VoIPCallSession).filter(VoIPCallSession.call_session_id == session_id).first()
+        if vcs:
+            import json
+            meta = {}
+            if vcs.metadata_json:
+                try:
+                    meta = json.loads(vcs.metadata_json)
+                except Exception:
+                    meta = {}
+            meta['dialed_page'] = page_clean
+            vcs.metadata_json = json.dumps(meta)
+    except Exception as e:
+        logger.warning(f"[RECORD-DIAL-PAGE] VoIPCallSession update notice: {e}")
+
+    # 2. Update StaffCallLog dialed_page if already created
+    try:
+        from app.models.call_tracking import StaffCallLog
+        scl = db.query(StaffCallLog).filter(StaffCallLog.device_call_id == session_id).first()
+        if scl:
+            scl.dialed_page = page_clean
+    except Exception as e:
+        logger.warning(f"[RECORD-DIAL-PAGE] StaffCallLog update notice: {e}")
+
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+
+    return {"success": True, "call_session_id": session_id, "dialed_page": page_clean}
 
 
 @router.post("/sync")
@@ -147,7 +278,16 @@ async def sync_call_logs(
             if fb.call_datetime:
                 existing_fallback.add((fb.phone_number, fb.call_type, fb.call_datetime))
 
-        # DC_CT_CRM_LOOKUP: One query for all CRM leads (unchanged — already bulk)
+        # DC_CT_BATCH_PREPARE: Pre-collect raw phones to resolve recognized system entities in bulk
+        batch_raw_phones = [
+            str(entry.get('number') or entry.get('phone_number') or '').strip()
+            for entry in call_logs
+            if (entry.get('number') or entry.get('phone_number'))
+        ]
+        system_matches = _resolve_phones_batch(db, batch_raw_phones) if batch_raw_phones else {}
+        records_personal_dropped = 0
+
+        # DC_CT_CRM_LOOKUP: Also check CRM leads in accessible companies
         all_lead_phones = {}
         leads = db.query(CRMLead.id, CRMLead.phone, CRMLead.alternate_phone).filter(
             CRMLead.company_id == company_id
@@ -159,7 +299,9 @@ async def sync_call_logs(
                     all_lead_phones[norm] = lead.id
 
         for entry in call_logs:
-            phone = entry.get('number') or entry.get('phone_number', '')
+            phone = str(entry.get('number') or entry.get('phone_number', '')).strip()
+            raw_type = entry.get('call_type') or entry.get('type') or 'OUTGOING'
+            call_type = str(raw_type).upper()
             duration = int(entry.get('duration') or entry.get('duration_seconds', 0))
             if duration < 0 or duration > 14400:
                 duration = 0
@@ -167,6 +309,20 @@ async def sync_call_logs(
             device_id = entry.get('device_call_id') or entry.get('id', '')
 
             if not phone or not call_ts:
+                continue
+
+            norm_phone = normalize_phone(phone)
+            if not norm_phone:
+                continue
+
+            # ── STRICT GATE: ONLY SYNC CALLS FOR SYSTEM NUMBERS ─────────────────
+            # Filter strictly to CRM Leads, VGK Members, MNR Members, Official Partners, and Vendors.
+            # All personal / unknown calls are dropped and NEVER persisted in staff_call_logs.
+            sys_info = system_matches.get(norm_phone)
+            matched_lead_id = sys_info.get("id") if (sys_info and sys_info.get("source") == "lead") else all_lead_phones.get(norm_phone)
+
+            if not sys_info and not matched_lead_id:
+                records_personal_dropped += 1
                 continue
 
             if isinstance(call_ts, (int, float)):
@@ -206,11 +362,9 @@ async def sync_call_logs(
                     continue
                 existing_fallback.add((phone, call_type, call_dt))
 
-            norm_phone = normalize_phone(phone)
-            matched_lead_id = all_lead_phones.get(norm_phone) if norm_phone else None
-
             raw_contact = entry.get('contact_name') or entry.get('name') or entry.get('cachedName') or None
-            contact_name_val = str(raw_contact).strip() if raw_contact and str(raw_contact).strip() else None
+            resolved_name = sys_info.get("name") if sys_info else None
+            contact_name_val = resolved_name or (str(raw_contact).strip() if raw_contact and str(raw_contact).strip() else None)
 
             call_log = StaffCallLog(
                 company_id=company_id,
@@ -229,9 +383,17 @@ async def sync_call_logs(
             )
             db.add(call_log)
             records_synced += 1
+
             if matched_lead_id:
                 records_matched += 1
-                # DC-CT-CALLNOTE-001: Auto-post [Call] note for recent matched calls only
+                # Sync lead last contact date and handler for real-time Auto Dialer & CRM parity
+                lead_obj = db.query(CRMLead).filter(CRMLead.id == matched_lead_id).first()
+                if lead_obj:
+                    if not lead_obj.last_contact_date or call_dt > lead_obj.last_contact_date:
+                        lead_obj.last_contact_date = call_dt
+                        lead_obj.last_contact_by = staff_id
+
+                # DC-CT-CALLNOTE-001: Auto-post [SIM Call] note for recent matched calls only
                 # Gate: call must have happened within last 24 hours (skips historical backfills)
                 if (get_indian_time() - call_dt).total_seconds() < 86400:
                     _dur_str = f' {duration}s' if duration > 0 else ''
@@ -240,8 +402,9 @@ async def sync_call_logs(
                         'lead_id': matched_lead_id,
                         'company_id': company_id,
                         'created_by_id': staff_id,
-                        'note': f'[Call] {_ct_label}{_dur_str}'
+                        'note': f'[SIM Call] {_ct_label}{_dur_str}'
                     })
+
             if not last_call_dt or call_dt > last_call_dt:
                 last_call_dt = call_dt
 
@@ -268,6 +431,7 @@ async def sync_call_logs(
             "records_synced": records_synced,
             "records_matched": records_matched,
             "records_skipped": records_skipped,
+            "records_personal_dropped": records_personal_dropped,
             "sync_id": sync_log.id
         }
 
@@ -295,7 +459,7 @@ async def get_lead_call_history(
     staff_id: int = Query(None, description="Filter calls by specific staff/handler"),
     call_type: str = Query(None, description="Filter by call type: INCOMING, OUTGOING, MISSED"),
     page: int = Query(1, ge=1),
-    per_page: int = Query(50, ge=1, le=200),
+    per_page: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user_hybrid)
 ):
@@ -431,12 +595,12 @@ async def get_lead_call_history(
         op_rows = db.query(OperatorCall).filter(op_filter).order_by(OperatorCall.created_at.desc()).limit(100).all()
         for op in op_rows:
             ct = 'MISSED' if (op.status or '').lower() == 'missed' else (op.call_type or 'INBOUND').upper()
-            st_name = op.handled_by or op.operator_name or 'MyOperator'
+            st_name = op.handled_by or op.operator_name or 'Central IVR'
             op_entries.append({
                 'id': f'operator_{op.id}',
                 'source': 'operator',
                 'staff_id': None,
-                'staff_name': f"{st_name} (Operator)" if st_name != 'MyOperator' else 'MyOperator',
+                'staff_name': f"{st_name} (IVR)" if st_name != 'Central IVR' else 'Central IVR',
                 'phone_number': op.caller_number if op.call_type == 'inbound' else op.called_number,
                 'contact_name': lead.name,
                 'call_type': ct,
@@ -451,11 +615,30 @@ async def get_lead_call_history(
         print(f"[CALL-TRACKING] Operator calls merge error: {_ope}")
         op_entries = []
 
+    cat_obj = db.query(SignupCategory.name).filter(SignupCategory.id == lead.category_id).first() if lead.category_id else None
+    cat_name = cat_obj[0] if cat_obj else 'General'
+
     native_data = [{
         **c.to_dict(),
         'staff_name': staff_names.get(c.staff_id, 'Unknown'),
         'source': getattr(c, 'source', 'native'),
+        'category_name': cat_name,
+        'call_from': resolve_call_from(
+            getattr(c, 'source', 'native'),
+            getattr(c, 'device_call_id', None),
+            c.call_type,
+            dialed_page=getattr(c, 'dialed_page', None),
+            matched_lead_id=c.matched_lead_id
+        ),
     } for c in calls]
+
+    for de in dialer_entries:
+        de['category_name'] = cat_name
+        de['call_from'] = 'Auto Dialer'
+
+    for oe in op_entries:
+        oe['category_name'] = cat_name
+        oe['call_from'] = 'Auto Dialer'
 
     all_data = sorted(
         native_data + dialer_entries + op_entries,
@@ -1523,7 +1706,7 @@ async def get_staff_call_details(
     phone_number: str = Query(None),
     quick_range: str = Query(None),
     page: int = Query(1, ge=1),
-    per_page: int = Query(50, ge=1, le=200),
+    per_page: int = Query(200, ge=1, le=2000),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user_hybrid)
 ):
@@ -1604,22 +1787,45 @@ async def get_staff_call_details(
     lead_ids = [c.matched_lead_id for c in calls if c.matched_lead_id]
     lead_info = {}
     if lead_ids:
-        lrows = db.query(CRMLead.id, CRMLead.name, CRMLead.status, CRMLead.phone).filter(CRMLead.id.in_(lead_ids)).all()
-        lead_info = {l.id: {'name': l.name, 'status': l.status, 'phone': l.phone} for l in lrows}
+        lrows = db.query(CRMLead.id, CRMLead.name, CRMLead.status, CRMLead.phone, CRMLead.category_id).filter(CRMLead.id.in_(lead_ids)).all()
+        lead_info = {l.id: {'name': l.name, 'status': l.status, 'phone': l.phone, 'category_id': l.category_id} for l in lrows}
 
     all_phones = list(set(normalize_phone(c.phone_number) for c in calls if c.phone_number))
     contact_map = {}
     if all_phones:
-        for lrow in db.query(CRMLead.phone, CRMLead.name, CRMLead.status, CRMLead.id).filter(
+        for lrow in db.query(CRMLead.phone, CRMLead.name, CRMLead.status, CRMLead.id, CRMLead.category_id).filter(
             func.right(func.regexp_replace(CRMLead.phone, r'[^\d]', '', 'g'), 10).in_(all_phones)
         ).all():
             norm = normalize_phone(lrow.phone)
             if norm and norm not in contact_map:
-                contact_map[norm] = {'name': lrow.name, 'status': lrow.status, 'lead_id': lrow.id}
+                contact_map[norm] = {'name': lrow.name, 'status': lrow.status, 'lead_id': lrow.id, 'category_id': lrow.category_id}
+
+    cat_rows = db.query(SignupCategory.id, SignupCategory.name).all()
+    cat_map = {c.id: c.name for c in cat_rows}
 
     target = db.query(StaffEmployee.full_name, StaffEmployee.emp_code).filter(
         StaffEmployee.id == target_staff_id
     ).first()
+
+    vcs_map = {}
+    vcs_session_ids = [c.device_call_id for c in calls if c.device_call_id and c.device_call_id.startswith('vcs_')]
+    if vcs_session_ids:
+        try:
+            import json
+            from app.models.voip_call_session import VoIPCallSession
+            v_rows = db.query(VoIPCallSession.call_session_id, VoIPCallSession.metadata_json).filter(
+                VoIPCallSession.call_session_id.in_(vcs_session_ids)
+            ).all()
+            for cs_id, m_json in v_rows:
+                if m_json:
+                    try:
+                        m_data = json.loads(m_json)
+                        if m_data.get('dialed_page'):
+                            vcs_map[cs_id] = m_data.get('dialed_page')
+                    except Exception:
+                        pass
+        except Exception as e:
+            logger.warning(f"[CALL-TRACKING] vcs_map error: {e}")
 
     def enrich_call(c):
         d = c.to_dict()
@@ -1631,6 +1837,19 @@ async def get_staff_call_details(
         d['contact_name_crm'] = ci['name'] if ci else None
         d['contact_lead_id'] = ci['lead_id'] if ci else None
         d['contact_lead_status'] = ci['status'] if ci else None
+
+        lead_cat_id = (li and li.get('category_id')) or (ci and ci.get('category_id'))
+        d['category_id'] = lead_cat_id
+        d['category_name'] = cat_map.get(lead_cat_id) if lead_cat_id else 'General'
+        dial_pg = getattr(c, 'dialed_page', None) or vcs_map.get(c.device_call_id)
+        d['dialed_page'] = dial_pg
+        d['call_from'] = resolve_call_from(
+            source=c.source,
+            device_call_id=c.device_call_id,
+            call_type=c.call_type,
+            dialed_page=dial_pg,
+            matched_lead_id=c.matched_lead_id
+        )
         return d
 
     return {

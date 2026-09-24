@@ -384,7 +384,18 @@ export class LeafletJourneyMap {
     }
 
     if (this.map && point) {
-      this.map.panTo([point.latitude, point.longitude], { animate: true, duration: 0.3 });
+      const L = (window as any).L;
+      if (L) {
+        try {
+          const latLng = L.latLng(point.latitude, point.longitude);
+          const bounds = this.map.getBounds();
+          if (bounds && bounds.isValid() && !bounds.pad(-0.15).contains(latLng)) {
+            this.map.panTo(latLng, { animate: true, duration: 0.35 });
+          }
+        } catch {
+          // Keep view steady
+        }
+      }
     }
   }
 

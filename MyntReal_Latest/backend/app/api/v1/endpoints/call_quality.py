@@ -31,7 +31,10 @@ INDIAN_TZ = pytz.timezone('Asia/Kolkata')
 _MIN_SAMPLE = 5
 _SAMPLE_PCT = 0.05
 
-_FULL_ACCESS = {'hr', 'accounts', 'key_leadership', 'leadership_role', 'team_leader', 'manager', 'vgk4u'}
+_FULL_ACCESS = {
+    'vgk4u', 'ea', 'key_leadership', 'leadership_role', 'hr', 'accounts',
+    'super_admin', 'tenant_admin'
+}
 
 
 def _ist_now():
@@ -49,8 +52,16 @@ def _get_role_code(db: Session, staff_id: int) -> str:
     return emp.role.role_code or 'unknown'
 
 
-def _is_full_access(role_code: str) -> bool:
-    return role_code in _FULL_ACCESS
+def _is_full_access(current_user, role_code: str) -> bool:
+    if role_code in _FULL_ACCESS:
+        return True
+    staff_type = getattr(current_user, 'staff_type', '') or ''
+    if staff_type in ['VGK4U', 'VGK4U Supreme', 'VGK4U_SUPREME', 'RVZ_SUPREME', 'KEY_LEADERSHIP', 'KEY LEADERSHIP', 'EA', 'VGK4U_EA']:
+        return True
+    emp_code = getattr(current_user, 'emp_code', '') or ''
+    if emp_code in ['MR10001', 'MR10018', 'MR10016', 'MR10025', 'MR10017']:
+        return True
+    return False
 
 
 def _resolve_company_id(company_id: Optional[int], current_user) -> int:
@@ -63,26 +74,29 @@ def _resolve_company_id(company_id: Optional[int], current_user) -> int:
 
 
 def _resolve_company_optional(company_id: Optional[int], full_access: bool, current_user) -> Optional[int]:
-    """For full_access roles: company_id is optional (None = all companies).
-    For non-full_access: always require and return a resolved company_id."""
-    if full_access:
-        return company_id or None  # None = cross-company view
-    return _resolve_company_id(company_id, current_user)
+    """For explicit company_id, use it. For full_access or cross-company downlines, None avoids restricting to single company."""
+    if company_id:
+        return company_id
+    return None
 
 
-def _get_downline_ids(db: Session, manager_id: int, company_id: int) -> list:
-    """Recursively get all downline staff IDs for a manager."""
-    result = db.execute(text("""
-        WITH RECURSIVE downline AS (
-            SELECT id FROM staff_employees WHERE reporting_manager_id = :mid AND base_company_id = :cid
-            UNION ALL
-            SELECT e.id FROM staff_employees e
-            JOIN downline d ON e.reporting_manager_id = d.id
-            WHERE e.base_company_id = :cid
-        )
-        SELECT id FROM downline
-    """), {'mid': manager_id, 'cid': company_id}).fetchall()
-    return [r[0] for r in result]
+def _get_downline_ids(db: Session, manager_id: int, company_id: Optional[int] = None) -> list:
+    """Recursively get all downline staff IDs for a manager (including manager themselves)."""
+    try:
+        from app.utils.staff_hierarchy import get_recursive_downline
+        return get_recursive_downline(manager_id, db, StaffEmployee, include_manager=True)
+    except Exception:
+        result = db.execute(text("""
+            WITH RECURSIVE downline AS (
+                SELECT id FROM staff_employees WHERE reporting_manager_id = :mid AND is_deleted = false
+                UNION ALL
+                SELECT e.id FROM staff_employees e
+                JOIN downline d ON e.reporting_manager_id = d.id
+                WHERE e.is_deleted = false
+            )
+            SELECT id FROM downline
+        """), {'mid': manager_id}).fetchall()
+        return list({manager_id} | {r[0] for r in result})
 
 
 def _enrich_reviews(db: Session, reviews: list) -> list:
@@ -227,8 +241,9 @@ def auto_sample(
     Idempotent: skips already-sampled call logs for the date.
     """
     role_code = _get_role_code(db, current_user.id)
-    full_access = _is_full_access(role_code)
-    if not full_access:
+    full_access = _is_full_access(current_user, role_code)
+    is_manager = role_code in ('manager', 'team_leader', 'sales_incharge')
+    if not full_access and not is_manager:
         raise HTTPException(403, 'Only leadership/managers can trigger sampling.')
     effective_cid = _resolve_company_optional(company_id, full_access, current_user)
 
@@ -238,6 +253,9 @@ def auto_sample(
     log_q = db.query(StaffCallLog).filter(StaffCallLog.call_date == target_date)
     if effective_cid:
         log_q = log_q.filter(StaffCallLog.company_id == effective_cid)
+    if not full_access:
+        downline = _get_downline_ids(db, current_user.id)
+        log_q = log_q.filter(StaffCallLog.staff_id.in_(downline))
     logs = log_q.all()
 
     if not logs:
@@ -310,7 +328,7 @@ def list_reviews(
     current_user=Depends(get_current_staff_user),
 ):
     role_code = _get_role_code(db, current_user.id)
-    full_access = _is_full_access(role_code)
+    full_access = _is_full_access(current_user, role_code)
     effective_cid = _resolve_company_optional(company_id, full_access, current_user)
 
     # Strictly filter for connected calls (duration > 0 and not missed/rejected)
@@ -325,8 +343,7 @@ def list_reviews(
         q = q.filter(CallQualityReview.company_id == effective_cid)
 
     if not full_access:
-        downline = _get_downline_ids(db, current_user.id, effective_cid)
-        downline.append(current_user.id)
+        downline = _get_downline_ids(db, current_user.id)
         q = q.filter(CallQualityReview.staff_id.in_(downline))
 
     if staff_id:
@@ -365,7 +382,7 @@ def get_review(
     from app.models.operator_calls import OperatorCall
 
     role_code = _get_role_code(db, current_user.id)
-    full_access = _is_full_access(role_code)
+    full_access = _is_full_access(current_user, role_code)
     effective_cid = _resolve_company_optional(company_id, full_access, current_user)
 
     q = db.query(CallQualityReview).filter(CallQualityReview.id == review_id)
@@ -376,8 +393,7 @@ def get_review(
         raise HTTPException(404, 'Review not found.')
 
     if not full_access:
-        downline = _get_downline_ids(db, current_user.id, effective_cid)
-        downline.append(current_user.id)
+        downline = _get_downline_ids(db, current_user.id)
         if rev.staff_id not in downline:
             raise HTTPException(403, 'Unauthorized to view this review.')
 
@@ -603,7 +619,7 @@ def open_or_create_review(
     from app.models.voip_call_session import VoIPCallSession
 
     role_code = _get_role_code(db, current_user.id)
-    full_access = _is_full_access(role_code)
+    full_access = _is_full_access(current_user, role_code)
     effective_cid = _resolve_company_optional(company_id, full_access, current_user)
 
     call_log_id = body.get('call_log_id')
@@ -660,8 +676,7 @@ def open_or_create_review(
     # If review exists, check access and return
     if rev:
         if not full_access:
-            downline = _get_downline_ids(db, current_user.id, effective_cid)
-            downline.append(current_user.id)
+            downline = _get_downline_ids(db, current_user.id)
             if rev.staff_id not in downline:
                 raise HTTPException(403, 'Unauthorized to view this review.')
         return get_review(review_id=rev.id, company_id=rev.company_id, db=db, current_user=current_user)
@@ -714,7 +729,7 @@ def submit_review(
     current_user=Depends(get_current_staff_user),
 ):
     role_code = _get_role_code(db, current_user.id)
-    full_access = _is_full_access(role_code)
+    full_access = _is_full_access(current_user, role_code)
     effective_cid = _resolve_company_optional(company_id, full_access, current_user)
 
     q = db.query(CallQualityReview).filter(CallQualityReview.id == review_id)
@@ -725,8 +740,7 @@ def submit_review(
         raise HTTPException(404, 'Review not found.')
 
     if not full_access:
-        downline = _get_downline_ids(db, current_user.id, effective_cid)
-        downline.append(current_user.id)
+        downline = _get_downline_ids(db, current_user.id)
         if rev.staff_id not in downline:
             raise HTTPException(403, 'Unauthorized to submit this review.')
 
@@ -772,7 +786,7 @@ def dashboard(
     current_user=Depends(get_current_staff_user),
 ):
     role_code = _get_role_code(db, current_user.id)
-    full_access = _is_full_access(role_code)
+    full_access = _is_full_access(current_user, role_code)
     effective_cid = _resolve_company_optional(company_id, full_access, current_user)
 
     today = _today_ist()
@@ -792,8 +806,7 @@ def dashboard(
         q = q.filter(CallQualityReview.company_id == effective_cid)
 
     if not full_access:
-        downline = _get_downline_ids(db, current_user.id, effective_cid)
-        downline.append(current_user.id)
+        downline = _get_downline_ids(db, current_user.id)
         q = q.filter(CallQualityReview.staff_id.in_(downline))
 
     all_reviews = q.all()
@@ -891,7 +904,7 @@ def day_report(
     current_user=Depends(get_current_staff_user),
 ):
     role_code = _get_role_code(db, current_user.id)
-    full_access = _is_full_access(role_code)
+    full_access = _is_full_access(current_user, role_code)
     effective_cid = _resolve_company_optional(company_id, full_access, current_user)
     target_date = report_date or _today_ist()
 
@@ -899,8 +912,7 @@ def day_report(
     if full_access:
         visible_ids = None
     else:
-        visible_ids = _get_downline_ids(db, current_user.id, effective_cid)
-        visible_ids.append(current_user.id)
+        visible_ids = _get_downline_ids(db, current_user.id)
 
     # Call logs for the date
     log_q = db.query(StaffCallLog).filter(StaffCallLog.call_date == target_date)
@@ -1019,14 +1031,13 @@ def range_report(
     current_user=Depends(get_current_staff_user),
 ):
     role_code = _get_role_code(db, current_user.id)
-    full_access = _is_full_access(role_code)
+    full_access = _is_full_access(current_user, role_code)
     effective_cid = _resolve_company_optional(company_id, full_access, current_user)
 
     if full_access:
         visible_ids = None
     else:
-        visible_ids = _get_downline_ids(db, current_user.id, effective_cid)
-        visible_ids.append(current_user.id)
+        visible_ids = _get_downline_ids(db, current_user.id)
 
     log_q = db.query(StaffCallLog).filter(
         StaffCallLog.call_date >= date_from,
@@ -1203,14 +1214,10 @@ def stream_review_recording(
         raise HTTPException(status_code=404, detail="Quality review record not found")
 
     role_code = _get_role_code(db, staff.id)
-    full_access = _is_full_access(role_code)
+    full_access = _is_full_access(staff, role_code)
 
     if not full_access:
-        effective_cid = staff.base_company_id
-        if rev.company_id and effective_cid and rev.company_id != effective_cid:
-            raise HTTPException(status_code=403, detail="Access denied for this company")
-        downline = _get_downline_ids(db, staff.id, effective_cid) if effective_cid else []
-        downline.append(staff.id)
+        downline = _get_downline_ids(db, staff.id)
         if rev.staff_id not in downline:
             raise HTTPException(status_code=403, detail="You do not have access to this call recording")
 

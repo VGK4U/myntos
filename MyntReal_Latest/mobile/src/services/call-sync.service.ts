@@ -10,6 +10,7 @@
  * and custom folder selection for unknown models.
  */
 
+import { Capacitor } from '@capacitor/core';
 import { Preferences } from '@capacitor/preferences';
 import { apiService } from './api.service';
 import { API_ENDPOINTS } from '../constants/api-endpoints';
@@ -496,7 +497,29 @@ class CallSyncService {
     }
   }
 
+  async triggerAutoSyncIfAndroid(): Promise<{ synced: number; matched: number; skipped: number } | null> {
+    if (!this.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
+      return null;
+    }
+    if (this.isSyncing) {
+      return null;
+    }
+    try {
+      const perms = await this.checkPermissions();
+      if (!perms.callLog) {
+        return null;
+      }
+      return await this.syncCallLogs(true);
+    } catch (e) {
+      console.warn('[DC_CALL_SYNC] triggerAutoSyncIfAndroid error:', e);
+      return null;
+    }
+  }
+
   async syncCallLogs(forceManual: boolean = false): Promise<{ synced: number; matched: number; skipped: number } | null> {
+    if (!this.isNativePlatform() || Capacitor.getPlatform() !== 'android') {
+      return { synced: 0, matched: 0, skipped: 0 };
+    }
     if (this.isSyncing) {
       console.log('[DC_CALL_SYNC] Sync skipped (already syncing)');
       this._lastSyncError = 'Sync already in progress. Please wait a moment and try again.';
