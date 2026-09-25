@@ -68,11 +68,20 @@ def _recalc_plan_stats(plan):
     plan.total_pending = plan.total_planned - plan.total_completed - plan.total_in_progress
 
 
+def _assert_dayplan_access(db: Session, current_user: StaffEmployee):
+    """Enforces SaaS tenant module entitlement for day planner endpoints."""
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
+
 @router.get("/today", summary="Get today's day plan for current user")
 def get_today_plan(
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
+    _assert_dayplan_access(db, current_user)
     today = get_indian_date()
     plan = db.query(StaffDayPlan).options(
         joinedload(StaffDayPlan.items).joinedload(StaffDayPlanItem.task).joinedload(StaffTask.primary_assignee),
@@ -631,11 +640,13 @@ def remove_plan_item(
 
 
 def _is_admin_user(user):
+    if getattr(user, 'admin_scope', None) in ['tenant_admin', 'company_admin', 'CLIENT_SPECIFIC']:
+        return True
     if getattr(user, 'staff_type', None) in ['VGK4U', 'VGK4U Supreme']:
         return True
     role = getattr(user, 'role', None)
     if role:
-        if getattr(role, 'role_code', None) in ['hr', 'ea', 'key_leadership']:
+        if getattr(role, 'role_code', None) in ['hr', 'ea', 'key_leadership', 'tenant_admin', 'admin']:
             return True
         if getattr(role, 'hierarchy_level', 0) and role.hierarchy_level >= 100:
             return True
@@ -649,6 +660,7 @@ def get_team_day_plans(
     current_user: StaffEmployee = Depends(get_current_staff_user),
     db: Session = Depends(get_db)
 ):
+    _assert_dayplan_access(db, current_user)
     if plan_date:
         try:
             target_date = date.fromisoformat(plan_date)

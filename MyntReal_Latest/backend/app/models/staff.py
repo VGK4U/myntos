@@ -86,6 +86,7 @@ class StaffDepartment(Base):
     data_assignments = Column(JSONB, default={})  # {task_categories: [1,2], expense_categories: [3,4], staff_members: [101,102]}
     system_features = Column(JSONB, default=[])  # ["journey_tracking", "kra_management", "time_tracker"]
     
+    company_id = Column(Integer, ForeignKey('associated_companies.id', ondelete='SET NULL'), nullable=True, index=True)
     is_active = Column(Boolean, default=True)
     created_by = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
     updated_by = Column(Integer, ForeignKey('staff_employees.id'), nullable=True)
@@ -103,6 +104,7 @@ class StaffDepartment(Base):
             "name": self.name,
             "department_code": self.department_code,
             "description": self.description,
+            "company_id": self.company_id,
             "head_id": self.head_id,
             "head_name": self.head.full_name if self.head else None,
             "is_freelancer_dept": self.is_freelancer_dept,
@@ -414,6 +416,12 @@ class StaffEmployee(Base):
     
     def can_manage(self, target_employee):
         """Check if this employee can manage another employee"""
+        if getattr(self, 'admin_scope', None) in ['tenant_admin', 'company_admin']:
+            return True
+        if (getattr(self, 'staff_type', '') or '').upper() in ['TENANT_ADMIN', 'SAAS_CLIENT']:
+            return True
+        if self.role and self.role.role_code in ['tenant_admin', 'admin', 'hr']:
+            return True
         if not self.role or not target_employee.role:
             return False
         return self.role.hierarchy_level > target_employee.role.hierarchy_level
@@ -1493,13 +1501,20 @@ def check_all_pending_agreements(db, employee_id: int, staff_type: str = None):
 
     read_session = SessionLocal()
     try:
-        if staff_type is None:
-            emp = read_session.query(StaffEmployee.staff_type).filter(StaffEmployee.id == employee_id).first()
-            staff_type = (emp[0] or 'MN_STAFF') if emp else 'MN_STAFF'
-        
-        # External SaaS client tenants are independent organizations and not subject to internal staff agreements
-        if (staff_type or '').upper() in ['TENANT_ADMIN', 'SAAS_CLIENT', 'CLIENT_USER']:
-            return (False, None, None)
+        emp_obj = read_session.query(StaffEmployee).filter(StaffEmployee.id == employee_id).first()
+        if emp_obj:
+            staff_type = staff_type or emp_obj.staff_type or 'MN_STAFF'
+            # External SaaS client tenants are independent organizations and not subject to internal staff agreements
+            if (staff_type or '').upper() in ['TENANT_ADMIN', 'SAAS_CLIENT', 'CLIENT_USER', 'SAAS_USER', 'SAAS_TENANT']:
+                return (False, None, None)
+            from app.services.saas_tenant_resolver import resolve_tenant_context
+            ctx = resolve_tenant_context(read_session, emp_obj)
+            if ctx.is_saas_tenant:
+                return (False, None, None)
+        else:
+            staff_type = staff_type or 'MN_STAFF'
+            if (staff_type or '').upper() in ['TENANT_ADMIN', 'SAAS_CLIENT', 'CLIENT_USER', 'SAAS_USER', 'SAAS_TENANT']:
+                return (False, None, None)
             
         VALID_STAFF_TYPES = [
             'MN_STAFF', 'FREELANCER', 'MYNT_REAL', 'MN_EMPLOYEE',

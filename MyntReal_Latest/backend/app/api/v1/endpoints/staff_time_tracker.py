@@ -189,6 +189,14 @@ def get_client_ip(request: Request = None) -> str:
     return request.headers.get("X-Real-IP", request.client.host if request.client else "unknown")
 
 
+def _assert_attendance_tenant_access(db: Session, current_user: StaffEmployee):
+    """Enforces SaaS tenant module entitlement for attendance endpoints."""
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
+
 # ==================== ATTENDANCE CLOCK IN/OUT ====================
 
 @router.get("/today", summary="Get today's attendance status")
@@ -200,6 +208,7 @@ async def get_today_status(
     Get current user's attendance status for today
     DC: Real-time status check
     """
+    _assert_attendance_tenant_access(db, current_user)
     today = get_indian_date()
     
     attendance = db.query(StaffAttendance).filter(
@@ -252,6 +261,7 @@ async def clock_in(
     DC: One clock-in per day per employee
     WVV: Validate location mode
     """
+    _assert_attendance_tenant_access(db, current_user)
     today = get_indian_date()
     now = get_indian_time()
     
@@ -472,6 +482,7 @@ async def clock_out(
     DC: Must be clocked in first
     WVV: Calculate worked hours
     """
+    _assert_attendance_tenant_access(db, current_user)
     today = get_indian_date()
     now = get_indian_time()
     
@@ -797,6 +808,7 @@ async def get_my_attendance_history(
     Get current user's attendance history
     DC: Personal attendance records
     """
+    _assert_attendance_tenant_access(db, current_user)
     query = db.query(StaffAttendance).filter(
         StaffAttendance.employee_id == current_user.id
     )
@@ -869,6 +881,7 @@ async def get_team_attendance(
     - Added: Status column with actual attendance status
     - Added: VGK/EA/HR can clock out employees (can_admin_clockout flag)
     """
+    _assert_attendance_tenant_access(db, current_user)
     filter_date = date_filter or from_date or get_indian_date()
     
     accessible_ids = get_team_member_ids(current_user, db, StaffEmployee, department_id)

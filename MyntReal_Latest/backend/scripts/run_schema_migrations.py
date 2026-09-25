@@ -1006,6 +1006,52 @@ def run_migrations():
                 conn.execute(text("CREATE INDEX IF NOT EXISTS idx_staff_call_logs_dialed_page ON staff_call_logs(dialed_page);"))
                 logger.info("✅ Staff call logs dialed_page column verified")
 
+                # 4.28 SaaS Workforce Phase 1 Foundation Migration (Authoritative Integration)
+                workforce_sql_file = _backend_dir / "migrations" / "add_saas_workforce_phase1_foundation_20260925.sql"
+                if workforce_sql_file.exists():
+                    has_wf_col = conn.execute(text(
+                        "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'staff_departments' AND column_name = 'company_id'"
+                    )).scalar()
+                    if has_wf_col:
+                        logger.info("⏭️ SaaS Workforce Phase 1 Foundation migration already applied — skipping")
+                    else:
+                        logger.info(f"Executing SaaS Workforce Phase 1 Foundation migration from {workforce_sql_file.name}...")
+                        with open(workforce_sql_file, "r", encoding="utf-8") as f:
+                            wf_sql = f.read()
+                        conn.execute(text(wf_sql))
+                        logger.info("✅ SaaS Workforce Phase 1 Foundation migration executed successfully")
+                else:
+                    logger.warning(f"⚠️ SaaS Workforce Phase 1 SQL migration file not found at {workforce_sql_file}")
+
+                # 4.29 Staff Leave Types Default Seed (if empty)
+                leave_types_count = conn.execute(text("SELECT count(*) FROM staff_leave_types")).scalar()
+                if leave_types_count == 0:
+                    logger.info("Seeding standard master leave types into staff_leave_types...")
+                    conn.execute(text("""
+                        INSERT INTO staff_leave_types (code, name, description, monthly_accrual, monthly_accrual_partial, is_accumulative, max_accumulation, requires_document, allow_half_day, max_consecutive_days, min_advance_days, attendance_status, display_order, is_active, created_at)
+                        VALUES
+                        ('casual_leave', 'Casual Leave', 'Casual leave for personal reasons', 1.0, 0.5, true, null, false, true, null, 0, 'CASUAL_LEAVE', 1, true, NOW()),
+                        ('sick_leave', 'Sick Leave', 'Medical/sick leave - requires document for >2 days', 0.5, 0.5, true, null, true, true, null, 0, 'SICK_LEAVE', 2, true, NOW()),
+                        ('approved_leave', 'Privilege Leave', 'Pre-approved privilege/earned leave', 0.0, 0.0, false, null, false, true, null, 0, 'APPROVED_LEAVE', 3, true, NOW()),
+                        ('unpaid_leave', 'Unpaid Leave', 'Leave without pay (Loss of Pay)', 0.0, 0.0, false, null, false, true, null, 0, 'UNPAID_LEAVE', 4, true, NOW());
+                    """))
+                    logger.info("✅ Standard master leave types seeded successfully")
+                else:
+                    logger.info("⏭️ staff_leave_types already populated — skipping seed")
+
+                # 4.30 SaaS Governance & Module Entitlements Schema Invariants
+                logger.info("Executing SaaS Governance & Module Entitlements schema invariants...")
+                conn.execute(text("""
+                    ALTER TABLE staff_employees ADD COLUMN IF NOT EXISTS admin_scope VARCHAR(50) DEFAULT 'CLIENT_SPECIFIC';
+                    ALTER TABLE staff_employees ADD COLUMN IF NOT EXISTS assigned_modules JSONB DEFAULT '[]'::jsonb;
+                    ALTER TABLE associated_companies ADD COLUMN IF NOT EXISTS company_segment VARCHAR(50) DEFAULT 'SEGMENT_A_INTERNAL';
+                    ALTER TABLE associated_companies ADD COLUMN IF NOT EXISTS licensed_modules JSONB DEFAULT '[]'::jsonb;
+                    ALTER TABLE staff_day_plan_items ADD COLUMN IF NOT EXISTS plan_type VARCHAR(50) DEFAULT 'TASK';
+                    ALTER TABLE staff_day_plan_items ADD COLUMN IF NOT EXISTS is_followup BOOLEAN DEFAULT FALSE;
+                    ALTER TABLE platform_clients ADD COLUMN IF NOT EXISTS subscribed_modules JSONB DEFAULT '[]'::jsonb;
+                """))
+                logger.info("✅ SaaS Governance & Module Entitlements schema invariants verified/applied")
+
         logger.info("✅ Feature-specific schema migrations complete")
         
         # 4.20 Staff cash balance zero adjustments as of 16-Sep-2026
@@ -1034,11 +1080,25 @@ def run_migrations():
             # Check 1: staff_employees columns
             staff_cols = conn.execute(text("""
                 SELECT column_name FROM information_schema.columns 
-                WHERE table_name = 'staff_employees' AND column_name IN ('tenant_id', 'token_version')
+                WHERE table_name = 'staff_employees' AND column_name IN ('tenant_id', 'token_version', 'assigned_modules', 'admin_scope')
             """)).fetchall()
             found_staff_cols = {r[0] for r in staff_cols}
-            if 'tenant_id' not in found_staff_cols or 'token_version' not in found_staff_cols:
-                raise RuntimeError(f"Gate Failed: staff_employees missing required columns. Found: {found_staff_cols}")
+            required_staff_cols = {'tenant_id', 'token_version', 'assigned_modules', 'admin_scope'}
+            if not required_staff_cols.issubset(found_staff_cols):
+                raise RuntimeError(f"Gate Failed: staff_employees missing required columns. Missing: {required_staff_cols - found_staff_cols}")
+
+            # Check 1b: Workforce columns
+            wf_cols = conn.execute(text("""
+                SELECT table_name, column_name FROM information_schema.columns 
+                WHERE (table_name = 'staff_departments' AND column_name = 'company_id')
+                   OR (table_name = 'staff_tasks' AND column_name = 'company_id')
+                   OR (table_name = 'staff_kra_templates' AND column_name = 'company_id')
+            """)).fetchall()
+            found_wf = {(r[0], r[1]) for r in wf_cols}
+            expected_wf = {('staff_departments', 'company_id'), ('staff_tasks', 'company_id'), ('staff_kra_templates', 'company_id')}
+            missing_wf = expected_wf - found_wf
+            if missing_wf:
+                raise RuntimeError(f"Gate Failed: Missing required Workforce columns: {missing_wf}")
 
             # Check 2: crm_leads column
             crm_cols = conn.execute(text("""

@@ -93,6 +93,7 @@ class StaffTask(Base):
     is_deleted = Column(Boolean, default=False, index=True)
     deleted_at = Column(DateTime, nullable=True)
     deleted_by = Column(Integer, ForeignKey('staff_employees.id', ondelete='SET NULL'), nullable=True)
+    company_id = Column(Integer, ForeignKey('associated_companies.id', ondelete='CASCADE'), nullable=True, index=True)
     
     created_at = Column(DateTime, default=get_indian_time, nullable=False)
     updated_at = Column(DateTime, default=get_indian_time, onupdate=get_indian_time)
@@ -133,6 +134,7 @@ class StaffTask(Base):
             "category": self.category,
             "priority": self.priority,
             "status": self.status,
+            "company_id": self.company_id,
             "created_by": self.created_by,
             "creator_name": self.creator.full_name if self.creator else None,
             "creator_code": self.creator.emp_code if self.creator else None,

@@ -200,6 +200,11 @@ def get_leave_types(
     (Casual, Sick, Approved, Unpaid are standard across all companies).
     Company-wise segregation is enforced on leave_balances and leave_requests.
     """
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
     leave_types = db.query(StaffLeaveType).filter(
         StaffLeaveType.is_active == True
     ).order_by(StaffLeaveType.display_order).all()
@@ -228,6 +233,10 @@ def get_my_leave_balance(
     db: Session = Depends(get_db)
 ):
     """Get leave balance for current employee"""
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
     
     leave_types = db.query(StaffLeaveType).filter(
         StaffLeaveType.is_active == True
@@ -570,31 +579,44 @@ def get_pending_manager_approvals(
     """
     Get leave requests pending manager approval
     
-    Access Control: Requires can_view access to leave-approvals menu
-    Manager sees only their direct subordinates' requests
+    Access Control: Managers see their subordinates; Tenant Admin sees company pending manager approvals
     """
-    
-    if not check_menu_access(db, current_user.id, LEAVE_APPROVALS_MENU_CODE, require_edit=False):
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
+    is_tenant_adm = _saas_ctx.is_tenant_admin or getattr(current_user, 'admin_scope', None) in ['tenant_admin', 'company_admin', 'CLIENT_SPECIFIC']
+    has_reports = db.query(StaffEmployee.id).filter(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.status == 'active').first() is not None
+    has_menu = check_menu_access(db, current_user.id, LEAVE_APPROVALS_MENU_CODE, require_edit=False)
+
+    if not (is_tenant_adm or has_reports or has_menu):
         raise HTTPException(status_code=403, detail="You do not have access to leave approvals")
     
-    subordinate_ids = db.query(StaffEmployee.id).filter(
-        StaffEmployee.reporting_manager_id == current_user.id,
-        StaffEmployee.status == 'active'
-    ).all()
-    subordinate_ids = [s[0] for s in subordinate_ids]
-    
-    if not subordinate_ids:
-        return {
-            "success": True,
-            "requests": [],
-            "total": 0,
-            "message": "No subordinates assigned"
-        }
-    
-    pending_requests = db.query(StaffLeaveRequest).filter(
-        StaffLeaveRequest.employee_id.in_(subordinate_ids),
-        StaffLeaveRequest.status == 'pending_manager'
-    ).order_by(StaffLeaveRequest.created_at).all()
+    if is_tenant_adm and _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        pending_requests = db.query(StaffLeaveRequest).filter(
+            StaffLeaveRequest.company_id == _saas_ctx.company.id,
+            StaffLeaveRequest.status == 'pending_manager'
+        ).order_by(StaffLeaveRequest.created_at).all()
+    else:
+        subordinate_ids = db.query(StaffEmployee.id).filter(
+            StaffEmployee.reporting_manager_id == current_user.id,
+            StaffEmployee.status == 'active'
+        ).all()
+        subordinate_ids = [s[0] for s in subordinate_ids]
+        
+        if not subordinate_ids:
+            return {
+                "success": True,
+                "requests": [],
+                "total": 0,
+                "message": "No subordinates assigned"
+            }
+        
+        pending_requests = db.query(StaffLeaveRequest).filter(
+            StaffLeaveRequest.employee_id.in_(subordinate_ids),
+            StaffLeaveRequest.status == 'pending_manager'
+        ).order_by(StaffLeaveRequest.created_at).all()
     
     result = []
     for req in pending_requests:
@@ -640,13 +662,12 @@ def manager_approve_leave(
 ):
     """
     Manager approves or rejects a leave request
-    
-    Access Control: Requires can_edit access to leave-approvals menu
     """
-    
-    if not check_menu_access(db, current_user.id, LEAVE_APPROVALS_MENU_CODE, require_edit=True):
-        raise HTTPException(status_code=403, detail="You do not have edit access to leave approvals")
-    
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
     leave_request = db.query(StaffLeaveRequest).filter(
         StaffLeaveRequest.id == request_id,
         StaffLeaveRequest.status == 'pending_manager'
@@ -654,10 +675,18 @@ def manager_approve_leave(
     
     if not leave_request:
         raise HTTPException(status_code=404, detail="Leave request not found or not pending manager approval")
+
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        if leave_request.company_id and leave_request.company_id != _saas_ctx.company.id:
+            raise HTTPException(status_code=403, detail="Access denied: Leave request belongs to another company")
     
     employee = db.query(StaffEmployee).filter_by(id=leave_request.employee_id).first()
-    if not employee or employee.reporting_manager_id != current_user.id:
-        raise HTTPException(status_code=403, detail="You are not the manager of this employee")
+    is_reporting_mgr = employee and employee.reporting_manager_id == current_user.id
+    is_tenant_adm = _saas_ctx.is_tenant_admin or getattr(current_user, 'admin_scope', None) in ['tenant_admin', 'company_admin', 'CLIENT_SPECIFIC']
+    has_menu = check_menu_access(db, current_user.id, LEAVE_APPROVALS_MENU_CODE, require_edit=True)
+
+    if not (is_reporting_mgr or is_tenant_adm or has_menu):
+        raise HTTPException(status_code=403, detail="You are not authorized to approve this leave request")
     
     new_status = LeaveRequestStatus.PENDING_HR if data.action == 'approve' else LeaveRequestStatus.REJECTED_MANAGER
     
@@ -782,13 +811,12 @@ def hr_approve_leave(
 ):
     """
     HR gives final approval or rejects a leave request
-    
-    Access Control: Requires can_edit access to leave-approvals menu
     """
-    
-    if not check_menu_access(db, current_user.id, LEAVE_APPROVALS_MENU_CODE, require_edit=True):
-        raise HTTPException(status_code=403, detail="You do not have edit access to leave approvals")
-    
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
     leave_request = db.query(StaffLeaveRequest).filter(
         StaffLeaveRequest.id == request_id,
         StaffLeaveRequest.status == 'pending_hr'
@@ -796,6 +824,19 @@ def hr_approve_leave(
     
     if not leave_request:
         raise HTTPException(status_code=404, detail="Leave request not found or not pending HR approval")
+
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        if leave_request.company_id and leave_request.company_id != _saas_ctx.company.id:
+            raise HTTPException(status_code=403, detail="Access denied: Leave request belongs to another company")
+    
+    is_hr_or_admin = (
+        _saas_ctx.is_tenant_admin
+        or getattr(current_user, 'admin_scope', None) in ['tenant_admin', 'company_admin', 'CLIENT_SPECIFIC']
+        or (current_user.role and current_user.role.role_code in ['hr', 'tenant_admin', 'ea', 'vgk4u'])
+        or check_menu_access(db, current_user.id, LEAVE_APPROVALS_MENU_CODE, require_edit=True)
+    )
+    if not is_hr_or_admin:
+        raise HTTPException(status_code=403, detail="You do not have edit access to leave approvals")
     
     new_status = LeaveRequestStatus.APPROVED if data.action == 'approve' else LeaveRequestStatus.REJECTED_HR
     

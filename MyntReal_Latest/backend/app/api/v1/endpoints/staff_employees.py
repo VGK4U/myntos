@@ -6,7 +6,7 @@ CRUD operations with RBAC
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query, UploadFile, File, Form, Body
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func
 from datetime import datetime, date
 from typing import Optional, List
 import pytz
@@ -433,15 +433,14 @@ async def list_employees(
     if _saas_ctx.is_saas_tenant:
         _saas_ctx.require_module('STAFF_HRMS')
 
-    query = db.query(StaffEmployee).filter(get_valid_staff_filter())
-    
     role_code = current_user.role.role_code.lower() if current_user.role and current_user.role.role_code else None
-    
+
     # DC: Apply role-based visibility filtering - Aligned with user's data
     if _saas_ctx.is_saas_tenant and _saas_ctx.company:
-        from app.models.staff import StaffCompanyMembership
         cid = _saas_ctx.company.id
-        query = query.filter(
+        from app.models.staff import StaffCompanyMembership
+        query = db.query(StaffEmployee).filter(
+            StaffEmployee.is_deleted == False,
             or_(
                 StaffEmployee.base_company_id == cid,
                 StaffEmployee.id.in_(
@@ -452,13 +451,15 @@ async def list_employees(
                 )
             )
         )
-    
-    if role_code in VIEW_ALL_ROLES or current_user.emp_code == "MR10001":
-        # Key Leadership and HR can see all employees
-        pass
+        is_admin_or_hr = _saas_ctx.is_tenant_admin or (current_user.role and current_user.role.role_code in ['admin', 'hr', 'tenant_admin'])
+        if not is_admin_or_hr:
+            query = query.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
     else:
-        # Aligned with their data: see self and direct reports
-        query = query.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
+        query = db.query(StaffEmployee).filter(get_valid_staff_filter())
+        if role_code in VIEW_ALL_ROLES or current_user.emp_code == "MR10001":
+            pass
+        else:
+            query = query.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
     
     if status_filter:
         query = query.filter(StaffEmployee.status == status_filter)
@@ -569,9 +570,6 @@ async def get_employees_directory(
     if _saas_ctx.is_saas_tenant:
         _saas_ctx.require_module('STAFF_HRMS')
 
-    query = db.query(StaffEmployee).filter(StaffEmployee.status == 'active', get_valid_staff_filter())
-    stats_base = db.query(StaffEmployee).filter(StaffEmployee.status == 'active', get_valid_staff_filter())
-    
     if _saas_ctx.is_saas_tenant and _saas_ctx.company:
         from app.models.staff import StaffCompanyMembership
         cid = _saas_ctx.company.id
@@ -584,12 +582,18 @@ async def get_employees_directory(
                 )
             )
         )
-        query = query.filter(co_filter)
-        stats_base = stats_base.filter(co_filter)
-
-    if role_code not in VIEW_ALL_ROLES and current_user.emp_code != "MR10001":
-        query = query.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
-        stats_base = stats_base.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
+        query = db.query(StaffEmployee).filter(StaffEmployee.status == 'active', StaffEmployee.is_deleted == False, co_filter)
+        stats_base = db.query(StaffEmployee).filter(StaffEmployee.status == 'active', StaffEmployee.is_deleted == False, co_filter)
+        is_admin_or_hr = _saas_ctx.is_tenant_admin or (current_user.role and current_user.role.role_code in ['admin', 'hr', 'tenant_admin'])
+        if not is_admin_or_hr:
+            query = query.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
+            stats_base = stats_base.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
+    else:
+        query = db.query(StaffEmployee).filter(StaffEmployee.status == 'active', get_valid_staff_filter())
+        stats_base = db.query(StaffEmployee).filter(StaffEmployee.status == 'active', get_valid_staff_filter())
+        if role_code not in VIEW_ALL_ROLES and current_user.emp_code != "MR10001":
+            query = query.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
+            stats_base = stats_base.filter(or_(StaffEmployee.reporting_manager_id == current_user.id, StaffEmployee.id == current_user.id))
     
     # Apply filters
     if department_id:
@@ -1020,13 +1024,19 @@ async def create_employee(
         if _saas_ctx.company:
             data.base_company_id = _saas_ctx.company.id
             data.data_companies = [_saas_ctx.company.id]
-    
-    # DC Protocol: Menu-based access control - page assignment = full access
-    # if role_code not in ADD_EDIT_ROLES:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="Only VGK4U Supreme or HR can add new employees"
-    #     )
+        if _saas_ctx.client:
+            from app.models.platform_b2b import PlatformSubscription
+            sub = db.query(PlatformSubscription).filter_by(client_id=_saas_ctx.client.id, status="active").first()
+            if sub:
+                active_users = db.query(StaffEmployee).filter(
+                    StaffEmployee.base_company_id == _saas_ctx.company.id,
+                    StaffEmployee.status == "active"
+                ).count()
+                if active_users >= sub.seat_count:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Tenant seat limit reached (maximum {sub.seat_count} active seats). Please upgrade your subscription to add more users."
+                    )
     
     # Check email uniqueness if provided
     if data.email:
@@ -1045,13 +1055,6 @@ async def create_employee(
             detail="Invalid role"
         )
     
-    # DC Protocol: Menu-based access control - page assignment = full access
-    # if role.role_code == "key_leadership" and current_user.role.role_code not in ["vgk4u", "key_leadership"]:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN,
-    #         detail="Only VGK4U Supreme or Key Leadership can create Key Leadership accounts"
-    #     )
-    
     # Validate department if provided
     if data.department_id:
         dept = db.query(StaffDepartment).filter_by(id=data.department_id, is_active=True).first()
@@ -1060,6 +1063,12 @@ async def create_employee(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid department"
             )
+        if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+            if dept.company_id is not None and dept.company_id != _saas_ctx.company.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Cannot assign department belonging to another organization"
+                )
     
     # DC: Validate reporting manager if provided
     if data.reporting_manager_id:
@@ -1069,6 +1078,8 @@ async def create_employee(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid reporting manager"
             )
+        if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+            _assert_staff_tenant_access(manager, db, current_user)
     
     # DC: Validate FREELANCER department assignment (Dec 04, 2025)
     # FREELANCER should ideally be assigned to freelancer departments
@@ -1352,6 +1363,11 @@ async def update_employee(
             dept = db.query(StaffDepartment).filter_by(id=data.department_id, is_active=True).first()
             if not dept:
                 raise HTTPException(status_code=400, detail="Invalid department")
+            from app.services.saas_tenant_resolver import resolve_tenant_context
+            _u_saas = resolve_tenant_context(db, current_user)
+            if _u_saas.is_saas_tenant and _u_saas.company:
+                if dept.company_id is not None and dept.company_id != _u_saas.company.id:
+                    raise HTTPException(status_code=403, detail="Cannot assign department belonging to another organization")
             employee.department_id = data.department_id
         else:
             employee.department_id = None
@@ -1383,6 +1399,10 @@ async def update_employee(
             manager = db.query(StaffEmployee).filter_by(id=data.reporting_manager_id, status='active').first()
             if not manager:
                 raise HTTPException(status_code=400, detail="Invalid reporting manager")
+            from app.services.saas_tenant_resolver import resolve_tenant_context
+            _u_saas = resolve_tenant_context(db, current_user)
+            if _u_saas.is_saas_tenant and _u_saas.company:
+                _assert_staff_tenant_access(manager, db, current_user)
             employee.reporting_manager_id = data.reporting_manager_id
         else:
             employee.reporting_manager_id = None
@@ -1844,9 +1864,15 @@ async def list_departments(
 ):
     """
     List all departments
-    DC: Available to all authenticated staff
+    SaaS: Scoped to company custom departments + global standard defaults
     """
     query = db.query(StaffDepartment)
+    
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        cid = _saas_ctx.company.id
+        query = query.filter(or_(StaffDepartment.company_id == cid, StaffDepartment.company_id.is_(None)))
     
     if not include_inactive:
         query = query.filter_by(is_active=True)
@@ -1868,15 +1894,30 @@ async def create_department(
 ):
     """
     Create new department
-    DC: VGK4U/HR only
+    SaaS: Scoped authoritatively to tenant company
     """
-    check_permission(current_user, 3, "create departments")
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    target_cid = _saas_ctx.company.id if (_saas_ctx.is_saas_tenant and _saas_ctx.company) else None
     
-    existing = db.query(StaffDepartment).filter_by(name=data.name).first()
-    if existing:
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        if not _saas_ctx.is_tenant_admin:
+            raise HTTPException(status_code=403, detail="Only tenant administrators can create custom departments")
+    else:
+        check_permission(current_user, 3, "create departments")
+    
+    clean_name = data.name.strip()
+    existing_q = db.query(StaffDepartment).filter(func.lower(StaffDepartment.name) == func.lower(clean_name))
+    if target_cid is not None:
+        existing_q = existing_q.filter(StaffDepartment.company_id == target_cid)
+    else:
+        existing_q = existing_q.filter(StaffDepartment.company_id.is_(None))
+    
+    if existing_q.first():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Department name already exists"
+            detail="Department name already exists in this organization"
         )
     
     if data.head_id:
@@ -1886,11 +1927,14 @@ async def create_department(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid department head"
             )
+        if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+            _assert_staff_tenant_access(head, db, current_user)
     
     department = StaffDepartment(
-        name=data.name,
+        name=clean_name,
         description=data.description,
-        head_id=data.head_id
+        head_id=data.head_id,
+        company_id=target_cid
     )
     
     db.add(department)
@@ -1900,7 +1944,7 @@ async def create_department(
         db, current_user.id, "CREATE", "department",
         resource_id=department.id,
         new_data=department.to_dict(),
-        ip_address=request.client.host if request.client else None
+        ip_address=request.client.host if request and request.client else None
     )
     
     db.commit()
@@ -1922,9 +1966,10 @@ async def update_department(
 ):
     """
     Update department
-    DC: VGK4U/HR only
+    SaaS: Tenant Admin can edit own company departments; cannot edit global defaults or other tenants
     """
-    check_permission(current_user, 3, "update departments")
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
     
     department = db.query(StaffDepartment).filter_by(id=department_id).first()
     if not department:
@@ -1933,16 +1978,32 @@ async def update_department(
             detail="Department not found"
         )
     
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        if not _saas_ctx.is_tenant_admin:
+            raise HTTPException(status_code=403, detail="Only tenant administrators can update custom departments")
+        if department.company_id is None:
+            raise HTTPException(status_code=403, detail="Cannot edit global default department")
+        if department.company_id != _saas_ctx.company.id:
+            raise HTTPException(status_code=403, detail="Cannot edit department belonging to another organization")
+    else:
+        check_permission(current_user, 3, "update departments")
+    
     old_data = department.to_dict()
     
     if data.name is not None:
-        existing = db.query(StaffDepartment).filter(
-            StaffDepartment.name == data.name,
+        clean_name = data.name.strip()
+        existing_q = db.query(StaffDepartment).filter(
+            func.lower(StaffDepartment.name) == func.lower(clean_name),
             StaffDepartment.id != department_id
-        ).first()
-        if existing:
+        )
+        if department.company_id is not None:
+            existing_q = existing_q.filter(StaffDepartment.company_id == department.company_id)
+        else:
+            existing_q = existing_q.filter(StaffDepartment.company_id.is_(None))
+        if existing_q.first():
             raise HTTPException(status_code=400, detail="Department name already exists")
-        department.name = data.name
+        department.name = clean_name
     
     if data.description is not None:
         department.description = data.description
@@ -1952,6 +2013,8 @@ async def update_department(
             head = db.query(StaffEmployee).filter_by(id=data.head_id, status='active').first()
             if not head:
                 raise HTTPException(status_code=400, detail="Invalid department head")
+            if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+                _assert_staff_tenant_access(head, db, current_user)
             department.head_id = data.head_id
         else:
             department.head_id = None
@@ -1966,7 +2029,7 @@ async def update_department(
         resource_id=department.id,
         old_data=old_data,
         new_data=department.to_dict(),
-        ip_address=request.client.host if request.client else None
+        ip_address=request.client.host if request and request.client else None
     )
     
     db.commit()
@@ -2061,6 +2124,56 @@ async def list_roles(
     return {
         "success": True,
         "roles": [role.to_dict() for role in roles]
+    }
+
+
+@router.get("/designations")
+async def list_designations(
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    List active designations for employee assignment and organization management
+    SaaS: Scoped to company with standard designation templates
+    """
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        cid = _saas_ctx.company.id if _saas_ctx.company else current_user.base_company_id
+        company_designations = [
+            r[0] for r in db.query(StaffEmployee.designation).filter(
+                StaffEmployee.base_company_id == cid,
+                StaffEmployee.designation.isnot(None),
+                StaffEmployee.designation != ''
+            ).distinct().all()
+        ]
+    else:
+        company_designations = [
+            r[0] for r in db.query(StaffEmployee.designation).filter(
+                StaffEmployee.designation.isnot(None),
+                StaffEmployee.designation != ''
+            ).distinct().all()
+        ]
+
+    standard_designations = [
+        "Software Engineer",
+        "Sales Executive",
+        "Sales Manager",
+        "Field Technician",
+        "Service Engineer",
+        "Operations Manager",
+        "HR Executive",
+        "Finance Analyst",
+        "Account Manager",
+        "Team Lead",
+        "Telecaller"
+    ]
+
+    combined = sorted(list(set(company_designations + standard_designations)))
+    return {
+        "success": True,
+        "designations": [{"name": d, "code": d.lower().replace(" ", "_")} for d in combined]
     }
 
 

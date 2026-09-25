@@ -164,6 +164,14 @@ class TimesheetEntryUpdate(BaseModel):
 
 # ==================== ENDPOINTS ====================
 
+def _assert_timesheet_tenant_access(db: Session, current_user: StaffEmployee):
+    """Enforces SaaS tenant module entitlement for timesheet endpoints."""
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
+
 @router.get("/my-entries/{date_str}", summary="Get my timesheet entries for a specific date")
 async def get_my_entries(
     date_str: str,
@@ -174,6 +182,7 @@ async def get_my_entries(
     Get timesheet entries for current user for a specific date
     DC: Own entries only, all statuses
     """
+    _assert_timesheet_tenant_access(db, current_user)
     try:
         entry_date = datetime.strptime(date_str, "%Y-%m-%d").date()
     except ValueError:
@@ -264,6 +273,7 @@ async def get_my_history(
     Get timesheet entries for current user for a date range
     DC: Own entries only, with optional filters
     """
+    _assert_timesheet_tenant_access(db, current_user)
     try:
         start_date = datetime.strptime(from_date, "%Y-%m-%d").date()
         end_date = datetime.strptime(to_date, "%Y-%m-%d").date()
@@ -383,6 +393,7 @@ async def create_timesheet_entry(
     - When lead_ids is provided, creates separate entries for each lead with same entry_group_id
     - Time calculations use entry_group_id to avoid double-counting
     """
+    _assert_timesheet_tenant_access(db, current_user)
     # DC Protocol: Check for overlapping entries (only for non-grouped lead entries)
     # Exclude auto-source entries — they must not block manual entry creation
     existing = db.query(StaffTimesheetEntry).filter(
@@ -795,29 +806,41 @@ async def get_team_entries_for_approval(
     DC: Regular managers see dept employees + direct reports (reporting_manager_id)
     WVV: Role hierarchy enforcement with department_id, staff_type, and reporting_manager_id filters
     """
-    is_top_level = current_user.role and current_user.role.role_code in ['key_leadership', 'vgk4u', 'ea']
-
-    if is_top_level:
-        base_scope_ids = None
+    _assert_timesheet_tenant_access(db, current_user)
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        cid = _saas_ctx.company.id
+        if _saas_ctx.is_tenant_admin or getattr(current_user, 'admin_scope', None) in ['tenant_admin', 'company_admin', 'CLIENT_SPECIFIC']:
+            comp_emps = db.query(StaffEmployee.id).filter(StaffEmployee.base_company_id == cid, StaffEmployee.status == 'active').all()
+            base_scope_ids = [e[0] for e in comp_emps] or [0]
+        else:
+            from app.utils.staff_hierarchy import get_team_member_ids
+            base_scope_ids = get_team_member_ids(current_user, db, StaffEmployee) or [0]
     else:
-        managed_depts = db.query(StaffDepartment).filter(
-            StaffDepartment.head_id == current_user.id
-        ).all()
-        dept_ids = [d.id for d in managed_depts]
+        is_top_level = current_user.role and current_user.role.role_code in ['key_leadership', 'vgk4u', 'ea']
 
-        direct_reports = db.query(StaffEmployee.id).filter(
-            StaffEmployee.reporting_manager_id == current_user.id
-        ).all()
-        direct_report_ids = [t[0] for t in direct_reports]
+        if is_top_level:
+            base_scope_ids = None
+        else:
+            managed_depts = db.query(StaffDepartment).filter(
+                StaffDepartment.head_id == current_user.id
+            ).all()
+            dept_ids = [d.id for d in managed_depts]
 
-        dept_employees = db.query(StaffEmployee.id).filter(
-            StaffEmployee.department_id.in_(dept_ids)
-        ).all()
-        dept_employee_ids = [t[0] for t in dept_employees]
+            direct_reports = db.query(StaffEmployee.id).filter(
+                StaffEmployee.reporting_manager_id == current_user.id
+            ).all()
+            direct_report_ids = [t[0] for t in direct_reports]
 
-        base_scope_ids = list(set(direct_report_ids + dept_employee_ids))
-        if not base_scope_ids:
-            base_scope_ids = [0]
+            dept_employees = db.query(StaffEmployee.id).filter(
+                StaffEmployee.department_id.in_(dept_ids)
+            ).all()
+            dept_employee_ids = [t[0] for t in dept_employees]
+
+            base_scope_ids = list(set(direct_report_ids + dept_employee_ids))
+            if not base_scope_ids:
+                base_scope_ids = [0]
 
     if reporting_manager_id:
         downline_ids = _get_recursive_downline(db, reporting_manager_id)
@@ -950,6 +973,10 @@ async def approve_timesheet_entry(
     # if not current_user.role or current_user.role.role_code not in ['manager', 'team_leader', 'key_leadership', 'vgk4u']:
     #     raise HTTPException(status_code=403, detail="Not authorized to approve entries")
 
+    _assert_timesheet_tenant_access(db, current_user)
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+
     entry = db.query(StaffTimesheetEntry).filter(
         StaffTimesheetEntry.id == entry_id
     ).first()
@@ -957,11 +984,19 @@ async def approve_timesheet_entry(
     if not entry:
         raise HTTPException(status_code=404, detail="Timesheet entry not found")
 
-    if current_user.role and current_user.role.role_code not in ['vgk4u', 'key_leadership']:
-        employee = db.query(StaffEmployee).filter(
-            StaffEmployee.id == entry.employee_id
-        ).first()
+    employee = db.query(StaffEmployee).filter(
+        StaffEmployee.id == entry.employee_id
+    ).first()
 
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        cid = _saas_ctx.company.id
+        if not employee or employee.base_company_id != cid:
+            raise HTTPException(status_code=403, detail="Access denied: Timesheet entry belongs to another company")
+        is_saas_admin = _saas_ctx.is_tenant_admin or getattr(current_user, 'admin_scope', None) in ['tenant_admin', 'company_admin', 'CLIENT_SPECIFIC']
+        is_reporting_manager = employee and employee.reporting_manager_id == current_user.id
+        if not is_saas_admin and not is_reporting_manager:
+            raise HTTPException(status_code=403, detail="Not authorized to approve this entry (not your direct report)")
+    elif current_user.role and current_user.role.role_code not in ['vgk4u', 'key_leadership']:
         is_reporting_manager = employee and employee.reporting_manager_id == current_user.id
 
         managed_depts = db.query(StaffDepartment).filter(

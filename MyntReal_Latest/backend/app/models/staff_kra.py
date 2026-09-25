@@ -75,6 +75,7 @@ class StaffKRATemplate(Base):
     rejection_reason = Column(Text, nullable=True)
     
     # Status
+    company_id = Column(Integer, ForeignKey('associated_companies.id', ondelete='CASCADE'), nullable=True, index=True)
     status = Column(String(32), nullable=False, default='active', index=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=get_indian_time_aware)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=get_indian_time_aware, onupdate=get_indian_time_aware)

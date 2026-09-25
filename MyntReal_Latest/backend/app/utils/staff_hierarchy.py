@@ -261,6 +261,10 @@ def _get_effective_role_code(current_user) -> str:
     as the primary HR/Accounts roles — consistent with DC access design intent.
     Primary role always takes precedence; additional departments only elevate when needed.
     """
+    if getattr(current_user, 'admin_scope', None) in ['tenant_admin', 'company_admin']:
+        return 'tenant_admin'
+    if (getattr(current_user, 'staff_type', '') or '').upper() in ['TENANT_ADMIN', 'SAAS_CLIENT']:
+        return 'tenant_admin'
     primary_code = (
         current_user.role.role_code.lower()
         if current_user.role and current_user.role.role_code else None

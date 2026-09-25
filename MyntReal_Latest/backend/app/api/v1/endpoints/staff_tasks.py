@@ -145,6 +145,23 @@ async def get_assignable_employees(
     from app.utils.staff_hierarchy import get_employee_eligibility_filter
     query = db.query(StaffEmployee).filter(get_employee_eligibility_filter(StaffEmployee))
     
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        cid = _saas_ctx.company.id
+        from app.models.staff import StaffCompanyMembership
+        query = query.filter(
+            or_(
+                StaffEmployee.base_company_id == cid,
+                StaffEmployee.id.in_(
+                    db.query(StaffCompanyMembership.staff_id).filter(
+                        StaffCompanyMembership.company_id == cid,
+                        StaffCompanyMembership.is_active == True
+                    )
+                )
+            )
+        )
+    
     if search:
         search_term = f"%{search.lower()}%"
         query = query.filter(
@@ -181,15 +198,15 @@ async def get_assignable_employees(
 
 def apply_department_scope_to_query(query, current_user, db):
     """
-    Apply reporting chain scope filtering to ANY task query
-    
-    DC Protocol (Dec 04, 2025): PURE REPORTING_MANAGER BASED - NO HIERARCHY_LEVEL CHECKS
-    - Users see tasks where primary assignee is in their reporting chain
-    - The org chart (reporting_manager_id) defines visibility EXCLUSIVELY
-    
-    CRITICAL: Uses reporting chain to determine accessible employees
-    Returns: Modified query with IN filter for reporting chain scope
+    Apply reporting chain scope filtering and company isolation to ANY task query
     """
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        if _saas_ctx.company:
+            query = query.filter(StaffTask.company_id == _saas_ctx.company.id)
+    
     from app.utils.staff_hierarchy import get_accessible_employee_ids
     
     # DC Protocol: Get accessible employees based on reporting chain (includes self)
@@ -207,15 +224,17 @@ def apply_department_scope_to_query(query, current_user, db):
 
 def verify_manager_task_scope(task: StaffTask, current_user: StaffEmployee, db: Session) -> bool:
     """
-    DC Protocol (Dec 04, 2025): Verify user can access task based on reporting chain
-    
-    PURE REPORTING_MANAGER BASED - NO HIERARCHY_LEVEL CHECKS
-    - Users can access tasks if primary assignee is in their reporting chain
-    - The org chart (reporting_manager_id) defines visibility EXCLUSIVELY
-    - Users can always access their own tasks (created by or assigned to them)
-    
-    Returns True if access is allowed, raises HTTPException otherwise
+    Verify user can access task based on company boundary and reporting chain
     """
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        if task.company_id is not None and task.company_id != _saas_ctx.company.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied: Task belongs to another organization"
+            )
+    
     from app.utils.staff_hierarchy import get_accessible_employee_ids
     
     # Users can always access tasks created by them
@@ -318,6 +337,20 @@ async def create_task(
     else:
         print(f"✅ WVV: Using current user as assigner: {current_user.full_name} ({current_user.emp_code})")
     
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        target_cid = _saas_ctx.company.id if _saas_ctx.company else current_user.base_company_id or 2
+        from app.models.staff import StaffCompanyMembership
+        is_same_comp = (primary_assignee.base_company_id == target_cid) or (
+            db.query(StaffCompanyMembership).filter_by(staff_id=primary_assignee.id, company_id=target_cid, is_active=True).first() is not None
+        )
+        if not is_same_comp:
+            raise HTTPException(status_code=403, detail="Primary assignee must belong to your organization")
+    else:
+        target_cid = current_user.base_company_id or 2
+    
     task_code = generate_task_code(db)
     
     # DC PROTOCOL: original_assigner_id MUST ALWAYS be current_user (immutable audit trail)
@@ -336,6 +369,7 @@ async def create_task(
         start_date=task_data.start_date,
         estimated_hours=Decimal(str(task_data.estimated_hours)) if task_data.estimated_hours else None,
         tags=task_data.tags or [],
+        company_id=target_cid,
         contact_phone=task_data.contact_phone.strip() if task_data.contact_phone else None,
         contact_person_name=task_data.contact_person_name.strip() if task_data.contact_person_name else None
     )
@@ -383,6 +417,7 @@ async def create_task(
                 primary_assignee_id=phase_input.phase_assignee_id,
                 due_date=phase_input.target_date,
                 start_date=task_data.start_date,
+                company_id=target_cid,
                 tags=['phase-task', f'parent-{task_code}']
             )
             db.add(child_task)

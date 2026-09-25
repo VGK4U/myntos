@@ -2327,9 +2327,23 @@ class TenantUserCreateIn(BaseModel):
     phone: Optional[str] = None
     designation: Optional[str] = "Staff"
     role_id: int
+    department_id: Optional[int] = None
+    reporting_manager_id: Optional[int] = None
+    date_of_joining: Optional[date] = None
     assigned_modules: Optional[List[str]] = Field(default_factory=list)
     password: Optional[str] = None
     # Any base_company_id or client_id or data_companies in payload is strictly ignored and overridden
+
+
+class TenantUserUpdateIn(BaseModel):
+    full_name: Optional[str] = Field(None, min_length=2, max_length=120)
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    designation: Optional[str] = None
+    role_id: Optional[int] = None
+    department_id: Optional[int] = None
+    reporting_manager_id: Optional[int] = None
+    date_of_joining: Optional[date] = None
 
 
 class TenantUserStatusUpdateIn(BaseModel):
@@ -2955,6 +2969,24 @@ def create_tenant_user(
         if existing:
             raise HTTPException(400, "Email address is already in use by another staff employee")
 
+    # ── 4b. DEPARTMENT & REPORTING MANAGER VALIDATION ───────────────────────
+    if payload.department_id:
+        dept = db.query(StaffDepartment).filter_by(id=payload.department_id, is_active=True).first()
+        if not dept:
+            raise HTTPException(400, "Invalid department ID")
+        if dept.company_id is not None and dept.company_id != company.id:
+            raise HTTPException(403, "Department belongs to another organization")
+
+    if payload.reporting_manager_id:
+        mgr = db.query(StaffEmployee).filter_by(id=payload.reporting_manager_id, status='active').first()
+        if not mgr:
+            raise HTTPException(400, "Invalid reporting manager ID")
+        is_same_comp = (mgr.base_company_id == company.id) or (
+            db.query(StaffCompanyMembership).filter_by(staff_id=mgr.id, company_id=company.id, is_active=True).first() is not None
+        )
+        if not is_same_comp:
+            raise HTTPException(403, "Reporting manager must belong to the same organization")
+
     # ── 5. CODE & PASSWORD GENERATION ────────────────────────────────────────
     emp_code = generate_employee_code(db, staff_type="MN_EMPLOYEE")
     raw_pwd = payload.password or emp_code
@@ -2969,8 +3001,10 @@ def create_tenant_user(
         phone=payload.phone,
         designation=payload.designation or "Staff",
         role_id=target_role.id,
+        department_id=payload.department_id,
+        reporting_manager_id=payload.reporting_manager_id,
         status="active",
-        date_of_joining=date.today(),
+        date_of_joining=payload.date_of_joining or date.today(),
         password_hash=pwd_hash,
         requires_password_change=True,
         base_company_id=company.id,  # STRICTLY LOCKED
@@ -3006,6 +3040,8 @@ def create_tenant_user(
             "email": new_user.email,
             "role_code": target_role.role_code,
             "base_company_id": company.id,
+            "department_id": new_user.department_id,
+            "reporting_manager_id": new_user.reporting_manager_id,
             "assigned_modules": payload.assigned_modules or [],
         }
     )
@@ -3022,9 +3058,114 @@ def create_tenant_user(
             "email": new_user.email,
             "role_code": target_role.role_code,
             "role_name": target_role.role_name,
+            "department_id": new_user.department_id,
+            "reporting_manager_id": new_user.reporting_manager_id,
+            "date_of_joining": new_user.date_of_joining.isoformat() if new_user.date_of_joining else None,
             "status": new_user.status,
             "base_company_id": new_user.base_company_id,
             "assigned_modules": new_user.assigned_modules or [],
+        }
+    }
+
+
+@router.put("/tenant/users/{user_id}")
+def update_tenant_user_profile(
+    user_id: int,
+    payload: TenantUserUpdateIn,
+    ctx: Tuple[StaffEmployee, PlatformClient, AssociatedCompany] = Depends(require_tenant_admin_context),
+    db: Session = Depends(get_db),
+):
+    """
+    Updates user details (name, phone, designation, role, department, reporting manager)
+    within the authenticated Tenant Admin's organization boundary.
+    """
+    admin_staff, client, company = ctx
+    target_user = db.query(StaffEmployee).filter(
+        StaffEmployee.id == user_id,
+        StaffEmployee.base_company_id == company.id,
+        StaffEmployee.is_deleted == False
+    ).first()
+
+    if not target_user:
+        raise HTTPException(404, "User not found in your organization")
+
+    if payload.full_name is not None:
+        target_user.full_name = payload.full_name.strip()
+    if payload.phone is not None:
+        target_user.phone = payload.phone.strip()
+    if payload.email is not None:
+        new_email = payload.email.strip().lower() if payload.email else None
+        if new_email and new_email != target_user.email:
+            existing = db.query(StaffEmployee).filter(
+                StaffEmployee.email == new_email,
+                StaffEmployee.id != target_user.id
+            ).first()
+            if existing:
+                raise HTTPException(400, "Email address already in use")
+        target_user.email = new_email
+    if payload.designation is not None:
+        target_user.designation = payload.designation.strip()
+
+    if payload.role_id is not None:
+        role = db.query(StaffRole).filter_by(id=payload.role_id, is_active=True).first()
+        if not role:
+            raise HTTPException(400, "Invalid role")
+        admin_level = int(getattr(admin_staff.role, "hierarchy_level", 85) or 85)
+        if role.role_code.upper() in _SUPER_ADMIN_ROLE_CODES or role.hierarchy_level >= min(admin_level, 85):
+            raise HTTPException(403, "Privilege escalation denied: cannot assign role with equal or higher hierarchy")
+        target_user.role_id = role.id
+
+    if payload.department_id is not None:
+        if payload.department_id > 0:
+            dept = db.query(StaffDepartment).filter_by(id=payload.department_id, is_active=True).first()
+            if not dept:
+                raise HTTPException(400, "Invalid department ID")
+            if dept.company_id is not None and dept.company_id != company.id:
+                raise HTTPException(403, "Department belongs to another organization")
+            target_user.department_id = payload.department_id
+        else:
+            target_user.department_id = None
+
+    if payload.reporting_manager_id is not None:
+        if payload.reporting_manager_id > 0:
+            if payload.reporting_manager_id == target_user.id:
+                raise HTTPException(400, "Employee cannot report to themselves")
+            mgr = db.query(StaffEmployee).filter_by(id=payload.reporting_manager_id, status='active').first()
+            if not mgr:
+                raise HTTPException(400, "Invalid reporting manager ID")
+            is_same_comp = (mgr.base_company_id == company.id) or (
+                db.query(StaffCompanyMembership).filter_by(staff_id=mgr.id, company_id=company.id, is_active=True).first() is not None
+            )
+            if not is_same_comp:
+                raise HTTPException(403, "Reporting manager must belong to the same organization")
+            target_user.reporting_manager_id = payload.reporting_manager_id
+        else:
+            target_user.reporting_manager_id = None
+
+    if payload.date_of_joining is not None:
+        target_user.date_of_joining = payload.date_of_joining
+
+    db.commit()
+    db.refresh(target_user)
+
+    return {
+        "ok": True,
+        "message": f"User '{target_user.full_name}' updated successfully.",
+        "user": {
+            "id": target_user.id,
+            "emp_code": target_user.emp_code,
+            "full_name": target_user.full_name,
+            "email": target_user.email,
+            "phone": target_user.phone,
+            "designation": target_user.designation,
+            "role_id": target_user.role_id,
+            "role_code": target_user.role.role_code if target_user.role else None,
+            "role_name": target_user.role.role_name if target_user.role else None,
+            "department_id": target_user.department_id,
+            "reporting_manager_id": target_user.reporting_manager_id,
+            "date_of_joining": target_user.date_of_joining.isoformat() if target_user.date_of_joining else None,
+            "status": target_user.status,
+            "base_company_id": target_user.base_company_id,
         }
     }
 

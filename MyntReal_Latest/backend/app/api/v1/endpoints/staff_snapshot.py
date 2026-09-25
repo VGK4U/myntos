@@ -75,14 +75,27 @@ def get_ops_snapshot(
     Access restricted to Key Leadership. Returns downline only (or all for VGK4U Supreme).
     DC Protocol: batch queries, no N+1, read-only.
     """
-    if not _is_key_leadership(current_user):
-        raise HTTPException(status_code=403, detail="Key Leadership access required for Operations Snapshot.")
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        if not _saas_ctx.has_module("STAFF_HRMS"):
+            raise HTTPException(status_code=403, detail="Access denied: Module 'STAFF_HRMS' is not licensed or entitled for this tenant.")
+        is_admin_or_manager = _saas_ctx.is_tenant_admin or (current_user.role and current_user.role.role_code in ['admin', 'hr', 'manager'])
+        if not is_admin_or_manager:
+            raise HTTPException(status_code=403, detail="Workforce HRMS access required for Operations Snapshot.")
+        is_supreme = _saas_ctx.is_tenant_admin
+    else:
+        if not _is_key_leadership(current_user):
+            raise HTTPException(status_code=403, detail="Key Leadership access required for Operations Snapshot.")
+        rc = (current_user.role.role_code if current_user.role else '').lower()
+        is_supreme = 'vgk4u' in rc or rc in {'vgk4u_supreme', 'key_leadership', 'ea', 'executive_admin'}
 
     today = _get_indian_date()
+    if not isinstance(from_date, date):
+        from_date = None
+    if not isinstance(to_date, date):
+        to_date = None
     is_range = from_date is not None and to_date is not None
-
-    rc = (current_user.role.role_code if current_user.role else '').lower()
-    is_supreme = 'vgk4u' in rc or rc in {'vgk4u_supreme', 'key_leadership', 'ea', 'executive_admin'}
 
     from app.utils.staff_hierarchy import get_employee_eligibility_filter
 
@@ -90,14 +103,17 @@ def get_ops_snapshot(
         eligibility_cond = get_employee_eligibility_filter(
             StaffEmployee, start_date=from_date, end_date=to_date
         ) if is_range else get_employee_eligibility_filter(StaffEmployee)
-        emp_rows = db.query(
+        q = db.query(
             StaffEmployee.id,
             StaffEmployee.emp_code,
             StaffEmployee.full_name,
             StaffEmployee.department_id,
             StaffEmployee.reporting_manager_id,
             StaffEmployee.base_company_id,
-        ).filter(eligibility_cond).all()
+        ).filter(eligibility_cond)
+        if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+            q = q.filter(StaffEmployee.base_company_id == _saas_ctx.company.id)
+        emp_rows = q.all()
     else:
         dl_ids = _get_downline_ids(
             db, current_user.id,
@@ -106,7 +122,7 @@ def get_ops_snapshot(
         )
         if not dl_ids:
             return []
-        emp_rows = db.query(
+        q = db.query(
             StaffEmployee.id,
             StaffEmployee.emp_code,
             StaffEmployee.full_name,
@@ -115,14 +131,25 @@ def get_ops_snapshot(
             StaffEmployee.base_company_id,
         ).filter(
             StaffEmployee.id.in_(dl_ids)
-        ).all()
+        )
+        if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+            q = q.filter(StaffEmployee.base_company_id == _saas_ctx.company.id)
+        emp_rows = q.all()
 
     if not emp_rows:
         return []
 
     emp_ids = [r.id for r in emp_rows]
 
-    dept_rows = db.query(StaffDepartment.id, StaffDepartment.name).all()
+    dept_q = db.query(StaffDepartment.id, StaffDepartment.name)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        dept_q = dept_q.filter(
+            or_(
+                StaffDepartment.company_id == _saas_ctx.company.id,
+                StaffDepartment.company_id.is_(None)
+            )
+        )
+    dept_rows = dept_q.all()
     dept_map = {d.id: d.name for d in dept_rows}
 
     mgr_rows = db.query(StaffEmployee.id, StaffEmployee.full_name).filter(
@@ -1253,17 +1280,29 @@ def get_my_team_summary(
     target_id = emp_id if emp_id else current_user.id
 
     # Security: key-leadership can view anyone; others can only view self or their own downline
-    if target_id != current_user.id:
-        if _is_key_leadership(current_user):
-            pass  # allowed
-        else:
-            my_dl = _get_downline_ids(db, current_user.id)
-            if target_id not in my_dl:
-                raise HTTPException(status_code=403, detail="Access denied.")
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        if target_id != current_user.id:
+            if not _saas_ctx.is_tenant_admin:
+                my_dl = _get_downline_ids(db, current_user.id)
+                if target_id not in my_dl:
+                    raise HTTPException(status_code=403, detail="Access denied.")
+    else:
+        if target_id != current_user.id:
+            if _is_key_leadership(current_user):
+                pass  # allowed
+            else:
+                my_dl = _get_downline_ids(db, current_user.id)
+                if target_id not in my_dl:
+                    raise HTTPException(status_code=403, detail="Access denied.")
 
     target_emp = db.query(StaffEmployee).filter(StaffEmployee.id == target_id).first()
     if not target_emp:
         raise HTTPException(status_code=404, detail="Employee not found.")
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        if target_emp.base_company_id != _saas_ctx.company.id:
+            raise HTTPException(status_code=403, detail="Access denied: Employee belongs to another organization.")
 
     dept_map = {d.id: d.name for d in db.query(StaffDepartment.id, StaffDepartment.name).all()}
 
@@ -1344,3 +1383,152 @@ def get_my_team_summary(
         "prev_team_total": prev_team_total,
         "prev_team_avg":   prev_team_avg,
     }
+
+
+@router.get("/workforce-summary", summary="Workforce Cockpit KPI Summary")
+def get_workforce_summary(
+    current_user: StaffEmployee = Depends(get_current_staff_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Returns high-level workforce metrics for SaaS cockpit:
+    - total_employees (active)
+    - total_departments
+    - tasks: {total, pending, in_progress, completed, overdue}
+    - kra: {active_templates, pending_approval}
+    """
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    
+    today = _get_indian_date()
+    from app.models.staff_tasks import StaffTask
+    from app.models.staff_kra import StaffKRATemplate
+    
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        if not _saas_ctx.has_module("STAFF_HRMS"):
+            raise HTTPException(status_code=403, detail="Access denied: Module 'STAFF_HRMS' is not licensed or entitled for this tenant.")
+        cid = _saas_ctx.company.id
+        emp_rows = db.query(StaffEmployee.id).filter(
+            StaffEmployee.base_company_id == cid,
+            StaffEmployee.status == 'active'
+        ).all()
+        company_emp_ids = [r[0] for r in emp_rows]
+        total_employees = len(company_emp_ids)
+        
+        dept_count = db.query(StaffDepartment).filter(
+            or_(
+                StaffDepartment.company_id == cid,
+                StaffDepartment.company_id.is_(None)
+            ),
+            StaffDepartment.is_active == True
+        ).count()
+        
+        # Tasks KPIs
+        tasks_q = db.query(StaffTask).filter(StaffTask.company_id == cid)
+        total_tasks = tasks_q.count()
+        pending_tasks = tasks_q.filter(StaffTask.status.in_(['pending', 'assigned', 'to_do'])).count()
+        in_progress_tasks = tasks_q.filter(StaffTask.status.in_(['in_progress', 'working'])).count()
+        completed_tasks = tasks_q.filter(StaffTask.status == 'completed').count()
+        overdue_tasks = tasks_q.filter(
+            StaffTask.status.notin_(['completed', 'cancelled']),
+            StaffTask.due_date < today
+        ).count()
+        
+        # KRA KPIs
+        kra_templates_q = db.query(StaffKRATemplate).filter(StaffKRATemplate.company_id == cid)
+        active_kras = kra_templates_q.filter(
+            StaffKRATemplate.status == 'active',
+            StaffKRATemplate.approval_status == 'approved'
+        ).count()
+        pending_kras = kra_templates_q.filter(
+            StaffKRATemplate.approval_status == 'pending_approval'
+        ).count()
+
+        # Attendance KPIs
+        from app.models.staff_attendance import StaffAttendance
+        present_today = 0
+        if company_emp_ids:
+            present_today = db.query(StaffAttendance).filter(
+                StaffAttendance.employee_id.in_(company_emp_ids),
+                StaffAttendance.date == today,
+                StaffAttendance.clock_in.isnot(None)
+            ).count()
+        absent_today = max(0, total_employees - present_today)
+
+        # Leave KPIs
+        from app.models.staff_attendance_sheet import StaffLeaveRequest, StaffLeaveRequestDay
+        leave_pending = db.query(StaffLeaveRequest).filter(
+            StaffLeaveRequest.company_id == cid,
+            StaffLeaveRequest.status.in_(['pending_manager', 'pending_hr'])
+        ).count()
+        on_leave_today = db.query(StaffLeaveRequestDay).join(StaffLeaveRequest).filter(
+            StaffLeaveRequest.company_id == cid,
+            StaffLeaveRequest.status == 'approved',
+            StaffLeaveRequestDay.date == today
+        ).count()
+
+        # Journeys KPIs
+        from app.models.staff_journey import StaffJourney, JourneyStatus
+        active_journeys = db.query(StaffJourney).filter(
+            StaffJourney.company_id == cid,
+            StaffJourney.date == today,
+            StaffJourney.status == JourneyStatus.IN_PROGRESS
+        ).count()
+        completed_journeys = db.query(StaffJourney).filter(
+            StaffJourney.company_id == cid,
+            StaffJourney.date == today,
+            StaffJourney.status == JourneyStatus.COMPLETED
+        ).count()
+
+        # Timesheet KPIs
+        from app.models.staff_timesheet import StaffTimesheetEntry
+        timesheet_pending = 0
+        if company_emp_ids:
+            timesheet_pending = db.query(StaffTimesheetEntry).filter(
+                StaffTimesheetEntry.employee_id.in_(company_emp_ids),
+                StaffTimesheetEntry.status == 'submitted'
+            ).count()
+        
+        return {
+            "success": True,
+            "company_id": cid,
+            "company_name": _saas_ctx.company.company_name,
+            "total_employees": total_employees,
+            "total_departments": dept_count,
+            "attendance": {
+                "present_today": present_today,
+                "absent_today": absent_today
+            },
+            "leave": {
+                "pending_approvals": leave_pending,
+                "on_leave_today": on_leave_today
+            },
+            "journeys": {
+                "active_today": active_journeys,
+                "completed_today": completed_journeys
+            },
+            "tasks": {
+                "total": total_tasks,
+                "pending": pending_tasks,
+                "in_progress": in_progress_tasks,
+                "completed": completed_tasks,
+                "overdue": overdue_tasks
+            },
+            "kra": {
+                "active_templates": active_kras,
+                "pending_approval": pending_kras
+            },
+            "timesheet": {
+                "pending_approval": timesheet_pending
+            }
+        }
+    else:
+        total_employees = db.query(StaffEmployee).filter(StaffEmployee.status == 'active').count()
+        dept_count = db.query(StaffDepartment).filter(StaffDepartment.is_active == True).count()
+        return {
+            "success": True,
+            "total_employees": total_employees,
+            "total_departments": dept_count,
+            "tasks": {"total": db.query(StaffTask).count()},
+            "kra": {"active_templates": db.query(StaffKRATemplate).filter(StaffKRATemplate.status == 'active').count()}
+        }

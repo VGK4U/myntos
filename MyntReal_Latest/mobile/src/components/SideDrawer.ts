@@ -941,7 +941,8 @@ export class SideDrawer {
       // For SaaS tenants, completely exclude internal platform and group company sections
       if (isSaaSTenant) {
         if (!isCoreWorkspace) {
-          const hasHrmsAccess = Boolean(this.allowedPaths !== '*' && this.allowedPaths instanceof Set && (this.allowedPaths.has('/staff/attendance-sheet') || this.allowedPaths.has('/staff/my-attendance')));
+          const hasHrmsEntitlement = Array.isArray(user.entitled_modules) && (user.entitled_modules.includes('STAFF_HRMS') || user.entitled_modules.includes('STAFF_HR'));
+          const hasHrmsAccess = hasHrmsEntitlement || Boolean(this.allowedPaths !== '*' && this.allowedPaths instanceof Set && (this.allowedPaths.has('/staff/attendance-sheet') || this.allowedPaths.has('/staff/my-attendance') || this.allowedPaths.has('/staff/employees')));
           const hrmsSections = ['HR', 'TASK_MANAGEMENT', 'KRA_MANAGEMENT', 'FIELD_LOCATION_TRACKING'];
           const saasRestricted = [
             'MNR', 'MYNT', 'VGK', 'META', 'CONFIG', 'NOT IN USE', 'NOT_IN_USE',

@@ -963,6 +963,11 @@ async def get_my_journeys(
     current_user: StaffEmployee = Depends(get_current_staff_user)
 ):
     """Get current user's journeys with filters"""
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+
     query = db.query(StaffJourney).filter(
         StaffJourney.employee_id == current_user.id
     )
@@ -1015,7 +1020,14 @@ async def get_team_journeys(
     DC Protocol (Jan 2026): Added include_self parameter for Journey Management page
     """
     from app.utils.staff_hierarchy import has_direct_reports
-    
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        is_saas_admin = _saas_ctx.is_tenant_admin
+    else:
+        is_saas_admin = False
+
     is_manager = has_direct_reports(current_user.id, db, StaffEmployee)
     is_vgk4u_or_hr = current_user.role and (
         current_user.role.hierarchy_level >= 150 or 
@@ -1023,7 +1035,7 @@ async def get_team_journeys(
         current_user.role.role_code in ['hr', 'ea']
     )
     
-    if not is_manager and not is_vgk4u_or_hr:
+    if not is_manager and not is_vgk4u_or_hr and not is_saas_admin:
         raise HTTPException(status_code=403, detail="Only those with direct reports or HR/VGK4U can view team journeys")
 
     # DC Protocol (Feb 25, 2026): Use get_team_member_ids to exclude self + hidden accounts

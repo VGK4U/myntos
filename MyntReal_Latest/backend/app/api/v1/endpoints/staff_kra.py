@@ -159,18 +159,11 @@ def check_manager_hierarchy_kra(db: Session, current_user: StaffEmployee, kra_in
     """
     Check if current manager has authority to review this KRA instance
     DC: KRAs - Manager ONLY (reporting_manager OR primary_spoc)
-    ONLY VGK4U Supreme (150) and HR can review all
-    Leadership/Key Leadership must follow hierarchy
+    ONLY VGK4U Supreme (150), HR, or SaaS Tenant Admin can review all within their scope
     """
     # DC: Guard against null role - should never happen but handle gracefully
     if not current_user.role:
         return False
-    
-    # ONLY VGK4U Supreme (150) OR HR/EA can review all
-    if current_user.role.hierarchy_level >= 150:
-        return True  # VGK4U Supreme
-    if current_user.role.role_name in ['HR', 'Executive Assistant'] or current_user.role.role_code in ['hr', 'ea']:
-        return True  # HR or EA
     
     # Get the KRA assignment to check hierarchy
     assignment = db.query(StaffKRAAssignment).filter(
@@ -179,6 +172,21 @@ def check_manager_hierarchy_kra(db: Session, current_user: StaffEmployee, kra_in
     
     if not assignment:
         return False
+
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        emp = db.query(StaffEmployee).filter_by(id=assignment.employee_id).first()
+        if emp and emp.base_company_id != _saas_ctx.company.id:
+            return False
+        if _saas_ctx.is_tenant_admin or getattr(current_user, 'admin_scope', None) in ['tenant_admin', 'company_admin', 'CLIENT_SPECIFIC']:
+            return True
+
+    # ONLY VGK4U Supreme (150) OR HR/EA can review all
+    if current_user.role.hierarchy_level >= 150:
+        return True  # VGK4U Supreme
+    if current_user.role.role_name in ['HR', 'Executive Assistant'] or current_user.role.role_code in ['hr', 'ea', 'tenant_admin']:
+        return True  # HR or EA or tenant_admin
     
     # Check if current user is reporting_manager, SPOC, or in upline chain of the employee
     if (assignment.reporting_manager_id == current_user.id or
@@ -239,12 +247,19 @@ async def get_next_kra_code(
     Pattern: KRA-001, KRA-002, KRA-003, etc.
     """
     try:
-        # DC: Only Key Leadership+ can request codes
-        if not check_key_leadership_or_above(current_user):
-            raise HTTPException(
-                status_code=403,
-                detail="Only Key Leadership and above can create KRA templates"
-            )
+        from app.services.saas_tenant_resolver import resolve_tenant_context
+        _saas_ctx = resolve_tenant_context(db, current_user)
+        if _saas_ctx.is_saas_tenant:
+            _saas_ctx.require_module('STAFF_HRMS')
+            is_admin_or_mgr = _saas_ctx.is_tenant_admin or (current_user.role and current_user.role.role_code in ['hr', 'manager', 'admin'])
+            if not is_admin_or_mgr:
+                raise HTTPException(status_code=403, detail="Only tenant administrators or managers can request KRA codes")
+        else:
+            if not check_key_leadership_or_above(current_user):
+                raise HTTPException(
+                    status_code=403,
+                    detail="Only Key Leadership and above can create KRA templates"
+                )
         
         # Query last template by ID (most recent)
         last_template = db.query(StaffKRATemplate).order_by(
@@ -309,11 +324,24 @@ async def create_kra_template(
     DC: Key Leadership+ can create templates
     WVV: Template requires VGK4U approval unless created by VGK4U
     """
-    if not check_key_leadership_or_above(current_user):
-        raise HTTPException(
-            status_code=403,
-            detail="Only Key Leadership, HR, EA, or Finance Admin can create KRA templates"
-        )
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        is_admin_or_mgr = _saas_ctx.is_tenant_admin or (current_user.role and current_user.role.role_code in ['hr', 'manager', 'admin'])
+        if not is_admin_or_mgr:
+            raise HTTPException(status_code=403, detail="Only tenant administrators or managers can create KRA templates")
+        target_cid = _saas_ctx.company.id if _saas_ctx.company else current_user.base_company_id or 2
+        is_auto_approve = False
+    else:
+        if not check_key_leadership_or_above(current_user):
+            raise HTTPException(
+                status_code=403,
+                detail="Only Key Leadership, HR, EA, or Finance Admin can create KRA templates"
+            )
+        is_vgk4u = check_vgk4u_supreme(current_user)
+        target_cid = current_user.base_company_id or 2
+        is_auto_approve = is_vgk4u
 
     # DC-KRA-CODE-001: Server-side auto-generation of kra_code.
     # Client may send a code (e.g. from /next-code) or omit / send an invalid value.
@@ -348,8 +376,6 @@ async def create_kra_template(
             _counter += 1
             kra_code_to_use = f"KRA-{_counter:03d}"
 
-    is_vgk4u = check_vgk4u_supreme(current_user)
-
     parsed_target_time = None
     if template_data.target_time:
         from datetime import time as dt_time
@@ -367,10 +393,11 @@ async def create_kra_template(
         estimated_time_minutes=template_data.estimated_time_minutes,
         target_time=parsed_target_time,
         is_mandatory=template_data.is_mandatory,
-        approval_status='approved' if is_vgk4u else 'pending_approval',
+        company_id=target_cid,
+        approval_status='approved' if is_auto_approve else 'pending_approval',
         created_by_employee_id=current_user.id,
-        approved_by_employee_id=current_user.id if is_vgk4u else None,
-        approval_date=get_indian_time() if is_vgk4u else None,
+        approved_by_employee_id=current_user.id if is_auto_approve else None,
+        approval_date=get_indian_time() if is_auto_approve else None,
         status='active'
     )
     
@@ -446,21 +473,34 @@ async def list_kra_templates(
         
         query = db.query(StaffKRATemplate).filter(StaffKRATemplate.status != 'deleted')
         
-        # DC: Role-based access control
-        is_vgk4u = check_vgk4u_supreme(current_user)
-        is_hr = check_hr(current_user)
-        is_key_leadership = check_key_leadership_or_above(current_user)
-        
-        if not (is_vgk4u or is_hr):
-            if is_key_leadership:
+        from app.services.saas_tenant_resolver import resolve_tenant_context
+        _saas_ctx = resolve_tenant_context(db, current_user)
+        if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+            query = query.filter(StaffKRATemplate.company_id == _saas_ctx.company.id)
+            is_admin_or_hr = _saas_ctx.is_tenant_admin or (current_user.role and current_user.role.role_code in ['hr', 'admin'])
+            if not is_admin_or_hr:
                 query = query.filter(
                     or_(
                         StaffKRATemplate.approval_status == 'approved',
                         StaffKRATemplate.created_by_employee_id == current_user.id
                     )
                 )
-            else:
-                query = query.filter(StaffKRATemplate.approval_status == 'approved')
+        else:
+            # DC: Role-based access control
+            is_vgk4u = check_vgk4u_supreme(current_user)
+            is_hr = check_hr(current_user)
+            is_key_leadership = check_key_leadership_or_above(current_user)
+            
+            if not (is_vgk4u or is_hr):
+                if is_key_leadership:
+                    query = query.filter(
+                        or_(
+                            StaffKRATemplate.approval_status == 'approved',
+                            StaffKRATemplate.created_by_employee_id == current_user.id
+                        )
+                    )
+                else:
+                    query = query.filter(StaffKRATemplate.approval_status == 'approved')
         
         # Apply filters
         if status:
@@ -590,16 +630,30 @@ async def list_pending_templates(
     List templates pending VGK4U approval
     DC: Only VGK4U Supreme can view pending templates
     """
-    if not check_vgk4u_supreme(current_user):
-        raise HTTPException(
-            status_code=403,
-            detail="Only VGK4U Supreme can view pending templates"
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        if not (_saas_ctx.is_tenant_admin or (current_user.role and current_user.role.role_code in ['hr', 'admin'])):
+            raise HTTPException(
+                status_code=403,
+                detail="Only tenant administrators or HR can view pending templates"
+            )
+        query = db.query(StaffKRATemplate).filter(
+            StaffKRATemplate.approval_status == 'pending_approval',
+            StaffKRATemplate.status == 'active',
+            StaffKRATemplate.company_id == _saas_ctx.company.id
         )
-    
-    query = db.query(StaffKRATemplate).filter(
-        StaffKRATemplate.approval_status == 'pending_approval',
-        StaffKRATemplate.status == 'active'
-    )
+    else:
+        if not check_vgk4u_supreme(current_user):
+            raise HTTPException(
+                status_code=403,
+                detail="Only VGK4U Supreme can view pending templates"
+            )
+        query = db.query(StaffKRATemplate).filter(
+            StaffKRATemplate.approval_status == 'pending_approval',
+            StaffKRATemplate.status == 'active'
+        )
     
     total = query.count()
     
@@ -652,17 +706,27 @@ async def get_kra_template(
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
     
-    is_vgk4u = check_vgk4u_supreme(current_user)
-    is_hr = check_hr(current_user)
-    is_key_leadership = check_key_leadership_or_above(current_user)
-    
-    if not (is_vgk4u or is_hr):
-        if is_key_leadership:
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        if template.company_id is not None and template.company_id != _saas_ctx.company.id:
+            raise HTTPException(status_code=403, detail="Access denied: Template belongs to another organization")
+        is_admin_or_hr = _saas_ctx.is_tenant_admin or (current_user.role and current_user.role.role_code in ['hr', 'admin'])
+        if not is_admin_or_hr:
             if template.approval_status != 'approved' and template.created_by_employee_id != current_user.id:
                 raise HTTPException(status_code=403, detail="Access denied")
-        else:
-            if template.approval_status != 'approved':
-                raise HTTPException(status_code=403, detail="Access denied")
+    else:
+        is_vgk4u = check_vgk4u_supreme(current_user)
+        is_hr = check_hr(current_user)
+        is_key_leadership = check_key_leadership_or_above(current_user)
+        
+        if not (is_vgk4u or is_hr):
+            if is_key_leadership:
+                if template.approval_status != 'approved' and template.created_by_employee_id != current_user.id:
+                    raise HTTPException(status_code=403, detail="Access denied")
+            else:
+                if template.approval_status != 'approved':
+                    raise HTTPException(status_code=403, detail="Access denied")
     
     return {
         "id": template.id,
@@ -706,13 +770,22 @@ async def update_kra_template(
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
     
-    is_vgk4u = check_vgk4u_supreme(current_user)
-    
-    if not is_vgk4u and template.created_by_employee_id != current_user.id:
-        raise HTTPException(
-            status_code=403,
-            detail="Only the creator or VGK4U can update this template"
-        )
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        if template.company_id is not None and template.company_id != _saas_ctx.company.id:
+            raise HTTPException(status_code=403, detail="Cannot edit template belonging to another organization")
+        if not _saas_ctx.is_tenant_admin and template.created_by_employee_id != current_user.id:
+            raise HTTPException(status_code=403, detail="Only the creator or tenant administrator can update this template")
+        is_vgk4u = _saas_ctx.is_tenant_admin
+    else:
+        is_vgk4u = check_vgk4u_supreme(current_user)
+        if not is_vgk4u and template.created_by_employee_id != current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Only the creator or VGK4U can update this template"
+            )
     
     old_data = {
         "title": template.title,
@@ -783,18 +856,32 @@ async def approve_kra_template(
 ):
     """
     Approve KRA template
-    DC: Only VGK4U Supreme can approve templates
+    DC: Only VGK4U Supreme (or SaaS Tenant Admin / HR) can approve templates
     """
-    if not check_vgk4u_supreme(current_user):
-        raise HTTPException(
-            status_code=403,
-            detail="Only VGK4U Supreme can approve KRA templates"
-        )
-    
-    template = db.query(StaffKRATemplate).filter(
-        StaffKRATemplate.id == template_id,
-        StaffKRATemplate.approval_status == 'pending_approval'
-    ).first()
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        is_admin_or_hr = _saas_ctx.is_tenant_admin or (current_user.role and current_user.role.role_code in ['hr', 'admin'])
+        if not is_admin_or_hr:
+            raise HTTPException(
+                status_code=403,
+                detail="Only Tenant Admin or HR can approve KRA templates"
+            )
+        template = db.query(StaffKRATemplate).filter(
+            StaffKRATemplate.id == template_id,
+            StaffKRATemplate.company_id == _saas_ctx.company.id,
+            StaffKRATemplate.approval_status == 'pending_approval'
+        ).first()
+    else:
+        if not check_vgk4u_supreme(current_user):
+            raise HTTPException(
+                status_code=403,
+                detail="Only VGK4U Supreme can approve KRA templates"
+            )
+        template = db.query(StaffKRATemplate).filter(
+            StaffKRATemplate.id == template_id,
+            StaffKRATemplate.approval_status == 'pending_approval'
+        ).first()
     
     if not template:
         raise HTTPException(
@@ -845,18 +932,32 @@ async def reject_kra_template(
 ):
     """
     Reject KRA template
-    DC: Only VGK4U Supreme can reject templates
+    DC: Only VGK4U Supreme (or SaaS Tenant Admin / HR) can reject templates
     """
-    if not check_vgk4u_supreme(current_user):
-        raise HTTPException(
-            status_code=403,
-            detail="Only VGK4U Supreme can reject KRA templates"
-        )
-    
-    template = db.query(StaffKRATemplate).filter(
-        StaffKRATemplate.id == template_id,
-        StaffKRATemplate.approval_status == 'pending_approval'
-    ).first()
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        is_admin_or_hr = _saas_ctx.is_tenant_admin or (current_user.role and current_user.role.role_code in ['hr', 'admin'])
+        if not is_admin_or_hr:
+            raise HTTPException(
+                status_code=403,
+                detail="Only Tenant Admin or HR can reject KRA templates"
+            )
+        template = db.query(StaffKRATemplate).filter(
+            StaffKRATemplate.id == template_id,
+            StaffKRATemplate.company_id == _saas_ctx.company.id,
+            StaffKRATemplate.approval_status == 'pending_approval'
+        ).first()
+    else:
+        if not check_vgk4u_supreme(current_user):
+            raise HTTPException(
+                status_code=403,
+                detail="Only VGK4U Supreme can reject KRA templates"
+            )
+        template = db.query(StaffKRATemplate).filter(
+            StaffKRATemplate.id == template_id,
+            StaffKRATemplate.approval_status == 'pending_approval'
+        ).first()
     
     if not template:
         raise HTTPException(
@@ -908,12 +1009,22 @@ async def deactivate_kra_template(
     Deactivate (soft delete) KRA template
     DC Protocol: Menu-based access control - page assignment = full access
     """
-    # DC Protocol: Menu-based access control - page assignment = full access
-    
-    template = db.query(StaffKRATemplate).filter(
-        StaffKRATemplate.id == template_id,
-        StaffKRATemplate.status == 'active'
-    ).first()
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        is_admin_or_hr = _saas_ctx.is_tenant_admin or (current_user.role and current_user.role.role_code in ['hr', 'admin'])
+        if not is_admin_or_hr:
+            raise HTTPException(status_code=403, detail="Only Tenant Admin or HR can deactivate KRA templates")
+        template = db.query(StaffKRATemplate).filter(
+            StaffKRATemplate.id == template_id,
+            StaffKRATemplate.company_id == _saas_ctx.company.id,
+            StaffKRATemplate.status == 'active'
+        ).first()
+    else:
+        template = db.query(StaffKRATemplate).filter(
+            StaffKRATemplate.id == template_id,
+            StaffKRATemplate.status == 'active'
+        ).first()
     
     if not template:
         raise HTTPException(status_code=404, detail="Active template not found")
@@ -953,12 +1064,22 @@ async def reactivate_kra_template(
     Reactivate a previously deactivated KRA template
     DC Protocol: Menu-based access control - page assignment = full access
     """
-    # DC Protocol: Menu-based access control - page assignment = full access
-    
-    template = db.query(StaffKRATemplate).filter(
-        StaffKRATemplate.id == template_id,
-        StaffKRATemplate.status == 'inactive'
-    ).first()
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        is_admin_or_hr = _saas_ctx.is_tenant_admin or (current_user.role and current_user.role.role_code in ['hr', 'admin'])
+        if not is_admin_or_hr:
+            raise HTTPException(status_code=403, detail="Only Tenant Admin or HR can reactivate KRA templates")
+        template = db.query(StaffKRATemplate).filter(
+            StaffKRATemplate.id == template_id,
+            StaffKRATemplate.company_id == _saas_ctx.company.id,
+            StaffKRATemplate.status == 'inactive'
+        ).first()
+    else:
+        template = db.query(StaffKRATemplate).filter(
+            StaffKRATemplate.id == template_id,
+            StaffKRATemplate.status == 'inactive'
+        ).first()
     
     if not template:
         raise HTTPException(status_code=404, detail="Inactive template not found")
@@ -1004,12 +1125,22 @@ async def permanent_delete_kra_template(
     - Past/historical assignments and instances are preserved
     - Template status set to 'deleted'
     """
-    # DC Protocol: Menu-based access control - page assignment = full access
-
-    template = db.query(StaffKRATemplate).filter(
-        StaffKRATemplate.id == template_id,
-        StaffKRATemplate.status.in_(['active', 'inactive'])
-    ).first()
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        is_admin_or_hr = _saas_ctx.is_tenant_admin or (current_user.role and current_user.role.role_code in ['hr', 'admin'])
+        if not is_admin_or_hr:
+            raise HTTPException(status_code=403, detail="Only Tenant Admin or HR can delete KRA templates")
+        template = db.query(StaffKRATemplate).filter(
+            StaffKRATemplate.id == template_id,
+            StaffKRATemplate.company_id == _saas_ctx.company.id,
+            StaffKRATemplate.status.in_(['active', 'inactive'])
+        ).first()
+    else:
+        template = db.query(StaffKRATemplate).filter(
+            StaffKRATemplate.id == template_id,
+            StaffKRATemplate.status.in_(['active', 'inactive'])
+        ).first()
 
     if not template:
         raise HTTPException(status_code=404, detail="Template not found or already deleted")
@@ -1095,12 +1226,19 @@ async def preview_template_delete(
     Preview the impact of deleting a KRA template.
     Shows counts of future assignments/instances that will be removed.
     """
-    # DC Protocol: Menu-based access control - page assignment = full access
-
-    template = db.query(StaffKRATemplate).filter(
-        StaffKRATemplate.id == template_id,
-        StaffKRATemplate.status.in_(['active', 'inactive'])
-    ).first()
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+        template = db.query(StaffKRATemplate).filter(
+            StaffKRATemplate.id == template_id,
+            StaffKRATemplate.company_id == _saas_ctx.company.id,
+            StaffKRATemplate.status.in_(['active', 'inactive'])
+        ).first()
+    else:
+        template = db.query(StaffKRATemplate).filter(
+            StaffKRATemplate.id == template_id,
+            StaffKRATemplate.status.in_(['active', 'inactive'])
+        ).first()
 
     if not template:
         raise HTTPException(status_code=404, detail="Template not found or already deleted")
@@ -1678,6 +1816,10 @@ async def get_my_kras(
     DC Protocol (Jan 27, 2026): Added date_from/date_to filtering for mobile parity
     """
     today = get_indian_date()
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
 
     # DC-JIT: Auto-generate missing KRA instances for the requested date range
     # Mirrors the /instances endpoint logic, scoped to the current user only
@@ -2442,16 +2584,23 @@ async def approve_kra_instance(
     - Status changes to 'approved', counts for performance
     """
     from app.utils.staff_hierarchy import has_direct_reports
+    from app.services.saas_tenant_resolver import resolve_tenant_context
+    _saas_ctx = resolve_tenant_context(db, current_user)
+    if _saas_ctx.is_saas_tenant:
+        _saas_ctx.require_module('STAFF_HRMS')
+        is_saas_admin = _saas_ctx.is_tenant_admin
+    else:
+        is_saas_admin = False
     
-    # DC Protocol: Early gate - must be manager (has_direct_reports) OR VGK4U/HR
+    # DC Protocol: Early gate - must be manager (has_direct_reports) OR VGK4U/HR/TenantAdmin
     is_manager = has_direct_reports(current_user.id, db, StaffEmployee)
     is_vgk4u_or_hr = current_user.role and (
         current_user.role.hierarchy_level >= 150 or 
         current_user.role.role_name in ['HR', 'Executive Assistant'] or
-        current_user.role.role_code in ['hr', 'ea']
+        current_user.role.role_code in ['hr', 'ea', 'tenant_admin']
     )
     
-    if not is_manager and not is_vgk4u_or_hr:
+    if not is_manager and not is_vgk4u_or_hr and not is_saas_admin:
         raise HTTPException(status_code=403, detail="Only those with direct reports or HR/VGK4U can approve KRAs")
     
     # Get the KRA instance
@@ -2930,14 +3079,24 @@ async def assign_kra_to_employees(
     WVV: Deterministic instance generation based on frequency
     """
     try:
-        # DC-WRITE: Only VGK/EA/HR can assign KRAs
-        if not (current_user.role and current_user.role.role_name in ['HR', 'Executive Assistant'] or 
-                current_user.role.role_code in ['hr', 'ea'] or
-                current_user.role.hierarchy_level >= 150):
-            raise HTTPException(status_code=403, detail="Only HR/EA/VGK4U can assign KRAs")
+        # DC-WRITE: Check authorization (VGK/EA/HR or SaaS Tenant Admin/HR)
+        from app.services.saas_tenant_resolver import resolve_tenant_context
+        _saas_ctx = resolve_tenant_context(db, current_user)
+        if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+            is_admin_or_hr = _saas_ctx.is_tenant_admin or (current_user.role and current_user.role.role_code in ['hr', 'admin'])
+            if not is_admin_or_hr:
+                raise HTTPException(status_code=403, detail="Only Tenant Admin or HR can assign KRAs")
+            template = db.query(StaffKRATemplate).filter(
+                StaffKRATemplate.id == template_id,
+                StaffKRATemplate.company_id == _saas_ctx.company.id
+            ).first()
+        else:
+            if not (current_user.role and current_user.role.role_name in ['HR', 'Executive Assistant'] or 
+                    current_user.role.role_code in ['hr', 'ea'] or
+                    current_user.role.hierarchy_level >= 150):
+                raise HTTPException(status_code=403, detail="Only HR/EA/VGK4U can assign KRAs")
+            template = db.query(StaffKRATemplate).filter(StaffKRATemplate.id == template_id).first()
         
-        # DC-VERIFY: Get template
-        template = db.query(StaffKRATemplate).filter(StaffKRATemplate.id == template_id).first()
         if not template:
             raise HTTPException(status_code=404, detail="KRA template not found")
         
@@ -2960,12 +3119,15 @@ async def assign_kra_to_employees(
         employee_ids = []
         for emp_code in employee_mnr_ids:
             try:
-                emp = db.query(StaffEmployee).filter(
+                emp_q = db.query(StaffEmployee).filter(
                     StaffEmployee.emp_code == emp_code,
                     StaffEmployee.status == 'active'
-                ).first()
+                )
+                if _saas_ctx.is_saas_tenant and _saas_ctx.company:
+                    emp_q = emp_q.filter(StaffEmployee.base_company_id == _saas_ctx.company.id)
+                emp = emp_q.first()
                 if not emp:
-                    errors.append(f"Employee {emp_code} not found or inactive")
+                    errors.append(f"Employee {emp_code} not found, inactive, or not in your organization")
                 else:
                     employee_ids.append(emp.id)
             except Exception as e:
